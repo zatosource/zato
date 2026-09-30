@@ -102,7 +102,7 @@ $.fn.zato.envRepo.handleCheck = function() {
 
     $('#progress-switch').addClass('hidden').removeClass('error-state');
     $('#progress-check').removeClass('hidden error-state');
-    $.fn.zato.settings.updateProgress('check', 'processing', 'Asking the host to connect to GitHub...');
+    $.fn.zato.settings.updateProgress('check', 'processing', 'Connecting to GitHub...');
 
     $.fn.zato.envRepo.sendRequest('check', function() {
         $.fn.zato.envRepo.pollStatus('check', ['ok'], $.fn.zato.envRepo.onCheckDone);
@@ -154,10 +154,10 @@ $.fn.zato.envRepo.handleSwitch = function() {
 
     $('#progress-check').addClass('hidden').removeClass('error-state');
     $('#progress-switch').removeClass('hidden error-state');
-    $.fn.zato.settings.updateProgress('switch', 'processing', 'Asking the host to switch the repository...');
+    $.fn.zato.settings.updateProgress('switch', 'processing', 'Switching the repository...');
 
     $.fn.zato.envRepo.sendRequest('switch', function() {
-        $.fn.zato.envRepo.pollStatus('switch', ['switching'], function(status) {
+        $.fn.zato.envRepo.pollStatus('switch', ['switching', 'switched'], function(status) {
             $.fn.zato.envRepo.onSwitchDone(status, button);
         });
     }, function(errorMessage) {
@@ -170,9 +170,14 @@ $.fn.zato.envRepo.handleSwitch = function() {
 
 $.fn.zato.envRepo.onSwitchDone = function(status, button) {
 
+    // A host restarts the environment after this state, without one the switch is already complete.
     if(status.state === 'switching') {
         $.fn.zato.settings.updateProgress('switch', 'processing', 'The host is restarting the environment, the loading page opens once it is up...');
         $.fn.zato.envRepo.waitForDeployPage();
+    }
+    else if(status.state === 'switched') {
+        button.prop('disabled', false);
+        $.fn.zato.settings.updateProgress('switch', 'completed', status.message);
     }
     else {
         button.prop('disabled', false);
@@ -222,7 +227,7 @@ $.fn.zato.envRepo.sendRequest = function(action, onSuccess, onError) {
             onSuccess();
         },
         error: function(xhr) {
-            let errorMessage = 'Request could not be sent to the host';
+            let errorMessage = 'Request could not be sent';
             try {
                 const response = JSON.parse(xhr.responseText);
                 errorMessage = response.error || errorMessage;
@@ -270,10 +275,10 @@ $.fn.zato.envRepo.pollStatus = function(step, finalStates, onDone) {
                 $.fn.zato.settings.updateProgress(step, 'processing', status.message);
             }
 
-            // .. and the host has only so long to answer.
+            // .. and there is only so long to wait for one.
             if(Date.now() > state.pollDeadline) {
                 state.pollTimer = null;
-                onDone({state: 'error', message: 'The host did not answer in time', lines: []});
+                onDone({state: 'error', message: 'No answer in time', lines: []});
                 return;
             }
 
