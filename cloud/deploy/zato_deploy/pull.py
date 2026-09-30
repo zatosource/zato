@@ -12,6 +12,7 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from http.client import OK
+from logging import getLogger
 from urllib.parse import urlencode
 
 # Zato
@@ -22,10 +23,17 @@ from zato_deploy.state import Download, Progress, Stage
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_Ping_Timeout = 5
+
 _Unit           = 'MB'
 _Bytes_Per_Unit = 1_000_000
 
-# How much of the stage the download takes, the rest being the extraction, which takes longer than the download on Azure.
+# How much of the stage the download takes, the rest being the extraction, which takes longer than the download itself.
 _Download_Share = 0.4
 
 # The download rate is averaged over this many seconds.
@@ -306,15 +314,42 @@ class PullTracker:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def pull_image(progress:'Progress', image:'str') -> 'None':
-    """ Pulls the image through the Docker Engine API, which reports the bytes of each layer as they arrive.
-    """
-    progress.advance_to(Stage_ID.Download)
+def _split_image(image:'str') -> 'tuple[str, str]':
 
     name, _, tag = image.partition(':')
     if not tag:
         tag = _Default_Tag
 
+    return name, tag
+
+# ################################################################################################################################
+
+def is_image_present(image:'str') -> 'bool':
+    """ Returns whether Docker already has the image.
+    """
+    name, tag = _split_image(image)
+    connection = DockerConnection(_Ping_Timeout)
+
+    try:
+        connection.request('GET', f'/images/{name}:{tag}/json')
+        response = connection.getresponse()
+        _ = response.read()
+        out = response.status == OK
+    finally:
+        connection.close()
+
+    logger.info('Image %s:%s present: %s', name, tag, out)
+
+    return out
+
+# ################################################################################################################################
+
+def pull_image(progress:'Progress', image:'str') -> 'None':
+    """ Pulls the image through the Docker Engine API, which reports the bytes of each layer as they arrive.
+    """
+    progress.advance_to(Stage_ID.Download)
+
+    name, tag = _split_image(image)
     query = urlencode({'fromImage': name, 'tag': tag})
 
     stage = progress.get_stage(Stage_ID.Download)

@@ -7,11 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import subprocess
 from logging import getLogger
 
 # Zato
 from zato_deploy.common import Port, strlist
+from zato_deploy.process import CommandResult, run_command
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,12 +33,12 @@ _Rule_Prefix = '-A PREROUTING '
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _iptables(arguments:'strlist') -> 'subprocess.CompletedProcess[str]':
+def _iptables(arguments:'strlist') -> 'CommandResult':
 
     command = ['iptables', '-t', 'nat']
     command.extend(arguments)
 
-    out = subprocess.run(command, capture_output=True, text=True)
+    out = run_command(command)
     return out
 
 # ################################################################################################################################
@@ -75,7 +75,7 @@ def add_redirect() -> 'None':
 
     result = _iptables(arguments)
 
-    if result.returncode != 0:
+    if result.exit_code != 0:
         logger.warning('Redirect could not be added: %s', result.stderr)
 
 # ################################################################################################################################
@@ -109,7 +109,7 @@ def remove_redirect() -> 'None':
 
     while True:
         result = _iptables(check)
-        if result.returncode != 0:
+        if result.exit_code != 0:
             break
         _ = _iptables(delete)
 

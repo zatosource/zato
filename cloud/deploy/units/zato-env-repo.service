@@ -1,0 +1,7 @@
+[Unit]
+Description=Zato environment repository - handles a request from the container
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/zato-deploy
+ExecStart=/usr/bin/python3 -m zato_deploy.env_repo

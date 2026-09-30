@@ -1,0 +1,9 @@
+/var/log/zato-deploy/*.log {
+    weekly
+    rotate 8
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}

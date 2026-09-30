@@ -4,11 +4,15 @@ zato_deploy/certificate.py
 zato_deploy/common.py
 zato_deploy/container.py
 zato_deploy/docker_api.py
+zato_deploy/env_repo.py
+zato_deploy/environment.py
 zato_deploy/firewall.py
+zato_deploy/git.py
 zato_deploy/host.py
 zato_deploy/main.py
 zato_deploy/process.py
 zato_deploy/pull.py
+zato_deploy/run_log.py
 zato_deploy/server.py
 zato_deploy/state.py
 static/index.html
@@ -17,3 +21,11 @@ static/fonts/Jost-Regular.ttf
 static/fonts/Jost-Medium.ttf
 static/vendor/tippy/popperjs.core.js
 static/vendor/tippy/tippy.js
+units/zato-deploy.service
+units/zato-env-repo.path
+units/zato-env-repo.service
+units/zato-env-repo-sync.service
+units/zato-env-repo.timer
+journald/zato.conf
+logrotate/zato-deploy
+github_known_hosts

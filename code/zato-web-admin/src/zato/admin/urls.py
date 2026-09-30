@@ -13,8 +13,8 @@ from django.views.static import serve as static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_variables, grafana_cloud, \
-    highlight as highlight_view, http_soap, http_soap_limits, live_form_updates, log_streaming, logging_, \
+from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_repo, env_variables, \
+    grafana_cloud, highlight as highlight_view, http_soap, http_soap_limits, live_form_updates, log_streaming, logging_, \
     main, news, on_prem_gateway, openapi_, python_packages, redis_, sbom, scheduler, service, ssl_config, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import as4 as channel_as4
@@ -1730,6 +1730,19 @@ urlpatterns += [
         login_required(updates.updates_view.delete_schedule), name='updates-delete-schedule'),
     url(r'^zato/updates/download-logs$',
         login_required(updates.download_logs), name='updates-download-logs'),
+
+    # Environment repository
+
+    url(r'^zato/env-repo/$',
+        login_required(env_repo.env_repo_view.index), name='env-repo'),
+    url(r'^zato/env-repo/status$',
+        login_required(env_repo.env_repo_view.get_status), name='env-repo-status'),
+    url(r'^zato/env-repo/links$',
+        login_required(env_repo.env_repo_view.get_links), name='env-repo-links'),
+    url(r'^zato/env-repo/check$',
+        login_required(env_repo.env_repo_view.check), name='env-repo-check'),
+    url(r'^zato/env-repo/switch$',
+        login_required(env_repo.env_repo_view.switch), name='env-repo-switch'),
 
     # Monitoring - Grafana Cloud
 

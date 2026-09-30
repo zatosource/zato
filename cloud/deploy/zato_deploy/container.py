@@ -20,6 +20,8 @@ from threading import Event, Thread
 
 # Zato
 from zato_deploy.common import clean_terminal_line, Config, Container, Line_Kind, Path, Port, Stage_ID, StageFailed, Status, strlist, strnone
+from zato_deploy.environment import Environment
+from zato_deploy.process import run_command
 from zato_deploy.state import Component, component_list, Progress
 
 # ################################################################################################################################
@@ -157,7 +159,9 @@ def _get_zato_ids(image:'str') -> 'tuple[int, int]':
 
     for flag in ('-u', '-g'):
         command = ['docker', 'run', '--rm', '--entrypoint', 'id', image, flag, Container.User]
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        result = run_command(command)
+        if result.exit_code != 0:
+            raise StageFailed(f'User ID not read from the image: {result.stderr.strip()}')
         value = result.stdout.strip()
         ids.append(int(value))
 
@@ -181,32 +185,77 @@ def _give_to_container(path:'str', user_id:'int', group_id:'int') -> 'None':
 
 # ################################################################################################################################
 
-def start_container(progress:'Progress', config:'Config') -> 'str':
-    """ Starts the container with the certificate directory mounted and returns its IP address.
+def _remove_container(progress:'Progress') -> 'None':
+    """ Removes the container from the previous run, since each run starts a fresh one.
+    """
+    result = run_command(['docker', 'rm', '--force', Container.Name])
+
+    if result.exit_code == 0:
+        progress.log(f'Removed container {Container.Name} from the previous run')
+
+# ################################################################################################################################
+
+def _mount(source:'str', target:'str', is_read_only:'bool') -> 'str':
+
+    out = f'type=bind,source={source},target={target}'
+
+    if is_read_only:
+        out += ',readonly'
+
+    return out
+
+# ################################################################################################################################
+
+def build_mounts(environment:'Environment') -> 'strlist':
+    """ Returns the mounts of the container, the same ones that run-container.sh in the blueprint uses,
+    with the certificate directory and the directory shared with the host on top.
+    """
+    env_target = os.path.join(Container.Hot_Deploy_Dir, environment.env_name)
+
+    out = [
+        _mount(environment.env_dir, env_target,           True),
+        _mount(environment.enmasse, Container.Enmasse_File, True),
+        _mount(environment.env_ini, Container.Env_INI_File, True),
+        _mount(Path.Lets_Encrypt_Dir, Container.Lets_Encrypt_Dir, False),
+        _mount(Path.Link_Dir,         Container.Host_Link_Dir,    False),
+    ]
+
+    if environment.requirements:
+        out.append(_mount(environment.requirements, Container.Requirements, True))
+
+    return out
+
+# ################################################################################################################################
+
+def start_container(progress:'Progress', config:'Config', environment:'Environment') -> 'str':
+    """ Starts a fresh container with the environment mounted and returns its IP address.
     """
     progress.advance_to(Stage_ID.Requirements)
 
-    # The container renews the certificate in the same directory, under its own account ..
-    try:
-        user_id, group_id = _get_zato_ids(config.image)
-    except (subprocess.CalledProcessError, ValueError) as exception:
-        raise StageFailed(f'User ID not read from the image: {exception}')
+    _remove_container(progress)
 
-    os.makedirs(Path.Lets_Encrypt_Dir, exist_ok=True)
-    _give_to_container(Path.Lets_Encrypt_Dir, user_id, group_id)
+    # The container writes to the certificate and link directories under its own account ..
+    user_id, group_id = _get_zato_ids(config.image)
+
+    for path in (Path.Lets_Encrypt_Dir, Path.Link_Dir):
+        os.makedirs(path, exist_ok=True)
+        _give_to_container(path, user_id, group_id)
 
     # .. and it starts with what the template configured ..
-    command = ['docker', 'run', '-d', '--restart=always', '--name', Container.Name]
+    command = ['docker', 'run', '-d', '--name', Container.Name]
+    command.extend(['--log-driver=journald', '--log-opt', f'tag={Container.Log_Tag}'])
 
     for port in Container.Published_Ports:
         command.extend(['-p', port])
 
-    volume = f'{Path.Lets_Encrypt_Dir}:{Container.Lets_Encrypt_Dir}'
-    command.extend(['--env-file', Path.Container_Env, '-v', volume, config.image])
+    for mount in build_mounts(environment):
+        command.extend(['--mount', mount])
 
-    result = subprocess.run(command, capture_output=True, text=True)
+    command.extend(['--env-file', Path.Container_Env, config.image])
 
-    if result.returncode != 0:
+    result = run_command(command)
+
+    if result.exit_code != 0:
         error = result.stderr.strip()
         raise StageFailed(error)
 
@@ -214,7 +263,10 @@ def start_container(progress:'Progress', config:'Config') -> 'str':
 
     # .. and its own address is where it is checked from.
     template = '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
-    result = subprocess.run(['docker', 'inspect', '-f', template, Container.Name], capture_output=True, text=True, check=True)
+    result = run_command(['docker', 'inspect', '-f', template, Container.Name])
+
+    if result.exit_code != 0:
+        raise StageFailed(f'Container address not read: {result.stderr.strip()}')
 
     out = result.stdout.strip()
     return out

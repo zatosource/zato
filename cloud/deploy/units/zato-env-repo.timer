@@ -1,0 +1,10 @@
+[Unit]
+Description=Zato environment repository - checks the branch every 5 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Unit=zato-env-repo-sync.service
+
+[Install]
+WantedBy=timers.target

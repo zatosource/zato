@@ -15,7 +15,7 @@ import tempfile
 import urllib.request
 
 # Zato
-from zato_deploy.common import Config, Lego, Path, Port, Stage_ID, StageFailed
+from zato_deploy.common import Config, Lego, Line_Kind, Path, Port, Stage_ID, StageFailed
 from zato_deploy.process import run_logged
 from zato_deploy.state import Progress
 
@@ -118,20 +118,25 @@ def obtain_certificate(progress:'Progress', config:'Config') -> 'str':
     progress.advance_to(Stage_ID.Certificate)
     os.makedirs(Path.Lets_Encrypt_Dir, exist_ok=True)
 
-    # Obtain the certificate ..
+    # The container renews the certificate from an earlier boot in the same directory ..
+    if os.path.exists(Path.Lets_Encrypt_PEM):
+        progress.log(f'Certificate for {config.fqdn} found in {Path.Lets_Encrypt_Dir}', Line_Kind.OK)
+        return Path.Lets_Encrypt_PEM
+
+    # .. otherwise it is obtained now ..
     try:
         _download_lego(progress)
         _run_lego(progress, config)
 
     # .. and if Let's Encrypt did not issue it, the deployment goes on with a self-signed one,
-    # while the container keeps asking Let's Encrypt itself.
+    # .. while the container keeps asking Let's Encrypt itself.
     except (OSError, StageFailed) as exception:
         progress.log(f'Let\'s Encrypt certificate not obtained: {exception}', 'error')
         _create_self_signed(progress, config)
         out = Path.Self_Signed_PEM
 
     else:
-        progress.log(f'Certificate for {config.fqdn} obtained', 'ok')
+        progress.log(f'Certificate for {config.fqdn} obtained', Line_Kind.OK)
         out = Path.Lets_Encrypt_PEM
 
     return out

@@ -1,0 +1,284 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from logging import getLogger
+
+# Zato
+from zato_deploy.common import anydict, Env_Repo_Action, Env_Repo_State, Link_File, load_env_repo_config, Path, \
+    Restart_Reason, strlist, Systemd_Unit, write_env_file
+from zato_deploy.git import is_ssh_url, run_git
+from zato_deploy.process import run_command
+from zato_deploy.run_log import setup_logging
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_Sync_Flag = '--sync'
+
+_Request_Keys = {'action', 'env_repo_url', 'env_repo_branch'}
+_Actions      = {Env_Repo_Action.Check, Env_Repo_Action.Switch}
+
+# How many lines of git's output the status keeps for the dashboard.
+_Max_Status_Lines = 40
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RequestError(Exception):
+    def __init__(self, message:'str') -> 'None':
+        super().__init__(message)
+        self.message = message
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Status:
+    """ What the dashboard reads about the request that is being handled.
+    """
+    def __init__(self, action:'str', url:'str', branch:'str') -> 'None':
+
+        self.action = action
+        self.url    = url
+        self.branch = branch
+        self.lines:'strlist' = []
+
+# ################################################################################################################################
+
+    def add_line(self, text:'str') -> 'None':
+
+        logger.info('%s', text)
+        self.lines.append(text)
+
+        del self.lines[:-_Max_Status_Lines]
+
+# ################################################################################################################################
+
+    def write(self, state:'str', message:'str') -> 'None':
+
+        logger.info('Status %s - %s', state, message)
+
+        data = {
+            'action':  self.action,
+            'url':     self.url,
+            'branch':  self.branch,
+            'state':   state,
+            'message': message,
+            'lines':   self.lines,
+            'time':    datetime.now(timezone.utc).isoformat(),
+        }
+
+        path = os.path.join(Path.Link_Dir, Link_File.Status)
+        temp_path = path + '.tmp'
+
+        with open(temp_path, 'w') as output_file:
+            json.dump(data, output_file, indent=2)
+
+        os.replace(temp_path, path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _read_request(path:'str') -> 'anydict':
+
+    with open(path) as input_file:
+        text = input_file.read()
+
+    logger.info('Request read from %s: %s', path, text.strip())
+
+    try:
+        out = json.loads(text)
+    except ValueError as exception:
+        raise RequestError(f'Request is not JSON: {exception}')
+
+    if not isinstance(out, dict):
+        raise RequestError('Request is not an object')
+
+    keys = set(out)
+
+    if keys != _Request_Keys:
+        raise RequestError(f'Request has keys {sorted(keys)}, expected {sorted(_Request_Keys)}')
+
+    for key in _Request_Keys:
+        if not isinstance(out[key], str):
+            raise RequestError(f'{key} is not a string')
+
+    if out['action'] not in _Actions:
+        raise RequestError(f'Unknown action: {out["action"]}')
+
+    if not is_ssh_url(out['env_repo_url']):
+        raise RequestError('Repository address must look like git@github.com:owner/name.git')
+
+    return out
+
+# ################################################################################################################################
+
+def _check_branch_name(branch:'str') -> 'None':
+
+    if not branch:
+        raise RequestError('Branch name is empty')
+
+    result = run_command(['git', 'check-ref-format', '--branch', branch])
+
+    if result.exit_code != 0:
+        raise RequestError(f'Branch name is not valid: {branch}')
+
+# ################################################################################################################################
+
+def _add_output_lines(status:'Status', text:'str') -> 'None':
+
+    for line in text.strip().splitlines():
+        line = line.strip()
+        if line:
+            status.add_line(line)
+
+# ################################################################################################################################
+
+def _check_access(status:'Status') -> 'None':
+    """ Asks GitHub for the branch with the deploy key, which is what a switch would do first.
+    """
+    status.write(Env_Repo_State.Checking, f'Checking access to {status.url}')
+
+    result = run_git(['ls-remote', '--heads', status.url, status.branch], is_verbose=True)
+
+    _add_output_lines(status, result.stderr)
+
+    if result.exit_code != 0:
+        raise RequestError(f'GitHub did not accept the deploy key for {status.url}, exit code {result.exit_code}')
+
+    if not result.stdout.strip():
+        raise RequestError(f'Branch {status.branch} not found in {status.url}')
+
+    _add_output_lines(status, result.stdout)
+
+# ################################################################################################################################
+
+def _restart_deploy(reason:'str') -> 'None':
+
+    os.makedirs(Path.Run_Dir, exist_ok=True)
+
+    with open(Path.Restart_Reason, 'w') as output_file:
+        _ = output_file.write(reason + '\n')
+
+    _ = run_command(['systemctl', 'restart', '--no-block', Systemd_Unit.Deploy])
+
+# ################################################################################################################################
+
+def _switch(status:'Status') -> 'None':
+    """ Points the configuration at the repository and restarts the deployment, which clones it and brings the page back.
+    """
+    values = {
+        'env_repo_url':    status.url,
+        'env_repo_branch': status.branch,
+    }
+
+    write_env_file(Path.Env_Repo_Config, values)
+    status.add_line(f'Configuration written to {Path.Env_Repo_Config}')
+
+    status.write(Env_Repo_State.Switching, f'Switching to {status.url} at {status.branch}')
+
+# ################################################################################################################################
+
+def handle_request() -> 'None':
+    """ Handles the request that the dashboard left in the shared directory, if there is one.
+    """
+    request_path = os.path.join(Path.Link_Dir, Link_File.Request)
+
+    if not os.path.exists(request_path):
+        logger.info('No request at %s', request_path)
+        return
+
+    status = Status('', '', '')
+    is_switched = False
+
+    try:
+        request = _read_request(request_path)
+
+        status = Status(request['action'], request['env_repo_url'], request['env_repo_branch'])
+
+        _check_branch_name(status.branch)
+        _check_access(status)
+
+        if status.action == Env_Repo_Action.Switch:
+            _switch(status)
+            is_switched = True
+        else:
+            status.write(Env_Repo_State.OK, f'Access to {status.url} at {status.branch} works')
+
+    except RequestError as exception:
+        status.write(Env_Repo_State.Error, exception.message)
+
+    finally:
+        if os.path.exists(request_path):
+            os.remove(request_path)
+            logger.info('Request removed from %s', request_path)
+
+    # The deployment restarts only once the request is gone, so the path unit does not start this again with a stale one.
+    if is_switched:
+        _restart_deploy(Restart_Reason.Switch)
+
+# ################################################################################################################################
+
+def sync() -> 'None':
+    """ Restarts the deployment if the configured branch has commits that the checkout does not.
+    """
+    if not os.path.exists(Path.Ready_Marker):
+        logger.info('Sync skipped, %s does not exist', Path.Ready_Marker)
+        return
+
+    if not os.path.isdir(Path.Env_Repo_Link):
+        logger.info('Sync skipped, %s is not a directory', Path.Env_Repo_Link)
+        return
+
+    config = load_env_repo_config(Path.Env_Repo_Config)
+    repo_dir = os.path.realpath(Path.Env_Repo_Link)
+
+    fetch = run_git(['fetch', 'origin', config.branch], cwd=repo_dir)
+
+    if fetch.exit_code != 0:
+        logger.info('Sync skipped, fetch of %s failed with exit code %d', config.branch, fetch.exit_code)
+        return
+
+    head       = run_git(['rev-parse', 'HEAD'], cwd=repo_dir).stdout.strip()
+    fetch_head = run_git(['rev-parse', 'FETCH_HEAD'], cwd=repo_dir).stdout.strip()
+
+    if head == fetch_head:
+        logger.info('Sync found no new commits, HEAD is %s', head)
+        return
+
+    logger.info('Sync found new commits, HEAD is %s and FETCH_HEAD is %s, restarting the deployment', head, fetch_head)
+    _restart_deploy(Restart_Reason.Sync)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def main() -> 'None':
+
+    setup_logging(Path.Env_Repo_Log)
+
+    if _Sync_Flag in sys.argv:
+        sync()
+    else:
+        handle_request()
+
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    main()
+
+# ################################################################################################################################
+# ################################################################################################################################

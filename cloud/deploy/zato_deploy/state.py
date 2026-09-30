@@ -168,19 +168,43 @@ class Progress:
 
                 # The stages before this one are finished ..
                 if stage.id != stage_id:
-                    if stage.status != Status.Done:
-                        if stage.started is None:
-                            stage.started = now
-                        stage.status   = Status.Done
-                        stage.finished = now
+                    self._finish_stage(stage, now)
                     continue
 
                 # .. and this one starts, unless it runs already.
                 if stage.status == Status.Pending:
                     stage.status  = Status.Active
                     stage.started = now
+                    logger.info('Stage started: %s', stage.name)
                     self._write_serial_console(stage.name)
                 break
+
+# ################################################################################################################################
+
+    def _finish_stage(self, stage:'Stage', now:'float') -> 'None':
+
+        if stage.status == Status.Done:
+            return
+
+        if stage.started is None:
+            stage.started = now
+
+        stage.status   = Status.Done
+        stage.finished = now
+
+        elapsed = stage.finished - stage.started
+        logger.info('Stage finished in %.1fs: %s', elapsed, stage.name)
+
+# ################################################################################################################################
+
+    def remove_stage(self, stage_id:'str') -> 'None':
+        """ Takes a stage that will not run off the page.
+        """
+        with self.lock:
+            stage = self.stage_by_id.pop(stage_id)
+            self.stages.remove(stage)
+
+        logger.info('Stage skipped: %s', stage.name)
 
 # ################################################################################################################################
 
@@ -191,11 +215,7 @@ class Progress:
 
         with self.lock:
             for stage in self.stages:
-                if stage.status != Status.Done:
-                    if stage.started is None:
-                        stage.started = now
-                    stage.status   = Status.Done
-                    stage.finished = now
+                self._finish_stage(stage, now)
             self.is_ready = True
 
         self._write_serial_console('The environment is ready')
@@ -220,6 +240,9 @@ class Progress:
 
             stage.status   = Status.Failed
             stage.finished = now
+
+            elapsed = stage.finished - stage.started
+            logger.error('Stage failed after %.1fs: %s - %s', elapsed, stage.name, message)
 
             # .. of the components that were still starting, the first one is what failed, and the rest never finished ..
             if stage.components:
@@ -268,7 +291,7 @@ class Progress:
 # ################################################################################################################################
 
     def _write_serial_console(self, text:'str') -> 'None':
-        """ Shows the progress in the boot diagnostics of the virtual machine too.
+        """ Shows the progress on the serial console of the virtual machine too.
         """
         try:
             with open(Path.Serial_Console, 'w') as console:
@@ -318,19 +341,28 @@ class Progress:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_stages(image:'str') -> 'stage_list':
-    """ Returns the stages in the order they run, each weighed by how many seconds it usually takes.
+def build_stages(image:'str', is_docker_installed:'bool') -> 'stage_list':
+    """ Returns the stages in the order they run on this boot, each weighed by how many seconds it usually takes.
     """
-    out = [
-        Stage(Stage_ID.Certificate,  'Getting a Let\'s Encrypt certificate', 14,  'lego'),
-        Stage(Stage_ID.Storage,      'Preparing local storage',              9,   'zato-deploy'),
-        Stage(Stage_ID.Docker,       'Installing Docker',                    38,  'apt-get install docker.io'),
-        Stage(Stage_ID.Download,     'Downloading Zato',                     150, f'docker pull {image}'),
-        Stage(Stage_ID.Requirements, 'Installing requirements',              18,  'docker logs zato'),
-        Stage(Stage_ID.Environment,  'Creating the environment',             26,  'docker logs zato'),
-        Stage(Stage_ID.Components,   'Starting components',                  36,  'docker logs zato'),
-        Stage(Stage_ID.Checking,     'Checking the environment',             8,   'zato-deploy'),
+    stages = [
+        Stage(Stage_ID.Certificate,  'Getting a Let\'s Encrypt certificate',  14,  'lego'),
+        Stage(Stage_ID.Storage,      'Preparing local storage',               9,   'zato-deploy'),
+        Stage(Stage_ID.Docker,       'Installing Docker',                     38,  'apt-get install docker.io'),
+        Stage(Stage_ID.Download,     'Downloading Zato',                      150, f'docker pull {image}'),
+        Stage(Stage_ID.Env_Repo,     'Getting the environment repository',    6,   'git'),
+        Stage(Stage_ID.Requirements, 'Installing requirements',               18,  'docker logs zato'),
+        Stage(Stage_ID.Environment,  'Creating the environment',              26,  'docker logs zato'),
+        Stage(Stage_ID.Components,   'Starting components',                   36,  'docker logs zato'),
+        Stage(Stage_ID.Checking,     'Checking the environment',              8,   'zato-deploy'),
     ]
+
+    out:'stage_list' = []
+
+    for stage in stages:
+        if stage.id == Stage_ID.Docker:
+            if is_docker_installed:
+                continue
+        out.append(stage)
 
     return out
 
