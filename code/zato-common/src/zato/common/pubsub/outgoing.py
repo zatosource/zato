@@ -12,15 +12,13 @@ from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
-# gevent
-from gevent import sleep
-
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub, URL_TYPE
 from zato.common.facade import PubSubFacade
+from zato.common.pubsub.delivery import deliver_with_policy
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
-from zato.common.util.http_retry import get_next_sleep_time, RetryPolicy
+from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
@@ -40,7 +38,8 @@ strpagedict = dict[str, 'OutgoingPage']
 
 _topic_prefix   = PubSub.Outgoing.Topic_Prefix
 _sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
-_round_wait     = PubSub.Outgoing.Retry_Round_Wait
+
+_retry = HTTP_SOAP.Retry
 
 # The keys of the envelope a queue stores
 Key_Conn_Type  = 'conn_type'
@@ -321,7 +320,7 @@ def get_retry_policy(conn_type:'str', wrapper:'any_') -> 'RetryPolicy':
     if builder:
         out = builder(wrapper)
     else:
-        out = RetryPolicy.from_config({})
+        out = RetryPolicy.from_config({}, _retry)
 
     return out
 
@@ -351,17 +350,6 @@ def locate_outgoing_conn(server:'ParallelServer', conn_type:'str', conn_id:'int'
     return out
 
 # ################################################################################################################################
-
-class DeliveryExhausted(Exception):
-    """ Raised when a round of delivery ran out of attempts.
-    """
-
-    def __init__(self, error:'str', attempts:'int') -> 'None':
-        super().__init__(error)
-        self.error = error
-        self.attempts = attempts
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 def deliver_envelope(server:'ParallelServer', cid:'str', envelope:'stranydict') -> 'None':
@@ -385,56 +373,6 @@ def deliver_envelope(server:'ParallelServer', cid:'str', envelope:'stranydict') 
         handler(server, cid, wrapper, request)
 
     deliver_with_policy(policy, envelope[Key_Attempts], cid, conn_name, attempt)
-
-# ################################################################################################################################
-
-def deliver_with_policy(
-    policy:'RetryPolicy',
-    attempts_made:'int',
-    cid:'str',
-    conn_name:'str',
-    attempt:'callable_',
-    ) -> 'None':
-    """ Runs attempts until one is accepted or the policy allows no more, counting from the attempts already made.
-    """
-    attempts_allowed = 1 + policy.max_retries
-
-    total_sleep_time = 0
-    current_sleep_time = policy.sleep_time
-
-    while True:
-
-        # Every attempt after a failed one is preceded by a wait
-        if attempts_made:
-            sleep(current_sleep_time)
-            total_sleep_time += current_sleep_time
-            current_sleep_time = get_next_sleep_time(policy, current_sleep_time, total_sleep_time)
-
-        try:
-            attempt()
-            return
-
-        except Exception as e:
-            attempts_made += 1
-
-            # Both the attempt count and the total wait are caps
-            has_attempts_left = attempts_made < attempts_allowed
-            has_time_left = total_sleep_time < policy.backoff_threshold
-
-            if has_attempts_left and has_time_left:
-                logger.info('Queue delivery retry cid=%s, conn=%s, attempt=%s of %s, reason=%s',
-                    cid, conn_name, attempts_made, attempts_allowed, e)
-                continue
-
-            logger.info('Queue delivery round over cid=%s, conn=%s, attempts=%s, reason=%s', cid, conn_name, attempts_made, e)
-            raise DeliveryExhausted(str(e), attempts_made) from e
-
-# ################################################################################################################################
-
-def wait_between_rounds() -> 'None':
-    """ The wait between two rounds of one message.
-    """
-    sleep(_round_wait)
 
 # ################################################################################################################################
 # ################################################################################################################################

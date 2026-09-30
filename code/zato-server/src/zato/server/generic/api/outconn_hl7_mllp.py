@@ -22,7 +22,7 @@ from zato.common.hl7.mllp.fields import Outgoing_Bool_Names, Outgoing_Defaults, 
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.pubsub.outgoing import Attempts_None, Key_Data, OutgoingPublisher, OutgoingType, SendRejected
 from zato.common.util.api import asbool, hex_sequence_to_bytes, new_cid_server
-from zato.common.util.http_retry import get_next_sleep_time, RetryPolicy
+from zato.common.util.retry import get_next_sleep_time, RetryPolicy
 from zato.common.util.tcp import parse_address
 from zato.server.connection.queue import Wrapper
 
@@ -46,6 +46,8 @@ if 0:
 _ms_per_second = 1000
 
 _use_queue_field = HTTP_SOAP.Queue.Field_Use_Queue
+
+_retry = HTTP_SOAP.Retry
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +102,7 @@ class _HL7MLLPConnection:
             self.name = ''
 
         # How a direct send that could not be delivered is tried again
-        self.retry_policy = RetryPolicy.from_config(config)
+        self.retry_policy = RetryPolicy.from_config(config, _retry)
 
         host, port_string = parse_address(config.address)
         port = int(port_string)

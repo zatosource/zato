@@ -1,151 +1,161 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# How many times a failed attempt is retried and how long to wait between attempts - shared by outgoing connections
+# and by the push delivery of published messages, each with a default set of its own.
+
 # stdlib
-import random
-import time
-from datetime import datetime, timedelta
+from datetime import timedelta
+from random import uniform
 
 # Zato
+from zato.common.api import HTTP_SOAP
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from datetime import datetime
+    from zato.common.typing_ import any_, stranydict
+    any_ = any_
+    datetime = datetime
+    stranydict = stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_retry = HTTP_SOAP.Retry
+
+# The shortest sleep to fall back to when backing off would otherwise sleep for no time at all,
+# which would turn the loop into a tight one against an endpoint that is already unwell.
+Minimum_Sleep_Time = 1
+
+# The schedule of the AMQP-backed topics' delivery - the first attempts sleep for the shorter time, the later ones
+# for the longer, and this many attempts is where the switch is.
+_early_attempt_count = 12
+_early_sleep_time = 5.0
+_late_sleep_time = 10.0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RetryPolicy:
+    """ How many times a failed attempt is retried and how long to wait between attempts.
+
+    The four settings live in a connection's opaque attributes or travel with a published message. The ceiling
+    on a single sleep and the jitter come from the default set the policy was built with.
+    """
+    __slots__ = 'max_retries', 'sleep_time', 'backoff_threshold', 'backoff_multiplier', 'max_sleep_time', 'jitter_percent'
+
+    def __init__(
+        self,
+        max_retries,        # type: int
+        sleep_time,         # type: int
+        backoff_threshold,  # type: int
+        backoff_multiplier, # type: int
+        max_sleep_time,     # type: int
+        jitter_percent,     # type: int
+    ) -> 'None':
+        self.max_retries = max_retries
+        self.sleep_time = sleep_time
+        self.backoff_threshold = backoff_threshold
+        self.backoff_multiplier = backoff_multiplier
+        self.max_sleep_time = max_sleep_time
+        self.jitter_percent = jitter_percent
+
+# ################################################################################################################################
+
+    @staticmethod
+    def from_config(config:'stranydict', defaults:'any_') -> 'RetryPolicy':
+        """ Builds a policy out of a config, falling back to the given default set
+        for whatever the config does not say.
+        """
+        out = RetryPolicy(
+            _resolve(config, _retry.Field_Max_Retries, defaults.Default_Max_Retries),
+            _resolve(config, _retry.Field_Sleep_Time, defaults.Default_Sleep_Time),
+            _resolve(config, _retry.Field_Backoff_Threshold, defaults.Default_Backoff_Threshold),
+            _resolve(config, _retry.Field_Backoff_Multiplier, defaults.Default_Backoff_Multiplier),
+            defaults.Max_Sleep_Time,
+            defaults.Jitter_Percent,
+        )
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _resolve(config:'stranydict', name:'str', default:'int') -> 'int':
+    """ Returns one retry setting from a config, or the given default.
+    """
+    out = config.get(name)
+
+    if out is None:
+        out = default
+
+    return out
+
+# ################################################################################################################################
+
+def get_next_sleep_time(policy:'RetryPolicy', current_sleep_time:'int', total_sleep_time:'int') -> 'int':
+    """ How long the sleep after the one just made is - it grows by the multiplier but is held under both
+    the per-sleep ceiling and whatever is left of the total budget, so a loop cannot overshoot the threshold,
+    and it is never no time at all, which would turn a loop into a tight one against an endpoint that is unwell.
+    """
+    next_sleep_time = current_sleep_time * policy.backoff_multiplier
+    remaining = policy.backoff_threshold - total_sleep_time
+    out = min(next_sleep_time, policy.max_sleep_time, remaining)
+
+    if out <= 0:
+        out = Minimum_Sleep_Time
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_remaining_time(start_time:'datetime', max_seconds:'int') -> 'timedelta':
-    """ Calculate remaining time in seconds based on start time and maximum duration.
+    """ How much of a time budget that started at the given time is left.
     """
     max_duration = timedelta(seconds=max_seconds)
     elapsed = utcnow() - start_time
-    remaining = max_duration - elapsed
+    out = max_duration - elapsed
 
-    return remaining
+    return out
 
-# ################################################################################################################################
 # ################################################################################################################################
 
 def get_sleep_time(
-    start_time: 'datetime',
-    max_seconds: 'int',
-    attempt_number: 'int',
-    jitter_range: 'float' = 2.0
+    start_time:'datetime',
+    max_seconds:'int',
+    attempt_number:'int',
+    jitter_range:'float'=2.0,
 ) -> 'float':
-    """ Get sleep time for the given attempt number.
+    """ How long to sleep before the given attempt of a delivery running against a time budget - no time at all
+    once the budget is spent or when the sleep would not fit in what is left of it.
     """
-
-    # Calculate remaining time
     time_remaining = get_remaining_time(start_time, max_seconds)
     time_remaining_seconds = max(0, time_remaining.total_seconds())
 
-    # No sleep if time is up
     if time_remaining_seconds <= 0:
         return 0.0
 
-    # Initial attempts get fewer seconds
-    # We'll add jittter in either case later on.
-    if attempt_number <= 12:
-         base_sleep = 5.0
+    if attempt_number <= _early_attempt_count:
+        base_sleep = _early_sleep_time
     else:
-         base_sleep = 10.0
+        base_sleep = _late_sleep_time
 
-    # Add jitter
-    jitter = random.uniform(0, jitter_range)
-    final_sleep = base_sleep + jitter
+    jitter = uniform(0, jitter_range)
+    out = base_sleep + jitter
 
-    # Check if we have time for this sleep
-    if final_sleep > time_remaining_seconds:
+    if out > time_remaining_seconds:
         return 0.0
 
-    return final_sleep
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def simulate_sleep_times() -> 'None':
-   """ Simulate sleep times for different attempt numbers.
-   """
-   print('Sleep Time Simulation:')
-   print('Attempt | Sleep Time | Range')
-   print('-' * 35)
-
-   # Show key attempts that demonstrate the algorithm
-   key_attempts = [1, 2, 5, 10, 12, 13, 15, 20, 50, 100]
-
-   # Use a dummy start time and long duration for simulation
-   dummy_start = utcnow()
-
-   for attempt in key_attempts:
-       sleep_time = get_sleep_time(dummy_start, 48*3600, attempt, jitter_range=0.0)  # No jitter for preview
-
-       # Determine which range this falls into
-       if attempt <= 1:
-           range_desc = 'No sleep'
-       elif attempt <= 12:
-           range_desc = '2-12 (5s base)'
-       else:
-           range_desc = '13+ (10s base)'
-
-       print(f'{attempt:7d} | {sleep_time:8.2f}s | {range_desc}')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-
-   # Preview the sleep times
-   simulate_sleep_times()
-
-   print('\n' + '='*50)
-   print('SIMULATION: First 15 attempts over 48 seconds')
-   print('='*50)
-
-   # Start the timer
-   start_time = utcnow()
-   max_seconds = 48*3600
-   attempt = 0
-
-   # Simulate first 15 API calls
-   for idx in range(15):
-       attempt += 1
-
-       # Calculate remaining time
-       remaining_seconds = get_remaining_time(start_time, max_seconds)
-       remaining_hours = remaining_seconds / 3600
-
-       print(f'\nAttempt {attempt}:')
-       print(f'  Time remaining: {remaining_hours:.1f} hours')
-
-       print(f'  Making API call #{attempt}...')
-
-
-        # Don't sleep after the last demo attempt
-       if idx < 14:
-           sleep_time = get_sleep_time(start_time, max_seconds, attempt + 1)
-
-           if sleep_time == 0:
-               elapsed = utcnow() - start_time
-               if elapsed >= timedelta(seconds=max_seconds):
-                   print('  Time limit reached!')
-                   break
-               else:
-                   print('  No sleep needed (first attempt)')
-           else:
-               print(f'  Sleeping for {sleep_time:.2f}s before next attempt...')
-               time.sleep(sleep_time)
-
-   print(f'\nFinal stats after {attempt} attempts:')
-
-   remaining_seconds = get_remaining_time(start_time, max_seconds)
-   remaining_hours = remaining_seconds / 3600
-   elapsed_hours = max_seconds / 3600 - remaining_hours
-
-   print(f'  Elapsed: {elapsed_hours:.3f} hours')
-   print(f'  Remaining: {remaining_hours:.1f} hours')
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

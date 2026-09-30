@@ -22,7 +22,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, Time
 from zato.common.api import HTTP_SOAP, URL_TYPE
 from zato.common.exception import BackendInvocationError
 from zato.common.typing_ import cast_
-from zato.common.util.http_retry import RetryPolicy
+from zato.common.util.retry import RetryPolicy
 from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
 from zato.server.service import RESTAdapter
 

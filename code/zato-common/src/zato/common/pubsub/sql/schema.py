@@ -11,7 +11,7 @@ from sqlalchemy import BigInteger, Boolean, Column, Identity, Index, Integer, Me
 from sqlalchemy.dialects.mysql import LONGTEXT
 
 # Zato
-from zato.common.api import PubSub
+from zato.common.api import HTTP_SOAP, PubSub
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,6 +30,8 @@ _data_class_column_len = 400
 
 # How long the stored preview of each payload is.
 _data_preview_len = PubSub.Message.Data_Preview_Len
+
+_retry = HTTP_SOAP.Retry
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,6 +85,12 @@ message_table = Table('pubsub_message', metadata,
     Column('in_reply_to', String(_short_column_len), nullable=True),
     Column('ext_client_id', String(_short_column_len), nullable=True),
 
+    # The retry settings the publisher gave, if any
+    Column(_retry.Field_Max_Retries, Integer, nullable=True),
+    Column(_retry.Field_Sleep_Time, Integer, nullable=True),
+    Column(_retry.Field_Backoff_Threshold, Integer, nullable=True),
+    Column(_retry.Field_Backoff_Multiplier, Integer, nullable=True),
+
     # Messages are looked up by their public identifier ..
     Index('idx_pubsub_message_msg_id', 'msg_id', unique=True),
 
@@ -95,6 +103,12 @@ message_table = Table('pubsub_message', metadata,
     # .. and the expiry sweep finds everything that is past its time.
     Index('idx_pubsub_message_expiration', 'expiration_ms'),
 )
+
+# The retry columns, for the queries that read a message back
+message_retry_columns = []
+
+for _name in _retry.FieldList:
+    message_retry_columns.append(message_table.c[_name])
 
 # ################################################################################################################################
 

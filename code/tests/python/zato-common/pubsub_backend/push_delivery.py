@@ -50,6 +50,15 @@ _fail_until_expired = 1_000_000
 # How quickly the expiring message expires, in seconds.
 _short_expiration_seconds = 1
 
+# The sleep a publisher asks for between its two attempts, in seconds.
+_publisher_sleep_time = 1
+
+# The sleep a message without settings gets before its first retry, in seconds, and how much
+# more than that the retry may take - the policy's jitter plus the greenlet's own overhead.
+_default_sleep_time = PubSub.Delivery.Default_Sleep_Time
+_jitter_fraction = PubSub.Delivery.Jitter_Percent / 100
+_slack_seconds = 0.5
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -62,21 +71,45 @@ class _StubConfigManager:
 # ################################################################################################################################
 
 class _StubServer:
-    """ Stands in for the server - records every service invocation and fails
-    the requested number of them first.
+    """ Stands in for the server - records every service invocation, when it was made and whether it was refused,
+    and fails the requested number of them first.
     """
     def __init__(self) -> 'None':
         self.config_manager = _StubConfigManager()
         self.invoked:'anylist' = []
+        self.attempt_times:'anylist' = []
         self.fail_count = 0
 
     def invoke(self, service_name:'str', payload:'any_') -> 'None':
+
+        self.attempt_times.append(monotonic())
 
         if self.fail_count > 0:
             self.fail_count -= 1
             raise Exception('Simulated delivery failure')
 
         self.invoked.append((service_name, payload))
+
+# ################################################################################################################################
+
+def _get_last_gap(server:'_StubServer') -> 'float':
+    """ How long the last attempt came after the one before it.
+    """
+    last_time = server.attempt_times[-1]
+    previous_time = server.attempt_times[-2]
+
+    out = last_time - previous_time
+    return out
+
+# ################################################################################################################################
+
+def _assert_gap_within(gap:'float', expected:'float') -> 'None':
+    """ A gap between two attempts is what the policy's sleep says, give or take the jitter and the slack.
+    """
+    lower = expected - _slack_seconds
+    upper = expected + expected * _jitter_fraction + _slack_seconds
+
+    assert lower <= gap <= upper, (gap, expected)
 
 # ################################################################################################################################
 
@@ -99,7 +132,8 @@ def _wait_until(condition:'callable_', description:'str') -> 'None':
 def run_push_delivery_scenario() -> 'None':
     """ Push delivery over the shared backend - the startup drain picks up what
     a previous process left behind, a publish wakes the delivery greenlet up,
-    a failed delivery is retried, and a message that expires for the push
+    a failed delivery is retried as the message's own settings or the default policy say,
+    a message whose round ran out leaves the queue, and a message that expires for the push
     subscriber leaves the queue while other subscribers keep it.
     """
     delete_all_rows()
@@ -153,14 +187,48 @@ def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', de
     _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the live publications are delivered')
     _wait_until(lambda: not get_delivery_rows(_sub_key), 'the live publications are acknowledged')
 
-    # .. a failed delivery is retried until it succeeds ..
+    # .. a failed delivery is retried after the sleep its publisher asked for ..
     server.fail_count = 1
-    _ = backend.publish(_topic, 'push-retried')
+    _ = backend.publish(_topic, 'push-retried', max_retries=1, retry_sleep_time=_publisher_sleep_time)
 
     delivered_so_far += 1
 
     _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the failed delivery is retried')
     assert server.invoked[-1] == (_service_name, 'push-retried'), server.invoked[-1]
+
+    gap = _get_last_gap(server)
+    _assert_gap_within(gap, _publisher_sleep_time)
+
+    # .. a failed delivery of a message without settings is retried after the default policy's first sleep ..
+    server.fail_count = 1
+    _ = backend.publish(_topic, 'push-retried-default')
+
+    delivered_so_far += 1
+
+    _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the failed delivery is retried under the default policy')
+    assert server.invoked[-1] == (_service_name, 'push-retried-default'), server.invoked[-1]
+
+    gap = _get_last_gap(server)
+    _assert_gap_within(gap, _default_sleep_time)
+
+    # .. a message that allows no retries and fails once is given up on - it leaves the queue,
+    # .. it was attempted exactly once and the message behind it is delivered ..
+    server.fail_count = 1
+    attempts_so_far = len(server.attempt_times)
+
+    _ = backend.publish(_topic, 'push-given-up', max_retries=0)
+
+    _wait_until(lambda: not get_delivery_rows(_sub_key), 'the given-up message leaves the push queue')
+
+    assert len(server.invoked) == delivered_so_far, server.invoked[-1]
+    assert len(server.attempt_times) == attempts_so_far + 1, len(server.attempt_times)
+
+    _ = backend.publish(_topic, 'push-after-given-up')
+
+    delivered_so_far += 1
+
+    _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the message after the given-up one is delivered')
+    assert server.invoked[-1] == (_service_name, 'push-after-given-up'), server.invoked[-1]
 
     # .. a message that keeps failing expires for the push subscriber and leaves
     # .. its queue, while the second subscriber - a pull one with no push greenlet -

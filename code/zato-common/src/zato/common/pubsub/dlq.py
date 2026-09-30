@@ -26,7 +26,7 @@ from zato.common.util.time_ import utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.pubsub.outgoing import DeliveryExhausted
+    from zato.common.pubsub.delivery import DeliveryExhausted
     from zato.common.typing_ import anytuple, stranydict
     from zato.server.base.parallel import ParallelServer
 

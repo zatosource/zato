@@ -31,7 +31,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, PubSub, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HTTP_SOAP, NotGiven, PARAMS_PRIORITY, PubSub, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.audit_log.facade import AuditFacade
 from zato.common.audit_log.scheduler import append_job_log_entry
@@ -167,6 +167,10 @@ _publish_meta_keys = {
     'in_reply_to',
     'ext_client_id',
     'pub_time',
+    HTTP_SOAP.Retry.Field_Max_Retries,
+    HTTP_SOAP.Retry.Field_Sleep_Time,
+    HTTP_SOAP.Retry.Field_Backoff_Threshold,
+    HTTP_SOAP.Retry.Field_Backoff_Multiplier,
 }
 
 # ################################################################################################################################

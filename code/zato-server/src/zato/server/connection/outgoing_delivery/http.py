@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 from zato.common.api import HTTP_SOAP
 from zato.common.pubsub.outgoing import Body_Mode_JSON, Body_Mode_XML, detect_body_mode, Key_Data, Key_Headers, Key_Method, \
     Key_Operation, Key_Params, Key_Path, OutgoingInvoker, OutgoingPage
-from zato.common.util.http_retry import RetryPolicy
+from zato.common.util.retry import RetryPolicy
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,6 +28,7 @@ if 0:
 # ################################################################################################################################
 
 _dlq = HTTP_SOAP.DLQ
+_retry = HTTP_SOAP.Retry
 
 # The request facts of the details window
 _fact_method       = 'Method'
@@ -173,7 +174,7 @@ def deliver_to_fhir(server:'ParallelServer', cid:'str', wrapper:'any_', request:
 def get_http_retry_policy(wrapper:'any_') -> 'RetryPolicy':
     """ The retry policy of an outgoing REST, SOAP, FHIR or MLLP connection - all four carry the same fields in their config.
     """
-    out = RetryPolicy.from_config(wrapper.config)
+    out = RetryPolicy.from_config(wrapper.config, _retry)
     return out
 
 # ################################################################################################################################

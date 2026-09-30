@@ -16,6 +16,7 @@ from lxml import etree
 import requests
 
 # Zato
+from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.common import classify_transport_error
 from zato.common.crypto.api import is_string_equal
@@ -30,7 +31,8 @@ from zato.common.soap.envelope import attach_body, build_envelope, get_header, g
 from zato.common.soap.message import SOAPMessage, to_lexical
 from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import apply_wss, keystore_from_config
-from zato.common.util.http_retry import RetryPolicy, send_with_retry
+from zato.common.util.http_retry import send_with_retry
+from zato.common.util.retry import RetryPolicy
 from zato.common.util.tls_verify import Default_Validate_TLS, resolve_tls_verify
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.mime_ import parse_header_parameters
@@ -61,6 +63,8 @@ logger = getLogger('zato')
 
 # What a retry of an outgoing SOAP request is called in the logs.
 _retry_label = 'SOAP out'
+
+_retry = HTTP_SOAP.Retry
 
 # How much of a non-SOAP error body goes into the exception message. Enough to recognise the
 # intermediary that produced it, not enough to put an entire error page into a log.
@@ -140,7 +144,7 @@ class SOAPClient:
 
         # A transport-level failure is retried per the connection's own configuration - the
         # dashboard offers the four retry settings for outgoing SOAP as much as it does for REST.
-        self.retry_policy = RetryPolicy.from_config(config)
+        self.retry_policy = RetryPolicy.from_config(config, _retry)
 
         # WS-Security, WS-Addressing, MTOM and body-credential injection are each optional.
         self.security         = config.get('security')
