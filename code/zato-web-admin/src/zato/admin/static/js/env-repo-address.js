@@ -78,18 +78,12 @@ $.fn.zato.envRepo.parseAddress = function(address) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// GitHub's page for a new deploy key, with the key already filled in if this page knows it.
+// GitHub's page for a new deploy key of the repository.
 $.fn.zato.envRepo.getKeyUrl = function(repo) {
 
     const config = $.fn.zato.envRepo.config;
-    const key = $('#public-key').text().trim();
 
-    let out = config.deployKeyUrl.replace('{owner}', repo.owner).replace('{name}', repo.name);
-
-    if(key) {
-        out += '?title=' + encodeURIComponent(config.deployKeyTitle) + '&key=' + encodeURIComponent(key);
-    }
-
+    const out = config.deployKeyUrl.replace('{owner}', repo.owner).replace('{name}', repo.name);
     return out;
 };
 

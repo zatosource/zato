@@ -10,7 +10,6 @@ $.fn.zato.envRepo.config = {
     pollTimeout: 180000,
     keyRetryInterval: 5000,
     keyWaitTimeout: 900000,
-    keyHelpDelay: 30000,
     deployPollInterval: 2000,
     deployProgressPath: '/zato-deploy/progress.json',
     reloadDelay: 1500,
@@ -18,7 +17,6 @@ $.fn.zato.envRepo.config = {
     fadeDuration: 600,
     defaultBranch: 'main',
     deployKeyUrl: 'https://github.com/{owner}/{name}/settings/keys/new',
-    deployKeyTitle: 'Zato',
     repoPatterns: [
         /^(?:https?:\/\/)?(?:www\.)?github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?(?:\.git)?(?:[/?#].*)?$/,
         /^(?:ssh:\/\/)?git@github\.com[:/][A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?(?:\.git)?\/?$/,
@@ -37,7 +35,6 @@ $.fn.zato.envRepo.state = {
     pollTimer: null,
     pollDeadline: null,
     retryTimer: null,
-    keyHelpTimer: null,
     branchTimer: null,
     keyDeadline: null,
     repo: null,
@@ -395,7 +392,8 @@ $.fn.zato.envRepo.onConnected = function(status) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Opens GitHub's deploy key page in a new tab and keeps checking until the key lets us in.
+// Shows the key to copy, opens GitHub's deploy key page in a new tab for it to be added on,
+// and keeps checking until the key lets us in.
 $.fn.zato.envRepo.handleAllow = function() {
 
     const config = $.fn.zato.envRepo.config;
@@ -417,12 +415,9 @@ $.fn.zato.envRepo.handleAllow = function() {
     $('#action-button').prop('disabled', true);
     $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to accept the key for ' + state.repo.full_name);
 
-    // The key comes up on this page only if the wait drags on, for anyone GitHub did not fill it in for.
     if($('#public-key').text().trim()) {
         $('#deploy-key-link').attr('href', $.fn.zato.envRepo.getKeyUrl(state.repo));
-        state.keyHelpTimer = setTimeout(function() {
-            $('#key-help').removeClass('hidden');
-        }, config.keyHelpDelay);
+        $('#key-help').removeClass('hidden');
     }
 
     $.fn.zato.envRepo.retryCheck();

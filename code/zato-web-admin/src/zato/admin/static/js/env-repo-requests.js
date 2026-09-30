@@ -68,11 +68,6 @@ $.fn.zato.envRepo.stopAll = function() {
         clearTimeout(state.retryTimer);
         state.retryTimer = null;
     }
-
-    if(state.keyHelpTimer) {
-        clearTimeout(state.keyHelpTimer);
-        state.keyHelpTimer = null;
-    }
 };
 
 // ////////////////////////////////////////////////////////////////////////

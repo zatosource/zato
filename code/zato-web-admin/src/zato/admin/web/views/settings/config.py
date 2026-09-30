@@ -224,7 +224,7 @@ env_repo_page_config['disconnect_label'] = 'Disconnect'
 env_repo_page_config['address_label'] = 'Address'
 env_repo_page_config['branch_label'] = 'Branch'
 env_repo_page_config['new_repo_label'] = 'Create repo from template'
-env_repo_page_config['key_help_text'] = 'If GitHub did not fill the key in, copy it from here.'
+env_repo_page_config['key_help_text'] = 'Copy this key, paste it into the Key field on GitHub and click Add key.'
 env_repo_page_config['key_help_label'] = 'Open the deploy keys page'
 
 sbom_page_config = {}
