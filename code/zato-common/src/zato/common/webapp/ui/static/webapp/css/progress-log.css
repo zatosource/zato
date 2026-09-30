@@ -25,8 +25,13 @@
     --progress-log-accent-soft-strong: rgba(87, 148, 208, 0.18);
     --progress-log-track: #e2e6ea;
     --progress-log-min-height: 6.875rem;
-    --progress-log-max-height: 18rem;
+    --progress-log-lines-shown: 12;
     --progress-log-padding-x: 1.125rem;
+    --progress-log-padding-y: 0.75rem;
+    --progress-log-max-height: calc(
+        var(--progress-log-lines-shown) * var(--progress-log-font-size) * var(--progress-log-line-height)
+        + 2 * var(--progress-log-padding-y)
+    );
     --progress-log-fade: 2.75rem;
     --progress-log-hover-delay: 120ms;
 
@@ -216,7 +221,7 @@
     flex: 1;
     min-height: 0;
     max-height: var(--progress-log-max-height);
-    padding: 0.75rem var(--progress-log-padding-x);
+    padding: var(--progress-log-padding-y) var(--progress-log-padding-x);
     overflow-y: auto;
     font-family: var(--progress-log-font-mono);
     font-size: var(--progress-log-font-size);

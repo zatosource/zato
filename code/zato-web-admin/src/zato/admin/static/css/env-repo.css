@@ -67,14 +67,6 @@ table.rate-limiting-form tr.hidden {
     flex: 0 0 auto;
 }
 
-.rate-limiting-save-group input[type="submit"].hidden {
-    display: none;
-}
-
-.env-repo-markup .rate-limiting-save-group .time-slots-add {
-    margin-top: 0;
-}
-
 /* ------------------------------------------------------------ */
 /* GitHub repository - progress                                 */
 /* ------------------------------------------------------------ */
@@ -83,14 +75,14 @@ table.rate-limiting-form tr.hidden {
     --progress-log-font-mono: var(--time-slot-mono);
     --progress-log-font-size: 11px;
     --progress-log-header-font-size: 11px;
-    --progress-log-max-height: 260px;
+    --progress-log-lines-shown: 7;
 
     box-sizing: border-box;
     margin-top: 12px;
 }
 
 /* ------------------------------------------------------------ */
-/* GitHub repository - flow                                     */
+/* GitHub repository - deploy key                               */
 /* ------------------------------------------------------------ */
 
 .env-repo-flow {
@@ -122,41 +114,6 @@ table.rate-limiting-form tr.hidden {
     display: none;
 }
 
-.env-repo-step.error {
-    border-color: #c0392b;
-    background: #fff8f7;
-}
-
-.env-repo-step.completed {
-    border-color: color-mix(in srgb, var(--zato-status-ok-color) 50%, #d8dce0);
-}
-
-.env-repo-step-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    flex: 0 0 auto;
-    font-size: 12px;
-    font-weight: 700;
-    margin-top: 1px;
-}
-
-.env-repo-step-icon img {
-    width: 16px;
-    height: 16px;
-    animation: env-repo-spin 0.8s linear infinite;
-}
-
-.env-repo-step.completed .env-repo-step-icon {
-    color: var(--zato-status-ok-color);
-}
-
-.env-repo-step.error .env-repo-step-icon {
-    color: #c0392b;
-}
-
 .env-repo-step-body {
     display: flex;
     flex-direction: column;
@@ -169,46 +126,11 @@ table.rate-limiting-form tr.hidden {
     font-weight: 600;
 }
 
-.env-repo-step-message {
-    font-family: var(--time-slot-mono);
-    font-size: 11px;
-    color: #666666;
-    overflow-wrap: anywhere;
-}
-
-.env-repo-step.error .env-repo-step-message {
-    color: #c0392b;
-}
-
-.env-repo-step-lines {
-    box-sizing: border-box;
-    width: 100%;
-    margin: 4px 0 0 0;
-    padding: 8px;
-    max-height: 220px;
-    overflow: auto;
-    border: 1px solid #e2e6ea;
-    border-radius: 3px;
-    background: #ffffff;
-    font-family: var(--time-slot-mono);
-    font-size: 11px;
-    color: #2c3e50;
-    white-space: pre-wrap;
-    word-break: break-all;
-}
-
-.env-repo-step-lines.hidden {
-    display: none;
-}
-
-/* ------------------------------------------------------------ */
-/* GitHub repository - deploy key                               */
-/* ------------------------------------------------------------ */
-
 .env-repo-key {
     display: flex;
     align-items: flex-start;
     gap: 8px;
+    margin: 6px 0;
     padding: 6px 8px;
     border: 1px dashed #b0b0b0;
     border-radius: 3px;
@@ -252,9 +174,4 @@ table.rate-limiting-form tr.hidden {
     gap: 4px;
     align-self: flex-start;
     font-size: 12px;
-}
-
-@keyframes env-repo-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
 }

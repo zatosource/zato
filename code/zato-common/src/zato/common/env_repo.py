@@ -49,7 +49,6 @@ class Env_Repo:
     New_Repo_Name = 'zato-environment'
 
     New_Repo_URL   = 'https://github.com/new?template_owner={owner}&template_name={name}&name={new_name}&visibility=private'
-    Deploy_Key_URL = 'https://github.com/{owner}/{name}/settings/keys/new'
     Repo_SSH_URL   = 'git@github.com:{owner}/{name}.git'
     Repo_HTTPS_URL = 'https://github.com/{owner}/{name}'
 
@@ -88,11 +87,6 @@ class Repo_Name:
     @property
     def https_url(self) -> 'str':
         out = Env_Repo.Repo_HTTPS_URL.format(owner=self.owner, name=self.name)
-        return out
-
-    @property
-    def deploy_key_url(self) -> 'str':
-        out = Env_Repo.Deploy_Key_URL.format(owner=self.owner, name=self.name)
         return out
 
 # ################################################################################################################################

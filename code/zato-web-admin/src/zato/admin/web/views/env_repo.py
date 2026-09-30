@@ -137,10 +137,9 @@ class EnvRepoView(SettingsBaseView):
             return json_response({'error': f'Request could not be written: {exception}'}, success=False)
 
         data = {
-            'full_name':      repo.full_name,
-            'url':            repo.ssh_url,
-            'https_url':      repo.https_url,
-            'deploy_key_url': repo.deploy_key_url,
+            'full_name': repo.full_name,
+            'url':       repo.ssh_url,
+            'https_url': repo.https_url,
         }
 
         return json_response(data)

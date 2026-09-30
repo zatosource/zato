@@ -711,10 +711,6 @@ zatoDeploy.config = {
     redirectSteps: 3,
     redirectStepMs: 700,
     fadeOutMs: 600,
-    copiedLabel: 'Copied to clipboard',
-    copiedShownMs: 1200,
-    copiedPlacement: 'left',
-    copiedOffset: [0, 10],
     tooltipTheme: 'zato-deploy',
     svgNamespace: 'http://www.w3.org/2000/svg',
 };
@@ -753,7 +749,7 @@ zatoDeploy.init = function() {
         container: document.getElementById('deploy-log'),
         theme: 'dark',
         linesKept: zatoDeploy.config.logLinesKept,
-        onCopied: zatoDeploy.confirmCopied,
+        tooltipTheme: zatoDeploy.config.tooltipTheme,
     });
     zatoDeploy.log.setState('live');
 
@@ -1338,34 +1334,6 @@ zatoDeploy.renderProgress = function(snapshot) {
 zatoDeploy.renderLog = function(log) {
     zatoDeploy.log.setSource(log.source);
     zatoDeploy.log.append(log.lines);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-zatoDeploy.confirmCopied = function(button) {
-
-    var config = zatoDeploy.config;
-
-    // One element holds one tooltip at a time, and the one from a moment ago may still be on screen.
-    if(button._tippy) {
-        button._tippy.destroy();
-    }
-
-    var tooltip = tippy(button, {
-        content: config.copiedLabel,
-        placement: config.copiedPlacement,
-        offset: config.copiedOffset,
-        theme: config.tooltipTheme,
-        trigger: 'manual',
-        arrow: true,
-        appendTo: document.body
-    });
-
-    tooltip.show();
-
-    setTimeout(function() {
-        tooltip.destroy();
-    }, config.copiedShownMs);
 };
 
 // ////////////////////////////////////////////////////////////////////////

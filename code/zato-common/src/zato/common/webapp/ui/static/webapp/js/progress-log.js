@@ -15,8 +15,11 @@ var defaults = {
     theme: 'light',
     source: '',
     copyLabel: 'Copy',
-    copiedLabel: 'Copied',
+    copiedLabel: 'Copied to clipboard',
     copiedShownMs: 1200,
+    copiedPlacement: 'left',
+    copiedOffset: [0, 10],
+    tooltipTheme: 'dark',
     linesKept: 500,
     linesAnimated: 3,
     scrollStickiness: 40,
@@ -110,7 +113,6 @@ function ProgressLog(config) {
     this.lines = [];
     this.lastId = null;
     this.isFollowed = true;
-    this.copiedTimer = null;
 
     this.build();
 }
@@ -325,23 +327,28 @@ ProgressLog.prototype.copy = function() {
 
 ProgressLog.prototype.confirmCopied = function() {
 
-    var self = this;
     var config = this.config;
+    var button = this.copyButton;
 
-    if(config.onCopied) {
-        config.onCopied(this.copyButton);
-        return;
+    // One element holds one tooltip at a time, and the one from a moment ago may still be on screen.
+    if(button._tippy) {
+        button._tippy.destroy();
     }
 
-    this.copyButton.textContent = config.copiedLabel;
+    var tooltip = tippy(button, {
+        content: config.copiedLabel,
+        placement: config.copiedPlacement,
+        offset: config.copiedOffset,
+        theme: config.tooltipTheme,
+        trigger: 'manual',
+        arrow: true,
+        appendTo: document.body
+    });
 
-    if(this.copiedTimer) {
-        clearTimeout(this.copiedTimer);
-    }
+    tooltip.show();
 
-    this.copiedTimer = setTimeout(function() {
-        self.copyButton.textContent = config.copyLabel;
-        self.copiedTimer = null;
+    setTimeout(function() {
+        tooltip.destroy();
     }, config.copiedShownMs);
 };
 

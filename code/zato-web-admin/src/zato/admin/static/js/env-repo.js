@@ -1,15 +1,22 @@
 $.fn.zato.envRepo = {};
 
+// The page has one action button whose label follows the mode - connect checks the address with GitHub,
+// allow opens GitHub's deploy key page with our key filled in and waits until GitHub accepts it,
+// and switch changes the environment over to the branch chosen.
+
 $.fn.zato.envRepo.config = {
     apiPrefix: '/zato/env-repo/',
     pollInterval: 1000,
     pollTimeout: 180000,
+    keyRetryInterval: 5000,
+    keyWaitTimeout: 900000,
     deployPollInterval: 2000,
     deployProgressPath: '/zato-deploy/progress.json',
     reloadDelay: 1500,
     statusFadeDelay: 2000,
     defaultBranch: 'main',
-    spinnerPath: '/static/gfx/spinner.svg',
+    deployKeyUrl: 'https://github.com/{owner}/{name}/settings/keys/new',
+    deployKeyTitle: 'Zato',
     repoPatterns: [
         /^(?:https?:\/\/)?(?:www\.)?github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?(?:\.git)?(?:[/?#].*)?$/,
         /^(?:ssh:\/\/)?git@github\.com[:/][A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?(?:\.git)?\/?$/,
@@ -17,37 +24,52 @@ $.fn.zato.envRepo.config = {
     ],
     emptyAddressMessage: 'Enter the address of the repository',
     badAddressMessage: 'The address must look like https://github.com/owner/name',
-    copiedMessage: 'Copied',
+    copiedMessage: 'Copied to clipboard',
+    copiedShownDelay: 950,
+    progressTheme: 'dark',
 };
 
 $.fn.zato.envRepo.state = {
+    mode: 'connect',
     requestTime: null,
     pollTimer: null,
     pollDeadline: null,
+    retryTimer: null,
+    keyDeadline: null,
     repo: null,
     isCreating: false,
+    isQuiet: false,
+    lastMessage: '',
+    lineCount: 0,
+    log: null,
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.envRepo.init = function() {
 
-    $('#create-button').on('click', $.fn.zato.envRepo.handleCreate);
-    $('#check-button').on('click', $.fn.zato.envRepo.handleConnect);
-    $('#update-button').on('click', $.fn.zato.envRepo.handleSwitch);
-    $('#copy-key').on('click', $.fn.zato.envRepo.handleCopyKey);
+    const config = $.fn.zato.envRepo.config;
+    const state = $.fn.zato.envRepo.state;
 
+    state.log = progressLog.create({
+        container: document.getElementById('progress-log'),
+        theme: config.progressTheme,
+        isHidden: true,
+    });
+
+    $('#create-button').on('click', $.fn.zato.envRepo.handleCreate);
+    $('#copy-key').on('click', $.fn.zato.envRepo.handleCopyKey);
     $('#repo-url').on('input', $.fn.zato.envRepo.handleUrlInput);
-    $('#repo-url').on('keydown', function(e) {
-        if(e.key === 'Enter') {
-            e.preventDefault();
-            $.fn.zato.envRepo.handleConnect();
-        }
+
+    // The button and Enter submit the form, which is what lets the browser remember the addresses entered.
+    $('#repo-form').on('submit', function(e) {
+        e.preventDefault();
+        $.fn.zato.envRepo.handleSubmit();
     });
 
     // Back from GitHub, the address of the new repository is what comes next.
     $(window).on('focus', function() {
-        if($.fn.zato.envRepo.state.isCreating && !$('#repo-url').val().trim()) {
+        if(state.isCreating && !$('#repo-url').val().trim()) {
             $('#repo-url').focus();
         }
     });
@@ -60,130 +82,147 @@ $.fn.zato.envRepo.init = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A repository just created has no key yet, so the next step is to allow access, not to connect.
 $.fn.zato.envRepo.handleCreate = function() {
+
     $.fn.zato.envRepo.state.isCreating = true;
+    $.fn.zato.envRepo.stopAll();
+    $.fn.zato.envRepo.resetFlow();
+    $.fn.zato.envRepo.setMode('allow');
+
+    $('#repo-url').val('');
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.envRepo.handleCopyKey = function() {
 
-    const icon = $(this);
+    const config = $.fn.zato.envRepo.config;
+    const icon = this;
     const text = $('#public-key').text();
 
     navigator.clipboard.writeText(text).then(function() {
-        $.fn.zato.envRepo.showStatus($.fn.zato.envRepo.config.copiedMessage, true);
-        icon.css('opacity', 1);
+
+        // One element holds one tooltip at a time, and the one from a moment ago may still be on screen.
+        if(icon._tippy) {
+            icon._tippy.destroy();
+        }
+
+        const tooltip = tippy(icon, {
+            content: config.copiedMessage,
+            placement: 'top',
+            trigger: 'manual',
+            theme: 'dark',
+            arrow: true,
+        });
+
+        tooltip.show();
+
+        setTimeout(function() {
+            tooltip.hide();
+            setTimeout(function() {
+                tooltip.destroy();
+            }, 200);
+        }, config.copiedShownDelay);
     });
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A new address starts the flow over, unless the page is waiting for the address of a repository just created.
 $.fn.zato.envRepo.handleUrlInput = function() {
 
-    // A new address starts the flow over.
-    $.fn.zato.envRepo.stopPolling();
+    $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.resetFlow();
     $.fn.zato.envRepo.clearFieldError();
-};
 
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.showStatus = function(message, isOK) {
-
-    const config = $.fn.zato.envRepo.config;
-    const status = $('#env-repo-status');
-
-    status.removeClass('show fade status-message-success status-message-error');
-    status.text(message).addClass('show ' + (isOK ? 'status-message-success' : 'status-message-error'));
-
-    if(isOK) {
-        setTimeout(function() {
-            status.addClass('fade');
-            setTimeout(function() {
-                status.removeClass('show fade status-message-success');
-            }, 500);
-        }, config.statusFadeDelay);
+    if(!$.fn.zato.envRepo.state.isCreating) {
+        $.fn.zato.envRepo.setMode('connect');
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.clearStatus = function() {
-    $('#env-repo-status').removeClass('show fade status-message-success status-message-error').text('');
-};
+$.fn.zato.envRepo.setMode = function(mode) {
 
-// ////////////////////////////////////////////////////////////////////////
+    const button = $('#action-button');
 
-$.fn.zato.envRepo.showFieldError = function(message) {
-
-    $('#repo-url').addClass('env-repo-error').focus();
-    $.fn.zato.envRepo.showStatus(message, false);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.clearFieldError = function() {
-
-    $('#repo-url').removeClass('env-repo-error');
-    $.fn.zato.envRepo.clearStatus();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.isAddressValid = function(address) {
-
-    const patterns = $.fn.zato.envRepo.config.repoPatterns;
-
-    for(let idx = 0; idx < patterns.length; idx++) {
-        if(patterns[idx].test(address)) {
-            return true;
-        }
-    }
-
-    return false;
+    $.fn.zato.envRepo.state.mode = mode;
+    button.val(button.data(mode + '-label'));
+    button.prop('disabled', false);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.envRepo.resetFlow = function() {
 
+    const state = $.fn.zato.envRepo.state;
+
     $('#branch-row').addClass('hidden');
-    $('#update-button').addClass('hidden').prop('disabled', false);
-    $('#check-button').prop('disabled', false);
     $('#key-help').addClass('hidden');
-    $('#step-check, #step-switch').addClass('hidden').removeClass('error completed');
+
+    state.log.clear();
+    state.log.hide();
+    state.lastMessage = '';
+    state.lineCount = 0;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.renderStep = function(step, state, message, lines) {
+// Opens the panel for a new request, with the repository's name in its header.
+$.fn.zato.envRepo.startLog = function(repo, message) {
 
-    const config = $.fn.zato.envRepo.config;
-    const item = $('#step-' + step);
-    const icon = item.find('.env-repo-step-icon');
-    const linesElem = item.find('.env-repo-step-lines');
+    const state = $.fn.zato.envRepo.state;
 
-    item.removeClass('hidden error completed');
-    item.find('.env-repo-step-message').text(message);
+    state.log.clear();
+    state.log.setSource(repo.full_name);
+    state.log.setState('live');
+    state.log.show();
+    state.lastMessage = '';
+    state.lineCount = 0;
 
-    if(state === 'processing') {
-        icon.html('<img src="' + config.spinnerPath + '">');
-    }
-    else if(state === 'completed') {
-        item.addClass('completed');
-        icon.text('\u2713');
-    }
-    else {
-        item.addClass('error');
-        icon.text('\u2717');
+    $.fn.zato.envRepo.appendLine(message, null);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.appendLine = function(text, kind) {
+    $.fn.zato.envRepo.state.log.append({text: text, kind: kind, time: new Date()});
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Each status carries all the lines of its request so far, only the ones not shown yet go to the panel,
+// and its message goes there once, when it changes.
+$.fn.zato.envRepo.appendStatus = function(status) {
+
+    const state = $.fn.zato.envRepo.state;
+
+    if(state.isQuiet) {
+        return;
     }
 
-    if(lines && lines.length) {
-        linesElem.text(lines.join('\n')).removeClass('hidden');
+    const lines = status.lines || [];
+
+    for(let idx = state.lineCount; idx < lines.length; idx++) {
+        $.fn.zato.envRepo.appendLine(lines[idx], null);
     }
-    else {
-        linesElem.text('').addClass('hidden');
+
+    state.lineCount = lines.length;
+
+    if(status.message && status.message !== state.lastMessage) {
+
+        let kind = null;
+
+        if(status.state === 'error') {
+            kind = 'error';
+        }
+        else if(status.state === 'ok' || status.state === 'switched') {
+            kind = 'ok';
+        }
+
+        $.fn.zato.envRepo.appendLine(status.message, kind);
+        state.lastMessage = status.message;
     }
 };
 
@@ -201,59 +240,156 @@ $.fn.zato.envRepo.getInput = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.envRepo.handleSubmit = function() {
+
+    const mode = $.fn.zato.envRepo.state.mode;
+
+    if(mode === 'allow') {
+        $.fn.zato.envRepo.handleAllow();
+    }
+    else if(mode === 'switch') {
+        $.fn.zato.envRepo.handleSwitch();
+    }
+    else {
+        $.fn.zato.envRepo.handleConnect();
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.envRepo.handleConnect = function() {
 
-    const config = $.fn.zato.envRepo.config;
-    const address = $('#repo-url').val().trim();
+    const state = $.fn.zato.envRepo.state;
+    const address = $.fn.zato.envRepo.getValidAddress();
 
-    $.fn.zato.envRepo.stopPolling();
+    if(address === null) {
+        return;
+    }
+
+    $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.resetFlow();
-    $.fn.zato.envRepo.clearFieldError();
 
-    // The address is checked here first, nothing is sent until it has the right shape.
-    if(!address) {
-        $.fn.zato.envRepo.showFieldError(config.emptyAddressMessage);
-        return;
-    }
+    state.repo = $.fn.zato.envRepo.parseAddress(address);
+    state.isQuiet = false;
 
-    if(!$.fn.zato.envRepo.isAddressValid(address)) {
-        $.fn.zato.envRepo.showFieldError(config.badAddressMessage);
-        return;
-    }
+    $('#action-button').prop('disabled', true);
+    $.fn.zato.envRepo.startLog(state.repo, 'Connecting to ' + state.repo.full_name);
 
-    $('#check-button').prop('disabled', true);
-    $.fn.zato.envRepo.renderStep('check', 'processing', 'Connecting to GitHub...');
-
-    $.fn.zato.envRepo.sendRequest('check', function(response) {
-        $.fn.zato.envRepo.state.repo = response;
-        $.fn.zato.envRepo.renderStep('check', 'processing', 'Connecting to ' + response.full_name + '...');
-        $.fn.zato.envRepo.pollStatus('check', ['ok'], $.fn.zato.envRepo.onConnectDone);
-    }, function(errorMessage) {
-        $('#check-button').prop('disabled', false);
-        $('#step-check').addClass('hidden');
-        $.fn.zato.envRepo.showFieldError(errorMessage);
+    $.fn.zato.envRepo.sendCheck(function(status) {
+        if(status.state === 'ok') {
+            $.fn.zato.envRepo.onConnected(status);
+        }
+        else {
+            $.fn.zato.envRepo.onRefused(status);
+        }
     });
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.onConnectDone = function(status) {
+$.fn.zato.envRepo.sendCheck = function(onDone) {
 
-    const repo = $.fn.zato.envRepo.state.repo;
+    $.fn.zato.envRepo.sendRequest('check', function() {
+        $.fn.zato.envRepo.pollStatus(['ok'], onDone);
+    }, function(errorMessage) {
+        onDone({state: 'error', message: errorMessage, lines: []});
+    });
+};
 
-    $('#check-button').prop('disabled', false);
+// ////////////////////////////////////////////////////////////////////////
 
-    if(status.state === 'ok') {
-        $.fn.zato.envRepo.renderStep('check', 'completed', 'Connected to ' + repo.full_name);
-        $.fn.zato.envRepo.fillBranches(status.branches || []);
-        $('#branch-row').removeClass('hidden');
-        $('#update-button').removeClass('hidden');
+// GitHub refused the key, so the next step is to add it - the button says so and the panel shows why.
+$.fn.zato.envRepo.onRefused = function(status) {
+
+    const state = $.fn.zato.envRepo.state;
+
+    $.fn.zato.envRepo.appendStatus(status);
+    state.log.setState('failed');
+
+    $.fn.zato.envRepo.setMode('allow');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.onConnected = function(status) {
+
+    const state = $.fn.zato.envRepo.state;
+    const branches = status.branches || [];
+
+    state.isQuiet = false;
+    state.isCreating = false;
+
+    $.fn.zato.envRepo.appendLine('Connected to ' + state.repo.full_name + ', ' + branches.length + ' ' + (branches.length === 1 ? 'branch' : 'branches'), 'ok');
+    state.log.setState('done');
+
+    $('#key-help').addClass('hidden');
+    $.fn.zato.envRepo.fillBranches(branches);
+    $('#branch-row').removeClass('hidden');
+
+    $.fn.zato.envRepo.setMode('switch');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Opens GitHub's deploy key page in a new tab and keeps checking until the key lets us in.
+$.fn.zato.envRepo.handleAllow = function() {
+
+    const config = $.fn.zato.envRepo.config;
+    const state = $.fn.zato.envRepo.state;
+    const address = $.fn.zato.envRepo.getValidAddress();
+
+    if(address === null) {
+        return;
     }
-    else {
-        $.fn.zato.envRepo.renderStep('check', 'error', status.message, status.lines);
-        $('#deploy-key-link').attr('href', repo.deploy_key_url);
+
+    $.fn.zato.envRepo.stopAll();
+
+    state.repo = $.fn.zato.envRepo.parseAddress(address);
+    state.keyDeadline = Date.now() + config.keyWaitTimeout;
+
+    // The tab opens here, within the click, or the browser would block it.
+    window.open($.fn.zato.envRepo.getKeyUrl(state.repo), '_blank', 'noopener');
+
+    $('#action-button').prop('disabled', true);
+    $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to accept the key for ' + state.repo.full_name);
+
+    // The key is also on this page for anyone GitHub did not fill it in for.
+    if($('#public-key').text().trim()) {
+        $('#deploy-key-link').attr('href', $.fn.zato.envRepo.getKeyUrl(state.repo));
         $('#key-help').removeClass('hidden');
     }
+
+    $.fn.zato.envRepo.retryCheck();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Each refusal while waiting is expected and stays out of the panel, only the outcome goes in.
+$.fn.zato.envRepo.retryCheck = function() {
+
+    const config = $.fn.zato.envRepo.config;
+    const state = $.fn.zato.envRepo.state;
+
+    state.isQuiet = true;
+
+    $.fn.zato.envRepo.sendCheck(function(status) {
+
+        if(status.state === 'ok') {
+            $.fn.zato.envRepo.onConnected(status);
+            return;
+        }
+
+        if(Date.now() > state.keyDeadline) {
+            state.isQuiet = false;
+            $.fn.zato.envRepo.appendLine('GitHub has not accepted the key', 'error');
+            $.fn.zato.envRepo.appendStatus(status);
+            state.log.setState('failed');
+            $.fn.zato.envRepo.setMode('allow');
+            return;
+        }
+
+        state.retryTimer = setTimeout($.fn.zato.envRepo.retryCheck, config.keyRetryInterval);
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -287,41 +423,47 @@ $.fn.zato.envRepo.fillBranches = function(branches) {
 
 $.fn.zato.envRepo.handleSwitch = function() {
 
-    const button = $(this);
-    button.prop('disabled', true);
+    const state = $.fn.zato.envRepo.state;
+    const branch = $('#repo-branch').val();
 
-    $.fn.zato.envRepo.stopPolling();
+    $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.clearStatus();
-    $.fn.zato.envRepo.renderStep('switch', 'processing', 'Switching the repository...');
+
+    state.isQuiet = false;
+
+    $('#action-button').prop('disabled', true);
+    $.fn.zato.envRepo.startLog(state.repo, 'Switching to ' + state.repo.full_name + ' at ' + branch);
 
     $.fn.zato.envRepo.sendRequest('switch', function() {
-        $.fn.zato.envRepo.pollStatus('switch', ['switching', 'switched'], function(status) {
-            $.fn.zato.envRepo.onSwitchDone(status, button);
-        });
+        $.fn.zato.envRepo.pollStatus(['switching', 'switched'], $.fn.zato.envRepo.onSwitchDone);
     }, function(errorMessage) {
-        button.prop('disabled', false);
-        $.fn.zato.envRepo.renderStep('switch', 'error', errorMessage);
+        $.fn.zato.envRepo.onSwitchDone({state: 'error', message: errorMessage, lines: []});
     });
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.onSwitchDone = function(status, button) {
+$.fn.zato.envRepo.onSwitchDone = function(status) {
+
+    const config = $.fn.zato.envRepo.config;
+    const state = $.fn.zato.envRepo.state;
+
+    $.fn.zato.envRepo.appendStatus(status);
 
     // A host restarts the environment after this state, without one the switch is already complete.
     if(status.state === 'switching') {
-        $.fn.zato.envRepo.renderStep('switch', 'processing', 'The environment is restarting, the loading page opens once it is up...');
+        $.fn.zato.envRepo.appendLine('The environment is restarting, the loading page opens once it is up', null);
         $.fn.zato.envRepo.waitForDeployPage();
     }
     else if(status.state === 'switched') {
-        $.fn.zato.envRepo.renderStep('switch', 'completed', status.message);
+        state.log.setState('done');
         setTimeout(function() {
             window.location.reload();
-        }, $.fn.zato.envRepo.config.reloadDelay);
+        }, config.reloadDelay);
     }
     else {
-        button.prop('disabled', false);
-        $.fn.zato.envRepo.renderStep('switch', 'error', status.message, status.lines);
+        state.log.setState('failed');
+        $.fn.zato.envRepo.setMode('switch');
     }
 };
 
@@ -379,7 +521,7 @@ $.fn.zato.envRepo.sendRequest = function(action, onSuccess, onError) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.stopPolling = function() {
+$.fn.zato.envRepo.stopAll = function() {
 
     const state = $.fn.zato.envRepo.state;
 
@@ -387,11 +529,16 @@ $.fn.zato.envRepo.stopPolling = function() {
         clearTimeout(state.pollTimer);
         state.pollTimer = null;
     }
+
+    if(state.retryTimer) {
+        clearTimeout(state.retryTimer);
+        state.retryTimer = null;
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.pollStatus = function(step, finalStates, onDone) {
+$.fn.zato.envRepo.pollStatus = function(finalStates, onDone) {
 
     const config = $.fn.zato.envRepo.config;
     const state = $.fn.zato.envRepo.state;
@@ -410,8 +557,8 @@ $.fn.zato.envRepo.pollStatus = function(step, finalStates, onDone) {
                 return;
             }
 
-            if(isFresh && status.message) {
-                $.fn.zato.envRepo.renderStep(step, 'processing', status.message);
+            if(isFresh) {
+                $.fn.zato.envRepo.appendStatus(status);
             }
 
             // .. and there is only so long to wait for one.

@@ -14,7 +14,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/progress-log.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-demo.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-address.js"></script>
 {% endblock %}
 
 {% block "content" %}
@@ -25,6 +25,7 @@
     {{ page_config.title }}
 </h2>
 
+<form id="repo-form" method="get" action="" autocomplete="on">
 <table class="rate-limiting-form">
     {% if current_full_name %}
     <tr>
@@ -38,7 +39,7 @@
     {% endif %}
     <tr>
         <td colspan="2">
-            <input type="text" id="repo-url" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="off" spellcheck="false" data-current-branch="{{ current_branch }}" />
+            <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-branch="{{ current_branch }}" />
         </td>
     </tr>
     <tr class="hidden" id="branch-row">
@@ -58,26 +59,18 @@
     </a>
     <span class="rate-limiting-save-group">
         <span class="status-message" id="env-repo-status"></span>
-        <span class="time-slots-add" id="demo-button">Run demo</span>
-        <input type="submit" id="check-button" value="{{ page_config.check_button_label }}" />
-        <input type="submit" id="update-button" class="hidden" value="{{ page_config.action_button_label }}" />
+        <input type="submit" id="action-button" value="{{ page_config.connect_label }}"
+            data-connect-label="{{ page_config.connect_label }}"
+            data-allow-label="{{ page_config.allow_label }}"
+            data-switch-label="{{ page_config.switch_label }}" />
     </span>
 </div>
+</form>
 
 <div class="env-repo-progress" id="progress-log"></div>
 
 <div class="env-repo-flow">
 
-    <div class="env-repo-step hidden" id="step-check">
-        <span class="env-repo-step-icon"></span>
-        <span class="env-repo-step-body">
-            <span class="env-repo-step-title">{{ page_config.step1_label }}</span>
-            <span class="env-repo-step-message"></span>
-            <pre class="env-repo-step-lines hidden"></pre>
-        </span>
-    </div>
-
-    {% if public_key %}
     <div class="env-repo-step env-repo-key-help hidden" id="key-help">
         <span class="env-repo-step-body">
             <span class="env-repo-step-title">{{ page_config.key_help_text }}</span>
@@ -91,16 +84,6 @@
                 {{ page_config.key_help_label }}
                 <svg class="env-repo-external" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
             </a>
-        </span>
-    </div>
-    {% endif %}
-
-    <div class="env-repo-step hidden" id="step-switch">
-        <span class="env-repo-step-icon"></span>
-        <span class="env-repo-step-body">
-            <span class="env-repo-step-title">{{ page_config.step2_label }}</span>
-            <span class="env-repo-step-message"></span>
-            <pre class="env-repo-step-lines hidden"></pre>
         </span>
     </div>
 
