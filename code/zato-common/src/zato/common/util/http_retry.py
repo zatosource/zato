@@ -16,85 +16,28 @@ from time import sleep
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 
 # Zato
-from zato.common.api import HTTP_SOAP
+from zato.common.util.retry import get_next_sleep_time
 from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, stranydict
+    from zato.common.typing_ import any_, callable_
+    from zato.common.util.retry import RetryPolicy
     any_ = any_
     callable_ = callable_
-    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato')
 
-_retry = HTTP_SOAP.Retry
-
-# The shortest sleep to fall back to when backing off would otherwise sleep for no time at all,
-# which would turn the loop into a tight one against an endpoint that is already unwell.
-Minimum_Sleep_Time = 1
-
 # The header an endpoint answers a rate-limited request with to say how long to wait
 # before making the next one.
 Retry_After_Header = 'Retry-After'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-class RetryPolicy:
-    """ How many times a failed attempt is retried and how long to wait between attempts.
-
-    The four settings live in a connection's opaque attributes and are shown by the dashboard for
-    both outgoing REST and outgoing SOAP. Keeping them in one object is what lets the REST and the
-    declarative SOAP path share one loop.
-    """
-    __slots__ = 'max_retries', 'sleep_time', 'backoff_threshold', 'backoff_multiplier'
-
-    def __init__(
-        self,
-        max_retries,       # type: int
-        sleep_time,        # type: int
-        backoff_threshold, # type: int
-        backoff_multiplier # type: int
-    ) -> 'None':
-        self.max_retries = max_retries
-        self.sleep_time = sleep_time
-        self.backoff_threshold = backoff_threshold
-        self.backoff_multiplier = backoff_multiplier
-
-# ################################################################################################################################
-
-    @staticmethod
-    def from_config(config:'stranydict') -> 'RetryPolicy':
-        """ Builds a policy out of a connection's config, falling back to the shared defaults
-        for a connection that was never configured with retries.
-        """
-        out = RetryPolicy(
-            _resolve(config, _retry.Field_Max_Retries, _retry.Default_Max_Retries),
-            _resolve(config, _retry.Field_Sleep_Time, _retry.Default_Sleep_Time),
-            _resolve(config, _retry.Field_Backoff_Threshold, _retry.Default_Backoff_Threshold),
-            _resolve(config, _retry.Field_Backoff_Multiplier, _retry.Default_Backoff_Multiplier),
-        )
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _resolve(config:'stranydict', name:'str', default:'int') -> 'int':
-    """ Returns one retry setting from a connection's config, or the shared default.
-    """
-    out = config.get(name)
-
-    if out is None:
-        out = default
-
-    return out
-
 # ################################################################################################################################
 
 def get_retry_after(response:'any_') -> 'int':
@@ -201,22 +144,6 @@ def send_with_retry(policy:'RetryPolicy', send:'callable_', cid:'str', label:'st
         total_sleep_time += current_sleep_time
 
         current_sleep_time = get_next_sleep_time(policy, current_sleep_time, total_sleep_time)
-
-# ################################################################################################################################
-
-def get_next_sleep_time(policy:'RetryPolicy', current_sleep_time:'int', total_sleep_time:'int') -> 'int':
-    """ How long the sleep after the one just made is - it grows by the multiplier but is held under both
-    the per-sleep ceiling and whatever is left of the total budget, so a loop cannot overshoot the threshold,
-    and it is never no time at all, which would turn a loop into a tight one against an endpoint that is unwell.
-    """
-    next_sleep_time = current_sleep_time * policy.backoff_multiplier
-    remaining = policy.backoff_threshold - total_sleep_time
-    out = min(next_sleep_time, _retry.Max_Sleep_Time, remaining)
-
-    if out <= 0:
-        out = Minimum_Sleep_Time
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

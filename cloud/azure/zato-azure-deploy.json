@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "description": "Deploys a Linux VM running the Zato quickstart Docker container."
+    "description": "Deploys a Linux VM running a Zato environment from a git repository in a Docker container."
   },
   "parameters": {
     "vmName": {
@@ -47,6 +47,45 @@
       "type": "securestring",
       "metadata": {
         "description": "Password for the Zato Dashboard user."
+      }
+    },
+    "installUpdates": {
+      "type": "string",
+      "defaultValue": "True",
+      "allowedValues": [
+        "True",
+        "False"
+      ],
+      "metadata": {
+        "description": "Whether to pull the latest Zato image on each boot."
+      }
+    },
+    "envRepoUrl": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "SSH address of the git repository with the environment, such as git@github.com:owner/name.git. Leave it empty to run the public Zato blueprint, which you can switch to your own repository from the Dashboard later."
+      }
+    },
+    "envRepoBranch": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": {
+        "description": "Branch of the environment repository."
+      }
+    },
+    "envRepoDeployKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Private SSH key with read access to the environment repository. Leave it empty if the repository is public or not given."
+      }
+    },
+    "envSecrets": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Secrets for the environment, one key=value per line, which enmasse reads from env.ini."
       }
     },
     "allowedSourceAddresses": {
@@ -117,8 +156,15 @@
     },
     "image": "zatosource/zato-4.1",
     "servingMarker": "/run/zato-deploy/serving",
-    "deployFilesUrl": "https://raw.githubusercontent.com/zatosource/zato/refs/heads/main/azure/deploy",
-    "cloudInit": "[concat('#cloud-config\nwrite_files:\n  - path: /etc/zato-deploy/deploy.env\n    permissions: \"0600\"\n    content: |\n      fqdn=', variables('fqdn'), '\n      admin_username=', parameters('adminUsername'), '\n      image=', variables('image'), '\n  - path: /etc/zato-deploy/container.env\n    permissions: \"0600\"\n    content: |\n      Zato_Password=', parameters('zatoPassword'), '\n      Zato_Use_Lets_Encrypt=True\n      Zato_SSL_Subject_Alt_Name=subjectAltName=DNS:', variables('fqdn'), '\n      Zato_Dashboard_CSRF_Trusted_Origins=https://', variables('fqdn'), ':8184\n  - path: /usr/local/bin/zato-deploy-download.sh\n    permissions: \"0755\"\n    content: |\n      #!/bin/bash\n      # Downloads the program that deploys the container and shows its progress on port 8184.\n      set -e\n      base_url=', variables('deployFilesUrl'), '\n      target_dir=/opt/zato-deploy\n      mkdir -p \"$target_dir\"\n      curl -fsSL --retry 10 --retry-all-errors -o \"$target_dir/files.txt\" \"$base_url/files.txt\"\n      while read -r name; do\n        if [ -n \"$name\" ]; then\n          curl -fsSL --retry 10 --retry-all-errors --create-dirs -o \"$target_dir/$name\" \"$base_url/$name\"\n        fi\n      done < \"$target_dir/files.txt\"\nruncmd:\n  - echo \"Zato - downloading the deployment program\" > /dev/ttyS0\n  - /usr/local/bin/zato-deploy-download.sh\n  - systemd-run --unit=zato-deploy --working-directory=/opt/zato-deploy /usr/bin/python3 -m zato_deploy\n')]"
+    "deployFilesUrl": "https://raw.githubusercontent.com/zatosource/zato/refs/heads/main/cloud/deploy",
+    "bootstrapPath": "/usr/local/bin/zato-deploy-bootstrap.sh",
+    "cloudInitDeployEnv": "[concat('  - path: /etc/zato-deploy/deploy.env\n    permissions: \"0600\"\n    content: |\n      fqdn=', variables('fqdn'), '\n      admin_username=', parameters('adminUsername'), '\n      image=', variables('image'), '\n')]",
+    "cloudInitContainerEnv": "[concat('  - path: /etc/zato-deploy/container.env\n    permissions: \"0600\"\n    content: |\n      Zato_Password=', parameters('zatoPassword'), '\n      Zato_Use_Lets_Encrypt=True\n      Zato_Install_Updates=', parameters('installUpdates'), '\n      Zato_SSL_Subject_Alt_Name=subjectAltName=DNS:', variables('fqdn'), '\n      Zato_Dashboard_CSRF_Trusted_Origins=https://', variables('fqdn'), ':8184\n')]",
+    "cloudInitEnvRepo": "[concat('  - path: /etc/zato-deploy/env-repo.env\n    permissions: \"0600\"\n    content: |\n      env_repo_url=', parameters('envRepoUrl'), '\n      env_repo_branch=', parameters('envRepoBranch'), '\n')]",
+    "cloudInitEnvSecrets": "[concat('  - path: /etc/zato-deploy/env-secrets.env\n    permissions: \"0600\"\n    encoding: b64\n    content: ', base64(concat(parameters('envSecrets'), '\n')), '\n')]",
+    "cloudInitEnvRepoKey": "[if(empty(parameters('envRepoDeployKey')), '', concat('  - path: /etc/zato-deploy/env-repo-key\n    permissions: \"0600\"\n    encoding: b64\n    content: ', base64(concat(parameters('envRepoDeployKey'), '\n')), '\n'))]",
+    "cloudInitRuncmd": "[concat('runcmd:\n  - echo \"Zato - downloading the deployment program\" > /dev/ttyS0\n  - curl -fsSL --retry 10 --retry-all-errors -o ', variables('bootstrapPath'), ' ', variables('deployFilesUrl'), '/bootstrap.sh\n  - chmod 0755 ', variables('bootstrapPath'), '\n  - ', variables('bootstrapPath'), ' ', variables('deployFilesUrl'), '\n')]",
+    "cloudInit": "[concat('#cloud-config\nwrite_files:\n', variables('cloudInitDeployEnv'), variables('cloudInitContainerEnv'), variables('cloudInitEnvRepo'), variables('cloudInitEnvSecrets'), variables('cloudInitEnvRepoKey'), variables('cloudInitRuncmd'))]"
   },
   "resources": [
     {

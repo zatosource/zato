@@ -16,12 +16,12 @@ from logging import getLogger
 from sqlalchemy import and_, bindparam, select
 
 # Zato
-from zato.common.api import PubSub
+from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size
-from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table, topic_sub_table
 from zato.common.util.api import new_msg_id, utcnow
 from zato.common.util.time_ import datetime_to_ms
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
@@ -30,7 +30,7 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsu
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, intlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +39,8 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_retry = HTTP_SOAP.Retry
 
 _default_priority     = PubSub.Message.Priority_Default
 _default_expiration   = PubSub.Message.Default_Expiration
@@ -73,6 +75,7 @@ _fetch_columns = [
     message_table.c.in_reply_to,
     message_table.c.ext_client_id,
 ]
+_fetch_columns.extend(message_retry_columns)
 
 # The fetch statement runs on every delivery, so it is built once here, not per call.
 _fetch_join = delivery_table.join(message_table, message_table.c.id == delivery_table.c.message_id)
@@ -118,9 +121,14 @@ class SQLPubSubBackend(SQLAdminAPI):
         pub_time:'strnone'=None,
         cid:'strnone'=None,
         msg_id:'strnone'=None,
+        max_retries:'intnone'=None,
+        retry_sleep_time:'intnone'=None,
+        retry_backoff_threshold:'intnone'=None,
+        retry_backoff_multiplier:'intnone'=None,
     ) -> 'PublishResult':
         """ Publish a message to a topic. A caller that needs to know the message's id before the message is
         stored, e.g. because the id travels inside the message itself, gives its own, otherwise one is generated.
+        The retry settings, when given, travel with the message and the push delivery retries it as they say.
         """
 
         # Normalize topic name to lowercase for case-insensitivity ..
@@ -197,6 +205,10 @@ class SQLPubSubBackend(SQLAdminAPI):
             'correl_id': correl_id,
             'in_reply_to': in_reply_to,
             'ext_client_id': ext_client_id,
+            _retry.Field_Max_Retries: max_retries,
+            _retry.Field_Sleep_Time: retry_sleep_time,
+            _retry.Field_Backoff_Threshold: retry_backoff_threshold,
+            _retry.Field_Backoff_Multiplier: retry_backoff_multiplier,
         }
 
         # .. one transaction inserts the message and its delivery rows ..

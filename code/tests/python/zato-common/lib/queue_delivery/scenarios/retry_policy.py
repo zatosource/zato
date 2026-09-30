@@ -31,7 +31,7 @@ if 0:
 
 _retry = HTTP_SOAP.Retry
 
-_round_wait = PubSub.Outgoing.Retry_Round_Wait
+_round_wait = PubSub.Delivery.Retry_Round_Wait
 
 # Scheduling slack of a measured wait
 _slack = 0.2

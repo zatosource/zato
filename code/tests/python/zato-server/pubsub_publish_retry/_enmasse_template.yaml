@@ -1,0 +1,60 @@
+security:
+
+  - name: test.publish-retry.publisher
+    type: basic_auth
+    username: test.publish-retry.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.publish-retry.subscriber
+    type: basic_auth
+    username: test.publish-retry.subscriber
+    password: "{{subscriber_password}}"
+
+  - name: test.publish-retry.rest-subscriber
+    type: basic_auth
+    username: test.publish-retry.rest-subscriber
+    password: "{{rest_subscriber_password}}"
+
+outgoing_rest:
+
+  - name: test.publish-retry.out.rest
+    host: "http://127.0.0.1:{{port_rest}}"
+    url_path: /webhook/publish-retry
+    data_format: json
+    timeout: 30
+
+pubsub_topic:
+
+  - name: test.publish-retry.service
+  - name: test.publish-retry.rest
+
+pubsub_permission:
+
+  - security: test.publish-retry.publisher
+    pub:
+      - test.publish-retry.**
+
+  - security: test.publish-retry.subscriber
+    sub:
+      - test.publish-retry.service
+
+  - security: test.publish-retry.rest-subscriber
+    sub:
+      - test.publish-retry.rest
+
+pubsub_subscription:
+
+  # The service the first topic pushes to is the one the tests have refuse invocations
+  - security: test.publish-retry.subscriber
+    delivery_type: push
+    push_type: service
+    push_service_name: test.publish-retry.target
+    topic_list:
+      - test.publish-retry.service
+
+  # The second topic pushes to a REST endpoint the tests have answer 503 for a while
+  - security: test.publish-retry.rest-subscriber
+    delivery_type: push
+    push_rest_endpoint: test.publish-retry.out.rest
+    topic_list:
+      - test.publish-retry.rest

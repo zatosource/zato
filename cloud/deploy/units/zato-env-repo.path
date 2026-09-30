@@ -1,0 +1,9 @@
+[Unit]
+Description=Zato environment repository - watches for requests from the container
+
+[Path]
+PathChanged=/var/lib/zato-deploy/link/request.json
+Unit=zato-env-repo.service
+
+[Install]
+WantedBy=multi-user.target

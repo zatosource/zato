@@ -25,6 +25,7 @@ from zato.admin.web.util import get_user_profile
 from zato.client import ZatoClient
 from zato.common.const import ServiceConst
 from zato.common.config_db import get_default_env_file_path, refresh_env_from_file
+from zato.common.env_repo import is_available as is_env_repo_available
 from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
 from zato.common.util.api import asbool
@@ -258,6 +259,7 @@ class ZatoMiddleware:
             resp.context_data = {'zato_version':version}
 
         resp.context_data['security_posture_enabled'] = asbool(os.environ.get('Zato_Security_Posture_Enabled', 'false'))
+        resp.context_data['env_repo_available'] = is_env_repo_available()
 
         if req.path not in _Auth_Paths:
             try:

@@ -1,0 +1,129 @@
+.env-repo-long-value {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    max-width: 420px;
+}
+
+.env-repo-long-value span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.env-repo-login {
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--primary-dark);
+    background: var(--white);
+    border: 2px solid var(--primary-dark);
+    padding: 0px 3px;
+    margin-left: 10px;
+    box-sizing: border-box;
+    width: 180px;
+}
+
+.env-repo-login:focus {
+    outline: none;
+    background: var(--background-light);
+}
+
+.env-repo-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.env-repo-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.env-repo-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--white);
+    background: var(--primary-dark);
+    flex: 0 0 auto;
+}
+
+.env-repo-link-disabled {
+    color: #999;
+    cursor: default;
+}
+
+.logs-section {
+    margin-top: 32px;
+    position: relative;
+}
+
+.env-repo-log {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    background: var(--background-light);
+    font-size: 13px;
+}
+
+.env-repo-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.env-repo-log-time {
+    color: #333;
+    font-weight: 600;
+}
+
+.env-repo-log-state {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    color: var(--white);
+    background: var(--primary-dark);
+}
+
+.env-repo-log-state.ok {
+    background: #067f39;
+}
+
+.env-repo-log-state.error {
+    background: #b3261e;
+}
+
+.env-repo-log-message {
+    color: #333;
+}
+
+.env-repo-log-lines {
+    margin: 6px 0 0 0;
+    padding: 8px;
+    max-height: 260px;
+    overflow: auto;
+    font-family: monospace;
+    font-size: 12px;
+    color: #333;
+    background: var(--white);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.env-repo-log-empty {
+    color: #333;
+    font-size: 14px;
+    text-align: center;
+    margin-top: 10px;
+}

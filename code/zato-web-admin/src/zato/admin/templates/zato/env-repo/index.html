@@ -1,0 +1,128 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}{{ page_config.title }}{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/env-repo.css">
+{% endblock %}
+
+{% block extra_page_js %}
+<script type="text/javascript" src="/static/js/env-repo.js" nonce="{{ CSP_NONCE }}"></script>
+{% endblock %}
+
+{% block left_content %}
+<h3>{{ page_config.version_section_title }}</h3>
+<div class="progress-panel">
+    <div class="info-container">
+        <div class="info-row">
+            <div class="info-label">{{ page_config.current_repo_label }}</div>
+            <div class="info-value env-repo-long-value">
+                <span id="current-url" title="{{ current_url }}">{{ current_url }}</span>
+                <span class="copy-icon" data-copy="current-url" title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">{{ page_config.current_branch_label }}</div>
+            <div class="info-value">
+                <span id="current-branch">{{ current_branch }}</span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">{{ page_config.current_commit_label }}</div>
+            <div class="info-value">
+                <span id="current-commit">{{ current_commit }}</span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">{{ page_config.public_key_label }}</div>
+            <div class="info-value env-repo-long-value">
+                <span id="public-key" title="{{ public_key }}">{{ public_key }}</span>
+                <span class="copy-icon" data-copy="public-key" title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">{{ page_config.repo_url_label }}</div>
+            <div class="info-value">
+                <input type="text" id="repo-url" value="" placeholder="git@github.com:owner/{{ new_repo_name }}.git">
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">{{ page_config.repo_branch_label }}</div>
+            <div class="info-value">
+                <input type="text" id="repo-branch" value="main" placeholder="main">
+            </div>
+        </div>
+    </div>
+
+    <div class="button-container">
+        <div class="button-wrapper">
+            <img src="/static/gfx/spinner.svg" class="button-spinner">
+            <span class="status-message test-success">OK</span>
+            <button class="secondary-button" id="check-button">
+                {{ page_config.check_button_label }}
+            </button>
+        </div>
+        <button class="action-button" id="update-button">
+            {{ page_config.action_button_label }}
+        </button>
+    </div>
+
+    <div class="progress-item hidden" id="progress-check">
+        <div class="progress-icon"></div>
+        <div class="progress-content">
+            <div class="progress-platform">
+                {{ page_config.step1_label }}
+                <span class="copy-icon progress-error-copy hidden" data-copy="check-error" title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </span>
+            </div>
+            <div class="progress-text" id="check-error">Waiting...</div>
+        </div>
+    </div>
+    <div class="progress-item hidden" id="progress-switch">
+        <div class="progress-icon"></div>
+        <div class="progress-content">
+            <div class="progress-platform">
+                {{ page_config.step2_label }}
+                <span class="copy-icon progress-error-copy hidden" data-copy="switch-error" title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </span>
+            </div>
+            <div class="progress-text" id="switch-error">Waiting...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block right_content %}
+                <h3>{{ page_config.config_section_title }}</h3>
+                <div class="config-panel">
+                    <div class="config-item">
+                        <div class="config-label">{{ page_config.github_login_label }}</div>
+                        <input type="text" id="github-login" class="env-repo-login" placeholder="octocat">
+                    </div>
+                    <div class="env-repo-steps">
+                        <div class="env-repo-step">
+                            <span class="env-repo-step-number">1</span>
+                            <a href="#" id="create-repo-link" class="dashboard-link env-repo-link" target="_blank" rel="noopener">{{ page_config.create_repo_label }}</a>
+                        </div>
+                        <div class="env-repo-step">
+                            <span class="env-repo-step-number">2</span>
+                            <a href="#" id="add-key-link" class="dashboard-link env-repo-link" target="_blank" rel="noopener">{{ page_config.add_key_label }}</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="logs-section show">
+                    <h3>{{ page_config.logs_section_title }}</h3>
+                    <div class="links-panel">
+                        <div class="env-repo-log" id="env-repo-log">
+                            <div class="env-repo-log-empty">No results</div>
+                        </div>
+                    </div>
+                </div>
+{% endblock %}

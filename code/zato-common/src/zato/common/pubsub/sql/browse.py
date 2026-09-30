@@ -15,7 +15,7 @@ from sqlalchemy import and_, exists, select
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.core import SQLBackendCore
-from zato.common.pubsub.sql.schema import delivery_table, message_table
+from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +55,7 @@ _browse_columns = [
     message_table.c.ext_client_id,
     message_table.c.publisher,
 ]
+_browse_columns.extend(message_retry_columns)
 
 # The additional columns read only when the entry carries the full payload.
 _browse_payload_columns = [
@@ -183,6 +184,8 @@ class SQLBrowseAPI(SQLBackendCore):
 
         if row.publisher:
             out['publisher'] = row.publisher
+
+        self._add_retry_settings(out, row)
 
         # .. and optionally the full payload.
         if needs_data:

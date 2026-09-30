@@ -7,21 +7,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 import os
 import signal
-import sys
 import time
 from logging import getLogger
 from types import FrameType
 
 # Zato
 from zato_deploy.certificate import obtain_certificate
-from zato_deploy.common import load_config, Path, Stage_ID, StageFailed
+from zato_deploy.common import Config, load_config, Path, Stage_ID, StageFailed
 from zato_deploy.container import build_components, check_environment, ContainerWatch, start_container
+from zato_deploy.environment import prepare_environment
 from zato_deploy.firewall import add_redirect, keep_redirect_first, remove_redirect
-from zato_deploy.host import install_docker, prepare_storage
-from zato_deploy.pull import pull_image
+from zato_deploy.host import install_docker, is_docker_installed, prepare_storage, start_docker
+from zato_deploy.pull import is_image_present, pull_image
+from zato_deploy.run_log import log_host_snapshot, log_run_header, read_restart_reason, setup_logging
 from zato_deploy.server import DeployServer, start_server
 from zato_deploy.state import build_stages, Progress
 
@@ -40,6 +40,9 @@ _Grace_Period = 1.2
 # How long the container may take from its start until all of its components run.
 _Container_Timeout = 1800
 
+# How many seconds the download stage takes when only the layers that changed are pulled.
+_Update_Download_Weight = 20
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -48,15 +51,20 @@ def _handle_sigterm(signal_number:'int', frame:'FrameType | None') -> 'None':
 
 # ################################################################################################################################
 
-def _mark_serving() -> 'None':
-    """ Tells the template that the page answers on the Dashboard's port. The template's deployment,
-    and with it the Dashboard's address in its outputs, finishes only once this file exists.
-    """
-    directory = os.path.dirname(Path.Serving_Marker)
+def _touch(path:'str') -> 'None':
+
+    directory = os.path.dirname(path)
     os.makedirs(directory, exist_ok=True)
 
-    with open(Path.Serving_Marker, 'w'):
+    with open(path, 'w'):
         pass
+
+# ################################################################################################################################
+
+def _remove(path:'str') -> 'None':
+
+    if os.path.exists(path):
+        os.remove(path)
 
 # ################################################################################################################################
 
@@ -84,18 +92,43 @@ def _wait_for_container(progress:'Progress', watch:'ContainerWatch') -> 'None':
         time.sleep(0.5)
 
 # ################################################################################################################################
+
+def _get_image(progress:'Progress', config:'Config') -> 'None':
+    """ Pulls the image on every run if updates are on, and otherwise only if there is no image yet.
+    """
+    is_present = is_image_present(config.image)
+
+    if is_present:
+        if config.is_install_updates:
+            progress.get_stage(Stage_ID.Download).weight = _Update_Download_Weight
+        else:
+            progress.remove_stage(Stage_ID.Download)
+            progress.log(f'Image {config.image} is present and Zato_Install_Updates is off')
+            return
+
+    pull_image(progress, config.image)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def main() -> 'None':
 
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', stream=sys.stdout)
+    setup_logging(Path.Deploy_Log)
     _ = signal.signal(signal.SIGTERM, _handle_sigterm)
 
+    # The environment is not ready until this run says so ..
+    _remove(Path.Ready_Marker)
+    reason = read_restart_reason()
+
     config = load_config(Path.Config)
-    stages = build_stages(config.image)
+    is_docker_ready = is_docker_installed()
+
+    stages = build_stages(config.image, is_docker_ready)
     progress = Progress(stages, f'ssh {config.admin_username}@{config.fqdn}')
 
-    # The page lists all the components from the start ..
+    log_run_header(config, reason, stages)
+
+    # .. the page lists all the components from the start ..
     components = build_components()
     progress.get_stage(Stage_ID.Components).components = components
     watch = ContainerWatch(progress, components)
@@ -109,18 +142,22 @@ def main() -> 'None':
             pem_path = obtain_certificate(progress, config)
             server = start_server(progress, pem_path)
             add_redirect()
-            _mark_serving()
+            _touch(Path.Serving_Marker)
 
-            # .. Docker's data goes to the local disk before Docker exists ..
+            # .. Docker's data goes to the local disk before Docker runs ..
             prepare_storage(progress)
 
+            if not is_docker_ready:
+                install_docker(progress)
+
             # .. and Docker puts its own rules in front of the redirect, which each time goes back to the top ..
-            install_docker(progress)
+            start_docker(progress)
             keep_redirect_first()
 
-            pull_image(progress, config.image)
+            _get_image(progress, config)
+            environment = prepare_environment(progress)
 
-            container_ip = start_container(progress, config)
+            container_ip = start_container(progress, config, environment)
             keep_redirect_first()
 
             # .. the container runs through its own stages ..
@@ -133,16 +170,21 @@ def main() -> 'None':
             progress.finish_all()
             watch.stop()
 
+            _touch(Path.Ready_Marker)
+            log_host_snapshot('ready')
+
             time.sleep(_Grace_Period)
 
         # A failure keeps the page up with the reason in it ..
         except StageFailed as exception:
             progress.fail(exception.message)
+            log_host_snapshot('failed')
             _wait_forever()
 
         except Exception as exception:
             logger.exception('Deployment failed')
             progress.fail(f'Unexpected error: {exception}')
+            log_host_snapshot('failed')
             _wait_forever()
 
     # .. and in either case the port goes back to the Dashboard in the end.

@@ -25,7 +25,8 @@ from zato.common.soap.common import Content_Type as SOAP_Content_Type
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
 from zato.common.util.config import extract_param_placeholders
-from zato.common.util.http_retry import RetryPolicy, send_with_retry
+from zato.common.util.http_retry import send_with_retry
+from zato.common.util.retry import RetryPolicy
 from zato.common.util.tls_verify import resolve_tls_verify
 from zato.server.connection.http_soap.outgoing.audit import insert_audit_event
 from zato.server.connection.http_soap.outgoing.auth import AuthMixin
@@ -193,12 +194,13 @@ class BaseHTTPSOAPWrapper(AuthMixin):
                 overrides[name] = value
 
         if not overrides:
-            return RetryPolicy.from_config(self.config)
+            out = RetryPolicy.from_config(self.config, _retry)
+            return out
 
         config = dict(self.config)
         config.update(overrides)
 
-        out = RetryPolicy.from_config(config)
+        out = RetryPolicy.from_config(config, _retry)
         return out
 
 # ################################################################################################################################

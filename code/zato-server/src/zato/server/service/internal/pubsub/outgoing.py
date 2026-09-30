@@ -12,9 +12,9 @@ from logging import getLogger
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.pubsub.delivery import DeliveryExhausted, wait_between_rounds
 from zato.common.pubsub.dlq import move_to_dlq
-from zato.common.pubsub.outgoing import deliver_envelope, DeliveryExhausted, get_outgoing_sub_key, Key_Conn_ID, \
-    Key_Conn_Type, wait_between_rounds
+from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, Key_Conn_ID, Key_Conn_Type
 from zato.server.service import Service
 
 # ################################################################################################################################

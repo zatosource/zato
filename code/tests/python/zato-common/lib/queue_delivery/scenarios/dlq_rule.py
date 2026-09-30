@@ -43,7 +43,7 @@ _past_interval_seconds = DLQ_Retry_Interval + 0.5
 _long_interval_seconds = 600
 
 # Longer than one round of the connection
-_return_timeout_seconds = PubSub.Outgoing.Retry_Round_Wait + 10.0
+_return_timeout_seconds = PubSub.Delivery.Retry_Round_Wait + 10.0
 _poll_interval_seconds = 0.1
 
 # ################################################################################################################################

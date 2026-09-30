@@ -20,6 +20,7 @@ from sqlalchemy import and_, bindparam, exists, select
 from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.api import HTTP_SOAP
 from zato.common.db_env import Type_SQLite
 from zato.common.pubsub.sql.config import get_pubsub_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
@@ -50,6 +51,8 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_retry = HTTP_SOAP.Retry
 
 # How many times a transaction rolled back as a deadlock victim is attempted in total,
 # and how long the pause between the attempts is, in seconds.
@@ -297,7 +300,20 @@ class SQLBackendCore:
         if row.ext_client_id:
             out['ext_client_id'] = row.ext_client_id
 
+        self._add_retry_settings(out, row)
+
         return out
+
+# ################################################################################################################################
+
+    def _add_retry_settings(self, out:'anydict', row:'any_') -> 'None':
+        """ Adds to a message dict each retry setting its publisher gave, a setting left out being left out here too,
+        so that the policy's defaults apply to it.
+        """
+        for name in _retry.FieldList:
+            value = getattr(row, name)
+            if value is not None:
+                out[name] = value
 
 # ################################################################################################################################
 

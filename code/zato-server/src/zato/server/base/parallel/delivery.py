@@ -9,9 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime
 from logging import getLogger
-from math import log2
-from random import uniform
-from time import monotonic
 from traceback import format_exc
 
 # gevent
@@ -22,7 +19,10 @@ from gevent.lock import RLock
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Expired, \
+    Interrupt_Paused
 from zato.common.util.api import utcnow
+from zato.common.util.retry import RetryPolicy
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,7 +30,7 @@ from zato.common.util.api import utcnow
 if 0:
     from gevent import Greenlet
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import anydict, intlist, strlist, strset
+    from zato.common.typing_ import anydict, callable_, intlist, strlist, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -45,13 +45,11 @@ _delivery_batch_size = 50
 # the batch it may have started just before it was asked to pause.
 _pause_join_timeout = 30
 
-_max_retry_time = PubSub.Delivery.Max_Retry_Time
-_retry_interval_initial = PubSub.Delivery.Retry_Interval_Initial
-_retry_interval_max = PubSub.Delivery.Retry_Interval_Max
-_retry_jitter_percent = PubSub.Delivery.Retry_Jitter_Percent
-
 # How long a delivery greenlet waits after a fetch that raised
-_fetch_error_sleep = _retry_interval_initial
+_fetch_error_sleep = PubSub.Delivery.Fetch_Error_Sleep
+
+# The default set a published message's own retry settings fall back to
+_delivery_defaults = PubSub.Delivery
 
 _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
@@ -212,11 +210,7 @@ class PushDelivery:
             topic_name = message['topic_name']
             sub_config = config_by_topic[topic_name]
 
-            # Outgoing queues retry as their connection says, not as this loop does
-            if sub_key.startswith(_outgoing_sub_key_prefix):
-                is_concluded = self._deliver_outgoing(message, sub_config, sub_key)
-            else:
-                is_concluded = self._deliver_with_retry(message, sub_config, sub_key)
+            is_concluded = self._deliver_one(message, sub_config, sub_key)
 
             # A message that was not concluded is not acked, and nothing behind it is either
             if not is_concluded:
@@ -231,115 +225,118 @@ class PushDelivery:
 
 # ################################################################################################################################
 
-    def _deliver_outgoing(
+    def _deliver_one(
         self,
         message:'anydict',
         sub_config:'anydict',
         sub_key:'str',
     ) -> 'bool':
-        """ Delivers one message of an outgoing connection's queue, returning whether it was concluded.
+        """ Delivers one message, returning whether it was concluded - delivered, expired or given up on.
+        A message of an outgoing connection's queue whose round failed is not concluded, it stays for the next round,
+        whereas a push message whose round ran out is concluded as a failed delivery.
         """
         msg_id = message['msg_id']
+        is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
 
         expiration_time_iso = message['expiration_time_iso']
         normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
         expiration_time = datetime.fromisoformat(normalized_expiration_iso)
 
-        try:
-            self._deliver_message(message, sub_config)
-        except Exception:
-            msg = f'PubSub outgoing delivery round failed for sub_key `{sub_key}`'
-            msg += f', msg_id `{msg_id}`: {format_exc()}'
-            logger.debug(msg)
+        # An expired message is not attempted at all ..
+        if utcnow() > expiration_time:
+            self._conclude_expired(message, sub_config, sub_key, is_outgoing)
+            return True
 
-            now = utcnow()
-            if now <= expiration_time:
+        def should_continue() -> 'str':
+
+            # .. a queue asked to pause gives up between two attempts rather than in the middle of one,
+            # .. leaving the message where it is so that it goes out again once the queue resumes ..
+            if sub_key in self._paused:
+                return Interrupt_Paused
+
+            # .. and a message that expired between two attempts is not attempted again.
+            if utcnow() > expiration_time:
+                return Interrupt_Expired
+
+            return ''
+
+        try:
+            self._deliver_message(message, sub_config, sub_key, should_continue)
+
+        except DeliveryInterrupted as e:
+
+            if e.reason == Interrupt_Paused:
+                logger.info('Pausing sub_key `%s` between delivery attempts, msg_id `%s`', sub_key, msg_id)
                 return False
 
-            # A message that expired during a failed round leaves the queue
-            msg = f'PubSub outgoing message expired before delivery for sub_key `{sub_key}`'
-            msg += f', msg_id `{msg_id}`, expiration_time_iso `{expiration_time_iso}`'
-            logger.info(msg)
-            self._insert_audit_event(message, sub_config, sub_key, False, True)
-            self.server.config_manager.outgoing_queue_depth.lower(sub_key, 1)
+            self._conclude_expired(message, sub_config, sub_key, is_outgoing)
             return True
+
+        except DeliveryExhausted as e:
+
+            # An outgoing connection's message whose round ran out stays for another round ..
+            if is_outgoing:
+                reason = str(e)
+                return self._keep_for_next_round(message, sub_config, sub_key, expiration_time, reason)
+
+            # .. whereas a push message whose round ran out is given up on.
+            msg = f'PubSub delivery given up for sub_key `{sub_key}`'
+            msg += f', msg_id `{msg_id}` after {e.attempts} attempts: {e.error}'
+            logger.error(msg)
+
+            self._insert_audit_event(message, sub_config, sub_key, False, False, e.error, e.attempts)
+            return True
+
+        except Exception:
+            reason = format_exc()
+            return self._keep_for_next_round(message, sub_config, sub_key, expiration_time, reason)
 
         self._insert_audit_event(message, sub_config, sub_key, True, False)
         return True
 
 # ################################################################################################################################
 
-    def _deliver_with_retry(
+    def _keep_for_next_round(
         self,
         message:'anydict',
         sub_config:'anydict',
         sub_key:'str',
+        expiration_time:'datetime',
+        reason:'str',
     ) -> 'bool':
-        """ Attempt to deliver a message, retrying with logarithmic backoff and jitter
-        until the delivery deadline is reached or the message expires. Acknowledgement
-        is the caller's job - one transaction covers the whole batch. Answers with whether
-        the message was concluded, which a queue asked to pause between two attempts was not.
+        """ A failed round of an outgoing connection's message leaves it in the queue for the next round,
+        unless it expired while the round was failing - then it is concluded as expired.
         """
         msg_id = message['msg_id']
+        is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
 
-        # Parse the expiration time for TTL checks on each retry ..
+        msg = f'PubSub outgoing delivery round failed for sub_key `{sub_key}`'
+        msg += f', msg_id `{msg_id}`: {reason}'
+        logger.debug(msg)
+
+        if utcnow() > expiration_time:
+            self._conclude_expired(message, sub_config, sub_key, is_outgoing)
+            return True
+
+        return False
+
+# ################################################################################################################################
+
+    def _conclude_expired(self, message:'anydict', sub_config:'anydict', sub_key:'str', is_outgoing:'bool') -> 'None':
+        """ Records that a message left the queue because it expired before it could be delivered.
+        """
+        msg_id = message['msg_id']
         expiration_time_iso = message['expiration_time_iso']
-        normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
-        expiration_time = datetime.fromisoformat(normalized_expiration_iso)
 
-        # .. set up the retry loop with logarithmic backoff ..
-        deadline = monotonic() + _max_retry_time
-        interval = _retry_interval_initial
-        attempt = 0
-        delivered = False
-        expired = False
+        msg = f'PubSub message expired before delivery for sub_key `{sub_key}`'
+        msg += f', msg_id `{msg_id}`, expiration_time_iso `{expiration_time_iso}`'
+        logger.info(msg)
 
-        while monotonic() < deadline:
+        self._insert_audit_event(message, sub_config, sub_key, False, True)
 
-            # .. a queue asked to pause gives up between two attempts rather than in the middle of one,
-            # .. leaving the message where it is so that it goes out again once the queue resumes ..
-            if sub_key in self._paused:
-                logger.info('Pausing sub_key `%s` between delivery attempts, msg_id `%s`', sub_key, msg_id)
-                return False
-
-            # .. drop expired messages without delivery ..
-            now = utcnow()
-            if now > expiration_time:
-                msg = f'PubSub message expired before delivery for sub_key `{sub_key}`'
-                msg += f', msg_id `{msg_id}`, expiration_time_iso `{expiration_time_iso}`'
-                logger.info(msg)
-                expired = True
-                break
-
-            # .. attempt the actual delivery ..
-            try:
-                self._deliver_message(message, sub_config)
-                delivered = True
-                break
-            except Exception:
-                attempt += 1
-                msg = f'PubSub delivery attempt {attempt} failed for sub_key `{sub_key}`'
-                msg += f', msg_id `{msg_id}`: {format_exc()}'
-                logger.debug(msg)
-
-                # .. compute jitter as a fraction of the current interval ..
-                jitter = interval * _retry_jitter_percent / 100
-                sleep_time = interval + uniform(0, jitter)
-                sleep(sleep_time)
-
-                # .. grow the interval logarithmically, capped at the configured maximum ..
-                interval = min(interval * log2(interval + 1), _retry_interval_max)
-        else:
-            if not delivered:
-                msg = f'PubSub delivery deadline exhausted for sub_key `{sub_key}`'
-                msg += f', msg_id `{msg_id}` after {attempt} attempts'
-                logger.error(msg)
-
-            # .. record the delivery outcome in the audit log.
-        self._insert_audit_event(message, sub_config, sub_key, delivered, expired)
-
-        # The message is out of the queue's hands either way - delivered, expired or given up on.
-        return True
+        # An outgoing connection's queue counts its messages
+        if is_outgoing:
+            self.server.config_manager.outgoing_queue_depth.lower(sub_key, 1)
 
 # ################################################################################################################################
 
@@ -349,9 +346,11 @@ class PushDelivery:
         sub_config:'anydict',
         sub_key:'str',
         delivered:'bool',
-        expired:'bool'
+        expired:'bool',
+        error:'str'='',
+        attempts:'int'=0,
     ) -> 'None':
-        """ Writes one audit event describing the outcome of a push delivery attempt.
+        """ Writes the one audit event describing how a push delivery concluded.
         """
 
         # The backend has no audit log in unit tests only.
@@ -363,6 +362,8 @@ class PushDelivery:
             return
 
         # Map the delivery outcome to an event type ..
+        status = ''
+
         if delivered:
             event_type = AuditEvent.Delivered
             outcome = AuditOutcome.OK
@@ -372,12 +373,10 @@ class PushDelivery:
         else:
             event_type = AuditEvent.Delivery_Failed
             outcome = AuditOutcome.Error
+            status = f'Given up after {attempts} attempts: {error}'
 
         # .. the delivery target is either a service or a REST endpoint ..
-        if sub_config['push_type'] == PubSub.Push_Type.Service:
-            endpoint = sub_config['push_service_name']
-        else:
-            endpoint = sub_config['rest_push_url']
+        endpoint = self._get_endpoint(sub_config)
 
         # .. these are optional at publish time so the message dict includes them
         # .. only when they were given ..
@@ -400,21 +399,58 @@ class PushDelivery:
             size=message['data_size'],
             priority=message['priority'],
             outcome=outcome,
+            status=status,
             data=message['data'],
         )
 
 # ################################################################################################################################
 
-    def _deliver_message(self, message:'anydict', sub_config:'anydict') -> 'None':
-        """ Deliver a single raw message to the configured target.
+    def _get_endpoint(self, sub_config:'anydict') -> 'str':
+        """ The name of what a subscription pushes to - a service or a REST endpoint.
+        """
+        if sub_config['push_type'] == PubSub.Push_Type.Service:
+            out = sub_config['push_service_name']
+        else:
+            out = sub_config['rest_push_url']
+
+        return out
+
+# ################################################################################################################################
+
+    def _deliver_message(
+        self,
+        message:'anydict',
+        sub_config:'anydict',
+        sub_key:'str',
+        should_continue:'callable_',
+    ) -> 'None':
+        """ Delivers one message to its target. An outgoing connection's queue invokes its delivery service once,
+        which retries as the connection says, whereas a push message runs one round under its own retry policy
+        right here, raising DeliveryExhausted when the round ran out.
         """
         push_type = sub_config['push_type']
 
         if push_type == PubSub.Push_Type.Service:
-            self._deliver_to_service(message, sub_config)
+            deliver = self._deliver_to_service
+        else:
+            deliver = self._deliver_to_rest
 
-        elif push_type == PubSub.Push_Type.REST:
-            self._deliver_to_rest(message, sub_config)
+        # Outgoing connections have retry policies of their own
+        if sub_key.startswith(_outgoing_sub_key_prefix):
+            deliver(message, sub_config)
+            return
+
+        policy = RetryPolicy.from_config(message, _delivery_defaults)
+        endpoint = self._get_endpoint(sub_config)
+
+        message_cid = message.get('cid')
+        if message_cid is None:
+            message_cid = ''
+
+        def attempt() -> 'None':
+            deliver(message, sub_config)
+
+        deliver_with_policy(policy, 0, message_cid, endpoint, attempt, should_continue)
 
 # ################################################################################################################################
 

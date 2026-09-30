@@ -875,6 +875,9 @@ class HTTP_SOAP:
         # The longest single sleep between attempts, in seconds
         Max_Sleep_Time = 8
 
+        # A connection's schedule is exactly what its fields say
+        Jitter_Percent = 0
+
         FieldList = (Field_Max_Retries, Field_Sleep_Time, Field_Backoff_Threshold, Field_Backoff_Multiplier)
 
     class Queue:
@@ -2514,9 +2517,6 @@ class PubSub:
         # Every such queue is subscribed by this one service.
         Delivery_Service = 'zato.pubsub.outgoing.deliver'
 
-        # Seconds between two rounds of one message
-        Retry_Round_Wait = 8
-
         # The DLQ topic and sub key prefixes, followed by the connection's type and name or id
         DLQ_Topic_Prefix = 'zato.out.dlq.'
         DLQ_Sub_Key_Prefix = 'zato.out.dlq.'
@@ -2549,18 +2549,36 @@ class PubSub:
         Data_Preview_Len = 100
 
     class Delivery:
+        """ The default retry policy of a published message's push delivery - the same names HTTP_SOAP.Retry has,
+        for a message whose publisher gave no retry settings of its own.
+        """
 
         # How long to keep retrying a failed delivery before giving up (30 days)
         Max_Retry_Time = 86_400 * 30
 
-        # Initial delay between delivery attempts (seconds)
-        Retry_Interval_Initial = 3
+        # How many seconds to sleep before the first retry
+        Default_Sleep_Time = 3
 
-        # Maximum delay between delivery attempts (seconds)
-        Retry_Interval_Max = 10
+        # Each retry sleeps this many times longer than the previous one
+        Default_Backoff_Multiplier = 2
 
-        # Random jitter added to each interval, as a percentage of the current interval
-        Retry_Jitter_Percent = 10
+        # The longest single sleep between attempts, in seconds
+        Max_Sleep_Time = 15
+
+        # Random jitter added to each sleep, as a percentage of that sleep
+        Jitter_Percent = 10
+
+        # A cap on the total sleep time across all the retries, in seconds
+        Default_Backoff_Threshold = Max_Retry_Time
+
+        # Enough attempts for the threshold to be what ends the round
+        Default_Max_Retries = Max_Retry_Time // Default_Sleep_Time
+
+        # Seconds between two rounds of one message of an outgoing connection's queue
+        Retry_Round_Wait = 8
+
+        # How long a delivery greenlet waits after a fetch that raised
+        Fetch_Error_Sleep = 3
 
     class Repeats:
         Max = 500

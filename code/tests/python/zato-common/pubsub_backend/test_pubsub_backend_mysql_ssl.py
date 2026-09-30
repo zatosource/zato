@@ -20,6 +20,7 @@ from lifecycle import run_lifecycle_scenario
 from outgoing import run_outgoing_scenario
 from push_delivery import run_push_delivery_scenario
 from queues import run_queues_scenario
+from retry_settings import run_retry_settings_scenario
 from stats import run_stats_scenario
 from wakeup import run_wakeup_scenario
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -46,6 +47,7 @@ def test_pubsub_backend_mysql_ssl(mysql_ssl_server:'DatabaseServer') -> 'None':
         run_encryption_scenario()
         run_cleanup_scenario()
         run_push_delivery_scenario()
+        run_retry_settings_scenario()
         run_outgoing_scenario()
         assert_mysql_connection_encrypted()
 

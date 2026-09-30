@@ -33,7 +33,8 @@ from zato.common.pubsub.outgoing import Attempts_None, Key_Data, Key_Method, Key
     OutgoingType, SendRejected, SendResult
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid_server
-from zato.common.util.http_retry import RetryPolicy, send_with_retry
+from zato.common.util.http_retry import send_with_retry
+from zato.common.util.retry import RetryPolicy
 from zato.server.connection.queue import Wrapper
 from zato.server.generic.api.outconn_hl7_fhir_audit import FHIRAuditMixin, get_fhir_rejection, Operation_Outcome_Type
 from zato.server.generic.api.outconn_hl7_fhir_resource import HL7FHIRResource
@@ -59,6 +60,8 @@ logger = getLogger(__name__)
 
 _basic_auth = HL7.Const.FHIR_Auth_Type.Basic_Auth.id
 _oauth = HL7.Const.FHIR_Auth_Type.OAuth.id
+
+_retry = HTTP_SOAP.Retry
 
 # How many milliseconds one second holds - used when converting request durations
 _ms_per_second = 1000
@@ -141,7 +144,7 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
         # Whether a write that did not go through waits in the connection's queue, and how a direct
         # send is tried again when the switch is off
         self.zato_use_queue = self.zato_config[_use_queue_field]
-        self.zato_retry_policy = RetryPolicy.from_config(self.zato_config)
+        self.zato_retry_policy = RetryPolicy.from_config(self.zato_config, _retry)
 
         # This can be built in advance in case we are using Basic Auth
         if self.zato_auth_type == _basic_auth:

@@ -1,0 +1,16 @@
+[Unit]
+Description=Zato deployment - the environment container and its loading page
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/zato-deploy
+ExecStart=/usr/bin/python3 -m zato_deploy
+Restart=on-failure
+RestartSec=10
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
