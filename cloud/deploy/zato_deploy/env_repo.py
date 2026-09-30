@@ -36,6 +36,8 @@ _Actions      = {Env_Repo_Action.Check, Env_Repo_Action.Switch}
 # How many lines of git's output the status keeps for the dashboard.
 _Max_Status_Lines = 40
 
+_Heads_Prefix = 'refs/heads/'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -56,6 +58,7 @@ class Status:
         self.url    = url
         self.branch = branch
         self.lines:'strlist' = []
+        self.branches:'strlist' = []
 
 # ################################################################################################################################
 
@@ -73,13 +76,14 @@ class Status:
         logger.info('Status %s - %s', state, message)
 
         data = {
-            'action':  self.action,
-            'url':     self.url,
-            'branch':  self.branch,
-            'state':   state,
-            'message': message,
-            'lines':   self.lines,
-            'time':    datetime.now(timezone.utc).isoformat(),
+            'action':   self.action,
+            'url':      self.url,
+            'branch':   self.branch,
+            'state':    state,
+            'message':  message,
+            'lines':    self.lines,
+            'branches': self.branches,
+            'time':     datetime.now(timezone.utc).isoformat(),
         }
 
         path = os.path.join(Path.Link_Dir, Link_File.Status)
@@ -148,22 +152,28 @@ def _add_output_lines(status:'Status', text:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _check_access(status:'Status') -> 'None':
-    """ Asks GitHub for the branch with the deploy key, which is what a switch would do first.
+def _list_branches(status:'Status') -> 'None':
+    """ Runs git ls-remote with the deploy key and keeps the branches it lists.
     """
-    status.write(Env_Repo_State.Checking, f'Checking access to {status.url}')
+    status.write(Env_Repo_State.Checking, f'Connecting to {status.url}')
 
-    result = run_git(['ls-remote', '--heads', status.url, status.branch], is_verbose=True)
+    result = run_git(['ls-remote', '--heads', status.url], is_verbose=True)
 
     _add_output_lines(status, result.stderr)
 
     if result.exit_code != 0:
         raise RequestError(f'GitHub did not accept the deploy key for {status.url}, exit code {result.exit_code}')
 
-    if not result.stdout.strip():
-        raise RequestError(f'Branch {status.branch} not found in {status.url}')
+    # Each line is a commit, a tab and refs/heads/<branch>.
+    for line in result.stdout.splitlines():
+        _, _, ref = line.strip().partition('\t')
+        if ref.startswith(_Heads_Prefix):
+            status.branches.append(ref[len(_Heads_Prefix):])
 
-    _add_output_lines(status, result.stdout)
+    if not status.branches:
+        raise RequestError(f'No branches found in {status.url}')
+
+    status.branches.sort()
 
 # ################################################################################################################################
 
@@ -210,14 +220,18 @@ def handle_request() -> 'None':
 
         status = Status(request['action'], request['env_repo_url'], request['env_repo_branch'])
 
-        _check_branch_name(status.branch)
-        _check_access(status)
+        _list_branches(status)
 
         if status.action == Env_Repo_Action.Switch:
+            _check_branch_name(status.branch)
+
+            if status.branch not in status.branches:
+                raise RequestError(f'Branch {status.branch} not found in {status.url}')
+
             _switch(status)
             is_switched = True
         else:
-            status.write(Env_Repo_State.OK, f'Access to {status.url} at {status.branch} works')
+            status.write(Env_Repo_State.OK, f'Connected to {status.url}')
 
     except RequestError as exception:
         status.write(Env_Repo_State.Error, exception.message)

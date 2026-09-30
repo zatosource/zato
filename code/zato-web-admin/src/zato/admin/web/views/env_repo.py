@@ -17,8 +17,8 @@ from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.base import SettingsBaseView
 from zato.admin.web.views.settings.config import env_repo_page_config
 from zato.admin.web.views.settings.utils import json_response
-from zato.common.env_repo import Env_Repo, get_deploy_key_url, get_link_dir, get_new_repo_url, get_repo_ssh_url, \
-    is_host_mode, read_current, read_public_key, read_status, set_local_dir, write_request
+from zato.common.env_repo import Env_Repo, get_link_dir, get_new_repo_url, is_host_mode, parse_repo_name, read_current, \
+    read_public_key, read_status, set_local_dir, write_request
 from zato.common.util.updates import Updater, UpdaterConfig
 
 # ################################################################################################################################
@@ -41,8 +41,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 updater_config = UpdaterConfig(current_dir=current_dir)
 updater = Updater(updater_config)
 
-_URL_Pattern = re.compile(r'^git@github\.com:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git$')
-_Login_Pattern = re.compile(r'^[A-Za-z0-9-]+$')
 _Branch_Pattern = re.compile(r'^[A-Za-z0-9_./-]+$')
 
 # ################################################################################################################################
@@ -79,15 +77,23 @@ class EnvRepoView(SettingsBaseView):
     def get_index_context(self) -> 'anydict':
 
         _set_local_dir()
+
         current = read_current() or {}
+        current_repo = parse_repo_name(current.get('url', ''))
 
         context = super().get_index_context()
         context['public_key'] = read_public_key()
-        context['current_url'] = current.get('url', '')
-        context['current_branch'] = current.get('branch', '')
-        context['current_commit'] = current.get('commit', '')[:12]
-        context['current_env_name'] = current.get('env_name', '')
+        context['new_repo_url'] = get_new_repo_url()
         context['new_repo_name'] = Env_Repo.New_Repo_Name
+        context['current_branch'] = current.get('branch', '')
+
+        # The address is shown the way a browser shows it.
+        if current_repo:
+            context['current_full_name'] = current_repo.full_name
+            context['current_url'] = current_repo.https_url
+        else:
+            context['current_full_name'] = ''
+            context['current_url'] = ''
 
         return context
 
@@ -107,49 +113,37 @@ class EnvRepoView(SettingsBaseView):
 
 # ################################################################################################################################
 
-    @method_allowed('GET')
-    def get_links(self, req:'HttpRequest') -> 'HttpResponse':
-        """ Returns the GitHub URLs for creating the repository and adding the deploy key.
-        """
-        login = _get_param(req.GET, 'login')
-
-        if not _Login_Pattern.match(login):
-            return json_response({'error': 'GitHub login must be letters, digits and dashes'}, success=False)
-
-        data = {
-            'new_repo_url':   get_new_repo_url(login),
-            'deploy_key_url': get_deploy_key_url(login),
-            'repo_ssh_url':   get_repo_ssh_url(login),
-        }
-
-        return json_response(data)
-
-# ################################################################################################################################
-
     def _handle_request(self, req:'HttpRequest', action:'str') -> 'HttpResponse':
         """ Writes the request for the host if there is one, otherwise handles it in this process.
         """
         _set_local_dir()
 
-        url = _get_param(req.POST, 'url')
+        repo = parse_repo_name(_get_param(req.POST, 'url'))
         branch = _get_param(req.POST, 'branch')
 
-        if not _URL_Pattern.match(url):
-            return json_response({'error': 'Repository address must look like git@github.com:owner/name.git'}, success=False)
+        if not repo:
+            return json_response({'error': 'Repository address must look like https://github.com/owner/name'}, success=False)
 
-        if not _Branch_Pattern.match(branch):
+        if action == Env_Repo.Action_Switch and not _Branch_Pattern.match(branch):
             return json_response({'error': 'Branch name is not valid'}, success=False)
 
         try:
             if is_host_mode():
-                write_request(action, url, branch)
+                write_request(action, repo.ssh_url, branch)
             else:
-                handle_request_locally(action, url, branch)
+                handle_request_locally(action, repo.ssh_url, branch)
         except OSError as exception:
             logger.warning('Request not written to %s: %s', get_link_dir(), exception)
             return json_response({'error': f'Request could not be written: {exception}'}, success=False)
 
-        return json_response({})
+        data = {
+            'full_name':      repo.full_name,
+            'url':            repo.ssh_url,
+            'https_url':      repo.https_url,
+            'deploy_key_url': repo.deploy_key_url,
+        }
+
+        return json_response(data)
 
 # ################################################################################################################################
 

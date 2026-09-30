@@ -216,29 +216,17 @@ env_variables_page_config['textarea_placeholder'] = 'KEY=value, one per line, e.
 env_variables_page_config['content_rows'] = []
 
 env_repo_page_config = {}
-env_repo_page_config['title'] = 'Environment repository'
+env_repo_page_config['title'] = 'GitHub repository'
 env_repo_page_config['api_prefix'] = '/zato/env-repo/'
-env_repo_page_config['step1_label'] = 'Test access'
+env_repo_page_config['step1_label'] = 'Connect'
 env_repo_page_config['step2_label'] = 'Switch'
-env_repo_page_config['check_button_label'] = 'Test access'
+env_repo_page_config['check_button_label'] = 'Connect'
 env_repo_page_config['action_button_label'] = 'Switch'
-env_repo_page_config['version_section_title'] = 'Environment repository'
-env_repo_page_config['config_section_title'] = 'New repository on GitHub'
-env_repo_page_config['logs_section_title'] = 'Log'
-env_repo_page_config['current_repo_label'] = 'Current repository'
-env_repo_page_config['current_branch_label'] = 'Branch'
-env_repo_page_config['current_commit_label'] = 'Commit'
-env_repo_page_config['public_key_label'] = 'Deploy key'
-env_repo_page_config['repo_url_label'] = 'Repository'
+env_repo_page_config['current_label'] = 'Current'
 env_repo_page_config['repo_branch_label'] = 'Branch'
-env_repo_page_config['github_login_label'] = 'GitHub login'
-env_repo_page_config['create_repo_label'] = 'Create the repository from the template'
-env_repo_page_config['add_key_label'] = 'Add the deploy key to the repository'
-env_repo_page_config['show_sidebar'] = True
-env_repo_page_config['show_restart_steps'] = False
-env_repo_page_config['restart_step_id'] = 'switch'
-env_repo_page_config['restart_step_label'] = env_repo_page_config['step2_label']
-env_repo_page_config['content_rows'] = []
+env_repo_page_config['new_repo_label'] = 'Create repo from template'
+env_repo_page_config['key_help_text'] = 'Add this deploy key to the repository, then connect again.'
+env_repo_page_config['key_help_label'] = 'Open the deploy keys page'
 
 sbom_page_config = {}
 sbom_page_config['title'] = 'CycloneDX SBOM'

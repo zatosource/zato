@@ -1731,14 +1731,12 @@ urlpatterns += [
     url(r'^zato/updates/download-logs$',
         login_required(updates.download_logs), name='updates-download-logs'),
 
-    # Environment repository
+    # GitHub repository
 
     url(r'^zato/env-repo/$',
         login_required(env_repo.env_repo_view.index), name='env-repo'),
     url(r'^zato/env-repo/status$',
         login_required(env_repo.env_repo_view.get_status), name='env-repo-status'),
-    url(r'^zato/env-repo/links$',
-        login_required(env_repo.env_repo_view.get_links), name='env-repo-links'),
     url(r'^zato/env-repo/check$',
         login_required(env_repo.env_repo_view.check), name='env-repo-check'),
     url(r'^zato/env-repo/switch$',

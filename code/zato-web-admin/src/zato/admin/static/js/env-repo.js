@@ -6,79 +6,185 @@ $.fn.zato.envRepo.config = {
     pollTimeout: 180000,
     deployPollInterval: 2000,
     deployProgressPath: '/zato-deploy/progress.json',
+    reloadDelay: 1500,
+    statusFadeDelay: 2000,
+    defaultBranch: 'main',
+    spinnerPath: '/static/gfx/spinner.svg',
+    repoPatterns: [
+        /^(?:https?:\/\/)?(?:www\.)?github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?(?:\.git)?(?:[/?#].*)?$/,
+        /^(?:ssh:\/\/)?git@github\.com[:/][A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?(?:\.git)?\/?$/,
+        /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?(?:\.git)?$/,
+    ],
+    emptyAddressMessage: 'Enter the address of the repository',
+    badAddressMessage: 'The address must look like https://github.com/owner/name',
+    copiedMessage: 'Copied',
 };
 
 $.fn.zato.envRepo.state = {
     requestTime: null,
     pollTimer: null,
     pollDeadline: null,
+    repo: null,
+    isCreating: false,
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.envRepo.init = function() {
 
-    $('#check-button').on('click', $.fn.zato.envRepo.handleCheck);
+    $('#create-button').on('click', $.fn.zato.envRepo.handleCreate);
+    $('#check-button').on('click', $.fn.zato.envRepo.handleConnect);
     $('#update-button').on('click', $.fn.zato.envRepo.handleSwitch);
-    $('.copy-icon').on('click', $.fn.zato.settings.handleCopyIcon);
-    $('#github-login').on('input', $.fn.zato.envRepo.handleLoginInput);
+    $('#copy-key').on('click', $.fn.zato.envRepo.handleCopyKey);
 
-    $('#create-repo-link, #add-key-link').on('click', $.fn.zato.envRepo.handleLinkClick);
-
-    $.fn.zato.envRepo.updateLinks();
-    $.fn.zato.envRepo.fetchStatus(false);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.handleLoginInput = function() {
-    $.fn.zato.envRepo.updateLinks();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.handleLinkClick = function(e) {
-
-    // The links lead nowhere until there is a login to build them from.
-    if($(this).attr('href') === '#') {
-        e.preventDefault();
-        $('#github-login').focus();
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.updateLinks = function() {
-
-    const login = $('#github-login').val().trim();
-    const createLink = $('#create-repo-link');
-    const addKeyLink = $('#add-key-link');
-
-    if(!login) {
-        createLink.attr('href', '#').addClass('env-repo-link-disabled');
-        addKeyLink.attr('href', '#').addClass('env-repo-link-disabled');
-        return;
-    }
-
-    $.ajax({
-        url: $.fn.zato.envRepo.config.apiPrefix + 'links',
-        type: 'GET',
-        data: {login: login},
-        success: function(response) {
-            createLink.attr('href', response.new_repo_url).removeClass('env-repo-link-disabled');
-            addKeyLink.attr('href', response.deploy_key_url).removeClass('env-repo-link-disabled');
-
-            // The address of the new repository is what the user will switch to.
-            const repoUrl = $('#repo-url');
-            if(!repoUrl.data('edited')) {
-                repoUrl.val(response.repo_ssh_url);
-            }
-        },
-        error: function() {
-            createLink.attr('href', '#').addClass('env-repo-link-disabled');
-            addKeyLink.attr('href', '#').addClass('env-repo-link-disabled');
+    $('#repo-url').on('input', $.fn.zato.envRepo.handleUrlInput);
+    $('#repo-url').on('keydown', function(e) {
+        if(e.key === 'Enter') {
+            e.preventDefault();
+            $.fn.zato.envRepo.handleConnect();
         }
     });
+
+    // Back from GitHub, the address of the new repository is what comes next.
+    $(window).on('focus', function() {
+        if($.fn.zato.envRepo.state.isCreating && !$('#repo-url').val().trim()) {
+            $('#repo-url').focus();
+        }
+    });
+
+    // A page that opens with an address already filled in connects on its own.
+    if($('#repo-url').val().trim()) {
+        $.fn.zato.envRepo.handleConnect();
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.handleCreate = function() {
+    $.fn.zato.envRepo.state.isCreating = true;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.handleCopyKey = function() {
+
+    const icon = $(this);
+    const text = $('#public-key').text();
+
+    navigator.clipboard.writeText(text).then(function() {
+        $.fn.zato.envRepo.showStatus($.fn.zato.envRepo.config.copiedMessage, true);
+        icon.css('opacity', 1);
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.handleUrlInput = function() {
+
+    // A new address starts the flow over.
+    $.fn.zato.envRepo.stopPolling();
+    $.fn.zato.envRepo.resetFlow();
+    $.fn.zato.envRepo.clearFieldError();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.showStatus = function(message, isOK) {
+
+    const config = $.fn.zato.envRepo.config;
+    const status = $('#env-repo-status');
+
+    status.removeClass('show fade status-message-success status-message-error');
+    status.text(message).addClass('show ' + (isOK ? 'status-message-success' : 'status-message-error'));
+
+    if(isOK) {
+        setTimeout(function() {
+            status.addClass('fade');
+            setTimeout(function() {
+                status.removeClass('show fade status-message-success');
+            }, 500);
+        }, config.statusFadeDelay);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.clearStatus = function() {
+    $('#env-repo-status').removeClass('show fade status-message-success status-message-error').text('');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.showFieldError = function(message) {
+
+    $('#repo-url').addClass('env-repo-error').focus();
+    $.fn.zato.envRepo.showStatus(message, false);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.clearFieldError = function() {
+
+    $('#repo-url').removeClass('env-repo-error');
+    $.fn.zato.envRepo.clearStatus();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.isAddressValid = function(address) {
+
+    const patterns = $.fn.zato.envRepo.config.repoPatterns;
+
+    for(let idx = 0; idx < patterns.length; idx++) {
+        if(patterns[idx].test(address)) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.resetFlow = function() {
+
+    $('#branch-row').addClass('hidden');
+    $('#update-button').addClass('hidden').prop('disabled', false);
+    $('#check-button').prop('disabled', false);
+    $('#key-help').addClass('hidden');
+    $('#step-check, #step-switch').addClass('hidden').removeClass('error completed');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.renderStep = function(step, state, message, lines) {
+
+    const config = $.fn.zato.envRepo.config;
+    const item = $('#step-' + step);
+    const icon = item.find('.env-repo-step-icon');
+    const linesElem = item.find('.env-repo-step-lines');
+
+    item.removeClass('hidden error completed');
+    item.find('.env-repo-step-message').text(message);
+
+    if(state === 'processing') {
+        icon.html('<img src="' + config.spinnerPath + '">');
+    }
+    else if(state === 'completed') {
+        item.addClass('completed');
+        icon.text('\u2713');
+    }
+    else {
+        item.addClass('error');
+        icon.text('\u2717');
+    }
+
+    if(lines && lines.length) {
+        linesElem.text(lines.join('\n')).removeClass('hidden');
+    }
+    else {
+        linesElem.text('').addClass('hidden');
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -87,7 +193,7 @@ $.fn.zato.envRepo.getInput = function() {
 
     const out = {
         url: $('#repo-url').val().trim(),
-        branch: $('#repo-branch').val().trim(),
+        branch: $('#repo-branch').val() || '',
     };
 
     return out;
@@ -95,52 +201,86 @@ $.fn.zato.envRepo.getInput = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.handleCheck = function() {
+$.fn.zato.envRepo.handleConnect = function() {
+
+    const config = $.fn.zato.envRepo.config;
+    const address = $('#repo-url').val().trim();
 
     $.fn.zato.envRepo.stopPolling();
-    $.fn.zato.settings.activateSpinner('.button-spinner');
+    $.fn.zato.envRepo.resetFlow();
+    $.fn.zato.envRepo.clearFieldError();
 
-    $('#progress-switch').addClass('hidden').removeClass('error-state');
-    $('#progress-check').removeClass('hidden error-state');
-    $.fn.zato.settings.updateProgress('check', 'processing', 'Connecting to GitHub...');
+    // The address is checked here first, nothing is sent until it has the right shape.
+    if(!address) {
+        $.fn.zato.envRepo.showFieldError(config.emptyAddressMessage);
+        return;
+    }
 
-    $.fn.zato.envRepo.sendRequest('check', function() {
-        $.fn.zato.envRepo.pollStatus('check', ['ok'], $.fn.zato.envRepo.onCheckDone);
+    if(!$.fn.zato.envRepo.isAddressValid(address)) {
+        $.fn.zato.envRepo.showFieldError(config.badAddressMessage);
+        return;
+    }
+
+    $('#check-button').prop('disabled', true);
+    $.fn.zato.envRepo.renderStep('check', 'processing', 'Connecting to GitHub...');
+
+    $.fn.zato.envRepo.sendRequest('check', function(response) {
+        $.fn.zato.envRepo.state.repo = response;
+        $.fn.zato.envRepo.renderStep('check', 'processing', 'Connecting to ' + response.full_name + '...');
+        $.fn.zato.envRepo.pollStatus('check', ['ok'], $.fn.zato.envRepo.onConnectDone);
     }, function(errorMessage) {
-        $.fn.zato.settings.deactivateSpinner('.button-spinner');
-        $.fn.zato.settings.updateProgress('check', 'error', errorMessage);
+        $('#check-button').prop('disabled', false);
+        $('#step-check').addClass('hidden');
+        $.fn.zato.envRepo.showFieldError(errorMessage);
     });
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.onCheckDone = function(status) {
+$.fn.zato.envRepo.onConnectDone = function(status) {
 
-    $.fn.zato.settings.deactivateSpinner('.button-spinner');
+    const repo = $.fn.zato.envRepo.state.repo;
+
+    $('#check-button').prop('disabled', false);
 
     if(status.state === 'ok') {
-        $.fn.zato.settings.updateProgress('check', 'completed', status.message);
-        $.fn.zato.envRepo.flashOK();
+        $.fn.zato.envRepo.renderStep('check', 'completed', 'Connected to ' + repo.full_name);
+        $.fn.zato.envRepo.fillBranches(status.branches || []);
+        $('#branch-row').removeClass('hidden');
+        $('#update-button').removeClass('hidden');
     }
     else {
-        $('#progress-check').data('full-error', status.message + '\n\n' + status.lines.join('\n'));
-        $.fn.zato.settings.updateProgress('check', 'error', status.message);
+        $.fn.zato.envRepo.renderStep('check', 'error', status.message, status.lines);
+        $('#deploy-key-link').attr('href', repo.deploy_key_url);
+        $('#key-help').removeClass('hidden');
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.flashOK = function() {
+$.fn.zato.envRepo.fillBranches = function(branches) {
 
-    const message = $('.status-message');
-    message.addClass('show');
+    const select = $('#repo-branch');
+    select.empty();
 
-    setTimeout(function() {
-        message.addClass('fade');
-        setTimeout(function() {
-            message.removeClass('show fade');
-        }, 500);
-    }, 1500);
+    branches.forEach(function(branch) {
+        select.append($('<option></option>').attr('value', branch).text(branch));
+    });
+
+    // The branch that runs now comes first, then main, then whatever is first.
+    const currentBranch = $('#repo-url').data('current-branch');
+    const defaultBranch = $.fn.zato.envRepo.config.defaultBranch;
+
+    let selected = branches[0];
+
+    if(branches.indexOf(currentBranch) !== -1) {
+        selected = currentBranch;
+    }
+    else if(branches.indexOf(defaultBranch) !== -1) {
+        selected = defaultBranch;
+    }
+
+    select.val(selected);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -151,10 +291,8 @@ $.fn.zato.envRepo.handleSwitch = function() {
     button.prop('disabled', true);
 
     $.fn.zato.envRepo.stopPolling();
-
-    $('#progress-check').addClass('hidden').removeClass('error-state');
-    $('#progress-switch').removeClass('hidden error-state');
-    $.fn.zato.settings.updateProgress('switch', 'processing', 'Switching the repository...');
+    $.fn.zato.envRepo.clearStatus();
+    $.fn.zato.envRepo.renderStep('switch', 'processing', 'Switching the repository...');
 
     $.fn.zato.envRepo.sendRequest('switch', function() {
         $.fn.zato.envRepo.pollStatus('switch', ['switching', 'switched'], function(status) {
@@ -162,7 +300,7 @@ $.fn.zato.envRepo.handleSwitch = function() {
         });
     }, function(errorMessage) {
         button.prop('disabled', false);
-        $.fn.zato.settings.updateProgress('switch', 'error', errorMessage);
+        $.fn.zato.envRepo.renderStep('switch', 'error', errorMessage);
     });
 };
 
@@ -172,17 +310,18 @@ $.fn.zato.envRepo.onSwitchDone = function(status, button) {
 
     // A host restarts the environment after this state, without one the switch is already complete.
     if(status.state === 'switching') {
-        $.fn.zato.settings.updateProgress('switch', 'processing', 'The host is restarting the environment, the loading page opens once it is up...');
+        $.fn.zato.envRepo.renderStep('switch', 'processing', 'The environment is restarting, the loading page opens once it is up...');
         $.fn.zato.envRepo.waitForDeployPage();
     }
     else if(status.state === 'switched') {
-        button.prop('disabled', false);
-        $.fn.zato.settings.updateProgress('switch', 'completed', status.message);
+        $.fn.zato.envRepo.renderStep('switch', 'completed', status.message);
+        setTimeout(function() {
+            window.location.reload();
+        }, $.fn.zato.envRepo.config.reloadDelay);
     }
     else {
         button.prop('disabled', false);
-        $('#progress-switch').data('full-error', status.message + '\n\n' + status.lines.join('\n'));
-        $.fn.zato.settings.updateProgress('switch', 'error', status.message);
+        $.fn.zato.envRepo.renderStep('switch', 'error', status.message, status.lines);
     }
 };
 
@@ -223,8 +362,8 @@ $.fn.zato.envRepo.sendRequest = function(action, onSuccess, onError) {
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
         },
-        success: function() {
-            onSuccess();
+        success: function(response) {
+            onSuccess(response);
         },
         error: function(xhr) {
             let errorMessage = 'Request could not be sent';
@@ -260,7 +399,7 @@ $.fn.zato.envRepo.pollStatus = function(step, finalStates, onDone) {
     state.pollDeadline = Date.now() + config.pollTimeout;
 
     const poll = function() {
-        $.fn.zato.envRepo.fetchStatus(true, function(status) {
+        $.fn.zato.envRepo.fetchStatus(function(status) {
 
             // Only a status written after the request went out is an answer to it ..
             const isFresh = status && new Date(status.time) >= state.requestTime;
@@ -272,7 +411,7 @@ $.fn.zato.envRepo.pollStatus = function(step, finalStates, onDone) {
             }
 
             if(isFresh && status.message) {
-                $.fn.zato.settings.updateProgress(step, 'processing', status.message);
+                $.fn.zato.envRepo.renderStep(step, 'processing', status.message);
             }
 
             // .. and there is only so long to wait for one.
@@ -291,70 +430,22 @@ $.fn.zato.envRepo.pollStatus = function(step, finalStates, onDone) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.fetchStatus = function(isPolling, onStatus) {
+$.fn.zato.envRepo.fetchStatus = function(onStatus) {
 
     $.ajax({
         url: $.fn.zato.envRepo.config.apiPrefix + 'status',
         type: 'GET',
         success: function(response) {
-            $.fn.zato.envRepo.renderCurrent(response.current);
-            $.fn.zato.envRepo.renderLog(response.status);
-            if(onStatus) {
-                onStatus(response.status);
-            }
+            onStatus(response.status);
         },
         error: function() {
-            if(onStatus) {
-                onStatus(null);
-            }
+            onStatus(null);
         }
     });
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.renderCurrent = function(current) {
-
-    if(!current) {
-        return;
-    }
-
-    $('#current-url').text(current.url).attr('title', current.url);
-    $('#current-branch').text(current.branch);
-    $('#current-commit').text(current.commit.substring(0, 12));
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.renderLog = function(status) {
-
-    const container = $('#env-repo-log');
-    container.empty();
-
-    if(!status) {
-        container.append($('<div class="env-repo-log-empty">No results</div>'));
-        return;
-    }
-
-    const header = $('<div class="env-repo-log-header"></div>');
-    header.append($('<span class="env-repo-log-time"></span>').text(new Date(status.time).toLocaleString()));
-    header.append($('<span class="env-repo-log-state"></span>').addClass(status.state).text(status.state));
-    container.append(header);
-
-    container.append($('<div class="env-repo-log-message"></div>').text(status.message));
-
-    if(status.lines.length) {
-        const lines = $('<pre class="env-repo-log-lines"></pre>');
-        lines.text(status.lines.join('\n'));
-        container.append(lines);
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 $(document).ready(function() {
-    $('#repo-url').on('input', function() {
-        $(this).data('edited', true);
-    });
     $.fn.zato.envRepo.init();
 });

@@ -20,7 +20,7 @@ from zato.common.env_repo import Env_Repo, write_json
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import anydict, strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +35,8 @@ _Git_Timeout = 60
 
 # How many lines of git's output the status keeps
 _Max_Status_Lines = 40
+
+_Heads_Prefix = 'refs/heads/'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,6 +58,7 @@ class Status:
         self.url    = url
         self.branch = branch
         self.lines:'strlist' = []
+        self.branches:'strlist' = []
 
 # ################################################################################################################################
 
@@ -78,10 +81,11 @@ class Status:
             'action':  self.action,
             'url':     self.url,
             'branch':  self.branch,
-            'state':   state,
-            'message': message,
-            'lines':   self.lines,
-            'time':    datetime.now(timezone.utc).isoformat(),
+            'state':    state,
+            'message':  message,
+            'lines':    self.lines,
+            'branches': self.branches,
+            'time':     datetime.now(timezone.utc).isoformat(),
         }
 
         write_json(Env_Repo.Status, data)
@@ -89,12 +93,12 @@ class Status:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _check_access(status:'Status') -> 'str':
-    """ Runs git ls-remote for the branch and returns the commit it is at.
+def _list_branches(status:'Status') -> 'strstrdict':
+    """ Runs git ls-remote and returns the branches with the commits they are at.
     """
-    status.write(Env_Repo.State_Checking, f'Checking access to {status.url}')
+    status.write(Env_Repo.State_Checking, f'Connecting to {status.url}')
 
-    command = ['git', 'ls-remote', '--heads', status.url, status.branch]
+    command = ['git', 'ls-remote', '--heads', status.url]
 
     # Neither git nor ssh may prompt for anything.
     env = dict(os.environ)
@@ -113,21 +117,30 @@ def _check_access(status:'Status') -> 'str':
     if result.returncode != 0:
         raise RequestError(f'GitHub refused access to {status.url}, exit code {result.returncode}')
 
-    stdout = result.stdout.strip()
+    out:'strstrdict' = {}
 
-    if not stdout:
-        raise RequestError(f'Branch {status.branch} not found in {status.url}')
+    # Each line is a commit, a tab and refs/heads/<branch>.
+    for line in result.stdout.splitlines():
+        commit, _, ref = line.strip().partition('\t')
+        if ref.startswith(_Heads_Prefix):
+            out[ref[len(_Heads_Prefix):]] = commit
 
-    status.add_lines(stdout)
+    if not out:
+        raise RequestError(f'No branches found in {status.url}')
 
-    out = stdout.split()[0]
+    status.branches = sorted(out)
     return out
 
 # ################################################################################################################################
 
-def _switch(status:'Status', commit:'str') -> 'None':
+def _switch(status:'Status', branches:'strstrdict') -> 'None':
     """ Writes current.json with the repository, branch and commit.
     """
+    commit = branches.get(status.branch)
+
+    if not commit:
+        raise RequestError(f'Branch {status.branch} not found in {status.url}')
+
     status.write(Env_Repo.State_Switching, f'Switching to {status.url} at {status.branch}')
 
     data:'anydict' = {
@@ -149,12 +162,12 @@ def _handle(action:'str', url:'str', branch:'str') -> 'None':
     status = Status(action, url, branch)
 
     try:
-        commit = _check_access(status)
+        branches = _list_branches(status)
 
         if action == Env_Repo.Action_Switch:
-            _switch(status, commit)
+            _switch(status, branches)
         else:
-            status.write(Env_Repo.State_OK, f'Access to {url} at {branch} works')
+            status.write(Env_Repo.State_OK, f'Connected to {url}')
 
     except RequestError as exception:
         status.write(Env_Repo.State_Error, exception.message)

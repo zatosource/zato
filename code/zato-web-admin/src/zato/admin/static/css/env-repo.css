@@ -1,158 +1,241 @@
-.settings-sidebar {
-    flex: 0 0 360px;
-    width: 360px;
-    min-width: 0;
-    box-sizing: border-box;
+/* ------------------------------------------------------------ */
+/* GitHub repository - page width                               */
+/* ------------------------------------------------------------ */
+
+.env-repo-markup > h2.zato,
+.env-repo-markup table.rate-limiting-form,
+.env-repo-markup .rate-limiting-actions,
+.env-repo-markup .env-repo-flow {
+    width: 100%;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.env-repo-long-value {
+/* ------------------------------------------------------------ */
+/* GitHub repository - heading                                  */
+/* ------------------------------------------------------------ */
+
+#markup > h2.zato.env-repo-title {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    min-width: 0;
-    max-width: 360px;
+    gap: 8px;
 }
 
-.env-repo-long-value span:first-child {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.env-repo-github {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    flex: 0 0 auto;
 }
 
-.env-repo-login {
-    font-family: monospace;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--primary-dark);
-    background: var(--white);
-    border: 2px solid var(--primary-dark);
-    padding: 0px 3px;
-    margin-left: 10px;
-    box-sizing: border-box;
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: 180px;
+/* ------------------------------------------------------------ */
+/* GitHub repository - form                                     */
+/* ------------------------------------------------------------ */
+
+table.rate-limiting-form input[type="text"].env-repo-input {
+    width: 100%;
 }
 
-.env-repo-login:focus {
-    outline: none;
-    background: var(--background-light);
+table.rate-limiting-form input[type="text"].env-repo-error {
+    border-color: #c0392b;
+    box-shadow: 0 0 0 2px #c0392b1a;
 }
 
-.env-repo-steps {
+.env-repo-current {
+    font-family: var(--time-slot-mono);
+    color: #2c3e50;
+}
+
+table.rate-limiting-form tr.hidden {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* GitHub repository - actions                                  */
+/* ------------------------------------------------------------ */
+
+.env-repo-markup .rate-limiting-actions {
+    margin-top: 9px;
+}
+
+.env-repo-external {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+    flex: 0 0 auto;
+}
+
+.rate-limiting-save-group input[type="submit"].hidden {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* GitHub repository - flow                                     */
+/* ------------------------------------------------------------ */
+
+.env-repo-flow {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 6px;
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 12px;
+    min-width: 0;
 }
 
 .env-repo-step {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    font-size: 13px;
+    padding: 10px 14px;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    background: #fdfefe;
+    font-size: 12px;
+    color: #2c3e50;
     min-width: 0;
 }
 
-.env-repo-link {
-    min-width: 0;
-    overflow-wrap: anywhere;
+.env-repo-step.hidden {
+    display: none;
 }
 
-.env-repo-step-number {
+.env-repo-step.error {
+    border-color: #c0392b;
+    background: #fff8f7;
+}
+
+.env-repo-step.completed {
+    border-color: color-mix(in srgb, var(--zato-status-ok-color) 50%, #d8dce0);
+}
+
+.env-repo-step-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--white);
-    background: var(--primary-dark);
+    width: 16px;
+    height: 16px;
     flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 1px;
 }
 
-.env-repo-link-disabled {
-    color: #999;
-    cursor: default;
+.env-repo-step-icon img {
+    width: 16px;
+    height: 16px;
+    animation: env-repo-spin 0.8s linear infinite;
 }
 
-.logs-section {
-    margin-top: 32px;
-    position: relative;
+.env-repo-step.completed .env-repo-step-icon {
+    color: var(--zato-status-ok-color);
 }
 
-.env-repo-log {
+.env-repo-step.error .env-repo-step-icon {
+    color: #c0392b;
+}
+
+.env-repo-step-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 12px;
-    background: var(--background-light);
-    font-size: 13px;
+    gap: 4px;
+    flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
 }
 
-.env-repo-log > * {
-    min-width: 0;
-    max-width: 100%;
-}
-
-.env-repo-log-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-}
-
-.env-repo-log-time {
-    color: #333;
+.env-repo-step-title {
     font-weight: 600;
+}
+
+.env-repo-step-message {
+    font-family: var(--time-slot-mono);
+    font-size: 11px;
+    color: #666666;
     overflow-wrap: anywhere;
 }
 
-.env-repo-log-state {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 8px;
-    color: var(--white);
-    background: var(--primary-dark);
+.env-repo-step.error .env-repo-step-message {
+    color: #c0392b;
 }
 
-.env-repo-log-state.ok,
-.env-repo-log-state.switched {
-    background: #067f39;
-}
-
-.env-repo-log-state.error {
-    background: #b3261e;
-}
-
-.env-repo-log-message {
-    color: #333;
-    overflow-wrap: anywhere;
-}
-
-.env-repo-log-lines {
+.env-repo-step-lines {
     box-sizing: border-box;
     width: 100%;
-    margin: 6px 0 0 0;
+    margin: 4px 0 0 0;
     padding: 8px;
-    max-height: 260px;
+    max-height: 220px;
     overflow: auto;
-    font-family: monospace;
-    font-size: 12px;
-    color: #333;
-    background: var(--white);
+    border: 1px solid #e2e6ea;
+    border-radius: 3px;
+    background: #ffffff;
+    font-family: var(--time-slot-mono);
+    font-size: 11px;
+    color: #2c3e50;
     white-space: pre-wrap;
     word-break: break-all;
 }
 
-.env-repo-log-empty {
-    color: #333;
-    font-size: 14px;
-    text-align: center;
-    margin-top: 10px;
+.env-repo-step-lines.hidden {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* GitHub repository - deploy key                               */
+/* ------------------------------------------------------------ */
+
+.env-repo-key {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px dashed #b0b0b0;
+    border-radius: 3px;
+    background: #f8f9fa;
+    font-family: var(--time-slot-mono);
+    font-size: 11px;
+    color: #1a56a8;
+    min-width: 0;
+}
+
+.env-repo-key span:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.env-repo-copy {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.1s;
+}
+
+.env-repo-copy:hover {
+    opacity: 1;
+}
+
+.env-repo-copy svg {
+    width: 14px;
+    height: 14px;
+    fill: #1a56a8;
+}
+
+.env-repo-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    align-self: flex-start;
+    font-size: 12px;
+}
+
+@keyframes env-repo-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
