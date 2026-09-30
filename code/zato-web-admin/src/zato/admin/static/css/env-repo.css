@@ -43,13 +43,29 @@ table.rate-limiting-form input[type="text"].env-repo-error {
     box-shadow: 0 0 0 2px #c0392b1a;
 }
 
-.env-repo-current {
-    font-family: var(--time-slot-mono);
-    color: #2c3e50;
+/* The placeholder, the spinner and the list share one cell, stacked on top of each other, so the row keeps
+   the height of the tallest of them whichever is on show, and each fades in or out where it stands. */
+.env-repo-branch {
+    display: inline-grid;
+    align-items: center;
+    justify-items: start;
+    vertical-align: middle;
 }
 
-table.rate-limiting-form tr.hidden {
-    display: none;
+.env-repo-branch > * {
+    grid-area: 1 / 1;
+    transition: opacity 0.6s ease, visibility 0.6s;
+}
+
+.env-repo-branch > [data-shown="false"] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.env-repo-branch > .info-spinner {
+    margin-right: 0;
+    top: 0;
 }
 
 /* ------------------------------------------------------------ */
@@ -174,4 +190,14 @@ table.rate-limiting-form tr.hidden {
     gap: 4px;
     align-self: flex-start;
     font-size: 12px;
+}
+
+.env-repo-link.hidden {
+    display: none;
+}
+
+.env-repo-side {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
 }

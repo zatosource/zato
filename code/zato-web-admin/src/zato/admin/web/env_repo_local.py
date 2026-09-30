@@ -14,7 +14,7 @@ from subprocess import PIPE, run, TimeoutExpired
 from threading import Thread
 
 # Zato
-from zato.common.env_repo import Env_Repo, write_json
+from zato.common.env_repo import Env_Repo, get_link_dir, write_json
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,6 +37,39 @@ _Git_Timeout = 60
 _Max_Status_Lines = 40
 
 _Heads_Prefix = 'refs/heads/'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_key_path() -> 'str':
+    out = os.path.join(get_link_dir(), Env_Repo.Private_Key)
+    return out
+
+# ################################################################################################################################
+
+def ensure_key() -> 'None':
+    """ Creates the dashboard's own deploy key pair in the link directory unless it is there already.
+    """
+    path = _get_key_path()
+
+    if os.path.exists(path):
+        return
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    command = ['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', Env_Repo.Key_Comment, '-f', path]
+
+    try:
+        result = run(command, stdout=PIPE, stderr=PIPE, timeout=_Git_Timeout, text=True)
+    except (OSError, TimeoutExpired) as exception:
+        logger.warning('Deploy key not created at %s: %s', path, exception)
+        return
+
+    if result.returncode != 0:
+        logger.warning('Deploy key not created at %s, exit code %d: %s', path, result.returncode, result.stderr.strip())
+        return
+
+    logger.info('Deploy key created at %s', path)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,10 +133,10 @@ def _list_branches(status:'Status') -> 'strstrdict':
 
     command = ['git', 'ls-remote', '--heads', status.url]
 
-    # Neither git nor ssh may prompt for anything.
+    # Only the dashboard's own key is offered, and neither git nor ssh may prompt for anything.
     env = dict(os.environ)
     env['GIT_TERMINAL_PROMPT'] = '0'
-    env['GIT_SSH_COMMAND'] = 'ssh -o BatchMode=yes'
+    env['GIT_SSH_COMMAND'] = f'ssh -o BatchMode=yes -o IdentitiesOnly=yes -i {_get_key_path()}'
 
     try:
         result = run(command, stdout=PIPE, stderr=PIPE, env=env, timeout=_Git_Timeout, text=True)
@@ -157,11 +190,27 @@ def _switch(status:'Status', branches:'strstrdict') -> 'None':
 
 # ################################################################################################################################
 
+def _disconnect(status:'Status') -> 'None':
+    """ Removes current.json, which is all that ties this dashboard to the repository.
+    """
+    path = os.path.join(get_link_dir(), Env_Repo.Current)
+
+    if os.path.exists(path):
+        os.remove(path)
+
+    status.write(Env_Repo.State_Disconnected, f'Disconnected from {status.url}')
+
+# ################################################################################################################################
+
 def _handle(action:'str', url:'str', branch:'str') -> 'None':
 
     status = Status(action, url, branch)
 
     try:
+        if action == Env_Repo.Action_Disconnect:
+            _disconnect(status)
+            return
+
         branches = _list_branches(status)
 
         if action == Env_Repo.Action_Switch:

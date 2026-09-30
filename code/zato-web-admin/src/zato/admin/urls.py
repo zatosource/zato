@@ -1741,6 +1741,8 @@ urlpatterns += [
         login_required(env_repo.env_repo_view.check), name='env-repo-check'),
     url(r'^zato/env-repo/switch$',
         login_required(env_repo.env_repo_view.switch), name='env-repo-switch'),
+    url(r'^zato/env-repo/disconnect$',
+        login_required(env_repo.env_repo_view.disconnect), name='env-repo-disconnect'),
 
     # Monitoring - Grafana Cloud
 

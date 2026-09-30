@@ -12,7 +12,7 @@ import re
 from logging import getLogger
 
 # Zato
-from zato.admin.web.env_repo_local import handle_request as handle_request_locally
+from zato.admin.web.env_repo_local import ensure_key, handle_request as handle_request_locally
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.base import SettingsBaseView
 from zato.admin.web.views.settings.config import env_repo_page_config
@@ -56,13 +56,16 @@ def _get_param(query:'QueryDict', name:'str') -> 'str':
 # ################################################################################################################################
 
 def _set_local_dir() -> 'None':
-    """ Points the link directory at a directory under the dashboard's base directory.
+    """ Points the link directory at a directory under the dashboard's base directory, with the dashboard's own deploy key in it.
     """
     # config_dir is set at startup, after this module is imported.
     from zato.admin import settings as admin_settings
 
     path = os.path.join(admin_settings.config_dir, Env_Repo.Local_Dir_Name)
     set_local_dir(path)
+
+    if not is_host_mode():
+        ensure_key()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,12 +91,7 @@ class EnvRepoView(SettingsBaseView):
         context['current_branch'] = current.get('branch', '')
 
         # The address is shown the way a browser shows it.
-        if current_repo:
-            context['current_full_name'] = current_repo.full_name
-            context['current_url'] = current_repo.https_url
-        else:
-            context['current_full_name'] = ''
-            context['current_url'] = ''
+        context['current_url'] = current_repo.https_url if current_repo else ''
 
         return context
 
@@ -155,6 +153,33 @@ class EnvRepoView(SettingsBaseView):
     @method_allowed('POST')
     def switch(self, req:'HttpRequest') -> 'HttpResponse':
         return self._handle_request(req, Env_Repo.Action_Switch)
+
+# ################################################################################################################################
+
+    @method_allowed('POST')
+    def disconnect(self, req:'HttpRequest') -> 'HttpResponse':
+        """ Disconnects from the repository the environment runs now, a host goes back to the public blueprint.
+        """
+        _set_local_dir()
+
+        current = read_current()
+
+        if not current:
+            return json_response({'error': 'No repository is connected'}, success=False)
+
+        url    = current['url']
+        branch = current['branch']
+
+        try:
+            if is_host_mode():
+                write_request(Env_Repo.Action_Disconnect, url, branch)
+            else:
+                handle_request_locally(Env_Repo.Action_Disconnect, url, branch)
+        except OSError as exception:
+            logger.warning('Request not written to %s: %s', get_link_dir(), exception)
+            return json_response({'error': f'Request could not be written: {exception}'}, success=False)
+
+        return json_response({'url': url})
 
 # ################################################################################################################################
 # ################################################################################################################################

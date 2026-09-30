@@ -1,8 +1,8 @@
 $.fn.zato.envRepo = {};
 
-// The page has one action button whose label follows the mode - connect checks the address with GitHub,
-// allow opens GitHub's deploy key page with our key filled in and waits until GitHub accepts it,
-// and switch changes the environment over to the branch chosen.
+// One button on the right. Connect checks the address with GitHub and lists the branches, and once they are listed,
+// Connect again switches the environment over to the branch chosen. When GitHub refuses, the button reads Allow access
+// and opens GitHub's deploy key page with our key filled in, then waits until GitHub accepts it.
 
 $.fn.zato.envRepo.config = {
     apiPrefix: '/zato/env-repo/',
@@ -10,10 +10,12 @@ $.fn.zato.envRepo.config = {
     pollTimeout: 180000,
     keyRetryInterval: 5000,
     keyWaitTimeout: 900000,
+    keyHelpDelay: 30000,
     deployPollInterval: 2000,
     deployProgressPath: '/zato-deploy/progress.json',
     reloadDelay: 1500,
     statusFadeDelay: 2000,
+    fadeDuration: 600,
     defaultBranch: 'main',
     deployKeyUrl: 'https://github.com/{owner}/{name}/settings/keys/new',
     deployKeyTitle: 'Zato',
@@ -35,9 +37,12 @@ $.fn.zato.envRepo.state = {
     pollTimer: null,
     pollDeadline: null,
     retryTimer: null,
+    keyHelpTimer: null,
+    branchTimer: null,
     keyDeadline: null,
     repo: null,
     isCreating: false,
+    isConnected: false,
     isQuiet: false,
     lastMessage: '',
     lineCount: 0,
@@ -57,7 +62,11 @@ $.fn.zato.envRepo.init = function() {
         isHidden: true,
     });
 
+    state.isConnected = $('#disconnect-button').data('is-connected') === 1;
+    $('#branch-placeholder').html($.fn.zato.empty_value);
+
     $('#create-button').on('click', $.fn.zato.envRepo.handleCreate);
+    $('#disconnect-button').on('click', $.fn.zato.envRepo.handleDisconnect);
     $('#copy-key').on('click', $.fn.zato.envRepo.handleCopyKey);
     $('#repo-url').on('input', $.fn.zato.envRepo.handleUrlInput);
 
@@ -74,10 +83,27 @@ $.fn.zato.envRepo.init = function() {
         }
     });
 
+    $.fn.zato.envRepo.updateSide();
+
     // A page that opens with an address already filled in connects on its own.
     if($('#repo-url').val().trim()) {
         $.fn.zato.envRepo.handleConnect();
     }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The link on the left is what makes sense now - Create when there is no address, Disconnect when the address
+// is the repository that runs now and its branches are listed, nothing otherwise.
+$.fn.zato.envRepo.updateSide = function() {
+
+    const state = $.fn.zato.envRepo.state;
+    const address = $('#repo-url').val().trim();
+    const currentUrl = $('#repo-url').data('current-url');
+    const isCurrent = state.isConnected && state.mode === 'switch' && address === currentUrl;
+
+    $('#create-button').toggleClass('hidden', address !== '');
+    $('#disconnect-button').toggleClass('hidden', !isCurrent);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -91,6 +117,7 @@ $.fn.zato.envRepo.handleCreate = function() {
     $.fn.zato.envRepo.setMode('allow');
 
     $('#repo-url').val('');
+    $.fn.zato.envRepo.updateSide();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -135,6 +162,7 @@ $.fn.zato.envRepo.handleUrlInput = function() {
     $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.resetFlow();
     $.fn.zato.envRepo.clearFieldError();
+    $.fn.zato.envRepo.updateSide();
 
     if(!$.fn.zato.envRepo.state.isCreating) {
         $.fn.zato.envRepo.setMode('connect');
@@ -143,13 +171,17 @@ $.fn.zato.envRepo.handleUrlInput = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The mode is connect, switch or allow - the first two read Connect, the branch row is what tells them apart.
 $.fn.zato.envRepo.setMode = function(mode) {
 
     const button = $('#action-button');
+    const label = mode === 'allow' ? 'allow-label' : 'connect-label';
 
     $.fn.zato.envRepo.state.mode = mode;
-    button.val(button.data(mode + '-label'));
+    button.val(button.data(label));
     button.prop('disabled', false);
+
+    $.fn.zato.envRepo.updateSide();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -158,7 +190,7 @@ $.fn.zato.envRepo.resetFlow = function() {
 
     const state = $.fn.zato.envRepo.state;
 
-    $('#branch-row').addClass('hidden');
+    $.fn.zato.envRepo.setBranchView('branch-placeholder');
     $('#key-help').addClass('hidden');
 
     state.log.clear();
@@ -169,7 +201,34 @@ $.fn.zato.envRepo.resetFlow = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Opens the panel for a new request, with the repository's name in its header.
+// The Branch cell shows one of the placeholder, the spinner or the list - what is on show fades out first,
+// then what comes next fades in, and the row never changes its height.
+$.fn.zato.envRepo.setBranchView = function(id) {
+
+    const config = $.fn.zato.envRepo.config;
+    const state = $.fn.zato.envRepo.state;
+    const shown = $('#branch-cell > [data-shown="true"]');
+
+    if(state.branchTimer) {
+        clearTimeout(state.branchTimer);
+        state.branchTimer = null;
+    }
+
+    if(shown.attr('id') === id) {
+        return;
+    }
+
+    shown.attr('data-shown', 'false');
+
+    state.branchTimer = setTimeout(function() {
+        $('#' + id).attr('data-shown', 'true');
+        state.branchTimer = null;
+    }, shown.length ? config.fadeDuration : 0);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Starts the panel over for a new request, with the repository's name in its header.
 $.fn.zato.envRepo.startLog = function(repo, message) {
 
     const state = $.fn.zato.envRepo.state;
@@ -217,7 +276,7 @@ $.fn.zato.envRepo.appendStatus = function(status) {
         if(status.state === 'error') {
             kind = 'error';
         }
-        else if(status.state === 'ok' || status.state === 'switched') {
+        else if(status.state === 'ok' || status.state === 'switched' || status.state === 'disconnected') {
             kind = 'ok';
         }
 
@@ -273,6 +332,7 @@ $.fn.zato.envRepo.handleConnect = function() {
     state.isQuiet = false;
 
     $('#action-button').prop('disabled', true);
+    $.fn.zato.envRepo.setBranchView('branch-spinner');
     $.fn.zato.envRepo.startLog(state.repo, 'Connecting to ' + state.repo.full_name);
 
     $.fn.zato.envRepo.sendCheck(function(status) {
@@ -305,12 +365,14 @@ $.fn.zato.envRepo.onRefused = function(status) {
 
     $.fn.zato.envRepo.appendStatus(status);
     state.log.setState('failed');
+    $.fn.zato.envRepo.setBranchView('branch-placeholder');
 
     $.fn.zato.envRepo.setMode('allow');
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Connected - the branches take the spinner's place and Connect now means the switch to the one chosen.
 $.fn.zato.envRepo.onConnected = function(status) {
 
     const state = $.fn.zato.envRepo.state;
@@ -319,12 +381,14 @@ $.fn.zato.envRepo.onConnected = function(status) {
     state.isQuiet = false;
     state.isCreating = false;
 
+    $.fn.zato.envRepo.stopAll();
+    $('#key-help').addClass('hidden');
+
     $.fn.zato.envRepo.appendLine('Connected to ' + state.repo.full_name + ', ' + branches.length + ' ' + (branches.length === 1 ? 'branch' : 'branches'), 'ok');
     state.log.setState('done');
 
-    $('#key-help').addClass('hidden');
     $.fn.zato.envRepo.fillBranches(branches);
-    $('#branch-row').removeClass('hidden');
+    $.fn.zato.envRepo.setBranchView('repo-branch');
 
     $.fn.zato.envRepo.setMode('switch');
 };
@@ -353,10 +417,12 @@ $.fn.zato.envRepo.handleAllow = function() {
     $('#action-button').prop('disabled', true);
     $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to accept the key for ' + state.repo.full_name);
 
-    // The key is also on this page for anyone GitHub did not fill it in for.
+    // The key comes up on this page only if the wait drags on, for anyone GitHub did not fill it in for.
     if($('#public-key').text().trim()) {
         $('#deploy-key-link').attr('href', $.fn.zato.envRepo.getKeyUrl(state.repo));
-        $('#key-help').removeClass('hidden');
+        state.keyHelpTimer = setTimeout(function() {
+            $('#key-help').removeClass('hidden');
+        }, config.keyHelpDelay);
     }
 
     $.fn.zato.envRepo.retryCheck();
@@ -455,7 +521,7 @@ $.fn.zato.envRepo.onSwitchDone = function(status) {
         $.fn.zato.envRepo.appendLine('The environment is restarting, the loading page opens once it is up', null);
         $.fn.zato.envRepo.waitForDeployPage();
     }
-    else if(status.state === 'switched') {
+    else if(status.state === 'switched' || status.state === 'disconnected') {
         state.log.setState('done');
         setTimeout(function() {
             window.location.reload();
@@ -463,131 +529,32 @@ $.fn.zato.envRepo.onSwitchDone = function(status) {
     }
     else {
         state.log.setState('failed');
-        $.fn.zato.envRepo.setMode('switch');
+        $.fn.zato.envRepo.setMode(state.mode);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.envRepo.waitForDeployPage = function() {
+// Disconnects from the repository that runs now, a host goes back to the public blueprint.
+$.fn.zato.envRepo.handleDisconnect = function(e) {
 
-    const config = $.fn.zato.envRepo.config;
-
-    // Once the loading page answers on this port, the container is gone and the page takes over.
-    const check = function() {
-        fetch(config.deployProgressPath, {cache: 'no-store'}).then(function(response) {
-            if(response.ok) {
-                window.location.replace('/');
-            }
-            else {
-                setTimeout(check, config.deployPollInterval);
-            }
-        }).catch(function() {
-            setTimeout(check, config.deployPollInterval);
-        });
-    };
-
-    setTimeout(check, config.deployPollInterval);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.sendRequest = function(action, onSuccess, onError) {
-
-    const input = $.fn.zato.envRepo.getInput();
-    $.fn.zato.envRepo.state.requestTime = new Date();
-
-    $.ajax({
-        url: $.fn.zato.envRepo.config.apiPrefix + action,
-        type: 'POST',
-        data: input,
-        headers: {
-            'X-CSRFToken': $.cookie('csrftoken')
-        },
-        success: function(response) {
-            onSuccess(response);
-        },
-        error: function(xhr) {
-            let errorMessage = 'Request could not be sent';
-            try {
-                const response = JSON.parse(xhr.responseText);
-                errorMessage = response.error || errorMessage;
-            } catch(e) {
-            }
-            onError(errorMessage);
-        }
-    });
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.stopAll = function() {
+    e.preventDefault();
 
     const state = $.fn.zato.envRepo.state;
+    const repo = $.fn.zato.envRepo.parseAddress($('#repo-url').data('current-url') || $('#repo-url').val().trim());
 
-    if(state.pollTimer) {
-        clearTimeout(state.pollTimer);
-        state.pollTimer = null;
-    }
+    $.fn.zato.envRepo.stopAll();
+    $.fn.zato.envRepo.resetFlow();
 
-    if(state.retryTimer) {
-        clearTimeout(state.retryTimer);
-        state.retryTimer = null;
-    }
-};
+    state.isQuiet = false;
 
-// ////////////////////////////////////////////////////////////////////////
+    $('#action-button').prop('disabled', true);
+    $.fn.zato.envRepo.startLog(repo, 'Disconnecting from ' + repo.full_name);
 
-$.fn.zato.envRepo.pollStatus = function(finalStates, onDone) {
-
-    const config = $.fn.zato.envRepo.config;
-    const state = $.fn.zato.envRepo.state;
-
-    state.pollDeadline = Date.now() + config.pollTimeout;
-
-    const poll = function() {
-        $.fn.zato.envRepo.fetchStatus(function(status) {
-
-            // Only a status written after the request went out is an answer to it ..
-            const isFresh = status && new Date(status.time) >= state.requestTime;
-
-            if(isFresh && (finalStates.indexOf(status.state) !== -1 || status.state === 'error')) {
-                state.pollTimer = null;
-                onDone(status);
-                return;
-            }
-
-            if(isFresh) {
-                $.fn.zato.envRepo.appendStatus(status);
-            }
-
-            // .. and there is only so long to wait for one.
-            if(Date.now() > state.pollDeadline) {
-                state.pollTimer = null;
-                onDone({state: 'error', message: 'No answer in time', lines: []});
-                return;
-            }
-
-            state.pollTimer = setTimeout(poll, config.pollInterval);
-        });
-    };
-
-    poll();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.fetchStatus = function(onStatus) {
-
-    $.ajax({
-        url: $.fn.zato.envRepo.config.apiPrefix + 'status',
-        type: 'GET',
-        success: function(response) {
-            onStatus(response.status);
-        },
-        error: function() {
-            onStatus(null);
-        }
+    $.fn.zato.envRepo.sendRequest('disconnect', function() {
+        $.fn.zato.envRepo.pollStatus(['switching', 'disconnected'], $.fn.zato.envRepo.onSwitchDone);
+    }, function(errorMessage) {
+        $.fn.zato.envRepo.onSwitchDone({state: 'error', message: errorMessage, lines: []});
     });
 };
 

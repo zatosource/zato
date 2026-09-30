@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from logging import getLogger
 
 # Zato
-from zato_deploy.common import anydict, Env_Repo_Action, Env_Repo_State, Link_File, load_env_repo_config, Path, \
+from zato_deploy.common import anydict, Blueprint, Env_Repo_Action, Env_Repo_State, Link_File, load_env_repo_config, Path, \
     Restart_Reason, strlist, Systemd_Unit, write_env_file
 from zato_deploy.git import is_ssh_url, run_git
 from zato_deploy.process import run_command
@@ -31,7 +31,7 @@ logger = getLogger(__name__)
 _Sync_Flag = '--sync'
 
 _Request_Keys = {'action', 'env_repo_url', 'env_repo_branch'}
-_Actions      = {Env_Repo_Action.Check, Env_Repo_Action.Switch}
+_Actions      = {Env_Repo_Action.Check, Env_Repo_Action.Switch, Env_Repo_Action.Disconnect}
 
 # How many lines of git's output the status keeps for the dashboard.
 _Max_Status_Lines = 40
@@ -203,6 +203,21 @@ def _switch(status:'Status') -> 'None':
 
 # ################################################################################################################################
 
+def _disconnect(status:'Status') -> 'None':
+    """ Clears the configured repository, so the deployment restarts with the public blueprint.
+    """
+    values = {
+        'env_repo_url':    '',
+        'env_repo_branch': '',
+    }
+
+    write_env_file(Path.Env_Repo_Config, values)
+    status.add_line(f'Configuration cleared in {Path.Env_Repo_Config}')
+
+    status.write(Env_Repo_State.Switching, f'Disconnecting from {status.url}, switching to {Blueprint.URL}')
+
+# ################################################################################################################################
+
 def handle_request() -> 'None':
     """ Handles the request that the dashboard left in the shared directory, if there is one.
     """
@@ -220,9 +235,12 @@ def handle_request() -> 'None':
 
         status = Status(request['action'], request['env_repo_url'], request['env_repo_branch'])
 
-        _list_branches(status)
+        if status.action == Env_Repo_Action.Disconnect:
+            _disconnect(status)
+            is_switched = True
 
-        if status.action == Env_Repo_Action.Switch:
+        elif status.action == Env_Repo_Action.Switch:
+            _list_branches(status)
             _check_branch_name(status.branch)
 
             if status.branch not in status.branches:
@@ -230,7 +248,9 @@ def handle_request() -> 'None':
 
             _switch(status)
             is_switched = True
+
         else:
+            _list_branches(status)
             status.write(Env_Repo_State.OK, f'Connected to {status.url}')
 
     except RequestError as exception:

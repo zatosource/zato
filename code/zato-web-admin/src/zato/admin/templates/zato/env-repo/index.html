@@ -3,6 +3,7 @@
 {% block html_title %}{{ page_config.title }}{% endblock %}
 
 {% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
     <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
     <link rel="stylesheet" type="text/css" href="/static/css/rate-limiting.css">
@@ -15,6 +16,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/progress-log.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-address.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-requests.js"></script>
 {% endblock %}
 
 {% block "content" %}
@@ -27,42 +29,41 @@
 
 <form id="repo-form" method="get" action="" autocomplete="on">
 <table class="rate-limiting-form">
-    {% if current_full_name %}
     <tr>
         <td class="rate-limiting-form-label">
-            <label>{{ page_config.current_label }}</label>
+            <label for="repo-url">{{ page_config.address_label }}</label>
         </td>
         <td>
-            <span class="env-repo-current" id="current-repo" title="{{ current_url }}">{{ current_full_name }} at {{ current_branch }}</span>
+            <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" />
         </td>
     </tr>
-    {% endif %}
     <tr>
-        <td colspan="2">
-            <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-branch="{{ current_branch }}" />
-        </td>
-    </tr>
-    <tr class="hidden" id="branch-row">
         <td class="rate-limiting-form-label">
-            <label for="repo-branch">{{ page_config.repo_branch_label }}</label>
+            <label for="repo-branch">{{ page_config.branch_label }}</label>
         </td>
         <td>
-            <select id="repo-branch"></select>
+            <span class="env-repo-branch" id="branch-cell">
+                <span id="branch-placeholder" data-shown="true"></span>
+                <img src="/static/gfx/spinner.svg" class="info-spinner" id="branch-spinner" data-shown="false" alt="">
+                <select id="repo-branch" data-shown="false"></select>
+            </span>
         </td>
     </tr>
 </table>
 
 <div class="rate-limiting-actions">
-    <a href="{{ new_repo_url }}" class="env-repo-link" id="create-button" target="_blank" rel="noopener">
-        {{ page_config.new_repo_label }}
-        <svg class="env-repo-external" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
-    </a>
+    <span class="env-repo-side">
+        <a href="{{ new_repo_url }}" class="env-repo-link hidden" id="create-button" target="_blank" rel="noopener">
+            {{ page_config.new_repo_label }}
+            <svg class="env-repo-external" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+        </a>
+        <a href="#" class="env-repo-link hidden" id="disconnect-button" data-is-connected="{% if current_url %}1{% else %}0{% endif %}">{{ page_config.disconnect_label }}</a>
+    </span>
     <span class="rate-limiting-save-group">
         <span class="status-message" id="env-repo-status"></span>
         <input type="submit" id="action-button" value="{{ page_config.connect_label }}"
             data-connect-label="{{ page_config.connect_label }}"
-            data-allow-label="{{ page_config.allow_label }}"
-            data-switch-label="{{ page_config.switch_label }}" />
+            data-allow-label="{{ page_config.allow_label }}" />
     </span>
 </div>
 </form>
