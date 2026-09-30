@@ -6,12 +6,15 @@
     <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
     <link rel="stylesheet" type="text/css" href="/static/css/rate-limiting.css">
+    <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/progress-log.css">
     <link rel="stylesheet" type="text/css" href="/static/css/env-repo.css">
 {% endblock %}
 
 {% block "extra_js" %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/progress-log.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-demo.js"></script>
 {% endblock %}
 
 {% block "content" %}
@@ -55,10 +58,13 @@
     </a>
     <span class="rate-limiting-save-group">
         <span class="status-message" id="env-repo-status"></span>
+        <span class="time-slots-add" id="demo-button">Run demo</span>
         <input type="submit" id="check-button" value="{{ page_config.check_button_label }}" />
         <input type="submit" id="update-button" class="hidden" value="{{ page_config.action_button_label }}" />
     </span>
 </div>
+
+<div class="env-repo-progress" id="progress-log"></div>
 
 <div class="env-repo-flow">
 

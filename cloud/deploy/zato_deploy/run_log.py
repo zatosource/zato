@@ -95,10 +95,11 @@ def _get_program_files() -> 'strlist':
     with open(Path.Files_List) as input_file:
         lines = input_file.read().splitlines()
 
+    # A line names the file as installed, and a line with two words also names where a shared file came from.
     for line in lines:
         line = line.strip()
         if line:
-            out.append(line)
+            out.append(line.split()[0])
 
     return out
 

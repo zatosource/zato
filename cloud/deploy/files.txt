@@ -21,6 +21,8 @@ static/fonts/Jost-Regular.ttf
 static/fonts/Jost-Medium.ttf
 static/vendor/tippy/popperjs.core.js
 static/vendor/tippy/tippy.js
+static/shared/progress-log.css code/zato-common/src/zato/common/webapp/ui/static/webapp/css/progress-log.css
+static/shared/progress-log.js code/zato-common/src/zato/common/webapp/ui/static/webapp/js/progress-log.js
 units/zato-deploy.service
 units/zato-env-repo.path
 units/zato-env-repo.service

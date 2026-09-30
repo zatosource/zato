@@ -5,6 +5,7 @@
 .env-repo-markup > h2.zato,
 .env-repo-markup table.rate-limiting-form,
 .env-repo-markup .rate-limiting-actions,
+.env-repo-markup .env-repo-progress,
 .env-repo-markup .env-repo-flow {
     width: 100%;
     max-width: 720px;
@@ -68,6 +69,24 @@ table.rate-limiting-form tr.hidden {
 
 .rate-limiting-save-group input[type="submit"].hidden {
     display: none;
+}
+
+.env-repo-markup .rate-limiting-save-group .time-slots-add {
+    margin-top: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* GitHub repository - progress                                 */
+/* ------------------------------------------------------------ */
+
+.env-repo-markup .env-repo-progress {
+    --progress-log-font-mono: var(--time-slot-mono);
+    --progress-log-font-size: 11px;
+    --progress-log-header-font-size: 11px;
+    --progress-log-max-height: 260px;
+
+    box-sizing: border-box;
+    margin-top: 12px;
 }
 
 /* ------------------------------------------------------------ */
