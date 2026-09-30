@@ -50,7 +50,7 @@ class GitHub_App:
     Home_URL    = 'https://zato.io'
 
     Name_Prefix = 'Zato dashboard'
-    Permissions = {'contents': 'read', 'metadata': 'read'}
+    Permissions = {'contents': 'write', 'metadata': 'read'}
 
     # Git authenticates with this user name and the installation token as the password.
     Token_User = 'x-access-token'
@@ -113,7 +113,7 @@ def get_app_name(suffix:'str') -> 'str':
 # ################################################################################################################################
 
 def build_manifest(name:'str', redirect_url:'str', setup_url:'str') -> 'anydict':
-    """ Returns what the browser posts to GitHub to create the App - read access to repository contents and nothing else,
+    """ Returns what the browser posts to GitHub to create the App - access to repository contents and nothing else,
     no webhook, and the two addresses of this dashboard that GitHub sends the browser back to.
     """
     out:'anydict' = {

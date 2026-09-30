@@ -142,10 +142,10 @@ def _list_branches(status:'Status') -> 'strstrdict':
     command.extend(auth)
     command.extend(['ls-remote', '--heads', status.url])
 
-    # Only the dashboard's own key is offered, and neither git nor ssh may prompt for anything.
+    # The dashboard's own key is offered along with the user's, and neither git nor ssh may prompt for anything.
     env = dict(os.environ)
     env['GIT_TERMINAL_PROMPT'] = '0'
-    env['GIT_SSH_COMMAND'] = f'ssh -o BatchMode=yes -o IdentitiesOnly=yes -i {_get_key_path()}'
+    env['GIT_SSH_COMMAND'] = f'ssh -o BatchMode=yes -i {_get_key_path()}'
 
     try:
         result = run(command, stdout=PIPE, stderr=PIPE, env=env, timeout=_Git_Timeout, text=True)
