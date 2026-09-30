@@ -241,6 +241,9 @@ def start_container(progress:'Progress', config:'Config', environment:'Environme
         os.makedirs(path, exist_ok=True)
         _give_to_container(path, user_id, group_id)
 
+    # .. and reads the secrets under that account too, so the file is its own and nobody else's.
+    os.chown(environment.env_ini, user_id, group_id)
+
     # .. and it starts with what the template configured ..
     command = ['docker', 'run', '-d', '--name', Container.Name]
     command.extend(['--log-driver=journald', '--log-opt', f'tag={Container.Log_Tag}'])

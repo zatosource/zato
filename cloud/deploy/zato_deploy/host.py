@@ -125,14 +125,28 @@ def _find_local_disk() -> 'strnone':
 # ################################################################################################################################
 
 def _get_mount_point(device:'str') -> 'strnone':
-    """ Returns where a device is mounted, or None if it is not.
+    """ Returns where a device is mounted, or None if it is not. The bind mounts of its directories are listed
+    along with the mount of the device itself, so its own mount point is looked for first.
     """
     result = run_command(['findmnt', '-n', '-o', 'TARGET', '--source', device])
 
     if result.exit_code != 0:
         return None
 
-    out = result.stdout.strip()
+    targets:'strlist' = []
+
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line:
+            targets.append(line)
+
+    if not targets:
+        out = None
+    elif Path.Local_Disk_Mount in targets:
+        out = Path.Local_Disk_Mount
+    else:
+        out = targets[0]
+
     return out
 
 # ################################################################################################################################
