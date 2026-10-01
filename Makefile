@@ -17,7 +17,7 @@
 	test-hl7 hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
+	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
@@ -1044,13 +1044,30 @@ test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain an
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ibm_mq \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-kafka: ## Kafka end-to-end tests against a live broker in Docker, driven through the Dashboard.
-	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py \
+test-kafka: ## Kafka unit tests - the Rust bridge and the enmasse round trips, no live servers.
+	. $(HOME)/.cargo/env && cd $(ZATO_RUST)/zato_queue_bridge && cargo test $(PYTEST_ARGS)
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_kafka.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		$(Zato_Log)
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+# The three suites below each start their own queue bridge, whose HTTP API listens on one fixed port,
+# which is why they run one after another and never side by side.
+test-kafka-live: ## Kafka tests against live Kafka in Docker - one instance plain and TLS, the three-instance cluster and queue delivery on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) Zato_Test_Kafka=1 $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/kafka/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka_live \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) Zato_Test_Kafka=1 $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/kafka_cluster/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka_cluster \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) Zato_Test_Kafka=1 $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_kafka/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_kafka \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS, plus live Redis tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
