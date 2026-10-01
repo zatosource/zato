@@ -1,0 +1,54 @@
+{% comment %} The Producer tab of an outgoing Kafka connection's create or edit form, included with panel_id and form {% endcomment %}
+<div class="dashboard-tab-panel alerts-tab-panel delivery-tab-panel kafka-producer-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
+    <div class="form-data alerts-tab-body">
+
+        <div class="alerts-tab-sections">
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Compression</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-always-on-line" id="{{ panel_id }}-line-compression">
+                        <label class="decision-line-label" for="{{ form.compression.id_for_label }}">Method</label>
+                        <span class="decision-line-slot">{{ form.compression }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Batching</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="{{ panel_id }}-line-batches">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-batches">Batches</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-batches"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-batches"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Acknowledgments</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="{{ panel_id }}-line-acks">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-acks">Acks</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-acks"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-acks"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle alerts-tab-always-on-line" id="{{ panel_id }}-line-is_idempotent">
+                        <label class="decision-line-label" for="{{ form.is_idempotent.id_for_label }}">Exactly once</label>
+                        <span class="decision-line-slot">{{ form.is_idempotent }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="alerts-tab-hidden-fields" hidden>
+            {{ form.acks }}
+            {{ form.max_message_size }}
+            {{ form.max_message_size_unit }}
+            {{ form.linger_ms }}
+            {{ form.linger_ms_unit }}
+            {{ form.send_timeout }}
+            {{ form.send_timeout_unit }}
+        </div>
+
+    </div>
+</div>

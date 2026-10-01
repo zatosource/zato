@@ -27,6 +27,9 @@
     --summary-link-hint-color: var(--zato-ui-text-muted);
     --summary-link-hover-delay: 60ms;
     --summary-link-height: auto;
+
+    /* The padding-bottom of .zato-link-face in style.css, the room its underline takes */
+    --summary-link-underline-pad: 2px;
 }
 
 /* The font size sits on the link itself so its line box is built from
@@ -38,8 +41,14 @@ a.summary-link {
     height: var(--summary-link-height);
 }
 
+/* The link face of style.css draws its dashed underline in a 2px padding under
+   the text. The link is a centred flex row, which centres that padded box and
+   so lifts the glyphs a pixel above the label next to them. The padding is
+   taken back out of the margin box here, which is what the row centres - the
+   glyphs then sit level with the label and the underline still draws below. */
 .summary-link-text {
     font-size: var(--summary-link-font-size);
+    margin-bottom: calc(-1 * var(--summary-link-underline-pad));
 }
 
 /* The hint keeps its room but shows only while the pointer is on the link */

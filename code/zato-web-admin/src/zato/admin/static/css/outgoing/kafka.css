@@ -1,0 +1,7 @@
+/* Outgoing Kafka connections - the Producer tab. */
+
+/* The compression method select lists five short names, so it is as wide as those
+   need and not as wide as the Alerts tab's connection selects are. */
+.data-popup .kafka-producer-tab-panel {
+    --alerts-tab-select-width: 10em;
+}

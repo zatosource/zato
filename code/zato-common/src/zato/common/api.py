@@ -533,6 +533,71 @@ class KAFKA:
         SASL_MECHANISM.OAUTHBEARER.id: SEC_DEF_TYPE.OAUTH,
     }
 
+    class COMPRESSION:
+        """ Codecs an outgoing connection compresses messages with.
+        """
+        NONE = NameId('None', 'none')
+        GZIP = NameId('gzip', 'gzip')
+        SNAPPY = NameId('Snappy', 'snappy')
+        LZ4 = NameId('LZ4', 'lz4')
+        ZSTD = NameId('Zstandard', 'zstd')
+
+        def __iter__(self) -> 'iterator_':
+            return iter((self.NONE, self.GZIP, self.SNAPPY, self.LZ4, self.ZSTD))
+
+    class ACKS:
+        """ How many brokers acknowledge a message before a send counts as done.
+        """
+        ALL = NameId('All Kafka instances', 'all')
+        LEADER = NameId('One Kafka instance', '1')
+        NONE = NameId('No confirmation', '0')
+
+        def __iter__(self) -> 'iterator_':
+            return iter((self.ALL, self.LEADER, self.NONE))
+
+    class Producer:
+        """ The producer settings of an outgoing connection.
+        """
+        Field_Compression = 'compression'
+        Field_Acks = 'acks'
+        Field_Is_Idempotent = 'is_idempotent'
+        Field_Max_Message_Size = 'max_message_size'
+        Field_Linger_Ms = 'linger_ms'
+        Field_Send_Timeout = 'send_timeout'
+
+        Default_Compression = 'none' # KAFKA.COMPRESSION.NONE
+        Default_Acks = 'all' # KAFKA.ACKS.ALL
+        Default_Is_Idempotent = True
+        Default_Max_Message_Size = 1_000_000
+        Default_Linger_Ms = 0
+        Default_Send_Timeout = 5
+
+        FieldList = (
+            Field_Compression,
+            Field_Acks,
+            Field_Is_Idempotent,
+            Field_Max_Message_Size,
+            Field_Linger_Ms,
+            Field_Send_Timeout,
+        )
+
+        IntFieldList = (Field_Max_Message_Size, Field_Linger_Ms, Field_Send_Timeout)
+
+        Defaults = {
+            Field_Compression: Default_Compression,
+            Field_Acks: Default_Acks,
+            Field_Is_Idempotent: Default_Is_Idempotent,
+            Field_Max_Message_Size: Default_Max_Message_Size,
+            Field_Linger_Ms: Default_Linger_Ms,
+            Field_Send_Timeout: Default_Send_Timeout,
+        }
+
+    class Default:
+        Address = 'localhost:9092'
+
+    # The password of the client's TLS key, stored encrypted and never listed back
+    Field_SSL_Key_Password = 'ssl_key_password'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
