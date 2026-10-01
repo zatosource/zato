@@ -44,6 +44,9 @@ class ModuleCtx:
     # The variable that turns the skip into a failure when the suite runs on purpose
     Required_Variable = 'Zato_Test_Kafka'
 
+    # What the bridge answers about a connection it has not been told of yet
+    Unknown_Connection_Text = 'Unknown outgoing connection'
+
     # The services the suites drive, deployed to the test server - they live next to the single-instance suite
     Services_File = Path(__file__).parent.parent.parent.parent / 'zato-server' / 'kafka' / '_services.py'
 
@@ -176,7 +179,8 @@ class KafkaSuite:
 # ################################################################################################################################
 
     def wait_until_connection_known(self, conn_name:'str') -> 'None':
-        """ Waits until a ping through an outgoing connection goes through, so the bridge has its definition.
+        """ Waits until the bridge has the definition of an outgoing connection - a ping through it either goes through
+        or fails for a reason of the connection's own, e.g. a key password that is wrong on purpose.
         """
         deadline = time.monotonic() + ModuleCtx.Deploy_Timeout
         result:'anydict' = {}
@@ -184,7 +188,7 @@ class KafkaSuite:
         while time.monotonic() < deadline:
             result = self.invoke('ping-connection', connection=conn_name)
 
-            if result['is_ok']:
+            if result['is_ok'] or ModuleCtx.Unknown_Connection_Text not in result['error']:
                 return
 
             time.sleep(ModuleCtx.Poll_Interval)

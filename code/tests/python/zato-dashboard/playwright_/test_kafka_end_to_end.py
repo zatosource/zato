@@ -214,7 +214,7 @@ class TestKafkaEndToEnd:
         # The channel - it consumes from the topic and routes to the receiver service ..
         channel_id = create_kafka_channel(page, base_url, channel_name, {
             'address': kafka_server.address,
-            'topic': topic_name,
+            'topics': topic_name,
             'group_id': group_id,
             'service': _Receiver_Service,
         })

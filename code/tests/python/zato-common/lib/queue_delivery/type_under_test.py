@@ -20,7 +20,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strdict
+    from zato.common.typing_ import any_, anydict, strdict, strstrdict
     from queue_delivery.backends import Backend
     from queue_delivery.receiver import RecordedRequest, RecordingReceiver
 
@@ -127,6 +127,9 @@ class TypeUnderTest:
 
     # The audit source the type's connections write under - what the alerts about them are filed under too
     audit_source = ''
+
+    # What the type's server needs in its environment beyond what every server gets, e.g. where a bridge of its own is
+    server_environment:'strstrdict' = {}
 
 # ################################################################################################################################
 

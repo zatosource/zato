@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name
 from zato.common.pubsub.outgoing import get_outgoing_sub_key, get_outgoing_topic_name, Key_Msg_ID
 from zato.common.pubsub.sql.schema import delivery_table
+from zato.server.connection.outgoing_delivery import register_delivery_handlers
 
 # Test support
 from queue_delivery.client import create_connection, delete_connection, edit_connection, get_client, get_pubsub_db_engine, \
@@ -39,6 +40,10 @@ _broker_skip_reason = 'The topics of a broker backend are bound to their queues 
 
 _renamed_suffix = '.renamed'
 _throwaway_suffix = '.throwaway'
+
+# The DLQ names below depend on each connection type's direction, which the server registers on start-up
+# and the test process has to register itself.
+register_delivery_handlers()
 
 # A rename or a delete holds the queue still first, which means waiting for the round of the message at its head to end -
 # and with the DLQ on, a round that ends with the endpoint still refusing moves that message to the DLQ. This is why the

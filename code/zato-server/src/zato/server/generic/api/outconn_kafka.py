@@ -10,13 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from json import dumps, loads
 from logging import getLogger
+from time import monotonic
 
 # Zato
 from zato.common.api import HTTP_SOAP, KAFKA
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.pubsub.delivery import deliver_with_policy
 from zato.common.pubsub.outgoing import Attempts_None, Key_Data, Key_Headers, Key_Is_Tombstone, Key_Key, Key_Partition, \
     OutgoingPublisher, OutgoingType, SendRejected
-from zato.common.util.api import new_cid_server
+from zato.common.util.api import asbool, new_cid_server
 from zato.common.util.delivery_config import Delivery_Field_Defaults
 from zato.common.util.retry import RetryPolicy
 from zato.server.queue_bridge.client import ModuleCtx as BridgeCtx
@@ -39,6 +41,14 @@ logger = getLogger(__name__)
 _producer = KAFKA.Producer
 _retry = HTTP_SOAP.Retry
 _use_queue_field = HTTP_SOAP.Queue.Field_Use_Queue
+
+# Whether a connection writes a sent and a received audit event per attempt, unless its configuration says otherwise
+_audit_log_field = 'is_audit_log_active'
+_audit_log_default = True
+
+# What the bridge's description of an error carries when the error was the client's own, e.g. a timeout, rather than
+# an answer of the Kafka instances - an answer is kept with the rejection, so a caller can tell the two apart
+_local_error_marker = '(Local: '
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -152,6 +162,12 @@ class OutconnKafkaWrapper:
         # How long the bridge waits for the Kafka instances to acknowledge one send, in seconds
         self.send_timeout = config[_producer.Field_Send_Timeout]
 
+        # A connection whose audit log is on writes a sent and a received event per attempt
+        if asbool(config.get(_audit_log_field, _audit_log_default)):
+            self.audit_log:'AuditLog | None' = AuditLog(server.name)
+        else:
+            self.audit_log = None
+
         # The publisher is keyed by the connection's id, a rename leaves it alone.
         self.publisher = OutgoingPublisher(server, OutgoingType.KAFKA, self.config.id)
 
@@ -197,36 +213,85 @@ class OutconnKafkaWrapper:
             return
 
         if status == BridgeCtx.Status_Error:
-            raise SendRejected(f'Kafka {what} through `{self.config.name}` failed: {reply["data"]}')
+            error = reply['data']
+
+            # What the Kafka instances answered, if the error is their answer and not the client's own
+            if _local_error_marker in error:
+                response = None
+            else:
+                response = error
+
+            raise SendRejected(f'Kafka {what} through `{self.config.name}` failed: {error}', response)
 
         raise SendRejected(f'Kafka {what} through `{self.config.name}` timed out')
 
 # ################################################################################################################################
 
-    def send_once(self, request:'stranydict') -> 'SendOutcome':
+    def _audit(self, cid:'str', event_type:'str', outcome:'str', data:'str', started:'float'=0.0) -> 'None':
+        """ Writes one audit event of an attempt, under the cid of the service that sent the message.
+        """
+        if not self.audit_log:
+            return
+
+        if started:
+            duration_ms = int((monotonic() - started) * 1000)
+        else:
+            duration_ms = 0
+
+        _ = self.audit_log.insert(
+            AuditSource.Kafka_Outgoing,
+            event_type,
+            self.config.name,
+            cid=cid,
+            endpoint=self.config.topic,
+            size=len(data),
+            outcome=outcome,
+            duration_ms=duration_ms,
+            data=data,
+        )
+
+# ################################################################################################################################
+
+    def send_once(self, request:'stranydict', cid:'str'='') -> 'SendOutcome':
         """ Makes one attempt to send one message through the bridge, raising when the Kafka instances did not acknowledge it.
+        Each attempt writes a sent event and a received one, the latter with what Kafka answered or how the attempt failed.
         """
         data = request[Key_Data]
 
-        reply:'anydict' = self.bridge.send_message(
-            self.config.name,
-            data.encode('utf8'),
-            key=request[Key_Key],
-            headers=request[Key_Headers],
-            partition=request[Key_Partition],
-            is_tombstone=request[Key_Is_Tombstone],
-            send_timeout=self.send_timeout,
-        )
+        if not cid:
+            cid = new_cid_server()
 
-        self._check_reply(reply, 'send')
+        started = monotonic()
+        self._audit(cid, AuditEvent.Request_Sent, AuditOutcome.OK, data)
+
+        try:
+            reply:'anydict' = self.bridge.send_message(
+                self.config.name,
+                data.encode('utf8'),
+                key=request[Key_Key],
+                headers=request[Key_Headers],
+                partition=request[Key_Partition],
+                is_tombstone=request[Key_Is_Tombstone],
+                send_timeout=self.send_timeout,
+            )
+
+            self._check_reply(reply, 'send')
+
+        except Exception as e:
+            self._audit(cid, AuditEvent.Response_Received, AuditOutcome.Error, str(e), started)
+            raise
 
         out = SendOutcome()
         out.topic = self.config.topic
 
-        if reply_data := reply['data']:
+        reply_data = reply['data']
+
+        if reply_data:
             landed = loads(reply_data)
             out.partition = landed['partition']
             out.offset = landed['offset']
+
+        self._audit(cid, AuditEvent.Response_Received, AuditOutcome.OK, reply_data or '', started)
 
         return out
 
@@ -235,7 +300,7 @@ class OutconnKafkaWrapper:
     def send_from_queue(self, cid:'str', request:'stranydict') -> 'SendOutcome':
         """ Makes one attempt to deliver a message the queue holds.
         """
-        out = self.send_once(request)
+        out = self.send_once(request, cid)
         return out
 
 # ################################################################################################################################
@@ -261,7 +326,7 @@ class OutconnKafkaWrapper:
         if self.use_queue:
 
             def attempt() -> 'SendOutcome':
-                out = self.send_once(request)
+                out = self.send_once(request, cid)
                 return out
 
             out = self.publisher.send_or_queue(cid, request, attempt)
@@ -271,7 +336,7 @@ class OutconnKafkaWrapper:
         outcome:'anylist' = []
 
         def attempt_with_outcome() -> 'None':
-            outcome.append(self.send_once(request))
+            outcome.append(self.send_once(request, cid))
 
         deliver_with_policy(self.retry_policy, Attempts_None, cid, self.config.name, attempt_with_outcome)
 

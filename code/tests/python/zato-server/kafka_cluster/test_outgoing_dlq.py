@@ -56,6 +56,10 @@ DLQ_Timeout = Message_Count * (Max_Retries + 1) * (Send_Timeout + Sleep_Time + 2
 # How long a retry from the DLQ has to land on the topic
 Retry_Timeout = 60.0
 
+# How long the connection is given to find the instances again once they are back - while every instance was down
+# the connection's attempts to reconnect grew further and further apart, up to ten seconds between them
+Reconnect_Wait = 15.0
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -197,6 +201,7 @@ def test_sends_while_kafka_is_down_queue_up_move_to_the_dlq_raise_the_alert_and_
         cluster.restore_all()
 
     cluster.wait_until_all_in_sync(names.topic)
+    time.sleep(Reconnect_Wait)
 
     # With Kafka back, a retry of everything in the DLQ delivers each message once
     _ = kafka_suite.dlq_action('retry-all-messages', sub_key=dlq['sub_key'])
