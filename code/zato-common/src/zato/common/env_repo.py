@@ -35,6 +35,7 @@ class Env_Repo:
     Request        = 'request.json'
     Status         = 'status.json'
     Current        = 'current.json'
+    Checkout       = 'checkout'
 
     Action_Check      = 'check'
     Action_Switch     = 'switch'

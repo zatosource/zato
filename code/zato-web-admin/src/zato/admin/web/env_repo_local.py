@@ -8,9 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import shutil
 from datetime import datetime, timezone
 from logging import getLogger
-from subprocess import PIPE, run, TimeoutExpired
+from subprocess import CompletedProcess, PIPE, run, TimeoutExpired
 from threading import Thread
 
 # Zato
@@ -21,7 +22,7 @@ from zato.common.github_app import get_git_auth_for_url, GitHubAppError
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strlist, strstrdict
+    from zato.common.typing_ import anydict, strlist, strnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,8 +40,6 @@ _Max_Status_Lines = 40
 
 _Heads_Prefix = 'refs/heads/'
 
-# The environment variables that name the project directory, the first one found is the one used.
-_Project_Root_Keys = ('Zato_Project_Root', 'Zato_Hot_Deploy_Dir', 'ZATO_HOT_DEPLOY_DIR')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,12 +129,9 @@ class Status:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _list_branches(status:'Status') -> 'strstrdict':
-    """ Runs git ls-remote and returns the branches with the commits they are at.
+def _run_git(status:'Status', arguments:'strlist', cwd:'strnone'=None) -> 'CompletedProcess':
+    """ Runs git with the App's token for an HTTPS address or the keys for an SSH one, and keeps what it printed.
     """
-    status.write(Env_Repo.State_Checking, f'Connecting to {status.url}')
-
-    # An HTTPS address is read with the App's token, an SSH one with the deploy key.
     try:
         auth = get_git_auth_for_url(get_link_dir(), status.url)
     except GitHubAppError as exception:
@@ -143,7 +139,7 @@ def _list_branches(status:'Status') -> 'strstrdict':
 
     command = ['git']
     command.extend(auth)
-    command.extend(['ls-remote', '--heads', status.url])
+    command.extend(arguments)
 
     # The dashboard's own key is offered along with the user's, and neither git nor ssh may prompt for anything.
     env = dict(os.environ)
@@ -151,13 +147,24 @@ def _list_branches(status:'Status') -> 'strstrdict':
     env['GIT_SSH_COMMAND'] = f'ssh -o BatchMode=yes -i {_get_key_path()}'
 
     try:
-        result = run(command, stdout=PIPE, stderr=PIPE, env=env, timeout=_Git_Timeout, text=True)
+        out = run(command, stdout=PIPE, stderr=PIPE, cwd=cwd, env=env, timeout=_Git_Timeout, text=True)
     except TimeoutExpired:
         raise RequestError(f'GitHub did not answer in {_Git_Timeout} seconds for {status.url}')
     except OSError as exception:
         raise RequestError(f'Git could not be run: {exception}')
 
-    status.add_lines(result.stderr)
+    status.add_lines(out.stderr)
+
+    return out
+
+# ################################################################################################################################
+
+def _list_branches(status:'Status') -> 'strstrdict':
+    """ Runs git ls-remote and returns the branches with the commits they are at.
+    """
+    status.write(Env_Repo.State_Checking, f'Connecting to {status.url}')
+
+    result = _run_git(status, ['ls-remote', '--heads', status.url])
 
     if result.returncode != 0:
         raise RequestError(f'GitHub refused access to {status.url}, exit code {result.returncode}')
@@ -175,8 +182,49 @@ def _list_branches(status:'Status') -> 'strstrdict':
 
 # ################################################################################################################################
 
+def _get_checkout_dir() -> 'str':
+    out = os.path.join(get_link_dir(), Env_Repo.Checkout)
+    return out
+
+# ################################################################################################################################
+
+def _is_checkout_of(status:'Status', repo_dir:'str') -> 'bool':
+    """ Returns whether the checkout is of the repository and branch the status is about.
+    """
+    if not os.path.isdir(os.path.join(repo_dir, '.git')):
+        return False
+
+    url = _run_git(status, ['remote', 'get-url', 'origin'], cwd=repo_dir)
+    branch = _run_git(status, ['rev-parse', '--abbrev-ref', 'HEAD'], cwd=repo_dir)
+
+    out = url.returncode == 0 and branch.returncode == 0 and url.stdout.strip() == status.url \
+        and branch.stdout.strip() == status.branch
+
+    return out
+
+# ################################################################################################################################
+
+def _clone(status:'Status') -> 'str':
+    """ Clones the repository at its branch into the dashboard's own checkout, in place of whatever was there.
+    """
+    repo_dir = _get_checkout_dir()
+
+    if os.path.exists(repo_dir):
+        shutil.rmtree(repo_dir, ignore_errors=True)
+
+    status.add_lines(f'Cloning {status.url} at {status.branch}')
+    result = _run_git(status, ['clone', '--branch', status.branch, '--single-branch', status.url, repo_dir])
+
+    if result.returncode != 0:
+        shutil.rmtree(repo_dir, ignore_errors=True)
+        raise RequestError(f'Clone of {status.url} at {status.branch} failed, exit code {result.returncode}')
+
+    return repo_dir
+
+# ################################################################################################################################
+
 def _switch(status:'Status', branches:'strstrdict') -> 'None':
-    """ Writes current.json with the repository, branch and commit.
+    """ Clones the repository at the branch and writes current.json with the repository, branch and commit.
     """
     commit = branches.get(status.branch)
 
@@ -184,6 +232,8 @@ def _switch(status:'Status', branches:'strstrdict') -> 'None':
         raise RequestError(f'Branch {status.branch} not found in {status.url}')
 
     status.write(Env_Repo.State_Switching, f'Switching to {status.url} at {status.branch}')
+
+    _ = _clone(status)
 
     data:'anydict' = {
         'url':      status.url,
@@ -199,72 +249,23 @@ def _switch(status:'Status', branches:'strstrdict') -> 'None':
 
 # ################################################################################################################################
 
-def _get_checkout_dir() -> 'str':
-    """ Returns the git checkout that the project directory this dashboard was started with is in.
-    """
-    project_root = ''
-
-    for key in _Project_Root_Keys:
-        value = os.environ.get(key, '')
-        if value:
-            project_root = value.split(':')[0].strip()
-            break
-
-    if not project_root:
-        raise RequestError(f'No project directory is configured, set {_Project_Root_Keys[0]}')
-
-    if not os.path.isdir(project_root):
-        raise RequestError(f'Project directory {project_root} does not exist')
-
-    command = ['git', 'rev-parse', '--show-toplevel']
-
-    try:
-        result = run(command, stdout=PIPE, stderr=PIPE, cwd=project_root, timeout=_Git_Timeout, text=True)
-    except (OSError, TimeoutExpired) as exception:
-        raise RequestError(f'Git could not be run in {project_root}: {exception}')
-
-    if result.returncode != 0:
-        raise RequestError(f'Project directory {project_root} is not in a git checkout')
-
-    out = result.stdout.strip()
-    return out
-
-# ################################################################################################################################
-
 def _pull(status:'Status') -> 'None':
-    """ Runs git pull in the checkout the project is in, with the user's own keys or the App's token.
+    """ Brings the dashboard's checkout up to date, or clones it if it is not there or is of something else.
     """
     repo_dir = _get_checkout_dir()
 
-    status.write(Env_Repo.State_Pulling, f'Pulling {status.url} in {repo_dir}')
+    status.write(Env_Repo.State_Pulling, f'Pulling {status.url} at {status.branch}')
 
-    try:
-        auth = get_git_auth_for_url(get_link_dir(), status.url)
-    except GitHubAppError as exception:
-        raise RequestError(exception.message)
+    if _is_checkout_of(status, repo_dir):
+        result = _run_git(status, ['pull', '--ff-only'], cwd=repo_dir)
+        status.add_lines(result.stdout)
 
-    command = ['git']
-    command.extend(auth)
-    command.extend(['pull', '--ff-only'])
+        if result.returncode != 0:
+            raise RequestError(f'Pull of {status.url} failed, exit code {result.returncode}')
+    else:
+        _ = _clone(status)
 
-    env = dict(os.environ)
-    env['GIT_TERMINAL_PROMPT'] = '0'
-    env['GIT_SSH_COMMAND'] = f'ssh -o BatchMode=yes -i {_get_key_path()}'
-
-    try:
-        result = run(command, stdout=PIPE, stderr=PIPE, cwd=repo_dir, env=env, timeout=_Git_Timeout, text=True)
-    except TimeoutExpired:
-        raise RequestError(f'GitHub did not answer in {_Git_Timeout} seconds for {status.url}')
-    except OSError as exception:
-        raise RequestError(f'Git could not be run: {exception}')
-
-    status.add_lines(result.stderr)
-    status.add_lines(result.stdout)
-
-    if result.returncode != 0:
-        raise RequestError(f'Pull of {status.url} failed, exit code {result.returncode}')
-
-    status.write(Env_Repo.State_Pulled, f'Pulled {status.url} in {repo_dir}')
+    status.write(Env_Repo.State_Pulled, f'Pulled {status.url} at {status.branch}')
 
 # ################################################################################################################################
 

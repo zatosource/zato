@@ -13,13 +13,6 @@
     margin-right: auto;
 }
 
-/* The hint stands to the right of the Connect button, so the content moves left by half the hint's width
-   for the two together to stay in the middle of the page */
-.env-repo-markup {
-    box-sizing: border-box;
-    padding-right: 120px;
-}
-
 /* ------------------------------------------------------------ */
 /* GitHub repository - heading                                  */
 /* ------------------------------------------------------------ */
@@ -53,6 +46,11 @@ table.rate-limiting-form input[type="text"].env-repo-input {
     padding-right: 96px;
 }
 
+/* The list of repositories opens on typing, the arrow the browser adds for it stays out of the field */
+table.rate-limiting-form input[type="text"].env-repo-input::-webkit-calendar-picker-indicator {
+    display: none !important;
+}
+
 table.rate-limiting-form input[type="text"].env-repo-error {
     border-color: #c0392b;
     box-shadow: 0 0 0 2px #c0392b1a;
@@ -81,6 +79,16 @@ table.rate-limiting-form input[type="text"].env-repo-error {
 .env-repo-branch > .info-spinner {
     margin-right: 0;
     top: 0;
+}
+
+/* The page's selects render as list boxes, this one is a menu with its text in the middle */
+table.rate-limiting-form select#repo-branch {
+    -webkit-appearance: menulist !important;
+    appearance: auto;
+    height: auto;
+    line-height: normal;
+    padding: 3px 6px;
+    vertical-align: middle;
 }
 
 /* ------------------------------------------------------------ */
@@ -226,6 +234,41 @@ table.rate-limiting-form input[type="text"].env-repo-error {
     font-size: 11px;
 }
 
+/* Allow access is the one thing to do when GitHub refuses, so it pulses in green until it is clicked -
+   the fill breathes and a ring of light runs round it, and both stop for anyone who asked for less motion */
+.rate-limiting-actions input[type="submit"].env-repo-attention {
+    position: relative;
+    color: #ffffff;
+    border-color: #2f8f4e;
+    background: linear-gradient(to bottom, #4caf6a, #2f8f4e);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    animation: env-repo-attention-pulse 1.4s ease-in-out infinite, env-repo-attention-ring 2.4s linear infinite;
+}
+
+.rate-limiting-actions input[type="submit"].env-repo-attention:hover {
+    background: linear-gradient(to bottom, #5cbf7a, #3a9f5e);
+}
+
+@keyframes env-repo-attention-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 106, 0.75); }
+    60%      { box-shadow: 0 0 0 9px rgba(76, 175, 106, 0); }
+}
+
+@keyframes env-repo-attention-ring {
+    0%   { outline: 2px solid rgba(76, 175, 106, 0.0);  outline-offset: 2px; }
+    25%  { outline: 2px solid rgba(76, 175, 106, 0.9);  outline-offset: 3px; }
+    50%  { outline: 2px solid rgba(255, 255, 255, 0.9); outline-offset: 4px; }
+    75%  { outline: 2px solid rgba(76, 175, 106, 0.9);  outline-offset: 3px; }
+    100% { outline: 2px solid rgba(76, 175, 106, 0.0);  outline-offset: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rate-limiting-actions input[type="submit"].env-repo-attention {
+        animation: none;
+        box-shadow: 0 0 0 3px rgba(76, 175, 106, 0.45);
+    }
+}
+
 /* The hint by the Connect button */
 .env-repo-hint {
     font-size: 11px;
@@ -257,6 +300,6 @@ table.rate-limiting-form input[type="text"].env-repo-error {
 
 .env-repo-chip.env-repo-chip-on,
 .env-repo-chip.env-repo-chip-on:hover {
-    color: #0d4a1f;
-    background: linear-gradient(to bottom, rgba(120, 220, 140, 0.45), rgba(80, 200, 110, 0.35));
+    color: #2f5a3a;
+    background: linear-gradient(to bottom, rgba(150, 190, 155, 0.4), rgba(125, 170, 135, 0.35));
 }

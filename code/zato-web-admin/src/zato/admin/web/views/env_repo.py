@@ -160,9 +160,11 @@ class EnvRepoView(SettingsBaseView):
         repos = self._list_repos(app)
 
         # The one repository the App may read is the address, unless the environment runs one already.
-        if len(repos) == 1 and not context['current_url']:
+        context['address'] = context['current_url']
+
+        if len(repos) == 1 and not context['address']:
             only_repo = parse_repo_name(repos[0])
-            context['current_url'] = only_repo.https_url if only_repo else ''
+            context['address'] = only_repo.https_url if only_repo else ''
 
         context['repos']           = repos
         context['app_state']       = _get_app_state(read_app(get_link_dir()))

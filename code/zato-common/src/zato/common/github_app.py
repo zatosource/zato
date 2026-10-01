@@ -49,7 +49,7 @@ class GitHub_App:
     Install_URL = 'https://github.com/apps/{slug}/installations/new'
     Home_URL    = 'https://zato.io'
 
-    Name_Prefix = 'Zato dashboard'
+    Name_Prefix = 'Zato Dashboard'
     Permissions = {'contents': 'write', 'metadata': 'read'}
 
     # Git authenticates with this user name and the installation token as the password.
@@ -378,6 +378,31 @@ def _get_jwt(link_dir:'str', app:'anydict') -> 'str':
 
 # ################################################################################################################################
 
+def _handle_gone(link_dir:'str', app:'anydict', jwt:'str') -> 'None':
+    """ Asks GitHub whether the App itself still exists - if not, everything about it is forgotten, and if it does,
+    only its installation is, so the next Connect leads to the install page and not to a new App.
+    """
+    try:
+        _ = _call_api('GET', '/app', f'Bearer {jwt}')
+    except GitHubAppError as exception:
+        if exception.status == 404:
+            forget_app(link_dir)
+            raise GitHubAppError(f'GitHub App {app["name"]} no longer exists on GitHub, click Connect to create a new one', 404)
+        raise
+
+    app['installation_id']  = 0
+    app['installation_url'] = ''
+    app['account']          = ''
+
+    _write_config(link_dir, app)
+    _ = _tokens.pop(link_dir, None)
+
+    logger.info('GitHub App %s is no longer installed, installation forgotten in %s', app['slug'], link_dir)
+
+    raise GitHubAppError(f'GitHub App {app["name"]} is no longer installed, click Connect to install it', 404)
+
+# ################################################################################################################################
+
 def get_installation_token(link_dir:'str') -> 'str':
     """ Returns a token that reads the repositories the App was installed for, minting one only when the last one is about to expire.
     """
@@ -393,13 +418,12 @@ def get_installation_token(link_dir:'str') -> 'str':
 
     jwt = _get_jwt(link_dir, app)
 
-    # A 404 here means the App or its installation was deleted on GitHub, so what is kept about it is of no use any more.
+    # A 404 here means the App or its installation was deleted on GitHub, and which of the two it was decides what is kept.
     try:
         response = _call_api('POST', f'/app/installations/{app["installation_id"]}/access_tokens', f'Bearer {jwt}')
     except GitHubAppError as exception:
         if exception.status == 404:
-            forget_app(link_dir)
-            raise GitHubAppError(f'GitHub App {app["name"]} no longer exists on GitHub, click Connect to create a new one', 404)
+            _handle_gone(link_dir, app, jwt)
         raise
 
     if not isinstance(response, dict) or 'token' not in response:

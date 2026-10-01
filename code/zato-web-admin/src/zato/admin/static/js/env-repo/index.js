@@ -2,10 +2,10 @@ $.fn.zato.envRepo = {};
 
 // One button on the right. Connect with no App yet creates this dashboard's GitHub App and installs it, which is
 // two pages on GitHub, then the repositories the App may read fill the address field. Connect with an address checks it
-// with GitHub and lists the branches, and once they are listed, Connect again switches the environment over to the branch
-// chosen. When GitHub refuses, the button reads Allow access and opens the App's page to add the repository on, or without
-// an App, GitHub's deploy key page, then waits until GitHub lets us in. Once the address is the repository that runs now,
-// the button reads Pull and Push stands next to it.
+// with GitHub and lists the branches, and once they are listed, the button reads Pull with Push next to it - Pull of the
+// repository and branch that run now is a plain pull, Pull of any other switches the environment over to it first.
+// When GitHub refuses, the button reads Allow access and opens the App's page to add the repository on, or without
+// an App, GitHub's deploy key page, then waits until GitHub lets us in.
 
 $.fn.zato.envRepo.config = {
     apiPrefix: '/zato/env-repo/',
@@ -51,6 +51,7 @@ $.fn.zato.envRepo.state = {
     keyDeadline: null,
     repo: null,
     isConnected: false,
+    isChecked: false,
     hint: null,
     knownRepos: null,
     isQuiet: false,
@@ -109,9 +110,13 @@ $.fn.zato.envRepo.init = function() {
     }
 
     // Back from GitHub with the App installed, the address typed before leaving is back in the field.
-    if(isInstalledNow && !$('#repo-url').val().trim()) {
-        $('#repo-url').val(window.sessionStorage.getItem(config.addressKey) || '');
+    if(isInstalledNow) {
+        const address = window.sessionStorage.getItem(config.addressKey) || '';
         window.sessionStorage.removeItem(config.addressKey);
+
+        if(address) {
+            $('#repo-url').val(address);
+        }
     }
 
     // A page that opens with an address already filled in connects on its own, unless the App has to be created
@@ -144,19 +149,20 @@ $.fn.zato.envRepo.isCurrent = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The chip on the left says whether the repository that runs now is the one connected to, Disconnect stands next to it
-// when it is, and Push stands by the button then too.
+// The chip in the field says whether GitHub let us into the repository whose address is there, Push stands by the button
+// once it did, and Disconnect only when that repository is the one that runs now.
 $.fn.zato.envRepo.updateSide = function() {
 
     const chip = $('#connection-chip');
     const isCurrent = $.fn.zato.envRepo.isCurrent();
+    const isChecked = $.fn.zato.envRepo.state.isChecked;
 
-    chip.toggleClass('env-repo-chip-on', isCurrent);
-    chip.toggleClass('env-repo-chip-off', !isCurrent);
-    chip.text(chip.data(isCurrent ? 'connected-label' : 'not-connected-label'));
+    chip.toggleClass('env-repo-chip-on', isChecked);
+    chip.toggleClass('env-repo-chip-off', !isChecked);
+    chip.text(chip.data(isChecked ? 'connected-label' : 'not-connected-label'));
 
     $('#disconnect-button').toggleClass('hidden', !isCurrent);
-    $('#push-button').toggleClass('hidden', !isCurrent);
+    $('#push-button').toggleClass('hidden', !isChecked);
 
     $.fn.zato.envRepo.updateHint();
 };
@@ -233,7 +239,8 @@ $.fn.zato.envRepo.handleUrlInput = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The mode is connect, switch, allow or pull - the first two read Connect, the branch row is what tells them apart.
+// The mode is connect, allow, switch or pull - the last two both read Pull, a pull of what runs now is a plain pull
+// and a pull of another branch or repository switches over to it first.
 $.fn.zato.envRepo.setMode = function(mode) {
 
     const button = $('#action-button');
@@ -242,13 +249,14 @@ $.fn.zato.envRepo.setMode = function(mode) {
     if(mode === 'allow') {
         label = 'allow-label';
     }
-    else if(mode === 'pull') {
+    else if(mode === 'pull' || mode === 'switch') {
         label = 'pull-label';
     }
 
     $.fn.zato.envRepo.state.mode = mode;
     button.val(button.data(label));
     button.prop('disabled', false);
+    button.toggleClass('env-repo-attention', mode === 'allow');
 
     $.fn.zato.envRepo.updateSide();
 };
@@ -262,6 +270,7 @@ $.fn.zato.envRepo.resetFlow = function() {
     $.fn.zato.envRepo.setBranchView('branch-placeholder');
     $('#key-help').addClass('hidden');
 
+    state.isChecked = false;
     state.log.clear();
     state.log.hide();
     state.lastMessage = '';
@@ -471,6 +480,7 @@ $.fn.zato.envRepo.onConnected = function(status) {
     const branches = status.branches || [];
 
     state.isQuiet = false;
+    state.isChecked = true;
 
     $.fn.zato.envRepo.stopAll();
     $('#key-help').addClass('hidden');
@@ -513,24 +523,25 @@ $.fn.zato.envRepo.handleAllow = function() {
     state.repo = $.fn.zato.envRepo.parseAddress(address);
     state.keyDeadline = Date.now() + config.keyWaitTimeout;
 
-    const hasApp = state.appState === config.appStateInstalled;
-    const url = hasApp ? state.installUrl : $.fn.zato.envRepo.getKeyUrl(state.repo);
+    // With the App, GitHub's page for its repositories is where the browser goes, and GitHub brings it back here
+    // once the repository is added, with the address waiting to be connected again.
+    if(state.appState === config.appStateInstalled) {
+        window.sessionStorage.setItem(config.addressKey, address);
+        window.location.href = state.installUrl;
+        return;
+    }
+
+    const url = $.fn.zato.envRepo.getKeyUrl(state.repo);
 
     // The tab opens here, within the click, or the browser would block it.
     window.open(url, '_blank', 'noopener');
 
     $('#action-button').prop('disabled', true);
+    $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to accept the key for ' + state.repo.full_name);
 
-    if(hasApp) {
-        $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to allow access to ' + state.repo.full_name);
-    }
-    else {
-        $.fn.zato.envRepo.startLog(state.repo, 'Waiting for GitHub to accept the key for ' + state.repo.full_name);
-
-        if($('#public-key').text().trim()) {
-            $('#deploy-key-link').attr('href', url);
-            $('#key-help').removeClass('hidden');
-        }
+    if($('#public-key').text().trim()) {
+        $('#deploy-key-link').attr('href', url);
+        $('#key-help').removeClass('hidden');
     }
 
     $.fn.zato.envRepo.retryCheck();

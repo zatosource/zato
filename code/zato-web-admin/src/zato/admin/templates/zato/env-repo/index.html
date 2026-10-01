@@ -15,11 +15,11 @@
 {% block "extra_js" %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/progress-log.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-address.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-actions.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-repos.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-requests.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/index.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/address.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/actions.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/repos.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/requests.js"></script>
 {% endblock %}
 
 {% block "content" %}
@@ -38,7 +38,7 @@
         </td>
         <td>
             <span class="env-repo-field">
-                <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" list="repo-list" />
+                <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ address }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" list="repo-list" />
                 <span class="how-it-works-badge env-repo-chip env-repo-chip-off" id="connection-chip"
                     data-not-connected-label="{{ page_config.not_connected_label }}"
                     data-connected-label="{{ page_config.connected_label }}">{{ page_config.not_connected_label }}</span>

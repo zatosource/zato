@@ -53,6 +53,7 @@ $.fn.zato.envRepo.initHint = function() {
     // the App's two pages in between.
     link.on('click', function() {
         window.sessionStorage.setItem(config.creatingKey, '1');
+        $.fn.zato.envRepo.updateHint();
     });
 
     const content = $('<span class="env-repo-hint"></span>').text(button.data('new-repo-hint')).append($('<br>')).append(link);
@@ -115,7 +116,12 @@ $.fn.zato.envRepo.handleFocus = function() {
                 return;
             }
         }
+
+        // The App was not given the new repository, so its address is typed, or pasted, here.
+        $('#repo-url').focus();
+
     }, function() {
+        $('#repo-url').focus();
     });
 };
 
@@ -143,7 +149,8 @@ $.fn.zato.envRepo.updateHint = function() {
         return;
     }
 
-    if($('#repo-url').val().trim()) {
+    // The hint is for someone with no repository, and once the link in it was clicked there is one on the way.
+    if($('#repo-url').val().trim() || $.fn.zato.envRepo.isCreating(false)) {
         hint.hide();
     }
     else {
