@@ -17,6 +17,7 @@ class ModuleCtx:
     # Azure
     Capacity_Name  = 'zatofabric'
     Resource_Group = 'zato-project-rg'
+    Capacity_SKU   = 'F2'
 
     # App registrations
     App_Name             = 'Zato Fabric'

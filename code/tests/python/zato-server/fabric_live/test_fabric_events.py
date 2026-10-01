@@ -67,7 +67,7 @@ def _invoke(client:'AdminClient', mode:'str', **fields:'object') -> 'anydict':
 
 # ################################################################################################################################
 
-def _wait_until_pingable(client:'AdminClient') -> 'None':
+def _wait_until_pingable(client:'AdminClient', connection:'str'=FabricCtx.Events_Outgoing_Name) -> 'None':
     """ Retries the ping until the outgoing connection reaches the eventstream, or fails with the last error.
     """
     now = time.monotonic()
@@ -76,7 +76,7 @@ def _wait_until_pingable(client:'AdminClient') -> 'None':
     last_error = ''
 
     while time.monotonic() < deadline:
-        response = _invoke(client, 'ping-connection', connection=FabricCtx.Events_Outgoing_Name)
+        response = _invoke(client, 'ping-connection', connection=connection)
 
         if response['is_ok']:
             return
@@ -84,19 +84,19 @@ def _wait_until_pingable(client:'AdminClient') -> 'None':
         last_error = response['error']
         time.sleep(ModuleCtx.Propagation_Poll_Interval)
 
-    msg = f'Connection {FabricCtx.Events_Outgoing_Name} could not be pinged within {timeout}s, last error: {last_error}'
+    msg = f'Connection {connection} could not be pinged within {timeout}s, last error: {last_error}'
     raise Exception(msg)
 
 # ################################################################################################################################
 
-def _send(client:'AdminClient', event:'anydict') -> 'None':
+def _send(client:'AdminClient', event:'anydict', connection:'str'=FabricCtx.Events_Outgoing_Name) -> 'None':
     """ Sends one event through the outgoing connection.
     """
-    response = _invoke(client, 'send', connection=FabricCtx.Events_Outgoing_Name, event=event)
+    response = _invoke(client, 'send', connection=connection, event=event)
 
     if not response['is_ok']:
         error = response['error']
-        raise Exception(f'Connection {FabricCtx.Events_Outgoing_Name} rejected the event: {error}')
+        raise Exception(f'Connection {connection} rejected the event: {error}')
 
 # ################################################################################################################################
 
@@ -116,7 +116,7 @@ def _wait_until_received(client:'AdminClient', marker:'str') -> 'anydict':
 
         time.sleep(ModuleCtx.Delivery_Poll_Interval)
 
-    msg = f'Channel {FabricCtx.Alerts_Channel_Name} did not deliver marker {marker} within {timeout}s'
+    msg = f'Marker {marker} did not come back through a channel within {timeout}s'
     raise Exception(msg)
 
 # ################################################################################################################################
@@ -268,6 +268,94 @@ def test_stock_alert_comes_back_through_the_channel(events_client:'AdminClient')
     assert alert['location'] == 'Oak Hill'
     assert alert['quantity'] == 12
     assert alert['reorder_level'] == 40
+
+
+# ################################################################################################################################
+
+_plain_yaml = """
+security:
+  - name: {events_key_name}
+    type: basic_auth
+    username: {username}
+    password: {events_password}
+    realm: zato
+
+  - name: {alerts_key_name}
+    type: basic_auth
+    username: {username}
+    password: {alerts_password}
+    realm: zato
+
+outgoing_kafka:
+  - name: {outgoing_name}
+    address: {events_address}
+    topic: {events_topic}
+    security: {events_key_name}
+    sasl_mechanism: PLAIN
+    ssl: true
+
+channel_kafka:
+  - name: {channel_name}
+    address: {alerts_address}
+    topic: {alerts_topic}
+    group_id: {group_id}
+    service: {service}
+    security: {alerts_key_name}
+    sasl_mechanism: PLAIN
+    ssl: true
+"""
+
+def test_plain_round_trip(
+    fabric_live:'FabricLiveEnvironment',
+    events_client:'AdminClient',
+    ) -> 'None':
+    """ A stock alert sent under SASL PLAIN with the eventstream's keys comes back through a PLAIN channel.
+    """
+    state = fabric_live.fabric.state
+    suffix = CryptoManager.generate_hex_string()
+
+    events_key_name = f'test.fabric.events.plain.events-key.{suffix}'
+    alerts_key_name = f'test.fabric.events.plain.alerts-key.{suffix}'
+    outgoing_name = f'test.fabric.events.plain.outgoing.{suffix}'
+    channel_name = f'test.fabric.events.plain.channel.{suffix}'
+
+    # The source and the destination are separate event hubs, each with keys of its own. The destination's
+    # consumer group is taken by the OAUTHBEARER channel, so this one reads under $Default, which every
+    # event hub has, and $$ stands for a literal $ in enmasse.
+    yaml = _plain_yaml.format(
+        events_key_name=events_key_name,
+        alerts_key_name=alerts_key_name,
+        username=FabricCtx.Plain_Username,
+        events_password=state['events_connection_string'],
+        alerts_password=state['alerts_connection_string'],
+        outgoing_name=outgoing_name,
+        events_address=f'{state["events_namespace"]}:{FabricCtx.Kafka_Port}',
+        events_topic=state['events_topic'],
+        channel_name=channel_name,
+        alerts_address=f'{state["alerts_namespace"]}:{FabricCtx.Kafka_Port}',
+        alerts_topic=state['alerts_topic'],
+        group_id='$$Default',
+        service=ModuleCtx.Receiver_Service,
+    )
+
+    _ = fabric_live.zato.import_yaml(f'fabric_live_plain_{suffix}.yaml', yaml)
+    _wait_until_pingable(events_client, outgoing_name)
+
+    marker = 'ITEM-PLAIN-' + suffix
+
+    event = {
+        'event_type': FabricCtx.Alert_Event_Type,
+        'item_id': marker,
+        'location': 'Oak Hill',
+        'quantity': 12,
+        'reorder_level': 40,
+        'occurred_at': _now(),
+    }
+
+    _send(events_client, event, outgoing_name)
+    alert = _wait_until_received(events_client, marker)
+
+    assert alert['location'] == 'Oak Hill'
 
 # ################################################################################################################################
 # ################################################################################################################################

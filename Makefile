@@ -863,16 +863,6 @@ test-aws: ## AWS connection tests through a live Zato server against a simulated
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_aws_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-kafka-live: ## Kafka SASL PLAIN and OAUTHBEARER round trips through a live Zato server against Azure Event Hubs.
-	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) \
-	Zato_Test_Kafka_Live=1 \
-	PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib \
-	$(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/kafka_live/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka_live -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
 # ############################################################################
 # Microsoft Fabric
 # ############################################################################
@@ -925,7 +915,7 @@ Fabric_Chapters = fabric-tutorial fabric-loading-tables fabric-lookup-tables fab
 	fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events fabric-reading-events \
 	fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems
 
-test-fabric-live: $(Fabric_Chapters) ## Microsoft Fabric tests through a live Zato server against the real Clinic Analytics workspace.
+test-fabric-live: $(Fabric_Chapters) ## Microsoft Fabric tests through a live Zato server against the real Clinic Analytics workspace, Kafka SASL PLAIN and OAUTHBEARER round trips through its eventstream included.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) \
 	Zato_Test_Fabric_Live=1 \
