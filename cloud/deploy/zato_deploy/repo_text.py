@@ -1,0 +1,1 @@
+../../../code/zato-common/src/zato/common/repo_text.py

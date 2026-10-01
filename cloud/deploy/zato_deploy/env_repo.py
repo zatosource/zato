@@ -15,8 +15,10 @@ from logging import getLogger
 
 # Zato
 from zato_deploy.common import anydict, Blueprint, Env_Repo_Action, Env_Repo_State, Link_File, load_env_repo_config, Path, \
-    Restart_Reason, strlist, Systemd_Unit, write_env_file
+    read_env_file, Restart_Reason, strlist, Systemd_Unit, write_env_file
 from zato_deploy.git import is_repo_url, run_git
+from zato_deploy.github_app import GitHubAppError, uninstall_app
+from zato_deploy.repo_text import count_text, get_repo_label, summarize_changes
 from zato_deploy.process import run_command
 from zato_deploy.run_log import setup_logging
 
@@ -57,6 +59,8 @@ class Status:
         self.action = action
         self.url    = url
         self.branch = branch
+        self.label  = get_repo_label(url)
+        self.message = ''
         self.lines:'strlist' = []
         self.branches:'strlist' = []
 
@@ -74,6 +78,11 @@ class Status:
     def write(self, state:'str', message:'str') -> 'None':
 
         logger.info('Status %s - %s', state, message)
+
+        if self.message:
+            self.lines.append(self.message)
+
+        self.message = message
 
         data = {
             'action':   self.action,
@@ -155,14 +164,14 @@ def _add_output_lines(status:'Status', text:'str') -> 'None':
 def _list_branches(status:'Status') -> 'None':
     """ Runs git ls-remote with the App's token or the deploy key and keeps the branches it lists.
     """
-    status.write(Env_Repo_State.Checking, f'Connecting to {status.url}')
+    status.write(Env_Repo_State.Checking, f'Connecting to {status.label}')
 
     result = run_git(['ls-remote', '--heads', status.url], is_verbose=True, url=status.url)
 
     _add_output_lines(status, result.stderr)
 
     if result.exit_code != 0:
-        raise RequestError(f'GitHub refused access to {status.url}, exit code {result.exit_code}')
+        raise RequestError(f'GitHub refused access to {status.label}, exit code {result.exit_code}')
 
     # Each line is a commit, a tab and refs/heads/<branch>.
     for line in result.stdout.splitlines():
@@ -196,13 +205,25 @@ def _switch(status:'Status') -> 'None':
     write_env_file(Path.Env_Repo_Config, values)
     status.add_line(f'Configuration written to {Path.Env_Repo_Config}')
 
-    status.write(Env_Repo_State.Switching, f'Switching to {status.url} at {status.branch}')
+    status.write(Env_Repo_State.Switching, f'Switching to {status.label} at {status.branch}, the environment restarts with it')
 
 # ################################################################################################################################
 
-def _disconnect(status:'Status') -> 'None':
-    """ Clears the configured repository, so the deployment restarts with the public blueprint.
+def _disconnect(status:'Status') -> 'bool':
+    """ Takes the App's access away on GitHub and clears the configured repository, so the deployment restarts
+    with the public blueprint. Returns whether a restart is due, which it is not if the blueprint ran already.
     """
+    try:
+        uninstall_app(Path.Link_Dir)
+    except GitHubAppError as exception:
+        raise RequestError(exception.message)
+
+    configured = read_env_file(Path.Env_Repo_Config)
+
+    if not configured['env_repo_url']:
+        status.write(Env_Repo_State.Disconnected, f'Disconnected from {status.label}')
+        return False
+
     values = {
         'env_repo_url':    '',
         'env_repo_branch': '',
@@ -211,7 +232,8 @@ def _disconnect(status:'Status') -> 'None':
     write_env_file(Path.Env_Repo_Config, values)
     status.add_line(f'Configuration cleared in {Path.Env_Repo_Config}')
 
-    status.write(Env_Repo_State.Switching, f'Disconnecting from {status.url}, switching to {Blueprint.URL}')
+    status.write(Env_Repo_State.Switching, f'Disconnected from {status.label}, the environment restarts with {get_repo_label(Blueprint.URL)}')
+    return True
 
 # ################################################################################################################################
 
@@ -224,17 +246,27 @@ def _pull(status:'Status') -> 'None':
 
     repo_dir = os.path.realpath(Path.Env_Repo_Link)
 
-    status.write(Env_Repo_State.Pulling, f'Pulling {status.url} at {status.branch}')
+    status.write(Env_Repo_State.Pulling, f'Pulling {status.label} at {status.branch}')
 
+    before = run_git(['rev-parse', 'HEAD'], cwd=repo_dir).stdout.strip()
     result = run_git(['pull', '--ff-only'], cwd=repo_dir, is_verbose=True, url=status.url)
 
     _add_output_lines(status, result.stderr)
     _add_output_lines(status, result.stdout)
 
     if result.exit_code != 0:
-        raise RequestError(f'Pull of {status.url} failed, exit code {result.exit_code}')
+        raise RequestError(f'Pull of {status.label} failed, exit code {result.exit_code}')
 
-    status.write(Env_Repo_State.Pulled, f'Pulled {status.url} at {status.branch}')
+    after = run_git(['rev-parse', 'HEAD'], cwd=repo_dir).stdout.strip()
+
+    if before == after:
+        status.write(Env_Repo_State.Pulled, f'{status.label} at {status.branch} is up to date')
+        return
+
+    changes = run_git(['diff', '--name-status', before, after], cwd=repo_dir)
+    status.add_line(summarize_changes(changes.stdout))
+
+    status.write(Env_Repo_State.Pulled, f'Pulled {status.label} at {status.branch}, now at {after[:12]}')
 
 # ################################################################################################################################
 
@@ -256,8 +288,7 @@ def handle_request() -> 'None':
         status = Status(request['action'], request['env_repo_url'], request['env_repo_branch'])
 
         if status.action == Env_Repo_Action.Disconnect:
-            _disconnect(status)
-            is_switched = True
+            is_switched = _disconnect(status)
 
         elif status.action == Env_Repo_Action.Pull:
             _pull(status)
@@ -267,7 +298,7 @@ def handle_request() -> 'None':
             _check_branch_name(status.branch)
 
             if status.branch not in status.branches:
-                raise RequestError(f'Branch {status.branch} not found in {status.url}')
+                raise RequestError(f'Branch {status.branch} not found in {status.label}')
 
             _switch(status)
             is_switched = True
@@ -275,9 +306,9 @@ def handle_request() -> 'None':
         else:
             _list_branches(status)
             if status.branches:
-                status.write(Env_Repo_State.OK, f'Connected to {status.url}')
+                status.write(Env_Repo_State.OK, f'Connected to {status.label}, {count_text(len(status.branches), "branch", "branches")}')
             else:
-                status.write(Env_Repo_State.OK, f'Connected to {status.url}, the repository is empty')
+                status.write(Env_Repo_State.OK, f'Connected to {status.label}, the repository is empty')
 
     except RequestError as exception:
         status.write(Env_Repo_State.Error, exception.message)

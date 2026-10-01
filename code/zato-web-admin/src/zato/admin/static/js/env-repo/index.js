@@ -52,6 +52,7 @@ $.fn.zato.envRepo.state = {
     repo: null,
     isConnected: false,
     isChecked: false,
+    isHost: false,
     hint: null,
     knownRepos: null,
     isQuiet: false,
@@ -76,7 +77,9 @@ $.fn.zato.envRepo.init = function() {
     state.isConnected = $('#disconnect-button').data('is-connected') === 1;
     state.appState = $('#repo-form').data('app-state');
     state.installUrl = $('#repo-form').data('install-url');
-    $('#branch-placeholder').html($.fn.zato.empty_value);
+    state.isChecked = $('#repo-form').data('is-checked') === 1;
+    state.isHost = $('#repo-form').data('is-host') === 1;
+    state.mode = $('#repo-form').data('mode');
 
     $('#disconnect-button').on('click', $.fn.zato.envRepo.handleDisconnect);
     $('#push-button').on('click', $.fn.zato.envRepo.handlePush);
@@ -122,16 +125,47 @@ $.fn.zato.envRepo.init = function() {
     // A page that opens with an address already filled in connects on its own, unless the App has to be created
     // first, which is not started without a click, and one with an App installed but no address finds out which
     // repositories the App may read.
+    // The page came with the address checked already, its panel shows how that went.
+    $.fn.zato.envRepo.showInitialStatus();
+
     if(state.appState !== config.appStateInstalled) {
         return;
     }
 
-    if($('#repo-url').val().trim()) {
-        $.fn.zato.envRepo.handleConnect();
-    }
-    else {
+    if(!$('#repo-url').val().trim()) {
         $.fn.zato.envRepo.pickRepo(isInstalledNow);
     }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What the server found out about the address before the page was served goes into the panel as it is,
+// nothing is asked of GitHub again.
+$.fn.zato.envRepo.showInitialStatus = function() {
+
+    const state = $.fn.zato.envRepo.state;
+    const text = $('#progress-log').attr('data-status');
+
+    if(!text) {
+        return;
+    }
+
+    const status = JSON.parse(text);
+    const address = $('#repo-url').val().trim();
+
+    state.repo = $.fn.zato.envRepo.parseAddress(address);
+    state.log.setSource(state.repo.full_name);
+
+    $.fn.zato.envRepo.appendStatus(status);
+
+    if(status.state === 'ok') {
+        state.log.setState('done');
+    }
+    else {
+        state.log.setState('failed');
+    }
+
+    state.log.show();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -149,20 +183,19 @@ $.fn.zato.envRepo.isCurrent = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The chip in the field says whether GitHub let us into the repository whose address is there, Push stands by the button
-// once it did, and Disconnect only when that repository is the one that runs now.
+// The chip in the field says whether GitHub let us into the repository whose address is there, and Push and Disconnect
+// stand by the button once it did.
 $.fn.zato.envRepo.updateSide = function() {
 
     const chip = $('#connection-chip');
-    const isCurrent = $.fn.zato.envRepo.isCurrent();
     const isChecked = $.fn.zato.envRepo.state.isChecked;
 
     chip.toggleClass('env-repo-chip-on', isChecked);
     chip.toggleClass('env-repo-chip-off', !isChecked);
     chip.text(chip.data(isChecked ? 'connected-label' : 'not-connected-label'));
 
-    $('#disconnect-button').toggleClass('hidden', !isCurrent);
-    $('#push-button').toggleClass('hidden', !isChecked);
+    $('#disconnect-button').toggleClass('env-repo-link-disabled', !isChecked);
+    $('#push-button').prop('disabled', !isChecked);
 
     $.fn.zato.envRepo.updateHint();
 };
@@ -181,6 +214,12 @@ $.fn.zato.envRepo.handleBranchChange = function() {
     const state = $.fn.zato.envRepo.state;
 
     if(state.mode !== 'switch' && state.mode !== 'pull') {
+        return;
+    }
+
+    // Only a host switches, which restarts it, locally the branch chosen is simply pulled.
+    if(!state.isHost) {
+        $.fn.zato.envRepo.setMode('pull');
         return;
     }
 
@@ -318,7 +357,9 @@ $.fn.zato.envRepo.startLog = function(repo, message) {
     state.lastMessage = '';
     state.lineCount = 0;
 
-    $.fn.zato.envRepo.appendLine(message, null);
+    if(message) {
+        $.fn.zato.envRepo.appendLine(message, null);
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -341,8 +382,11 @@ $.fn.zato.envRepo.appendStatus = function(status) {
 
     const lines = status.lines || [];
 
+    // The message of a step becomes a line once the next step is written, so it is not shown a second time.
     for(let idx = state.lineCount; idx < lines.length; idx++) {
-        $.fn.zato.envRepo.appendLine(lines[idx], null);
+        if(lines[idx] !== state.lastMessage) {
+            $.fn.zato.envRepo.appendLine(lines[idx], null);
+        }
     }
 
     state.lineCount = lines.length;
@@ -433,7 +477,7 @@ $.fn.zato.envRepo.handleConnect = function() {
 
     $('#action-button').prop('disabled', true);
     $.fn.zato.envRepo.setBranchView('branch-spinner');
-    $.fn.zato.envRepo.startLog(state.repo, 'Connecting to ' + state.repo.full_name);
+    $.fn.zato.envRepo.startLog(state.repo, '');
 
     $.fn.zato.envRepo.sendCheck(function(status) {
         if(status.state === 'ok') {
@@ -485,17 +529,15 @@ $.fn.zato.envRepo.onConnected = function(status) {
     $.fn.zato.envRepo.stopAll();
     $('#key-help').addClass('hidden');
 
+    $.fn.zato.envRepo.appendStatus(status);
+    state.log.setState('done');
+
     // A repository with no branches is an empty one, there is nothing in it to switch to yet.
     if(!branches.length) {
-        $.fn.zato.envRepo.appendLine('Connected to ' + state.repo.full_name + ', the repository is empty', 'ok');
-        state.log.setState('done');
         $.fn.zato.envRepo.setBranchView('branch-placeholder');
         $.fn.zato.envRepo.setMode('connect');
         return;
     }
-
-    $.fn.zato.envRepo.appendLine('Connected to ' + state.repo.full_name + ', ' + branches.length + ' ' + (branches.length === 1 ? 'branch' : 'branches'), 'ok');
-    state.log.setState('done');
 
     $.fn.zato.envRepo.fillBranches(branches);
     $.fn.zato.envRepo.setBranchView('repo-branch');

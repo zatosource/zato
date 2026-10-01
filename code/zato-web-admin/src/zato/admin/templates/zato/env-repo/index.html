@@ -30,7 +30,7 @@
     {{ page_config.title }}
 </h2>
 
-<form id="repo-form" method="get" action="" autocomplete="on" data-app-state="{{ app_state }}" data-install-url="{{ app_install_url }}">
+<form id="repo-form" method="get" action="" autocomplete="on" data-app-state="{{ app_state }}" data-install-url="{{ app_install_url }}" data-new-install-url="{{ app_new_install_url }}" data-mode="{{ mode }}" data-is-checked="{% if is_checked %}1{% else %}0{% endif %}" data-is-host="{% if is_host %}1{% else %}0{% endif %}">
 <table class="rate-limiting-form">
     <tr>
         <td class="rate-limiting-form-label">
@@ -39,9 +39,9 @@
         <td>
             <span class="env-repo-field">
                 <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ address }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" list="repo-list" />
-                <span class="how-it-works-badge env-repo-chip env-repo-chip-off" id="connection-chip"
+                <span class="how-it-works-badge env-repo-chip {% if is_checked %}env-repo-chip-on{% else %}env-repo-chip-off{% endif %}" id="connection-chip"
                     data-not-connected-label="{{ page_config.not_connected_label }}"
-                    data-connected-label="{{ page_config.connected_label }}">{{ page_config.not_connected_label }}</span>
+                    data-connected-label="{{ page_config.connected_label }}">{% if is_checked %}{{ page_config.connected_label }}{% else %}{{ page_config.not_connected_label }}{% endif %}</span>
             </span>
             <datalist id="repo-list">{% for repo in repos %}<option value="https://github.com/{{ repo }}"></option>{% endfor %}</datalist>
         </td>
@@ -52,9 +52,9 @@
         </td>
         <td>
             <span class="env-repo-branch" id="branch-cell">
-                <span id="branch-placeholder" data-shown="true"></span>
+                <span id="branch-placeholder" data-shown="{% if branches %}false{% else %}true{% endif %}"><span class="form_hint">---</span></span>
                 <img src="/static/gfx/spinner.svg" class="info-spinner" id="branch-spinner" data-shown="false" alt="">
-                <select id="repo-branch" data-shown="false"></select>
+                <select id="repo-branch" data-shown="{% if branches %}true{% else %}false{% endif %}">{% for branch in branches %}<option value="{{ branch }}"{% if branch == selected_branch %} selected{% endif %}>{{ branch }}</option>{% endfor %}</select>
             </span>
         </td>
     </tr>
@@ -62,12 +62,13 @@
 
 <div class="rate-limiting-actions">
     <span class="env-repo-side">
-        <a href="#" class="env-repo-link hidden" id="disconnect-button" data-is-connected="{% if current_url %}1{% else %}0{% endif %}">{{ page_config.disconnect_label }}</a>
+        <a href="#" class="env-repo-link{% if not is_checked %} env-repo-link-disabled{% endif %}" id="disconnect-button" data-is-connected="{% if current_url %}1{% else %}0{% endif %}">{{ page_config.disconnect_label }}</a>
+        <img src="/static/gfx/spinner.svg" class="info-spinner env-repo-side-spinner hidden" id="disconnect-spinner" alt="">
     </span>
     <span class="rate-limiting-save-group">
         <span class="status-message" id="env-repo-status"></span>
-        <input type="button" id="push-button" class="hidden" value="{{ page_config.push_label }}" />
-        <input type="submit" id="action-button" value="{{ page_config.connect_label }}"
+        <input type="button" id="push-button" value="{{ page_config.push_label }}"{% if not is_checked %} disabled{% endif %} />
+        <input type="submit" id="action-button" value="{% if mode == 'allow' %}{{ page_config.allow_label }}{% elif is_checked %}{{ page_config.pull_label }}{% else %}{{ page_config.connect_label }}{% endif %}"{% if mode == 'allow' %} class="env-repo-attention"{% endif %}
             data-connect-label="{{ page_config.connect_label }}"
             data-allow-label="{{ page_config.allow_label }}"
             data-pull-label="{{ page_config.pull_label }}"
@@ -82,7 +83,7 @@
     <input type="hidden" name="manifest" value="{{ manifest }}" />
 </form>
 
-<div class="env-repo-progress" id="progress-log"></div>
+<div class="env-repo-progress" id="progress-log" data-status="{{ initial_status }}"></div>
 
 <div class="env-repo-flow">
 

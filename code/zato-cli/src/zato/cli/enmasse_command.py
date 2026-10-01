@@ -37,6 +37,7 @@ class Enmasse(ZatoCommand):
         {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':2},
 
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
+        {'name':'--result-file', 'help':'Path to a JSON file to write counts of created and updated objects to after an import'},
     ]
 
     def get_cluster_id(self, args):
@@ -149,12 +150,16 @@ class Enmasse(ZatoCommand):
                 yaml_config:'stranydict' = importer.from_path(args.input)
 
                 # Sync objects ..
-                _ = importer.sync_from_yaml(
+                created, updated = importer.sync_from_yaml(
                     yaml_config,
                     session,
                     server_dir=self.component_dir,
                     wait_for_services_timeout=args.missing_wait_time
                 )
+
+                # .. let the caller know how many objects of each type were created and updated ..
+                if args.result_file:
+                    self._write_result_file(args.result_file, created, updated)
 
                 # .. reload the configuration if needed ..
                 if asbool(os.environ.get('Zato_Needs_Config_Reload', True)):
@@ -185,6 +190,30 @@ class Enmasse(ZatoCommand):
             sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
 
         session.close()
+
+# ################################################################################################################################
+
+    def _write_result_file(self, path:'str', created:'stranydict', updated:'stranydict') -> 'None':
+
+        # stdlib
+        from json import dumps
+
+        counts_created = {}
+        counts_updated = {}
+
+        for key, items in created.items():
+            counts_created[key] = len(items)
+
+        for key, items in updated.items():
+            counts_updated[key] = len(items)
+
+        data = {
+            'created': counts_created,
+            'updated': counts_updated,
+        }
+
+        with open(path, 'w') as f:
+            _ = f.write(dumps(data))
 
 # ################################################################################################################################
 

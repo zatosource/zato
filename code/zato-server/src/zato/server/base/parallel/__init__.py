@@ -2159,6 +2159,28 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def get_env_repo_dir(self) -> 'anydict':
+        """ Returns where the dashboard keeps checkouts of repositories for this server.
+        """
+        # Zato
+        from zato.server.env_repo import get_repo_dir
+
+        out = {'repo_dir': get_repo_dir(self)}
+        return out
+
+# ################################################################################################################################
+
+    def deploy_env_repo(self, path:'str', files:'strlist') -> 'anydict':
+        """ Deploys a checkout of a repository the dashboard pulled, see zato.server.env_repo.deploy.
+        """
+        # Zato
+        from zato.server.env_repo import deploy
+
+        out = deploy(self, path, files)
+        return out
+
+# ################################################################################################################################
+
     def import_enmasse(self, file_content:'str', file_name:'str') -> 'str':
 
         # stdlib

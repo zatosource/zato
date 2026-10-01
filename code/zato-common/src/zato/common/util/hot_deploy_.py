@@ -23,8 +23,9 @@ from zato.common.util.file_system import resolve_path
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import iterator_, list_, pathlist, strdictdict
+    from zato.common.typing_ import iterator_, list_, pathlist, strdictdict, strlist
     strdictdict = strdictdict
+    projectlist = list_[HotDeployProject]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +36,72 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
+
+_enmasse_suffixes = ('.yaml', '.yml')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_enmasse_file(path:'str') -> 'bool':
+    """ Returns whether the path is an enmasse file, e.g. enmasse.yaml or enmasse-crm.yml.
+    """
+    name = os.path.basename(path)
+    out = name.startswith(HotDeploy.Enmasse_File_Pattern) and name.endswith(_enmasse_suffixes)
+    return out
+
+# ################################################################################################################################
+
+def is_in_pickup_dir(path:'str', projects:'projectlist') -> 'bool':
+    """ Returns whether the path is inside any directory the projects pick code up from.
+    """
+    for project in projects:
+        for pickup_dir in project.pickup_from_path:
+            if path.startswith(str(pickup_dir) + os.sep):
+                return True
+
+    return False
+
+# ################################################################################################################################
+
+def list_project_files(root:'str', projects:'projectlist') -> 'tuple[strlist, strlist]':
+    """ Returns every Python file in the projects' pickup directories and every enmasse file under the root.
+    """
+    py_files:'strlist' = []
+    enmasse_files:'strlist' = []
+
+    for project in projects:
+        for pickup_dir in project.pickup_from_path:
+            for item in sorted(Path(pickup_dir).rglob('*.py')):
+                if '__pycache__' not in item.parts:
+                    py_files.append(str(item))
+
+    for item in sorted(Path(root).rglob('*')):
+        if item.is_file() and is_enmasse_file(str(item)):
+            enmasse_files.append(str(item))
+
+    return py_files, enmasse_files
+
+# ################################################################################################################################
+
+def list_changed_project_files(root:'str', files:'strlist', projects:'projectlist') -> 'tuple[strlist, strlist]':
+    """ Out of paths relative to the root, returns the ones that are code in a pickup directory and the ones that are
+    enmasse files, leaving out what no longer exists.
+    """
+    py_files:'strlist' = []
+    enmasse_files:'strlist' = []
+
+    for item in files:
+        path = os.path.abspath(os.path.join(root, item))
+
+        if not os.path.isfile(path):
+            continue
+
+        if path.endswith('.py') and is_in_pickup_dir(path, projects):
+            py_files.append(path)
+        elif is_enmasse_file(path):
+            enmasse_files.append(path)
+
+    return py_files, enmasse_files
 
 # ################################################################################################################################
 # ################################################################################################################################

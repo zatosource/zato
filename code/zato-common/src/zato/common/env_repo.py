@@ -35,7 +35,6 @@ class Env_Repo:
     Request        = 'request.json'
     Status         = 'status.json'
     Current        = 'current.json'
-    Checkout       = 'checkout'
 
     Action_Check      = 'check'
     Action_Switch     = 'switch'
@@ -48,6 +47,7 @@ class Env_Repo:
     State_Switched     = 'switched'
     State_Disconnected = 'disconnected'
     State_Pulling      = 'pulling'
+    State_Deploying    = 'deploying'
     State_Pulled       = 'pulled'
     State_Error        = 'error'
 
@@ -56,6 +56,8 @@ class Env_Repo:
 
     # The name of the repository created from the template
     New_Repo_Name = 'zato-environment'
+
+    Default_Branch = 'main'
 
     New_Repo_URL   = 'https://github.com/new?template_owner={owner}&template_name={name}&name={new_name}&visibility=private'
     Repo_SSH_URL   = 'git@github.com:{owner}/{name}.git'

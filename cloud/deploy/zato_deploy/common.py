@@ -174,9 +174,10 @@ class Env_Repo_State:
     Checking  = 'checking'
     OK        = 'ok'
     Error     = 'error'
-    Switching = 'switching'
-    Pulling   = 'pulling'
-    Pulled    = 'pulled'
+    Switching    = 'switching'
+    Disconnected = 'disconnected'
+    Pulling      = 'pulling'
+    Pulled       = 'pulled'
 
 # ################################################################################################################################
 

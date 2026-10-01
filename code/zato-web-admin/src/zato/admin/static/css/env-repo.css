@@ -225,9 +225,31 @@ table.rate-limiting-form select#repo-branch {
     min-height: 20px;
 }
 
-#github-app-form.hidden,
-#push-button.hidden {
+/* The spinner stands to the right of the Disconnect link while the disconnect runs */
+.env-repo-side-spinner {
+    margin-left: 8px;
+    margin-right: 0;
+    top: 0;
+}
+
+.env-repo-side-spinner.hidden {
     display: none;
+}
+
+#github-app-form.hidden {
+    display: none;
+}
+
+/* The link and Push are there whether or not the page is connected, only greyed out while it is not,
+   so nothing moves when it connects */
+.env-repo-link.env-repo-link-disabled {
+    color: #9aa0a6;
+    pointer-events: none;
+}
+
+.rate-limiting-actions input[type="button"]:disabled {
+    opacity: 0.45;
+    cursor: default;
 }
 
 .rate-limiting-actions input[type="button"] {

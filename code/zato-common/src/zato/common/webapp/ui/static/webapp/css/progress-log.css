@@ -167,6 +167,13 @@
     transition-delay: 0s;
 }
 
+/* A page's own focus ring for buttons stays off this one, a click leaves nothing behind once the tooltip is gone */
+.progress-log-copy:focus,
+.progress-log-copy:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
 /* ------------------------------------------------------------ */
 /* Progress bar                                                 */
 /* ------------------------------------------------------------ */

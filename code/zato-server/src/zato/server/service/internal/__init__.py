@@ -276,6 +276,10 @@ class ServerInvoker(AdminService):
         elif func_name == 'get_sdk_secret_field_names':
             type_ = self.request.raw['type_']
             response = func(type_)
+        elif func_name == 'deploy_env_repo':
+            path = self.request.raw['path']
+            files = self.request.raw.get('files') or []
+            response = func(path, files)
         else:
             response = func()
 

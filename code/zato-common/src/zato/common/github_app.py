@@ -403,6 +403,34 @@ def _handle_gone(link_dir:'str', app:'anydict', jwt:'str') -> 'None':
 
 # ################################################################################################################################
 
+def uninstall_app(link_dir:'str') -> 'None':
+    """ Removes the App's installation on GitHub, so it reads nothing any more, and forgets it here. The App itself stays,
+    the next Connect installs it again. An installation already gone on GitHub counts as removed.
+    """
+    app = read_app(link_dir)
+
+    if not app or not is_installed(app):
+        return
+
+    jwt = _get_jwt(link_dir, app)
+
+    try:
+        _ = _call_api('DELETE', f'/app/installations/{app["installation_id"]}', f'Bearer {jwt}')
+    except GitHubAppError as exception:
+        if exception.status != 404:
+            raise
+
+    app['installation_id']  = 0
+    app['installation_url'] = ''
+    app['account']          = ''
+
+    _write_config(link_dir, app)
+    _ = _tokens.pop(link_dir, None)
+
+    logger.info('GitHub App %s uninstalled, installation forgotten in %s', app['slug'], link_dir)
+
+# ################################################################################################################################
+
 def get_installation_token(link_dir:'str') -> 'str':
     """ Returns a token that reads the repositories the App was installed for, minting one only when the last one is about to expire.
     """

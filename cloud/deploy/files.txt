@@ -9,6 +9,7 @@ zato_deploy/environment.py
 zato_deploy/firewall.py
 zato_deploy/git.py
 zato_deploy/github_app.py code/zato-common/src/zato/common/github_app.py
+zato_deploy/repo_text.py code/zato-common/src/zato/common/repo_text.py
 zato_deploy/host.py
 zato_deploy/main.py
 zato_deploy/process.py

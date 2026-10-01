@@ -421,8 +421,12 @@ class CommandsFacade:
 
 # ################################################################################################################################
 
-    def run_enmasse_sync_import(self, file_path:'str | Path') -> 'CommandResult':
+    def run_enmasse_sync_import(self, file_path:'str | Path', result_file:'str'='') -> 'CommandResult':
         command = f'enmasse --import --input {file_path} {self.server.base_dir} --verbose'
+
+        if result_file:
+            command += f' --result-file {result_file}'
+
         result = self.run_zato_cli_sync(command, callback=self._on_enmasse_completed)
         return result
 

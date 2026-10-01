@@ -6,7 +6,6 @@
 $.fn.zato.envRepo.handleSwitch = function() {
 
     const state = $.fn.zato.envRepo.state;
-    const branch = $('#repo-branch').val();
 
     $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.clearStatus();
@@ -14,10 +13,10 @@ $.fn.zato.envRepo.handleSwitch = function() {
     state.isQuiet = false;
 
     $('#action-button').prop('disabled', true);
-    $.fn.zato.envRepo.startLog(state.repo, 'Switching to ' + state.repo.full_name + ' at ' + branch);
+    $.fn.zato.envRepo.startLog(state.repo, '');
 
     $.fn.zato.envRepo.sendRequest('switch', function() {
-        $.fn.zato.envRepo.pollStatus(['switching', 'switched'], $.fn.zato.envRepo.onSwitchDone);
+        $.fn.zato.envRepo.pollStatus(['switching'], $.fn.zato.envRepo.onSwitchDone);
     }, function(errorMessage) {
         $.fn.zato.envRepo.onSwitchDone({state: 'error', message: errorMessage, lines: []});
     });
@@ -32,9 +31,8 @@ $.fn.zato.envRepo.onSwitchDone = function(status) {
 
     $.fn.zato.envRepo.appendStatus(status);
 
-    // A host restarts the environment after this state, without one the switch is already complete.
+    // The host restarts the environment after this state and its own page takes over once it is up.
     if(status.state === 'switching') {
-        $.fn.zato.envRepo.appendLine('The environment is restarting, the loading page opens once it is up', null);
         $.fn.zato.envRepo.waitForDeployPage();
     }
     else if(status.state === 'switched' || status.state === 'disconnected') {
@@ -63,7 +61,7 @@ $.fn.zato.envRepo.handlePull = function() {
     state.repo = $.fn.zato.envRepo.parseAddress($('#repo-url').val().trim());
 
     $('#action-button').prop('disabled', true);
-    $.fn.zato.envRepo.startLog(state.repo, 'Pulling ' + state.repo.full_name);
+    $.fn.zato.envRepo.startLog(state.repo, '');
 
     $.fn.zato.envRepo.sendRequest('pull', function() {
         $.fn.zato.envRepo.pollStatus(['pulled'], $.fn.zato.envRepo.onPullDone);
@@ -86,26 +84,69 @@ $.fn.zato.envRepo.onPullDone = function(status) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Disconnects from the repository that runs now, a host goes back to the public blueprint.
+// Disconnects from the repository entirely - the App's access on GitHub is taken away, the checkout and current.json
+// are removed, a host goes back to the public blueprint. A spinner stands where the link was until it is done,
+// then the page is as it was before anything was connected.
 $.fn.zato.envRepo.handleDisconnect = function(e) {
 
     e.preventDefault();
 
     const state = $.fn.zato.envRepo.state;
-    const repo = $.fn.zato.envRepo.parseAddress($('#repo-url').data('current-url') || $('#repo-url').val().trim());
+
+    $.fn.zato.envRepo.stopAll();
+    $.fn.zato.envRepo.clearStatus();
+
+    // The panel is left alone, so what the poll finds does not go into it.
+    state.isQuiet = true;
+
+    $('#disconnect-button').addClass('env-repo-link-disabled');
+    $('#disconnect-spinner').removeClass('hidden');
+
+    $.fn.zato.envRepo.sendRequest('disconnect', function() {
+        $.fn.zato.envRepo.pollStatus(['switching', 'disconnected'], $.fn.zato.envRepo.onDisconnectDone);
+    }, function(errorMessage) {
+        $.fn.zato.envRepo.onDisconnectDone({state: 'error', message: errorMessage, lines: []});
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.onDisconnectDone = function(status) {
+
+    const state = $.fn.zato.envRepo.state;
+
+    state.isQuiet = false;
+    $('#disconnect-spinner').addClass('hidden');
+
+    // A host restarts the environment with the public blueprint, the loading page takes over from here.
+    if(status.state === 'switching') {
+        $.fn.zato.envRepo.waitForDeployPage();
+        return;
+    }
+
+    if(status.state !== 'disconnected') {
+        $.fn.zato.envRepo.showStatus(status.message, false);
+        $.fn.zato.envRepo.updateSide();
+        return;
+    }
+
+    // Nothing of the repository is left, here or on GitHub, and the page is as it was before anything was connected.
+    const config = $.fn.zato.envRepo.config;
+
+    state.isConnected = false;
+    state.knownRepos = null;
+
+    if(state.appState === config.appStateInstalled) {
+        state.appState = config.appStateCreated;
+        state.installUrl = $('#repo-form').data('new-install-url');
+    }
 
     $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.resetFlow();
 
-    state.isQuiet = false;
+    $('#repo-url').val('').data('current-url', '').data('current-branch', '');
+    $('#repo-list').empty();
 
-    $('#action-button').prop('disabled', true);
-    $.fn.zato.envRepo.startLog(repo, 'Disconnecting from ' + repo.full_name);
-
-    $.fn.zato.envRepo.sendRequest('disconnect', function() {
-        $.fn.zato.envRepo.pollStatus(['switching', 'disconnected'], $.fn.zato.envRepo.onSwitchDone);
-    }, function(errorMessage) {
-        $.fn.zato.envRepo.onSwitchDone({state: 'error', message: errorMessage, lines: []});
-    });
+    $.fn.zato.envRepo.setMode('connect');
 };
 
