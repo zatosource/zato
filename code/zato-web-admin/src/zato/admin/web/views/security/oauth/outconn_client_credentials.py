@@ -43,7 +43,7 @@ class Index(_Index):
     output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
         'static_header', 'is_static_token', 'static_prefix', \
-        'issuer', 'jwks_url', 'audience', 'claims'
+        'issuer', 'jwks_url', 'audience', 'claims', 'identity_claim'
     output_repeated = True
 
     def handle(self):
@@ -64,7 +64,7 @@ class _CreateEdit(CreateEdit):
     input_optional = 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
         'static_header', 'is_static_token', 'static_prefix', \
-        'issuer', 'jwks_url', 'audience', 'claims'
+        'issuer', 'jwks_url', 'audience', 'claims', 'identity_claim'
     output_required = 'id', 'name'
 
     def success_message(self, item):

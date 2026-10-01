@@ -332,3 +332,21 @@
 #mcp-wizard select.routing-disabled {
     opacity: 0.5;
 }
+
+/* ------------------------------------------------------------ */
+/* MCP wizard - OAuth below the Security picker                  */
+/* ------------------------------------------------------------ */
+
+.mcp-wizard-oauth {
+    margin-top: 12px;
+}
+
+.mcp-wizard-oauth-scopes-slot input[type="text"] {
+    width: 100%;
+}
+
+/* The scopes line follows the toggle - off means the line is visibly out of play */
+#mcp-wizard .mcp-wizard-line-disabled .decision-line-label,
+#mcp-wizard .mcp-wizard-line-disabled input[type="text"] {
+    opacity: 0.5;
+}

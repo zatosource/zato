@@ -89,6 +89,9 @@ $.fn.zato.security.oauth.field_descriptions = {
         'Required for this definition to accept inbound JWTs at all.',
     'id_claims': 'Additional claim=value pairs, one per line, that inbound JWTs must carry, ' +
         'e.g. department=Accounting.',
+    'id_identity_claim': 'The claim whose value names the person behind an inbound JWT, ' +
+        'e.g. preferred_username, email, oid or sub. Sessions, rate limits and the audit log ' +
+        'then tell one person from another on the same definition.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -157,6 +160,7 @@ $.fn.zato.security.oauth.edit = function(id) {
     $('#id_edit-jwks_url').val(instance.jwks_url);
     $('#id_edit-audience').val(instance.audience);
     $('#id_edit-claims').val(instance.claims);
+    $('#id_edit-identity_claim').val(instance.identity_claim);
 
     // Open the dialog without auto-populate
     $.fn.zato.data_table._create_edit('edit', 'Edit Bearer token definition', id, undefined, false);
@@ -222,6 +226,7 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.jwks_url);
     row += String.format("<td class='ignore'>{0}</td>", item.audience);
     row += String.format("<td class='ignore'>{0}</td>", item.claims);
+    row += String.format("<td class='ignore'>{0}</td>", item.identity_claim);
 
     if(include_tr) {
         row += '</tr>';

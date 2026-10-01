@@ -606,6 +606,15 @@ review.render = function() {
         securityRows.push(['Assigned', config.noneLabel]);
     }
 
+    // OAuth with the customer's identity provider, with the scopes clients ask for while it is on
+    var isOAuthOn = wizard.field('oauth').prop('checked');
+    securityRows.push(['OAuth', isOAuthOn ? config.onLabel : config.offLabel]);
+
+    if(isOAuthOn) {
+        var oauthScopes = wizard.field('oauth_scopes').val().trim();
+        securityRows.push(['Scopes', oauthScopes ? oauthScopes : config.noneLabel]);
+    }
+
     // Response shaping
     var shapingRows = [
         ['Allow agent filters', wizard.field('allow_agent_filters').prop('checked') ? config.allowedLabel : config.notAllowedLabel],

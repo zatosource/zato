@@ -762,6 +762,14 @@ test-bearer: ## Inbound bearer token live tests.
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
+test-mcp-oauth: ## OAuth for MCP gateways - simulated clients signing in through Keycloak.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mcp_oauth_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_oauth -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
 test-graphql: ## GraphQL live tests.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/graphql_live/ \

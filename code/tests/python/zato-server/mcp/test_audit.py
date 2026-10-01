@@ -13,7 +13,7 @@ from unittest import TestCase
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import MCPAttr
 from zato.common.json_internal import dumps, loads
-from zato.common.test import _test_sec_def_id
+from zato.common.test import _test_identity
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.audit import build_audit_event, build_rate_limit_audit_event, Method_Rate_Limited, \
@@ -213,6 +213,43 @@ class AuditAttrs(TestCase):
         self.assertNotIn('pii_count', event['attrs'])
         self.assertEqual(loads(event['data'])['pii_count'], 3)
 
+    def test_the_auth_block_lands_in_data_and_three_of_its_fields_are_attrs(self) -> 'None':
+
+        auth = {
+            'type': 'bearer_jwt',
+            'definition': 'billing.agents',
+            'identity': 'alice',
+            'issuer': 'https://idp.example.com/realms/zato',
+            'audience': 'zato-mcp',
+            'client': 'cursor',
+            'scopes': ['openid', 'profile'],
+            'token_id': 'abc',
+            'expires_at': 1700000000,
+            'claims_matched': ['roles=Billing.Agent'],
+            'reason': '',
+            'claim': '',
+        }
+
+        event = _build(auth=auth)
+
+        self.assertEqual(loads(event['data'])['auth'], auth)
+        self.assertEqual(event['attrs'][MCPAttr.Identity], 'alice')
+        self.assertEqual(event['attrs'][MCPAttr.Client], 'cursor')
+
+        # An accepted caller has no reason to carry, and the rest of the block stays in the data document alone
+        self.assertNotIn(MCPAttr.Reason, event['attrs'])
+        self.assertNotIn('issuer', event['attrs'])
+        self.assertNotIn('scopes', event['attrs'])
+
+    def test_a_refused_caller_carries_its_reason_as_an_attr(self) -> 'None':
+
+        auth = {'type': 'bearer_jwt', 'definition': '', 'identity': '', 'client': '', 'reason': 'expired', 'claim': ''}
+        event = _build(auth=auth)
+
+        self.assertEqual(event['attrs'][MCPAttr.Reason], 'expired')
+        self.assertNotIn(MCPAttr.Identity, event['attrs'])
+        self.assertNotIn(MCPAttr.Client, event['attrs'])
+
     def test_a_rate_limited_request_audits_under_its_own_event_type(self) -> 'None':
 
         event = build_rate_limit_audit_event(_gateway_name, _sec_def_name, _cid, _session_id, _remote_address,
@@ -281,7 +318,7 @@ class ResponseMetadata(TestCase):
     def test_tools_call_records_method_and_tool_name(self) -> 'None':
 
         handler = _make_handler()
-        session_id = handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = handler.session_manager.create(_mcp_protocol_version, _test_identity)
 
         request = {
             'jsonrpc': '2.0',
@@ -290,7 +327,7 @@ class ResponseMetadata(TestCase):
             'params': {'name': _test_tool_name, 'arguments': {}},
         }
 
-        mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.method, 'tools/call')
         self.assertEqual(mcp_response.tool_name, _test_tool_name)
@@ -298,10 +335,10 @@ class ResponseMetadata(TestCase):
     def test_other_methods_record_the_method_without_a_tool_name(self) -> 'None':
 
         handler = _make_handler()
-        session_id = handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = handler.session_manager.create(_mcp_protocol_version, _test_identity)
 
         request = {'jsonrpc': '2.0', 'method': 'ping', 'id': 1}
-        mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.method, 'ping')
         self.assertIsNone(mcp_response.tool_name)
@@ -309,7 +346,7 @@ class ResponseMetadata(TestCase):
     def test_an_unparseable_request_records_no_method(self) -> 'None':
 
         handler = _make_handler()
-        mcp_response = handler.handle_raw_request(b'this is not json', _test_sec_def_id)
+        mcp_response = handler.handle_raw_request(b'this is not json', _test_identity)
 
         self.assertIsNone(mcp_response.method)
         self.assertIsNone(mcp_response.tool_name)

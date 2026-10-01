@@ -42,6 +42,10 @@ Method_Rate_Limited = 'rate-limited'
 # can count the responses a safeguard or the size cap refused and the ones the cap cut short
 _trace_attr_names = (MCPAttr.Reject_Kind, MCPAttr.Was_Truncated, MCPAttr.Tokens_Before, MCPAttr.Tokens_After)
 
+# The keys of the auth document that also become attributes of the row, so the listing shows them
+# and the free-text search finds a person, a client or a refusal reason by name
+_auth_attr_names = (MCPAttr.Identity, MCPAttr.Client, MCPAttr.Reason)
+
 # The fixed mapping of methods to audit event types - methods outside this set,
 # e.g. ping or notifications/initialized, audit as their literal method name.
 _method_to_event = {
@@ -111,12 +115,15 @@ def build_audit_event(
     duration_ms:'float',
     request_size:'int',
     trace:'anydictnone' = None,
+    auth:'anydictnone' = None,
     ) -> 'stranydict':
     """ Builds the keyword dict for one AuditLog.insert call out of plain inputs -
     this is the published column mapping of the MCP audit log. The request and response
     payloads are never included, only their sizes are. The trace of what response shaping
     did - PII counts, compaction counts, token cuts, the agent filter - lands in the data
     document, one key per finding, with nothing written for stages that did nothing.
+    The auth document, when given, says who the caller was and through which definition,
+    or why a refused caller was turned away.
     """
 
     # A request that could not be parsed has no method to audit under ..
@@ -180,6 +187,15 @@ def build_audit_event(
         for attr_name in _trace_attr_names:
             if attr_name in trace:
                 attrs[attr_name] = trace[attr_name]
+
+    # .. the caller's auth document sits next to the address and the method, and the three of its
+    # fields the listing shows and the search covers become attributes of the row too ..
+    if auth:
+        data['auth'] = auth
+
+        for attr_name in _auth_attr_names:
+            if value := auth.get(attr_name):
+                attrs[attr_name] = value
 
     # .. and this is the whole published mapping - the duration column holds whole
     # milliseconds for the listings, rounded up so a sub-millisecond request never

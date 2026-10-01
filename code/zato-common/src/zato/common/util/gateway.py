@@ -82,6 +82,46 @@ def ensure_mcp_gateway_exists(session, cluster_id):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def ensure_mcp_oauth_metadata_channel_exists(session, cluster_id):
+    """ Creates the one channel serving the OAuth protected resource metadata of every MCP gateway,
+    if it does not exist. Returns True if created, False if it already existed.
+    """
+    from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
+    from zato.common.odb.model import Cluster, HTTPSOAP, Service
+    from zato.common.util.mcp_oauth import Metadata_Channel_Name, Metadata_Channel_Url_Path, Metadata_Service_Name
+
+    existing = session.query(HTTPSOAP).filter(
+        HTTPSOAP.name == Metadata_Channel_Name,
+        HTTPSOAP.cluster_id == cluster_id,
+        HTTPSOAP.connection == CONNECTION.CHANNEL,
+    ).first()
+
+    if existing:
+        return False
+
+    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
+
+    service = session.query(Service).filter(
+        Service.name == Metadata_Service_Name,
+        Service.cluster_id == cluster_id,
+    ).first()
+
+    if not service:
+        service = Service(None, Metadata_Service_Name, True, Metadata_Service_Name, True, cluster)
+        session.add(service)
+        session.flush()
+
+    channel = HTTPSOAP(
+        None, Metadata_Channel_Name, True, True, CONNECTION.CHANNEL,
+        URL_TYPE.PLAIN_HTTP, None, Metadata_Channel_Url_Path, None, '', None, DATA_FORMAT.JSON,
+        service=service, cluster=cluster)
+    session.add(channel)
+
+    return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def ensure_mcp_rest_channel(session, channel_name, url_path, cluster_id, is_active=True,
                             security_groups=None, old_name=None):
     """ Creates or updates the REST channel that makes an MCP gateway reachable over HTTP.
@@ -175,6 +215,78 @@ def _resolve_security_group_names_to_ids(session, group_names, cluster_id):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_oauth_capable_bearer_names(session, group_id_list, cluster_id):
+    """ Returns the names of the bearer token definitions among the members of the given groups
+    that carry both an issuer and an audience, which is what verifying a JWT needs.
+    """
+    from zato.common.api import Groups, SEC_DEF_TYPE
+    from zato.common.odb.model import GenericObject, OAuth
+    from zato.common.util.sql import parse_instance_opaque_attr
+
+    out = []
+
+    # The member types that bearer definitions are stored under
+    bearer_types = (SEC_DEF_TYPE.OAUTH, 'bearer_token')
+
+    for group_id in group_id_list:
+
+        members = session.query(GenericObject).filter(
+            GenericObject.parent_object_id == group_id,
+            GenericObject.type_ == Groups.Type.Group_Member,
+            GenericObject.cluster_id == cluster_id,
+        ).all()
+
+        for member in members:
+
+            # A member's name is its type, the definition's id and the group's id joined with dashes
+            sec_type, security_id, _ignored = member.name.split('-')
+
+            if sec_type not in bearer_types:
+                continue
+
+            sec_def = session.query(OAuth).filter(OAuth.id == int(security_id)).first()
+
+            if not sec_def:
+                continue
+
+            opaque = parse_instance_opaque_attr(sec_def)
+
+            if opaque.get('is_static_token'):
+                continue
+
+            has_issuer = bool(opaque.get('issuer') or opaque.get('auth_server_url'))
+            has_audience = bool(opaque.get('audience'))
+
+            if has_issuer and has_audience:
+                out.append(sec_def.name)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def validate_oauth_security(session, data, group_id_list, cluster_id):
+    """ A gateway with OAuth on needs at least one bearer token definition with an issuer
+    and an audience among its security definitions - raises ValueError naming what is missing otherwise.
+    """
+    if not data.get('oauth'):
+        return
+
+    gateway_name = data['name']
+
+    if not group_id_list:
+        raise ValueError(f'MCP gateway `{gateway_name}` has OAuth on but no security definitions - ' + \
+            'add a bearer token definition with an issuer and an audience')
+
+    names = _get_oauth_capable_bearer_names(session, group_id_list, cluster_id)
+
+    if not names:
+        raise ValueError(f'MCP gateway `{gateway_name}` has OAuth on but none of its security definitions ' + \
+            'is a bearer token definition with both an issuer and an audience')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def on_mcp_gateway_create_edit(service, data, model, old_name):
     """ Hook called by zato.generic.connection create/edit for the gateway-mcp type.
     Creates or updates the HTTPSOAP channel by invoking the standard http-soap services,
@@ -184,6 +296,7 @@ def on_mcp_gateway_create_edit(service, data, model, old_name):
     from contextlib import closing
 
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
+    from zato.common.exception import BadRequest
     from zato.common.odb.model import HTTPSOAP
 
     logger = logging.getLogger(__name__)
@@ -197,6 +310,12 @@ def on_mcp_gateway_create_edit(service, data, model, old_name):
 
         security_groups = data.get('security_groups', [])
         security_groups = _resolve_security_group_names_to_ids(session, security_groups, cluster_id)
+
+        # A gateway with OAuth on is saved only with a bearer definition that can verify tokens ..
+        try:
+            validate_oauth_security(session, data, security_groups, cluster_id)
+        except ValueError as e:
+            raise BadRequest(service.cid, str(e))
 
         # Check if the HTTPSOAP channel already exists (use old_name for renames) ..
         lookup_name = old_name if (old_name and old_name != gateway_name) else gateway_name

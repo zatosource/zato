@@ -16,6 +16,13 @@ $.fn.zato.gateway.mcp.field_descriptions = {
         'Invalid calls are refused with an error naming the offending field.',
     'id_is_audit_log_active': 'Whether this gateway\'s traffic is recorded in the audit log - one event per request ' +
         'with the method, tool, caller and outcome. Payloads themselves are never recorded, only their sizes are.',
+    'id_oauth': 'Lets MCP clients sign people in through your own identity provider, such as Microsoft Entra ID ' +
+        'or Keycloak. A request without a valid token is answered with a challenge naming where the client ' +
+        'can learn how to sign in, and the gateway needs at least one bearer token definition with an issuer ' +
+        'and an audience among its security definitions.',
+    'id_oauth_scopes': 'The scopes clients ask the identity provider for when they sign a person in, ' +
+        'separated by spaces, e.g. api://zato-mcp/tools.access offline_access. Published in the gateway\'s ' +
+        'protected resource metadata.',
 
     'id_allow_agent_filters': 'Adds an optional response_filter parameter to every tool, letting an AI agent ' +
         'pass its own JSONata expression per call. The expression runs on the server and the agent receives ' +

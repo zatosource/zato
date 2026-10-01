@@ -94,7 +94,7 @@ _top_level_order = [
 _object_order:'anydict' = {}
 
 _object_order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'use_digest', 'sign', 'encrypt', \
-    'issuer', 'subject', 'audience', 'jwks_url', 'claims:list', 'signing_key', 'signing_certificate_chain', \
+    'issuer', 'subject', 'audience', 'jwks_url', 'claims:list', 'identity_claim', 'signing_key', 'signing_certificate_chain', \
     'decryption_key', 'peer_certificate', 'trust_anchors', 'cert_path', 'key_path', 'ca_certs_path', \
     'client_cert_fingerprint', 'client_cert_subject_dn', 'principal', 'keytab_path', 'target_spn', \
     'needs_delegation', 'auth_endpoint', 'client_id_field', \

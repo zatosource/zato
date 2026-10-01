@@ -9,13 +9,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND, TOO_MANY_REQUESTS
+from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND, TOO_MANY_REQUESTS, UNAUTHORIZED
 from time import monotonic
 from traceback import format_exc
 
 # Zato
+from zato.common.bearer_token_identity import Auth_Info_Key, build_auth_block, Identity_Key
 from zato.common.json_internal import dumps
+from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 from zato.common.rate_limiting.headers import build_rate_limit_headers, Header_Retry_After, Rate_Limit_Result_Key
+from zato.common.util.mcp_oauth import build_challenge_header, get_metadata_url, get_server_address
 from zato.server.connection.mcp.audit import build_audit_event, build_rate_limit_audit_event, Method_Auth_Rejected, \
     Method_Session_Delete
 from zato.server.connection.mcp.common import MCPResponse, printable
@@ -84,6 +87,9 @@ _not_found_note = 'Not found'
 
 # Internal service namespace - never exposed as MCP tools, the same rule the tool registry follows
 _internal_prefix = 'zato.'
+
+# The header a gateway with OAuth on answers unauthenticated requests with
+_www_authenticate_header = 'WWW-Authenticate'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -220,14 +226,12 @@ class MCPEndpoint(AdminService):
             logger.info(
                 'MCP gateway `%s` rejected unauthenticated request (sec name=`%s` username=`%s`)',
                 self.channel.name, channel_security.name, printable(channel_security.username))
-            self.response.status_code = FORBIDDEN
-            self.response.payload = ''
-            self._audit_auth_rejection()
+            self._reject_unauthenticated()
             return
 
         logger.info(
-            'MCP gateway `%s` authenticated sec_def id=`%s` username=`%s`',
-            self.channel.name, channel_security.id, channel_security.username)
+            'MCP gateway `%s` authenticated sec_def id=`%s` username=`%s` identity=`%s`',
+            self.channel.name, channel_security.id, channel_security.username, self._get_identity())
 
         # .. a caller its own definition's rate limit refused is answered 429 here, so its
         # .. refusal can be audited under the definition's name ..
@@ -282,8 +286,8 @@ class MCPEndpoint(AdminService):
         # .. get the remote address for session logging ..
         remote_address = self.request_ctx[_remote_addr_key]
 
-        # .. get the sec_def id of the authenticated caller ..
-        sec_def_id = channel_security.id
+        # .. get the resolved identity of the authenticated caller - sessions are bound to it ..
+        identity = self._get_identity()
 
         # .. get the handler for request dispatch, reading it once into a local so a gateway
         # deletion later in this request cannot affect the dispatch already underway ..
@@ -309,7 +313,7 @@ class MCPEndpoint(AdminService):
 
             # .. measure how long the dispatch takes for the audit log ..
             start_time = monotonic()
-            mcp_response = handler.handle_delete_session(session_id, sec_def_id, protocol_version_header)
+            mcp_response = handler.handle_delete_session(session_id, identity, protocol_version_header)
             duration_ms = (monotonic() - start_time) * _ms_per_second
 
             self.response.status_code = mcp_response.status_code
@@ -340,7 +344,7 @@ class MCPEndpoint(AdminService):
         # .. dispatch through the MCP handler, measuring how long it takes for the audit log ..
         start_time = monotonic()
         mcp_response = handler.handle_raw_request(
-            raw_request, sec_def_id, session_id, remote_address, protocol_version_header,
+            raw_request, identity, session_id, remote_address, protocol_version_header,
             mcp_method_header, mcp_name_header)
         duration_ms = (monotonic() - start_time) * _ms_per_second
 
@@ -409,10 +413,9 @@ class MCPEndpoint(AdminService):
             raw_request = raw_request.encode('utf8')
 
         gateway_name = self.channel.name
-        sec_def_name = self.channel.security.name
+        sec_def_name = self._get_identity()
 
         assert gateway_name is not None
-        assert sec_def_name is not None
 
         event = build_rate_limit_audit_event(
             gateway_name=gateway_name,
@@ -433,11 +436,63 @@ class MCPEndpoint(AdminService):
 
 # ################################################################################################################################
 
-    def _audit_auth_rejection(self) -> 'None':
+    def _get_identity(self) -> 'str':
+        """ Returns the resolved identity of the caller - a person out of a token when the definition
+        names an identity claim, otherwise the definition's name.
+        """
+        out = self.request_ctx.get(Identity_Key) or self.channel.security.name or ''
+        return out
+
+# ################################################################################################################################
+
+    def _get_auth_info(self) -> 'BearerAuthInfo':
+        """ Returns what the HTTP channel established about the caller's credentials.
+        A request that never reached the bearer check is one that carried no credentials at all.
+        """
+        out = self.request_ctx.get(Auth_Info_Key)
+
+        if out is None:
+            out = BearerAuthInfo()
+            out.reason = BearerRefusalReason.No_Credentials
+
+        return out
+
+# ################################################################################################################################
+
+    def _reject_unauthenticated(self) -> 'None':
+        """ Answers a request whose credentials did not authenticate - 401 with a challenge naming
+        the gateway's metadata document when the gateway has OAuth on, 403 otherwise - and writes
+        the audit event of the refusal.
+        """
+        auth_info = self._get_auth_info()
+        status_code = FORBIDDEN
+
+        # The gateway may be gone mid-flight, in which case there is nothing to challenge for ..
+        gateway_config = self.server.config_manager.gateway_mcp.get(self.channel.name)
+
+        if gateway_config is not None:
+            wrapper = gateway_config.conn
+
+            # .. a gateway with OAuth on tells the client where to learn how to sign in ..
+            if wrapper.config.get('oauth'):
+                url_path = wrapper.config.get('url_path') or ''
+                metadata_url = get_metadata_url(get_server_address(), url_path)
+                has_token = auth_info.reason != BearerRefusalReason.No_Credentials
+
+                status_code = UNAUTHORIZED
+                self.response.headers[_www_authenticate_header] = build_challenge_header(metadata_url, has_token)
+
+        self.response.status_code = status_code
+        self.response.payload = ''
+
+        self._audit_auth_rejection(status_code, auth_info)
+
+# ################################################################################################################################
+
+    def _audit_auth_rejection(self, status_code:'int', auth_info:'BearerAuthInfo') -> 'None':
         """ Writes the audit event of a request whose credentials did not authenticate -
-        only when the gateway exists and has its audit log on. The caller has no security
-        definition, so the event carries an empty identity, and the rejection audits
-        under its own event type with an error outcome.
+        only when the gateway exists and has its audit log on. The event names whoever
+        could be read out of the refused token and why the token was refused.
         """
 
         # The gateway may be gone mid-flight - a rejection on a deleted gateway leaves no event ..
@@ -456,12 +511,12 @@ class MCPEndpoint(AdminService):
         session_id = self.request.http.headers.get(_session_header)
 
         mcp_response = MCPResponse()
-        mcp_response.status_code = FORBIDDEN
+        mcp_response.status_code = status_code
         mcp_response.body = None
 
         self._insert_audit_event(
             wrapper, Method_Auth_Rejected, None, session_id, remote_address,
-            mcp_response, '', 0, 0, sec_def_name='')
+            mcp_response, '', 0, 0, sec_def_name=auth_info.identity)
 
 # ################################################################################################################################
 
@@ -483,15 +538,23 @@ class MCPEndpoint(AdminService):
         """
 
         # The gateway's channel name is always present, and outside of auth rejections,
-        # which state their empty identity explicitly, the caller is always authenticated
-        # by the time an audit event is built, so the definition's name is present too.
+        # which state their identity explicitly, the caller is always authenticated
+        # by the time an audit event is built, so the resolved identity is present too.
         gateway_name = self.channel.name
 
         if sec_def_name is None:
-            sec_def_name = self.channel.security.name
+            sec_def_name = self._get_identity()
 
         assert gateway_name is not None
         assert sec_def_name is not None
+
+        # Only callers that went through the bearer check have an auth document to record
+        auth = None
+
+        if auth_info := self.request_ctx.get(Auth_Info_Key):
+            auth = build_auth_block(auth_info)
+        elif method == Method_Auth_Rejected:
+            auth = build_auth_block(self._get_auth_info())
 
         event = build_audit_event(
             gateway_name=gateway_name,
@@ -507,6 +570,7 @@ class MCPEndpoint(AdminService):
             duration_ms=duration_ms,
             request_size=request_size,
             trace=mcp_response.trace,
+            auth=auth,
         )
 
         # A refused audit write drops this one event with a logged warning,

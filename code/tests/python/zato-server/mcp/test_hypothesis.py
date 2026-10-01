@@ -16,7 +16,7 @@ from hypothesis import strategies as st
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.common.test import _test_sec_def_id
+from zato.common.test import _test_identity
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
@@ -100,7 +100,7 @@ def _make_session(handler:'any_') -> 'str':
     """
 
     session_manager = handler.session_manager
-    out = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+    out = session_manager.create(_mcp_protocol_version, _test_identity)
     return out
 
 # ################################################################################################################################
@@ -122,7 +122,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         """
 
         handler = _make_handler()
-        response = handler.handle_raw_request(raw_data, _test_sec_def_id)
+        response = handler.handle_raw_request(raw_data, _test_identity)
 
         self.assertIsNotNone(response)
         self.assertIsNotNone(response.status_code)
@@ -137,7 +137,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
         handler = _make_handler()
         encoded_text = text.encode('utf8')
-        response = handler.handle_raw_request(encoded_text, _test_sec_def_id)
+        response = handler.handle_raw_request(encoded_text, _test_identity)
 
         self.assertIsNotNone(response)
         self.assertIsNotNone(response.status_code)
@@ -156,7 +156,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
 
         handler = _make_handler()
         encoded_text = text.encode('utf8')
-        response = handler.handle_raw_request(encoded_text, _test_sec_def_id)
+        response = handler.handle_raw_request(encoded_text, _test_identity)
 
         self.assertEqual(response.status_code, OK)
 
@@ -184,7 +184,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         session_id = _make_session(handler)
         serialized = dumps(obj)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertIsNotNone(response)
         self.assertEqual(response.status_code, OK)
@@ -207,7 +207,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         handler = _make_handler()
         serialized = dumps(arr)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw, _test_sec_def_id)
+        response = handler.handle_raw_request(raw, _test_identity)
 
         self.assertIsNotNone(response)
 
@@ -227,7 +227,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         msg = {'jsonrpc': _jsonrpc_version, 'method': method, 'id': 1}
         serialized = dumps(msg)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(response.status_code, OK)
 
@@ -250,7 +250,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         msg = {'jsonrpc': version, 'method': 'ping', 'id': 1}
         serialized = dumps(msg)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(response.status_code, OK)
 
@@ -284,7 +284,7 @@ class ArrayBodyFuzzing(TestCase):
         handler = _make_handler()
         serialized = dumps(messages)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw, _test_sec_def_id)
+        response = handler.handle_raw_request(raw, _test_identity)
 
         self.assertEqual(response.status_code, OK)
 
@@ -318,7 +318,7 @@ class AllowlistEnforcement(TestCase):
         }
         serialized = dumps(msg)
         raw = serialized.encode('utf8')
-        response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(response.status_code, OK)
 
@@ -484,7 +484,7 @@ class SessionFuzzing(TestCase):
         serialized = dumps(msg)
         raw = serialized.encode('utf8')
 
-        response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(response.status_code, BAD_REQUEST)
 
@@ -497,7 +497,7 @@ class SessionFuzzing(TestCase):
         """
 
         handler = _make_handler()
-        response = handler.handle_delete_session(session_id, _test_sec_def_id)
+        response = handler.handle_delete_session(session_id, _test_identity)
 
         self.assertEqual(response.status_code, NOT_FOUND)
 

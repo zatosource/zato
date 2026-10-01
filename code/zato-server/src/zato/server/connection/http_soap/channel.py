@@ -24,8 +24,10 @@ from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, MISC, SEC_D
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.hl7.audit import get_wire_attrs, get_wire_msa_control_id
 from zato.common.hl7.mllp.dedup import extract_control_id
+from zato.common.bearer_token_identity import Auth_Info_Key, Identity_Key
 from zato.common.bearer_token_verifier import extract_bearer_token
 from zato.common.const import ServiceConst
+from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
 from zato.common.json_ import dumps
 from zato.common.marshal_.api import Model, ModelValidationError
@@ -123,6 +125,17 @@ _sec_def_key_prefix_map = {
 
 # Where the dashboard reads an internal error's own message from.
 _header_zato_message = 'X-Zato-Message'
+
+# ################################################################################################################################
+
+def _build_refusal_info(reason:'str') -> 'BearerAuthInfo':
+    """ Builds the auth info of a request that no credential of the channel's groups accepted.
+    """
+    out = BearerAuthInfo()
+    out.is_ok = False
+    out.reason = reason
+
+    return out
 
 # A header value is a single line, so these are what it cannot contain and what stands in for them.
 _header_line_breaks = ('\r', '\n')
@@ -1355,8 +1368,15 @@ class RequestDispatcher:
         # .. build the key prefix ..
         key_prefix = _sec_def_key_prefix_map[sec_def_type].format(sec_def_id)
 
+        # .. a person resolved out of a token gets counters of their own under the definition's rules ..
+        key_suffix = ''
+        identity = request_ctx.get(Identity_Key) or ''
+
+        if identity != sec_def_info['name']:
+            key_suffix = f'{identity}:'
+
         # .. and check rate limiting.
-        out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix)
+        out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix, key_suffix)
 
         return out
 
@@ -1462,9 +1482,13 @@ class RequestDispatcher:
         # Handle bearer tokens via groups ..
         if bearer_token:
 
-            # .. run the validation now ..
-            if security_id := security_groups_ctx.check_security_bearer_token(cid, channel_name, bearer_token):
-                sec_def = self.url_data.oauth_get_by_id(security_id)
+            # .. run the validation now, leaving what it established for the service behind the channel ..
+            auth_info = security_groups_ctx.check_bearer_token(cid, channel_name, bearer_token)
+            request_ctx[Auth_Info_Key] = auth_info
+
+            if auth_info.is_ok:
+                sec_def = self.url_data.oauth_get_by_id(auth_info.security_id)
+                request_ctx[Identity_Key] = auth_info.identity
             else:
                 logger.warning('Invalid bearer token (groups)')
                 raise Forbidden(cid)
@@ -1480,6 +1504,7 @@ class RequestDispatcher:
                 sec_def = self.url_data.basic_auth_get_by_id(security_id)
             else:
                 logger.warning('Invalid Basic Auth credentials (groups)')
+                request_ctx[Auth_Info_Key] = _build_refusal_info(BearerRefusalReason.No_Definition_Matched)
                 raise Forbidden(cid)
 
         # Handle API keys via groups ..
@@ -1490,10 +1515,12 @@ class RequestDispatcher:
                 sec_def = self.url_data.apikey_get_by_id(security_id)
             else:
                 logger.warning('Invalid API key (groups)')
+                request_ctx[Auth_Info_Key] = _build_refusal_info(BearerRefusalReason.No_Definition_Matched)
                 raise Forbidden(cid)
 
         else:
             logger.warning('Received neither Basic Auth, bearer token nor API key (groups)')
+            request_ctx[Auth_Info_Key] = _build_refusal_info(BearerRefusalReason.No_Credentials)
             raise Forbidden(cid)
 
         # A credential that matched has a definition behind it, and that definition is what the
@@ -1503,6 +1530,10 @@ class RequestDispatcher:
             logger.error('Could not look up the security definition a credential matched; channel=%s; cid=%s',
                 channel_name, cid)
             raise Forbidden(cid)
+
+        # Credentials other than bearer tokens are their definition's name and nothing more
+        if Identity_Key not in request_ctx:
+            request_ctx[Identity_Key] = sec_def['name']
 
         # Now we can enrich the request context with information
         # that will become self.channel.security for services.

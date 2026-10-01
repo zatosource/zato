@@ -16,7 +16,7 @@ from gevent import sleep as gevent_sleep
 # Zato
 from zato.common.api import MCP
 from zato.common.json_internal import dumps
-from zato.common.test import _test_sec_def_id
+from zato.common.test import _test_identity
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_method_not_found, \
@@ -136,7 +136,7 @@ def _make_session(handler:'MCPHandler') -> 'str':
     """
 
     session_manager = handler.session_manager
-    out = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+    out = session_manager.create(_mcp_protocol_version, _test_identity)
     return out
 
 # ################################################################################################################################
@@ -156,7 +156,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -181,7 +181,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', {})
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -201,7 +201,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -221,7 +221,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -253,7 +253,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -282,7 +282,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -306,7 +306,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         body = mcp_response.body
         result = body['result']
@@ -334,7 +334,7 @@ class HandleToolsCall(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        _ = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        _ = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         first_payload = received_payloads[0]
         self.assertEqual(first_payload, {})
@@ -366,7 +366,7 @@ class HandleNonObjectArguments(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -425,7 +425,7 @@ class HandleConcurrentDispatch(TestCase):
             initialize_request = _make_request('initialize', params=_initialize_params, request_id=99)
             raw = dumps(initialize_request)
 
-            interleaved_response = handler.handle_raw_request(raw, _test_sec_def_id)
+            interleaved_response = handler.handle_raw_request(raw, _test_identity)
             interleaved_responses.append(interleaved_response)
 
             return 'Customer details'
@@ -439,7 +439,7 @@ class HandleConcurrentDispatch(TestCase):
         request = _make_request('tools/call', params)
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         # .. the interleaved initialize must have created its own session ..
         interleaved_response = interleaved_responses[0]
@@ -475,7 +475,7 @@ class HandleConcurrentDispatch(TestCase):
             initialize_request = _make_request('initialize', params=_initialize_params, request_id=99)
             raw = dumps(initialize_request)
 
-            interleaved_response = handler.handle_raw_request(raw, _test_sec_def_id)
+            interleaved_response = handler.handle_raw_request(raw, _test_identity)
             interleaved_responses.append(interleaved_response)
 
             return 'Customer details'
@@ -488,11 +488,11 @@ class HandleConcurrentDispatch(TestCase):
         params = {'name': 'crm.get-customer', 'arguments': {'customer_id': '123'}}
         tools_call_request = _make_request('tools/call', params)
         raw = dumps(tools_call_request)
-        _ = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        _ = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         initialize_request = _make_request('initialize', params=_initialize_params, request_id=2)
         raw = dumps(initialize_request)
-        initialize_response = handler.handle_raw_request(raw, _test_sec_def_id)
+        initialize_response = handler.handle_raw_request(raw, _test_identity)
 
         # .. both initialize responses must carry session IDs ..
         interleaved_response = interleaved_responses[0]

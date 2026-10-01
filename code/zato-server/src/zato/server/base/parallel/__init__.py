@@ -62,7 +62,7 @@ from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_c
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
-from zato.common.util.gateway import ensure_mcp_gateway_exists
+from zato.common.util.gateway import ensure_mcp_gateway_exists, ensure_mcp_oauth_metadata_channel_exists
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.log_destinations import delete_log_destination, get_log_destinations, ping_log_destination, \
@@ -1628,12 +1628,26 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), channel_noun, len(outgoing), outgoing_noun)
         self._queue_bridge.reload(channels=channels, outgoing=outgoing)
 
+        # The listeners follow the channels the config manager holds now - the normalized configurations, not the raw rows.
+        if self._channel_listeners:
+            listener_configs = []
+            for type_ in channel_types:
+                listener_configs.extend(self.config_manager.generic_conn_api[type_].values())
+            self._channel_listeners.sync(listener_configs)
+
 # ################################################################################################################################
 
     def _ensure_stream_group(self, redis_conn:'any_', stream:'str', group_name:'str') -> 'None':
-        """ Creates a Redis stream and its consumer group idempotently.
+        """ Creates a Redis stream and its consumer group idempotently - the scheduler's streams come up
+        before the queue bridge does, so this cannot go through the bridge client.
         """
-        self._queue_bridge.ensure_stream_group(redis_conn, stream, group_name)
+        try:
+            _ = redis_conn.xgroup_create(stream, group_name, id='$', mkstream=True)
+        except Exception as exc:
+
+            # The group already exists, which is fine - anything else is a real error.
+            if 'BUSYGROUP' not in str(exc):
+                raise
 
 # ################################################################################################################################
 
@@ -1861,6 +1875,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             # The built-in channels and gateways ..
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_gateway_exists(session, self.cluster_id)
+            mcp_oauth_metadata_created = ensure_mcp_oauth_metadata_channel_exists(session, self.cluster_id)
 
             # .. the AS2 jobs, which always live in the main ODB ..
             as2_rotation_job_created = ensure_as2_rotation_job_exists(session, self.cluster_id)
@@ -1885,6 +1900,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             created_flags = [
                 openapi_created,
                 mcp_created,
+                mcp_oauth_metadata_created,
                 as2_rotation_job_created,
                 as2_async_mdn_job_created,
                 as2_resend_job_created,
@@ -1907,6 +1923,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if mcp_created:
                 logger.info('Created MCP gateway')
+
+            if mcp_oauth_metadata_created:
+                logger.info('Created MCP OAuth protected resource metadata channel')
 
             if as2_rotation_job_created:
                 logger.info('Created AS2 rotation completion job')

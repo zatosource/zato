@@ -368,9 +368,14 @@ def ensure_keycloak() -> 'None':
     # .. then wait for it to accept requests ..
     _wait_until_ready()
 
-    # .. and finally make sure the realms and clients exist.
+    # .. then make sure the realms and clients exist ..
     admin_token = _get_admin_token()
     _provision(admin_token)
+
+    # .. and the people, groups and public clients a sign-in needs. The module is a sibling of this one
+    # and reads this one's constants, which is why it is imported here rather than at the top.
+    from keycloak_oauth import provision_oauth_login
+    provision_oauth_login(admin_token)
 
 # ################################################################################################################################
 

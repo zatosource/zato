@@ -13,7 +13,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.common.test import _test_sec_def_id
+from zato.common.test import _test_identity
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _mcp_protocol_version
@@ -127,7 +127,7 @@ class SessionManagerCreate(TestCase):
     def test_create_returns_session_id(self) -> 'None':
 
         manager = MCPSessionManager()
-        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         self.assertIsInstance(session_id, str)
         self.assertTrue(len(session_id) > 0)
@@ -138,18 +138,18 @@ class SessionManagerCreate(TestCase):
 
         self.assertEqual(manager.session_count, 0)
 
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
         self.assertEqual(manager.session_count, 1)
 
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
         self.assertEqual(manager.session_count, 2)
 
     def test_each_session_has_unique_id(self) -> 'None':
 
         manager = MCPSessionManager()
 
-        session_id_1 = manager.create(_mcp_protocol_version, _test_sec_def_id)
-        session_id_2 = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id_1 = manager.create(_mcp_protocol_version, _test_identity)
+        session_id_2 = manager.create(_mcp_protocol_version, _test_identity)
 
         self.assertNotEqual(session_id_1, session_id_2)
 
@@ -157,11 +157,11 @@ class SessionManagerCreate(TestCase):
 
         manager = MCPSessionManager(max_sessions=2)
 
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
 
         with self.assertRaises(ValueError):
-            _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+            _ = manager.create(_mcp_protocol_version, _test_identity)
 
     def test_expired_sessions_do_not_count_against_the_cap(self) -> 'None':
         """ A session past its TTL frees its slot even before the reaper sweeps it.
@@ -169,13 +169,13 @@ class SessionManagerCreate(TestCase):
 
         manager = MCPSessionManager(ttl=0, max_sessions=2)
 
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
 
         # With a zero TTL both sessions above are already expired,
         # so the cap has room even though neither was swept yet.
         sleep(0.01)
-        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         self.assertTrue(session_id)
         self.assertEqual(manager.session_count, 3)
@@ -188,9 +188,9 @@ class SessionManagerValidate(TestCase):
     def test_validate_existing_session(self) -> 'None':
 
         manager = MCPSessionManager()
-        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = manager.create(_mcp_protocol_version, _test_identity)
 
-        result = manager.validate(session_id, _test_sec_def_id)
+        result = manager.validate(session_id, _test_identity)
 
         self.assertEqual(result, Session_Valid)
 
@@ -198,7 +198,7 @@ class SessionManagerValidate(TestCase):
 
         manager = MCPSessionManager()
 
-        result = manager.validate('nonexistent-session-id', _test_sec_def_id)
+        result = manager.validate('nonexistent-session-id', _test_identity)
 
         self.assertEqual(result, Session_Not_Found)
 
@@ -207,10 +207,10 @@ class SessionManagerValidate(TestCase):
         """
 
         manager = MCPSessionManager()
-        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = manager.create(_mcp_protocol_version, _test_identity)
 
-        other_sec_def_id = _test_sec_def_id + 1
-        result = manager.validate(session_id, other_sec_def_id)
+        other_identity = _test_identity + '.other'
+        result = manager.validate(session_id, other_identity)
 
         self.assertEqual(result, Session_Invalid_Identity)
 
@@ -222,13 +222,13 @@ class SessionManagerDelete(TestCase):
     def test_delete_existing_session(self) -> 'None':
 
         manager = MCPSessionManager()
-        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         result = manager.delete(session_id)
 
         self.assertTrue(result)
         self.assertEqual(manager.session_count, 0)
-        self.assertEqual(manager.validate(session_id, _test_sec_def_id), Session_Not_Found)
+        self.assertEqual(manager.validate(session_id, _test_identity), Session_Not_Found)
 
     def test_delete_unknown_session(self) -> 'None':
 
@@ -246,8 +246,8 @@ class SessionManagerCleanup(TestCase):
     def test_cleanup_removes_expired(self) -> 'None':
 
         manager = MCPSessionManager(ttl=0)
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
 
         removed = manager.cleanup_expired()
 
@@ -257,7 +257,7 @@ class SessionManagerCleanup(TestCase):
     def test_cleanup_keeps_fresh_sessions(self) -> 'None':
 
         manager = MCPSessionManager(ttl=9999)
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
 
         removed = manager.cleanup_expired()
 
@@ -274,10 +274,10 @@ class SessionManagerReaping(TestCase):
         """
 
         manager = MCPSessionManager(ttl=0, max_lifetime=9999)
-        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         # The session was just created but the TTL is 0, so any elapsed time makes it idle-expired ..
-        is_valid = manager.validate(session_id, _test_sec_def_id)
+        is_valid = manager.validate(session_id, _test_identity)
 
         self.assertEqual(is_valid, Session_Expired)
 
@@ -288,8 +288,8 @@ class SessionManagerReaping(TestCase):
         """
 
         manager = MCPSessionManager(ttl=0, max_lifetime=9999)
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
 
         self.assertEqual(manager.session_count, 2)
 
@@ -307,10 +307,10 @@ class SessionManagerReaping(TestCase):
 
         # Use a generous idle TTL but a 0-second max lifetime ..
         manager = MCPSessionManager(ttl=9999, max_lifetime=0)
-        session_id = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         # The session was just created but max_lifetime=0 means any elapsed time exceeds it ..
-        is_valid = manager.validate(session_id, _test_sec_def_id)
+        is_valid = manager.validate(session_id, _test_identity)
 
         self.assertEqual(is_valid, Session_Expired)
 
@@ -322,10 +322,10 @@ class SessionManagerReaping(TestCase):
 
         # Build two managers, each with one expired session ..
         orders_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
-        _ = orders_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = orders_manager.create(_mcp_protocol_version, _test_identity)
 
         notifications_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
-        _ = notifications_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = notifications_manager.create(_mcp_protocol_version, _test_identity)
 
         # .. mock the gateway_mcp_dict structure that the reaper expects ..
         gateway_dict:'anydict' = {
@@ -350,7 +350,7 @@ class SessionManagerReaping(TestCase):
 
         # Use a generous idle TTL but a 0-second max lifetime ..
         manager = MCPSessionManager(ttl=9999, max_lifetime=0)
-        _ = manager.create(_mcp_protocol_version, _test_sec_def_id)
+        _ = manager.create(_mcp_protocol_version, _test_identity)
 
         self.assertEqual(manager.session_count, 1)
 
@@ -378,7 +378,7 @@ class HandlerInitializeCreatesSession(TestCase):
         }
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertIsNotNone(mcp_response.session_id)
@@ -404,7 +404,7 @@ class HandlerInitializeCreatesSession(TestCase):
         }
         raw = dumps(request)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity)
 
         # .. must return an error ..
         self.assertEqual(mcp_response.status_code, OK)
@@ -430,7 +430,7 @@ class HandlerInitializeCreatesSession(TestCase):
         ]
         raw = dumps(messages)
 
-        mcp_response = handler.handle_raw_request(raw, _test_sec_def_id)
+        mcp_response = handler.handle_raw_request(raw, _test_identity)
 
         self.assertEqual(mcp_response.status_code, OK)
         self.assertEqual(mcp_response.body['error']['code'], _error_invalid_request)
@@ -449,12 +449,12 @@ class HandlerSessionValidation(TestCase):
 
         # First, initialize to get a session ..
         initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': _initialize_params})
-        initialize_response = handler.handle_raw_request(initialize_request, _test_sec_def_id)
+        initialize_response = handler.handle_raw_request(initialize_request, _test_identity)
         session_id = initialize_response.session_id
 
         # .. then use the session ID for a subsequent request.
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
-        ping_response = handler.handle_raw_request(ping_request, _test_sec_def_id, session_id=session_id)
+        ping_response = handler.handle_raw_request(ping_request, _test_identity, session_id=session_id)
 
         self.assertEqual(ping_response.status_code, OK)
 
@@ -467,7 +467,7 @@ class HandlerSessionValidation(TestCase):
         handler = _make_handler()
 
         request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
-        mcp_response = handler.handle_raw_request(request, _test_sec_def_id, session_id='bogus-session-id')
+        mcp_response = handler.handle_raw_request(request, _test_identity, session_id='bogus-session-id')
 
         self.assertEqual(mcp_response.status_code, BAD_REQUEST)
 
@@ -476,7 +476,7 @@ class HandlerSessionValidation(TestCase):
         handler = _make_handler()
 
         request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
-        mcp_response = handler.handle_raw_request(request, _test_sec_def_id)
+        mcp_response = handler.handle_raw_request(request, _test_identity)
 
         self.assertEqual(mcp_response.status_code, BAD_REQUEST)
 
@@ -489,13 +489,13 @@ class HandlerSessionValidation(TestCase):
 
         # Create a session for one identity ..
         initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': _initialize_params})
-        initialize_response = handler.handle_raw_request(initialize_request, _test_sec_def_id)
+        initialize_response = handler.handle_raw_request(initialize_request, _test_identity)
         session_id = initialize_response.session_id
 
         # .. then present it as a different identity.
-        other_sec_def_id = _test_sec_def_id + 1
+        other_identity = _test_identity + '.other'
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
-        ping_response = handler.handle_raw_request(ping_request, other_sec_def_id, session_id=session_id)
+        ping_response = handler.handle_raw_request(ping_request, other_identity, session_id=session_id)
 
         self.assertEqual(ping_response.status_code, BAD_REQUEST)
 
@@ -511,11 +511,11 @@ class HandlerDeleteSession(TestCase):
 
         # Create a session ..
         initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': _initialize_params})
-        initialize_response = handler.handle_raw_request(initialize_request, _test_sec_def_id)
+        initialize_response = handler.handle_raw_request(initialize_request, _test_identity)
         session_id = initialize_response.session_id
 
         # .. delete it.
-        delete_response = handler.handle_delete_session(session_id, _test_sec_def_id)
+        delete_response = handler.handle_delete_session(session_id, _test_identity)
 
         self.assertEqual(delete_response.status_code, OK)
         self.assertEqual(session_manager.session_count, 0)
@@ -524,7 +524,7 @@ class HandlerDeleteSession(TestCase):
 
         handler = _make_handler()
 
-        delete_response = handler.handle_delete_session('nonexistent-session-id', _test_sec_def_id)
+        delete_response = handler.handle_delete_session('nonexistent-session-id', _test_identity)
 
         self.assertEqual(delete_response.status_code, NOT_FOUND)
 
@@ -532,7 +532,7 @@ class HandlerDeleteSession(TestCase):
 
         handler = _make_handler()
 
-        delete_response = handler.handle_delete_session(None, _test_sec_def_id)
+        delete_response = handler.handle_delete_session(None, _test_identity)
 
         self.assertEqual(delete_response.status_code, NOT_FOUND)
 
@@ -545,12 +545,12 @@ class HandlerDeleteSession(TestCase):
 
         # Create a session for one identity ..
         initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': _initialize_params})
-        initialize_response = handler.handle_raw_request(initialize_request, _test_sec_def_id)
+        initialize_response = handler.handle_raw_request(initialize_request, _test_identity)
         session_id = initialize_response.session_id
 
         # .. attempt deletion as a different identity.
-        other_sec_def_id = _test_sec_def_id + 1
-        delete_response = handler.handle_delete_session(session_id, other_sec_def_id)
+        other_identity = _test_identity + '.other'
+        delete_response = handler.handle_delete_session(session_id, other_identity)
 
         self.assertEqual(delete_response.status_code, BAD_REQUEST)
 
@@ -564,14 +564,14 @@ class HandlerDeleteSession(TestCase):
 
         # Create and delete a session ..
         initialize_request = dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1, 'params': _initialize_params})
-        initialize_response = handler.handle_raw_request(initialize_request, _test_sec_def_id)
+        initialize_response = handler.handle_raw_request(initialize_request, _test_identity)
         session_id = initialize_response.session_id
 
-        _ = handler.handle_delete_session(session_id, _test_sec_def_id)
+        _ = handler.handle_delete_session(session_id, _test_identity)
 
         # .. using the deleted session ID must fail.
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
-        ping_response = handler.handle_raw_request(ping_request, _test_sec_def_id, session_id=session_id)
+        ping_response = handler.handle_raw_request(ping_request, _test_identity, session_id=session_id)
 
         self.assertEqual(ping_response.status_code, BAD_REQUEST)
 

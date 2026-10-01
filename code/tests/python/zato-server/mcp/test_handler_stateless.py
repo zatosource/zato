@@ -13,7 +13,7 @@ from unittest import TestCase
 # Zato
 from zato.common.api import MCP
 from zato.common.json_internal import dumps
-from zato.common.test import _test_sec_def_id
+from zato.common.test import _test_identity
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
@@ -123,7 +123,7 @@ def _dispatch(
     raw = dumps(request)
 
     out = handler.handle_raw_request(
-        raw, _test_sec_def_id,
+        raw, _test_identity,
         protocol_version_header=protocol_version_header,
         mcp_method_header=mcp_method_header,
         mcp_name_header=mcp_name_header,
@@ -195,7 +195,7 @@ class VersionRouting(TestCase):
         raw = dumps(messages)
 
         mcp_response = handler.handle_raw_request(
-            raw, _test_sec_def_id,
+            raw, _test_identity,
             protocol_version_header=MCP.Protocol_Version_Stateless,
             mcp_method_header='tools/list',
         )
@@ -421,7 +421,7 @@ class StatelessNotifications(TestCase):
         raw = dumps(request)
 
         mcp_response = handler.handle_raw_request(
-            raw, _test_sec_def_id,
+            raw, _test_identity,
             protocol_version_header=MCP.Protocol_Version_Stateless,
             mcp_method_header='notifications/progress',
         )

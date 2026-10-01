@@ -7,14 +7,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import FORBIDDEN, NOT_FOUND, OK
+import os
+from http.client import FORBIDDEN, NOT_FOUND, OK, UNAUTHORIZED
 from unittest import TestCase
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.bearer_token_identity import Auth_Info_Key
 from zato.common.json_internal import dumps, loads
-from zato.common.test import _test_sec_def_id
+from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
+from zato.common.test import _test_identity
 from zato.common.typing_ import cast_
+from zato.common.util.mcp_oauth import Server_Address_Env_Key
 from zato.server.connection.mcp.handler import _error_invalid_request, _mcp_protocol_version, MCPHandler
 from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
 from zato.server.service.internal.gateway import mcp as mcp_endpoint_module
@@ -31,6 +35,12 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The address the challenge tests expect the metadata URL to be built from
+_server_address = 'https://api.example.com'
+
+# The header a gateway with OAuth on answers unauthenticated requests with
+_www_authenticate = 'WWW-Authenticate'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -190,8 +200,8 @@ class GatewayMCPWrapperInvoke(TestCase):
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
-        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
-        mcp_response = wrapper.handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        session_id = session_manager.create(_mcp_protocol_version, _test_identity)
+        mcp_response = wrapper.handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -214,8 +224,8 @@ class _MockChannelSecurity:
     """
     def __init__(self, is_authenticated:'bool'=True) -> 'None':
         if is_authenticated:
-            self.id = _test_sec_def_id
-            self.name = 'test.sec.def'
+            self.id = 1
+            self.name = _test_identity
             self.username = 'test.user'
         else:
             self.id = ''
@@ -337,7 +347,7 @@ class MCPEndpointOriginValidation(TestCase):
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
-        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = session_manager.create(_mcp_protocol_version, _test_identity)
 
         endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
@@ -364,7 +374,7 @@ class MCPEndpointOriginValidation(TestCase):
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
-        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = session_manager.create(_mcp_protocol_version, _test_identity)
 
         endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
@@ -393,7 +403,7 @@ class MCPEndpointOriginValidation(TestCase):
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
-        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = session_manager.create(_mcp_protocol_version, _test_identity)
 
         endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
@@ -505,7 +515,7 @@ class MCPEndpointNoHandler(TestCase):
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
-        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = session_manager.create(_mcp_protocol_version, _test_identity)
 
         endpoint = _make_endpoint('live-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
@@ -550,8 +560,8 @@ class MCPEndpointServiceDispatch(TestCase):
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
-        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
-        mcp_response = wrapper.handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+        session_id = session_manager.create(_mcp_protocol_version, _test_identity)
+        mcp_response = wrapper.handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -580,7 +590,7 @@ class MCPEndpointServiceDispatch(TestCase):
         raw = dumps(messages)
 
         assert wrapper.handler is not None
-        mcp_response = wrapper.handler.handle_raw_request(raw, _test_sec_def_id)
+        mcp_response = wrapper.handler.handle_raw_request(raw, _test_identity)
 
         self.assertEqual(mcp_response.status_code, OK)
 
@@ -666,7 +676,7 @@ class MCPEndpointWithoutCredentials(TestCase):
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
-        session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+        session_id = session_manager.create(_mcp_protocol_version, _test_identity)
 
         endpoint = _make_endpoint('no-security-gateway', wrapper, is_authenticated=False)
         endpoint.request.http.headers['mcp-session-id'] = session_id
@@ -712,6 +722,128 @@ class MCPEndpointWithoutCredentials(TestCase):
         self.assertEqual(event['ext_client_id'], '')
         self.assertEqual(event['outcome'], AuditOutcome.Error)
         self.assertEqual(event['cid'], 'test-cid-1')
+
+        # The refusal says why, and a gateway with OAuth off sends no challenge
+        data = loads(event['data'])
+        self.assertEqual(data['auth']['reason'], BearerRefusalReason.No_Credentials)
+        self.assertNotIn(_www_authenticate, endpoint.response.headers)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MCPEndpointOAuthChallenge(TestCase):
+    """ A gateway with OAuth on answers unauthenticated requests with 401 and a challenge
+    pointing at its protected resource metadata, instead of a bare 403.
+    """
+
+    def setUp(self) -> 'None':
+        self._previous_address = os.environ.get(Server_Address_Env_Key)
+        os.environ[Server_Address_Env_Key] = _server_address
+
+    def tearDown(self) -> 'None':
+        if self._previous_address is None:
+            _ = os.environ.pop(Server_Address_Env_Key, None)
+        else:
+            os.environ[Server_Address_Env_Key] = self._previous_address
+
+# ################################################################################################################################
+
+    def _make_oauth_endpoint(self, auth_info:'any_'=None) -> 'tuple[MCPEndpoint, _MockAuditLog]':
+
+        server:'any_' = _MockServer()
+
+        config:'any_' = _MockBunch({
+            'name': 'oauth-gateway',
+            'services': [],
+            'is_audit_log_active': True,
+            'oauth': True,
+            'url_path': '/mcp/billing',
+        })
+
+        wrapper = GatewayMCPWrapper(config, server)
+        wrapper.build_wrapper()
+
+        audit_log = _MockAuditLog()
+        wrapper._audit_log = cast_('any_', audit_log)
+
+        endpoint = _make_endpoint('oauth-gateway', wrapper, is_authenticated=False)
+        endpoint.cid = 'test-cid-oauth'
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+
+        if auth_info is not None:
+            endpoint.request_ctx[Auth_Info_Key] = auth_info
+
+        return endpoint, audit_log
+
+# ################################################################################################################################
+
+    def test_no_credentials_gets_challenge_without_error(self) -> 'None':
+
+        endpoint, audit_log = self._make_oauth_endpoint()
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, UNAUTHORIZED)
+
+        expected = f'Bearer resource_metadata="{_server_address}/.well-known/oauth-protected-resource/mcp/billing"'
+        self.assertEqual(endpoint.response.headers[_www_authenticate], expected)
+
+        event = audit_log.events[0]
+        self.assertEqual(event['event_type'], AuditEvent.Auth_Failed)
+
+        data = loads(event['data'])
+        self.assertEqual(data['auth']['reason'], BearerRefusalReason.No_Credentials)
+        self.assertEqual(data['auth']['type'], 'none')
+
+# ################################################################################################################################
+
+    def test_refused_token_gets_challenge_with_invalid_token(self) -> 'None':
+
+        auth_info = BearerAuthInfo()
+        auth_info.is_ok = False
+        auth_info.is_jwt = True
+        auth_info.reason = BearerRefusalReason.Expired
+        auth_info.sec_def_name = 'billing.agents'
+        auth_info.identity_claim = 'preferred_username'
+        auth_info.identity = 'billing.agents/alice'
+        auth_info.claims = {
+            'iss': 'https://idp.example.com/realms/zato',
+            'aud': 'zato-mcp',
+            'azp': 'claude-desktop',
+            'preferred_username': 'alice',
+            'jti': 'token-1',
+            'exp': 1700000000,
+            'scope': 'openid mcp:tools',
+            'email': 'alice@example.com',
+        }
+
+        endpoint, audit_log = self._make_oauth_endpoint(auth_info)
+        endpoint.handle()
+
+        self.assertEqual(endpoint.response.status_code, UNAUTHORIZED)
+
+        header = endpoint.response.headers[_www_authenticate]
+        self.assertTrue(header.startswith('Bearer resource_metadata="'))
+        self.assertTrue(header.endswith(', error="invalid_token"'))
+
+        # The audit event says who was turned away, from which client and why ..
+        event = audit_log.events[0]
+        self.assertEqual(event['ext_client_id'], 'billing.agents/alice')
+
+        auth = loads(event['data'])['auth']
+        self.assertEqual(auth['type'], 'bearer_jwt')
+        self.assertEqual(auth['definition'], 'billing.agents')
+        self.assertEqual(auth['identity'], 'alice')
+        self.assertEqual(auth['client'], 'claude-desktop')
+        self.assertEqual(auth['issuer'], 'https://idp.example.com/realms/zato')
+        self.assertEqual(auth['audience'], 'zato-mcp')
+        self.assertEqual(auth['scopes'], ['openid', 'mcp:tools'])
+        self.assertEqual(auth['token_id'], 'token-1')
+        self.assertEqual(auth['expires_at'], 1700000000)
+        self.assertEqual(auth['reason'], BearerRefusalReason.Expired)
+
+        # .. and nothing beyond the named fields is copied out of the token.
+        self.assertNotIn('email', auth)
+        self.assertNotIn('alice@example.com', event['data'])
 
 # ################################################################################################################################
 # ################################################################################################################################

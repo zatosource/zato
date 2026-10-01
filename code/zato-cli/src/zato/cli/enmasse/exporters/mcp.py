@@ -43,6 +43,9 @@ GATEWAY_OPTIONAL_FIELDS = [
     # Routing and security
     'url_path', 'services', 'security_groups', 'is_audit_log_active',
 
+    # OAuth with the customer's own identity provider
+    'oauth', 'oauth_scopes',
+
     # Skills served as prompts
     'skills',
 
@@ -190,6 +193,11 @@ class GatewayMCPExporter:
                 # so an empty list is omitted either way.
                 if field == 'security_groups':
                     value = self._groups_as_names(value, row['name'])
+
+                # The scopes mean nothing on a gateway with OAuth off
+                if field == 'oauth_scopes':
+                    if not row.get('oauth'):
+                        continue
 
                 if value == _field_defaults[field]:
                     continue

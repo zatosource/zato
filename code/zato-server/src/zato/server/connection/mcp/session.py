@@ -61,7 +61,7 @@ class MCPSession:
     """ Holds state for a single MCP session.
     """
     session_id:       'str'
-    sec_def_id:       'int'
+    identity:         'str'
     created_at:       'float'
     last_seen_at:     'float'
     protocol_version: 'str'
@@ -94,20 +94,20 @@ class MCPSessionManager:
 
 # ################################################################################################################################
 
-    def create(self, protocol_version:'str', sec_def_id:'int', remote_address:'str' = '') -> 'str':
+    def create(self, protocol_version:'str', identity:'str', remote_address:'str' = '') -> 'str':
         """ Creates a new session and returns its ID.
         Raises ValueError if the per-identity session cap has been reached -
         only live sessions count against it, never expired ones the reaper
         has not swept yet.
         """
 
-        # Count how many live sessions this sec_def already owns ..
+        # Count how many live sessions this identity already owns ..
         now = monotonic()
         identity_count = 0
 
         for session in self._sessions.values():
 
-            if session.sec_def_id != sec_def_id:
+            if session.identity != identity:
                 continue
 
             # An expired session awaiting the reaper takes no slot
@@ -134,7 +134,7 @@ class MCPSessionManager:
         session_uuid = uuid4()
         unique_id = session_uuid.hex
         session.session_id       = f'{_session_id_prefix}{unique_id}'
-        session.sec_def_id       = sec_def_id
+        session.identity         = identity
         session.protocol_version = protocol_version
 
         # .. record the creation time ..
@@ -153,7 +153,7 @@ class MCPSessionManager:
 
 # ################################################################################################################################
 
-    def validate(self, session_id:'str', sec_def_id:'int') -> 'str':
+    def validate(self, session_id:'str', identity:'str') -> 'str':
         """ Returns a validation result constant indicating the session state.
         Touching a live session updates its last_seen_at timestamp.
         Ownership is always enforced - a session is only valid for the identity that created it.
@@ -164,8 +164,8 @@ class MCPSessionManager:
             return Session_Not_Found
 
         # .. reject if the session belongs to a different identity ..
-        if session.sec_def_id != sec_def_id:
-            logger.info('MCP: Session `%s` owned by sec_def %d, caller is %d', session_id, session.sec_def_id, sec_def_id)
+        if session.identity != identity:
+            logger.info('MCP: Session `%s` owned by `%s`, caller is `%s`', session_id, session.identity, identity)
             return Session_Invalid_Identity
 
         now = monotonic()

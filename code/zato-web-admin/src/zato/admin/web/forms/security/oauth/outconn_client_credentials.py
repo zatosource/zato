@@ -53,6 +53,8 @@ class CreateForm(forms.Form):
     jwks_url = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     audience = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     claims = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}))
+    identity_claim = forms.CharField(required=False, widget=forms.TextInput(
+        attrs={'style':'width:100%', 'placeholder':'preferred_username'}))
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)

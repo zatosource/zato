@@ -74,6 +74,8 @@ class AuditSource:
     MCP           = 'mcp'
     MLLP_Channel  = 'mllp-channel'
     MLLP_Outgoing = 'mllp-outgoing'
+    Kafka_Channel  = 'kafka-channel'
+    Kafka_Outgoing = 'kafka-outgoing'
     FHIR          = 'fhir'
     Config        = 'config'
     Scheduler     = 'scheduler'
@@ -137,6 +139,8 @@ _source_label = {
     AuditSource.MCP: 'MCP',
     AuditSource.MLLP_Channel: 'MLLP channel',
     AuditSource.MLLP_Outgoing: 'MLLP outgoing',
+    AuditSource.Kafka_Channel: 'Kafka channel',
+    AuditSource.Kafka_Outgoing: 'Kafka outgoing',
     AuditSource.FHIR: 'FHIR outgoing',
     AuditSource.Config: 'Log access',
     AuditSource.Scheduler: 'Scheduler',
@@ -194,6 +198,11 @@ class MCPAttr:
     Tokens_Before = 'tokens_before'
     Tokens_After  = 'tokens_after'
 
+    # Who the caller was, which OAuth client the person signed in through and why a refused caller was turned away
+    Identity      = 'identity'
+    Client        = 'client'
+    Reason        = 'reason'
+
 # ################################################################################################################################
 
 # The searchable attributes each source's events carry in the event_attr table -
@@ -208,8 +217,10 @@ source_attr_names = {
     # The model a completion was asked of and why the provider stopped generating - stop, length, refusal, tool_use.
     AuditSource.LLM: (LLMAttr.Model, LLMAttr.Finish_Reason),
 
-    # The JSON-RPC method of a gateway's request, the error code of a failed call and what refused a tool's response.
-    AuditSource.MCP: (MCPAttr.Method, MCPAttr.Error_Code, MCPAttr.Reject_Kind),
+    # The JSON-RPC method of a gateway's request, the error code of a failed call, what refused a tool's response,
+    # and the person, the OAuth client and the refusal reason of a request that went through the bearer check.
+    AuditSource.MCP: (MCPAttr.Method, MCPAttr.Error_Code, MCPAttr.Reject_Kind, MCPAttr.Identity, MCPAttr.Client,
+        MCPAttr.Reason),
 
     # The channel type the invocation came in through.
     AuditSource.Service: ('channel',),

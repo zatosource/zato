@@ -15,7 +15,7 @@ from unittest import main, TestCase
 # Zato
 from zato.common.json_internal import dumps
 from zato.common.skills.api import skill_file_name, skills_directory_name
-from zato.common.test import _test_sec_def_id
+from zato.common.test import _test_identity
 from zato.common.typing_ import cast_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
@@ -103,7 +103,7 @@ def _make_handler(skill_prompts:'SkillPrompts') -> 'MCPHandler':
 
 def _make_session(handler:'MCPHandler') -> 'str':
     session_manager = handler.session_manager
-    out = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+    out = session_manager.create(_mcp_protocol_version, _test_identity)
     return out
 
 # ################################################################################################################################
@@ -274,14 +274,14 @@ class HandleInitializeCapabilities(TestCase):
         handler = _make_handler(SkillPrompts('', []))
 
         request = _make_request('initialize', params=_initialize_params)
-        mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id)
+        mcp_response = handler.handle_raw_request(dumps(request), _test_identity)
 
         capabilities = mcp_response.body['result']['capabilities']
         self.assertNotIn('prompts', capabilities)
 
         handler = _make_handler(SkillPrompts('', ['invoice-mapping']))
 
-        mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id)
+        mcp_response = handler.handle_raw_request(dumps(request), _test_identity)
 
         capabilities = mcp_response.body['result']['capabilities']
         self.assertEqual(capabilities['prompts'], {})
@@ -302,7 +302,7 @@ class HandlePromptsList(TestCase):
             session_id = _make_session(handler)
 
             request = _make_request('prompts/list')
-            mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+            mcp_response = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
 
             self.assertEqual(mcp_response.status_code, OK)
 
@@ -319,7 +319,7 @@ class HandlePromptsList(TestCase):
         session_id = _make_session(handler)
 
         request = _make_request('prompts/list')
-        mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
 
         result = mcp_response.body['result']
         self.assertEqual(result['prompts'], [])
@@ -340,7 +340,7 @@ class HandlePromptsGet(TestCase):
             session_id = _make_session(handler)
 
             request = _make_request('prompts/get', params={'name': 'invoice-mapping'})
-            mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+            mcp_response = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
 
             self.assertEqual(mcp_response.status_code, OK)
 
@@ -368,7 +368,7 @@ class HandlePromptsGet(TestCase):
             session_id = _make_session(handler)
 
             request = _make_request('prompts/get', params={'name': 'invoice-mapping'})
-            mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+            mcp_response = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
 
             error = mcp_response.body['error']
             self.assertEqual(error['code'], _error_invalid_params)
@@ -388,7 +388,7 @@ class HandlePromptsGet(TestCase):
                 session_id = _make_session(handler)
 
                 request = _make_request('prompts/get', params={'name': 'invoice-mapping'})
-                mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+                mcp_response = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
 
                 error = mcp_response.body['error']
                 self.assertEqual(error['code'], _error_invalid_params)
@@ -404,7 +404,7 @@ class HandlePromptsGet(TestCase):
         session_id = _make_session(handler)
 
         request = _make_request('prompts/get', params={})
-        mcp_response = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+        mcp_response = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
 
         error = mcp_response.body['error']
         self.assertEqual(error['code'], _error_invalid_params)

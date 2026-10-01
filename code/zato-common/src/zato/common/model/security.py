@@ -7,14 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.typing_ import dataclass, dict_field
+from zato.common.typing_ import dataclass, dict_field, list_field
 from zato.server.service import Model
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import datetime, dtnone, intnone, stranydict, timedelta
+    from zato.common.typing_ import datetime, dtnone, intnone, stranydict, strlist, timedelta
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,6 +74,62 @@ class BearerTokenVerifyConfig(Model):
 
     # JWT mode - claim name to required value pairs, all of which must match
     claims:'stranydict' = dict_field()
+
+    # JWT mode - the claim whose value names the caller, e.g. sub, email or oid
+    identity_claim:'str' = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class BearerTokenVerifyResult(Model):
+    """ The outcome of checking one inbound bearer token against one security definition.
+    When the token is accepted, claims are the verified ones. When it is refused, reason says
+    why and claims carry whatever could be read from the token without trusting it.
+    """
+    is_ok:'bool' = False
+    reason:'str' = ''
+    claim:'str' = ''
+    claims:'stranydict' = dict_field()
+    claims_matched:'strlist' = list_field()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class BearerAuthInfo(Model):
+    """ What a bearer token check against a channel's security groups established about the caller.
+    On success security_id names the definition that matched and identity is the resolved caller.
+    On refusal reason says why, and identity, issuer and client are filled in as far as they could be read.
+    """
+    is_ok:'bool' = False
+    security_id:'int' = 0
+    sec_def_name:'str' = ''
+    identity_claim:'str' = ''
+    identity:'str' = ''
+    reason:'str' = ''
+    claim:'str' = ''
+    claims:'stranydict' = dict_field()
+    claims_matched:'strlist' = list_field()
+    is_jwt:'bool' = False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BearerRefusalReason:
+    """ Why an inbound bearer token or a request without one was turned away.
+    """
+    No_Credentials = 'no_credentials'
+    Malformed = 'malformed'
+    Unsupported_Algorithm = 'unsupported_algorithm'
+    Unknown_Key = 'unknown_key'
+    Expired = 'expired'
+    Wrong_Issuer = 'wrong_issuer'
+    Wrong_Audience = 'wrong_audience'
+    Bad_Signature = 'bad_signature'
+    Claim_Missing = 'claim_missing'
+    Claim_Mismatch = 'claim_mismatch'
+    No_Definition_Matched = 'no_definition_matched'
 
 # ################################################################################################################################
 # ################################################################################################################################
