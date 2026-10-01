@@ -62,9 +62,9 @@ _Channel_Tab_Order = ['config', 'consumer', 'routing', 'delivery']
 
 _Service_Get_List = 'zato.generic.connection.get-list'
 
-# Services every server has
-_Channel_Service = 'zato.ping'
-_Routing_Service = 'zato.helpers.input-logger'
+# The fixture services this suite deploys - the service lists of the dialogs leave internal services out
+_Channel_Service = 'test.kafka.receiver'
+_Routing_Service = 'test.kafka.invoke'
 
 # The popovers of each tab, from the JS of each tab and micro-forms/core.js
 _Producer_Popover_Prefix = 'kafka-producer-tab'
@@ -590,7 +590,8 @@ class TestKafkaChannelTabs:
         assert get_field_value(page, 'edit', Field_Max_Retries) == _Changed_Max_Retries
         assert get_field_value(page, 'edit', Field_Action) == _dlq.Action.Discard
 
-        # Comma-separated topics on the edit
+        # Comma-separated topics on the edit, back on the Config tab
+        _switch_to_tab(page, _Channel_Page_Prefix, 'edit', 'config')
         fill_kafka_channel_form(page, {'topics': ', '.join(_Topics_Edited)}, 'edit-')
         submit_edit_form(page)
 

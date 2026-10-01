@@ -262,8 +262,10 @@ skip_simple_type = {
     'as4_peer_encryption_cert',
     'as4_trust_anchors',
 
-    # Kafka fields that are text even when they look like a number or JSON
+    # Kafka fields that are text even when they look like a number, a boolean or JSON - acks of `1` or `0`
+    # are what Kafka calls these settings, not a count or a flag
     'topic',
+    KAFKA.Producer.Field_Acks,
     KAFKA.Consumer.Field_Topics,
     KAFKA.Consumer.Field_Routing,
     KAFKA.Consumer.Field_Dedup_Header,
