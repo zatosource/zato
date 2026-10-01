@@ -14,9 +14,9 @@ from threading import RLock
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key, parse_dlq_sub_key
-from zato.common.pubsub.outgoing import find_outgoing_conn, get_outgoing_sub_key, locate_outgoing_conn, \
-    parse_outgoing_sub_key
+from zato.common.pubsub.dlq import DLQ_Sub_Key_Prefixes, get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key, parse_dlq_sub_key
+from zato.common.pubsub.outgoing import find_outgoing_conn, get_direction, get_outgoing_sub_key, is_inbound, \
+    locate_outgoing_conn, parse_outgoing_sub_key
 from zato.server.base.config_manager.common import ConfigManagerImpl
 
 # ################################################################################################################################
@@ -119,11 +119,13 @@ class OutgoingDLQs(ConfigManagerImpl):
 # ################################################################################################################################
 
     def restore_outgoing_dlqs(self, sub_key_list:'list[str]') -> 'None':
-        """ Brings back the DLQs at startup, out of every outgoing sub key the database knows.
+        """ Brings back the DLQs at startup, out of every outgoing sub key the database knows and every channel DLQ sub key.
         """
         restored_count = 0
 
-        for sub_key in sub_key_list:
+        inbound_sub_key_list = self.server.pubsub_backend.get_sub_keys_by_prefix(PubSub.Inbound.DLQ_Sub_Key_Prefix)
+
+        for sub_key in sub_key_list + inbound_sub_key_list:
 
             if not is_dlq_sub_key(sub_key):
                 continue
@@ -133,7 +135,7 @@ class OutgoingDLQs(ConfigManagerImpl):
 
         suffix = 'DLQ' if restored_count == 1 else 'DLQs'
 
-        logger.info('Restored %d outgoing connection %s', restored_count, suffix)
+        logger.info('Restored %d connection %s', restored_count, suffix)
 
 # ################################################################################################################################
 
@@ -146,9 +148,12 @@ class OutgoingDLQs(ConfigManagerImpl):
 # ################################################################################################################################
 
     def get_outgoing_queue_list(self) -> 'list[anydict]':
-        """ One row per outgoing connection that has a queue or a DLQ, with the depth of each.
+        """ One row per connection that has a queue or a DLQ, with the depth of each.
         """
-        dlq_counts = self.server.pubsub_backend.get_pending_counts_by_prefix(PubSub.Outgoing.DLQ_Sub_Key_Prefix)
+        dlq_counts:'anydict' = {}
+
+        for prefix in DLQ_Sub_Key_Prefixes:
+            dlq_counts.update(self.server.pubsub_backend.get_pending_counts_by_prefix(prefix))
 
         conn_keys:'set[anytuple]' = set()
 
@@ -168,7 +173,6 @@ class OutgoingDLQs(ConfigManagerImpl):
 
             conn_name, _ = found
 
-            queue_sub_key = get_outgoing_sub_key(conn_type, conn_id)
             dlq_sub_key = get_dlq_sub_key(conn_type, conn_id)
 
             if dlq_sub_key in dlq_counts:
@@ -176,11 +180,18 @@ class OutgoingDLQs(ConfigManagerImpl):
             else:
                 dlq_depth = 0
 
+            if is_inbound(conn_type):
+                queue_depth = 0
+            else:
+                queue_sub_key = get_outgoing_sub_key(conn_type, conn_id)
+                queue_depth = self.outgoing_queue_depth.get(queue_sub_key)
+
             out.append({
                 'conn_type': conn_type,
                 'conn_id': conn_id,
                 'name': conn_name,
-                'queue_depth': self.outgoing_queue_depth.get(queue_sub_key),
+                'direction': get_direction(conn_type),
+                'queue_depth': queue_depth,
                 'dlq_depth': dlq_depth,
             })
 

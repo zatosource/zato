@@ -1281,6 +1281,11 @@ urlpatterns += [
     url(r'^zato/outgoing/delivery/save/$',
         login_required(out_delivery.save), name='out-delivery-save'),
 
+    # .. the DLQ of a channel, served by the delivery page
+
+    path('zato/channel/delivery/<str:conn_type>/<int:conn_id>/',
+        login_required(out_delivery.index), name='channel-delivery'),
+
     # .. Redis
 
     url(r'^zato/redis/$',

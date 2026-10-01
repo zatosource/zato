@@ -13,7 +13,7 @@ from contextlib import nullcontext
 from zato.common.ext.bunch import Bunch
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, HL7, LDAP, ZATO_NONE
+from zato.common.api import GENERIC as COMMON_GENERIC, HL7, HTTP_SOAP, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
 from zato.common.typing_ import cast_
@@ -21,6 +21,8 @@ from zato.common.util.api import as_bool, parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
 from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, channel_int_config_keys
+from zato.server.generic.api.channel_kafka import channel_bool_config_keys as channel_kafka_bool_config_keys, \
+    channel_config_defaults as channel_kafka_config_defaults, channel_int_config_keys as channel_kafka_int_config_keys
 from zato.server.generic.api.cloud_aws import cloud_aws_config_defaults, cloud_aws_int_config_keys
 from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
 from zato.server.generic.api.outconn_as2 import outconn_as2_bool_config_keys, outconn_as2_config_defaults, \
@@ -33,6 +35,8 @@ from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_bool_config_ke
     outconn_fhir_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_bool_config_keys, outconn_config_defaults, \
     outconn_int_config_keys
+from zato.server.generic.api.outconn_kafka import outconn_bool_config_keys as outconn_kafka_bool_config_keys, \
+    outconn_config_defaults as outconn_kafka_config_defaults, outconn_int_config_keys as outconn_kafka_int_config_keys
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
@@ -46,14 +50,14 @@ from zato.server.generic.api.outconn_mongodb import outconn_mongodb_bool_config_
 from zato.server.generic.api.outconn_smb import outconn_smb_bool_config_keys, outconn_smb_config_defaults, \
     outconn_smb_int_config_keys, outconn_smb_string_config_keys
 from zato.server.generic.connection import GenericConnection
-from zato.server.connection.outgoing_delivery import publishable_generic_types
+from zato.server.connection.outgoing_delivery import inbound_generic_types, publishable_generic_types
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from logging import Logger
-    from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_
+    from zato.common.typing_ import any_, anytuple, callable_, stranydict, strnone, tuple_
     from zato.server.connection.queue import Wrapper
     Wrapper = Wrapper
 
@@ -98,6 +102,8 @@ class Generic(ConfigManagerImpl):
     hold_outgoing_queue: 'callable_'
     rename_outgoing_subscription: 'callable_'
     delete_outgoing_subscription: 'callable_'
+    rename_outgoing_dlq: 'callable_'
+    delete_outgoing_dlq: 'callable_'
 
 # ################################################################################################################################
 
@@ -174,12 +180,16 @@ class Generic(ConfigManagerImpl):
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
 
-            # .. a connection that can be published to takes its queue with it, unless this delete
-            # .. is only the first half of an edit, which puts the connection back right away ..
-            conn_type = publishable_generic_types.get(conn_dict['type_'])
+            # .. a connection that can be published to takes its queue with it and a channel takes its DLQ,
+            # .. unless this delete is only the first half of an edit ..
+            if needs_queue_delete:
+                conn_type = publishable_generic_types.get(conn_dict['type_'])
+                inbound_type = inbound_generic_types.get(conn_dict['type_'])
 
-            if conn_type and needs_queue_delete:
-                self.delete_outgoing_subscription(conn_type, conn_dict['id'], conn_name)
+                if conn_type:
+                    self.delete_outgoing_subscription(conn_type, conn_dict['id'], conn_name)
+                elif inbound_type:
+                    self.delete_outgoing_dlq(inbound_type, conn_dict['id'], conn_name)
 
             # .. and note the change for whoever caches anything built out of these configs.
             self._note_as2_config_change(conn_dict['type_'])
@@ -289,7 +299,14 @@ class Generic(ConfigManagerImpl):
         old_name = old_conn_dict['name']
 
         conn_type = publishable_generic_types.get(msg['type_'])
+        inbound_type = inbound_generic_types.get(msg['type_'])
+
         is_rename = bool(conn_type) and old_name != msg['name']
+
+        is_inbound_rename = False
+        if inbound_type:
+            if old_name != msg['name']:
+                is_inbound_rename = True
 
         # A renamed connection that can be published to has its topic moved to the new name, and both
         # that and the config this method replaces happen with the queue held still - nothing is published
@@ -309,9 +326,13 @@ class Generic(ConfigManagerImpl):
             msg['secret'] = secret
             self._create_generic_connection(msg, True, skip)
 
-            # .. and whatever was queued for this connection now waits under its new topic.
+            # .. and whatever was queued for this connection now waits under its new topic ..
             if is_rename:
                 self.rename_outgoing_subscription(conn_type, msg['id'], old_name, msg['name'])
+
+            # .. while a renamed channel only has its DLQ to move.
+            if is_inbound_rename:
+                self.rename_outgoing_dlq(inbound_type, msg['id'], old_name, msg['name'])
 
 # ################################################################################################################################
 
@@ -437,6 +458,57 @@ class Generic(ConfigManagerImpl):
                     config[key] = int(value)
                 else:
                     config[key] = channel_config_defaults[key]
+
+# ################################################################################################################################
+
+    def _normalize_kafka_config(
+        self,
+        config:'stranydict',
+        defaults:'stranydict',
+        int_keys:'anytuple',
+        bool_keys:'anytuple',
+        ) -> 'None':
+        """ Fills in defaults for fields the create path did not supply and makes integers and booleans
+        out of fields that arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. make sure numeric fields are integers, an empty string takes the default ..
+        for key in int_keys:
+            value = config[key]
+            if isinstance(value, str):
+                if value:
+                    config[key] = int(value)
+                else:
+                    config[key] = defaults[key]
+
+        # .. and make sure boolean fields are booleans.
+        for key in bool_keys:
+            value = config[key]
+            if isinstance(value, str):
+                if value:
+                    config[key] = as_bool(value)
+                else:
+                    config[key] = defaults[key]
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_channel_kafka(self, config:'stranydict') -> 'None':
+        self._normalize_kafka_config(
+            config, channel_kafka_config_defaults, channel_kafka_int_config_keys, channel_kafka_bool_config_keys)
+
+        # A channel never has a queue in front of it.
+        config[HTTP_SOAP.Queue.Field_Use_Queue] = False
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_kafka(self, config:'stranydict') -> 'None':
+        self._normalize_kafka_config(
+            config, outconn_kafka_config_defaults, outconn_kafka_int_config_keys, outconn_kafka_bool_config_keys)
 
 # ################################################################################################################################
 

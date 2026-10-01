@@ -1126,6 +1126,14 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _get_channel_listener_config(self, msg:'any_') -> 'any_':
+        """ The configuration a channel's listener runs with - the normalized one the config manager holds.
+        """
+        out = self.generic_conn_api[msg['type_']][msg['name']]
+        return out
+
+# ################################################################################################################################
+
     def _notify_queue_bridge_channel(self, action:'str', msg:'any_') -> 'None':
         bridge = getattr(self.server, '_queue_bridge', None)
         if not bridge:
@@ -1135,12 +1143,17 @@ class ConfigManager(_ConfigManagerBase):
             self.logger.info('Queue bridge channel %s: %s', action, name)
             config = dict(msg)
             self.server._enrich_queue_bridge_config(config)
+
+            # The listener starts before and stops after the bridge is told.
             if action == 'create':
+                self.server.on_queue_bridge_channel_created(self._get_channel_listener_config(msg))
                 bridge.add_channel(config)
             elif action == 'edit':
+                self.server.on_queue_bridge_channel_edited(self._get_channel_listener_config(msg))
                 bridge.edit_channel(config)
             elif action == 'delete':
                 bridge.delete_channel(name)
+                self.server.on_queue_bridge_channel_deleted(msg['id'])
         except Exception:
             self.logger.warning('Could not notify queue bridge about channel %s=%s: %s', action, msg.get('name', ''), format_exc())
 

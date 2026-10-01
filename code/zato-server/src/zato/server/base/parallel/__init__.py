@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from base64 import b64decode
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -32,7 +31,7 @@ from redis.exceptions import RedisError
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch, bunchify
-from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, \
+from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, KAFKA, \
     On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
@@ -90,6 +89,7 @@ from zato.server.generic.connection import GenericConnection
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 from zato.server.queue_bridge.client import QueueBridgeClient
+from zato.server.queue_bridge.recv import ChannelListeners
 from zato.server.quota_tiers import QuotaTiersManager
 from zato.server.rule_engine_api import start_rule_engine_change_listener
 from zato.server.scheduler_.adapter import SchedulerODBAdapter
@@ -147,6 +147,9 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 # How often, at most, a still-failing Redis stream listener logs a reminder (in seconds).
 _listener_error_log_interval = 60.0
+
+# The prefixes of an encrypted secret
+_secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
 
 # The OAuth scope sent to the token endpoint when the definition has none.
 _default_kafka_oauth_scope = ''
@@ -307,6 +310,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.needs_x_zato_cid = False
         self._queue_bridge = cast_('QueueBridgeClient', None)
         self._queue_bridge_started = False
+        self._channel_listeners = cast_('ChannelListeners', None)
         self._scheduler_started = False
         self.rate_limiting_manager = RateLimitingManager()
 
@@ -1527,27 +1531,21 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _invoke_queue_service(self, service_name:'str', data:'any_', headers:'anydict') -> 'any_':
-        """ Invoked by the recv listener greenlet when a message is received
-        from an external queue (Kafka, IBM MQ, etc.) via the queue bridge binary.
-        A JSON message is parsed into self.request.input, any other message is passed through as bytes.
-        """
-        request_ctx = {'zato.request.headers': headers}
-        response = self.invoke(service_name, data, data_format=DATA_FORMAT.JSON, request_ctx=request_ctx)
-        return response
-
-# ################################################################################################################################
-
     def _enrich_queue_bridge_config(self, config:'anydict') -> 'None':
         """ Resolves the connection's secret and its security definition into the credential fields the bridge expects.
         """
         if secret := config.get('secret'):
 
             # A secret stored encrypted is decrypted before the bridge sees it.
-            if secret.startswith((SECRETS.Encrypted_Indicator, SECRETS.PREFIX)):
+            if secret.startswith(_secret_prefixes):
                 secret = self.decrypt(secret)
 
             config['password'] = secret
+
+        # The TLS key's password is stored encrypted, IBM MQ connections do not have it.
+        if key_password := config.get(KAFKA.Field_SSL_Key_Password):
+            if key_password.startswith(_secret_prefixes):
+                config[KAFKA.Field_SSL_Key_Password] = self.decrypt(key_password)
 
         # Connections without a security definition have no such key.
         security_id = config.get('security_id')
@@ -1587,6 +1585,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                             outgoing.append(config)
 
             self._queue_bridge = QueueBridgeClient()
+            self._channel_listeners = ChannelListeners(self)
+            self._start_channel_listeners(channel_types)
+
             channel_noun = 'channel' if len(channels) == 1 else 'channels'
             outgoing_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
             logger.info('Sending reload to queue bridge with %d %s and %d %s',
@@ -1595,9 +1596,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self._queue_bridge_started = True
 
             self._start_queue_bridge_request_listener()
-            self._start_queue_bridge_recv_listener()
 
-            logger.info('Queue bridge client connected, recv listener started')
+            logger.info('Queue bridge client connected, channel listeners started')
         except Exception:
             logger.warning('Queue bridge could not be started: %s', format_exc())
 
@@ -1633,13 +1633,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _ensure_stream_group(self, redis_conn:'any_', stream:'str', group_name:'str') -> 'None':
         """ Creates a Redis stream and its consumer group idempotently.
         """
-        try:
-            _ = redis_conn.xgroup_create(stream, group_name, id='$', mkstream=True)
-        except Exception as exc:
-
-            # The group already exists, which is fine - anything else is a real error.
-            if 'BUSYGROUP' not in str(exc):
-                raise
+        self._queue_bridge.ensure_stream_group(redis_conn, stream, group_name)
 
 # ################################################################################################################################
 
@@ -1745,83 +1739,39 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _start_queue_bridge_recv_listener(self) -> 'None':
-        """ Starts a dedicated greenlet that consumes recv events from the queue bridge via Redis Streams.
+    def _start_channel_listeners(self, channel_types:'strtuple') -> 'None':
+        """ Starts one listener per channel the queue bridge consumes, out of the channels the config manager knows.
         """
-        recv_redis = self._queue_bridge.new_redis_conn()
-
-        recv_stream = 'zato:queue_bridge:stream:recv'
-        group_name = 'server-recv'
-        consumer_name = 'server-recv-0'
-
-        self._ensure_stream_group(recv_redis, recv_stream, group_name)
-
-        def _recv_listener_loop() -> 'None':
-
-            error_since = 0.0
-            last_logged = 0.0
-
-            while True:
+        for type_ in channel_types:
+            for config in self.config_manager.generic_conn_api[type_].values():
                 try:
-                    result = cast_('anylist', recv_redis.xreadgroup(
-                        groupname=group_name,
-                        consumername=consumer_name,
-                        streams={recv_stream: '>'},
-                        count=10,
-                        block=1000,
-                    ))
+                    self._channel_listeners.start(config)
+                except Exception:
+                    logger.warning('Channel listener could not be started for `%s`: %s', config['name'], format_exc())
 
-                    # We are able to read from the stream again, so the error condition, if any, has cleared.
-                    if error_since:
-                        logger.info('Queue bridge recv listener recovered')
-                        error_since = 0.0
+# ################################################################################################################################
 
-                    if not result:
-                        continue
+    def on_queue_bridge_channel_created(self, config:'anydict') -> 'None':
+        """ Starts the listener of a channel the bridge consumes.
+        """
+        if self._channel_listeners:
+            self._channel_listeners.start(config)
 
-                    for stream_name, messages in result:
-                        for msg_id, fields in messages:
-                            service_name = fields['service']
-                            payload_b64 = fields['payload']
-                            payload = b64decode(payload_b64)
+# ################################################################################################################################
 
-                            headers_json = fields['headers']
-                            if headers_json:
-                                headers = json_loads(headers_json)
-                            else:
-                                headers = {}
+    def on_queue_bridge_channel_edited(self, config:'anydict') -> 'None':
+        """ Updates the listener of a channel the bridge consumes.
+        """
+        if self._channel_listeners:
+            self._channel_listeners.update(config)
 
-                            response = self._invoke_queue_service(service_name, payload, headers)
+# ################################################################################################################################
 
-                            # Messages that carry a reply-to queue get the service's response
-                            # sent back automatically, with no action needed in the service itself.
-                            reply_to_queue = fields['reply_to_queue']
-                            if reply_to_queue and response:
-                                if isinstance(response, bytes):
-                                    reply_data = response
-                                elif isinstance(response, str):
-                                    reply_data = response.encode('utf8')
-                                else:
-                                    reply_data = json_dumps(response).encode('utf8')
-
-                                _ = self._queue_bridge.send_reply(
-                                    fields['channel_name'],
-                                    reply_to_queue,
-                                    fields['reply_to_queue_manager'],
-                                    fields['message_id'],
-                                    reply_data,
-                                )
-
-                            _ = recv_redis.xack(stream_name, group_name, msg_id)
-
-                except Exception as exc:
-                    error_since, last_logged = self._handle_stream_listener_error(
-                        'queue bridge recv', exc, recv_redis, (recv_stream,), group_name, error_since, last_logged)
-                    sleep(1)
-
-        _ = spawn(_recv_listener_loop)
-
-        logger.info('Queue bridge recv listener greenlet started')
+    def on_queue_bridge_channel_deleted(self, channel_id:'int') -> 'None':
+        """ Stops the listener of a channel the bridge consumes and deletes its stream.
+        """
+        if self._channel_listeners:
+            self._channel_listeners.stop(channel_id, needs_stream_delete=True)
 
 # ################################################################################################################################
 

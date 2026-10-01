@@ -1,0 +1,26 @@
+{% comment %} The Routing tab of a Kafka channel's create or edit form, included with panel_id and form {% endcomment %}
+<div class="dashboard-tab-panel alerts-tab-panel delivery-tab-panel kafka-routing-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
+    <div class="form-data alerts-tab-body">
+
+        <div class="alerts-tab-sections">
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Rules</div>
+                <div class="decision-lines" id="{{ panel_id }}-rules"></div>
+                <div class="kafka-routing-tab-actions">
+                    <a href="javascript:void(0)" class="kafka-routing-tab-add" id="{{ panel_id }}-add">Add a rule</a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="alerts-tab-hidden-fields" hidden>
+            {{ form.routing }}
+            {{ form.routing_topic }}
+            {{ form.routing_header_name }}
+            {{ form.routing_header_value }}
+            {{ form.routing_service }}
+        </div>
+
+    </div>
+</div>

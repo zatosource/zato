@@ -681,7 +681,7 @@ class Service:
         self.soap.init(self.cid, self._config_store.out_soap)
 
         # Kafka facade
-        self.out.kafka.init(self._config_manager)
+        self.out.kafka.init(self._config_manager, self.cid)
 
         # IBM MQ facade
         self.ibm_mq.init(self._config_manager)

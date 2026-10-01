@@ -289,7 +289,19 @@ $.fn.zato.outgoing_delivery.showDetails = function(kind, msgId, details) {
         page.addFact(facts, config.labelReason, dlqHeader.reason);
         page.addFact(facts, config.labelRounds, dlqHeader.rounds);
         page.addFact(facts, config.labelLastError, dlqHeader.error, 'delivery-details-value-error');
+
+        // A header stored before the class was recorded does not have it.
+        if('error_class' in dlqHeader) {
+            page.addFact(facts, config.labelErrorClass, dlqHeader.error_class);
+        }
+
         page.addFact(facts, config.labelSourceTopic, dlqHeader.source_topic);
+
+        // Only a channel's message has a source.
+        if('source' in dlqHeader) {
+            page.addMapFact(facts, config.labelSource, dlqHeader.source);
+        }
+
         page.addFact(facts, config.labelRule, details.rule);
     }
 

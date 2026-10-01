@@ -1,0 +1,2 @@
+{% comment %} The link to the DLQ page of one channel, included with conn_type and item {% endcomment %}
+<td class="kafka-channel-dlq-cell">{% if item.is_internal %}<span class="form_hint">Dead-letter queue</span>{% else %}<a href="/zato/channel/delivery/{{ conn_type }}/{{ item.id }}/?cluster={{ cluster_id }}&amp;tab=dlq">Dead-letter queue</a>{% endif %}</td>

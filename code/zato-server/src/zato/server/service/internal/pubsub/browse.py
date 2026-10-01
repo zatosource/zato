@@ -14,7 +14,7 @@ from json import dumps, loads
 # Zato
 from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, Header_Error, Header_Moved_Time, Header_Reason, Key_DLQ
 from zato.common.pubsub.outgoing import find_outgoing_conn, get_dlq_settings, get_outgoing_sub_key, get_outgoing_topic_name, \
-    get_page_description, invoker_to_dict, Key_Attempts, Key_CID, Key_Data, Key_DLQ_Rounds, Key_Pub_Time, \
+    get_page_description, invoker_to_dict, is_inbound, Key_Attempts, Key_CID, Key_Data, Key_DLQ_Rounds, Key_Pub_Time, \
     Key_Request
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService
@@ -178,10 +178,15 @@ class GetMessageList(_BrowseService):
         conn_name, wrapper = self._get_conn(conn_type, conn_id)
         page = get_page_description(conn_type)
 
-        # A queue on a broker cannot be browsed
-        topic_name = get_outgoing_topic_name(conn_type, conn_name)
-        topic_backend = self.server.config_manager.get_pubsub_topic_backend(topic_name)
-        is_queue_browsable = topic_backend is None
+        # A channel has no queue, and a queue on an external pub/sub backend cannot be browsed.
+        has_queue = not is_inbound(conn_type)
+
+        if has_queue:
+            topic_name = get_outgoing_topic_name(conn_type, conn_name)
+            topic_backend = self.server.config_manager.get_pubsub_topic_backend(topic_name)
+            is_queue_browsable = topic_backend is None
+        else:
+            is_queue_browsable = False
 
         documents = self._get_documents(kind, conn_type, conn_id, conn_name)
 
@@ -215,8 +220,11 @@ class GetMessageList(_BrowseService):
             items.append(_to_row(msg_id, document, destination))
 
         # The depths of both tabs go along with either
-        queue_sub_key = get_outgoing_sub_key(conn_type, conn_id)
-        queue_depth = self.server.config_manager.outgoing_queue_depth.get(queue_sub_key)
+        if has_queue:
+            queue_sub_key = get_outgoing_sub_key(conn_type, conn_id)
+            queue_depth = self.server.config_manager.outgoing_queue_depth.get(queue_sub_key)
+        else:
+            queue_depth = 0
 
         dlq_topic_name, dlq_sub_key = self._get_names(Kind_DLQ, conn_type, conn_id, conn_name)
         dlq_depth = self.server.pubsub_backend.get_total_count(dlq_sub_key, dlq_topic_name, _pending)
@@ -225,6 +233,7 @@ class GetMessageList(_BrowseService):
 
         self.response.payload = {
             'conn_name': conn_name,
+            'has_queue': has_queue,
             'is_queue_browsable': is_queue_browsable,
             'queue_depth': queue_depth,
             'dlq_depth': dlq_depth,

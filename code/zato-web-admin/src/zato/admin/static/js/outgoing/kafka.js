@@ -100,7 +100,8 @@ $.fn.zato.outgoing.kafka._bind_tabs = function(action, field_prefix) {
     });
     $.fn.zato.delivery_tab.bind({
         panel_id: 'out-kafka-' + action + '-tab-panel-delivery',
-        field_prefix: field_prefix
+        field_prefix: field_prefix,
+        has_queue: true
     });
 }
 

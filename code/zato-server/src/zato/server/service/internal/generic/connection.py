@@ -30,6 +30,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
+from zato.common.util.delivery_config import apply_delivery_defaults, Delivery_Int_Fields, validate_delivery_fields
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.rule_engine_api import on_rule_engine_api_create_edit, on_rule_engine_api_delete
@@ -108,6 +109,28 @@ def on_kafka_create_edit(service:'Service', data:'Bunch', model:'any_', old_name
 
 # ################################################################################################################################
 
+# The generic connection types that carry the queue switch and the DLQ settings
+_delivery_settings_types = (
+    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA,
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA,
+)
+
+def prepare_kafka_delivery_settings(service:'Service', data:'Bunch') -> 'None':
+    """ Fills in and validates the delivery settings of a Kafka connection being written.
+    """
+    apply_delivery_defaults(data)
+
+    # A channel has no queue in front of it.
+    if data['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+        data[HTTP_SOAP.Queue.Field_Use_Queue] = False
+
+    try:
+        validate_delivery_fields(data)
+    except ValueError as e:
+        raise BadRequest(service.cid, str(e))
+
+# ################################################################################################################################
+
 hook = {
     COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: on_kafka_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: on_mcp_gateway_create_edit,
@@ -173,6 +196,9 @@ extra_secret_keys = (
     # OData, Microsoft Fabric and Microsoft Power Automate
     'client_secret',
 
+    # Kafka
+    KAFKA.Field_SSL_Key_Password,
+
 )
 
 # Keys that hold secrets - they are never returned in listings, no matter whether their values
@@ -235,6 +261,13 @@ skip_simple_type = {
     'as4_peer_signing_cert',
     'as4_peer_encryption_cert',
     'as4_trust_anchors',
+
+    # Kafka fields that are text even when they look like a number or JSON
+    'topic',
+    KAFKA.Consumer.Field_Topics,
+    KAFKA.Consumer.Field_Routing,
+    KAFKA.Consumer.Field_Dedup_Header,
+    HTTP_SOAP.DLQ.Field_Forward_To,
 }
 
 # The alert settings that are text - a status codes list of `500` alone, an outcome codes list or an ack codes
@@ -261,6 +294,15 @@ for _alert_type in set(conn_type_to_alert_type.values()):
 # so nothing else says they are numbers.
 int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
 int_attrs = int_attrs + list(MLLP_Channel_Int_Names) + list(MLLP_Outgoing_Int_Names) + list(FHIR_Outgoing_Int_Names)
+
+# The Kafka integer fields
+int_attrs = int_attrs + list(KAFKA.Consumer.IntFieldList) + list(KAFKA.Producer.IntFieldList) + list(Delivery_Int_Fields)
+int_attrs = int_attrs + [
+    HTTP_SOAP.Retry.Field_Max_Retries,
+    HTTP_SOAP.Retry.Field_Sleep_Time,
+    HTTP_SOAP.Retry.Field_Backoff_Threshold,
+    HTTP_SOAP.Retry.Field_Backoff_Multiplier,
+]
 
 # ################################################################################################################################
 
@@ -365,6 +407,9 @@ class _CreateEdit(_BaseService):
 
         # Make sure that specific keys are integers
         ensure_ints(data)
+
+        if data.get('type_') in _delivery_settings_types:
+            prepare_kafka_delivery_settings(self, data)
 
         # The cluster ID may be missing on input, e.g. in API calls that give only the object's ID,
         # or it may have been turned into a bool by the simple-type parser above (1 becomes True),

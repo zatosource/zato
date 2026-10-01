@@ -1,19 +1,24 @@
 //! Redis Streams integration for the standalone queue bridge binary.
 //!
-//! Provides command ingestion from `zato:queue_bridge:stream:command` and
-//! recv event publishing to `zato:queue_bridge:stream:recv`.
+//! Provides command ingestion from `zato:queue_bridge:stream:command`, recv event publishing
+//! to one `zato:queue_bridge:stream:recv:<channel_id>` stream per channel, and reply publishing
+//! to `zato:queue_bridge:stream:reply`.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use serde::Deserialize;
 
-use crate::bridge::{BridgeShared, ChannelConfig, OutgoingConfig, RecvEvent};
+use crate::bridge::{BridgeShared, ChannelConfig, OutgoingConfig, RecvEvent, ReplyEvent, SendRequest};
+use crate::wire;
 
 /// Redis stream key where the server publishes commands for the queue bridge.
 pub const COMMAND_STREAM: &str = "zato:queue_bridge:stream:command";
 
-/// Redis stream key where the queue bridge publishes received messages.
-pub const RECV_STREAM: &str = "zato:queue_bridge:stream:recv";
+/// Prefix of the per-channel Redis stream keys where the queue bridge publishes received messages.
+///
+/// The channel ID follows the prefix, so one slow channel never holds back another.
+pub const RECV_STREAM_PREFIX: &str = "zato:queue_bridge:stream:recv:";
 
 /// Redis stream key where the queue bridge publishes synchronous replies.
 pub const REPLY_STREAM: &str = "zato:queue_bridge:stream:reply";
@@ -32,6 +37,11 @@ const STREAM_MAXLEN: usize = 100_000;
 
 /// What XREADGROUP returns - per stream, a list of entries, each a list of field-value pairs.
 type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
+
+/// Returns the recv stream key of one channel.
+pub fn recv_stream_key(channel_id: u64) -> String {
+    format!("{RECV_STREAM_PREFIX}{channel_id}")
+}
 
 /// Ensures the consumer group exists on the command stream.
 ///
@@ -84,7 +94,7 @@ pub fn process_startup_reload(conn: &mut redis::Connection, shared: &BridgeShare
     publish_reply(conn, correlation_id, "ok");
 }
 
-/// Publishes a recv event to the recv stream via XADD.
+/// Publishes a recv event to the recv stream of its channel via XADD.
 pub fn publish_recv_event(conn: &mut redis::Connection, event: &RecvEvent) {
     tracing::info!(
         "Publishing recv event: channel={} topic={} service={} payload_len={}",
@@ -93,13 +103,16 @@ pub fn publish_recv_event(conn: &mut redis::Connection, event: &RecvEvent) {
         event.service,
         event.payload.len()
     );
-    let payload_b64 = base64_encode(&event.payload);
+    let payload_b64 = wire::base64_encode(&event.payload);
+    let stream_key = recv_stream_key(event.channel_id);
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
-        .arg(RECV_STREAM)
+        .arg(&stream_key)
         .arg("MAXLEN")
         .arg("~")
         .arg(STREAM_MAXLEN)
         .arg("*")
+        .arg("channel_id")
+        .arg(event.channel_id)
         .arg("channel_name")
         .arg(&event.channel_name)
         .arg("topic")
@@ -119,7 +132,10 @@ pub fn publish_recv_event(conn: &mut redis::Connection, event: &RecvEvent) {
         .query(conn);
 
     if let Err(err) = result {
-        tracing::error!("Failed to XADD recv event for channel '{}': {err}", event.channel_name);
+        tracing::error!(
+            "Failed to XADD recv event for channel '{}' to '{stream_key}': {err}",
+            event.channel_name
+        );
     }
 }
 
@@ -148,6 +164,11 @@ fn publish_reply_with_data(conn: &mut redis::Connection, correlation_id: &str, s
     if let Err(err) = result {
         tracing::error!("Failed to XADD reply for correlation_id={correlation_id}: {err}");
     }
+}
+
+/// Publishes a reply produced on the bridge runtime, as drained by the reply publisher thread.
+pub fn publish_reply_event(conn: &mut redis::Connection, event: &ReplyEvent) {
+    publish_reply_with_data(conn, &event.correlation_id, &event.status, &event.data);
 }
 
 /// Reads and processes commands from the command stream in a blocking loop.
@@ -219,8 +240,14 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeSh
 }
 
 /// Dispatches a single command to the appropriate handler.
-fn process_command(conn: &mut redis::Connection, shared: &BridgeShared, command: &str, correlation_id: &str, payload: &str) {
-    tracing::info!("Command received: {command} correlation_id={correlation_id} payload={payload}");
+fn process_command(conn: &mut redis::Connection, shared: &Arc<BridgeShared>, command: &str, correlation_id: &str, payload: &str) {
+    // Commits arrive once per message and would drown the log at info level.
+    if command == "commit_offset" {
+        tracing::debug!("Command received: {command} payload={payload}");
+    } else {
+        tracing::info!("Command received: {command} correlation_id={correlation_id} payload={payload}");
+    }
+
     match command {
         "reload" => {
             handle_reload(shared, payload);
@@ -232,8 +259,9 @@ fn process_command(conn: &mut redis::Connection, shared: &BridgeShared, command:
         "delete_outgoing" => handle_delete_outgoing(shared, payload),
         "edit_channel" => handle_edit_channel(shared, payload),
         "edit_outgoing" => handle_edit_outgoing(shared, payload),
-        "ping" => handle_ping(conn, shared, correlation_id, payload),
-        "send_message" => handle_send_message(conn, shared, correlation_id, payload),
+        "commit_offset" => handle_commit_offset(shared, payload),
+        "ping" => handle_ping(shared, correlation_id, payload),
+        "send_message" => handle_send_message(shared, correlation_id, payload),
         "send_reply" => handle_send_reply(conn, shared, correlation_id, payload),
         "stop" => {
             tracing::info!("Received stop command");
@@ -257,14 +285,46 @@ struct ReloadPayload {
     outgoing: Vec<OutgoingConfig>,
 }
 
-/// Payload for the `ping` and `send_message` commands.
+/// Payload for the `ping` command.
 #[derive(Deserialize)]
-struct ConnPayload {
+struct PingPayload {
     /// Outgoing connection name to target.
     conn_name: String,
-    /// Optional base64-encoded payload for `send_message`.
+}
+
+/// Payload for the `send_message` command.
+#[derive(Deserialize)]
+struct SendMessagePayload {
+    /// Outgoing connection name to target.
+    conn_name: String,
+    /// Base64-encoded payload, empty for a tombstone.
     #[serde(default)]
     data: String,
+    /// Message key as text, which decides the partition when none is given (Kafka only).
+    #[serde(default)]
+    key: Option<String>,
+    /// Message headers as text names and values (Kafka only).
+    #[serde(default)]
+    headers: HashMap<String, String>,
+    /// Partition to publish to, letting Kafka choose when absent (Kafka only).
+    #[serde(default)]
+    partition: Option<i32>,
+    /// Whether the message is a tombstone, i.e. a key with no value (Kafka only).
+    #[serde(default)]
+    is_tombstone: bool,
+}
+
+/// Payload for the `commit_offset` command.
+#[derive(Deserialize)]
+struct CommitOffsetPayload {
+    /// ID of the channel whose message is resolved.
+    channel_id: u64,
+    /// Topic the message came from.
+    topic: String,
+    /// Partition the message came from.
+    partition: i32,
+    /// Offset of the resolved message.
+    offset: i64,
 }
 
 /// Payload for the `delete_channel` and `delete_outgoing` commands.
@@ -293,7 +353,7 @@ struct SendReplyPayload {
 /// Replaces the whole connection configuration with the one carried by the payload.
 fn handle_reload(shared: &BridgeShared, payload: &str) {
     tracing::info!("Reload payload: {payload}");
-    let parsed: ReloadPayload = match crate::wire::parse_payload(payload) {
+    let parsed: ReloadPayload = match wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse reload payload: {err}, payload: {payload}");
@@ -302,6 +362,9 @@ fn handle_reload(shared: &BridgeShared, payload: &str) {
     };
 
     shared.cancel_all_channels();
+
+    #[cfg(feature = "kafka")]
+    crate::kafka::clear_producers(shared);
 
     let mut state = shared.state.lock();
     state.channels.clear();
@@ -313,6 +376,12 @@ fn handle_reload(shared: &BridgeShared, payload: &str) {
         state.outgoing.insert(outgoing_config.name.clone(), outgoing_config.clone());
     }
     drop(state);
+
+    // Producers are built outside the state lock, since building one may take a moment.
+    #[cfg(feature = "kafka")]
+    for outgoing_config in &parsed.outgoing {
+        crate::kafka::refresh_producer(shared, outgoing_config);
+    }
 
     let channel_count = parsed.channels.len();
     let outgoing_count = parsed.outgoing.len();
@@ -330,7 +399,7 @@ fn handle_reload(shared: &BridgeShared, payload: &str) {
 
 /// Adds one channel (consumer) connection from the payload.
 fn handle_add_channel(shared: &BridgeShared, payload: &str) {
-    let config: ChannelConfig = match crate::wire::parse_payload(payload) {
+    let config: ChannelConfig = match wire::parse_payload(payload) {
         Ok(config) => config,
         Err(err) => {
             tracing::error!("Failed to parse add_channel payload: {err}");
@@ -345,7 +414,7 @@ fn handle_add_channel(shared: &BridgeShared, payload: &str) {
 
 /// Adds one outgoing (producer) connection from the payload.
 fn handle_add_outgoing(shared: &BridgeShared, payload: &str) {
-    let config: OutgoingConfig = match crate::wire::parse_payload(payload) {
+    let config: OutgoingConfig = match wire::parse_payload(payload) {
         Ok(config) => config,
         Err(err) => {
             tracing::error!("Failed to parse add_outgoing payload: {err}");
@@ -353,13 +422,17 @@ fn handle_add_outgoing(shared: &BridgeShared, payload: &str) {
         }
     };
     let name = config.name.clone();
+
+    #[cfg(feature = "kafka")]
+    crate::kafka::refresh_producer(shared, &config);
+
     shared.state.lock().outgoing.insert(name.clone(), config);
     tracing::info!("Added outgoing: {name}");
 }
 
 /// Cancels and removes the channel named in the payload.
 fn handle_delete_channel(shared: &BridgeShared, payload: &str) {
-    let parsed: DeletePayload = match crate::wire::parse_payload(payload) {
+    let parsed: DeletePayload = match wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse delete_channel payload: {err}");
@@ -373,20 +446,24 @@ fn handle_delete_channel(shared: &BridgeShared, payload: &str) {
 
 /// Removes the outgoing connection named in the payload.
 fn handle_delete_outgoing(shared: &BridgeShared, payload: &str) {
-    let parsed: DeletePayload = match crate::wire::parse_payload(payload) {
+    let parsed: DeletePayload = match wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse delete_outgoing payload: {err}");
             return;
         }
     };
+
+    #[cfg(feature = "kafka")]
+    crate::kafka::drop_producer(shared, &parsed.name);
+
     shared.state.lock().outgoing.remove(&parsed.name);
     tracing::info!("Deleted outgoing: {}", parsed.name);
 }
 
 /// Replaces one channel's configuration, cancelling its current consumer first.
 fn handle_edit_channel(shared: &BridgeShared, payload: &str) {
-    let config: ChannelConfig = match crate::wire::parse_payload(payload) {
+    let config: ChannelConfig = match wire::parse_payload(payload) {
         Ok(config) => config,
         Err(err) => {
             tracing::error!("Failed to parse edit_channel payload: {err}");
@@ -400,9 +477,9 @@ fn handle_edit_channel(shared: &BridgeShared, payload: &str) {
     shared.config_notify.notify_one();
 }
 
-/// Replaces one outgoing connection's configuration.
+/// Replaces one outgoing connection's configuration and rebuilds its producer.
 fn handle_edit_outgoing(shared: &BridgeShared, payload: &str) {
-    let config: OutgoingConfig = match crate::wire::parse_payload(payload) {
+    let config: OutgoingConfig = match wire::parse_payload(payload) {
         Ok(config) => config,
         Err(err) => {
             tracing::error!("Failed to parse edit_outgoing payload: {err}");
@@ -410,46 +487,91 @@ fn handle_edit_outgoing(shared: &BridgeShared, payload: &str) {
         }
     };
     let name = config.name.clone();
+
+    #[cfg(feature = "kafka")]
+    crate::kafka::refresh_producer(shared, &config);
+
     shared.state.lock().outgoing.insert(name.clone(), config);
     tracing::info!("Edited outgoing: {name}");
 }
 
-/// Pings the outgoing connection named in the payload and replies with the outcome.
-fn handle_ping(conn: &mut redis::Connection, shared: &BridgeShared, correlation_id: &str, payload: &str) {
-    let parsed: ConnPayload = match crate::wire::parse_payload(payload) {
+/// Routes a resolved message's offset to the consume loop of its channel.
+fn handle_commit_offset(shared: &BridgeShared, payload: &str) {
+    let parsed: CommitOffsetPayload = match wire::parse_payload(payload) {
+        Ok(parsed) => parsed,
+        Err(err) => {
+            tracing::error!("Failed to parse commit_offset payload: {err}");
+            return;
+        }
+    };
+
+    let request = crate::bridge::CommitRequest {
+        topic: parsed.topic,
+        partition: parsed.partition,
+        offset: parsed.offset,
+    };
+
+    shared.commit_offset(parsed.channel_id, request);
+}
+
+/// Pings the outgoing connection named in the payload on the bridge runtime and replies with the outcome.
+fn handle_ping(shared: &Arc<BridgeShared>, correlation_id: &str, payload: &str) {
+    let parsed: PingPayload = match wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse ping payload: {err}");
-            publish_reply_with_data(conn, correlation_id, "error", &format!("bad payload: {err}"));
+            shared.publish_reply(correlation_id, Err(format!("bad payload: {err}")));
             return;
         }
     };
-    match crate::bridge::ping_sync(shared, &parsed.conn_name) {
-        Ok(()) => publish_reply_with_data(conn, correlation_id, "ok", ""),
-        Err(err) => publish_reply_with_data(conn, correlation_id, "error", &err),
-    }
+
+    let shared_for_task = Arc::clone(shared);
+    let correlation_id = correlation_id.to_string();
+
+    // The ping may wait for a broker that is down, which must not stall the command thread.
+    shared.runtime_handle.spawn(async move {
+        let result = crate::bridge::ping(&shared_for_task, &parsed.conn_name).await;
+        shared_for_task.publish_reply(&correlation_id, result.map(|()| String::new()));
+    });
 }
 
-/// Sends one message through the outgoing connection named in the payload.
-fn handle_send_message(conn: &mut redis::Connection, shared: &BridgeShared, correlation_id: &str, payload: &str) {
-    let parsed: ConnPayload = match crate::wire::parse_payload(payload) {
+/// Sends one message through the outgoing connection named in the payload on the bridge runtime.
+fn handle_send_message(shared: &Arc<BridgeShared>, correlation_id: &str, payload: &str) {
+    let parsed: SendMessagePayload = match wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse send_message payload: {err}");
-            publish_reply_with_data(conn, correlation_id, "error", &format!("bad payload: {err}"));
+            shared.publish_reply(correlation_id, Err(format!("bad payload: {err}")));
             return;
         }
     };
-    let data = base64_decode(&parsed.data);
-    match crate::bridge::publish_sync(shared, &parsed.conn_name, &data) {
-        Ok(()) => publish_reply_with_data(conn, correlation_id, "ok", ""),
-        Err(err) => publish_reply_with_data(conn, correlation_id, "error", &err),
+
+    let mut headers = Vec::with_capacity(parsed.headers.len());
+    for (name, value) in parsed.headers {
+        headers.push((name, value.into_bytes()));
     }
+
+    let request = SendRequest {
+        payload: wire::base64_decode(&parsed.data),
+        key: parsed.key.map(String::into_bytes),
+        headers,
+        partition: parsed.partition,
+        is_tombstone: parsed.is_tombstone,
+    };
+
+    let shared_for_task = Arc::clone(shared);
+    let correlation_id = correlation_id.to_string();
+
+    // The send waits for the delivery report, which must not stall the command thread.
+    shared.runtime_handle.spawn(async move {
+        let result = crate::bridge::publish_message(&shared_for_task, &parsed.conn_name, request).await;
+        shared_for_task.publish_reply(&correlation_id, result.map(|outcome| outcome.to_reply_data()));
+    });
 }
 
 /// Sends a reply to the queue the original message nominated.
 fn handle_send_reply(conn: &mut redis::Connection, shared: &BridgeShared, correlation_id: &str, payload: &str) {
-    let parsed: SendReplyPayload = match crate::wire::parse_payload(payload) {
+    let parsed: SendReplyPayload = match wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse send_reply payload: {err}");
@@ -457,7 +579,7 @@ fn handle_send_reply(conn: &mut redis::Connection, shared: &BridgeShared, correl
             return;
         }
     };
-    let data = base64_decode(&parsed.data);
+    let data = wire::base64_decode(&parsed.data);
 
     let target = crate::bridge::ReplyTarget {
         channel_name: &parsed.channel_name,
@@ -471,112 +593,4 @@ fn handle_send_reply(conn: &mut redis::Connection, shared: &BridgeShared, correl
         Ok(()) => publish_reply_with_data(conn, correlation_id, "ok", ""),
         Err(err) => publish_reply_with_data(conn, correlation_id, "error", &err),
     }
-}
-
-/// The base64 alphabet, indexed by the value of one six-bit group.
-const BASE64_ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-/// Keeps only the six bits one base64 character encodes.
-const SIX_BIT_MASK: u32 = 0x3F;
-
-/// Keeps only the eight bits one decoded byte holds.
-const BYTE_MASK: u32 = 0xFF;
-
-/// Number of input bytes encoded by one group of four base64 characters.
-const BYTES_PER_GROUP: usize = 3;
-
-/// Number of base64 characters produced per group of input bytes.
-const CHARS_PER_GROUP: usize = 4;
-
-/// Maps one six-bit group onto its base64 character.
-fn base64_char(group: u32) -> char {
-    // The mask keeps the index inside the 64-entry alphabet, so the lookup always hits.
-    let index = usize::try_from(group & SIX_BIT_MASK).unwrap_or(0);
-    BASE64_ALPHABET.get(index).copied().map_or('=', char::from)
-}
-
-/// Takes the low eight bits of a decoded group as one output byte.
-fn base64_byte(group: u32) -> u8 {
-    // The mask leaves a value that always fits in a byte.
-    u8::try_from(group & BYTE_MASK).unwrap_or(0)
-}
-
-/// Simple base64 encoder for binary payloads in Redis stream fields.
-fn base64_encode(data: &[u8]) -> String {
-    let mut result = String::with_capacity(data.len().div_ceil(BYTES_PER_GROUP) * CHARS_PER_GROUP);
-
-    for chunk in data.chunks(BYTES_PER_GROUP) {
-        // Bytes missing from a trailing partial chunk count as zero, which is what
-        // the padding characters below stand for.
-        let first = u32::from(chunk.first().copied().unwrap_or(0));
-        let second = u32::from(chunk.get(1).copied().unwrap_or(0));
-        let third = u32::from(chunk.get(2).copied().unwrap_or(0));
-
-        let triple = (first << 16) | (second << 8) | third;
-
-        result.push(base64_char(triple >> 18));
-        result.push(base64_char(triple >> 12));
-
-        if chunk.len() > 1 {
-            result.push(base64_char(triple >> 6));
-        } else {
-            result.push('=');
-        }
-
-        if chunk.len() > 2 {
-            result.push(base64_char(triple));
-        } else {
-            result.push('=');
-        }
-    }
-
-    result
-}
-
-/// Simple base64 decoder for binary payloads from Redis stream fields.
-fn base64_decode(encoded: &str) -> Vec<u8> {
-    const fn decode_char(chr: u8) -> Option<u8> {
-        match chr {
-            b'A'..=b'Z' => Some(chr - b'A'),
-            b'a'..=b'z' => Some(chr - b'a' + 26),
-            b'0'..=b'9' => Some(chr - b'0' + 52),
-            b'+' => Some(62),
-            b'/' => Some(63),
-            _ => None,
-        }
-    }
-
-    let bytes: Vec<u8> = encoded.bytes().filter(|&byte| byte != b'=').collect();
-    let mut result = Vec::with_capacity(bytes.len() * BYTES_PER_GROUP / CHARS_PER_GROUP);
-
-    for chunk in bytes.chunks(CHARS_PER_GROUP) {
-        let mut buf: u32 = 0;
-        let mut count: u32 = 0;
-
-        for &byte in chunk {
-            if let Some(val) = decode_char(byte) {
-                buf = (buf << 6) | u32::from(val);
-                count += 1;
-            }
-        }
-
-        // A single character carries too few bits to yield a byte, so such a group is dropped.
-        if count >= 2 {
-            // A partial group is left-aligned first, so its bits sit where a full group's would.
-            let shift = (4 - count) * 6;
-            buf <<= shift;
-
-            result.push(base64_byte(buf >> 16));
-
-            if count >= 3 {
-                result.push(base64_byte(buf >> 8));
-            }
-
-            if count >= 4 {
-                result.push(base64_byte(buf));
-            }
-        }
-    }
-
-    result
 }

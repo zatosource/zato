@@ -80,6 +80,7 @@
 
             <div class="dashboard-tabs delivery-tabs" role="tablist" aria-label="Delivery">
 
+                {% if has_queue %}
                 <button type="button"
                         class="dashboard-tab{% if active_tab == 'queue' %} dashboard-tab-active{% endif %}"
                         data-tab="queue"
@@ -88,6 +89,7 @@
                         aria-selected="{% if active_tab == 'queue' %}true{% else %}false{% endif %}">
                     <span class="dashboard-tab-label">Delivery queue</span>
                 </button>
+                {% endif %}
 
                 <button type="button"
                         class="dashboard-tab{% if active_tab == 'dlq' %} dashboard-tab-active{% endif %}"
@@ -99,6 +101,7 @@
 
             </div>
 
+            {% if has_queue %}
             <div class="dashboard-tab-panel"
                  id="delivery-tab-panel-queue"
                  role="tabpanel"
@@ -109,6 +112,7 @@
                     {% endwith %}
                 {% endif %}
             </div>
+            {% endif %}
 
             <div class="dashboard-tab-panel"
                  id="delivery-tab-panel-dlq"

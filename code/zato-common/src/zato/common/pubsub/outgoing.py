@@ -26,7 +26,7 @@ from zato.common.util.time_ import utcnow
 
 if 0:
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, anytuple, callable_, strcalldict, stranydict, strset
+    from zato.common.typing_ import any_, anytuple, callable_, strcalldict, stranydict, strdict, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -41,6 +41,9 @@ _sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
 _retry = HTTP_SOAP.Retry
 
+Direction_In  = PubSub.Direction.In
+Direction_Out = PubSub.Direction.Out
+
 # The keys of the envelope a queue stores
 Key_Conn_Type  = 'conn_type'
 Key_Conn_ID    = 'conn_id'
@@ -52,13 +55,21 @@ Key_Attempts   = 'attempts'
 Key_DLQ_Rounds = 'dlq_rounds'
 Key_Request    = 'request'
 
-# The keys of the request part - an HTTP type stores a method, a SOAP type an operation, a FHIR type a method and a path
+# The keys of the request part - an HTTP type stores a method, a SOAP type an operation, a FHIR type a method and a path,
+# a Kafka type a key and a partition, a Kafka channel a service
 Key_Method    = 'method'
 Key_Operation = 'operation'
 Key_Path      = 'path'
 Key_Data      = 'data'
 Key_Headers   = 'headers'
 Key_Params    = 'params'
+Key_Key          = 'key'
+Key_Partition    = 'partition'
+Key_Is_Tombstone = 'is_tombstone'
+Key_Service      = 'service'
+
+# Whether the data is base64 text
+Key_Is_Base64 = 'is_base64'
 
 Attempts_None = 0
 Attempts_Direct = 1
@@ -83,6 +94,9 @@ page_descriptions:'strpagedict' = {}
 # Connection types whose queue topics write no pub/sub audit events
 audit_disabled_conn_types:'strset' = set()
 
+# The direction of each connection type
+conn_directions:'strdict' = {}
+
 # The Ace modes a message's body is shown in
 Body_Mode_JSON = 'json'
 Body_Mode_XML  = 'xml'
@@ -106,6 +120,14 @@ class OutgoingType:
     SFTP = 'sftp'
     SMB = 'smb'
     FTP = 'ftp'
+    KAFKA = 'kafka'
+
+# ################################################################################################################################
+
+class InboundType:
+    """ The kinds of channel whose failed messages have a DLQ.
+    """
+    KAFKA = 'kafka-channel'
 
 # Which kind of outgoing connection an HTTP/SOAP connection is, by its transport
 http_soap_outgoing_types = {
@@ -250,12 +272,14 @@ def register_outgoing_conn_type(
     retry_policy:'callable_ | None'=None,
     dlq_settings:'callable_ | None'=None,
     page:'OutgoingPage | None'=None,
+    direction:'str'=Direction_Out,
     ) -> 'None':
-    """ Registers one type of outgoing connection with its locator, handler, retry policy, DLQ settings and what
+    """ Registers one type of connection with its locator, handler, retry policy, DLQ settings and what
     the delivery page shows of its messages.
     """
     conn_locators[conn_type] = locator
     delivery_handlers[conn_type] = handler
+    conn_directions[conn_type] = direction
 
     if retry_policy:
         retry_policy_builders[conn_type] = retry_policy
@@ -268,6 +292,22 @@ def register_outgoing_conn_type(
 
     if not is_audit_log_active:
         audit_disabled_conn_types.add(conn_type)
+
+# ################################################################################################################################
+
+def get_direction(conn_type:'str') -> 'str':
+    """ The direction of one connection type.
+    """
+    out = conn_directions[conn_type]
+    return out
+
+# ################################################################################################################################
+
+def is_inbound(conn_type:'str') -> 'bool':
+    """ Whether one connection type is a channel.
+    """
+    out = get_direction(conn_type) == Direction_In
+    return out
 
 # ################################################################################################################################
 

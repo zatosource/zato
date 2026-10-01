@@ -16,8 +16,9 @@ from traceback import format_exc
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
-from zato.common.pubsub.outgoing import get_outgoing_topic_name, is_dlq_active, Key_CID, Key_Conn_ID, Key_Conn_Name, \
-    Key_Conn_Type, Key_DLQ_Rounds, Key_Msg_ID, Key_Pub_Time, locate_outgoing_conn
+from zato.common.pubsub.outgoing import Direction_In, Direction_Out, get_direction, get_outgoing_topic_name, is_dlq_active, \
+    is_inbound, Key_CID, Key_Conn_ID, Key_Conn_Name, Key_Conn_Type, Key_DLQ_Rounds, Key_Msg_ID, Key_Pub_Time, \
+    locate_outgoing_conn
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
 from zato.common.util.time_ import utcnow
@@ -27,36 +28,55 @@ from zato.common.util.time_ import utcnow
 
 if 0:
     from zato.common.pubsub.delivery import DeliveryExhausted
-    from zato.common.typing_ import anytuple, stranydict
+    from zato.common.typing_ import anytuple, stranydict, strdictnone
     from zato.server.base.parallel import ParallelServer
+    strdictnone = strdictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
 
-_topic_prefix   = PubSub.Outgoing.DLQ_Topic_Prefix
-_sub_key_prefix = PubSub.Outgoing.DLQ_Sub_Key_Prefix
+# The DLQ prefixes by direction
+_topic_prefix_by_direction = {
+    Direction_Out: PubSub.Outgoing.DLQ_Topic_Prefix,
+    Direction_In: PubSub.Inbound.DLQ_Topic_Prefix,
+}
+
+_sub_key_prefix_by_direction = {
+    Direction_Out: PubSub.Outgoing.DLQ_Sub_Key_Prefix,
+    Direction_In: PubSub.Inbound.DLQ_Sub_Key_Prefix,
+}
+
+# Every DLQ sub key prefix
+DLQ_Sub_Key_Prefixes = tuple(_sub_key_prefix_by_direction.values())
 
 # The section a message gains when it moves to the DLQ and its keys
 Key_DLQ = 'dlq'
 
 Header_Reason        = 'reason'
 Header_Error         = 'error'
+Header_Error_Class   = 'error_class'
 Header_Attempts      = 'attempts'
 Header_Moved_Time    = 'moved_time_iso'
 Header_Source_Topic  = 'source_topic'
 Header_Source_Msg_ID = 'source_msg_id'
 Header_Pub_Time      = 'pub_time_iso'
 Header_Rounds        = 'rounds'
+Header_CID           = 'cid'
+
+# Where a channel's message came from
+Header_Source = 'source'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def get_dlq_topic_name(conn_type:'str', conn_name:'str') -> 'str':
-    """ The name of the topic that is one outgoing connection's DLQ.
+    """ The name of the topic that is one connection's DLQ.
     """
-    out = f'{_topic_prefix}{conn_type}.{conn_name}'
+    prefix = _topic_prefix_by_direction[get_direction(conn_type)]
+
+    out = f'{prefix}{conn_type}.{conn_name}'
     out = out.lower()
 
     validate_topic_name(out)
@@ -66,17 +86,19 @@ def get_dlq_topic_name(conn_type:'str', conn_name:'str') -> 'str':
 # ################################################################################################################################
 
 def get_dlq_sub_key(conn_type:'str', conn_id:'int') -> 'str':
-    """ The sub key of one outgoing connection's DLQ.
+    """ The sub key of one connection's DLQ.
     """
-    out = f'{_sub_key_prefix}{conn_type}.{conn_id}'
+    prefix = _sub_key_prefix_by_direction[get_direction(conn_type)]
+
+    out = f'{prefix}{conn_type}.{conn_id}'
     return out
 
 # ################################################################################################################################
 
 def is_dlq_sub_key(sub_key:'str') -> 'bool':
-    """ Whether a sub key is that of a DLQ.
+    """ Whether a sub key is that of a DLQ, an outgoing connection's or a channel's.
     """
-    out = sub_key.startswith(_sub_key_prefix)
+    out = sub_key.startswith(DLQ_Sub_Key_Prefixes)
     return out
 
 # ################################################################################################################################
@@ -84,7 +106,13 @@ def is_dlq_sub_key(sub_key:'str') -> 'bool':
 def parse_dlq_sub_key(sub_key:'str') -> 'anytuple':
     """ Turns a DLQ sub key back into the connection type and connection id it was built from.
     """
-    remainder = sub_key[len(_sub_key_prefix):]
+    for prefix in DLQ_Sub_Key_Prefixes:
+        if sub_key.startswith(prefix):
+            remainder = sub_key[len(prefix):]
+            break
+    else:
+        raise ValueError(f'Not a DLQ sub key -> `{sub_key}`')
+
     conn_type, _, conn_id = remainder.rpartition('.')
 
     out = (conn_type, int(conn_id))
@@ -93,19 +121,30 @@ def parse_dlq_sub_key(sub_key:'str') -> 'anytuple':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_dlq_header(envelope:'stranydict', source_topic:'str', exhausted:'DeliveryExhausted') -> 'stranydict':
+def build_dlq_header(
+    envelope:'stranydict',
+    source_topic:'str',
+    exhausted:'DeliveryExhausted',
+    *,
+    source:'strdictnone'=None,
+    ) -> 'stranydict':
     """ The DLQ header of one message.
     """
     out = {
         Header_Reason: PubSub.Outgoing.DLQ_Reason_Retries_Exhausted,
         Header_Error: exhausted.error,
+        Header_Error_Class: exhausted.error_class,
         Header_Attempts: exhausted.attempts,
         Header_Moved_Time: utcnow().isoformat(),
         Header_Source_Topic: source_topic,
         Header_Source_Msg_ID: envelope[Key_Msg_ID],
         Header_Pub_Time: envelope[Key_Pub_Time],
         Header_Rounds: envelope[Key_DLQ_Rounds],
+        Header_CID: envelope[Key_CID],
     }
+
+    if source:
+        out[Header_Source] = source
 
     return out
 
@@ -122,29 +161,41 @@ def strip_dlq_header(document:'stranydict') -> 'stranydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def move_to_dlq(server:'ParallelServer', cid:'str', envelope:'stranydict', exhausted:'DeliveryExhausted') -> 'bool':
-    """ Moves one message to its connection's DLQ if the connection's DLQ switch is on, returning whether it did.
+def move_to_dlq(
+    server:'ParallelServer',
+    cid:'str',
+    envelope:'stranydict',
+    exhausted:'DeliveryExhausted',
+    *,
+    source_topic:'str'='',
+    source:'strdictnone'=None,
+    ) -> 'str':
+    """ Moves one message to its connection's DLQ if the connection's DLQ switch is on, returning the message's id in the DLQ,
+    or an empty string when it did not move.
     """
     conn_type = envelope[Key_Conn_Type]
     conn_id = envelope[Key_Conn_ID]
     conn_name = envelope[Key_Conn_Name]
 
-    # The message travels under the correlation id of the service that sent it
+    # The message travels under the correlation id of the service that sent it.
     if envelope[Key_CID]:
         cid = envelope[Key_CID]
 
     _, wrapper = locate_outgoing_conn(server, conn_type, conn_id, conn_name)
 
     if not is_dlq_active(conn_type, wrapper):
-        return False
+        return ''
 
     config_manager = server.config_manager
     dlq_topic_name, current_name = config_manager.ensure_outgoing_dlq(conn_type, conn_id)
 
-    source_topic = get_outgoing_topic_name(conn_type, current_name)
+    # A channel has no queue of its own.
+    if not source_topic:
+        if not is_inbound(conn_type):
+            source_topic = get_outgoing_topic_name(conn_type, current_name)
 
     document = dict(envelope)
-    document[Key_DLQ] = build_dlq_header(envelope, source_topic, exhausted)
+    document[Key_DLQ] = build_dlq_header(envelope, source_topic, exhausted, source=source)
 
     data = dumps(document)
     msg_id = new_msg_id()
@@ -162,14 +213,14 @@ def move_to_dlq(server:'ParallelServer', cid:'str', envelope:'stranydict', exhau
     except Exception:
         logger.warning('Could not move message `%s` of `%s` to DLQ `%s`, cid `%s`, e:`%s`',
             envelope[Key_Msg_ID], conn_name, dlq_topic_name, cid, format_exc())
-        return False
+        return ''
 
     _insert_dlq_audit_event(server, cid, envelope, dlq_topic_name, msg_id, data, exhausted)
 
     logger.info('Moved message `%s` of `%s` to DLQ `%s` as `%s` after %d attempts, cid `%s`, reason `%s`',
         envelope[Key_Msg_ID], conn_name, dlq_topic_name, msg_id, exhausted.attempts, cid, exhausted.error)
 
-    return True
+    return msg_id
 
 # ################################################################################################################################
 

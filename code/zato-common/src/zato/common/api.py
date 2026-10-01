@@ -592,6 +592,92 @@ class KAFKA:
             Field_Send_Timeout: Default_Send_Timeout,
         }
 
+    class AUTO_OFFSET_RESET:
+        """ Where a consumer group without a committed offset starts reading a topic from.
+        """
+        LATEST = NameId('Latest', 'latest')
+        EARLIEST = NameId('Earliest', 'earliest')
+
+        def __iter__(self) -> 'iterator_':
+            out = iter((self.LATEST, self.EARLIEST))
+            return out
+
+    class Consumer:
+        """ The consumer settings of a channel.
+        """
+        Field_Topics = 'topics'
+        Field_Auto_Offset_Reset = 'auto_offset_reset'
+        Field_Max_Message_Size = 'max_message_size'
+        Field_Max_In_Flight = 'max_in_flight'
+        Field_Should_Deliver_Tombstones = 'should_deliver_tombstones'
+        Field_Dedup_Header = 'dedup_header'
+        Field_Dedup_TTL = 'dedup_ttl'
+        Field_Routing = 'routing'
+
+        Default_Topics = ''
+        Default_Auto_Offset_Reset = 'latest'
+        Default_Max_Message_Size = 1_000_000
+        Default_Max_In_Flight = 100
+        Default_Should_Deliver_Tombstones = False
+        Default_Dedup_Header = ''
+        Default_Dedup_TTL = 86_400 * 7
+        Default_Routing = ''
+
+        FieldList = (
+            Field_Topics,
+            Field_Auto_Offset_Reset,
+            Field_Max_Message_Size,
+            Field_Max_In_Flight,
+            Field_Should_Deliver_Tombstones,
+            Field_Dedup_Header,
+            Field_Dedup_TTL,
+            Field_Routing,
+        )
+
+        IntFieldList = (Field_Max_Message_Size, Field_Max_In_Flight, Field_Dedup_TTL)
+        BoolFieldList = (Field_Should_Deliver_Tombstones,)
+
+        Defaults = {
+            Field_Topics: Default_Topics,
+            Field_Auto_Offset_Reset: Default_Auto_Offset_Reset,
+            Field_Max_Message_Size: Default_Max_Message_Size,
+            Field_Max_In_Flight: Default_Max_In_Flight,
+            Field_Should_Deliver_Tombstones: Default_Should_Deliver_Tombstones,
+            Field_Dedup_Header: Default_Dedup_Header,
+            Field_Dedup_TTL: Default_Dedup_TTL,
+            Field_Routing: Default_Routing,
+        }
+
+        # The Redis key prefix of a channel's dedup values, the channel's id and the value follow.
+        Dedup_Key_Prefix = 'zato:kafka:dedup:'
+
+    class Routing:
+        """ The keys of one routing rule of a channel - the rules travel as a JSON list of such mappings.
+        """
+        Key_Topic = 'topic'
+        Key_Header_Name = 'header_name'
+        Key_Header_Value = 'header_value'
+        Key_Service = 'service'
+
+        KeyList = (Key_Topic, Key_Header_Name, Key_Header_Value, Key_Service)
+
+    class Header:
+        """ The headers a service receives next to a message's own, and the ones a send can carry.
+        """
+        Key = 'kafka.key'
+        Topic = 'kafka.topic'
+        Partition = 'kafka.partition'
+        Offset = 'kafka.offset'
+        Timestamp = 'kafka.timestamp'
+        Is_Tombstone = 'kafka.is_tombstone'
+        Channel = 'kafka.channel'
+
+        # A header whose value is not text arrives base64-encoded under its name with this suffix.
+        B64_Suffix = '.b64'
+
+        # The bridge's value of a tombstone header.
+        Is_Tombstone_True = 'true'
+
     class Default:
         Address = 'localhost:9092'
 
@@ -2593,6 +2679,20 @@ class PubSub:
         DLQ_Job_Name             = 'zato.pubsub.dlq'
         DLQ_Job_Interval_Minutes = 1
         DLQ_Rule_Service         = 'zato.pubsub.dlq.run'
+
+    class Inbound:
+        """ The DLQs of channels - a channel has no queue in front of it, only the DLQ its failed messages move to.
+        """
+
+        # The DLQ topic and sub key prefixes, followed by the channel's type and name or id
+        DLQ_Topic_Prefix = 'zato.in.dlq.'
+        DLQ_Sub_Key_Prefix = 'zato.in.dlq.'
+
+    class Direction:
+        """ Which way a connection with a DLQ moves messages.
+        """
+        In = 'in'
+        Out = 'out'
 
     class REST_Server:
 

@@ -105,6 +105,9 @@ $.fn.zato.delivery_tab.state = {
     panelId: null,
     fieldPrefix: '',
 
+    // Whether the bound connection has a delivery queue
+    hasQueue: true,
+
     // The names of the hidden columns, read once off the page's json_script element
     fieldNames: null
 };
@@ -123,6 +126,13 @@ $.fn.zato.delivery_tab.config.deliveryLinkLabel = 'Delivery queue';
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The link to a channel's delivery page
+$.fn.zato.delivery_tab.config.channelDeliveryPageUrl = '/zato/channel/delivery/';
+$.fn.zato.delivery_tab.config.channelDeliveryPageTab = 'dlq';
+$.fn.zato.delivery_tab.config.channelDeliveryLinkLabel = 'Dead-letter queue';
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The cell of a new row that links to the connection's delivery page
 $.fn.zato.delivery_tab.link_cell = function(connType, item, clusterId) {
 
@@ -131,6 +141,17 @@ $.fn.zato.delivery_tab.link_cell = function(connType, item, clusterId) {
     var url = config.deliveryPageUrl + connType + '/' + item.id + '/?cluster=' + clusterId + '&tab=' + config.deliveryPageTab;
 
     var out = String.format('<td><a href="{0}">{1}</a></td>', url, config.deliveryLinkLabel);
+    return out;
+}
+
+// The cell of a new row that links to a channel's delivery page
+$.fn.zato.delivery_tab.channel_link_cell = function(connType, item, clusterId) {
+
+    var config = $.fn.zato.delivery_tab.config;
+
+    var url = config.channelDeliveryPageUrl + connType + '/' + item.id + '/?cluster=' + clusterId + '&tab=' + config.channelDeliveryPageTab;
+
+    var out = String.format('<td><a href="{0}">{1}</a></td>', url, config.channelDeliveryLinkLabel);
     return out;
 }
 
@@ -401,7 +422,12 @@ $.fn.zato.delivery_tab.render = function() {
     summary.textContent = tab.formatSummary();
 
     var panel = $('#' + tab.state.panelId);
-    var useQueue = tab.field(config.fieldUseQueue).is(':checked');
+    var useQueue = true;
+
+    if(tab.state.hasQueue) {
+        useQueue = tab.field(config.fieldUseQueue).is(':checked');
+    }
+
     panel.toggleClass(config.offClass, !useQueue);
 
     var actionLine = $('#' + tab.elementId('line', config.actionLine));
@@ -489,6 +515,10 @@ $.fn.zato.delivery_tab.bind = function(options) {
 
     tab.state.panelId = options.panel_id;
     tab.state.fieldPrefix = options.field_prefix;
+
+    // A channel has no queue switch to show.
+    tab.state.hasQueue = options.has_queue;
+    $('#' + tab.elementId('line', config.fieldUseQueue)).toggle(tab.state.hasQueue);
 
     tab.field(config.fieldUseQueue).off('change.delivery_tab').on('change.delivery_tab', tab.render);
     tab.field(config.fieldUseDLQ).off('change.delivery_tab').on('change.delivery_tab', tab.render);

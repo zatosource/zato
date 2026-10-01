@@ -327,7 +327,8 @@ $.fn.zato.http_soap.create = function(object_type) {
 
         $.fn.zato.delivery_tab.bind({
             panel_id: 'http-soap-create-tab-panel-delivery',
-            field_prefix: ''
+            field_prefix: '',
+            has_queue: true
         });
     }
 
@@ -372,7 +373,8 @@ $.fn.zato.http_soap.edit = function(id) {
         // The Delivery tab reads the form the item was populated into
         $.fn.zato.delivery_tab.bind({
             panel_id: 'http-soap-edit-tab-panel-delivery',
-            field_prefix: 'edit-'
+            field_prefix: 'edit-',
+            has_queue: true
         });
     }
 

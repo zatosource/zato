@@ -17,10 +17,11 @@ from logging import getLogger
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.facade import PubSubFacade
-from zato.common.pubsub.dlq import get_dlq_topic_name, Header_Moved_Time, Header_Rounds, Key_DLQ, parse_dlq_sub_key, \
-    strip_dlq_header
-from zato.common.pubsub.outgoing import Attempts_None, find_outgoing_conn, get_dlq_settings, Key_CID, Key_Request, \
-    locate_outgoing_conn, OutgoingPublisher
+from zato.common.pubsub.delivery import DeliveryExhausted
+from zato.common.pubsub.dlq import get_dlq_topic_name, Header_Moved_Time, Header_Rounds, Header_Source, Header_Source_Topic, \
+    Key_DLQ, move_to_dlq, parse_dlq_sub_key, strip_dlq_header
+from zato.common.pubsub.outgoing import Attempts_None, deliver_envelope, find_outgoing_conn, get_dlq_settings, is_inbound, \
+    Key_Attempts, Key_CID, Key_DLQ_Rounds, Key_Request, locate_outgoing_conn, OutgoingPublisher
 from zato.common.util.time_ import utcnow
 from zato.server.service import Bool
 from zato.server.service.internal import AdminService
@@ -119,12 +120,17 @@ class _DLQService(AdminService):
 class _RetryMixin(_DLQService):
 
     def _retry(self, sub_key:'str', msg_id:'str', document:'stranydict') -> 'str':
-        """ Puts one DLQ message back at the end of its connection's queue, returning its new id.
+        """ Tries one DLQ message again, returning its new id in the queue or the DLQ, or an empty string if it was delivered.
         """
         conn_type, conn_id, _ = self._get_dlq_names(sub_key)
 
-        rounds = document[Key_DLQ][Header_Rounds] + 1
+        header = document[Key_DLQ]
+        rounds = header[Header_Rounds] + 1
         envelope = strip_dlq_header(document)
+
+        if is_inbound(conn_type):
+            out = self._retry_inbound(sub_key, msg_id, envelope, header, rounds)
+            return out
 
         publisher = OutgoingPublisher(self.server, conn_type, conn_id)
         result = publisher.publish_request(envelope[Key_CID], Attempts_None, envelope[Key_Request], dlq_rounds=rounds)
@@ -135,6 +141,41 @@ class _RetryMixin(_DLQService):
 
         out = result.msg_id
         return out
+
+# ################################################################################################################################
+
+    def _retry_inbound(self, sub_key:'str', msg_id:'str', envelope:'stranydict', header:'stranydict', rounds:'int') -> 'str':
+        """ Invokes a channel's service again under the channel's retry policy.
+        """
+        envelope[Key_Attempts] = Attempts_None
+        envelope[Key_DLQ_Rounds] = rounds
+
+        cid = envelope[Key_CID]
+
+        try:
+            deliver_envelope(self.server, cid, envelope)
+        except DeliveryExhausted as e:
+
+            # The message goes back to its DLQ as a new message.
+            new_msg_id = move_to_dlq(self.server, cid, envelope, e,
+                source_topic=header[Header_Source_Topic], source=header[Header_Source])
+
+            if not new_msg_id:
+                raise
+
+            self._ack(sub_key, msg_id)
+
+            logger.info('Retried DLQ message `%s` of `%s`, round %d, exhausted again, now `%s`, e:`%s`',
+                msg_id, sub_key, rounds, new_msg_id, e.error)
+
+            out = new_msg_id
+            return out
+
+        self._ack(sub_key, msg_id)
+
+        logger.info('Retried DLQ message `%s` of `%s`, round %d, delivered', msg_id, sub_key, rounds)
+
+        return ''
 
 # ################################################################################################################################
 
