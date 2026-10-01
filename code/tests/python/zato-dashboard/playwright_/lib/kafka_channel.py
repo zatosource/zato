@@ -31,8 +31,9 @@ Kafka_Channel_Page_Url = '/zato/channel/kafka/?cluster=1&type_=channel-kafka'
 # that takes one topic per line or a comma-separated list.
 _Text_Fields = ('name', 'address', 'topics', 'group_id', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file')
 
-# Select fields set by raw value via JS since Chosen.js hides the underlying elements
-_Select_Fields = ('service',)
+# Select fields set by raw value via JS since Chosen.js hides the underlying elements - and the Consumer tab's
+# select stands on a panel that is hidden until its tab is clicked
+_Select_Fields = ('service', 'auto_offset_reset')
 
 # Checkbox fields toggled by boolean options
 _Checkbox_Fields = ('is_active', 'ssl')
