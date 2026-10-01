@@ -2170,13 +2170,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def deploy_env_repo(self, path:'str', files:'strlist') -> 'anydict':
+    def deploy_env_repo(self, path:'str', files:'strlist', is_full:'bool') -> 'anydict':
         """ Deploys a checkout of a repository the dashboard pulled, see zato.server.env_repo.deploy.
         """
         # Zato
         from zato.server.env_repo import deploy
 
-        out = deploy(self, path, files)
+        out = deploy(self, path, files, is_full)
         return out
 
 # ################################################################################################################################

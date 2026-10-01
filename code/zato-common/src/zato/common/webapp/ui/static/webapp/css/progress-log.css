@@ -85,6 +85,7 @@
     background: var(--progress-log-header-background);
     font-family: var(--progress-log-font-mono);
     font-size: var(--progress-log-header-font-size);
+    line-height: 1;
     color: var(--progress-log-text-faint);
 }
 

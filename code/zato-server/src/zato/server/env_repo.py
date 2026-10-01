@@ -117,10 +117,10 @@ def _deploy_enmasse(server:'ParallelServer', path:'str') -> 'tuple[int, int]':
 
 # ################################################################################################################################
 
-def deploy(server:'ParallelServer', path:'str', files:'strlist') -> 'anydict':
-    """ Deploys a checkout of a repository - everything in it the first time this process sees it, otherwise only the files
-    given, if any - and returns how many services were new or updated, how many enmasse objects were created or updated,
-    and what could not be deployed.
+def deploy(server:'ParallelServer', path:'str', files:'strlist', is_full:'bool'=False) -> 'anydict':
+    """ Deploys a checkout of a repository - everything in it if asked to or the first time this process sees it,
+    otherwise only the files given, if any - and returns how many services were new or updated, how many enmasse objects
+    were created or updated, and what could not be deployed.
     """
     root = os.path.abspath(path)
 
@@ -132,7 +132,8 @@ def deploy(server:'ParallelServer', path:'str', files:'strlist') -> 'anydict':
     projects = _projects.get(root)
     is_new = projects is None
 
-    if projects is None:
+    # A fresh clone may have new directories to pick code up from, so the project is looked at anew.
+    if is_new or is_full:
         projects = get_project_info(root, HotDeploy.Source_Directory) or []
 
         for project in projects:
@@ -142,7 +143,7 @@ def deploy(server:'ParallelServer', path:'str', files:'strlist') -> 'anydict':
 
         _projects[root] = projects
 
-    if is_new:
+    if is_new or is_full:
         py_files, enmasse_files = list_project_files(root, projects)
     else:
         py_files, enmasse_files = list_changed_project_files(root, files, projects)

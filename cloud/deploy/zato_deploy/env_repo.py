@@ -60,7 +60,6 @@ class Status:
         self.url    = url
         self.branch = branch
         self.label  = get_repo_label(url)
-        self.message = ''
         self.lines:'strlist' = []
         self.branches:'strlist' = []
 
@@ -79,10 +78,7 @@ class Status:
 
         logger.info('Status %s - %s', state, message)
 
-        if self.message:
-            self.lines.append(self.message)
-
-        self.message = message
+        self.lines.append(message)
 
         data = {
             'action':   self.action,

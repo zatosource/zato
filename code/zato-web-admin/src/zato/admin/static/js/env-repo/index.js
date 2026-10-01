@@ -112,22 +112,23 @@ $.fn.zato.envRepo.init = function() {
         $.fn.zato.envRepo.showStatus(error, false);
     }
 
-    // Back from GitHub with the App installed, the address typed before leaving is back in the field.
+    // Back from GitHub with the App installed, the address typed before leaving is back in the field and is connected
+    // right away, the App was installed for its sake.
     if(isInstalledNow) {
         const address = window.sessionStorage.getItem(config.addressKey) || '';
         window.sessionStorage.removeItem(config.addressKey);
 
-        if(address) {
+        if(address && state.appState === config.appStateInstalled) {
             $('#repo-url').val(address);
+            $.fn.zato.envRepo.handleConnect();
+            return;
         }
     }
 
-    // A page that opens with an address already filled in connects on its own, unless the App has to be created
-    // first, which is not started without a click, and one with an App installed but no address finds out which
-    // repositories the App may read.
     // The page came with the address checked already, its panel shows how that went.
     $.fn.zato.envRepo.showInitialStatus();
 
+    // With an App installed but no address, the repositories the App may read are what the field offers.
     if(state.appState !== config.appStateInstalled) {
         return;
     }
@@ -382,29 +383,23 @@ $.fn.zato.envRepo.appendStatus = function(status) {
 
     const lines = status.lines || [];
 
-    // The message of a step becomes a line once the next step is written, so it is not shown a second time.
+    // The message of each step is among the lines, in order, and the one of the final step is coloured by how it ended.
+    let kind = null;
+
+    if(status.state === 'error') {
+        kind = 'error';
+    }
+    else if(status.state === 'ok' || status.state === 'switched' || status.state === 'disconnected' || status.state === 'pulled') {
+        kind = 'ok';
+    }
+
     for(let idx = state.lineCount; idx < lines.length; idx++) {
-        if(lines[idx] !== state.lastMessage) {
-            $.fn.zato.envRepo.appendLine(lines[idx], null);
-        }
+        const isMessage = kind && lines[idx] === status.message;
+        $.fn.zato.envRepo.appendLine(lines[idx], isMessage ? kind : null);
     }
 
     state.lineCount = lines.length;
-
-    if(status.message && status.message !== state.lastMessage) {
-
-        let kind = null;
-
-        if(status.state === 'error') {
-            kind = 'error';
-        }
-        else if(status.state === 'ok' || status.state === 'switched' || status.state === 'disconnected' || status.state === 'pulled') {
-            kind = 'ok';
-        }
-
-        $.fn.zato.envRepo.appendLine(status.message, kind);
-        state.lastMessage = status.message;
-    }
+    state.lastMessage = status.message || '';
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -527,6 +522,7 @@ $.fn.zato.envRepo.onConnected = function(status) {
     state.isChecked = true;
 
     $.fn.zato.envRepo.stopAll();
+    $.fn.zato.envRepo.isCreating(true);
     $('#key-help').addClass('hidden');
 
     $.fn.zato.envRepo.appendStatus(status);

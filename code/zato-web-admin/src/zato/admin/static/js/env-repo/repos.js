@@ -66,6 +66,7 @@ $.fn.zato.envRepo.initHint = function() {
         interactive: true,
         trigger: 'manual',
         hideOnClick: false,
+        duration: [200, 0],
         appendTo: document.body,
     });
 };

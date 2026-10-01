@@ -143,6 +143,7 @@ $.fn.zato.envRepo.onDisconnectDone = function(status) {
 
     $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.resetFlow();
+    $.fn.zato.envRepo.isCreating(true);
 
     $('#repo-url').val('').data('current-url', '').data('current-branch', '');
     $('#repo-list').empty();

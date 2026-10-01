@@ -47,7 +47,6 @@ class Env_Repo:
     State_Switched     = 'switched'
     State_Disconnected = 'disconnected'
     State_Pulling      = 'pulling'
-    State_Deploying    = 'deploying'
     State_Pulled       = 'pulled'
     State_Error        = 'error'
 

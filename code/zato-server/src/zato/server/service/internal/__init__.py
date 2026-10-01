@@ -279,7 +279,8 @@ class ServerInvoker(AdminService):
         elif func_name == 'deploy_env_repo':
             path = self.request.raw['path']
             files = self.request.raw.get('files') or []
-            response = func(path, files)
+            is_full = bool(self.request.raw.get('is_full'))
+            response = func(path, files, is_full)
         else:
             response = func()
 

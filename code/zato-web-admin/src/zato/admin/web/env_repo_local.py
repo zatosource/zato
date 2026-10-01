@@ -104,7 +104,6 @@ class Status:
         self.branch = branch
         self.client = client
         self.label  = get_repo_label(url)
-        self.message = ''
         self.lines:'strlist' = []
         self.branches:'strlist' = []
 
@@ -125,10 +124,7 @@ class Status:
 
         logger.info('Status %s - %s', state, message)
 
-        if self.message:
-            self.lines.append(self.message)
-
-        self.message = message
+        self.lines.append(message)
 
         data:'anydict' = {
             'action':  self.action,
@@ -309,13 +305,11 @@ def _get_head(status:'Status', repo_dir:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _deploy(status:'Status', repo_dir:'str', files:'strlist') -> 'None':
-    """ Has the server deploy the checkout - the files given, or everything if the server does not know it yet -
-    and tells how many services and enmasse objects that touched.
+def _deploy(status:'Status', repo_dir:'str', files:'strlist', is_full:'bool') -> 'None':
+    """ Has the server deploy the checkout - all of it after a clone or if the server does not know it yet, otherwise
+    the files given - and tells how many services and enmasse objects that touched, if any.
     """
-    status.write(Env_Repo.State_Deploying, f'Deploying {status.label} at {status.branch}')
-
-    response = _invoke(status, _Func_Deploy, {'path': repo_dir, 'files': files})
+    response = _invoke(status, _Func_Deploy, {'path': repo_dir, 'files': files, 'is_full': is_full})
 
     services_new     = response.get('services_new') or 0
     services_updated = response.get('services_updated') or 0
@@ -339,8 +333,6 @@ def _deploy(status:'Status', repo_dir:'str', files:'strlist') -> 'None':
 
     if parts:
         status.add_lines('Deployed ' + ', '.join(parts))
-    else:
-        status.add_lines('Nothing to deploy')
 
     for error in errors:
         status.add_lines(error)
@@ -362,7 +354,7 @@ def _pull(status:'Status') -> 'None':
         _ = _clone(status)
         head = _get_head(status, repo_dir)
         _write_current(status, head)
-        _deploy(status, repo_dir, [])
+        _deploy(status, repo_dir, [], True)
         status.write(Env_Repo.State_Pulled, f'Pulled {status.label} at {status.branch}, now at {head[:12]}')
         return
 
@@ -377,7 +369,7 @@ def _pull(status:'Status') -> 'None':
     _write_current(status, after)
 
     if before == after:
-        _deploy(status, repo_dir, [])
+        _deploy(status, repo_dir, [], False)
         status.write(Env_Repo.State_Pulled, f'{status.label} at {status.branch} is up to date')
         return
 
@@ -385,7 +377,7 @@ def _pull(status:'Status') -> 'None':
     status.add_lines(summarize_changes(changes.stdout))
 
     files = _run_git(status, ['diff', '--name-only', before, after], cwd=repo_dir).stdout.split()
-    _deploy(status, repo_dir, files)
+    _deploy(status, repo_dir, files, False)
 
     status.write(Env_Repo.State_Pulled, f'Pulled {status.label} at {status.branch}, now at {after[:12]}')
 
