@@ -12,7 +12,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.admin.web.alerts_tab_lines import Line_Kind_Popover
-from zato.common.alerting.object_config import alert_type_fhir, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap
+from zato.common.alerting.object_config import alert_type_fhir, alert_type_kafka_outgoing, alert_type_mllp_outgoing, alert_type_rest, \
+    alert_type_soap
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,7 +29,7 @@ if 0:
 Section_Queue = 'Queue'
 
 # The types whose connections can use a queue
-queue_alert_types = (alert_type_rest, alert_type_soap, alert_type_fhir, alert_type_mllp_outgoing)
+queue_alert_types = (alert_type_rest, alert_type_soap, alert_type_fhir, alert_type_mllp_outgoing, alert_type_kafka_outgoing)
 
 # What both lines say about where their numbers come from
 _reads_the_connection = 'The depth is read off the connection itself, not off the audit log, so this line works ' + \

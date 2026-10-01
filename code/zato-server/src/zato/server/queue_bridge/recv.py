@@ -17,9 +17,11 @@ from traceback import format_exc
 
 # gevent
 from gevent import sleep, spawn
+from gevent.queue import Queue
 
 # Zato
 from zato.common.api import DATA_FORMAT, GENERIC, HTTP_SOAP, KAFKA, PubSub
+from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, wait_between_rounds
 from zato.common.pubsub.dlq import move_to_dlq
 from zato.common.pubsub.outgoing import Attempts_None, build_envelope, InboundType, Key_Data, Key_Headers, Key_Is_Base64, \
@@ -68,6 +70,9 @@ _error_log_interval = 60.0
 
 # Why a round of attempts was interrupted
 Interrupt_Stopped = 'stopped'
+
+# A message that cannot be decoded counts as one failed attempt
+Attempts_Poison = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,10 +129,70 @@ def invoke_channel_service(server:'ParallelServer', cid:'str', service:'str', pa
 
 # ################################################################################################################################
 
+def invoke_kafka_service(server:'ParallelServer', cid:'str', service:'str', payload:'bytes', headers:'strdict') -> 'any_':
+    """ One attempt at the service a Kafka channel's message was routed to, recorded in the audit log under the message's cid,
+    so that a replay from the DLQ lines up with the first attempts.
+    """
+    start = monotonic()
+
+    try:
+        out = invoke_channel_service(server, cid, service, payload, headers)
+    except Exception as e:
+        _audit_kafka_attempt(server, cid, service, payload, headers, start, AuditOutcome.Error, str(e))
+        raise
+    else:
+        _audit_kafka_attempt(server, cid, service, payload, headers, start, AuditOutcome.OK, '')
+        return out
+
+# ################################################################################################################################
+
+def _audit_kafka_attempt(
+    server:'ParallelServer',
+    cid:'str',
+    service:'str',
+    payload:'bytes',
+    headers:'strdict',
+    start:'float',
+    outcome:'str',
+    status:'str',
+    ) -> 'None':
+    """ Records one attempt at a Kafka channel's service - the channel is the object, the topic is the endpoint.
+    """
+    audit_log = server.service_audit_log
+
+    if not audit_log:
+        return
+
+    data, _ = decode_payload(payload)
+    duration_ms = int((monotonic() - start) * 1000)
+
+    attrs = {
+        _header.Topic: headers.get(_header.Topic, ''),
+        _header.Partition: headers.get(_header.Partition, ''),
+        _header.Offset: headers.get(_header.Offset, ''),
+        Key_Service: service,
+    }
+
+    _ = audit_log.insert(
+        AuditSource.Kafka_Channel,
+        AuditEvent.Message_Received,
+        headers.get(_header.Channel, ''),
+        cid=cid,
+        endpoint=headers.get(_header.Topic, ''),
+        size=len(payload),
+        outcome=outcome,
+        status=status,
+        duration_ms=duration_ms,
+        attrs=attrs,
+        bodies={AuditBody.Request: data},
+    )
+
+# ################################################################################################################################
+
 def invoke_channel_request(server:'ParallelServer', cid:'str', request:'stranydict') -> 'any_':
     """ Invokes the service of a stored channel message.
     """
-    out = invoke_channel_service(server, cid, request[Key_Service], encode_payload(request), request[Key_Headers])
+    out = invoke_kafka_service(server, cid, request[Key_Service], encode_payload(request), request[Key_Headers])
     return out
 
 # ################################################################################################################################
@@ -191,6 +256,10 @@ class ChannelListener:
         self._greenlet:'anynone' = None
         self._is_stopped = False
 
+        # One lane per partition, so that a message stuck in its rounds holds up its own partition only
+        self._lanes:'dict[anytuple, Queue]' = {}
+        self._lane_greenlets:'anylist' = []
+
 # ################################################################################################################################
 
     def __repr__(self) -> 'str':
@@ -229,6 +298,12 @@ class ChannelListener:
         if self._greenlet:
             self._greenlet.kill()
             self._greenlet = None
+
+        for greenlet in self._lane_greenlets:
+            greenlet.kill()
+
+        self._lane_greenlets.clear()
+        self._lanes.clear()
 
         logger.info('Channel listener stopped for `%s` (%s)', self.config['name'], self.channel_id)
 
@@ -281,11 +356,51 @@ class ChannelListener:
                         if self._is_stopped:
                             return
 
-                        self._handle_entry(msg_id, fields)
+                        self._dispatch(msg_id, fields)
 
             except Exception as exc:
                 error_since, last_logged = self._on_read_error(exc, error_since, last_logged)
                 sleep(_error_sleep)
+
+# ################################################################################################################################
+
+    def _dispatch(self, msg_id:'str', fields:'strdict') -> 'None':
+        """ Hands one entry to the lane of its partition - a Kafka message waits behind the ones of its own partition only,
+        while anything else is handled in the order it was read in.
+        """
+        if self.is_kafka:
+            lane_key = self._get_lane_key(fields)
+        else:
+            lane_key = ()
+
+        if not (lane := self._lanes.get(lane_key)):
+            lane = Queue()
+            self._lanes[lane_key] = lane
+            self._lane_greenlets.append(spawn(self._run_lane, lane))
+
+        lane.put((msg_id, fields))
+
+# ################################################################################################################################
+
+    def _get_lane_key(self, fields:'strdict') -> 'anytuple':
+        """ The topic and partition an entry came from, or an empty key for one whose headers cannot be read.
+        """
+        try:
+            headers = loads(fields['headers'])
+            out = (fields['topic'], int(headers[_header.Partition]))
+        except Exception:
+            out = ()
+
+        return out
+
+# ################################################################################################################################
+
+    def _run_lane(self, lane:'Queue') -> 'None':
+        """ Handles the entries of one lane, one after another, until stopped.
+        """
+        while not self._is_stopped:
+            msg_id, fields = lane.get()
+            self._handle_entry(msg_id, fields)
 
 # ################################################################################################################################
 
@@ -381,13 +496,17 @@ class ChannelListener:
         channel_name = fields['channel_name']
         topic = fields['topic']
 
-        payload = b64decode(fields['payload'])
+        # A message the entry cannot be decoded into is poison - it goes to the DLQ as it is and the next one follows.
+        try:
+            payload = b64decode(fields['payload'], validate=True)
+            headers:'strdict' = loads(fields['headers'])
+            partition = int(headers[_header.Partition])
+            offset = int(headers[_header.Offset])
+        except Exception as e:
+            self._handle_poison(msg_id, fields, e)
+            return
 
-        headers:'strdict' = loads(fields['headers'])
         headers[_header.Channel] = channel_name
-
-        partition = int(headers[_header.Partition])
-        offset = int(headers[_header.Offset])
 
         def resolve() -> 'None':
             self.server._queue_bridge.commit_offset(self.channel_id, topic, partition, offset)
@@ -396,7 +515,7 @@ class ChannelListener:
         # A tombstone goes to the service only if the channel says so ..
         if headers[_header.Is_Tombstone] == _header.Is_Tombstone_True:
             if not config[_consumer.Field_Should_Deliver_Tombstones]:
-                logger.info('Skipping tombstone from `%s` at %s/%s/%s, channel `%s`', topic, partition, offset, channel_name)
+                logger.info('Skipping tombstone from `%s` at %s/%s, channel `%s`', topic, partition, offset, channel_name)
                 resolve()
                 return
 
@@ -404,7 +523,7 @@ class ChannelListener:
         service = route_message(self.routing, config['service'], topic, headers)
 
         if not service:
-            logger.info('Skipping message from `%s` at %s/%s/%s, channel `%s` has no service for it',
+            logger.info('Skipping message from `%s` at %s/%s, channel `%s` has no service for it',
                 topic, partition, offset, channel_name)
             resolve()
             return
@@ -414,7 +533,7 @@ class ChannelListener:
 
         if dedup_key:
             if self.redis.exists(dedup_key):
-                logger.info('Skipping duplicate from `%s` at %s/%s/%s, channel `%s`, key `%s`',
+                logger.info('Skipping duplicate from `%s` at %s/%s, channel `%s`, key `%s`',
                     topic, partition, offset, channel_name, dedup_key)
                 resolve()
                 return
@@ -425,7 +544,7 @@ class ChannelListener:
         request = build_channel_request(service, payload, headers)
 
         def attempt() -> 'None':
-            _ = invoke_channel_service(self.server, cid, service, payload, headers)
+            _ = invoke_kafka_service(self.server, cid, service, payload, headers)
 
         # The rounds go on until the message is delivered or moved to the DLQ.
         while not self._is_stopped:
@@ -447,7 +566,7 @@ class ChannelListener:
                     resolve()
                     return
 
-                logger.warning('Message from `%s` at %s/%s/%s of channel `%s` failed, cid `%s`, next round in %ss: %s',
+                logger.warning('Message from `%s` at %s/%s of channel `%s` failed, cid `%s`, next round in %ss: %s',
                     topic, partition, offset, channel_name, cid, PubSub.Delivery.Retry_Round_Wait, e.error)
 
                 wait_between_rounds()
@@ -458,6 +577,57 @@ class ChannelListener:
 
                 resolve()
                 return
+
+# ################################################################################################################################
+
+    def _handle_poison(self, msg_id:'str', fields:'strdict', error:'Exception') -> 'None':
+        """ An entry that cannot be decoded goes to the DLQ as one failed attempt, with what little is known of it,
+        its offset is committed if the headers said where it was, and the listener goes on with the next entry.
+        """
+        channel_name = fields['channel_name']
+        topic = fields['topic']
+        cid = new_cid_server()
+
+        headers:'strdict' = {
+            _header.Channel: channel_name,
+            _header.Topic: topic,
+        }
+
+        # The position is known only if the headers themselves could be read.
+        try:
+            raw_headers = loads(fields['headers'])
+            partition = int(raw_headers[_header.Partition])
+            offset = int(raw_headers[_header.Offset])
+        except Exception:
+            source = None
+        else:
+            headers[_header.Partition] = str(partition)
+            headers[_header.Offset] = str(offset)
+            source = {
+                _header.Topic: topic,
+                _header.Partition: partition,
+                _header.Offset: offset,
+            }
+
+        # The payload is stored as the bridge sent it, the one thing that is certain about it.
+        request = {
+            Key_Service: fields['service'] or self.config['service'],
+            Key_Data: fields['payload'],
+            Key_Is_Base64: False,
+            Key_Headers: headers,
+        }
+
+        exhausted = DeliveryExhausted(f'Cannot decode message: {error}', Attempts_Poison, error.__class__.__name__)
+        envelope = build_envelope(InboundType.KAFKA, self.channel_id, channel_name, cid, Attempts_Poison, request)
+
+        if not move_to_dlq(self.server, cid, envelope, exhausted, source_topic=topic, source=source):
+            logger.warning('Dropping message `%s` of channel `%s` from `%s` that cannot be decoded and has no DLQ, cid `%s`: %s',
+                msg_id, channel_name, topic, cid, error)
+
+        if source:
+            self.server._queue_bridge.commit_offset(self.channel_id, topic, source[_header.Partition], source[_header.Offset])
+
+        self._ack(msg_id)
 
 # ################################################################################################################################
 
@@ -573,6 +743,22 @@ class ChannelListeners:
     def stop_all(self) -> 'None':
         for channel_id in list(self._listeners):
             self.stop(channel_id)
+
+# ################################################################################################################################
+
+    def sync(self, configs:'anylist') -> 'None':
+        """ Makes the listeners match a full list of channels - after a config reload, a channel that is new
+        gets a listener, one that is known gets the configuration it has now and one that is gone is stopped.
+        """
+        current_ids = set()
+
+        for config in configs:
+            current_ids.add(config['id'])
+            self.update(config)
+
+        for channel_id in list(self._listeners):
+            if channel_id not in current_ids:
+                self.stop(channel_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

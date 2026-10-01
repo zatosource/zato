@@ -874,3 +874,164 @@ pub fn send_reply_sync(shared: &BridgeShared, target: &ReplyTarget<'_>, payload:
 }
 
 // ################################################################################################################################
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Parses a channel out of JSON the way the server sends it.
+    fn channel(json: &str) -> ChannelConfig {
+        crate::wire::parse_payload::<ChannelConfig>(json).expect("channel config parses")
+    }
+
+    /// Parses an outgoing connection out of JSON the way the server sends it.
+    fn outgoing(json: &str) -> Result<OutgoingConfig, String> {
+        crate::wire::parse_payload::<OutgoingConfig>(json).map_err(|err| err.to_string())
+    }
+
+    // Channels
+
+    #[test]
+    fn a_channel_predating_the_topic_list_reads_its_one_topic() {
+        let config = channel(r#"{"name": "orders", "address": "localhost:9092", "topic": "orders", "service": "my.service"}"#);
+
+        assert_eq!(config.topics(), vec!["orders"]);
+        assert_eq!(config.topics_text(), "orders");
+        assert_eq!(config.type_, TYPE_CHANNEL_KAFKA);
+    }
+
+    #[test]
+    fn a_channel_with_a_topic_list_reads_the_list_and_not_the_old_topic() {
+        let config = channel(
+            r#"{"name": "orders", "address": "localhost:9092", "topic": "old", "topics": ["orders", "invoices"],
+            "service": "my.service"}"#,
+        );
+
+        assert_eq!(config.topics(), vec!["orders", "invoices"]);
+        assert_eq!(config.topics_text(), "orders, invoices");
+    }
+
+    #[test]
+    fn a_channel_reads_topics_typed_one_per_line_or_separated_by_commas() {
+        let config =
+            channel(r#"{"name": "orders", "address": "localhost:9092", "topics": "orders\n invoices ,\n\n shipments", "service": "s"}"#);
+
+        assert_eq!(config.topics(), vec!["orders", "invoices", "shipments"]);
+    }
+
+    #[test]
+    fn a_channel_drops_blank_entries_of_a_topic_list() {
+        let config = channel(r#"{"name": "orders", "address": "localhost:9092", "topics": ["orders", "", "  "], "service": "s"}"#);
+
+        assert_eq!(config.topics(), vec!["orders"]);
+    }
+
+    #[test]
+    fn a_channel_with_no_topic_at_all_reads_none() {
+        let config = channel(r#"{"name": "orders", "address": "localhost:9092", "topics": null, "topic": null, "service": "s"}"#);
+
+        assert!(config.topics().is_empty());
+        assert_eq!(config.topics_text(), "");
+    }
+
+    #[test]
+    fn a_channel_reads_its_consumer_options_and_falls_back_on_the_defaults() {
+        let config = channel(
+            r#"{"id": "17", "name": "orders", "address": "localhost:9092", "topics": ["orders"], "service": "s",
+            "auto_offset_reset": "latest", "max_message_size": "2000000", "max_in_flight": 5}"#,
+        );
+
+        assert_eq!(config.id(), 17);
+        assert_eq!(config.auto_offset_reset(), "latest");
+        assert_eq!(config.max_message_size(), 2_000_000);
+        assert_eq!(config.max_in_flight(), 5);
+
+        let config = channel(
+            r#"{"name": "orders", "address": "localhost:9092", "topics": ["orders"], "service": "s",
+            "auto_offset_reset": null, "max_message_size": "", "max_in_flight": 0, "id": null}"#,
+        );
+
+        assert_eq!(config.id(), 0);
+        assert_eq!(config.auto_offset_reset(), DEFAULT_AUTO_OFFSET_RESET);
+        assert_eq!(config.max_message_size(), DEFAULT_MAX_MESSAGE_SIZE);
+
+        // A limit of zero would pause the consumer forever, so it means the default
+        assert_eq!(config.max_in_flight(), DEFAULT_MAX_IN_FLIGHT);
+    }
+
+    #[test]
+    fn a_channel_reads_nulls_and_toggles_the_way_the_database_and_the_dashboard_send_them() {
+        let config = channel(
+            r#"{"name": "orders", "address": "localhost:9092", "topics": ["orders"], "service": "s",
+            "username": null, "password": null, "sasl_mechanism": null, "ssl": "", "ssl_key_password": null}"#,
+        );
+
+        assert_eq!(config.username, "");
+        assert_eq!(config.sasl_mechanism, "");
+        assert!(!config.ssl);
+        assert_eq!(config.ssl_key_password, "");
+
+        let config = channel(
+            r#"{"name": "orders", "address": "localhost:9092", "topics": ["orders"], "service": "s",
+            "ssl": "true", "ssl_ca_file": "/tmp/ca.pem", "ssl_key_password": "secret"}"#,
+        );
+
+        assert!(config.ssl);
+        assert_eq!(config.ssl_ca_file.as_deref(), Some("/tmp/ca.pem"));
+        assert_eq!(config.ssl_key_password, "secret");
+    }
+
+    // Outgoing connections
+
+    #[test]
+    fn an_outgoing_connection_reads_its_producer_options() {
+        let config = outgoing(
+            r#"{"name": "orders", "address": "localhost:9092", "topic": "orders", "compression": "zstd", "acks": "1",
+            "is_idempotent": false, "max_message_size": 500000, "linger_ms": "20", "send_timeout": 12}"#,
+        );
+
+        let config = config.expect("outgoing config parses");
+
+        assert_eq!(config.compression(), "zstd");
+        assert_eq!(config.acks(), "1");
+        assert!(!config.is_idempotent());
+        assert_eq!(config.max_message_size(), 500_000);
+        assert_eq!(config.linger_ms(), 20);
+        assert_eq!(config.send_timeout(), 12);
+        assert_eq!(config.type_, TYPE_OUTCONN_KAFKA);
+    }
+
+    #[test]
+    fn an_outgoing_connection_without_producer_options_reads_the_defaults() {
+        let config = outgoing(
+            r#"{"name": "orders", "address": "localhost:9092", "topic": "orders", "compression": null, "acks": "",
+            "is_idempotent": "", "max_message_size": null, "linger_ms": "", "send_timeout": 0}"#,
+        );
+
+        let config = config.expect("outgoing config parses");
+
+        assert_eq!(config.compression(), DEFAULT_COMPRESSION);
+        assert_eq!(config.acks(), DEFAULT_ACKS);
+        assert_eq!(config.is_idempotent(), DEFAULT_IS_IDEMPOTENT);
+        assert_eq!(config.max_message_size(), DEFAULT_MAX_MESSAGE_SIZE);
+        assert_eq!(config.linger_ms(), DEFAULT_LINGER_MS);
+
+        // A timeout of zero would fail every send at once, so it means the default
+        assert_eq!(config.send_timeout(), DEFAULT_SEND_TIMEOUT);
+    }
+
+    #[test]
+    fn an_outgoing_connection_reads_exactly_once_as_text_too() {
+        let turned_on = outgoing(r#"{"name": "o", "address": "a", "topic": "t", "is_idempotent": "true"}"#);
+        let turned_off = outgoing(r#"{"name": "o", "address": "a", "topic": "t", "is_idempotent": "false"}"#);
+
+        assert_eq!(turned_on.map(|config| config.is_idempotent()), Ok(true));
+        assert_eq!(turned_off.map(|config| config.is_idempotent()), Ok(false));
+    }
+
+    #[test]
+    fn an_outgoing_connection_needs_a_name_and_an_address() {
+        assert!(outgoing(r#"{"topic": "orders"}"#).is_err());
+        assert!(outgoing(r#"{"name": "orders"}"#).is_err());
+    }
+}

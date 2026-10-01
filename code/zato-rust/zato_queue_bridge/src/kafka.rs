@@ -9,11 +9,11 @@
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
-use rdkafka::ClientConfig;
 use rdkafka::Message;
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::message::{BorrowedMessage, Header, Headers, OwnedHeaders};
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
+use rdkafka::{ClientConfig, TopicPartitionList};
 use tokio_util::sync::CancellationToken;
 
 use crate::bridge::{BridgeShared, ChannelConfig, CommitReceiver, OutgoingConfig, RecvEvent, SendOutcome, SendRequest};
@@ -332,16 +332,28 @@ impl InFlight {
         }
     }
 
+    /// Records one more message in flight and says whether the partitions are to be paused now.
+    ///
+    /// Partitions assigned since the last pause arrive unpaused, so this says yes for every
+    /// message at or above the limit rather than only for the first one.
+    const fn record_forwarded(&mut self) -> bool {
+        self.count = self.count.saturating_add(1);
+        self.count >= self.limit
+    }
+
+    /// Records one message as resolved and says whether the partitions are to be resumed now -
+    /// only once they were paused and the count has dropped below the limit again.
+    const fn record_committed(&mut self) -> bool {
+        self.count = self.count.saturating_sub(1);
+        self.is_paused && self.count < self.limit
+    }
+
     /// Records one more message in flight and pauses the partitions once the limit is reached.
     fn on_forwarded(&mut self, consumer: &StreamConsumer, channel_name: &str) {
-        self.count = self.count.saturating_add(1);
-
-        if self.count < self.limit {
+        if !self.record_forwarded() {
             return;
         }
 
-        // Partitions assigned since the last pause arrive unpaused, so the pause is repeated
-        // for every message above the limit rather than only on the first one.
         match consumer.assignment() {
             Ok(assignment) => {
                 if let Err(err) = consumer.pause(&assignment) {
@@ -357,9 +369,7 @@ impl InFlight {
 
     /// Records one message as resolved and resumes the partitions once below the limit.
     fn on_committed(&mut self, consumer: &StreamConsumer, channel_name: &str) {
-        self.count = self.count.saturating_sub(1);
-
-        if !self.is_paused || self.count >= self.limit {
+        if !self.record_committed() {
             return;
         }
 
@@ -377,6 +387,14 @@ impl InFlight {
     }
 }
 
+/// Whether a resolved message's partition is still among the ones this consumer holds.
+///
+/// After a rebalance it may not be, and then the consumer that holds the partition now is
+/// the one to commit for it - storing the offset here would be storing it for nobody.
+fn is_still_assigned(assignment: &TopicPartitionList, request: &crate::bridge::CommitRequest) -> bool {
+    assignment.find_partition(&request.topic, request.partition).is_some()
+}
+
 /// Stores the offset after a resolved message so the next auto-commit carries it.
 ///
 /// An offset for a partition no longer assigned after a rebalance is dropped, because the
@@ -390,7 +408,7 @@ fn store_resolved_offset(consumer: &StreamConsumer, channel_name: &str, request:
         }
     };
 
-    if assignment.find_partition(&request.topic, request.partition).is_none() {
+    if !is_still_assigned(&assignment, request) {
         tracing::debug!(
             "Kafka consumer `{channel_name}`: partition {}/{} no longer assigned, dropping offset {}",
             request.topic,
@@ -400,12 +418,11 @@ fn store_resolved_offset(consumer: &StreamConsumer, channel_name: &str, request:
         return;
     }
 
-    // librdkafka stores the position to resume from, which is the one after the resolved message.
-    let next_offset = request.offset.saturating_add(1);
-
-    if let Err(err) = consumer.store_offset(&request.topic, request.partition, next_offset) {
+    // librdkafka itself stores offset + 1, the position to resume from, so the resolved message's own offset goes in.
+    if let Err(err) = consumer.store_offset(&request.topic, request.partition, request.offset) {
         tracing::warn!(
-            "Kafka consumer `{channel_name}`: cannot store offset {next_offset} for {}/{}: {err}",
+            "Kafka consumer `{channel_name}`: cannot store offset {} for {}/{}: {err}",
+            request.offset,
             request.topic,
             request.partition
         );
@@ -679,3 +696,166 @@ pub async fn ping(shared: &BridgeShared, config: &OutgoingConfig) -> Result<(), 
 }
 
 // ################################################################################################################################
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bridge::CommitRequest;
+
+    /// A commit request for one position of a topic.
+    fn commit_request(topic: &str, partition: i32, offset: i64) -> CommitRequest {
+        CommitRequest {
+            topic: topic.to_string(),
+            partition,
+            offset,
+        }
+    }
+
+    /// Looks a header up by name in the list `push_header` builds.
+    fn header_value<'headers>(headers: &'headers [(String, String)], name: &str) -> Option<&'headers str> {
+        headers.iter().find(|(key, _)| key == name).map(|(_, value)| value.as_str())
+    }
+
+    // Header encoding
+
+    #[test]
+    fn a_text_header_is_forwarded_as_it_is() {
+        let mut headers = Vec::new();
+        push_header(&mut headers, "tenant", Some(b"acme"));
+
+        assert_eq!(header_value(&headers, "tenant"), Some("acme"));
+        assert_eq!(headers.len(), 1);
+    }
+
+    #[test]
+    fn a_header_that_is_not_text_is_encoded_and_renamed() {
+        let mut headers = Vec::new();
+        push_header(&mut headers, "digest", Some(&[0xff, 0x00, 0xfe]));
+
+        // The service sees the suffix and knows to decode the value
+        assert_eq!(header_value(&headers, "digest"), None);
+        assert_eq!(
+            header_value(&headers, "digest.b64"),
+            Some(wire::base64_encode(&[0xff, 0x00, 0xfe]).as_str())
+        );
+    }
+
+    #[test]
+    fn a_header_without_a_value_is_an_empty_string() {
+        let mut headers = Vec::new();
+        push_header(&mut headers, "empty", None);
+
+        assert_eq!(header_value(&headers, "empty"), Some(""));
+    }
+
+    #[test]
+    fn an_empty_value_is_text_and_stays_under_its_own_name() {
+        let mut headers = Vec::new();
+        push_header(&mut headers, "blank", Some(b""));
+
+        assert_eq!(header_value(&headers, "blank"), Some(""));
+        assert_eq!(header_value(&headers, "blank.b64"), None);
+    }
+
+    #[test]
+    fn headers_become_a_json_object_the_server_reads() {
+        let mut headers = Vec::new();
+        push_header(&mut headers, "tenant", Some(b"acme"));
+        push_header(&mut headers, "digest", Some(&[0xff]));
+
+        let json: std::collections::HashMap<String, String> =
+            wire::parse_payload(&wire::headers_to_json(&headers)).expect("the headers parse");
+
+        assert_eq!(json.get("tenant").map(String::as_str), Some("acme"));
+        assert_eq!(json.get("digest.b64"), Some(&wire::base64_encode(&[0xff])));
+    }
+
+    // Offsets across a rebalance
+
+    #[test]
+    fn an_offset_for_a_partition_still_held_is_kept() {
+        let mut assignment = TopicPartitionList::new();
+        assignment.add_partition("orders", 0);
+        assignment.add_partition("orders", 2);
+
+        assert!(is_still_assigned(&assignment, &commit_request("orders", 0, 17)));
+        assert!(is_still_assigned(&assignment, &commit_request("orders", 2, 3)));
+    }
+
+    #[test]
+    fn an_offset_for_a_partition_that_moved_away_is_dropped() {
+        let mut assignment = TopicPartitionList::new();
+        assignment.add_partition("orders", 0);
+
+        // The partition went to another consumer in a rebalance
+        assert!(!is_still_assigned(&assignment, &commit_request("orders", 1, 17)));
+
+        // And so did a whole topic
+        assert!(!is_still_assigned(&assignment, &commit_request("invoices", 0, 17)));
+    }
+
+    #[test]
+    fn an_offset_is_dropped_when_nothing_is_held_at_all() {
+        let assignment = TopicPartitionList::new();
+
+        assert!(!is_still_assigned(&assignment, &commit_request("orders", 0, 0)));
+    }
+
+    // In-flight limit
+
+    #[test]
+    fn partitions_pause_once_the_limit_is_reached() {
+        let mut in_flight = InFlight::new(3);
+
+        assert!(!in_flight.record_forwarded());
+        assert!(!in_flight.record_forwarded());
+        assert!(in_flight.record_forwarded());
+        assert_eq!(in_flight.count, 3);
+    }
+
+    #[test]
+    fn the_pause_is_repeated_for_every_message_above_the_limit() {
+        let mut in_flight = InFlight::new(2);
+        let _ = in_flight.record_forwarded();
+
+        // Partitions assigned after the first pause arrive unpaused, so each message above the limit pauses again
+        assert!(in_flight.record_forwarded());
+        assert!(in_flight.record_forwarded());
+        assert!(in_flight.record_forwarded());
+    }
+
+    #[test]
+    fn partitions_resume_once_below_the_limit_and_only_if_they_were_paused() {
+        let mut in_flight = InFlight::new(2);
+        let _ = in_flight.record_forwarded();
+        let _ = in_flight.record_forwarded();
+
+        // Nothing was told to pause yet, so there is nothing to resume
+        assert!(!in_flight.record_committed());
+
+        in_flight.count = 2;
+        in_flight.is_paused = true;
+
+        assert!(in_flight.record_committed());
+        assert_eq!(in_flight.count, 1);
+    }
+
+    #[test]
+    fn a_commit_at_the_limit_does_not_resume() {
+        let mut in_flight = InFlight::new(2);
+        in_flight.count = 3;
+        in_flight.is_paused = true;
+
+        // Three down to two is still at the limit
+        assert!(!in_flight.record_committed());
+        assert!(in_flight.record_committed());
+    }
+
+    #[test]
+    fn a_commit_with_nothing_in_flight_does_not_go_below_zero() {
+        let mut in_flight = InFlight::new(2);
+
+        assert!(!in_flight.record_committed());
+        assert_eq!(in_flight.count, 0);
+    }
+}
