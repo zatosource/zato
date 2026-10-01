@@ -36,7 +36,7 @@ from zato.common.util.updates import Updater, UpdaterConfig
 
 if 0:
     from django.http import HttpRequest, HttpResponse, QueryDict
-    from zato.common.typing_ import anydict, anydictnone
+    from zato.common.typing_ import anydict, anydictnone, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -157,10 +157,37 @@ class EnvRepoView(SettingsBaseView):
 
         manifest = build_manifest(get_app_name(token_hex(3)), redirect_url, setup_url)
 
-        context['app_state']       = _get_app_state(app)
+        repos = self._list_repos(app)
+
+        # The one repository the App may read is the address, unless the environment runs one already.
+        if len(repos) == 1 and not context['current_url']:
+            only_repo = parse_repo_name(repos[0])
+            context['current_url'] = only_repo.https_url if only_repo else ''
+
+        context['repos']           = repos
+        context['app_state']       = _get_app_state(read_app(get_link_dir()))
         context['app_install_url'] = get_install_url(app) if app else ''
         context['manifest_action'] = f'{GitHub_App.Create_URL}?state={state}'
         context['manifest']        = dumps(manifest)
+
+# ################################################################################################################################
+
+    def _list_repos(self, app:'anydictnone') -> 'strlist':
+        """ Returns the repositories the App may read, newest first, or nothing if there is no App or GitHub cannot be asked.
+        An App deleted on GitHub is forgotten here while at it.
+        """
+        out:'strlist' = []
+
+        if not is_installed(app):
+            return out
+
+        try:
+            token = get_installation_token(get_link_dir())
+            out = list_repositories(token)
+        except GitHubAppError as exception:
+            logger.warning('Repositories not listed: %s', exception.message)
+
+        return out
 
 # ################################################################################################################################
 
@@ -239,13 +266,10 @@ class EnvRepoView(SettingsBaseView):
         """
         _set_local_dir()
 
-        try:
-            token = get_installation_token(get_link_dir())
-            repos = list_repositories(token)
-        except GitHubAppError as exception:
-            return json_response({'error': exception.message}, success=False)
+        repos = self._list_repos(read_app(get_link_dir()))
+        app_state = _get_app_state(read_app(get_link_dir()))
 
-        return json_response({'repos': repos})
+        return json_response({'repos': repos, 'app_state': app_state})
 
 # ################################################################################################################################
 
@@ -314,9 +338,8 @@ class EnvRepoView(SettingsBaseView):
 
 # ################################################################################################################################
 
-    @method_allowed('POST')
-    def disconnect(self, req:'HttpRequest') -> 'HttpResponse':
-        """ Disconnects from the repository the environment runs now, a host goes back to the public blueprint.
+    def _handle_current(self, action:'str') -> 'HttpResponse':
+        """ Writes a request about the repository the environment runs now.
         """
         _set_local_dir()
 
@@ -330,14 +353,30 @@ class EnvRepoView(SettingsBaseView):
 
         try:
             if is_host_mode():
-                write_request(Env_Repo.Action_Disconnect, url, branch)
+                write_request(action, url, branch)
             else:
-                handle_request_locally(Env_Repo.Action_Disconnect, url, branch)
+                handle_request_locally(action, url, branch)
         except OSError as exception:
             logger.warning('Request not written to %s: %s', get_link_dir(), exception)
             return json_response({'error': f'Request could not be written: {exception}'}, success=False)
 
         return json_response({'url': url})
+
+# ################################################################################################################################
+
+    @method_allowed('POST')
+    def disconnect(self, req:'HttpRequest') -> 'HttpResponse':
+        """ Disconnects from the repository the environment runs now, a host goes back to the public blueprint.
+        """
+        return self._handle_current(Env_Repo.Action_Disconnect)
+
+# ################################################################################################################################
+
+    @method_allowed('POST')
+    def pull(self, req:'HttpRequest') -> 'HttpResponse':
+        """ Brings the checkout of the repository the environment runs now up to date, without a restart.
+        """
+        return self._handle_current(Env_Repo.Action_Pull)
 
 # ################################################################################################################################
 # ################################################################################################################################

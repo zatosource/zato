@@ -166,6 +166,7 @@ class Env_Repo_Action:
     Check      = 'check'
     Switch     = 'switch'
     Disconnect = 'disconnect'
+    Pull       = 'pull'
 
 # ################################################################################################################################
 
@@ -174,6 +175,8 @@ class Env_Repo_State:
     OK        = 'ok'
     Error     = 'error'
     Switching = 'switching'
+    Pulling   = 'pulling'
+    Pulled    = 'pulled'
 
 # ################################################################################################################################
 

@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
     <link rel="stylesheet" type="text/css" href="/static/css/rate-limiting.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/progress-log.css">
     <link rel="stylesheet" type="text/css" href="/static/css/env-repo.css">
 {% endblock %}
@@ -16,6 +17,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/progress-log.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-address.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-actions.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-repos.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo-requests.js"></script>
 {% endblock %}
 
@@ -34,8 +37,13 @@
             <label for="repo-url">{{ page_config.address_label }}</label>
         </td>
         <td>
-            <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" list="repo-list" />
-            <datalist id="repo-list"></datalist>
+            <span class="env-repo-field">
+                <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ current_url }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" list="repo-list" />
+                <span class="how-it-works-badge env-repo-chip env-repo-chip-off" id="connection-chip"
+                    data-not-connected-label="{{ page_config.not_connected_label }}"
+                    data-connected-label="{{ page_config.connected_label }}">{{ page_config.not_connected_label }}</span>
+            </span>
+            <datalist id="repo-list">{% for repo in repos %}<option value="https://github.com/{{ repo }}"></option>{% endfor %}</datalist>
         </td>
     </tr>
     <tr>
@@ -54,17 +62,18 @@
 
 <div class="rate-limiting-actions">
     <span class="env-repo-side">
-        <a href="{{ new_repo_url }}" class="env-repo-link hidden" id="create-button" target="_blank" rel="noopener">
-            {{ page_config.new_repo_label }}
-            <svg class="env-repo-external" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
-        </a>
         <a href="#" class="env-repo-link hidden" id="disconnect-button" data-is-connected="{% if current_url %}1{% else %}0{% endif %}">{{ page_config.disconnect_label }}</a>
     </span>
     <span class="rate-limiting-save-group">
         <span class="status-message" id="env-repo-status"></span>
+        <input type="button" id="push-button" class="hidden" value="{{ page_config.push_label }}" />
         <input type="submit" id="action-button" value="{{ page_config.connect_label }}"
             data-connect-label="{{ page_config.connect_label }}"
-            data-allow-label="{{ page_config.allow_label }}" />
+            data-allow-label="{{ page_config.allow_label }}"
+            data-pull-label="{{ page_config.pull_label }}"
+            data-new-repo-url="{{ new_repo_url }}"
+            data-new-repo-label="{{ page_config.new_repo_label }}"
+            data-new-repo-hint="{{ page_config.new_repo_hint }}" />
     </span>
 </div>
 </form>

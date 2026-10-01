@@ -134,6 +134,12 @@ $.fn.zato.envRepo.fetchRepos = function(onRepos, onError) {
         url: $.fn.zato.envRepo.config.apiPrefix + 'github-app/repos',
         type: 'GET',
         success: function(response) {
+
+            // The App may turn out to be gone from GitHub, in which case the page is one without an App.
+            if(response.app_state) {
+                $.fn.zato.envRepo.state.appState = response.app_state;
+            }
+
             onRepos(response.repos || []);
         },
         error: function(xhr) {

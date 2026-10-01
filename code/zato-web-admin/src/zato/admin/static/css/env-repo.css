@@ -13,6 +13,13 @@
     margin-right: auto;
 }
 
+/* The hint stands to the right of the Connect button, so the content moves left by half the hint's width
+   for the two together to stay in the middle of the page */
+.env-repo-markup {
+    box-sizing: border-box;
+    padding-right: 120px;
+}
+
 /* ------------------------------------------------------------ */
 /* GitHub repository - heading                                  */
 /* ------------------------------------------------------------ */
@@ -34,8 +41,16 @@
 /* GitHub repository - form                                     */
 /* ------------------------------------------------------------ */
 
+/* The field and the chip in its right end */
+.env-repo-field {
+    position: relative;
+    display: block;
+}
+
 table.rate-limiting-form input[type="text"].env-repo-input {
     width: 100%;
+    box-sizing: border-box;
+    padding-right: 96px;
 }
 
 table.rate-limiting-form input[type="text"].env-repo-error {
@@ -202,6 +217,46 @@ table.rate-limiting-form input[type="text"].env-repo-error {
     min-height: 20px;
 }
 
-#github-app-form.hidden {
+#github-app-form.hidden,
+#push-button.hidden {
     display: none;
+}
+
+.rate-limiting-actions input[type="button"] {
+    font-size: 11px;
+}
+
+/* The hint by the Connect button */
+.env-repo-hint {
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.env-repo-hint a {
+    color: #ffd54a;
+    text-decoration: none;
+}
+
+/* The chip is the How does it work badge in grey or green, and it only reads, so it is neither clicked nor raised */
+.env-repo-chip,
+.env-repo-chip:hover {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: text;
+    user-select: text;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.env-repo-chip.env-repo-chip-off,
+.env-repo-chip.env-repo-chip-off:hover {
+    color: #4b4b4f;
+    background: linear-gradient(to bottom, rgba(150, 150, 155, 0.3), rgba(130, 130, 135, 0.25));
+}
+
+.env-repo-chip.env-repo-chip-on,
+.env-repo-chip.env-repo-chip-on:hover {
+    color: #0d4a1f;
+    background: linear-gradient(to bottom, rgba(120, 220, 140, 0.45), rgba(80, 200, 110, 0.35));
 }

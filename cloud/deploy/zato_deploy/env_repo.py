@@ -31,7 +31,7 @@ logger = getLogger(__name__)
 _Sync_Flag = '--sync'
 
 _Request_Keys = {'action', 'env_repo_url', 'env_repo_branch'}
-_Actions      = {Env_Repo_Action.Check, Env_Repo_Action.Switch, Env_Repo_Action.Disconnect}
+_Actions      = {Env_Repo_Action.Check, Env_Repo_Action.Switch, Env_Repo_Action.Disconnect, Env_Repo_Action.Pull}
 
 # How many lines of git's output the status keeps for the dashboard.
 _Max_Status_Lines = 40
@@ -170,9 +170,6 @@ def _list_branches(status:'Status') -> 'None':
         if ref.startswith(_Heads_Prefix):
             status.branches.append(ref[len(_Heads_Prefix):])
 
-    if not status.branches:
-        raise RequestError(f'No branches found in {status.url}')
-
     status.branches.sort()
 
 # ################################################################################################################################
@@ -218,6 +215,29 @@ def _disconnect(status:'Status') -> 'None':
 
 # ################################################################################################################################
 
+def _pull(status:'Status') -> 'None':
+    """ Brings the checkout up to date with GitHub, and nothing restarts - the running environment picks the files up
+    the way it picks up any other change to them.
+    """
+    if not os.path.isdir(Path.Env_Repo_Link):
+        raise RequestError(f'No checkout at {Path.Env_Repo_Link}')
+
+    repo_dir = os.path.realpath(Path.Env_Repo_Link)
+
+    status.write(Env_Repo_State.Pulling, f'Pulling {status.url} at {status.branch}')
+
+    result = run_git(['pull', '--ff-only'], cwd=repo_dir, is_verbose=True, url=status.url)
+
+    _add_output_lines(status, result.stderr)
+    _add_output_lines(status, result.stdout)
+
+    if result.exit_code != 0:
+        raise RequestError(f'Pull of {status.url} failed, exit code {result.exit_code}')
+
+    status.write(Env_Repo_State.Pulled, f'Pulled {status.url} at {status.branch}')
+
+# ################################################################################################################################
+
 def handle_request() -> 'None':
     """ Handles the request that the dashboard left in the shared directory, if there is one.
     """
@@ -239,6 +259,9 @@ def handle_request() -> 'None':
             _disconnect(status)
             is_switched = True
 
+        elif status.action == Env_Repo_Action.Pull:
+            _pull(status)
+
         elif status.action == Env_Repo_Action.Switch:
             _list_branches(status)
             _check_branch_name(status.branch)
@@ -251,7 +274,10 @@ def handle_request() -> 'None':
 
         else:
             _list_branches(status)
-            status.write(Env_Repo_State.OK, f'Connected to {status.url}')
+            if status.branches:
+                status.write(Env_Repo_State.OK, f'Connected to {status.url}')
+            else:
+                status.write(Env_Repo_State.OK, f'Connected to {status.url}, the repository is empty')
 
     except RequestError as exception:
         status.write(Env_Repo_State.Error, exception.message)

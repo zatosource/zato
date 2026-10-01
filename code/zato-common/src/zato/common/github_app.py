@@ -84,9 +84,10 @@ _tokens:'dict[str, tuple[float, str]]' = {}
 # ################################################################################################################################
 
 class GitHubAppError(Exception):
-    def __init__(self, message:'str') -> 'None':
+    def __init__(self, message:'str', status:'int'=0) -> 'None':
         super().__init__(message)
         self.message = message
+        self.status  = status
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -159,7 +160,7 @@ def _call_api(method:'str', path:'str', auth:'str', data:'anydict | None'=None) 
 
     except HTTPError as exception:
         message = _get_error_message(exception)
-        raise GitHubAppError(f'GitHub answered {exception.code} to {method} {path}: {message}')
+        raise GitHubAppError(f'GitHub answered {exception.code} to {method} {path}: {message}', exception.code)
 
     except URLError as exception:
         raise GitHubAppError(f'GitHub could not be reached for {method} {path}: {exception.reason}')
@@ -239,6 +240,19 @@ def read_app(link_dir:'str') -> 'anydict | None':
         return None
 
     return out
+
+# ################################################################################################################################
+
+def forget_app(link_dir:'str') -> 'None':
+    """ Removes what is kept about the App, which is what happens once GitHub says the App is gone.
+    """
+    for path in (_get_config_path(link_dir), _get_key_path(link_dir)):
+        if os.path.exists(path):
+            os.remove(path)
+
+    _ = _tokens.pop(link_dir, None)
+
+    logger.info('GitHub App forgotten in %s', link_dir)
 
 # ################################################################################################################################
 
@@ -379,7 +393,14 @@ def get_installation_token(link_dir:'str') -> 'str':
 
     jwt = _get_jwt(link_dir, app)
 
-    response = _call_api('POST', f'/app/installations/{app["installation_id"]}/access_tokens', f'Bearer {jwt}')
+    # A 404 here means the App or its installation was deleted on GitHub, so what is kept about it is of no use any more.
+    try:
+        response = _call_api('POST', f'/app/installations/{app["installation_id"]}/access_tokens', f'Bearer {jwt}')
+    except GitHubAppError as exception:
+        if exception.status == 404:
+            forget_app(link_dir)
+            raise GitHubAppError(f'GitHub App {app["name"]} no longer exists on GitHub, click Connect to create a new one', 404)
+        raise
 
     if not isinstance(response, dict) or 'token' not in response:
         raise GitHubAppError('GitHub did not answer with an installation token')
@@ -409,9 +430,10 @@ def _get_expires_at(response:'anydict') -> 'float':
 # ################################################################################################################################
 
 def list_repositories(token:'str') -> 'strlist':
-    """ Returns the full names of the repositories the installation may read.
+    """ Returns the full names of the repositories the installation may read, the newest first.
     """
     out:'strlist' = []
+    found:'list[tuple[str, str]]' = []
     page = 1
 
     while True:
@@ -423,14 +445,18 @@ def list_repositories(token:'str') -> 'strlist':
         repositories = response.get('repositories') or []
 
         for item in repositories:
-            out.append(str(item['full_name']))
+            found.append((str(item['created_at']), str(item['full_name'])))
 
         if len(repositories) < 100:
             break
 
         page += 1
 
-    out.sort()
+    found.sort(reverse=True)
+
+    for _, full_name in found:
+        out.append(full_name)
+
     return out
 
 # ################################################################################################################################

@@ -39,6 +39,9 @@ _Max_Status_Lines = 40
 
 _Heads_Prefix = 'refs/heads/'
 
+# The environment variables that name the project directory, the first one found is the one used.
+_Project_Root_Keys = ('Zato_Project_Root', 'Zato_Hot_Deploy_Dir', 'ZATO_HOT_DEPLOY_DIR')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -167,9 +170,6 @@ def _list_branches(status:'Status') -> 'strstrdict':
         if ref.startswith(_Heads_Prefix):
             out[ref[len(_Heads_Prefix):]] = commit
 
-    if not out:
-        raise RequestError(f'No branches found in {status.url}')
-
     status.branches = sorted(out)
     return out
 
@@ -199,6 +199,75 @@ def _switch(status:'Status', branches:'strstrdict') -> 'None':
 
 # ################################################################################################################################
 
+def _get_checkout_dir() -> 'str':
+    """ Returns the git checkout that the project directory this dashboard was started with is in.
+    """
+    project_root = ''
+
+    for key in _Project_Root_Keys:
+        value = os.environ.get(key, '')
+        if value:
+            project_root = value.split(':')[0].strip()
+            break
+
+    if not project_root:
+        raise RequestError(f'No project directory is configured, set {_Project_Root_Keys[0]}')
+
+    if not os.path.isdir(project_root):
+        raise RequestError(f'Project directory {project_root} does not exist')
+
+    command = ['git', 'rev-parse', '--show-toplevel']
+
+    try:
+        result = run(command, stdout=PIPE, stderr=PIPE, cwd=project_root, timeout=_Git_Timeout, text=True)
+    except (OSError, TimeoutExpired) as exception:
+        raise RequestError(f'Git could not be run in {project_root}: {exception}')
+
+    if result.returncode != 0:
+        raise RequestError(f'Project directory {project_root} is not in a git checkout')
+
+    out = result.stdout.strip()
+    return out
+
+# ################################################################################################################################
+
+def _pull(status:'Status') -> 'None':
+    """ Runs git pull in the checkout the project is in, with the user's own keys or the App's token.
+    """
+    repo_dir = _get_checkout_dir()
+
+    status.write(Env_Repo.State_Pulling, f'Pulling {status.url} in {repo_dir}')
+
+    try:
+        auth = get_git_auth_for_url(get_link_dir(), status.url)
+    except GitHubAppError as exception:
+        raise RequestError(exception.message)
+
+    command = ['git']
+    command.extend(auth)
+    command.extend(['pull', '--ff-only'])
+
+    env = dict(os.environ)
+    env['GIT_TERMINAL_PROMPT'] = '0'
+    env['GIT_SSH_COMMAND'] = f'ssh -o BatchMode=yes -i {_get_key_path()}'
+
+    try:
+        result = run(command, stdout=PIPE, stderr=PIPE, cwd=repo_dir, env=env, timeout=_Git_Timeout, text=True)
+    except TimeoutExpired:
+        raise RequestError(f'GitHub did not answer in {_Git_Timeout} seconds for {status.url}')
+    except OSError as exception:
+        raise RequestError(f'Git could not be run: {exception}')
+
+    status.add_lines(result.stderr)
+    status.add_lines(result.stdout)
+
+    if result.returncode != 0:
+        raise RequestError(f'Pull of {status.url} failed, exit code {result.returncode}')
+
+    status.write(Env_Repo.State_Pulled, f'Pulled {status.url} in {repo_dir}')
+
+# ################################################################################################################################
+
 def _disconnect(status:'Status') -> 'None':
     """ Removes current.json, which is all that ties this dashboard to the repository.
     """
@@ -220,12 +289,18 @@ def _handle(action:'str', url:'str', branch:'str') -> 'None':
             _disconnect(status)
             return
 
+        if action == Env_Repo.Action_Pull:
+            _pull(status)
+            return
+
         branches = _list_branches(status)
 
         if action == Env_Repo.Action_Switch:
             _switch(status, branches)
-        else:
+        elif branches:
             status.write(Env_Repo.State_OK, f'Connected to {url}')
+        else:
+            status.write(Env_Repo.State_OK, f'Connected to {url}, the repository is empty')
 
     except RequestError as exception:
         status.write(Env_Repo.State_Error, exception.message)

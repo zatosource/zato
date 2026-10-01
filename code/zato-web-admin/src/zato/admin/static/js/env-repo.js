@@ -1,10 +1,11 @@
 $.fn.zato.envRepo = {};
 
-// One button on the right. Connect with no address creates this dashboard's GitHub App and installs it, which is
+// One button on the right. Connect with no App yet creates this dashboard's GitHub App and installs it, which is
 // two pages on GitHub, then the repositories the App may read fill the address field. Connect with an address checks it
 // with GitHub and lists the branches, and once they are listed, Connect again switches the environment over to the branch
 // chosen. When GitHub refuses, the button reads Allow access and opens the App's page to add the repository on, or without
-// an App, GitHub's deploy key page, then waits until GitHub lets us in.
+// an App, GitHub's deploy key page, then waits until GitHub lets us in. Once the address is the repository that runs now,
+// the button reads Pull and Push stands next to it.
 
 $.fn.zato.envRepo.config = {
     apiPrefix: '/zato/env-repo/',
@@ -33,6 +34,9 @@ $.fn.zato.envRepo.config = {
     appStateCreated: 'created',
     appStateInstalled: 'installed',
     addressKey: 'zato.envRepo.address',
+    creatingKey: 'zato.envRepo.creating',
+    hintPlacement: 'right',
+    hintTheme: 'dark',
 };
 
 $.fn.zato.envRepo.state = {
@@ -46,8 +50,9 @@ $.fn.zato.envRepo.state = {
     branchTimer: null,
     keyDeadline: null,
     repo: null,
-    isCreating: false,
     isConnected: false,
+    hint: null,
+    knownRepos: null,
     isQuiet: false,
     lastMessage: '',
     lineCount: 0,
@@ -72,8 +77,9 @@ $.fn.zato.envRepo.init = function() {
     state.installUrl = $('#repo-form').data('install-url');
     $('#branch-placeholder').html($.fn.zato.empty_value);
 
-    $('#create-button').on('click', $.fn.zato.envRepo.handleCreate);
     $('#disconnect-button').on('click', $.fn.zato.envRepo.handleDisconnect);
+    $('#push-button').on('click', $.fn.zato.envRepo.handlePush);
+    $('#repo-branch').on('change', $.fn.zato.envRepo.handleBranchChange);
     $('#copy-key').on('click', $.fn.zato.envRepo.handleCopyKey);
     $('#repo-url').on('input', $.fn.zato.envRepo.handleUrlInput);
 
@@ -83,14 +89,11 @@ $.fn.zato.envRepo.init = function() {
         $.fn.zato.envRepo.handleSubmit();
     });
 
-    // Back from GitHub, the address of the new repository is what comes next.
-    $(window).on('focus', function() {
-        if(state.isCreating && !$('#repo-url').val().trim()) {
-            $('#repo-url').focus();
-        }
-    });
-
+    $.fn.zato.envRepo.initHint();
     $.fn.zato.envRepo.updateSide();
+
+    // Back from GitHub with a repository just created, the App knows about it already.
+    $(window).on('focus', $.fn.zato.envRepo.handleFocus);
 
     // What GitHub's pages send the browser back with is read once and taken off the address bar.
     const params = new URLSearchParams(window.location.search);
@@ -122,74 +125,65 @@ $.fn.zato.envRepo.init = function() {
         $.fn.zato.envRepo.handleConnect();
     }
     else {
-        $.fn.zato.envRepo.loadRepos(isInstalledNow);
+        $.fn.zato.envRepo.pickRepo(isInstalledNow);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The repositories the App may read go to the field's list, and one alone goes to the field itself. Right after the
-// installation that one is connected without further ado, and several are left for the user to pick from.
-$.fn.zato.envRepo.loadRepos = function(shouldConnect) {
-
-    const list = $('#repo-list');
-
-    $.fn.zato.envRepo.fetchRepos(function(repos) {
-
-        list.empty();
-
-        repos.forEach(function(fullName) {
-            list.append($('<option></option>').attr('value', 'https://github.com/' + fullName));
-        });
-
-        if($('#repo-url').val().trim()) {
-            return;
-        }
-
-        if(repos.length === 1) {
-            $('#repo-url').val('https://github.com/' + repos[0]);
-            $.fn.zato.envRepo.updateSide();
-
-            if(shouldConnect) {
-                $.fn.zato.envRepo.handleConnect();
-            }
-        }
-        else if(shouldConnect) {
-            $('#repo-url').focus();
-        }
-
-    }, function(errorMessage) {
-        $.fn.zato.envRepo.showStatus(errorMessage, false);
-    });
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The link on the left is what makes sense now - Create when there is no address, Disconnect when the address
-// is the repository that runs now and its branches are listed, nothing otherwise.
-$.fn.zato.envRepo.updateSide = function() {
+// Whether the address is the repository that runs now, with its branches listed.
+$.fn.zato.envRepo.isCurrent = function() {
 
     const state = $.fn.zato.envRepo.state;
     const address = $('#repo-url').val().trim();
     const currentUrl = $('#repo-url').data('current-url');
-    const isCurrent = state.isConnected && state.mode === 'switch' && address === currentUrl;
 
-    $('#create-button').toggleClass('hidden', address !== '');
-    $('#disconnect-button').toggleClass('hidden', !isCurrent);
+    const out = state.isConnected && (state.mode === 'switch' || state.mode === 'pull') && address === currentUrl;
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A repository just created has no key yet, so the next step is to allow access, not to connect.
-$.fn.zato.envRepo.handleCreate = function() {
+// The chip on the left says whether the repository that runs now is the one connected to, Disconnect stands next to it
+// when it is, and Push stands by the button then too.
+$.fn.zato.envRepo.updateSide = function() {
 
-    $.fn.zato.envRepo.state.isCreating = true;
-    $.fn.zato.envRepo.stopAll();
-    $.fn.zato.envRepo.resetFlow();
-    $.fn.zato.envRepo.setMode('allow');
+    const chip = $('#connection-chip');
+    const isCurrent = $.fn.zato.envRepo.isCurrent();
 
-    $('#repo-url').val('');
-    $.fn.zato.envRepo.updateSide();
+    chip.toggleClass('env-repo-chip-on', isCurrent);
+    chip.toggleClass('env-repo-chip-off', !isCurrent);
+    chip.text(chip.data(isCurrent ? 'connected-label' : 'not-connected-label'));
+
+    $('#disconnect-button').toggleClass('hidden', !isCurrent);
+    $('#push-button').toggleClass('hidden', !isCurrent);
+
+    $.fn.zato.envRepo.updateHint();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.envRepo.handlePush = function() {
+    alert('Push clicked');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// With the repository that runs now, the branch that runs is pulled and any other one is switched to.
+$.fn.zato.envRepo.handleBranchChange = function() {
+
+    const state = $.fn.zato.envRepo.state;
+
+    if(state.mode !== 'switch' && state.mode !== 'pull') {
+        return;
+    }
+
+    if(!$.fn.zato.envRepo.isCurrent()) {
+        return;
+    }
+
+    const isCurrentBranch = $('#repo-branch').val() === $('#repo-url').data('current-branch');
+    $.fn.zato.envRepo.setMode(isCurrentBranch ? 'pull' : 'switch');
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -228,26 +222,29 @@ $.fn.zato.envRepo.handleCopyKey = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A new address starts the flow over, unless the page is waiting for the address of a repository just created.
+// A new address starts the flow over.
 $.fn.zato.envRepo.handleUrlInput = function() {
 
     $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.resetFlow();
     $.fn.zato.envRepo.clearFieldError();
-    $.fn.zato.envRepo.updateSide();
-
-    if(!$.fn.zato.envRepo.state.isCreating) {
-        $.fn.zato.envRepo.setMode('connect');
-    }
+    $.fn.zato.envRepo.setMode('connect');
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The mode is connect, switch or allow - the first two read Connect, the branch row is what tells them apart.
+// The mode is connect, switch, allow or pull - the first two read Connect, the branch row is what tells them apart.
 $.fn.zato.envRepo.setMode = function(mode) {
 
     const button = $('#action-button');
-    const label = mode === 'allow' ? 'allow-label' : 'connect-label';
+    let label = 'connect-label';
+
+    if(mode === 'allow') {
+        label = 'allow-label';
+    }
+    else if(mode === 'pull') {
+        label = 'pull-label';
+    }
 
     $.fn.zato.envRepo.state.mode = mode;
     button.val(button.data(label));
@@ -348,7 +345,7 @@ $.fn.zato.envRepo.appendStatus = function(status) {
         if(status.state === 'error') {
             kind = 'error';
         }
-        else if(status.state === 'ok' || status.state === 'switched' || status.state === 'disconnected') {
+        else if(status.state === 'ok' || status.state === 'switched' || status.state === 'disconnected' || status.state === 'pulled') {
             kind = 'ok';
         }
 
@@ -377,6 +374,9 @@ $.fn.zato.envRepo.handleSubmit = function() {
 
     if(mode === 'allow') {
         $.fn.zato.envRepo.handleAllow();
+    }
+    else if(mode === 'pull') {
+        $.fn.zato.envRepo.handlePull();
     }
     else if(mode === 'switch') {
         $.fn.zato.envRepo.handleSwitch();
@@ -417,6 +417,7 @@ $.fn.zato.envRepo.handleConnect = function() {
 
     $.fn.zato.envRepo.stopAll();
     $.fn.zato.envRepo.resetFlow();
+    $.fn.zato.envRepo.updateHint();
 
     state.repo = $.fn.zato.envRepo.parseAddress(address);
     state.isQuiet = false;
@@ -462,17 +463,26 @@ $.fn.zato.envRepo.onRefused = function(status) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Connected - the branches take the spinner's place and Connect now means the switch to the one chosen.
+// Connected - the branches take the spinner's place and Connect now means the switch to the one chosen,
+// or Pull if the one chosen is the one that runs now.
 $.fn.zato.envRepo.onConnected = function(status) {
 
     const state = $.fn.zato.envRepo.state;
     const branches = status.branches || [];
 
     state.isQuiet = false;
-    state.isCreating = false;
 
     $.fn.zato.envRepo.stopAll();
     $('#key-help').addClass('hidden');
+
+    // A repository with no branches is an empty one, there is nothing in it to switch to yet.
+    if(!branches.length) {
+        $.fn.zato.envRepo.appendLine('Connected to ' + state.repo.full_name + ', the repository is empty', 'ok');
+        state.log.setState('done');
+        $.fn.zato.envRepo.setBranchView('branch-placeholder');
+        $.fn.zato.envRepo.setMode('connect');
+        return;
+    }
 
     $.fn.zato.envRepo.appendLine('Connected to ' + state.repo.full_name + ', ' + branches.length + ' ' + (branches.length === 1 ? 'branch' : 'branches'), 'ok');
     state.log.setState('done');
@@ -481,6 +491,7 @@ $.fn.zato.envRepo.onConnected = function(status) {
     $.fn.zato.envRepo.setBranchView('repo-branch');
 
     $.fn.zato.envRepo.setMode('switch');
+    $.fn.zato.envRepo.handleBranchChange();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -580,79 +591,6 @@ $.fn.zato.envRepo.fillBranches = function(branches) {
     }
 
     select.val(selected);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.handleSwitch = function() {
-
-    const state = $.fn.zato.envRepo.state;
-    const branch = $('#repo-branch').val();
-
-    $.fn.zato.envRepo.stopAll();
-    $.fn.zato.envRepo.clearStatus();
-
-    state.isQuiet = false;
-
-    $('#action-button').prop('disabled', true);
-    $.fn.zato.envRepo.startLog(state.repo, 'Switching to ' + state.repo.full_name + ' at ' + branch);
-
-    $.fn.zato.envRepo.sendRequest('switch', function() {
-        $.fn.zato.envRepo.pollStatus(['switching', 'switched'], $.fn.zato.envRepo.onSwitchDone);
-    }, function(errorMessage) {
-        $.fn.zato.envRepo.onSwitchDone({state: 'error', message: errorMessage, lines: []});
-    });
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.envRepo.onSwitchDone = function(status) {
-
-    const config = $.fn.zato.envRepo.config;
-    const state = $.fn.zato.envRepo.state;
-
-    $.fn.zato.envRepo.appendStatus(status);
-
-    // A host restarts the environment after this state, without one the switch is already complete.
-    if(status.state === 'switching') {
-        $.fn.zato.envRepo.appendLine('The environment is restarting, the loading page opens once it is up', null);
-        $.fn.zato.envRepo.waitForDeployPage();
-    }
-    else if(status.state === 'switched' || status.state === 'disconnected') {
-        state.log.setState('done');
-        setTimeout(function() {
-            window.location.reload();
-        }, config.reloadDelay);
-    }
-    else {
-        state.log.setState('failed');
-        $.fn.zato.envRepo.setMode(state.mode);
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Disconnects from the repository that runs now, a host goes back to the public blueprint.
-$.fn.zato.envRepo.handleDisconnect = function(e) {
-
-    e.preventDefault();
-
-    const state = $.fn.zato.envRepo.state;
-    const repo = $.fn.zato.envRepo.parseAddress($('#repo-url').data('current-url') || $('#repo-url').val().trim());
-
-    $.fn.zato.envRepo.stopAll();
-    $.fn.zato.envRepo.resetFlow();
-
-    state.isQuiet = false;
-
-    $('#action-button').prop('disabled', true);
-    $.fn.zato.envRepo.startLog(repo, 'Disconnecting from ' + repo.full_name);
-
-    $.fn.zato.envRepo.sendRequest('disconnect', function() {
-        $.fn.zato.envRepo.pollStatus(['switching', 'disconnected'], $.fn.zato.envRepo.onSwitchDone);
-    }, function(errorMessage) {
-        $.fn.zato.envRepo.onSwitchDone({state: 'error', message: errorMessage, lines: []});
-    });
 };
 
 // ////////////////////////////////////////////////////////////////////////

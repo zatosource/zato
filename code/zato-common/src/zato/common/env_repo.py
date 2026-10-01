@@ -39,12 +39,15 @@ class Env_Repo:
     Action_Check      = 'check'
     Action_Switch     = 'switch'
     Action_Disconnect = 'disconnect'
+    Action_Pull       = 'pull'
 
     State_Checking     = 'checking'
     State_OK           = 'ok'
     State_Switching    = 'switching'
     State_Switched     = 'switched'
     State_Disconnected = 'disconnected'
+    State_Pulling      = 'pulling'
+    State_Pulled       = 'pulled'
     State_Error        = 'error'
 
     Blueprint_Owner = 'zatosource'
