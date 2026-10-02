@@ -14,9 +14,9 @@
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
-	test-hl7 test-fhir-bulk-export test-ccda hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
+	test-hl7 test-fhir-bulk-export test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
-	test-audit-log test-audit-export elastic-demo test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
+	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
@@ -807,6 +807,20 @@ test-ccda: ## C-CDA to FHIR - the converter, the service facade, enmasse, a live
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
+test-documents: ## Documents in attachments, files and IHE XDM packages - the unpacker, the service input and a live server with the demo IMAP server.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/documents/ \
+		$(CURDIR)/code/tests/python/zato-server/documents/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_documents -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/documents_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_documents_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
 test-mcp-oauth: ## OAuth for MCP gateways - simulated clients signing in through Keycloak.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -830,10 +844,6 @@ test-audit-export: ## Audit log export to OpenTelemetry - the offline mapping an
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_export_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
-
-elastic-demo: ## Zato exporting its audit log to Elasticsearch over OTLP, with Kibana to watch the events - runs until Ctrl+C.
-	ZATO_TEST_BASE_DIR=$(CURDIR) PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib \
-		$(ZATO_PY) $(CURDIR)/code/tests/python/zato-server/audit_export_live/elastic_demo.py
 
 test-graphql: ## GraphQL live tests.
 	$(ZATO_PY) -m pytest \
@@ -1322,7 +1332,7 @@ Zato_Test_Toolchain := \
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
-	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-ccda test-llm test-rule-engine test-enmasse test-audit-export
+	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui

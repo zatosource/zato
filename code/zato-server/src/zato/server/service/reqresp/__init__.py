@@ -17,9 +17,10 @@ from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
 # Zato
-from zato.common.api import simple_types
+from zato.common.api import IMAPAttachment, IMAPMessage, simple_types
 from zato.common.hl7.fhir.bulk_export.file import BulkExportFile
 from zato.common.marshal_.api import Model
+from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.json_internal import loads
 from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
@@ -222,8 +223,9 @@ class Request:
         self.encrypt_func = encrypt_func
 
         # A bulk export file is the input as it is, whatever the service declares - the service reads it lazily,
-        # and so is the bundle a C-CDA channel made of the document it received
-        if isinstance(self.payload, (BulkExportFile, Bundle)):
+        # and so are the bundle a C-CDA channel made of the document it received and the messages, attachments
+        # and files that the IMAP and file transfer schedulers hand over
+        if isinstance(self.payload, (BulkExportFile, Bundle, FileTransferItem, IMAPAttachment, IMAPMessage)):
             self.input = self.payload
 
         elif is_io:

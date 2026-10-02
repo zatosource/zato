@@ -22,8 +22,10 @@ from zato.common.defaults import http_plain_server_port
 # ################################################################################################################################
 
 if 0:
+    from zato.common.documents.model import doclist
     from zato.common.ext.imbox import Imbox
     from zato.common.typing_ import any_, iterator_, stranydict, strnone
+    doclist = doclist
     Imbox = Imbox
     iterator_ = iterator_
     stranydict = stranydict
@@ -2325,6 +2327,19 @@ class SMTPMessage:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _uid_as_str(uid:'any_') -> 'str':
+    """ Generic IMAP servers report uids as bytes while Microsoft 365 uses str, this normalizes them.
+    """
+    if isinstance(uid, bytes):
+        out = uid.decode('utf-8')
+    else:
+        out = uid
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class IMAPMessage:
     def __init__(self, uid:'str', conn:'Imbox', data:'any_') -> 'None':
         self.uid = uid
@@ -2341,6 +2356,41 @@ class IMAPMessage:
 
     def mark_seen(self):
         raise NotImplementedError('Must be implemented by subclasses')
+
+    def to_dict(self) -> 'stranydict':
+        """ The message as a JSON-friendly dict - what the audit log records and what a service returning the message
+        it received answers with. Attachments are described by name, type and size rather than carried along.
+        """
+        attachments = []
+
+        for attachment in self.data.attachments:
+            attachments.append({
+                'filename': attachment['filename'],
+                'content_type': attachment['content-type'],
+                'size': attachment['size'],
+            })
+
+        out:'stranydict' = {
+            'uid': _uid_as_str(self.uid),
+            'subject': self.data.subject,
+            'sent_from': self.data.sent_from,
+            'body': self.data.body,
+            'attachments': attachments,
+        }
+        return out
+
+    def documents(self) -> 'doclist':
+        """ The documents of every attachment of this message, in the order the attachments come in.
+        """
+        from zato.common.documents.unpack import read_documents
+
+        out = []
+
+        for attachment in self.data.attachments:
+            data = attachment['content'].getvalue()
+            out.extend(read_documents(data, file_name=attachment['filename'], mime_type=attachment['content-type']))
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2378,6 +2428,96 @@ class IMAPAttachment:
         self_id = hex(id(self))
         return '<{} at {}, filename:`{}`, content_type:`{}`, size:`{}`, msg_uid:`{}`>'.format(
             class_name, self_id, self.filename, self.content_type, self.size, self.msg_uid)
+
+    def to_dict(self) -> 'stranydict':
+        """ The attachment as a JSON-friendly dict - what the audit log records and what a service returning the attachment
+        it received answers with. The bytes become text, size is still the byte count.
+        """
+        out:'stranydict' = {
+            'msg_uid': _uid_as_str(self.msg_uid),
+            'subject': self.subject,
+            'sent_from': self.sent_from,
+            'filename': self.filename,
+            'content_type': self.content_type,
+            'size': self.size,
+            'content_id': self.content_id,
+            'data': self.data.decode('utf8', 'replace'),
+        }
+        return out
+
+    def documents(self) -> 'doclist':
+        """ The documents this attachment carries - the attachment itself unless it is an archive, in which case
+        each file inside, and each document the metadata names if the archive is an IHE XDM package.
+        """
+        from zato.common.documents.unpack import read_documents
+
+        out = read_documents(self.data, file_name=self.filename, mime_type=self.content_type)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Documents:
+    """ Documents arriving inside email attachments, files and archives, and how the containers they come in are read.
+    """
+
+    # What every zip archive begins with
+    Zip_Magic = b'PK\x03\x04'
+
+    # The type of a document whose container says nothing about it and whose name tells nothing either
+    Default_Mime_Type = 'application/octet-stream'
+
+    # The types that the names of clinical documents mean, the same on every system - anything else is left
+    # to what the system itself knows about file names
+    Mime_Types = {
+        '.xml':  'application/xml',
+        '.cda':  'application/cda+xml',
+        '.ccda': 'application/cda+xml',
+        '.pdf':  'application/pdf',
+        '.json': 'application/json',
+        '.txt':  'text/plain',
+        '.zip':  'application/zip',
+    }
+
+    class Source:
+        Attachment = 'attachment'
+        Zip = 'zip'
+        XDM = 'xdm'
+
+    class Reason:
+        Bad_Zip = 'bad-zip'
+        No_Metadata = 'no-metadata'
+        Missing_File = 'missing-file'
+        Hash_Mismatch = 'hash-mismatch'
+        Size_Mismatch = 'size-mismatch'
+
+    class XDM:
+        """ IHE Cross-Enterprise Document Media Interchange - a zip with the documents of each submission set
+        in a subdirectory of IHE_XDM, described by the ebRIM metadata file next to them.
+        """
+        Dir = 'IHE_XDM'
+        Metadata_File = 'METADATA.XML'
+
+        # What a Direct message's subject carries when the message holds an XDM package
+        Subject_Marker = 'XDM/1.0/DDM'
+
+        # The metadata's XML namespaces
+        NS_RIM = 'urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0'
+        NS_LCM = 'urn:oasis:names:tc:ebxml-regrep:xsd:lcm:3.0'
+
+        class Slot:
+            URI = 'URI'
+            Hash = 'hash'
+            Size = 'size'
+            Creation_Time = 'creationTime'
+            Language_Code = 'languageCode'
+
+        # The classification and identification schemes of a document entry
+        class Scheme:
+            Class_Code = 'urn:uuid:41a5887f-8865-4c09-adf7-e362475b143a'
+            Type_Code  = 'urn:uuid:f0306f51-975f-434e-a61c-c59651d33983'
+            Patient_ID = 'urn:uuid:58a6f841-87b3-4a3e-92fd-a8ffeff98427'
+            Unique_ID  = 'urn:uuid:2e82c1f6-a085-4c72-9da3-8640a32e42ab'
 
 # ################################################################################################################################
 # ################################################################################################################################
