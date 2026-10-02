@@ -247,8 +247,8 @@ def main() -> 'None':
         stack = start_stack()
 
         # .. then the server, exporting from its very start ..
-        directory = tempfile.mkdtemp(prefix='zato_opentelemetry_demo_')
-        zato = ZatoEnvironment(directory, password_prefix='opentelemetry.demo')
+        directory = tempfile.mkdtemp(prefix='zato_elastic_demo_')
+        zato = ZatoEnvironment(directory, password_prefix='elastic.demo')
         parts.add('zato environment', zato.stop)
 
         zato.create()
@@ -260,7 +260,7 @@ def main() -> 'None':
         agent_key = 'billing.assistant.' + CryptoManager.generate_hex_string()
         partner_key = 'partner.portal.' + CryptoManager.generate_hex_string()
 
-        _ = zato.import_yaml('opentelemetry_demo.yaml', build_definitions(agent_key, partner_key))
+        _ = zato.import_yaml('elastic_demo.yaml', build_definitions(agent_key, partner_key))
         wait_for_tools(server_address + ModuleCtx.Gateway_Path, agent_key)
 
         _print_banner(stack, server_address)

@@ -16,7 +16,7 @@
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
 	test-hl7 test-fhir-bulk-export test-ccda hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
-	test-audit-log test-audit-export opentelemetry-demo test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
+	test-audit-log test-audit-export elastic-demo test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
@@ -831,9 +831,9 @@ test-audit-export: ## Audit log export to OpenTelemetry - the offline mapping an
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-opentelemetry-demo: ## Zato exporting its audit log to Elasticsearch over OTLP, with Kibana to watch the events - runs until Ctrl+C.
+elastic-demo: ## Zato exporting its audit log to Elasticsearch over OTLP, with Kibana to watch the events - runs until Ctrl+C.
 	ZATO_TEST_BASE_DIR=$(CURDIR) PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib \
-		$(ZATO_PY) $(CURDIR)/code/tests/python/zato-server/audit_export_live/opentelemetry_demo.py
+		$(ZATO_PY) $(CURDIR)/code/tests/python/zato-server/audit_export_live/elastic_demo.py
 
 test-graphql: ## GraphQL live tests.
 	$(ZATO_PY) -m pytest \

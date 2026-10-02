@@ -44,9 +44,9 @@ class ModuleCtx:
     Kibana_Image = 'docker.elastic.co/kibana/kibana:9.5.4'
 
     # The network the two containers talk over and their names, so a stale run's can be removed
-    Network          = 'zato-otel-demo'
-    ES_Container     = 'zato-otel-demo-elasticsearch'
-    Kibana_Container = 'zato-otel-demo-kibana'
+    Network          = 'zato-elastic-demo'
+    ES_Container     = 'zato-elastic-demo-elasticsearch'
+    Kibana_Container = 'zato-elastic-demo-kibana'
 
     # The ports inside the containers
     ES_Port     = 9200
