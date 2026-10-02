@@ -14,7 +14,7 @@
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
-	test-hl7 hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
+	test-hl7 test-fhir-bulk-export hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
@@ -764,6 +764,26 @@ test-bearer: ## Inbound and outgoing bearer token live tests, including private 
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
+test-fhir-bulk-export: ## FHIR bulk exports - the export program against the fake FHIR server, the file object, the destinations, enmasse, a live server and the Dashboard tab.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/fhir_bulk_export/ \
+		$(CURDIR)/code/tests/python/zato-server/destinations/test_dispatch.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_bulk_export_outgoing_fhir.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_fhir_bulk_export -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/fhir_bulk_export_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_fhir_bulk_export_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_fhir_outconn_bulk_export.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
 test-mcp-oauth: ## OAuth for MCP gateways - simulated clients signing in through Keycloak.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1275,7 +1295,7 @@ Zato_Test_Toolchain := \
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
-	test-ibm-mq test-kafka test-sdk test-hl7 test-llm test-rule-engine test-enmasse test-audit-export
+	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-llm test-rule-engine test-enmasse test-audit-export
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui

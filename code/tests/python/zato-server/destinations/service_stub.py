@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# A service offering only what delivering to a destination reaches for - the four facades, its
+# A service offering only what delivering to a destination reaches for - the facades, invoke, its
 # correlation id, the message it was given and the server it runs on. Each facade remembers the
 # calls made through it, so a test can say which connection was reached, with what, and whether
 # the connection's own audit log was turned off for the call.
@@ -274,6 +274,79 @@ class EMailAPIRecorder:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# What the connections a bulk export delivers to answer with
+Kafka_Response = {'topic': 'fhir.exports', 'offset': 7}
+SFTP_Response = {'is_ok': True}
+Service_Response = {'received': True}
+
+# ################################################################################################################################
+
+class KafkaInvokerRecorder:
+    """ Stands in for the invoker self.out.kafka hands out.
+    """
+    def __init__(self, connection:'str', calls:'anylist') -> 'None':
+        self.connection = connection
+        self.calls = calls
+
+    def send(self, data:'any_', *, key:'any_'=None, headers:'any_'=None) -> 'anydict':
+        self.calls.append((self.connection, data, key, headers))
+        return Kafka_Response
+
+# ################################################################################################################################
+
+class KafkaFacadeRecorder:
+    """ Stands in for self.out.kafka.
+    """
+    def __init__(self) -> 'None':
+        self.calls:'anylist' = []
+
+    def __getitem__(self, connection:'str') -> 'KafkaInvokerRecorder':
+        out = KafkaInvokerRecorder(connection, self.calls)
+        return out
+
+# ################################################################################################################################
+
+class OutgoingStub:
+    """ Stands in for self.out - the namespace Kafka is reached under.
+    """
+    def __init__(self) -> 'None':
+        self.kafka = KafkaFacadeRecorder()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SFTPConnectionRecorder:
+    """ Stands in for the connection self.sftp hands out - what was uploaded or written, and where to.
+    """
+    def __init__(self, connection:'str', uploads:'anylist', writes:'anylist') -> 'None':
+        self.connection = connection
+        self.uploads = uploads
+        self.writes = writes
+
+    def upload(self, local_path:'str', remote_path:'str', *, recursive:'bool'=False, overwrite:'bool'=False) -> 'anydict':
+        self.uploads.append((self.connection, local_path, remote_path, recursive, overwrite))
+        return SFTP_Response
+
+    def write(self, data:'any_', remote_path:'str', *, overwrite:'bool'=False) -> 'anydict':
+        self.writes.append((self.connection, data, remote_path, overwrite))
+        return SFTP_Response
+
+# ################################################################################################################################
+
+class SFTPFacadeRecorder:
+    """ Stands in for self.sftp.
+    """
+    def __init__(self) -> 'None':
+        self.uploads:'anylist' = []
+        self.writes:'anylist' = []
+
+    def __getitem__(self, connection:'str') -> 'SFTPConnectionRecorder':
+        out = SFTPConnectionRecorder(connection, self.uploads, self.writes)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RequestStub:
     """ Stands in for self.request, carrying the message as it arrived.
     """
@@ -305,6 +378,11 @@ class ServiceStub:
         self.rest = RESTFacadeRecorder()
         self.mllp = MLLPFacadeRecorder()
         self.fhir = FHIRFacadeRecorder()
+        self.out = OutgoingStub()
+        self.sftp = SFTPFacadeRecorder()
+
+        # The services invoked as destinations - the name each was invoked under and with what
+        self.invocations:'anylist' = []
 
         # A server with the e-mail component turned off has no such facade at all
         if has_email:
@@ -314,6 +392,12 @@ class ServiceStub:
 
         self.destination = DestinationFacade()
         self.destination.init(request_payload)
+
+# ################################################################################################################################
+
+    def invoke(self, name:'str', request:'any_'=None, *, cid:'str'='', **kwargs:'any_') -> 'anydict':
+        self.invocations.append((name, request, cid))
+        return Service_Response
 
 # ################################################################################################################################
 # ################################################################################################################################

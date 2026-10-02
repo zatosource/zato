@@ -1,0 +1,45 @@
+/* ------------------------------------------------------------ */
+/* FHIR bulk export tab - the destinations picker               */
+/* ------------------------------------------------------------ */
+
+:root {
+    --fhir-bulk-export-badge-gap: 6px;
+    --fhir-bulk-export-badge-padding: 4px 8px;
+    --fhir-bulk-export-badge-remove-gap: 6px;
+    --fhir-bulk-export-picker-gap: 6px;
+    --fhir-bulk-export-picker-margin-top: 8px;
+    --fhir-bulk-export-option-width: 14em;
+}
+
+.fhir-bulk-export-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fhir-bulk-export-badge-gap);
+}
+
+.fhir-bulk-export-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--fhir-bulk-export-badge-padding);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.fhir-bulk-export-badge-remove {
+    display: inline-flex;
+    align-items: center;
+    margin-left: var(--fhir-bulk-export-badge-remove-gap);
+    color: inherit;
+}
+
+.fhir-bulk-export-picker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fhir-bulk-export-picker-gap);
+    margin-top: var(--fhir-bulk-export-picker-margin-top);
+}
+
+.fhir-bulk-export-destination-option {
+    width: var(--fhir-bulk-export-option-width);
+}

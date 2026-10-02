@@ -12,7 +12,7 @@ from copy import deepcopy
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HTTP_SOAP, KAFKA, \
+from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HL7, HTTP_SOAP, KAFKA, \
     SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import conn_type_to_alert_type, get_field_kinds as get_alert_field_kinds, \
@@ -40,8 +40,8 @@ from zato.server.generic.connection import GenericConnection
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.internal.generic.alert_settings import prepare_generic_alert_settings
-from zato.server.service.internal.health_check import delete_health_check_job, has_health_check_config, sync_health_check_job, \
-    validate_run_every
+from zato.server.service.internal.health_check import delete_health_check_job, has_bulk_export_config, has_health_check_config, \
+    sync_bulk_export_job, sync_health_check_job, validate_run_every
 from zato.server.service.internal.outgoing.file_transfer.schedule import delete_connection_jobs, resync_connection_jobs
 from zato.server.service.meta import DeleteMeta
 
@@ -72,9 +72,15 @@ extra_delete_attrs = ['type_']
 # ################################################################################################################################
 
 _health_check = HTTP_SOAP.HealthCheck
+_bulk = HL7.BulkExport
 
 # The generic connection types that carry a health check job, each with the connection type its job links back to
 _health_check_link_types = {
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: SchedulerLink.ConnType.FHIR_Outgoing,
+}
+
+# The generic connection types that carry a bulk export job - FHIR connections alone
+_bulk_export_link_types = {
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: SchedulerLink.ConnType.FHIR_Outgoing,
 }
 
@@ -165,6 +171,11 @@ def delete_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_')
     if instance.type_ in _health_check_link_types:
         opaque = parse_instance_opaque_attr(instance)
         delete_health_check_job(service, opaque.get(_health_check.Field_Job_ID))
+
+    # .. as does the bulk export job of a FHIR connection.
+    if instance.type_ in _bulk_export_link_types:
+        opaque = parse_instance_opaque_attr(instance)
+        delete_health_check_job(service, opaque.get(_bulk.Field_Job_ID))
 
     before_snapshot = get_model_snapshot(instance)
 
@@ -480,6 +491,13 @@ class _CreateEdit(_BaseService):
                 data[_health_check.Field_Run_Every] = run_every
                 conn.opaque[_health_check.Field_Run_Every] = run_every
 
+        # The same goes for a bulk export schedule
+        if data.type_ in _bulk_export_link_types:
+            if has_bulk_export_config(data):
+                run_every = validate_run_every(self, data[_bulk.Field_Run_Every], data[_bulk.Field_Run_Unit], 'Bulk export')
+                data[_bulk.Field_Run_Every] = run_every
+                conn.opaque[_bulk.Field_Run_Every] = run_every
+
         # AS2 outgoing connections are stored in the external database when one is configured,
         # under their local ids, without the offset they are known under everywhere else.
         is_ext = needs_ext_db(data.type_)
@@ -539,6 +557,13 @@ class _CreateEdit(_BaseService):
                         if previous_job_id := model_opaque.get(_health_check.Field_Job_ID):
                             data[_health_check.Field_Job_ID] = previous_job_id
                             conn.opaque[_health_check.Field_Job_ID] = previous_job_id
+
+                if data.type_ in _bulk_export_link_types:
+                    model_opaque = parse_instance_opaque_attr(model)
+                    if not data.get(_bulk.Field_Job_ID):
+                        if previous_job_id := model_opaque.get(_bulk.Field_Job_ID):
+                            data[_bulk.Field_Job_ID] = previous_job_id
+                            conn.opaque[_bulk.Field_Job_ID] = previous_job_id
 
                 # The audit export's payload flag is set through enmasse only and has no field in the Dashboard,
                 # so an edit that does not carry it keeps what was stored.
@@ -648,6 +673,10 @@ class _CreateEdit(_BaseService):
         # the job pings the connection and each ping lands in the audit log under the connection's health source.
         if data.type_ in _health_check_link_types:
             sync_health_check_job(self, data, public_id, _health_check_link_types[data.type_])
+
+        # .. and so can its bulk export job, which starts an export on the tab's schedule.
+        if data.type_ in _bulk_export_link_types:
+            sync_bulk_export_job(self, data, public_id, _bulk_export_link_types[data.type_])
 
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value

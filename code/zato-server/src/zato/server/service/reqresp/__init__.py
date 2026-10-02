@@ -18,6 +18,7 @@ from lxml.objectify import ObjectifiedElement
 
 # Zato
 from zato.common.api import simple_types
+from zato.common.hl7.fhir.bulk_export.file import BulkExportFile
 from zato.common.marshal_.api import Model
 from zato.common.json_internal import loads
 from zato.common.typing_ import cast_
@@ -219,7 +220,11 @@ class Request:
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
-        if is_io:
+        # A bulk export file is the input as it is, whatever the service declares - the service reads it lazily
+        if isinstance(self.payload, BulkExportFile):
+            self.input = self.payload
+
+        elif is_io:
 
             parsed = io_processor.parse_input(self.payload or {}, data_format, extra=self.channel_params, service=self.service)
 

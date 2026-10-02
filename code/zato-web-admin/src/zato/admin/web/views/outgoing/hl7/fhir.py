@@ -16,8 +16,10 @@ from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, \
     extract_security_id, Index as _Index, invoke_action_handler, method_allowed, ping_connection, SecurityList
 from zato.common.alerting.object_config import alert_type_fhir, Field_Prefix
-from zato.common.api import GENERIC, generic_attrs, HTTP_SOAP, SEC_DEF_TYPE
+from zato.common.api import GENERIC, generic_attrs, HL7, HTTP_SOAP, SEC_DEF_TYPE
 from zato.common.ext.bunch import Bunch
+from zato.common.hl7.fhir.fields import Bulk_Export_Fields, Bulk_Export_Names
+from zato.common.hl7.fields import get_defaults
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,6 +34,18 @@ _health_check_field_names = (
     _health_check.Field_Run_Every,
     _health_check.Field_Run_Unit,
     _health_check.Field_Job_ID,
+)
+
+# The Bulk export tab's fields, stored in the connection's opaque attributes
+_bulk = HL7.BulkExport
+_bulk_export_field_names = tuple(Bulk_Export_Names)
+_bulk_export_defaults = get_defaults(Bulk_Export_Fields)
+
+# The tab's checkboxes - their names carry no boolean prefix, so they are typed here
+_bulk_export_bool_names = (
+    _bulk.Field_Is_Active,
+    _bulk.Field_Delete_Files,
+    _bulk.Field_Delete_On_Server,
 )
 
 # The retry fields, stored in the connection's opaque attributes
@@ -62,8 +76,8 @@ class Index(_Index):
     input_required = 'cluster_id', 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
         'pool_size', 'security_name'
-    output_optional = ('extra',) + generic_attrs + _health_check_field_names + _retry_field_names + \
-        _delivery_field_names + _alert_field_names
+    output_optional = ('extra',) + generic_attrs + _health_check_field_names + _bulk_export_field_names + \
+        _retry_field_names + _delivery_field_names + _alert_field_names
     output_repeated = True
 
 # ################################################################################################################################
@@ -78,6 +92,15 @@ class Index(_Index):
             run_unit = None
 
         item[_health_check.Field_Run_Unit] = health_check_unit_for_form(run_unit)
+
+        # A false flag does not reach the item at all, which is what a missing checkbox field means,
+        # while any other field a connection does not carry shows its default
+        for name, default in _bulk_export_defaults.items():
+            if name not in item:
+                if name in _bulk_export_bool_names:
+                    item[name] = False
+                else:
+                    item[name] = default
 
         # The retry fields are opaque attributes - a connection that predates them carries no values, so the defaults show
         delivery_tab.fill_retry_row(item)
@@ -113,6 +136,7 @@ class Index(_Index):
             'edit_alerts_tab': alerts_tab.get_alerts_tab_context(edit_form, _alert_type),
             'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
             'delivery_tab_config': delivery_tab.get_delivery_tab_config(),
+            'bulk_export_field_names': _bulk_export_field_names,
         }
 
 # ################################################################################################################################
@@ -122,8 +146,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'is_internal', 'address', 'security_id', 'pool_size'
-    input_optional = ('is_active', 'extra') + generic_attrs + _health_check_field_names + _retry_field_names + \
-        _delivery_field_names + _alert_field_names
+    input_optional = ('is_active', 'extra') + generic_attrs + _health_check_field_names + _bulk_export_field_names + \
+        _retry_field_names + _delivery_field_names + _alert_field_names
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -156,6 +180,10 @@ class _CreateEdit(CreateEdit):
         # The form names the health check's unit in the singular, the scheduler in the plural
         if run_unit := input_dict.get(_health_check.Field_Run_Unit):
             input_dict[_health_check.Field_Run_Unit] = health_check_unit_to_scheduler[run_unit]
+
+        # An unchecked checkbox of the Bulk export tab arrives as None, a checked one as text
+        for name in _bulk_export_bool_names:
+            input_dict[name] = input_dict[name] is not None
 
         # A duration is stored as seconds, which is what its count and unit join into
         alerts_tab.join_unit_fields(_alert_type, input_dict)

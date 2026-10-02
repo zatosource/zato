@@ -36,6 +36,7 @@ from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views import groups
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
+from zato.admin.web.views.outgoing.hl7 import fhir_bulk_export as out_hl7_fhir_bulk_export
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
@@ -592,6 +593,10 @@ urlpatterns += [
         login_required(out_hl7_fhir.invoke_action), name='outgoing-hl7-fhir-invoke-action'),
     url(r'^zato/outgoing/hl7/fhir/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
         login_required(out_hl7_fhir.invoke), name='outgoing-hl7-fhir-invoke'),
+    url(r'^zato/outgoing/hl7/fhir/bulk-export/(?P<conn_id>[^/]*)/cluster/(?P<cluster_id>[^/]*)/run/$',
+        login_required(out_hl7_fhir_bulk_export.run), name='outgoing-hl7-fhir-bulk-export-run'),
+    url(r'^zato/outgoing/hl7/fhir/bulk-export/(?P<conn_id>[^/]*)/cluster/(?P<cluster_id>[^/]*)/$',
+        login_required(out_hl7_fhir_bulk_export.index), name='outgoing-hl7-fhir-bulk-export'),
 
     # .. HL7 MLLP
 

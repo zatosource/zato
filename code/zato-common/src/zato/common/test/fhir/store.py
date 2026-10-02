@@ -311,4 +311,21 @@ class FHIRStore:
         return out
 
 # ################################################################################################################################
+
+    def get_all_current(self) -> 'resource_list':
+        """ Returns the current version of every non-deleted resource, whatever its type, in storage order.
+        """
+        out:'resource_list' = []
+
+        with self._lock:
+
+            for key, versions in self._versions.items():
+                if key in self._deleted:
+                    continue
+
+                out.append(versions[-1])
+
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################

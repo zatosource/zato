@@ -1097,6 +1097,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         self._start_rule_engine_change_listener()
 
+        # FHIR bulk exports that a previous process of this server left unfinished carry on now
+        self._resume_fhir_bulk_exports()
+
         self.log_environment_details()
 
         # A fresh environment - one with no user services to deploy and no user-defined
@@ -1806,6 +1809,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             start_openapi_console_listener(self)
         except Exception:
             logger.warning('OpenAPI console listener could not be started: %s', format_exc())
+
+# ################################################################################################################################
+
+    def _resume_fhir_bulk_exports(self) -> 'None':
+        """ Starts the export program again for each FHIR bulk export left unfinished - the workers take turns
+        and each skips the jobs another one already started.
+        """
+        try:
+            from zato.server.hl7.fhir.bulk_export import resume_unfinished_jobs
+            resume_unfinished_jobs(self)
+        except Exception:
+            logger.warning('FHIR bulk exports could not be resumed: %s', format_exc())
 
 # ################################################################################################################################
 

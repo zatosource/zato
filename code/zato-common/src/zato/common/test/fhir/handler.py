@@ -16,6 +16,7 @@ from uuid import uuid4
 
 # Zato
 from zato.common.api import OAuth
+from zato.common.test.fhir.bulk import Files_Path_Prefix, handle_bulk_get, handle_export_delete, Status_Path_Prefix
 from zato.common.test.fhir.bundles import handle_bundle
 from zato.common.test.fhir.common import auth_type_basic, error_invalid_client, fhir_content_type, fhir_version, \
     grant_type_client_credentials, json_content_type, token_lifetime, token_path
@@ -148,6 +149,12 @@ class FHIRRequestHandler(BaseHTTPRequestHandler):
         if path in ('/metadata', token_path):
             out = True
             return out
+
+        # .. and so are the files of an export whose manifest says they need no token.
+        if path.startswith(Files_Path_Prefix):
+            if not self.server.bulk.config.requires_access_token:
+                out = True
+                return out
 
         received = self.headers.get('Authorization')
 
@@ -347,7 +354,7 @@ class FHIRRequestHandler(BaseHTTPRequestHandler):
 # ################################################################################################################################
 
     def do_GET(self) -> 'None': # noqa: N802
-        """ Dispatches GET requests to capabilities, search, read or vread.
+        """ Dispatches GET requests to capabilities, the Bulk Data Access API, search, read or vread.
         """
         if not self._check_auth():
             return
@@ -359,6 +366,10 @@ class FHIRRequestHandler(BaseHTTPRequestHandler):
         if segments == ['metadata']:
             statement = self._build_capability_statement()
             self.send_json(OK, statement)
+            return
+
+        # .. a bulk export is kicked off, polled and downloaded under paths of its own ..
+        if handle_bulk_get(self, segments, parameters):
             return
 
         # .. everything else starts with a resource type.
@@ -666,6 +677,13 @@ class FHIRRequestHandler(BaseHTTPRequestHandler):
         """ Handles the delete interaction - deletes are idempotent and reads afterwards return 410 Gone.
         """
         if not self._check_auth():
+            return
+
+        # A delete of an export's status URL lets its files go
+        path = urlsplit(self.path).path
+        if path.startswith(Status_Path_Prefix):
+            export_id = path[len(Status_Path_Prefix):]
+            handle_export_delete(self, export_id)
             return
 
         segments, _ = self._split_path()

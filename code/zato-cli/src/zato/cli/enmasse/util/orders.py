@@ -217,7 +217,8 @@ _object_order['outgoing_kafka']   = ('name', 'is_active', 'address', 'topic', 's
 
 _object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names + ('alerts:dict',)
 _object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names + ('alerts:dict',)
-_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + ('alerts:dict',)
+_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + \
+    ('bulk_export:dict', 'alerts:dict')
 
 _object_order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
     'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with',

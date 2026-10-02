@@ -48,6 +48,7 @@ _data_keys_by_source:'stranydict' = {
     AuditSource.File_Outgoing: All_Keys,
     AuditSource.SQL_Outgoing:  ('statement', 'row_count', 'error'),
     AuditSource.FHIR:          ('resource_type', 'method', 'path'),
+    AuditSource.FHIR_Bulk_Export: All_Keys,
     AuditSource.Email_IMAP:    ('sent_from', 'sent_to'),
     AuditSource.AS2:           ('mic', 'disposition'),
 }

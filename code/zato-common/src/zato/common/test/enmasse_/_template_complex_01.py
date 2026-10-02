@@ -527,6 +527,48 @@ outgoing_kafka:
     ssl: true
     ssl_ca_file: /path/to/ca.pem
 
+outgoing_fhir:
+
+  - name: enmasse.fhir.outgoing.1
+    address: https://fhir.example.com/r4
+    security: enmasse.basic_auth.1
+
+  - name: enmasse.fhir.outgoing.2
+    address: https://bulk.example.com/fhir
+    security: enmasse.bearer_token.1
+    bulk_export:
+      is_active: true
+      level: group
+      group_id: diabetes-registry
+      types:
+        - Patient
+        - Observation
+        - Condition
+      since: "2026-01-01T00:00:00Z"
+      type_filter:
+        - "Observation?category=laboratory"
+      run_every: 1
+      run_unit: days
+      start_date: "2026-01-02T03:00:00"
+      delete_files: true
+      delete_on_server: false
+      destinations:
+        - name: enmasse.sftp.archive
+          type: sftp
+          connection: enmasse.sftp.archive
+          options:
+            remote_path: /exports/{job_id}/{file_name}
+        - name: enmasse.kafka.outgoing.1
+          type: kafka
+          connection: enmasse.kafka.outgoing.1
+        - name: enmasse.fhir.outgoing.1
+          type: hl7-fhir
+          connection: enmasse.fhir.outgoing.1
+        - name: enmasse.bulk.export.handler
+          type: service
+          connection: enmasse.bulk.export.handler
+          is_active: false
+
 outgoing_graphql:
 
   - name: enmasse.graphql.outgoing.1

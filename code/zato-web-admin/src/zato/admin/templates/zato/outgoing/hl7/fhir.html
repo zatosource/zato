@@ -22,6 +22,8 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/badge.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/fhir-bulk-export-tab.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -59,6 +61,9 @@
     {{ delivery_tab_config|json_script:"delivery-tab-config" }}
 
     {% comment %} FHIR {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir-bulk-export-tab.js"></script>
+    {{ bulk_export_field_names|json_script:"fhir-bulk-export-field-names" }}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -73,6 +78,7 @@
             '_audit_log',
             '_usage',
             '_delivery',
+            '_bulk_exports',
             '_edit',
             '_delete',
             '_ping',
@@ -88,7 +94,12 @@
             'health_check_run_unit',
             'health_check_job_id',
 
-            {% comment %} 8 - the Delivery tab, then the Alerts tab {% endcomment %}
+            {% comment %} 8 - the Bulk export tab {% endcomment %}
+            {% for field_name in bulk_export_field_names %}
+            '{{ field_name }}',
+            {% endfor %}
+
+            {% comment %} 9 - the Delivery tab, then the Alerts tab {% endcomment %}
         ].concat($.fn.zato.delivery_tab.columns()).concat($.fn.zato.alerts_tab.columns());
     }
     </script>
@@ -131,6 +142,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th> {% comment %} _delivery {% endcomment %}
+                        <th>&nbsp;</th> {% comment %} _bulk_exports {% endcomment %}
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -156,10 +168,15 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        {% comment %} 8 - the Delivery tab {% endcomment %}
+                        {% comment %} 8 - the Bulk export tab {% endcomment %}
+                        {% for field_name in bulk_export_field_names %}
+                        <th class='ignore'>&nbsp;</th>
+                        {% endfor %}
+
+                        {% comment %} 9 - the Delivery tab {% endcomment %}
                         {% include "zato/include/delivery-tab-headers.html" %}
 
-                        {% comment %} 9 - the Alerts tab {% endcomment %}
+                        {% comment %} 10 - the Alerts tab {% endcomment %}
                         {% for field_name in alerts_tab_config.storage_field_names %}
                         <th class='ignore'>&nbsp;</th>
                         {% endfor %}
@@ -191,6 +208,7 @@
                         <td><a href="/zato/audit-log/?source=fhir&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% if not item.is_audit_log_active %} <span class="form_hint">(off)</span>{% endif %}</td>
                         <td><a href="/zato/channel-usage/?sources=fhir&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a></td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="fhir" %}
+                        <td><a href="/zato/outgoing/hl7/fhir/bulk-export/{{ item.id }}/cluster/{{ cluster_id }}/">Bulk exports</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
@@ -211,10 +229,15 @@
                         <td class='ignore'>{{ item.health_check_run_unit|default:'' }}</td>
                         <td class='ignore'>{{ item.health_check_job_id|default:'' }}</td>
 
-                        {% comment %} 8 - the Delivery tab {% endcomment %}
+                        {% comment %} 8 - the Bulk export tab {% endcomment %}
+                        {% for field_name in bulk_export_field_names %}
+                        <td class='ignore'>{{ item|get_item:field_name }}</td>
+                        {% endfor %}
+
+                        {% comment %} 9 - the Delivery tab {% endcomment %}
                         {% include "zato/include/delivery-tab-cells.html" %}
 
-                        {% comment %} 9 - the Alerts tab {% endcomment %}
+                        {% comment %} 10 - the Alerts tab {% endcomment %}
                         {% for field_name in alerts_tab_config.storage_field_names %}
                         <td class='ignore'>{{ item|get_item:field_name }}</td>
                         {% endfor %}
@@ -223,7 +246,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='17'>No results</td>
+                        <td colspan='18'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -239,6 +262,7 @@
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="bulk-export" role="tab" aria-selected="false">Bulk export</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         {% include "zato/include/delivery-tab-button.html" %}
                     </div>
@@ -285,6 +309,8 @@
                     {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
                     {{ create_form.health_check_job_id }}
 
+                    {% include "zato/outgoing/hl7/fhir-bulk-export-tab.html" with panel_id="out-fhir-create-tab-panel-bulk-export" form=create_form field_prefix="" %}
+
                     {% include "zato/include/alerts-tab.html" with panel_id="out-fhir-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
                     {% include "zato/include/delivery-tab.html" with panel_id="out-fhir-create-tab-panel-delivery" form=create_form %}
@@ -311,6 +337,7 @@
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="bulk-export" role="tab" aria-selected="false">Bulk export</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         {% include "zato/include/delivery-tab-button.html" %}
                     </div>
@@ -356,6 +383,8 @@
 
                     {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
                     {{ edit_form.health_check_job_id }}
+
+                    {% include "zato/outgoing/hl7/fhir-bulk-export-tab.html" with panel_id="out-fhir-edit-tab-panel-bulk-export" form=edit_form field_prefix="edit-" %}
 
                     {% include "zato/include/alerts-tab.html" with panel_id="out-fhir-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 

@@ -15,11 +15,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 
 # Zato
-from zato.common.api import HTTP_SOAP, SCHEDULER, SchedulerLink
+from zato.common.api import HL7, HTTP_SOAP, SCHEDULER, SchedulerLink
 from zato.common.defaults import default_cluster_id
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Job
-from zato.common.util.api import utcnow
+from zato.common.util.api import as_bool, utcnow
 from zato.common.util.interval import interval_from_unit
 from zato.common.util.rest_invocation import update_linked_job_fields
 from zato.server.connection.http_soap import BadRequest
@@ -38,6 +38,7 @@ if 0:
 
 _invocation = HTTP_SOAP.Invocation
 _health_check = HTTP_SOAP.HealthCheck
+_bulk = HL7.BulkExport
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,6 +178,58 @@ def sync_health_check_job(service:'AdminService', input:'Bunch', conn_id:'int', 
         run_every=input.get(_health_check.Field_Run_Every),
         run_unit=input.get(_health_check.Field_Run_Unit),
         extra=health_check_extra,
+    )
+
+# ################################################################################################################################
+
+def has_bulk_export_config(input:'Bunch') -> 'bool':
+    """ Returns True if a bulk export schedule was asked for on input - a run-every is what says so.
+    """
+    out = bool(input.get(_bulk.Field_Run_Every))
+    return out
+
+# ################################################################################################################################
+
+def sync_bulk_export_job(service:'AdminService', input:'Bunch', conn_id:'int', link_conn_type:'str') -> 'None':
+    """ Keeps the bulk export job of a FHIR connection in sync with the input just committed - the job starts
+    an export of the connection, which runs on its own and lands its files where the connection's tab says.
+    """
+    extra = dumps({
+        _health_check.Extra_Conn_ID: conn_id,
+        _health_check.Extra_Conn_Name: input.name,
+        _health_check.Extra_Conn_Type: link_conn_type,
+    })
+
+    # The tab has a start date of its own, an empty one meaning right away
+    start_date = input.get(_bulk.Field_Start_Date)
+    if not start_date:
+        start_date = utcnow().isoformat()
+
+    # The job runs only while both the connection and its bulk export tab are active
+    is_export_active = input.get(_bulk.Field_Is_Active)
+    if is_export_active is None:
+        is_export_active = False
+    is_active = as_bool(input.is_active) and as_bool(is_export_active)
+
+    # A tab without a unit means the default one
+    run_unit = input.get(_bulk.Field_Run_Unit)
+    if not run_unit:
+        run_unit = _invocation.Unit.Minutes
+
+    sync_one_linked_job(
+        service,
+        conn_id,
+        link_conn_type,
+        is_active=is_active,
+        kind=SchedulerLink.KindType.BulkExport,
+        has_config=has_bulk_export_config(input),
+        job_id=input.get(_bulk.Field_Job_ID),
+        job_name=_bulk.Job_Prefix + input.name,
+        job_service=_bulk.Dispatch_Service,
+        start_date=start_date,
+        run_every=input.get(_bulk.Field_Run_Every),
+        run_unit=run_unit,
+        extra=extra,
     )
 
 # ################################################################################################################################

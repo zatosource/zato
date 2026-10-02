@@ -16,6 +16,7 @@ from logging import getLogger
 from time import sleep
 
 # Zato
+from zato.common.test.fhir.bulk import BulkExportState
 from zato.common.test.fhir.common import FHIRHTTPServer, OAuthTokenIssuer, auth_type_basic, auth_type_oauth, token_path
 from zato.common.test.fhir.handler import FHIRRequestHandler
 from zato.common.test.fhir.store import FHIRStore
@@ -48,7 +49,8 @@ class FHIRTestServer:
     """ An in-memory FHIR R4 server for use in tests, listening on the loopback interface only.
     It implements the spec's RESTful API - capabilities, create, read, vread, update, patch, delete, search
     and the transaction and batch interactions with urn:uuid reference resolution -
-    with resource versioning, searchset Bundles and OperationOutcome errors. Authentication is optional
+    with resource versioning, searchset Bundles and OperationOutcome errors, along with the Bulk Data Access
+    $export operation at the system, patient and group levels. Authentication is optional
     and matches what the FHIR outgoing connection supports - Basic Auth, or OAuth bearer tokens issued
     by the server's own RFC 6749 token endpoint, with the credentials acting as client_id and client_secret,
     or, when a public key is given, with a client assertion signed by the matching private key, per RFC 7523.
@@ -76,6 +78,9 @@ class FHIRTestServer:
 
         # The store that holds all the resources
         self.store = FHIRStore()
+
+        # The bulk exports the server has run and how it behaves during one
+        self.bulk = BulkExportState()
 
         # The HTTP server and its thread, populated in .start
         self._server:'FHIRHTTPServer | None' = None
@@ -154,7 +159,7 @@ class FHIRTestServer:
 
         address = (self.host, self.port)
         server = FHIRHTTPServer(
-            address, FHIRRequestHandler, self.store, self.address, self.auth_type, auth_header, token_issuer)
+            address, FHIRRequestHandler, self.store, self.address, self.auth_type, auth_header, token_issuer, self.bulk)
 
         self._server = server
 

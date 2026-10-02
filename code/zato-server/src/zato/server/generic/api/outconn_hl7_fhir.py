@@ -47,7 +47,7 @@ if 0:
     from requests import Response
     from zato.common.ext.bunch import Bunch
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, stranydict, strdictnone
+    from zato.common.typing_ import any_, stranydict, strdictnone, strlistnone
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -180,6 +180,40 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
         request = self._build_request_part(_publish_method, resource['resourceType'], resource, None)
 
         out = self.zato_publisher.publish_request('', Attempts_None, request, **kwargs)
+        return out
+
+# ################################################################################################################################
+
+    def export(
+        self,
+        *,
+        level:'str'=HL7.BulkExport.Level.Group,
+        group_id:'str'='',
+        patient_ids:'strlistnone'=None,
+        types:'strlistnone'=None,
+        since:'str'='',
+        type_filter:'strlistnone'=None,
+        destinations:'any_'=None,
+        ) -> 'str':
+        """ Starts a bulk export of this connection with what is given here in place of the tab's settings
+        and returns the id of the job started - the files land where the connection's tab says, or at the
+        destinations given here.
+        """
+        request = {
+            'conn_name': self.zato_config['name'],
+            'level': level,
+            'group_id': group_id,
+            'patient_ids': patient_ids,
+            'types': types,
+            'since': since,
+            'type_filter': type_filter,
+            'destinations': destinations,
+        }
+
+        server = self.zato_config['server'] # type: ParallelServer
+        response = server.invoke(HL7.BulkExport.Dispatch_Service, request, cid=self.zato_cid)
+
+        out = response['job_id']
         return out
 
 # ################################################################################################################################

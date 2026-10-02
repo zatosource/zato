@@ -1,0 +1,102 @@
+{% comment %}
+Bulk export tab for outgoing FHIR connections - what to export, on what schedule and where the files go.
+
+Expects in the context:
+* form         - the create or edit form
+* panel_id     - the id of the tab panel
+* field_prefix - "" for create, "edit-" for edit
+{% endcomment %}
+
+<div class="dashboard-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
+
+    <table class="form-data">
+
+        <tr>
+            <td></td>
+            <td>
+                <label for="id_{{ field_prefix }}bulk_export_is_active">
+                    Active
+                    {{ form.bulk_export_is_active }}
+                </label>
+            </td>
+        </tr>
+
+        <tr>
+            <td class="form-label-cell"><label for="id_{{ field_prefix }}bulk_export_level">Export</label></td>
+            <td>{{ form.bulk_export_level }}</td>
+        </tr>
+
+        <tr class="fhir-bulk-export-row-group">
+            <td class="form-label-cell"><label for="id_{{ field_prefix }}bulk_export_group_id">Group ID</label></td>
+            <td>{{ form.bulk_export_group_id }}</td>
+        </tr>
+
+        <tr class="fhir-bulk-export-row-patient">
+            <td class="form-label-cell"><label for="id_{{ field_prefix }}bulk_export_patient_ids">Patient IDs</label></td>
+            <td>{{ form.bulk_export_patient_ids }}</td>
+        </tr>
+
+        <tr>
+            <td class="form-label-cell"><label for="id_{{ field_prefix }}bulk_export_types">Resource types</label></td>
+            <td>{{ form.bulk_export_types }}</td>
+        </tr>
+
+        <tr>
+            <td class="form-label-cell"><label for="id_{{ field_prefix }}bulk_export_since">Since</label></td>
+            <td>{{ form.bulk_export_since }}</td>
+        </tr>
+
+        <tr>
+            <td class="form-label-cell form-label-cell-top"><label for="id_{{ field_prefix }}bulk_export_type_filter">Type filter</label></td>
+            <td>{{ form.bulk_export_type_filter }}</td>
+        </tr>
+
+        <tr>
+            <td class="form-label-cell"><label for="id_{{ field_prefix }}bulk_export_run_every">Run every</label></td>
+            <td>
+                {{ form.bulk_export_run_every }}
+                {{ form.bulk_export_run_unit }}
+            </td>
+        </tr>
+
+        <tr>
+            <td class="form-label-cell"><label for="id_{{ field_prefix }}bulk_export_start_date">Start time</label></td>
+            <td>{{ form.bulk_export_start_date }}</td>
+        </tr>
+
+        <tr>
+            <td class="form-label-cell form-label-cell-top"><label for="id_{{ field_prefix }}fhir-bulk-export-destination-type">Destinations</label></td>
+            <td>
+                <div class="fhir-bulk-export-destinations" id="{{ panel_id }}-destinations">
+                    <div class="fhir-bulk-export-badges" id="{{ panel_id }}-destination-badges"></div>
+                    <div class="fhir-bulk-export-picker">
+                        <select id="id_{{ field_prefix }}fhir-bulk-export-destination-type" class="fhir-bulk-export-destination-type"></select>
+                        <select id="id_{{ field_prefix }}fhir-bulk-export-destination-connection" class="fhir-bulk-export-destination-connection"></select>
+                        <span class="fhir-bulk-export-destination-options" id="{{ panel_id }}-destination-options"></span>
+                        <button type="button" class="fhir-bulk-export-destination-add" id="{{ panel_id }}-destination-add">Add</button>
+                    </div>
+                </div>
+            </td>
+        </tr>
+
+        <tr>
+            <td></td>
+            <td>
+                <label for="id_{{ field_prefix }}bulk_export_delete_files">
+                    Delete files after delivery
+                    {{ form.bulk_export_delete_files }}
+                </label>
+                |
+                <label for="id_{{ field_prefix }}bulk_export_delete_on_server">
+                    Delete export on server
+                    {{ form.bulk_export_delete_on_server }}
+                </label>
+            </td>
+        </tr>
+
+    </table>
+
+    {{ form.bulk_export_job_id }}
+    {{ form.bulk_export_destinations }}
+
+</div>

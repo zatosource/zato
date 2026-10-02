@@ -1166,8 +1166,9 @@ class SchedulerLink:
     class KindType:
         Scheduler = 'scheduler'
         HealthCheck = 'health_check'
+        BulkExport = 'bulk_export'
 
-    KindList = (KindType.Scheduler, KindType.HealthCheck)
+    KindList = (KindType.Scheduler, KindType.HealthCheck, KindType.BulkExport)
 
     FieldList = (Conn_Type, Conn_ID, Kind)
 
@@ -2644,6 +2645,91 @@ class HL7:
 
             def __iter__(self):
                 return iter((self.No_Auth, self.Basic_Auth, self.OAuth))
+
+    class BulkExport:
+        """ The FHIR Bulk Data $export an outgoing FHIR connection runs - its field names, the job
+        that runs it and the services that start it and deliver its files.
+        """
+
+        class Level:
+            Group   = 'group'
+            Patient = 'patient'
+            System  = 'system'
+
+        LevelList = (Level.Group, Level.Patient, Level.System)
+
+        # The path each level kicks the export off at - the group one has the group ID filled in
+        Kickoff_Path = {
+            Level.Group:   '/Group/{group_id}/$export',
+            Level.Patient: '/Patient/$export',
+            Level.System:  '/$export',
+        }
+
+        # Prefix of the names of the jobs auto-created for connections with a schedule
+        Job_Prefix = 'bulk-export.'
+
+        # The service a job invokes to start an export, and the one that hands each file to its destinations
+        Dispatch_Service = 'zato.hl7.fhir.bulk-export.run'
+        Deliver_Service  = 'zato.hl7.fhir.bulk-export.deliver'
+
+        # Where the files are downloaded to - an environment variable, or a directory under the server's work dir
+        Env_Dir     = 'Zato_FHIR_Bulk_Export_Dir'
+        Default_Dir = 'fhir-bulk-export'
+
+        # How long to wait between polls when the server does not say, and how many times a file download is tried
+        Default_Retry_After = 10
+        Download_Retries    = 3
+
+        # What the output files are, and the type of the files that list what the server could not export
+        Content_Type        = 'application/fhir+ndjson'
+        Error_Resource_Type = 'OperationOutcome'
+
+        # The name of the file an export's state is kept in, and of the log the program writes
+        State_File_Name = 'state.json'
+        Log_File_Name   = 'fhir-bulk-export.log'
+
+        # The connection fields the tab holds
+        Field_Is_Active        = 'bulk_export_is_active'
+        Field_Level            = 'bulk_export_level'
+        Field_Group_ID         = 'bulk_export_group_id'
+        Field_Patient_IDs      = 'bulk_export_patient_ids'
+        Field_Types            = 'bulk_export_types'
+        Field_Since            = 'bulk_export_since'
+        Field_Type_Filter      = 'bulk_export_type_filter'
+        Field_Run_Every        = 'bulk_export_run_every'
+        Field_Run_Unit         = 'bulk_export_run_unit'
+        Field_Start_Date       = 'bulk_export_start_date'
+        Field_Job_ID           = 'bulk_export_job_id'
+        Field_Destinations     = 'bulk_export_destinations'
+        Field_Delete_Files     = 'bulk_export_delete_files'
+        Field_Delete_On_Server = 'bulk_export_delete_on_server'
+
+        # The fields of the schedule, in the order the job sync reads them
+        ScheduleFieldList = (Field_Run_Every, Field_Run_Unit, Field_Start_Date, Field_Job_ID)
+
+        # The fields a run may be started with by hand, overriding the tab
+        OverrideFieldList = ('level', 'group_id', 'patient_ids', 'types', 'since', 'type_filter', 'destinations')
+
+        # The YAML key enmasse keeps the tab under, and the prefix stripped off each field inside it
+        Enmasse_Key   = 'bulk_export'
+        Field_Prefix  = 'bulk_export_'
+
+        # The phases an export's audit events are recorded under
+        class Phase:
+            Kickoff  = 'kick-off'
+            Poll     = 'poll'
+            Manifest = 'manifest'
+            Download = 'download'
+            Deliver  = 'deliver'
+            Cleanup  = 'cleanup'
+            Done     = 'done'
+            Failed   = 'failed'
+
+        # The statuses a job goes through
+        class Status:
+            Running = 'running'
+            Done    = 'done'
+            Failed  = 'failed'
 
 # ################################################################################################################################
 # ################################################################################################################################
