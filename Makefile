@@ -22,7 +22,7 @@
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
-	test-all test test-all-reset test-clean-test-all test-perf \
+	test-all test-all-no-static test test-all-reset test-all-no-static-reset test-clean-test-all test-perf \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
@@ -1343,37 +1343,54 @@ Zato_Test_Heavy := test-rest test-server test-rest-fuzz test-server-fuzz
 # Standalone performance suites, left out of test-all
 Zato_Test_Perf := test-pubsub-perf test-rule-engine-perf
 
+Zato_Test_Fuzz := test-rest-fuzz test-server-fuzz
+
 Zato_Test_All := \
 	$(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) \
 	$(Zato_Test_Live) $(Zato_Test_Browser) $(Zato_Test_Heavy)
 
+# Real functionality only - no static checks, no fuzzing and no mutation testing
+Zato_Test_No_Static := $(filter-out $(Zato_Test_Static) $(Zato_Test_Fuzz),$(Zato_Test_All))
+
 # Which target the run is currently on - written before the target starts, so a target that
 # fails or is interrupted leaves its own name behind and the next run picks up from there.
-# Removed once the list has been walked to the end.
-Zato_Test_Resume_File := $(CURDIR)/code/tests/.test-all-resume
+# Removed once the list has been walked to the end. Each walk has its own file.
+Zato_Test_Resume_File           := $(CURDIR)/code/tests/.test-all-resume
+Zato_Test_No_Static_Resume_File := $(CURDIR)/code/tests/.test-all-no-static-resume
 
 # Set to anything to ignore the resume file and walk the list from the beginning
 RESTART ?=
 
-test-all: ## Everything, resuming from the target that last failed. RESTART=1 to start from scratch.
-	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Resume_File); fi
+# Walks the targets in $(1) in order, resuming from the one named in the resume file $(2)
+define Zato_Test_Walk
+	@if [ -n "$(RESTART)" ]; then rm -f $(2); fi
 	@resume=''; \
-	if [ -f $(Zato_Test_Resume_File) ]; then \
-		resume=$$(cat $(Zato_Test_Resume_File)); \
+	if [ -f $(2) ]; then \
+		resume=$$(cat $(2)); \
 		echo ">>> Resuming from $$resume"; \
 	fi; \
-	for target in $(Zato_Test_All); do \
+	for target in $(1); do \
 		if [ -n "$$resume" ]; then \
 			if [ "$$target" != "$$resume" ]; then continue; fi; \
 			resume=''; \
 		fi; \
-		echo "$$target" > $(Zato_Test_Resume_File); \
+		echo "$$target" > $(2); \
 		$(MAKE) $$target || exit $$?; \
 	done; \
-	rm -f $(Zato_Test_Resume_File)
+	rm -f $(2)
+endef
+
+test-all: ## Everything, resuming from the target that last failed. RESTART=1 to start from scratch.
+	$(call Zato_Test_Walk,$(Zato_Test_All),$(Zato_Test_Resume_File))
+
+test-all-no-static: ## Everything except the static checks, fuzzing and mutation testing, resuming from the target that last failed. RESTART=1 to start from scratch.
+	$(call Zato_Test_Walk,$(Zato_Test_No_Static),$(Zato_Test_No_Static_Resume_File))
 
 test-all-reset: ## Forget where the last test-all stopped.
 	rm -f $(Zato_Test_Resume_File)
+
+test-all-no-static-reset: ## Forget where the last test-all-no-static stopped.
+	rm -f $(Zato_Test_No_Static_Resume_File)
 
 test-clean-test-all: ## Run test-all from a clean state instead of resuming a previous run.
 	$(MAKE) RESTART=1 test-all
