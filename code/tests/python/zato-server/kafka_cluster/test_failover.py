@@ -25,7 +25,10 @@ from live_kafka.client import produce, read_topic
 if 0:
     from conftest import ClusterSuite
     from live_kafka.tls import KafkaTLS
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anylist, bytesnone
+
+    # A tombstone's value is None
+    bytesnonelist = list[bytesnone]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,7 +133,7 @@ def names_by_transport(kafka_suite:'ClusterSuite') -> 'dict[str, Names]':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _read_all(kafka_suite:'ClusterSuite', names:'Names') -> 'list[bytes]':
+def _read_all(kafka_suite:'ClusterSuite', names:'Names') -> 'bytesnonelist':
     """ Every payload the topic holds, read through the instances that are up right now.
     """
     address = kafka_suite.cluster.ssl_bootstrap if names.tls else kafka_suite.bootstrap

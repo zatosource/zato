@@ -25,6 +25,9 @@ if 0:
     from live_kafka.tls import KafkaTLS
     from zato.common.typing_ import any_, strdict, strlist
 
+    # What the confluent-kafka clients take their configuration as
+    kafka_config = dict[str, str | int | float | bool]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -373,7 +376,7 @@ class KafkaCluster:
         """
         from confluent_kafka.admin import AdminClient
 
-        config = {
+        config:'kafka_config' = {
             'bootstrap.servers': self._running_bootstrap(),
             'socket.timeout.ms': int(ClusterCtx.Metadata_Timeout * 1000),
         }
@@ -411,7 +414,7 @@ class KafkaCluster:
         """
         from confluent_kafka.admin import AdminClient
 
-        config = {
+        config:'kafka_config' = {
             'bootstrap.servers': self._running_bootstrap(),
             'socket.timeout.ms': int(ClusterCtx.Metadata_Timeout * 1000),
         }

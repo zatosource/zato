@@ -26,6 +26,7 @@ from zato.common.api import KAFKA
 
 if 0:
     from conftest import KafkaSuite
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -226,12 +227,21 @@ def test_tombstones_are_skipped_unless_the_channel_delivers_them(kafka_suite:'Ka
 
     # .. the channel with tombstones off commits past it and invokes nothing ..
     _ = wait_until_committed(kafka_suite.address, names.group, names.topic_a, 0, offset + 1)
-    kafka_suite.not_received(lambda elem: elem['headers'].get(_header.Key) == 'gone-1', within=1)
+
+    def has_first_key(item:'anydict') -> 'bool':
+        out = item['headers'].get(_header.Key) == 'gone-1'
+        return out
+
+    kafka_suite.not_received(has_first_key, within=1)
 
     # .. and the channel with tombstones on delivers it.
     landed = produce(kafka_suite.address, names.topic_tombstones, None, key='gone-2')
 
-    received = kafka_suite.wait_for_received(lambda elem: elem['headers'].get(_header.Key) == 'gone-2')
+    def has_second_key(item:'anydict') -> 'bool':
+        out = item['headers'].get(_header.Key) == 'gone-2'
+        return out
+
+    received = kafka_suite.wait_for_received(has_second_key)
     item = received[0]
 
     assert item['data'] == ''

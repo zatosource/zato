@@ -18,7 +18,8 @@ from sqlalchemy import select
 
 # Zato
 from live_sql.env import database_env
-from support import attributes_of, build_config, decode_records, wait_for_bodies, wait_until, FakeSender, Server_Name
+from support import attributes_of, build_config, decode_records, wait_for_bodies, wait_for_exported, wait_until, FakeSender, \
+    Server_Name
 from zato.common.api import SCHEDULER
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
@@ -191,7 +192,10 @@ class TestHandOff(_HookTestCase):
             self.assertEqual(first[_column('endpoint')], row['endpoint'])
             self.assertEqual(first[_column('size')], row['size'])
             self.assertEqual(first[_column('outcome')], row['outcome'])
-            self.assertEqual(first[_column('classification')], row['classification'])
+
+            # .. a successful event is unclassified, and an empty column is no attribute ..
+            self.assertEqual(row['classification'], '')
+            self.assertNotIn(_column('classification'), first)
 
             # .. the record's time is the row's time ..
             event_time = datetime.fromisoformat(row['event_time_iso'])
@@ -230,7 +234,8 @@ class TestHandOff(_HookTestCase):
                 cid=f'cid-buffered-{index}', outcome=AuditOutcome.OK)
             self.assertIsNone(out)
 
-        self.assertTrue(wait_for_bodies(self.sender, 1))
+        # The worker may send the flushed events in one body or in several, depending on when it wakes up.
+        self.assertTrue(wait_for_exported(self.export.queue, 3))
 
         records = self.records()
         self.assertEqual(len(records), 3)

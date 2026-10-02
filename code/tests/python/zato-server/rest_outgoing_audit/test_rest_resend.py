@@ -73,6 +73,11 @@ class _Connections:
         self.mllp = {}
         self.email = {}
 
+        # A REST or SOAP repeat reaches for none of these
+        self.out = None
+        self.sftp = None
+        self.invoke = None
+
 # ################################################################################################################################
 
 class _Invoker:

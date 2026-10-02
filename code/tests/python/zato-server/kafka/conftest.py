@@ -91,7 +91,7 @@ def kafka_suite() -> 'iterator_':
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)
-def _clean_slate(request:'any_') -> 'iterator_':
+def clean_slate(request:'any_') -> 'iterator_':
     """ Every test starts with no recorded invocations and receivers that behave.
     """
     if 'kafka_suite' in request.fixturenames:

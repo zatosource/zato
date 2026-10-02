@@ -198,16 +198,20 @@ def build_attributes(event:'QueuedEvent', max_payload_size:'int') -> 'stranydict
             continue
         out[f'{ModuleCtx.Attr_Prefix}.{name}'] = value
 
-    # .. the data document's exported keys ..
+    # .. the data document's exported keys, in which case the data column is no payload ..
     source = values['source']
     event_type = values['event_type']
+    data = values['data']
 
     if has_data_export(source, event_type):
-        build_data_attributes(source, event_type, values['data'], out)
+        build_data_attributes(source, event_type, data, out)
+        payload_data = ''
+    else:
+        payload_data = data
 
     # .. and payloads only for an object that sends them.
-    elif event.is_payload_active:
-        build_payload_attributes(values['data'], event.bodies, max_payload_size, out)
+    if event.is_payload_active:
+        build_payload_attributes(payload_data, event.bodies, max_payload_size, out)
 
     return out
 

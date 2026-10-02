@@ -25,6 +25,7 @@ from live_kafka.client import produce, wait_for_assignment
 
 if 0:
     from conftest import ClusterSuite
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,7 +159,11 @@ def test_a_frozen_instance_delays_neither_the_other_partitions_nor_the_service_s
     cluster.wait_until_all_in_sync(names.topic)
 
     # The service never saw the message that failed
-    kafka_suite.not_received(lambda elem: elem['data'] == hung, within=2.0)
+    def is_hung(item:'anydict') -> 'bool':
+        out = item['data'] == hung
+        return out
+
+    kafka_suite.not_received(is_hung, within=2.0)
 
 # ################################################################################################################################
 # ################################################################################################################################

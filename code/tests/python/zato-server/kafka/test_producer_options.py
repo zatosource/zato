@@ -147,7 +147,7 @@ def names(kafka_suite:'KafkaSuite') -> 'Names':
 
     yaml = _yaml.format(
         address=kafka_suite.address,
-        ssl_address=kafka_suite.kafka.ssl_address,
+        ssl_address=kafka_suite.ssl_address,
         receiver=Receiver,
         compression_connections=compression_connections,
         ca_cert=tls.ca_cert,

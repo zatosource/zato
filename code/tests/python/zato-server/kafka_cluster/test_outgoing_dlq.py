@@ -35,7 +35,10 @@ from queue_delivery.alerting import get_alerts_raised, get_newest_audit_event_id
 
 if 0:
     from conftest import ClusterSuite
-    from zato.common.typing_ import anydict, anylist, strlist
+    from zato.common.typing_ import anydict, anylist, bytesnone, strlist
+
+    # A tombstone's value is None
+    bytesnonelist = list[bytesnone]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,12 +124,12 @@ def _dlq_alerts(conn_name:'str', since_id:'int') -> 'anylist':
 
 # ################################################################################################################################
 
-def _wait_for_payloads_on_topic(kafka_suite:'ClusterSuite', topic:'str', payloads:'strlist') -> 'list[bytes]':
+def _wait_for_payloads_on_topic(kafka_suite:'ClusterSuite', topic:'str', payloads:'strlist') -> 'bytesnonelist':
     """ Waits until every payload is on the topic and returns everything the topic holds.
     """
     deadline = time.monotonic() + Retry_Timeout
     wanted = {elem.encode('utf8') for elem in payloads}
-    out:'list[bytes]' = []
+    out:'bytesnonelist' = []
 
     while time.monotonic() < deadline:
         out = [elem.value for elem in read_topic(kafka_suite.bootstrap, topic, 1_000, timeout=3)]

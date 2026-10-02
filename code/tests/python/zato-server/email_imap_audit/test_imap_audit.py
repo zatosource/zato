@@ -155,7 +155,7 @@ def test_a_microsoft_365_message_writes_the_decoded_bytes(tmp_path:'os.PathLike'
         data = _get_message_summary(imap_message.data)
         attachment_envelopes = _build_attachment_envelopes(imap_message.data.attachments)
 
-        _insert_imap_audit_event(conn.audit_log, AuditEvent.Message_Received, Connection_Name,
+        _insert_imap_audit_event(conn.audit_log, conn.is_export_payload_active, AuditEvent.Message_Received, Connection_Name,
             cid='cid-ms365-1', msg_id='msg-365-1', folder='INBOX', outcome=AuditOutcome.OK, data=data,
             attachments=attachment_envelopes)
 

@@ -32,7 +32,11 @@ from zato.common.pubsub.outgoing import InboundType, Key_CID, Key_Conn_Name, Key
 
 if 0:
     from conftest import KafkaSuite
-    from zato.common.typing_ import any_, anydict, strdict
+    from redis.typing import EncodableT, FieldT
+    from zato.common.typing_ import any_, anydict, callable_, strdict
+
+    # The fields of one Redis stream entry
+    stream_fields = dict[FieldT, EncodableT]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -311,13 +315,40 @@ def wait_for_rounds(kafka_suite:'KafkaSuite', conn_name:'str', rounds:'int') -> 
 
 # ################################################################################################################################
 
+def delivered_ok(payload:'str') -> 'callable_':
+    """ What matches the invocation that delivered a payload successfully.
+    """
+    def matches(item:'anydict') -> 'bool':
+        out = False
+
+        if item['data'] == payload:
+            if item['outcome'] == 'ok':
+                out = True
+
+        return out
+
+    return matches
+
+# ################################################################################################################################
+
+def with_key(key:'str') -> 'callable_':
+    """ What matches an invocation with a message of that key.
+    """
+    def matches(item:'anydict') -> 'bool':
+        out = item['headers'].get(_header.Key) == key
+        return out
+
+    return matches
+
+# ################################################################################################################################
+
 def poison_entry(kafka_suite:'KafkaSuite', conn_name:'str', topic:'str', *, payload:'str', headers:'str') -> 'int':
     """ Writes one entry straight into a channel's recv stream, as the bridge would, with fields of the test's choosing.
     """
     connection = kafka_suite.connection(conn_name)
     channel_id = connection['id']
 
-    fields = {
+    fields:'stream_fields' = {
         'channel_id': str(channel_id),
         'channel_name': conn_name,
         'topic': topic,
@@ -445,7 +476,7 @@ def test_with_the_dlq_off_a_failing_message_blocks_its_partition_only(kafka_suit
         kafka_suite.set_behaviour(Receiver_Two)
 
     # Once the service works the message goes through, is committed, and the one behind it follows
-    _ = kafka_suite.wait_for_received(lambda elem: elem['data'] == blocked and elem['outcome'] == 'ok', timeout=Round_Timeout)
+    _ = kafka_suite.wait_for_received(delivered_ok(blocked), timeout=Round_Timeout)
     _ = kafka_suite.wait_for_payload(behind)
 
     assert behind_landed.offset == blocked_landed.offset + 1
@@ -551,7 +582,7 @@ def test_a_tombstone_with_delivery_off_is_committed_and_skipped(kafka_suite:'Kaf
     _ = wait_until_committed(kafka_suite.address, names.group_poison, names.topic_poison, 0, landed.offset + 1)
 
     assert dlq_ids(kafka_suite, names.channel_poison) == before
-    kafka_suite.not_received(lambda elem: elem['headers'].get(_header.Key) == 'gone', within=Quiet_Time)
+    kafka_suite.not_received(with_key('gone'), within=Quiet_Time)
 
 # ################################################################################################################################
 
@@ -700,7 +731,7 @@ def test_discard_empties_the_dlq(kafka_suite:'KafkaSuite', names:'Names') -> 'No
     assert kafka_suite.topic_messages(names.forward_topic, names.forward_sub_key) == []
 
     kafka_suite.set_behaviour(Receiver)
-    kafka_suite.not_received(lambda elem: elem['data'] == payload and elem['outcome'] == 'ok', within=Quiet_Time)
+    kafka_suite.not_received(delivered_ok(payload), within=Quiet_Time)
 
 # ################################################################################################################################
 
@@ -780,7 +811,7 @@ def test_the_delivery_page_lists_searches_shows_and_acts_on_the_dlq(kafka_suite:
     kafka_suite.set_behaviour(Receiver)
     _ = kafka_suite.dlq_page_action(names.channel_dlq, 'retry', [message['msg_id']])
 
-    delivered = kafka_suite.wait_for_received(lambda elem: elem['data'] == payload and elem['outcome'] == 'ok')
+    delivered = kafka_suite.wait_for_received(delivered_ok(payload))
     assert delivered[0]['cid'] == document[Key_CID]
     assert message['msg_id'] not in dlq_ids(kafka_suite, names.channel_dlq)
 
@@ -792,7 +823,7 @@ def test_the_delivery_page_lists_searches_shows_and_acts_on_the_dlq(kafka_suite:
     assert message['msg_id'] not in dlq_ids(kafka_suite, names.channel_dlq)
 
     kafka_suite.set_behaviour(Receiver)
-    kafka_suite.not_received(lambda elem: elem['data'] == payload and elem['outcome'] == 'ok', within=Quiet_Time)
+    kafka_suite.not_received(delivered_ok(payload), within=Quiet_Time)
 
 # ################################################################################################################################
 
@@ -818,7 +849,7 @@ def test_the_dlq_survives_a_restart_a_rename_and_goes_away_with_the_channel(kafk
     counts = kafka_suite.run_dlq_rule()
     assert counts[names.channel_lifecycle] == 1, counts
 
-    delivered = kafka_suite.wait_for_received(lambda elem: elem['data'] == payload and elem['outcome'] == 'ok')
+    delivered = kafka_suite.wait_for_received(delivered_ok(payload))
     assert delivered[0]['cid'] == cid
     assert kafka_suite.dlq(names.channel_lifecycle)['messages'] == []
 

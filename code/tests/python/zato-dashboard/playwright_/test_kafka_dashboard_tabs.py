@@ -290,14 +290,6 @@ def _open_channel_create_dialog(page:'Page', base_url:'str', name:'str', topics:
     })
 
 # ################################################################################################################################
-
-def _cancel_edit_dialog(page:'Page') -> 'None':
-    """ Closes an edit dialog without saving.
-    """
-    page.click('#edit-div button:has-text("Cancel")')
-    _ = page.wait_for_selector('#edit-div', state='hidden', timeout=_Popover_Timeout)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class TestKafkaOutconnTabs:

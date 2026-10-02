@@ -28,7 +28,7 @@ from live_kafka.client import group_assignments, produce, wait_for_assignment
 
 if 0:
     from conftest import ClusterSuite
-    from zato.common.typing_ import anylist, strlist
+    from zato.common.typing_ import anydict, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,7 +138,12 @@ def _wait_for_burst(kafka_suite:'ClusterSuite', payloads:'strlist') -> 'None':
     """ Waits until every payload of a burst reached one of the two receivers.
     """
     wanted = set(payloads)
-    _ = kafka_suite.wait_for_received(lambda elem: elem['data'] in wanted, len(payloads), timeout=Burst_Timeout)
+
+    def is_wanted(item:'anydict') -> 'bool':
+        out = item['data'] in wanted
+        return out
+
+    _ = kafka_suite.wait_for_received(is_wanted, len(payloads), timeout=Burst_Timeout)
 
 # ################################################################################################################################
 

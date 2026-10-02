@@ -235,12 +235,8 @@ class TestOutcomes:
 
         # One message arrived cleanly and another could not be decrypted.
         record_message_received(audit_log, _as2_from, _as2_to, 'msg-1@zato', payload='Inbound test payload')
-        received_options = {
-            'error': 'decryption-failed',
-            'outcome': AuditOutcome.Error,
-        }
-
-        record_message_received(audit_log, _as2_from, _as2_to, 'msg-2@zato', **received_options)
+        record_message_received(audit_log, _as2_from, _as2_to, 'msg-2@zato', error='decryption-failed',
+            outcome=AuditOutcome.Error)
 
         now = utcnow()
         rows = get_outcomes(now, Range_Week)

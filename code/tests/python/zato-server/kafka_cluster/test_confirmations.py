@@ -27,7 +27,10 @@ from live_kafka.client import read_topic
 
 if 0:
     from conftest import ClusterSuite
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, bytesnone
+
+    # A tombstone's value is None
+    bytesnonelist = list[bytesnone]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,7 +115,7 @@ def names(kafka_suite:'ClusterSuite') -> 'Names':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _payloads_on_topic(kafka_suite:'ClusterSuite', topic:'str') -> 'list[bytes]':
+def _payloads_on_topic(kafka_suite:'ClusterSuite', topic:'str') -> 'bytesnonelist':
     messages = read_topic(kafka_suite.bootstrap, topic, 1_000, timeout=5)
     out = [elem.value for elem in messages]
 

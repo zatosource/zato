@@ -25,6 +25,12 @@ from certificates import generate_certificates
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The files are read by the Kafka process inside the container, which runs under a user of its own
 _file_mode = 0o644
 
@@ -45,7 +51,7 @@ class KafkaTLS(NamedTuple):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _read_private_key(path:'str') -> 'serialization.PrivateKeyTypes':
+def _read_private_key(path:'str') -> 'PrivateKeyTypes':
     """ One private key, as the certificates helper wrote it.
     """
     with open(path, 'rb') as file_:

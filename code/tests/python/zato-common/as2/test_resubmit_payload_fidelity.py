@@ -224,13 +224,16 @@ class TestPayloadFidelity:
 
             # The older shape - one text payload with its metadata alongside it, which is what
             # events already in the database look like.
-            options = {
-                'payload': 'ISA*00*Test payload of an 810 invoice',
-                'filename': 'invoice-810.edi',
-                'content_type': 'application/edi-x12',
-                'cid': 'cid-received',
-                }
-            record_message_received(audit_log, 'PartnerCorp', 'ZatoRetail', '<invoice-810@partnercorp>', **options)
+            record_message_received(
+                audit_log,
+                'PartnerCorp',
+                'ZatoRetail',
+                '<invoice-810@partnercorp>',
+                payload='ISA*00*Test payload of an 810 invoice',
+                filename='invoice-810.edi',
+                content_type='application/edi-x12',
+                cid='cid-received',
+            )
 
             event = load_event(1)
 

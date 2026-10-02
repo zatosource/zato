@@ -114,20 +114,23 @@ def kafka_suite() -> 'iterator_':
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)
-def _clean_slate(request:'any_') -> 'iterator_':
+def clean_slate(request:'any_') -> 'iterator_':
     """ Every test starts with no recorded invocations, receivers that behave and every instance up and running,
     and leaves the cluster whole for the next one whatever it did to it.
     """
+    used_suite:'ClusterSuite | None' = None
+
     if 'kafka_suite' in request.fixturenames:
         suite:'ClusterSuite' = request.getfixturevalue('kafka_suite')
         suite.cluster.restore_all()
         suite.clear_received()
         suite.reset_behaviour()
+        used_suite = suite
 
     yield
 
-    if 'kafka_suite' in request.fixturenames:
-        suite.cluster.restore_all()
+    if used_suite:
+        used_suite.cluster.restore_all()
 
 # ################################################################################################################################
 # ################################################################################################################################

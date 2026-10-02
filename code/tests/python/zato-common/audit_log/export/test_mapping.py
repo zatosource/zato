@@ -18,7 +18,8 @@ from opentelemetry.proto.logs.v1.logs_pb2 import SEVERITY_NUMBER_ERROR, SEVERITY
 from support import attributes_of, build_queued, to_queued, CapturingAuditLog, Server_Name
 from zato.common.api import SCHEDULER
 from zato.common.audit_log.calls import record_remote_call
-from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource, LLMAttr, MCPAttr
+from zato.common.audit_log.common import AuditBody, AuditClassification, AuditEvent, AuditOutcome, AuditSource, LLMAttr, \
+    MCPAttr
 from zato.common.audit_log.config_audit import record_config_change, ConfigScope
 from zato.common.audit_log.export.data import ModuleCtx as DataCtx
 from zato.common.audit_log.export.mapping import build_log_record, severity_by_outcome, ModuleCtx
@@ -363,7 +364,10 @@ class TestMCP(TestCase):
 
         for reason in reasons:
 
+            # The auth block reads the identity off the token's identity claim, so a caller with no identity has none.
             info = _build_auth_info(is_ok=False, reason=reason, claim='groups', identity='', claims_matched=[])
+            del info.claims[info.identity_claim]
+
             auth = build_auth_block(info)
 
             event = _build_mcp_event(
@@ -452,7 +456,7 @@ class TestSources(TestCase):
     def test_soap_channel(self) -> 'None':
 
         _ = self.audit_log.insert(AuditSource.SOAP_Channel, AuditEvent.Request_Received, 'crm.soap',
-            cid='cid-soap-1', endpoint='/soap/crm', size=800, outcome=AuditOutcome.Error, status='500',
+            cid='cid-soap-1', endpoint='/soap/crm', size=800, outcome=AuditOutcome.Error, status='503',
             application_outcome='soap:Server', data='<soap:Envelope/>', bodies={AuditBody.Request: '<soap:Envelope/>'})
 
         record, attributes = _build_record(self.audit_log.last())
@@ -460,7 +464,7 @@ class TestSources(TestCase):
         self.assertEqual(record.severity_text, 'ERROR')
         self.assertEqual(attributes[_column('source')], AuditSource.SOAP_Channel)
         self.assertEqual(attributes[_column('application_outcome')], 'soap:Server')
-        self.assertEqual(attributes[_column('classification')], self.audit_log.last().values['classification'])
+        self.assertEqual(attributes[_column('classification')], AuditClassification.Transient)
 
         self._assert_no_data_or_payload(attributes)
 

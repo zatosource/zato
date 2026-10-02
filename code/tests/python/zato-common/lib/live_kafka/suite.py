@@ -115,6 +115,19 @@ class KafkaSuite:
 
 # ################################################################################################################################
 
+    @property
+    def ssl_address(self) -> 'str':
+        """ The TLS listener's address a connection points at - for a cluster, the first instance's only, as with address.
+        """
+        if isinstance(self.kafka, KafkaCluster):
+            out = self.kafka[0].ssl_address
+        else:
+            out = self.kafka.ssl_address
+
+        return out
+
+# ################################################################################################################################
+
     def invoke(self, mode:'str', **fields:'any_') -> 'anydict':
         """ One call to the invoker deployed to the test server.
         """
@@ -265,7 +278,11 @@ class KafkaSuite:
     def wait_for_payload(self, payload:'str', count:'int'=1, **kwargs:'any_') -> 'anylist':
         """ Waits until a payload was received that many times.
         """
-        out = self.wait_for_received(lambda elem: elem['data'] == payload, count, **kwargs)
+        def matches(item:'anydict') -> 'bool':
+            out = item['data'] == payload
+            return out
+
+        out = self.wait_for_received(matches, count, **kwargs)
         return out
 
 # ################################################################################################################################
