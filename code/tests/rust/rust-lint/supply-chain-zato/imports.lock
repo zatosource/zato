@@ -37,69 +37,16 @@ user-login = "hsivonen"
 user-name = "Henri Sivonen"
 
 [[publisher.wasip2]]
-version = "1.0.3+wasi-0.2.9"
-when = "2026-04-17"
+version = "1.0.4+wasi-0.2.12"
+when = "2026-06-12"
 user-id = 1
 user-login = "alexcrichton"
 user-name = "Alex Crichton"
-
-[[publisher.wasip3]]
-version = "0.4.0+wasi-0.3.0-rc-2026-01-06"
-when = "2026-01-15"
-user-id = 1
-user-login = "alexcrichton"
-user-name = "Alex Crichton"
-
-[[publisher.wasm-encoder]]
-version = "0.244.0"
-when = "2026-01-06"
-trusted-publisher = "github:bytecodealliance/wasm-tools"
-
-[[publisher.wasm-metadata]]
-version = "0.236.0"
-when = "2025-07-28"
-user-id = 73222
-user-login = "wasmtime-publish"
-
-[[publisher.wasmparser]]
-version = "0.244.0"
-when = "2026-01-06"
-trusted-publisher = "github:bytecodealliance/wasm-tools"
-
-[[publisher.wit-bindgen]]
-version = "0.51.0"
-when = "2026-01-12"
-trusted-publisher = "github:bytecodealliance/wit-bindgen"
 
 [[publisher.wit-bindgen]]
 version = "0.57.1"
 when = "2026-04-17"
 trusted-publisher = "github:bytecodealliance/wit-bindgen"
-
-[[publisher.wit-bindgen-core]]
-version = "0.51.0"
-when = "2026-01-12"
-trusted-publisher = "github:bytecodealliance/wit-bindgen"
-
-[[publisher.wit-bindgen-rust]]
-version = "0.51.0"
-when = "2026-01-12"
-trusted-publisher = "github:bytecodealliance/wit-bindgen"
-
-[[publisher.wit-bindgen-rust-macro]]
-version = "0.51.0"
-when = "2026-01-12"
-trusted-publisher = "github:bytecodealliance/wit-bindgen"
-
-[[publisher.wit-component]]
-version = "0.244.0"
-when = "2026-01-06"
-trusted-publisher = "github:bytecodealliance/wasm-tools"
-
-[[publisher.wit-parser]]
-version = "0.244.0"
-when = "2026-01-06"
-trusted-publisher = "github:bytecodealliance/wasm-tools"
 
 [[audits.bytecode-alliance.wildcard-audits.bumpalo]]
 who = "Nick Fitzgerald <fitzgen@gmail.com>"
@@ -118,89 +65,11 @@ notes = """
 This is a Bytecode Alliance authored crate.
 """
 
-[[audits.bytecode-alliance.wildcard-audits.wasip3]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-user-id = 1 # Alex Crichton (alexcrichton)
-start = "2025-09-10"
-end = "2026-08-21"
-notes = """
-This is a Bytecode Alliance authored crate.
-"""
-
-[[audits.bytecode-alliance.wildcard-audits.wasm-encoder]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-trusted-publisher = "github:bytecodealliance/wasm-tools"
-start = "2025-08-14"
-end = "2027-01-08"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.wildcard-audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-user-id = 73222 # wasmtime-publish
-start = "2023-01-01"
-end = "2026-06-03"
-notes = """
-The Bytecode Alliance uses the `wasmtime-publish` crates.io account to automate
-publication of this crate from CI. This repository requires all PRs are reviewed
-by a Bytecode Alliance maintainer and it owned by the Bytecode Alliance itself.
-"""
-
-[[audits.bytecode-alliance.wildcard-audits.wasmparser]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-trusted-publisher = "github:bytecodealliance/wasm-tools"
-start = "2025-08-14"
-end = "2027-01-08"
-notes = "The Bytecode Alliance is the author of this crate"
-
 [[audits.bytecode-alliance.wildcard-audits.wit-bindgen]]
 who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
 trusted-publisher = "github:bytecodealliance/wit-bindgen"
 start = "2025-08-13"
-end = "2027-01-08"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.wildcard-audits.wit-bindgen-core]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-trusted-publisher = "github:bytecodealliance/wit-bindgen"
-start = "2025-08-13"
-end = "2027-01-08"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.wildcard-audits.wit-bindgen-rust]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-trusted-publisher = "github:bytecodealliance/wit-bindgen"
-start = "2025-08-13"
-end = "2027-01-12"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.wildcard-audits.wit-bindgen-rust-macro]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-trusted-publisher = "github:bytecodealliance/wit-bindgen"
-start = "2025-08-13"
-end = "2027-01-08"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.wildcard-audits.wit-component]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-trusted-publisher = "github:bytecodealliance/wasm-tools"
-start = "2025-08-14"
-end = "2027-01-08"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.wildcard-audits.wit-parser]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-trusted-publisher = "github:bytecodealliance/wasm-tools"
-start = "2025-08-14"
 end = "2027-01-08"
 notes = "The Bytecode Alliance is the author of this crate"
 
@@ -244,22 +113,10 @@ criteria = "safe-to-deploy"
 delta = "2.10.0 -> 2.11.1"
 notes = "Minor updates, nothing awry here."
 
-[[audits.bytecode-alliance.audits.heck]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.4.1 -> 0.5.0"
-notes = "Minor changes for a `no_std` upgrade but otherwise everything looks as expected."
-
 [[audits.bytecode-alliance.audits.iana-time-zone-haiku]]
 who = "Dan Gohman <dev@sunfishcode.online>"
 criteria = "safe-to-deploy"
 version = "0.1.2"
-
-[[audits.bytecode-alliance.audits.leb128fmt]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-version = "0.1.0"
-notes = "Well-scoped crate do doing LEB encoding with no `unsafe` code and does what it says on the tin."
 
 [[audits.bytecode-alliance.audits.matchers]]
 who = "Pat Hickey <phickey@fastly.com>"
@@ -311,6 +168,12 @@ who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
 delta = "0.10.0 -> 0.10.1"
 notes = "Minor logging-based updated fixing a recent advisory for the crate."
+
+[[audits.bytecode-alliance.audits.rustc_version]]
+who = "Alex Crichton <alex@alexcrichton.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.0 -> 0.4.1"
+notes = "Minor changes, nothing worrisome"
 
 [[audits.bytecode-alliance.audits.semver]]
 who = "Pat Hickey <phickey@fastly.com>"
@@ -365,54 +228,6 @@ Crate is sound, albeit leaky, and not actively malicious. Probably not the best
 crate to use in practice but it's suitable for testing dependencies.
 """
 
-[[audits.bytecode-alliance.audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.236.0 -> 0.237.0"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.237.0 -> 0.238.1"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.238.1 -> 0.239.0"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.239.0 -> 0.240.0"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.240.0 -> 0.241.2"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.241.2 -> 0.242.0"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.242.0 -> 0.243.0"
-notes = "The Bytecode Alliance is the author of this crate"
-
-[[audits.bytecode-alliance.audits.wasm-metadata]]
-who = "Alex Crichton <alex@alexcrichton.com>"
-criteria = "safe-to-deploy"
-delta = "0.243.0 -> 0.244.0"
-notes = "The Bytecode Alliance is the author of this crate"
-
 [[audits.google.audits.bitflags]]
 who = "Lukasz Anforowicz <lukasza@chromium.org>"
 criteria = "safe-to-deploy"
@@ -443,19 +258,6 @@ version = "0.2.5"
 notes = "No unsafe code"
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
-[[audits.google.audits.equivalent]]
-who = "George Burgess IV <gbiv@google.com>"
-criteria = "safe-to-deploy"
-version = "1.0.1"
-aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
-
-[[audits.google.audits.equivalent]]
-who = "Jonathan Hao <phao@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "1.0.1 -> 1.0.2"
-notes = "No changes to any .rs files or Rust code."
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
 [[audits.google.audits.foldhash]]
 who = "Lukasz Anforowicz <lukasza@chromium.org>"
 criteria = "safe-to-deploy"
@@ -482,49 +284,11 @@ delta = "0.1.4 -> 0.1.5"
 notes = "No new `unsafe`."
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
-[[audits.google.audits.heck]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-version = "0.4.1"
-notes = """
-Grepped for `-i cipher`, `-i crypto`, `'\bfs\b'``, `'\bnet\b'``, `'\bunsafe\b'``
-and there were no hits.
-
-`heck` (version `0.3.3`) has been added to Chromium in
-https://source.chromium.org/chromium/chromium/src/+/28841c33c77833cc30b286f9ae24c97e7a8f4057
-"""
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
 [[audits.google.audits.httpdate]]
 who = "George Burgess IV <gbiv@google.com>"
 criteria = "safe-to-deploy"
 version = "1.0.3"
 aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
-
-[[audits.google.audits.indexmap]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-version = "2.7.1"
-notes = '''
-Grepped for `-i cipher`, `-i crypto`, `'\bfs\b'`, `'\bnet\b'`
-and there were no hits.
-
-There is a little bit of `unsafe` Rust code - the audit can be found at
-https://chromium-review.googlesource.com/c/chromium/src/+/6187726/2
-'''
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.indexmap]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "2.7.1 -> 2.8.0"
-notes = """
-No `unsafe` introduced or affected in:
-* `indexmap_with_default!` and `indexset_with_default!` macros
-* New `PartialEq` implementations
-* `fn slice_eq` in `util.rs`
-"""
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
 [[audits.google.audits.lazy_static]]
 who = "Lukasz Anforowicz <lukasza@chromium.org>"
@@ -1013,24 +777,6 @@ criteria = "safe-to-deploy"
 delta = "1.2.1 -> 1.2.2"
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
 
-[[audits.mozilla.audits.hashbrown]]
-who = "Erich Gubler <erichdongubler@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "0.15.5 -> 0.16.0"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.hashbrown]]
-who = "Erich Gubler <erichdongubler@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "0.16.0 -> 0.16.1"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.hashbrown]]
-who = "Erich Gubler <erichdongubler@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "0.16.1 -> 0.17.0"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
 [[audits.mozilla.audits.idna]]
 who = "Valentin Gosu <valentin.gosu@gmail.com>"
 criteria = "safe-to-deploy"
@@ -1054,19 +800,6 @@ aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-ch
 who = "edgul <ed.guloien@gmail.com>"
 criteria = "safe-to-deploy"
 delta = "1.0.3 -> 1.1.0"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.indexmap]]
-who = "Erich Gubler <erichdongubler@gmail.com>"
-criteria = "safe-to-deploy"
-delta = "2.8.0 -> 2.11.4"
-aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.indexmap]]
-who = "Ben Dean-Kawamura <bdk@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "2.11.4 -> 2.14.0"
-notes = "Mostly internal refactorings.  No new unsafe code."
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
 
 [[audits.mozilla.audits.log]]
@@ -1161,6 +894,16 @@ who = "Benjamin VanderSloot <bvandersloot@mozilla.com>"
 criteria = "safe-to-deploy"
 delta = "0.4.9 -> 0.4.14"
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
+
+[[audits.mozilla.audits.rustc_version]]
+who = "Nika Layzell <nika@thelayzells.com>"
+criteria = "safe-to-deploy"
+version = "0.4.0"
+notes = """
+Use of powerful capabilities is limited to invoking `rustc -vV` to get version
+information for parsing version information.
+"""
+aggregated-from = "https://raw.githubusercontent.com/mozilla/cargo-vet/main/supply-chain/audits.toml"
 
 [[audits.mozilla.audits.semver]]
 who = "Ben Dean-Kawamura <bdk@mozilla.com>"

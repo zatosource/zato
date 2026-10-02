@@ -367,7 +367,7 @@ ruff:
 
 pyright:
 	@echo "Running every configured Python type check from $(CURDIR)/code"
-	cd $(CURDIR)/code && $(PYRIGHT) \
+	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) \
 		zato-common/src/zato/hl7v2/ \
 		zato-common/src/zato/common/hl7/fhir/fields.py \
 		zato-common/src/zato/common/pubsub/outgoing.py \
@@ -1510,12 +1510,17 @@ vet: vet-zato ## Supply-chain audit everywhere.
 # the unsafe usage table stays the deliverable, and a run that fails for any other reason -
 # a compile error, a crash - still fails the target. No grep -q anywhere - with pipefail
 # a -q grep that quits early kills the pipe upstream and flips the pipeline's status.
+# The tolerated noise is also left out of what gets printed, together with geiger's
+# "Failed to match (ignoring source)" lines, the files its own parser cannot read and
+# the raw cargo artifact messages it echoes.
+GEIGER_NOISE := ^Failed to match \(ignoring source\) package:|^Failed to parse file:|^WARNING: Dependency file was never scanned:|^WARNING: .*No metrics found|^error: Found [0-9]+ warnings$$|^\{"\$$message_type":"artifact",
+
 geiger-zato: ## Report unsafe usage in public crate dependency trees.
 	. $(HOME)/.cargo/env && \
 	for crate in zato_common_core zato_server_core zato_scheduler_core; do \
 		out=$$(cargo geiger --manifest-path $(ZATO_RUST_DIR)/$$crate/Cargo.toml 2>&1); \
 		status=$$?; \
-		echo "$$out"; \
+		echo "$$out" | grep -Ev '$(GEIGER_NOISE)'; \
 		if [ $$status -ne 0 ]; then \
 			errline=$$(echo "$$out" | grep -E '^error: Found [0-9]+ warnings$$'); \
 			if [ -z "$$errline" ]; then exit $$status; fi; \
