@@ -29,6 +29,7 @@ from zato.common.bearer_token_verifier import extract_bearer_token
 from zato.common.const import ServiceConst
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
+from zato.common.hl7.ccda.exception import CCDAError
 from zato.common.json_ import dumps
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import current_time_us
@@ -46,6 +47,7 @@ from zato.common.util.url_dispatcher import normalize_path_info, to_internal_acc
 from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.as2 import AS2ChannelRuntime
 from zato.server.connection.as4 import AS4ChannelRuntime
+from zato.server.connection.ccda import CCDAFacade
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.connection.http_soap import response_cache
 from zato.server.connection.http_soap.cors import add_cors_response_headers, handle_preflight_request, is_allowed_origin
@@ -98,6 +100,8 @@ _transport_soap = URL_TYPE.SOAP
 _transport_as2 = URL_TYPE.AS2
 _transport_as4 = URL_TYPE.AS4
 _data_format_hl7_v2 = HL7.Const.Version.v2.id
+_data_format_ccda = HL7.CCDA.Data_Format
+_ccda_reason_not_cda = HL7.CCDA.Reason.Not_CDA
 _default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
@@ -949,6 +953,13 @@ class RequestDispatcher:
                 msg = 'No client error wrapper for transport:`{}`, data_format:`{}`'.format(
                     channel_item.get('transport'), channel_item.get('data_format'))
                 logger.log(TRACE1, msg)
+
+            # With no wrapper, the arguments of an exception leave as one piece of text
+            if isinstance(response, tuple):
+                parts = []
+                for item in response:
+                    parts.append(str(item))
+                response = ' '.join(parts)
         else:
             response = error_wrapper(cid, response)
 
@@ -1651,12 +1662,29 @@ class RequestHandler:
         if channel_item['data_format'] == ModuleCtx.IO_FORM_DATA:
             request_ctx['zato.request.payload'] = post_data
 
+        # What the service receives - the bytes as they came, unless the data format says otherwise
+        payload:'any_' = raw_request
+
         # An HL7 channel hands its service the message as text, the same as an MLLP channel does
         if channel_item['data_format'] == _data_format_hl7_v2:
-            raw_request = raw_request.decode('utf-8')
+            payload = raw_request.decode('utf-8')
+
+        # A C-CDA channel converts the document first and hands its service the resulting bundle ..
+        elif channel_item['data_format'] == _data_format_ccda:
+            ccda = CCDAFacade()
+            ccda.init(cid, self.server, channel_item['name'])
+            try:
+                payload = ccda.to_fhir(raw_request)
+            except CCDAError as e:
+
+                # .. a document that is not CDA at all is the caller's error, anything else is ours.
+                if e.reason == _ccda_reason_not_cda:
+                    raise BadRequest(cid, e.msg, needs_msg=True)
+                else:
+                    raise
 
         # Invoke the service ..
-        response = service.update_handle(self._set_response_data, service, raw_request,
+        response = service.update_handle(self._set_response_data, service, payload,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
             cast_('ConfigDispatcher', config_manager.config_dispatcher),
             config_manager, cid, request_ctx=request_ctx,

@@ -331,6 +331,18 @@ _test_transfer_columns = [
     {'key': 'status', 'label': 'Status', 'type': 'text'},
 ]
 
+_ccda_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'object_name', 'label': 'Service', 'type': 'text'},
+    {'key': 'root_template', 'label': 'Document', 'type': 'text'},
+    {'key': 'resource_count', 'label': 'Resources', 'type': 'text'},
+    {'key': 'document_size', 'label': 'Document size', 'type': 'text'},
+    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 # The columns of the all-events page - the ones every source shares, plus the source itself.
 _all_sources_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
@@ -377,6 +389,7 @@ _source_columns = {
     'microsoft-health': _microsoft_health_columns,
     'certificate': _certificate_columns,
     'test-transfer': _test_transfer_columns,
+    'ccda': _ccda_columns,
 }
 
 # ################################################################################################################################

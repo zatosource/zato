@@ -7,14 +7,14 @@
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
-	help install-deps \
+	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
-	test-hl7 test-fhir-bulk-export hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
+	test-hl7 test-fhir-bulk-export test-ccda hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
@@ -293,6 +293,9 @@ install:
 install-deps: ## Create local venv and install test dependencies.
 	cd $(CURDIR)/code/tests && uv venv .venv --clear
 	cd $(CURDIR)/code/tests && uv pip install -r requirements.txt
+
+install-fhir-converter: ## Build the C-CDA to FHIR converter from source and install it next to the Python binary.
+	$(CURDIR)/../../zato-docker/build-scripts/08d-install-fhir-converter.sh $(CURDIR)/code/bin/fhir-converter
 
 health-install: ## Install health deps and build.
 	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
@@ -780,6 +783,26 @@ test-fhir-bulk-export: ## FHIR bulk exports - the export program against the fak
 		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_fhir_outconn_bulk_export.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
+test-ccda: ## C-CDA to FHIR - the converter, the service facade, enmasse, a live server with C-CDA channels and the Dashboard form.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/hl7/ccda/ \
+		$(CURDIR)/code/tests/python/zato-server/ccda/ \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_ccda_channel.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ccda -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/ccda_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ccda_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_hl7_rest_channel_ccda.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
@@ -1295,7 +1318,7 @@ Zato_Test_Toolchain := \
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
-	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-llm test-rule-engine test-enmasse test-audit-export
+	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-ccda test-llm test-rule-engine test-enmasse test-audit-export
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui

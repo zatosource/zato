@@ -53,6 +53,7 @@ from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, FTPFacade, IBMMQFacade, KafkaFacade, \
     GraphQLFacade, KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SalesforceFacade, SchedulerFacade, \
     SFTPFacade, SMBFacade, SOAPFacade
+from zato.server.connection.ccda import CCDAFacade
 from zato.server.connection.grpc_ import GRPCFacade
 from zato.server.destination.facade import DestinationFacade
 from zato.server.destination.hook import run_for_service as run_destinations_for_service
@@ -517,6 +518,9 @@ class Service:
         # FHIR facade for outgoing connections
         self.fhir = FHIRFacade()
 
+        # C-CDA to FHIR conversion
+        self.ccda = CCDAFacade()
+
         # IBM MQ facade for outgoing connections
         self.ibm_mq = IBMMQFacade()
 
@@ -691,6 +695,9 @@ class Service:
 
         # FHIR facade
         self.fhir.init(self.cid, self._config_manager)
+
+        # C-CDA conversion
+        self.ccda.init(self.cid, self.server, self.name)
 
         # MLLP facade
         self.mllp.init(self.cid, self._config_manager)

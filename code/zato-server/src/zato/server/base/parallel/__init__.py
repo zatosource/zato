@@ -81,6 +81,7 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.delivery import PushDelivery
 from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigStore
+from zato.server.connection.ccda import log_converter_status
 from zato.server.connection.mcp.session import MCPSessionReaper
 from zato.server.connection.outgoing_delivery import register_delivery_handlers
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
@@ -391,6 +392,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             # The audit log for invocations of user-defined services.
             self.service_audit_log = AuditLog(self.name)
+
+            # Whether C-CDA documents can be converted on this server
+            log_converter_status()
 
             internal = self.service_store.import_internal_services(internal_service_modules, self.base_dir, self.sync_internal)
             locally_deployed.extend(internal)

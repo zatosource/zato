@@ -44,7 +44,8 @@ $.fn.zato.channel.hl7.rest.field_descriptions = {
     'id_is_active': 'Whether this channel accepts messages. ' +
         'An inactive channel rejects all requests without invoking the service.',
     'id_hl7_version': 'Version of the HL7 standard the messages use. ' +
-        'HL7 v2.x is the pipe-delimited format with segments such as MSH and PID.',
+        'HL7 v2.x is the pipe-delimited format with segments such as MSH and PID. ' +
+        'C-CDA is the XML document format, converted to a FHIR bundle before the service runs.',
     'id_should_return_errors': 'When on, details of processing errors are sent back to the caller ' +
         'in the response. Leave it off if callers should not see internal error information.',
 };

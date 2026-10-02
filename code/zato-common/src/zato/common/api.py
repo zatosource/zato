@@ -716,6 +716,8 @@ class DATA_FORMAT(Attrs):
     CSV = 'csv'
     DICT = 'dict'
     FORM_DATA = 'form'
+    HL7 = 'hl7'
+    HL7_CCDA = 'hl7-ccda'
     JSON = 'json'
     POST = 'post'
 
@@ -2621,10 +2623,11 @@ class HL7:
     class Const:
 
         class Version:
-            v2 = NameId('HL7 v2.x', 'hl7-v2')
+            v2   = NameId('HL7 v2.x', 'hl7-v2')
+            ccda = NameId('C-CDA', 'hl7-ccda')
 
             def __iter__(self):
-                return iter((self.v2,))
+                return iter((self.v2, self.ccda))
 
         class ImplClass:
             zato = 'zato'
@@ -2730,6 +2733,40 @@ class HL7:
             Running = 'running'
             Done    = 'done'
             Failed  = 'failed'
+
+    class CCDA:
+        """ The conversion of C-CDA documents to FHIR bundles - the data format of channels that convert
+        on arrival and where the converter that does the work is installed.
+        """
+
+        # The data format of an HL7 REST channel that converts each document before its service runs
+        Data_Format = 'hl7-ccda'
+
+        # Where the converter is installed - an environment variable, or a directory next to the Python interpreter
+        Env_Dir          = 'Zato_FHIR_Converter_Dir'
+        Default_Dir_Name = 'fhir-converter'
+
+        # The converter's binary and the directory of its templates, both under the directory above
+        Binary_Name        = 'Microsoft.Health.Fhir.Liquid.Converter.Tool'
+        Templates_Dir_Name = 'templates'
+        Templates_Set_Name = 'Ccda'
+
+        # How long one conversion may take, in seconds
+        Timeout = 60.0
+
+        # The template used when a document names no template of its own, and the type of the bundles returned
+        Default_Root_Template = 'CCD'
+        Bundle_Type           = 'transaction'
+
+        # The content type of the documents themselves
+        Content_Type = 'application/cda+xml'
+
+        # Why a conversion did not happen
+        class Reason:
+            Not_Installed    = 'not-installed'
+            Not_CDA          = 'not-cda'
+            Converter_Failed = 'converter-failed'
+            Timeout          = 'timeout'
 
 # ################################################################################################################################
 # ################################################################################################################################
