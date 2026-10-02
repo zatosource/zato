@@ -164,7 +164,7 @@ fn get_channel_field(channel_item: Option<&Bound<'_, PyAny>>, key: &str) -> PyRe
 }
 
 /// Sub-second part of a duration in microseconds, for `seconds.micros` style log fields.
-fn fractional_micros(delta: TimeDelta) -> i64 {
+pub fn fractional_micros(delta: TimeDelta) -> i64 {
     delta.num_microseconds().unwrap_or(NO_MICROS) % MICROS_PER_SECOND
 }
 

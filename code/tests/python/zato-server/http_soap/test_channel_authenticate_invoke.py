@@ -961,7 +961,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         groups_ctx = MagicMock()
         groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         groups_ctx.check_security_basic_auth.return_value = 123
-        ctx.dispatcher.url_data.basic_auth_get_by_id.return_value = {'username': 'u', 'sec_type': 'basic_auth'}
+        ctx.dispatcher.url_data.basic_auth_get_by_id.return_value = {'name': 'test.basic-auth', 'username': 'u', 'sec_type': 'basic_auth'}
 
         request_ctx = _make_request_ctx({
             'HTTP_AUTHORIZATION': 'Basic dXNlcjpwYXNz',
@@ -1005,7 +1005,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         groups_ctx = MagicMock()
         groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         groups_ctx.check_security_apikey.return_value = 456
-        ctx.dispatcher.url_data.apikey_get_by_id.return_value = {'api_key': 'k', 'sec_type': 'apikey'}
+        ctx.dispatcher.url_data.apikey_get_by_id.return_value = {'name': 'test.apikey', 'api_key': 'k', 'sec_type': 'apikey'}
 
         request_ctx = _make_request_ctx({
             'HTTP_X_API_KEY': 'my-api-key',
@@ -1069,7 +1069,7 @@ class CheckSecurityGroupsCustomHeaderTestCase(unittest.TestCase):
         groups_ctx = MagicMock()
         groups_ctx.apikey_header = 'HTTP_X_CUSTOM_TOKEN'
         groups_ctx.check_security_apikey.return_value = 789
-        ctx.dispatcher.url_data.apikey_get_by_id.return_value = {'api_key': 'k', 'sec_type': 'apikey'}
+        ctx.dispatcher.url_data.apikey_get_by_id.return_value = {'name': 'test.apikey', 'api_key': 'k', 'sec_type': 'apikey'}
 
         request_ctx = _make_request_ctx({
             'HTTP_X_CUSTOM_TOKEN': 'my-api-key',
@@ -1113,7 +1113,7 @@ class CheckSecurityGroupsCustomHeaderTestCase(unittest.TestCase):
         groups_ctx = MagicMock()
         groups_ctx.apikey_header = None
         groups_ctx.check_security_basic_auth.return_value = 123
-        ctx.dispatcher.url_data.basic_auth_get_by_id.return_value = {'username': 'u', 'sec_type': 'basic_auth'}
+        ctx.dispatcher.url_data.basic_auth_get_by_id.return_value = {'name': 'test.basic-auth', 'username': 'u', 'sec_type': 'basic_auth'}
 
         request_ctx = _make_request_ctx({
             'HTTP_AUTHORIZATION': 'Basic dXNlcjpwYXNz',
@@ -1480,7 +1480,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 
         result = ctx.dispatcher._handle_dispatch_error(_test_cid, RuntimeError('details'), channel_item, request_ctx)
 
-        self.assertEqual(result[0], 'details')
+        self.assertEqual(result, 'details')
 
 # ################################################################################################################################
 
