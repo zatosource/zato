@@ -114,6 +114,12 @@ class PendingEvent:
     parents: 'anylist'
     parent_link_type: 'str' = ''
 
+    # Whether the event's payload leaves the process with the export
+    is_export_payload_active: 'bool' = False
+
+    # The id the database gave the event once it was written
+    event_id: 'int' = 0
+
 # ################################################################################################################################
 # ################################################################################################################################
 

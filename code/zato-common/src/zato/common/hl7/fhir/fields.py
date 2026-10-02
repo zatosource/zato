@@ -46,6 +46,7 @@ Outgoing_Fields:'fhir_field_list' = [
     FHIRField('security_id', 0),
 
     FHIRField('is_audit_log_active', True),
+    FHIRField('is_audit_export_payload_active', False),
 
     # How a send that did not go through is tried again - the same settings an outgoing REST connection has.
     FHIRField(_retry.Field_Max_Retries, _retry.Default_Max_Retries),

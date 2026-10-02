@@ -23,17 +23,20 @@ from sqlalchemy import select
 from zato.common.api import SCHEDULER
 from zato.common.audit_log.api import AuditEvent, AuditSource, get_audit_engine
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_table
+from zato.common.audit_log.export.api import get_audit_export
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.engine import Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.typing_ import intlistnone, intnone
 
     # Dummy assignments to satisfy type checkers
     AuditLog = AuditLog
+    Engine = Engine
     intlistnone = intlistnone
     intnone = intnone
 
@@ -167,6 +170,9 @@ def record_job_complete(event_id:'int', *, outcome:'str', duration_ms:'int', err
     now = utcnow()
     append_job_log_entry(event_id, now.isoformat(), Log_Level_System, f'Job completed, outcome: {outcome}, duration: {duration_human}')
 
+    # The collector sees the finished run as a second record of the same event
+    _emit_updated_row(engine, event_id)
+
 # ################################################################################################################################
 
 def record_job_timeout(job_id:'int', current_run:'int', *, elapsed_ms:'int', error:'str') -> 'None':
@@ -208,6 +214,17 @@ def record_job_timeout(job_id:'int', current_run:'int', *, elapsed_ms:'int', err
     elapsed_human = format_duration_ms(elapsed_ms)
     now = utcnow()
     append_job_log_entry(event_id, now.isoformat(), Log_Level_System, f'Job timed out after {elapsed_human}')
+
+    # The collector sees the timed out run as a second record of the same event
+    _emit_updated_row(engine, event_id)
+
+# ################################################################################################################################
+
+def _emit_updated_row(engine:'Engine', event_id:'int') -> 'None':
+    """ Hands a run updated in place to the OTLP export, if this process has one.
+    """
+    if export := get_audit_export():
+        export.emit_row(engine, event_id)
 
 # ################################################################################################################################
 

@@ -123,6 +123,7 @@ def _insert_send_event(
     outcome:'str',
     status:'str' = '',
     is_auth_error:'bool' = False,
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Writes one message-sent event describing a direct e-mail send, successful or not.
     A rejection of the credentials gets the auth-failed event type,
@@ -148,6 +149,7 @@ def _insert_send_event(
         duration_ms=duration_ms,
         data=data,
         attachments=attachment_envelopes,
+        is_export_payload_active=is_export_payload_active,
     )
 
 # ################################################################################################################################
@@ -177,6 +179,9 @@ class SMTPConnection(BaseConnection):
             self.needs_audit = config['is_audit_log_active']
         else:
             self.needs_audit = True
+
+        # The payloads leave with the audit export only if the connection says so
+        self.is_export_payload_active = bool(config.get('is_audit_export_payload_active'))
 
         self.conn_args:'anylist' = [
             self.config.host.encode('utf-8'),
@@ -356,7 +361,8 @@ class SMTPConnection(BaseConnection):
             # .. record the failure before telling the caller ..
             if needs_audit:
                 _insert_send_event(self.audit_log, self.config.name, msg, from_, cid, send_start, attachment_envelopes,
-                    outcome=AuditOutcome.Error, status=str(e), is_auth_error=is_auth_error(e))
+                    outcome=AuditOutcome.Error, status=str(e), is_auth_error=is_auth_error(e),
+                    is_export_payload_active=self.is_export_payload_active)
 
             # .. and tell the caller that the message was not sent.
             return False
@@ -371,7 +377,7 @@ class SMTPConnection(BaseConnection):
             # .. record what went out on the wire ..
             if needs_audit:
                 _insert_send_event(self.audit_log, self.config.name, msg, from_, cid, send_start, attachment_envelopes,
-                    outcome=AuditOutcome.OK)
+                    outcome=AuditOutcome.OK, is_export_payload_active=self.is_export_payload_active)
 
             # .. and tell the caller that the message was sent successfully.
             return True
@@ -394,6 +400,9 @@ class Microsoft365SMTPConnection(BaseConnection):
             self.needs_audit = config['is_audit_log_active']
         else:
             self.needs_audit = True
+
+        # The payloads leave with the audit export only if the connection says so
+        self.is_export_payload_active = bool(config.get('is_audit_export_payload_active'))
 
 # ################################################################################################################################
 
@@ -525,7 +534,7 @@ class Microsoft365SMTPConnection(BaseConnection):
             # .. record the failure before telling the caller ..
             if needs_audit:
                 _insert_send_event(self.audit_log, self.config['name'], msg, from_, cid, send_start, attachment_envelopes,
-                    outcome=AuditOutcome.Error, status=str(e))
+                    outcome=AuditOutcome.Error, status=str(e), is_export_payload_active=self.is_export_payload_active)
 
             # .. and tell the caller that the message was not sent.
             return False
@@ -539,7 +548,7 @@ class Microsoft365SMTPConnection(BaseConnection):
             # .. record what went out on the wire ..
             if needs_audit:
                 _insert_send_event(self.audit_log, self.config['name'], msg, from_, cid, send_start, attachment_envelopes,
-                    outcome=AuditOutcome.OK)
+                    outcome=AuditOutcome.OK, is_export_payload_active=self.is_export_payload_active)
 
             # .. and tell the caller that the message was sent successfully.
             return True

@@ -541,6 +541,9 @@ class ConfigManager(_ConfigManagerBase):
 
             # Whether this connection's exchanges go to the audit log - it arrives as an opaque attribute
             'is_audit_log_active':config.get('is_audit_log_active'),
+
+            # Whether its payloads leave with the audit export - an opaque attribute too, off unless set
+            'is_audit_export_payload_active':config.get('is_audit_export_payload_active'),
         }
 
         # The AS4 fields arrive as opaque attributes, which hold only what the connection was saved
@@ -650,6 +653,9 @@ class ConfigManager(_ConfigManagerBase):
 
             # Whether this connection's traffic goes to the audit log - it arrives as an opaque attribute
             'is_audit_log_active':config.get('is_audit_log_active'),
+
+            # Whether its payloads leave with the audit export - an opaque attribute too, off unless set
+            'is_audit_export_payload_active':config.get('is_audit_export_payload_active'),
 
             # SOAP-specific and mutual-TLS details - they arrive as opaque attributes
             # and are absent from connections created before these fields existed.
@@ -1505,6 +1511,10 @@ class ConfigManager(_ConfigManagerBase):
                 # A topic whose audit log was turned off explicitly writes no audit events
                 if opaque.get('is_audit_log_active') is False:
                     self.server.pubsub_backend.set_topic_audit_flag(row.name, False)
+
+                # A topic's message payloads leave with the audit export only if the topic says so
+                if opaque.get('is_audit_export_payload_active') is True:
+                    self.server.pubsub_backend.set_topic_payload_flag(row.name, True)
 
                 # Topics without opaque attributes predate backend types and are built-in,
                 # and built-in topics never have registry entries.
@@ -3033,6 +3043,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # Every new topic announces its audit log state ..
         self.server.pubsub_backend.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
+        self.server.pubsub_backend.set_topic_payload_flag(msg.topic_name, msg.get('is_audit_export_payload_active', False))
 
         # .. and AMQP-backed topics additionally get a registry entry
         # .. along with the channel override if one is needed.
@@ -3063,6 +3074,7 @@ class ConfigManager(_ConfigManagerBase):
         # which also covers renames since the old name is forgotten first.
         self.server.pubsub_backend.delete_topic_audit_flag(old_name)
         self.server.pubsub_backend.set_topic_audit_flag(new_name, msg.is_audit_log_active)
+        self.server.pubsub_backend.set_topic_payload_flag(new_name, msg.get('is_audit_export_payload_active', False))
 
         # Handle name change ..
         if old_name != new_name:

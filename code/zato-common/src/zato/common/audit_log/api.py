@@ -24,6 +24,7 @@ from zato.common.audit_log.common import Attr_Value_Max_Len, Audit_DB_File_Name,
     AuditEvent, AuditLink, AuditOutcome, AuditSource, derive_classification, Env_Retention_Days, \
     Env_Retention_Days_Prefix, event_attr_table, event_body_table, event_link_table, event_table, get_retention_days, \
     get_source_env_suffix, metadata, Status_Outstanding
+from zato.common.audit_log.export.api import get_audit_export
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
     Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
@@ -382,10 +383,12 @@ class AuditLog:
         attachments:'anylistnone' = None,
         parents:'intlistnone' = None,
         parent_link_type:'str' = AuditLink.Resubmit_Of,
+        is_export_payload_active:'bool' = False,
         ) -> 'intnone':
         """ Writes one audit event, at the moment it happens, in the same process.
         Returns the event's id when the write is synchronous, None when it was buffered,
         and None without writing anything when the audit log is turned off.
+        The payload leaves the process with the OTLP export only if is_export_payload_active is set.
         """
 
         # A turned-off audit log records nothing at all - the event is dropped in silence,
@@ -428,6 +431,7 @@ class AuditLog:
         pending.attachments = attachments
         pending.parents = parents
         pending.parent_link_type = parent_link_type
+        pending.is_export_payload_active = is_export_payload_active
 
         pending.values = {
             'cid': cid,
@@ -585,6 +589,15 @@ class AuditLog:
 
         _trace('db write of %d events done %.1fms', batch_size, write_elapsed_ms)
 
+        # Events the database accepted go out to the OTLP collector too, if this process exports them.
+        # The export is looked up here rather than held by the writer because writers are built
+        # in many places, and this way all of them share the one export the process has.
+        if export := get_audit_export():
+            try:
+                export.emit_batch(batch)
+            except Exception:
+                logger.exception('Audit export could not take a batch of %d events', batch_size)
+
         # Periodically delete rows older than the retention window
         self._insert_count += batch_size
 
@@ -627,6 +640,9 @@ class AuditLog:
                 primary_key = result.inserted_primary_key
                 event_id = primary_key[0]
                 out = event_id
+
+                # The export needs the id once the batch is written
+                pending.event_id = event_id
 
                 # .. searchable attributes ..
                 if pending.attrs:

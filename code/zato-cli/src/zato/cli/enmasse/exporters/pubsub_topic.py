@@ -68,6 +68,10 @@ class PubSubTopicExporter:
                 if opaque.get('is_audit_log_active') is False:
                     exported_topic['is_audit_log_active'] = False
 
+                # Payloads leave with the audit export only when the flag is on, so only the on state is exported
+                if opaque.get('is_audit_export_payload_active') is True:
+                    exported_topic['is_audit_export_payload_active'] = True
+
             exported_topics.append(exported_topic)
 
         logger.info('Successfully prepared %d pub/sub topic definitions for export', len(exported_topics))

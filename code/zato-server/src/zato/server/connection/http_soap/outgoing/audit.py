@@ -113,6 +113,7 @@ def insert_audit_event(
         application_outcome=application_outcome,
         status=status,
         data=data,
+        is_export_payload_active=wrapper.is_export_payload_active,
     )
 
 # ################################################################################################################################

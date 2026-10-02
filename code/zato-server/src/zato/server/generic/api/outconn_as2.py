@@ -36,10 +36,11 @@ from zato.server.connection.queue import Wrapper
 if 0:
     from zato.common.as2.outbound import SendResult
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import anylist, strnone
+    from zato.common.typing_ import anylist, stranydict, strnone
     from zato.server.base.parallel import ParallelServer
     anylist = anylist
     ParallelServer = ParallelServer
+    stranydict = stranydict
     send_payload = send_payload
     SendResult = SendResult
 
@@ -115,6 +116,9 @@ outconn_as2_config_defaults:'as2_config_defaults' = {
     # Whether this connection's exchanges are recorded in the audit log.
     'is_audit_log_active': True,
 
+    # Whether its payloads leave with the audit log's OTLP export.
+    'is_audit_export_payload_active': False,
+
     # A zero means the partnership's own numeric default stays in place.
     'http_timeout_seconds': 0,
     'chunked_threshold_bytes': 0,
@@ -152,7 +156,7 @@ outconn_as2_int_config_keys = ('http_timeout_seconds', 'chunked_threshold_bytes'
 # Config keys that must be booleans but may arrive as strings from opaque storage
 outconn_as2_bool_config_keys = ('sign', 'encrypt', 'compress', 'compress_before_signing', 'mdn_signed',
     'preserve_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename',
-    'is_audit_log_active')
+    'is_audit_log_active', 'is_audit_export_payload_active')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -259,13 +263,14 @@ class _AS2Connection:
 
             reconciler = MDNReconciler(self.server_name)
 
-            values = {
+            values:'stranydict' = {
                 'payload': clear_payload,
                 'filename': stored_filename,
                 'async_mdn_url': self.partnership.async_mdn_url,
                 'cid': cid,
                 'payloads': payloads,
                 'delivery_kind': delivery_kind,
+                'is_export_payload_active': self.partnership.is_audit_export_payload_active,
             }
 
             record_send_result(reconciler, self.partnership.as2_from, self.partnership.as2_to, out, **values)

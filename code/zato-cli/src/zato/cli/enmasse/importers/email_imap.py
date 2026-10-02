@@ -212,6 +212,9 @@ class IMAPImporter:
         # The audit log is on unless the YAML definition turns it off
         imap_def['is_audit_log_active'] = imap_def.get('is_audit_log_active', True)
 
+        # Payloads leave with the audit export only if the YAML definition says so
+        imap_def['is_audit_export_payload_active'] = imap_def.get('is_audit_export_payload_active', False)
+
         # Set any opaque attributes from the configuration
         set_instance_opaque_attrs(imap_conn, imap_def)
 
@@ -256,6 +259,9 @@ class IMAPImporter:
 
         # The audit log is on unless the YAML definition turns it off
         imap_def['is_audit_log_active'] = imap_def.get('is_audit_log_active', True)
+
+        # Payloads leave with the audit export only if the YAML definition says so
+        imap_def['is_audit_export_payload_active'] = imap_def.get('is_audit_export_payload_active', False)
 
         # Set any opaque attributes
         set_instance_opaque_attrs(imap_conn, imap_def)

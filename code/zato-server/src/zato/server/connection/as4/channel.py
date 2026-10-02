@@ -115,6 +115,9 @@ class AS4ChannelRuntime:
 
         self.needs_audit = is_audit_log_active
 
+        # The payloads leave with the audit export only if the configuration says so
+        self.is_export_payload_active = bool(config.get('is_audit_export_payload_active'))
+
         if self.needs_audit:
             self.audit_log = AuditLog(server.name)
 
@@ -339,7 +342,8 @@ class AS4ChannelRuntime:
 
         record_message_handed_over(self.audit_log, queued.from_party, queued.to_party,
             message_id=queued.message_id, conversation_id=queued.conversation_id, service=queued.service,
-            action=queued.action, payloads=payloads, raw_message=body, cid=cid)
+            action=queued.action, payloads=payloads, raw_message=body, cid=cid,
+            is_export_payload_active=self.is_export_payload_active)
 
 # ################################################################################################################################
 
@@ -406,7 +410,8 @@ class AS4ChannelRuntime:
             return
 
         record_inbound_result(self.audit_log, result, body, cid,
-            own_party=self.own_party, partner_party=self.partner_party, reconciler=self.reconciler)
+            own_party=self.own_party, partner_party=self.partner_party, reconciler=self.reconciler,
+            is_export_payload_active=self.is_export_payload_active)
 
 # ################################################################################################################################
 

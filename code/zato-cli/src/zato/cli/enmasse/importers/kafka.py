@@ -66,6 +66,8 @@ Channel_Extra_Field_Defaults.update(Delivery_Field_Defaults)
 Outgoing_Extra_Field_Defaults = dict(_common_extra_field_defaults)
 Outgoing_Extra_Field_Defaults.update({
     'topic': '',
+    'is_audit_log_active': True,
+    'is_audit_export_payload_active': False,
 })
 Outgoing_Extra_Field_Defaults.update(_producer.Defaults)
 Outgoing_Extra_Field_Defaults.update(Retry_Field_Defaults)

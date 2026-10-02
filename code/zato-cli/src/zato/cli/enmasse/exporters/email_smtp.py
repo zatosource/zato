@@ -111,6 +111,10 @@ class SMTPExporter:
             if item.get('is_audit_log_active') is False:
                 smtp_conn['is_audit_log_active'] = False
 
+            # Payloads leave with the audit export only when the flag is on, so only the on state is exported
+            if item.get('is_audit_export_payload_active') is True:
+                smtp_conn['is_audit_export_payload_active'] = True
+
             exported_smtp.append(smtp_conn)
 
         logger.info('Successfully prepared %d SMTP connection definitions for export', len(exported_smtp))

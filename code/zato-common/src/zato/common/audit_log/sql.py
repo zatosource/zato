@@ -71,6 +71,7 @@ def record_sql_execution(
     row_count:'intnone' = None,
     duration_ms:'int' = 0,
     error:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'intnone':
     """ Writes one audit event describing one executed SQL statement. The level says
     how much travels with the event - the statement alone, the statement with its
@@ -118,7 +119,8 @@ def record_sql_execution(
 
     # Our response to produce
     out = audit_log.insert(AuditSource.SQL_Outgoing, AuditEvent.Request_Sent, conn_name,
-        cid=cid, endpoint=endpoint, outcome=outcome, duration_ms=duration_ms, data=data, attrs=attrs)
+        cid=cid, endpoint=endpoint, outcome=outcome, duration_ms=duration_ms, data=data, attrs=attrs,
+        is_export_payload_active=is_export_payload_active)
 
     return out
 

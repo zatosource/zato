@@ -146,6 +146,9 @@ class SQLImporter:
         else:
             out.password = encrypt_secret(session, CryptoManager.generate_password(to_str=True))
 
+        # .. payloads leave with the audit export only if the YAML definition says so ..
+        sql_definition['is_audit_export_payload_active'] = sql_definition.get('is_audit_export_payload_active', False)
+
         # .. whatever else the definition carries goes to the opaque attributes ..
         set_instance_opaque_attrs(out, sql_definition)
 
@@ -207,6 +210,9 @@ class SQLImporter:
         if 'extra' in sql_definition:
             extra = '\n'.join(sql_definition['extra'])
             out.extra = extra.encode('utf8')
+
+        # .. payloads leave with the audit export only if the YAML definition says so ..
+        sql_definition['is_audit_export_payload_active'] = sql_definition.get('is_audit_export_payload_active', False)
 
         # .. and whatever else the definition carries goes to the opaque attributes.
         set_instance_opaque_attrs(out, sql_definition)

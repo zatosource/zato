@@ -18,7 +18,7 @@ from zato.common.alerting import config_map
 from zato.common.alerting.object_config import conn_type_to_alert_type, get_field_kinds as get_alert_field_kinds, \
     storage_name as alert_storage_name
 from zato.common.alerting.validate_numbers import Number_Kinds as Alert_Number_Kinds
-from zato.common.audit_log.common import AuditEvent
+from zato.common.audit_log.common import AuditEvent, Export_Payload_Flag as _audit_export_payload_field
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
 from zato.common.exception import BadRequest
@@ -539,6 +539,14 @@ class _CreateEdit(_BaseService):
                         if previous_job_id := model_opaque.get(_health_check.Field_Job_ID):
                             data[_health_check.Field_Job_ID] = previous_job_id
                             conn.opaque[_health_check.Field_Job_ID] = previous_job_id
+
+                # The audit export's payload flag is set through enmasse only and has no field in the Dashboard,
+                # so an edit that does not carry it keeps what was stored.
+                if _audit_export_payload_field not in data:
+                    model_opaque = parse_instance_opaque_attr(model)
+                    if stored_payload_flag := model_opaque.get(_audit_export_payload_field):
+                        data[_audit_export_payload_field] = stored_payload_flag
+                        conn.opaque[_audit_export_payload_field] = stored_payload_flag
 
                 # Use the secret that was given on input because it may be a new one.
                 # Otherwise, if no secret is given on input, it means that we are not changing it

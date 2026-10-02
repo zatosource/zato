@@ -62,6 +62,7 @@ class AS2Importer(GenericConnectionImporter):
         'warn_on_duplicate_filename': False,
         'alerting_opt_out': False,
         'is_audit_log_active': True,
+        'is_audit_export_payload_active': False,
 
         # A zero means the partnership's own numeric default stays in place.
         'http_timeout_seconds': 0,

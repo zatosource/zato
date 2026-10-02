@@ -164,12 +164,14 @@ def handle_message(
         # .. is no channel whose audit setting could be consulted ..
         audit_log = server.audit_log
         audit_channel_name = ''
+        is_export_payload_active = False
 
         if audit_log:
             if matched_route is None:
                 audit_channel_name = Unmatched_Object_Name
             elif matched_route.is_audit_log_active:
                 audit_channel_name = matched_route.channel_name
+                is_export_payload_active = matched_route.is_audit_export_payload_active
 
         # .. the received event and its acknowledgment share one correlation id,
         # .. with the wire-level attributes as the defaults the parsed ones replace ..
@@ -203,7 +205,8 @@ def handle_message(
             if audit_log and audit_channel_name:
                 _ = audit_message_received(
                     audit_log, audit_channel_name, message_text,
-                    cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
+                    cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint,
+                    is_export_payload_active=is_export_payload_active)
 
         # .. invoke the matched route's callback ..
         else:
@@ -255,10 +258,12 @@ def handle_message(
                     if audit_log and audit_channel_name:
                         _ = audit_message_received(
                             audit_log, audit_channel_name, message_text,
-                            cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
+                            cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint,
+                            is_export_payload_active=is_export_payload_active)
                         _ = audit_ack_sent(
                             audit_log, audit_channel_name, ack_code, ack_string,
-                            cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'])
+                            cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'],
+                            is_export_payload_active=is_export_payload_active)
 
                     server.send_framed(active_socket, ack_string, settings, connection_context)
 
@@ -310,10 +315,12 @@ def handle_message(
                     if audit_log and audit_channel_name:
                         _ = audit_message_received(
                             audit_log, audit_channel_name, message_text,
-                            cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
+                            cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint,
+                            is_export_payload_active=is_export_payload_active)
                         _ = audit_ack_sent(
                             audit_log, audit_channel_name, ack_code, ack_string,
-                            cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'])
+                            cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'],
+                            is_export_payload_active=is_export_payload_active)
 
                     server.send_framed(active_socket, ack_string, settings, connection_context)
 
@@ -333,7 +340,8 @@ def handle_message(
 
                 _ = audit_message_received(
                     audit_log, audit_channel_name, message_text,
-                    cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
+                    cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint,
+                    is_export_payload_active=is_export_payload_active)
 
                 audit_received_ms = (monotonic() - audit_received_start) * Ms_Per_Second
                 trace('audit received done %.1fms (%s)', audit_received_ms, audit_msg_id)
@@ -384,7 +392,7 @@ def handle_message(
             _ = audit_ack_sent(
                 audit_log, audit_channel_name, ack_code, ack_string,
                 cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'],
-                duration_ms=callback_duration_ms)
+                duration_ms=callback_duration_ms, is_export_payload_active=is_export_payload_active)
 
             audit_ack_ms = (monotonic() - audit_ack_start) * Ms_Per_Second
             trace('audit ack done %.1fms (%s)', audit_ack_ms, audit_msg_id)

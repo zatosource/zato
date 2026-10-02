@@ -59,6 +59,7 @@ _bool_field_defaults = {
     'warn_on_duplicate_filename': False,
     'alerting_opt_out': False,
     'is_audit_log_active': True,
+    'is_audit_export_payload_active': False,
 }
 
 # The private keys are encrypted at rest, so they are never exported.

@@ -47,6 +47,7 @@ def _with_audit_log_flag(item:'anydict') -> 'anydict':
     """
     out = dict(item)
     out['is_audit_log_active'] = item.get('is_audit_log_active', True)
+    out['is_audit_export_payload_active'] = item.get('is_audit_export_payload_active', False)
 
     return out
 

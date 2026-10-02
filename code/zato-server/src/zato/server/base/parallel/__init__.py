@@ -925,6 +925,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.cluster = self.odb.cluster
         self.cluster_id = self.cluster.id
         self.cluster_name = self.cluster.name
+
+        # The OTLP export of the audit log, on only if an endpoint is configured
+        self._start_audit_export()
+
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
@@ -1868,6 +1872,26 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def _start_audit_export(self) -> 'None':
+        """ Starts the OTLP export of the audit log if an endpoint is configured. A configuration that cannot
+        be read is logged and leaves the export off, the server itself starts regardless.
+        """
+        from zato.common.audit_log.export.api import ModuleCtx as ExportCtx, start_audit_export
+        from zato.common.version import get_version
+
+        # The version is reported without the product name in front of it
+        version = get_version().replace('Zato ', '', 1)
+
+        _ = start_audit_export(
+            service_name=ExportCtx.Service_Server,
+            server_name=self.name,
+            cluster_name=self.cluster_name,
+            instance_id=self.deployment_key,
+            version=version,
+        )
+
+# ################################################################################################################################
+
     def _pre_initialize(self) -> 'None':
 
         with closing(self.odb.session()) as session:
@@ -2656,6 +2680,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
+
+            # Audit events still queued for the collector go out before the process ends
+            from zato.common.audit_log.export.api import stop_audit_export
+            stop_audit_export()
 
             logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 

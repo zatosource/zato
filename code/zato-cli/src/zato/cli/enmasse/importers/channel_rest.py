@@ -93,7 +93,7 @@ class ChannelImporter:
                 # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
                     if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
-                        'is_audit_log_active', Alerts_Key,
+                        'is_audit_log_active', 'is_audit_export_payload_active', Alerts_Key,
                         'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor'] \
                         and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
@@ -266,6 +266,23 @@ class ChannelImporter:
             logger.info('is_audit_log_active changed for channel %s: yaml=%s db=%s', item['name'], yaml_value, db_value)
             return True
 
+        # The payload export flag is off unless set, in YAML and in the database alike
+        yaml_payload_value = item.get('is_audit_export_payload_active', False)
+        db_payload_value = False
+
+        try:
+            opaque1 = db_def.get('opaque1')
+            if opaque1:
+                opaque = loads(opaque1)
+                db_payload_value = opaque.get('is_audit_export_payload_active', False)
+        except Exception as e:
+            logger.warning('Error parsing opaque for channel %s: %s', item['name'], e)
+
+        if yaml_payload_value != db_payload_value:
+            logger.info('is_audit_export_payload_active changed for channel %s: yaml=%s db=%s',
+                item['name'], yaml_payload_value, db_payload_value)
+            return True
+
         return False
 
 # ################################################################################################################################
@@ -382,7 +399,7 @@ class ChannelImporter:
         # Process standard attributes
         for key, value in channel_def.items():
             if key not in ['service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
-                'is_audit_log_active',
+                'is_audit_log_active', 'is_audit_export_payload_active',
                 'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor']:
                 setattr(channel, key, value)
 
@@ -414,6 +431,9 @@ class ChannelImporter:
 
         # The audit log is on unless the YAML definition turns it off
         opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)
+
+        # Payloads leave with the audit export only if the YAML definition says so
+        opaque_attrs['is_audit_export_payload_active'] = channel_def.get('is_audit_export_payload_active', False)
 
         # The channel is included in OpenAPI documents unless the YAML definition turns it off
         opaque_attrs['should_include_in_openapi'] = channel_def.get('should_include_in_openapi', True)
@@ -463,7 +483,7 @@ class ChannelImporter:
         # Process standard attributes
         for key, value in channel_def.items():
             if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
-                'is_audit_log_active',
+                'is_audit_log_active', 'is_audit_export_payload_active',
                 'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor']:
                 setattr(channel, key, value)
 
@@ -507,6 +527,9 @@ class ChannelImporter:
 
         # The audit log is on unless the YAML definition turns it off
         opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)
+
+        # Payloads leave with the audit export only if the YAML definition says so
+        opaque_attrs['is_audit_export_payload_active'] = channel_def.get('is_audit_export_payload_active', False)
 
         # The channel is included in OpenAPI documents unless the YAML definition turns it off
         opaque_attrs['should_include_in_openapi'] = channel_def.get('should_include_in_openapi', True)

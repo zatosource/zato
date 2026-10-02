@@ -158,6 +158,10 @@ class ChannelSOAPExporter:
             if channel_row.get('is_audit_log_active') is False:
                 exported_channel['is_audit_log_active'] = False
 
+            # Payloads leave with the audit export only when the flag is on, so only the on state is exported
+            if channel_row.get('is_audit_export_payload_active') is True:
+                exported_channel['is_audit_export_payload_active'] = True
+
             # Alert settings moved away from their defaults travel as one nested mapping
             alerts = group_alerts(channel_row, alert_type_channels)
             if alerts is not None:

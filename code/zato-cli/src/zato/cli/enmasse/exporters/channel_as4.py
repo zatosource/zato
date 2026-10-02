@@ -99,6 +99,10 @@ class ChannelAS4Exporter:
             if opaque.get('is_audit_log_active') is False:
                 exported_channel['is_audit_log_active'] = False
 
+            # Payloads leave with the audit export only when the flag is on, so only the on state is exported
+            if opaque.get('is_audit_export_payload_active') is True:
+                exported_channel['is_audit_export_payload_active'] = True
+
             out.append(exported_channel)
 
         logger.info('Successfully prepared %d AS4 channel definitions for export', len(out))

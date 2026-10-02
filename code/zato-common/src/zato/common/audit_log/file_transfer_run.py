@@ -20,6 +20,7 @@ from sqlalchemy import and_, func, select
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, get_audit_engine, AuditBody, \
     AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.export.api import get_audit_export
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -205,6 +206,10 @@ def update_run_event(
 
     with engine.begin() as connection:
         _ = connection.execute(statement)
+
+    # The collector sees the updated run as another record of the same event
+    if export := get_audit_export():
+        export.emit_row(engine, event_id)
 
 # ################################################################################################################################
 

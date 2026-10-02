@@ -322,6 +322,7 @@ def audit_message_received(
     msg_id:'str',
     attrs:'stranydict',
     endpoint:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'intnone':
     """ Writes the event of one HL7 message arriving on a channel. The receipt itself
     always succeeds - whatever happens next is the acknowledgment's story.
@@ -341,6 +342,7 @@ def audit_message_received(
         outcome=AuditOutcome.OK,
         attrs=attrs,
         bodies={AuditBody.Request: message_text},
+        is_export_payload_active=is_export_payload_active,
     )
 
     return out
@@ -357,6 +359,7 @@ def audit_ack_sent(
     msg_id:'str',
     facility:'str',
     duration_ms:'int' = 0,
+    is_export_payload_active:'bool' = False,
     ) -> 'intnone':
     """ Writes the event of an acknowledgment leaving a channel - the ACK code decides
     the outcome, so a rejected message is visibly a failure on its own row.
@@ -378,6 +381,7 @@ def audit_ack_sent(
         duration_ms=duration_ms,
         attrs={Attr_Ack_Status: ack_code},
         bodies={AuditBody.Response: ack_text},
+        is_export_payload_active=is_export_payload_active,
     )
 
     return out
@@ -393,6 +397,7 @@ def audit_message_sent(
     msg_id:'str',
     attrs:'stranydict',
     endpoint:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'intnone':
     """ Writes the event of one HL7 message leaving through an outgoing connection.
     """
@@ -407,6 +412,7 @@ def audit_message_sent(
         outcome=AuditOutcome.OK,
         attrs=attrs,
         bodies={AuditBody.Request: message_text},
+        is_export_payload_active=is_export_payload_active,
     )
 
     return out
@@ -422,6 +428,7 @@ def audit_ack_received(
     msg_id:'str',
     duration_ms:'int' = 0,
     error_text:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'intnone':
     """ Writes the event of an acknowledgment arriving for a message sent earlier
     on the same cid - or of no acknowledgment arriving at all, when the code
@@ -446,6 +453,7 @@ def audit_ack_received(
         status=error_text,
         duration_ms=duration_ms,
         attrs={Attr_Ack_Status: result.ack_status},
+        is_export_payload_active=is_export_payload_active,
     )
 
     return out
@@ -459,6 +467,7 @@ def audit_batch_received(
     *,
     cid:'str',
     endpoint:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'intnone':
     """ Writes the audit rows of one FHS/BHS batch file - a parent event for the batch
     itself plus a child row per contained message, each child with its own attributes
@@ -490,6 +499,7 @@ def audit_batch_received(
         outcome=AuditOutcome.OK,
         attrs={'batch_count': len(messages)},
         bodies={AuditBody.Request: batch_text},
+        is_export_payload_active=is_export_payload_active,
     )
 
     # Lineage links need the parent's id, which only the synchronous writer returns -
@@ -517,6 +527,7 @@ def audit_batch_received(
             attrs=attrs,
             parents=parents,
             parent_link_type=AuditLink.Batch_Item_Of,
+            is_export_payload_active=is_export_payload_active,
         )
 
     return out

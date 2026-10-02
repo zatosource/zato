@@ -132,6 +132,7 @@ def record_message_received(
     error:'str' = '',
     outcome:'str' = AuditOutcome.OK,
     payloads:'anylistnone' = None,
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records that a message arrived from the partner, with every document stored alongside
     so a later reprocess can re-publish all of them, and the raw MIME body kept as delivery
@@ -154,7 +155,8 @@ def record_message_received(
         'mic': mic, 'error': error, 'payloads': payloads}
     data = dumps(details)
 
-    values = {'cid': cid, 'msg_id': message_id, 'correl_id': correl_id, 'outcome': outcome, 'data': data}
+    values:'stranydict' = {'cid': cid, 'msg_id': message_id, 'correl_id': correl_id, 'outcome': outcome, 'data': data,
+        'is_export_payload_active': is_export_payload_active}
 
     audit_log.insert(AuditSource.AS2, AuditEvent.Message_Received, pair, **values)
 
@@ -173,6 +175,7 @@ def record_mdn_sent(
     raw_mime:'str' = '',
     cid:'str' = '',
     outcome:'str' = AuditOutcome.OK,
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records that an MDN went back to the partner - the receipt half of an inbound exchange,
     with the disposition it reported and the raw MDN bytes kept as delivery evidence.
@@ -187,7 +190,8 @@ def record_mdn_sent(
         'raw_mime': raw_mime}
     data = dumps(details)
 
-    audit_log.insert(AuditSource.AS2, AuditEvent.MDN_Sent, pair, cid=cid, msg_id=message_id, outcome=outcome, data=data)
+    audit_log.insert(AuditSource.AS2, AuditEvent.MDN_Sent, pair, cid=cid, msg_id=message_id, outcome=outcome, data=data,
+        is_export_payload_active=is_export_payload_active)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -205,6 +209,7 @@ def record_send_result(
     correl_id:'str' = '',
     payloads:'anylistnone' = None,
     delivery_kind:'str' = DeliveryKind.Original,
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records everything one outbound delivery produced - the message-sent event with the raw
     MIME body and the MIC computed at send time, plus the mdn-received event when a synchronous
@@ -225,7 +230,7 @@ def record_send_result(
     else:
         sent_outcome = AuditOutcome.Error
 
-    values = {
+    values:'stranydict' = {
         'mic': result.mic,
         'async_mdn_url': async_mdn_url,
         'cid': cid,
@@ -237,6 +242,7 @@ def record_send_result(
         'delivery_kind': delivery_kind,
         'http_status': result.http_status,
         'outcome': sent_outcome,
+        'is_export_payload_active': is_export_payload_active,
     }
 
     reconciler.record_message_sent(as2_from, as2_to, result.message_id, **values)
@@ -261,11 +267,19 @@ def record_send_result(
         'mic': mdn.mic, 'mdn_error': result.mdn_error, 'raw_mime': mdn_raw_mime}
     mdn_data = dumps(mdn_details)
 
-    reconciler.record_mdn_received(result.message_id, outcome=outcome, cid=cid, data=mdn_data)
+    reconciler.record_mdn_received(result.message_id, outcome=outcome, cid=cid, data=mdn_data,
+        is_export_payload_active=is_export_payload_active)
 
 # ################################################################################################################################
 
-def record_inbound_result(audit_log:'AuditLog', result:'InboundResult', body:'bytes', cid:'str') -> 'None':
+def record_inbound_result(
+    audit_log:'AuditLog',
+    result:'InboundResult',
+    body:'bytes',
+    cid:'str',
+    *,
+    is_export_payload_active:'bool' = False,
+    ) -> 'None':
     """ Records everything one inbound request produced - the message-received event with the raw
     MIME body as it arrived, plus the mdn-sent event when an MDN went back, synchronously
     or through the asynchronous delivery the caller performs.
@@ -304,7 +318,7 @@ def record_inbound_result(audit_log:'AuditLog', result:'InboundResult', body:'by
 
     raw_mime = encode_raw_mime(body)
 
-    values = {
+    values:'stranydict' = {
         'payload': payload,
         'filename': filename,
         'content_type': content_type,
@@ -314,6 +328,7 @@ def record_inbound_result(audit_log:'AuditLog', result:'InboundResult', body:'by
         'error': error,
         'outcome': outcome,
         'payloads': payloads,
+        'is_export_payload_active': is_export_payload_active,
     }
 
     record_message_received(audit_log, result.as2_from, result.as2_to, result.message_id, **values)
@@ -335,7 +350,7 @@ def record_inbound_result(audit_log:'AuditLog', result:'InboundResult', body:'by
 
     mdn_raw_mime = encode_raw_mime(mdn_body)
 
-    values = {
+    values:'stranydict' = {
         'disposition': disposition.disposition_type,
         'modifier_kind': disposition.modifier_kind,
         'modifier': disposition.modifier,
@@ -343,6 +358,7 @@ def record_inbound_result(audit_log:'AuditLog', result:'InboundResult', body:'by
         'raw_mime': mdn_raw_mime,
         'cid': cid,
         'outcome': outcome,
+        'is_export_payload_active': is_export_payload_active,
     }
 
     record_mdn_sent(audit_log, result.as2_from, result.as2_to, result.message_id, **values)

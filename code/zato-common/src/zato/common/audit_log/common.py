@@ -56,6 +56,10 @@ _endpoint_column_len = 500
 # Attribute values are capped so they always fit an indexable column
 Attr_Value_Max_Len = _short_column_len
 
+# The per-object flag, stored in opaque attributes next to is_audit_log_active, that lets
+# an object's payloads leave the process with the OTLP export. Off unless set.
+Export_Payload_Flag = 'is_audit_export_payload_active'
+
 # ################################################################################################################################
 
 class AuditSource:

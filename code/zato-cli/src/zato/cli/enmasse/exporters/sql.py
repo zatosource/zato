@@ -115,6 +115,10 @@ class SQLExporter:
                 if audit_log != _audit_log_off:
                     item['audit_log'] = audit_log
 
+            # .. payloads leave with the audit export only if the flag is on, so only that is exported ..
+            if opaque.get('is_audit_export_payload_active') is True:
+                item['is_audit_export_payload_active'] = True
+
             # .. the SSL fields travel only if SSL is enabled at all ..
             if ssl := opaque.get('ssl'):
                 item['ssl'] = ssl

@@ -33,7 +33,8 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # Keys that never map to database columns directly - they are handled separately.
-_non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'response_cache', 'use_mtom', 'is_audit_log_active')
+_non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'response_cache', 'use_mtom', 'is_audit_log_active',
+    'is_audit_export_payload_active')
 
 # What the alert settings name the object as in the errors they raise
 _connection_type = 'channel_soap'
@@ -256,6 +257,9 @@ class ChannelSOAPImporter:
 
         # The audit log is on unless the YAML definition turns it off
         opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)
+
+        # Payloads leave with the audit export only if the YAML definition says so
+        opaque_attrs['is_audit_export_payload_active'] = channel_def.get('is_audit_export_payload_active', False)
 
         return opaque_attrs
 

@@ -15,6 +15,7 @@ from time import monotonic
 # Zato
 from zato.common.api import HTTP_SOAP, KAFKA
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import Export_Payload_Flag
 from zato.common.pubsub.delivery import deliver_with_policy
 from zato.common.pubsub.outgoing import Attempts_None, Key_Data, Key_Headers, Key_Is_Tombstone, Key_Key, Key_Partition, \
     OutgoingPublisher, OutgoingType, SendRejected
@@ -168,6 +169,9 @@ class OutconnKafkaWrapper:
         else:
             self.audit_log = None
 
+        # The payloads leave with the audit export only if the connection says so
+        self.is_export_payload_active = asbool(config.get(Export_Payload_Flag, False))
+
         # The publisher is keyed by the connection's id, a rename leaves it alone.
         self.publisher = OutgoingPublisher(server, OutgoingType.KAFKA, self.config.id)
 
@@ -248,6 +252,7 @@ class OutconnKafkaWrapper:
             outcome=outcome,
             duration_ms=duration_ms,
             data=data,
+            is_export_payload_active=self.is_export_payload_active,
         )
 
 # ################################################################################################################################

@@ -16,7 +16,7 @@
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
 	test-hl7 hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
-	test-audit-log test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
+	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
@@ -770,6 +770,22 @@ test-mcp-oauth: ## OAuth for MCP gateways - simulated clients signing in through
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
+test-audit-export: ## Audit log export to OpenTelemetry - the offline mapping and queue tests, the enmasse round trip of the payload flag, then a live server against a collector.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/audit_log/export/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_export -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_audit_export_payload.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_export_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/audit_export_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_export_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
 test-graphql: ## GraphQL live tests.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/graphql_live/ \
@@ -1257,7 +1273,7 @@ Zato_Test_Toolchain := \
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
-	test-ibm-mq test-kafka test-sdk test-hl7 test-llm test-rule-engine test-enmasse
+	test-ibm-mq test-kafka test-sdk test-hl7 test-llm test-rule-engine test-enmasse test-audit-export
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui

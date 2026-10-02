@@ -107,19 +107,21 @@ _object_order['quota_tier'] = 'name', 'description', 'rules:list',
 _object_order['groups']     = 'name', 'quota_tier', 'members:list',
 
 _object_order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'method', \
-    'content_type', 'timeout', 'is_audit_log_active', 'should_include_in_openapi', 'gateway_service_list:list', \
+    'content_type', 'timeout', 'is_audit_log_active', 'is_audit_export_payload_active', 'should_include_in_openapi', \
+    'gateway_service_list:list', \
     'groups:list', \
     'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor', \
     'alerts:dict',
 _object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
-    'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', \
+    'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', 'is_audit_export_payload_active', \
     'groups:list', 'rate_limiting:list', 'response_cache:dict', 'alerts:dict',
 
 _object_order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'content_type', \
-    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Delivery_Fields + \
+    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active', 'is_audit_export_payload_active') + Retry_Fields + Delivery_Fields + \
     Invocation_Order_Fields_REST + ('alerts:dict',)
 _object_order['outgoing_soap'] = ('name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', \
-    'content_type', 'timeout', 'tls_verify', 'is_audit_log_active', 'use_ws_addressing', 'use_mtom', \
+    'content_type', 'timeout', 'tls_verify', 'is_audit_log_active', 'is_audit_export_payload_active', 'use_ws_addressing', \
+    'use_mtom', \
     'tls_client_cert', 'tls_client_key', 'body_credentials') + Retry_Fields + Delivery_Fields + Invocation_Order_Fields_SOAP + \
     ('alerts:dict',)
 

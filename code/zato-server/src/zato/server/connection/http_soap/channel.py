@@ -1326,6 +1326,9 @@ class RequestDispatcher:
         else:
             status = ''
 
+        # .. the payload leaves with the audit export only if the channel says so ..
+        is_export_payload_active = bool(channel_item.get('is_audit_export_payload_active'))
+
         # .. now, write out the event.
         self.audit_log.insert(
             source,
@@ -1341,6 +1344,7 @@ class RequestDispatcher:
             data=data,
             attrs=attrs,
             ext_client_id=ext_client_id,
+            is_export_payload_active=is_export_payload_active,
         )
 
 # ################################################################################################################################

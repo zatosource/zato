@@ -281,6 +281,7 @@ class SQLPubSubBackend(SQLAdminAPI):
                     priority=priority,
                     outcome=AuditOutcome.OK,
                     data=serialized_data,
+                    is_export_payload_active=self.is_topic_payload_exported(topic_name),
                 )
 
         # .. update the publish counter and return the result.
@@ -538,6 +539,7 @@ class SQLPubSubBackend(SQLAdminAPI):
                         priority=message['priority'],
                         outcome=AuditOutcome.OK,
                         data=data_raw,
+                        is_export_payload_active=self.is_topic_payload_exported(message['topic_name']),
                     )
 
             # .. update the delivery counter.

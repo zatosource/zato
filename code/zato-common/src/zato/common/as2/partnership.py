@@ -176,6 +176,9 @@ class Partnership:
     # protection is not something a logging preference gets to switch off.
     is_audit_log_active: bool = True
 
+    # Whether this partnership's payloads leave the process with the audit log's OTLP export.
+    is_audit_export_payload_active: bool = False
+
 # ################################################################################################################################
 # ################################################################################################################################
 

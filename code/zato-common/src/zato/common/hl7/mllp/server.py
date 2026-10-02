@@ -440,7 +440,8 @@ class HL7MLLPServer:
 
             _ = audit_ack_sent(
                 self.audit_log, route.channel_name, Rejection_Ack_Code, ack_string,
-                cid=audit_cid, msg_id=control_id, facility=wire_attrs['facility'])
+                cid=audit_cid, msg_id=control_id, facility=wire_attrs['facility'],
+                is_export_payload_active=route.is_audit_export_payload_active)
 
         self.send_framed(active_socket, ack_string, settings, connection_context)
 
