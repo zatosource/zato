@@ -97,8 +97,9 @@ _object_order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'us
     'issuer', 'subject', 'audience', 'jwks_url', 'claims:list', 'identity_claim', 'signing_key', 'signing_certificate_chain', \
     'decryption_key', 'peer_certificate', 'trust_anchors', 'cert_path', 'key_path', 'ca_certs_path', \
     'client_cert_fingerprint', 'client_cert_subject_dn', 'principal', 'keytab_path', 'target_spn', \
-    'needs_delegation', 'auth_endpoint', 'client_id_field', \
-    'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', \
+    'needs_delegation', 'auth_endpoint', 'client_auth_method', 'client_id_field', \
+    'client_secret_field', 'jwt_algorithm', 'key_id', 'assertion_audience', 'certificate', \
+    'grant_type', 'scopes', 'data_format', 'extra_fields:list', \
     'static_header', 'is_static_token', 'static_token', 'static_prefix', 'rate_limiting:list', 'quota_tier',
 
 _object_order['on_prem_gateway'] = 'name', 'is_active', 'hosts:list',

@@ -95,6 +95,16 @@ security:
     extra_fields:
       - audience=example.com
 
+  - name: enmasse.bearer_token.private_key_jwt
+    username: enmasse.private.key.jwt
+    type: bearer_token
+    auth_endpoint: https://example.com/oauth2/token
+    client_auth_method: private_key_jwt
+    jwt_algorithm: RS384
+    key_id: enmasse-key-1
+    private_key: Zato_Enmasse_Env.EnmasseBearerTokenPrivateKey
+    scopes: system/Patient.read
+
   - name: enmasse.ntlm.1
     username: enmasse\\user
     password: abcdef123456

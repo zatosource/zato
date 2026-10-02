@@ -745,16 +745,18 @@ test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real 
 llm-console: ## Browser console for the local LLM - starts Ollama, the model and Open WebUI.
 	$(ZATO_PY) -u $(CURDIR)/code/tests/python/zato-server/mcp_llm_live/console.py
 
-test-bearer: ## Inbound bearer token live tests.
+test-bearer: ## Inbound and outgoing bearer token live tests, including private key JWT.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/security/ \
 		$(CURDIR)/code/tests/python/zato-server/bearer_inbound_live/ \
+		$(CURDIR)/code/tests/python/zato-server/bearer_outgoing_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_bearer -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_crud.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_private_key_jwt.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_groups.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_rest_channel.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_mcp_gateway.py \

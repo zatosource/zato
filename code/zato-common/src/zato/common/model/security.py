@@ -14,7 +14,8 @@ from zato.server.service import Model
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import datetime, dtnone, intnone, stranydict, strlist, timedelta
+    from datetime import timedelta
+    from zato.common.typing_ import datetime, dtnone, intnone, stranydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,6 +31,18 @@ class BearerTokenConfig(Model):
     auth_server_url:'str'
     client_id_field:'str'
     client_secret_field:'str'
+
+    # How the client proves its identity at the token endpoint - a client secret or a signed JWT
+    client_auth_method:'str' = ''
+
+    # Private key JWT - the PEM key the assertion is signed with, its algorithm and its key ID
+    private_key:'str' = ''
+    jwt_algorithm:'str' = ''
+    key_id:'str' = ''
+
+    # Private key JWT - the aud claim when it is not the auth endpoint, and the certificate the thumbprints come from
+    assertion_audience:'str' = ''
+    certificate:'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################

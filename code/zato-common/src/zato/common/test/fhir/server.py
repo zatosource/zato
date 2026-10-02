@@ -50,9 +50,10 @@ class FHIRTestServer:
     and the transaction and batch interactions with urn:uuid reference resolution -
     with resource versioning, searchset Bundles and OperationOutcome errors. Authentication is optional
     and matches what the FHIR outgoing connection supports - Basic Auth, or OAuth bearer tokens issued
-    by the server's own RFC 6749 token endpoint, with the credentials acting as client_id and client_secret.
+    by the server's own RFC 6749 token endpoint, with the credentials acting as client_id and client_secret,
+    or, when a public key is given, with a client assertion signed by the matching private key, per RFC 7523.
     """
-    def __init__(self, username:'str'='', password:'str'='', auth_type:'str'='') -> 'None':
+    def __init__(self, username:'str'='', password:'str'='', auth_type:'str'='', public_key_pem:'str'='') -> 'None':
 
         # Connection details for clients
         self.host = '127.0.0.1'
@@ -62,6 +63,9 @@ class FHIRTestServer:
         # the username and password, with OAuth they are the client ID and client secret.
         self.username = username
         self.password = password
+
+        # The public key client assertions are verified with - with OAuth only
+        self.public_key_pem = public_key_pem
 
         # Credentials without an explicit auth type mean Basic Auth
         if username:
@@ -120,7 +124,7 @@ class FHIRTestServer:
         if self.auth_type != auth_type_oauth:
             return None
 
-        out = OAuthTokenIssuer(self.username, self.password)
+        out = OAuthTokenIssuer(self.username, self.password, self.public_key_pem, self.token_endpoint)
         return out
 
 # ################################################################################################################################

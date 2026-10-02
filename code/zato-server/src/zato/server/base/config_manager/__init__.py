@@ -2155,7 +2155,10 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_OAUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing OAuth security definition.
         """
-        # Update channels and outgoing connections ..
+        # Tokens obtained with the previous configuration must not be reused ..
+        self.server.bearer_token_manager.invalidate(msg.old_name)
+
+        # .. update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
 
@@ -2172,7 +2175,10 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_OAUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an OAuth security definition.
         """
-        # Update channels and outgoing connections ..
+        # A definition created later under the same name must not find this one's tokens ..
+        self.server.bearer_token_manager.invalidate(msg.name)
+
+        # .. update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_delete)
 
@@ -2183,7 +2189,10 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an OAuth security definition.
         """
-        # Update channels and outgoing connections ..
+        # Tokens obtained with the previous secret must not be reused ..
+        self.server.bearer_token_manager.invalidate(msg.name)
+
+        # .. update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_change_password)
 

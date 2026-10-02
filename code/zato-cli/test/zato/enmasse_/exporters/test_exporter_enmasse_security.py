@@ -120,13 +120,21 @@ class TestEnmasseSecurityExporter(TestCase):
 
             # Check type-specific fields
             if yaml_def.get('type') == 'bearer_token':
-                for field in ['auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format']:
+                bearer_fields = [
+                    'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format',
+                    'client_auth_method', 'jwt_algorithm', 'key_id', 'scopes', 'assertion_audience', 'certificate',
+                ]
+                for field in bearer_fields:
                     if field in yaml_def:
                         self.assertEqual(exported_def.get(field), yaml_def.get(field), f'Field {field} mismatch for security definition "{name}"')
 
                 # Check extra_fields if present
                 if 'extra_fields' in yaml_def:
                     self.assertEqual(exported_def.get('extra_fields'), yaml_def.get('extra_fields'), f'Extra fields mismatch for security definition "{name}"')
+
+                # The private key is import-only, the same as the password
+                self.assertNotIn('private_key', exported_def, f'Private key must not be exported for "{name}"')
+                self.assertNotIn('password', exported_def, f'Password must not be exported for "{name}"')
 
             # Check WS-Security fields - every mode-specific attribute must round-trip through opaque storage
             if yaml_def.get('type') == 'wss':

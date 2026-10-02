@@ -38,7 +38,7 @@ success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
 
 # The keys a listing never carries - the raw opaque column is among them because its JSON may hold a token of its own.
-Listing_Secret_Keys = ('password', 'secret', 'static_token', GENERIC.ATTR_NAME)
+Listing_Secret_Keys = ('password', 'secret', 'static_token', 'private_key', GENERIC.ATTR_NAME)
 
 # A value starting with either of these is encrypted already and is stored as it is.
 Secret_Prefixes = (SECRETS.PREFIX, SECRETS.Encrypted_Indicator)

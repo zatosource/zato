@@ -355,6 +355,9 @@ urlpatterns += [
     url(r'^zato/security/oauth/outconn/client-credentials/get-token/$',
         login_required(oauth_outconn_client_credentials.get_token),
             name='security-oauth-outconn-client-credentials-get-token'),
+    url(r'^zato/security/oauth/outconn/client-credentials/public-key/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(oauth_outconn_client_credentials.get_public_key),
+            name='security-oauth-outconn-client-credentials-public-key'),
     url(r'^zato/security/oauth/outconn/client-credentials/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(oauth_outconn_client_credentials.Delete()), name=oauth_outconn_client_credentials.Delete.url_name),
     ]

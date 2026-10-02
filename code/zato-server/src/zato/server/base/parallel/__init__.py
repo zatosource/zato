@@ -32,7 +32,7 @@ from redis.exceptions import RedisError
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, KAFKA, \
-    On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+    OAuth, On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
@@ -170,6 +170,11 @@ def _enrich_kafka_oauth(config_manager:'ConfigManager', config:'anydict', securi
     """ Fills in the OAuth client credentials and token endpoint from a Bearer token definition.
     """
     sec_def = config_manager.oauth_get_by_id(security_id)
+
+    # Kafka clients authenticate with a client secret only, so a definition that signs assertions cannot be used here
+    if sec_def.get('client_auth_method') == OAuth.Client_Auth_Method.Private_Key_JWT:
+        raise Exception(f'Kafka connection `{config["name"]}` cannot use bearer token definition `{sec_def["name"]}` ' + \
+            'because it authenticates with a private key JWT and Kafka supports client secrets only')
 
     if scopes := sec_def.get('scopes'):
         scopes = normalize_scopes(scopes)

@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import Quota_Tiers
+from zato.common.api import OAuth, Quota_Tiers
 from zato.common.json_internal import loads
 from zato.common.odb.model import to_json
 from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, spnego_list, \
@@ -164,8 +164,10 @@ class SecurityExporter:
                 if field in item and item[field]:
                     opaque_data[field] = item[field]
 
-            # The token itself is import-only and is never exported
+            # The token itself is import-only and is never exported, and neither is the private key
             _ = opaque_data.pop('static_token', None)
+            for name in OAuth.Secret_Fields:
+                _ = opaque_data.pop(name, None)
 
             # Update OAuth definition with the collected opaque data
             if opaque_data:

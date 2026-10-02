@@ -21,17 +21,19 @@ from dateutil.parser import parse as dt_parse
 from requests import post as requests_post
 
 # Zato
-from zato.common.api import Data_Format, GENERIC
+from zato.common.api import Data_Format, GENERIC, OAuth
 from zato.common.exception import BackendInvocationError
 from zato.common.json_internal import loads as json_loads_internal
 from zato.common.odb.model import SecurityBase
 from zato.common.model.security import BearerTokenConfig, BearerTokenInfo, BearerTokenInfoResult
+from zato.common.private_key_jwt import build_assertion, load_private_key, PrivateKeyJWTError
 from zato.common.util.api import parse_extra_into_dict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
     from zato.common.typing_ import any_, dtnone, intnone, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.cache import CacheAPI
@@ -40,6 +42,22 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# The revision a definition has before it is ever edited, changed or deleted.
+Initial_Revision = 0
+
+# The cache expiry of a token whose response did not say how long it is valid for.
+Default_Cache_Expiry_Seconds = 60
+
+# The opaque fields a private key JWT definition carries, each with the value an older definition reads as.
+Private_Key_JWT_Fields = {
+    'client_auth_method': OAuth.Default.Client_Auth_Method,
+    'private_key': '',
+    'jwt_algorithm': OAuth.Default.JWT_Algorithm,
+    'key_id': '',
+    'assertion_audience': '',
+    'certificate': '',
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,6 +90,61 @@ class BearerTokenManager:
         self.security_facade = server.security_facade
         self.cache = server.config_manager.cache_api
 
+        # Each definition's revision is part of its cache key - bumping it makes all its cached tokens unreachable
+        self.revisions:'dict[str, int]' = {}
+
+        # Parsed private keys by definition name, along with the encrypted text each was parsed from
+        self.private_keys:'dict[str, tuple[str, PrivateKeyTypes]]' = {}
+
+# ################################################################################################################################
+
+    def invalidate(self, sec_def_name:'str') -> 'None':
+        """ Forgets everything cached for a definition - its tokens stop being found and its key is parsed anew.
+        """
+        revision = self.revisions.get(sec_def_name)
+        if revision is None:
+            revision = Initial_Revision
+
+        self.revisions[sec_def_name] = revision + 1
+        _ = self.private_keys.pop(sec_def_name, None)
+
+# ################################################################################################################################
+
+    def _get_private_key(self, config:'BearerTokenConfig') -> 'PrivateKeyTypes':
+        """ Returns the parsed private key of a definition, decrypting and parsing it on first use only.
+        """
+        if not config.private_key:
+            raise PrivateKeyJWTError(f'Bearer token definition `{config.sec_def_name}` has no private key')
+
+        # .. a key parsed earlier is reused as long as the stored text has not changed ..
+        cached = self.private_keys.get(config.sec_def_name)
+        if cached and cached[0] == config.private_key:
+            return cached[1]
+
+        # .. otherwise, the key is decrypted and parsed now ..
+        private_key_pem = self.server.decrypt(config.private_key)
+        key = load_private_key(private_key_pem)
+
+        # .. and kept for the next call.
+        self.private_keys[config.sec_def_name] = (config.private_key, key)
+
+        return key
+
+# ################################################################################################################################
+
+    def _build_client_assertion(self, config:'BearerTokenConfig') -> 'str':
+        """ Signs a client assertion for a definition - the audience is the token endpoint unless the definition overrides it.
+        """
+        key = self._get_private_key(config)
+
+        audience = config.assertion_audience
+        if not audience:
+            audience = config.auth_server_url
+
+        out = build_assertion(key, config.jwt_algorithm, config.username, audience, config.key_id, config.certificate)
+
+        return out
+
 # ################################################################################################################################
 
     def _get_bearer_token_config(self, sec_def:'stranydict') -> 'BearerTokenConfig':
@@ -100,7 +173,27 @@ class BearerTokenManager:
         out.client_id_field = sec_def['client_id_field']
         out.client_secret_field = sec_def['client_secret_field']
 
+        # .. definitions created before private key JWT existed have none of its fields ..
+        # .. and they read as client secret definitions ..
+        out.client_auth_method = self._get_opaque_field(sec_def, 'client_auth_method')
+        out.private_key = self._get_opaque_field(sec_def, 'private_key')
+        out.jwt_algorithm = self._get_opaque_field(sec_def, 'jwt_algorithm')
+        out.key_id = self._get_opaque_field(sec_def, 'key_id')
+        out.assertion_audience = self._get_opaque_field(sec_def, 'assertion_audience')
+        out.certificate = self._get_opaque_field(sec_def, 'certificate')
+
         # .. and return it to our caller.
+        return out
+
+# ################################################################################################################################
+
+    def _get_opaque_field(self, sec_def:'stranydict', name:'str') -> 'str':
+        """ Returns an opaque field of a definition, or the value an older definition without it reads as.
+        """
+        out = sec_def.get(name)
+        if not out:
+            out = Private_Key_JWT_Fields[name]
+
         return out
 
 # ################################################################################################################################
@@ -150,6 +243,26 @@ class BearerTokenManager:
 
 # ################################################################################################################################
 
+    def _build_token_request(self, config:'BearerTokenConfig') -> 'stranydict':
+        """ Returns the body of a token request - a private key JWT definition sends a signed assertion
+        in place of its client secret, which never leaves the server.
+        """
+        out = {
+            config.client_id_field: config.username,
+            'grant_type': config.grant_type,
+            'scope': config.scopes,
+        }
+
+        if config.client_auth_method == OAuth.Client_Auth_Method.Private_Key_JWT:
+            out['client_assertion_type'] = OAuth.Assertion_Type
+            out['client_assertion'] = self._build_client_assertion(config)
+        else:
+            out[config.client_secret_field] = config.password
+
+        return out
+
+# ################################################################################################################################
+
     def _get_bearer_token_from_auth_server(
         self,
         config, # type: BearerTokenConfig
@@ -171,12 +284,7 @@ class BearerTokenManager:
         _scopes = scopes or config.scopes
 
         # Build our outgoing request ..
-        request = {
-            config.client_id_field: config.username,
-            config.client_secret_field: config.password,
-            'grant_type': config.grant_type,
-            'scope': config.scopes
-        }
+        request = self._build_token_request(config)
 
         # .. scopes are optional ..
         if _scopes:
@@ -227,8 +335,13 @@ class BearerTokenManager:
         scopes = scopes or 'NoScopes'
         audience = audience or 'NoAudience'
 
-        # Build the cache key ..
-        key = f'zato.sec.bearer-token.{sec_def_name}.{scopes}.{audience}'
+        # Tokens obtained before a definition was edited or deleted must not be found again ..
+        revision = self.revisions.get(sec_def_name)
+        if revision is None:
+            revision = Initial_Revision
+
+        # .. build the cache key ..
+        key = f'zato.sec.bearer-token.{sec_def_name}.{revision}.{scopes}.{audience}'
 
         # .. and return it to our caller.
         return key
@@ -258,7 +371,7 @@ class BearerTokenManager:
         if info.expires_in_sec:
             expiry = info.expires_in_sec / 2
         else:
-            expiry = 60
+            expiry = Default_Cache_Expiry_Seconds
 
         # .. serialize the token info for storage ..
         value = {
@@ -387,42 +500,80 @@ class BearerTokenManager:
 
 # ################################################################################################################################
 
-    def get_bearer_token_from_odb(self, odb, security_id='', raw_params=None):
+    def _get_sec_def_from_odb(self, odb:'any_', security_id:'any_') -> 'stranydict | None':
+        """ Reads a bearer token definition from the database, with its opaque fields included.
+        """
+        out = None
+
+        with closing(odb.session()) as session:
+            sec_row = session.query(SecurityBase).filter_by(id=security_id).first()
+            if sec_row:
+                opaque = getattr(sec_row, GENERIC.ATTR_NAME, None)
+                opaque = json_loads_internal(opaque) if opaque else {}
+                out = {
+                    'id': sec_row.id,
+                    'name': sec_row.name,
+                    'username': sec_row.username or '',
+                    'password': sec_row.password or '',
+                    'auth_server_url': opaque.get('auth_server_url', ''),
+                    'client_id_field': opaque.get('client_id_field', OAuth.Default.Client_ID_Field),
+                    'client_secret_field': opaque.get('client_secret_field', OAuth.Default.Client_Secret_Field),
+                    'grant_type': opaque.get('grant_type', OAuth.Default.Grant_Type),
+                    'scopes': opaque.get('scopes', ''),
+                    'extra_fields': opaque.get('extra_fields', ''),
+                    'data_format': opaque.get('data_format', 'json'),
+                }
+
+                # .. the private key JWT fields may be absent from definitions created before they existed.
+                for name, default in Private_Key_JWT_Fields.items():
+                    out[name] = opaque.get(name, default)
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_sec_def_from_raw_params(self, odb:'any_', security_id:'any_', raw_params:'stranydict') -> 'stranydict':
+        """ Builds a bearer token definition from what a Dashboard form holds - a private key left empty
+        in the edit form means the key stored in the database is to be used.
+        """
+        out = {
+            'name': raw_params.get('name', ''),
+            'username': raw_params['username'],
+            'password': raw_params['secret'],
+            'auth_server_url': raw_params['auth_server_url'],
+            'client_id_field': raw_params['client_id_field'],
+            'client_secret_field': raw_params['client_secret_field'],
+            'grant_type': raw_params['grant_type'],
+            'scopes': raw_params.get('scopes', ''),
+            'extra_fields': raw_params.get('extra_fields', ''),
+            'data_format': raw_params.get('data_format', 'json'),
+        }
+
+        for name, default in Private_Key_JWT_Fields.items():
+            out[name] = raw_params.get(name, default)
+
+        # .. the form never shows a stored key, so an empty one has to be read from the database ..
+        is_private_key_jwt = out['client_auth_method'] == OAuth.Client_Auth_Method.Private_Key_JWT
+        if is_private_key_jwt and (not out['private_key']) and security_id:
+            stored = self._get_sec_def_from_odb(odb, security_id)
+            if stored:
+                out['private_key'] = stored['private_key']
+
+                # .. and the same goes for a certificate left empty.
+                if not out['certificate']:
+                    out['certificate'] = stored['certificate']
+
+        return out
+
+# ################################################################################################################################
+
+    def get_bearer_token_from_odb(self, odb:'any_', security_id:'any_'='', raw_params:'stranydict | None'=None) -> 'str':
 
         try:
             if raw_params:
-                sec_def = {
-                    'name': raw_params.get('name', ''),
-                    'username': raw_params['username'],
-                    'password': raw_params['secret'],
-                    'auth_server_url': raw_params['auth_server_url'],
-                    'client_id_field': raw_params['client_id_field'],
-                    'client_secret_field': raw_params['client_secret_field'],
-                    'grant_type': raw_params['grant_type'],
-                    'scopes': raw_params.get('scopes', ''),
-                    'extra_fields': raw_params.get('extra_fields', ''),
-                    'data_format': raw_params.get('data_format', 'json'),
-                }
+                sec_def = self._get_sec_def_from_raw_params(odb, security_id, raw_params)
             else:
-                sec_def = None
-                with closing(odb.session()) as session:
-                    sec_row = session.query(SecurityBase).filter_by(id=security_id).first()
-                    if sec_row:
-                        opaque = getattr(sec_row, GENERIC.ATTR_NAME, None)
-                        opaque = json_loads_internal(opaque) if opaque else {}
-                        sec_def = {
-                            'id': sec_row.id,
-                            'name': sec_row.name,
-                            'username': sec_row.username or '',
-                            'password': sec_row.password or '',
-                            'auth_server_url': opaque.get('auth_server_url', ''),
-                            'client_id_field': opaque.get('client_id_field', 'client_id'),
-                            'client_secret_field': opaque.get('client_secret_field', 'client_secret'),
-                            'grant_type': opaque.get('grant_type', 'client_credentials'),
-                            'scopes': opaque.get('scopes', ''),
-                            'extra_fields': opaque.get('extra_fields', ''),
-                            'data_format': opaque.get('data_format', 'json'),
-                        }
+                sec_def = self._get_sec_def_from_odb(odb, security_id)
 
                 if not sec_def:
                     return dumps({
@@ -437,6 +588,15 @@ class BearerTokenManager:
             info = self._get_bearer_token_from_auth_server(config, scopes, data_format)
 
             return dumps({'is_ok': True, 'token': info.token})
+
+        except PrivateKeyJWTError as error:
+            return dumps({
+                'is_ok': False,
+                'error': 'Error while obtaining token',
+                'response_body': str(error),
+                'response_content_type': 'text/plain',
+                'status_code': 0,
+            })
 
         except BackendInvocationError as error:
             return dumps({

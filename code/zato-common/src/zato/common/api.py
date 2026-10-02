@@ -2172,12 +2172,36 @@ class MicrosoftFabric:
 
 class OAuth:
 
+    class Client_Auth_Method:
+        Client_Secret = 'client_secret'
+        Private_Key_JWT = 'private_key_jwt'
+
+    class JWT_Algorithm:
+        RS256 = 'RS256'
+        RS384 = 'RS384'
+        PS256 = 'PS256'
+        ES384 = 'ES384'
+
+    # The algorithms a client assertion can be signed with, in the order the Dashboard lists them.
+    JWT_Algorithms = (JWT_Algorithm.RS384, JWT_Algorithm.RS256, JWT_Algorithm.PS256, JWT_Algorithm.ES384)
+
+    # The RFC 7523 value of client_assertion_type in a token request.
+    Assertion_Type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+
+    # How long a client assertion stays valid, measured from the moment it is signed.
+    Assertion_Lifetime_Seconds = 300
+
+    # The opaque fields of a definition that are stored encrypted and never returned.
+    Secret_Fields = ('private_key',)
+
     class Default:
         Auth_Server_URL = 'https://example.com/oauth2/token'
         Scopes = [] # There are no default scopes
         Client_ID_Field = 'client_id'
         Client_Secret_Field = 'client_secret'
         Grant_Type = 'client_credentials'
+        Client_Auth_Method = 'client_secret'
+        JWT_Algorithm = 'RS384'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2199,6 +2223,18 @@ class IO:
     Bearer_Token_Format = [
         NameId('JSON', DATA_FORMAT.JSON),
         NameId('Form data', DATA_FORMAT.FORM_DATA)
+    ]
+
+    Bearer_Token_Client_Auth_Method = [
+        NameId('Client secret', OAuth.Client_Auth_Method.Client_Secret),
+        NameId('Private key JWT', OAuth.Client_Auth_Method.Private_Key_JWT),
+    ]
+
+    Bearer_Token_JWT_Algorithm = [
+        NameId(OAuth.JWT_Algorithm.RS384),
+        NameId(OAuth.JWT_Algorithm.RS256),
+        NameId(OAuth.JWT_Algorithm.PS256),
+        NameId(OAuth.JWT_Algorithm.ES384),
     ]
 
 # ################################################################################################################################

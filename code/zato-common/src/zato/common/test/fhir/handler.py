@@ -15,9 +15,10 @@ from urllib.parse import parse_qsl, urlsplit
 from uuid import uuid4
 
 # Zato
+from zato.common.api import OAuth
 from zato.common.test.fhir.bundles import handle_bundle
-from zato.common.test.fhir.common import auth_type_basic, fhir_content_type, fhir_version, grant_type_client_credentials, \
-    json_content_type, token_lifetime, token_path
+from zato.common.test.fhir.common import auth_type_basic, error_invalid_client, fhir_content_type, fhir_version, \
+    grant_type_client_credentials, json_content_type, token_lifetime, token_path
 from zato.common.test.fhir.store import search_parameter_list, utc_now_instant
 from zato.common.typing_ import cast_
 
@@ -26,7 +27,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from zato.common.test.fhir.common import FHIRHTTPServer, OAuthTokenIssuer
-    from zato.common.typing_ import any_, dictlist, stranydict, strlist, strstrdict
+    from zato.common.typing_ import any_, dictlist, stranydict, strlist, strnone, strstrdict
     OAuthTokenIssuer = OAuthTokenIssuer
 
 # ################################################################################################################################
@@ -392,6 +393,46 @@ class FHIRRequestHandler(BaseHTTPRequestHandler):
 
 # ################################################################################################################################
 
+    def _issue_token(self, token_issuer:'OAuthTokenIssuer', request:'stranydict') -> 'tuple[strnone, str]':
+        """ Authenticates a token request and returns a token, or None and the reason there is none.
+        A client assertion of RFC 7523 takes the place of the client secret - a request carrying both is refused,
+        as RFC 7521 requires, and so is an assertion of any type other than the JWT bearer one.
+        """
+        client_secret = request.get('client_secret')
+        assertion = request.get('client_assertion')
+        assertion_type = request.get('client_assertion_type')
+
+        # A client logs in one way or the other, never both ..
+        if client_secret is not None and assertion is not None:
+            return None, 'Both a client secret and a client assertion were given'
+
+        # .. a signed assertion is verified against the registered key ..
+        if assertion is not None:
+
+            if assertion_type != OAuth.Assertion_Type:
+                return None, f'Unsupported client assertion type -> {assertion_type}'
+
+            out = token_issuer.issue_with_assertion(assertion)
+            return out
+
+        # .. and a secret is compared with the registered one.
+        client_id = request.get('client_id')
+
+        if client_id is None:
+            client_id = ''
+
+        if client_secret is None:
+            client_secret = ''
+
+        token = token_issuer.issue(client_id, client_secret)
+
+        if token is None:
+            return None, 'Client credentials rejected'
+
+        return token, ''
+
+# ################################################################################################################################
+
     def _handle_token_request(self) -> 'None':
         """ Implements the token endpoint for the client credentials grant of RFC 6749,
         accepting both form-encoded and JSON requests, which is what Zato's BearerTokenManager sends.
@@ -428,20 +469,11 @@ class FHIRRequestHandler(BaseHTTPRequestHandler):
             self.send_json(BAD_REQUEST, {'error': 'unsupported_grant_type'}, is_fhir=False)
             return
 
-        # .. issue a token if the client credentials are correct ..
-        client_id = request.get('client_id')
-        client_secret = request.get('client_secret')
-
-        if client_id is None:
-            client_id = ''
-
-        if client_secret is None:
-            client_secret = ''
-
-        token = token_issuer.issue(client_id, client_secret)
+        # .. issue a token if the client authenticated, with its secret or with a signed assertion ..
+        token, error = self._issue_token(token_issuer, request)
 
         if token is None:
-            self.send_json(BAD_REQUEST, {'error': 'invalid_client'}, is_fhir=False)
+            self.send_json(BAD_REQUEST, {'error': error_invalid_client, 'error_description': error}, is_fhir=False)
             return
 
         # .. and return it the way RFC 6749 specifies.
