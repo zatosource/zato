@@ -79,6 +79,10 @@ Short_Token_Lifespan = 1
 Client_JWT_RSA = 'zato-test-jwt-rsa'
 Client_JWT_EC  = 'zato-test-jwt-ec'
 
+# A signed JWT client that callers present a key it was never given - a client of its own,
+# because the ODB allows one bearer token definition per client ID
+Client_JWT_Unknown_Key = 'zato-test-jwt-unknown-key'
+
 # How long tokens issued to the JWT clients last, in seconds. Short enough for a rotated key
 # to be exercised within a test, long enough for a token to be used right after it was issued.
 JWT_Token_Lifespan = 6

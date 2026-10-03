@@ -3,35 +3,23 @@
 /* ------------------------------------------------------------ */
 
 :root {
-    --fhir-bulk-export-badge-gap: 6px;
-    --fhir-bulk-export-badge-padding: 4px 8px;
-    --fhir-bulk-export-badge-remove-gap: 6px;
+    --fhir-bulk-export-badge-gap: 4px;
     --fhir-bulk-export-picker-gap: 6px;
     --fhir-bulk-export-control-height: 24px;
     --fhir-bulk-export-type-width: 7em;
     --fhir-bulk-export-connection-width: 16em;
-    --fhir-bulk-export-option-text-width: 12em;
+    --fhir-bulk-export-option-text-width: 30em;
+    --fhir-bulk-export-badge-paper: white;
 }
 
+/* The badges are chips, from shared/chips.css - they stand on the dialog's grey,
+   not inside a white field, so their translucent fill is mixed over white here */
 .fhir-bulk-export-badges {
+    --zato-chip-fill: color-mix(in srgb, var(--zato-chip-ink) 8%, var(--fhir-bulk-export-badge-paper));
+    --zato-chip-fill-hover: color-mix(in srgb, var(--zato-chip-ink) 13%, var(--fhir-bulk-export-badge-paper));
     display: flex;
     flex-wrap: wrap;
     gap: var(--fhir-bulk-export-badge-gap);
-}
-
-.fhir-bulk-export-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--fhir-bulk-export-badge-padding);
-    text-transform: none;
-    letter-spacing: 0;
-}
-
-.fhir-bulk-export-badge-remove {
-    display: inline-flex;
-    align-items: center;
-    margin-left: var(--fhir-bulk-export-badge-remove-gap);
-    color: inherit;
 }
 
 /* The line keeps one height whatever type is picked */
@@ -77,4 +65,16 @@
 
 .fhir-bulk-export-destination-option-text {
     width: var(--fhir-bulk-export-option-text-width);
+}
+
+/* formalize.css hands the button a bold shadowed face with its own line box,
+   the words are centred by the flex box instead */
+.fhir-bulk-export-destination-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 1;
+    text-shadow: none;
 }

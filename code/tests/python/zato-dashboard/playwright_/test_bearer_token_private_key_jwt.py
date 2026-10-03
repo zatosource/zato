@@ -52,9 +52,13 @@ Cell_Has_Private_Key    = 27
 Cell_JWT_Algorithm      = 28
 Cell_Key_ID             = 29
 
-# The client the fake FHIR server knows and the key it verifies assertions with
-_client_id = 'zato-dashboard-pkjwt-client'
+# The client the fake FHIR server knows and the key it verifies assertions with,
+# unique per run because the database enforces unique usernames
+_client_id = 'client.' + _Test_Name_Prefix + 'token-server'
 _client_secret = 'secret.' + CryptoManager.generate_hex_string()
+
+# What the dashboard logs when a definition's key does not parse
+_Bad_Key_Log = 'Private key could not be parsed as PEM'
 
 _private_key_pem = generate_rsa_private_key_pem()
 _public_key_pem = get_public_key_pem(load_private_key(_private_key_pem))
@@ -93,11 +97,18 @@ def _is_row_visible(page:'Page', dialog_id:'str', row_class:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def _fill_private_key_jwt_form(page:'Page', name:'str', token_url:'str', private_key_pem:'str', key_id:'str') -> 'None':
+def _fill_private_key_jwt_form(
+    page:'Page',
+    name:'str',
+    client_id:'str',
+    token_url:'str',
+    private_key_pem:'str',
+    key_id:'str',
+    ) -> 'None':
     """ Fills the create form with a private key JWT definition.
     """
     page.fill('#id_name', name)
-    page.fill('#id_username', _client_id)
+    page.fill('#id_username', client_id)
     page.fill('#id_auth_server_url', token_url)
 
     _ = page.select_option('#id_client_auth_method', OAuth.Client_Auth_Method.Private_Key_JWT)
@@ -108,13 +119,13 @@ def _fill_private_key_jwt_form(page:'Page', name:'str', token_url:'str', private
 
 # ################################################################################################################################
 
-def _create_private_key_jwt_definition(page:'Page', base_url:'str', name:'str', token_url:'str') -> 'str':
+def _create_private_key_jwt_definition(page:'Page', base_url:'str', name:'str', client_id:'str', token_url:'str') -> 'str':
     """ Creates a private key JWT definition via the UI and returns its server-side ID.
     """
     navigate_to_page(page, base_url, Bearer_Page_Url)
     open_create_dialog(page)
 
-    _fill_private_key_jwt_form(page, name, token_url, _private_key_pem, _key_id)
+    _fill_private_key_jwt_form(page, name, client_id, token_url, _private_key_pem, _key_id)
 
     submit_create_form(page)
     _ = wait_for_definition_row(page, name)
@@ -195,8 +206,9 @@ class TestBearerTokenPrivateKeyJWT:
         base_url = zato_dashboard['dashboard_url']
 
         definition_name = _Test_Name_Prefix + 'create'
+        client_id = 'client.' + definition_name
 
-        _ = _create_private_key_jwt_definition(page, base_url, definition_name, token_server.token_endpoint)
+        _ = _create_private_key_jwt_definition(page, base_url, definition_name, client_id, token_server.token_endpoint)
 
         for reload_page in (False, True):
 
@@ -209,7 +221,7 @@ class TestBearerTokenPrivateKeyJWT:
 
             assert cells[Cell_Name] == definition_name, f'Expected name "{definition_name}", got: "{cells[Cell_Name]}"'
             assert cells[Cell_Token_Type] == 'Dynamic', f'Expected a dynamic definition, got: "{cells[Cell_Token_Type]}"'
-            assert cells[Cell_Username] == _client_id, f'Expected client ID "{_client_id}", got: "{cells[Cell_Username]}"'
+            assert cells[Cell_Username] == client_id, f'Expected client ID "{client_id}", got: "{cells[Cell_Username]}"'
 
             assert cells[Cell_Client_Auth_Method] == OAuth.Client_Auth_Method.Private_Key_JWT, \
                 f'Expected private key JWT, got: "{cells[Cell_Client_Auth_Method]}"'
@@ -220,6 +232,7 @@ class TestBearerTokenPrivateKeyJWT:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_Bad_Key_Log)
     def test_03_create_without_a_usable_key_is_refused(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ A private key JWT definition whose key does not parse is not created and the page says why.
         """
@@ -227,11 +240,13 @@ class TestBearerTokenPrivateKeyJWT:
         base_url = zato_dashboard['dashboard_url']
 
         definition_name = _Test_Name_Prefix + 'bad-key'
+        client_id = 'client.' + definition_name
+        token_url = 'https://example.com/oauth2/token'
 
         navigate_to_page(page, base_url, Bearer_Page_Url)
         open_create_dialog(page)
 
-        _fill_private_key_jwt_form(page, definition_name, 'https://example.com/oauth2/token', 'this is not a key', _key_id)
+        _fill_private_key_jwt_form(page, definition_name, client_id, token_url, 'this is not a key', _key_id)
 
         # The submission fails on the server side, which the page reports in its message area ..
         page.click('#create-div input[type="submit"]')
@@ -261,7 +276,9 @@ class TestBearerTokenPrivateKeyJWT:
         base_url = zato_dashboard['dashboard_url']
 
         definition_name = _Test_Name_Prefix + 'edit'
-        definition_id = _create_private_key_jwt_definition(page, base_url, definition_name, token_server.token_endpoint)
+        client_id = 'client.' + definition_name
+
+        definition_id = _create_private_key_jwt_definition(page, base_url, definition_name, client_id, token_server.token_endpoint)
 
         # The row must come from the server for the edit dialog to know a key is stored ..
         navigate_to_page(page, base_url, Bearer_Page_Url)
@@ -308,7 +325,9 @@ class TestBearerTokenPrivateKeyJWT:
         base_url = zato_dashboard['dashboard_url']
 
         definition_name = _Test_Name_Prefix + 'public-key'
-        definition_id = _create_private_key_jwt_definition(page, base_url, definition_name, token_server.token_endpoint)
+        client_id = 'client.' + definition_name
+
+        definition_id = _create_private_key_jwt_definition(page, base_url, definition_name, client_id, token_server.token_endpoint)
 
         navigate_to_page(page, base_url, Bearer_Page_Url)
         _ = wait_for_definition_row(page, definition_name)
@@ -346,7 +365,7 @@ class TestBearerTokenPrivateKeyJWT:
         base_url = zato_dashboard['dashboard_url']
 
         definition_name = _Test_Name_Prefix + 'get-token'
-        _ = _create_private_key_jwt_definition(page, base_url, definition_name, token_server.token_endpoint)
+        _ = _create_private_key_jwt_definition(page, base_url, definition_name, _client_id, token_server.token_endpoint)
 
         navigate_to_page(page, base_url, Bearer_Page_Url)
         row = wait_for_definition_row(page, definition_name)

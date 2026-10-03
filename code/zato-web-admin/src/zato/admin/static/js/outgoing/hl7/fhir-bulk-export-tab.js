@@ -36,8 +36,9 @@ tab.config = {
     typeSelectSuffix: 'fhir-bulk-export-destination-type',
     connectionSelectSuffix: 'fhir-bulk-export-destination-connection',
 
-    badgeClass: 'zato-badge zato-badge-blue fhir-bulk-export-badge',
-    badgeRemoveClass: 'fhir-bulk-export-badge-remove',
+    badgeClass: 'zato-chip fhir-bulk-export-badge',
+    badgeTextClass: 'zato-chip-text',
+    badgeRemoveClass: 'zato-chip-remove fhir-bulk-export-badge-remove',
     optionInputClass: 'fhir-bulk-export-destination-option',
     optionSelectClass: 'fhir-bulk-export-destination-option-select',
     optionTextClass: 'fhir-bulk-export-destination-option-text',
@@ -269,12 +270,12 @@ tab.renderConnectionSelect = function() {
     connectionSelect.disabled = !hasConnections;
     tab.panelElement(tab.config.addSuffix).disabled = !hasConnections;
 
-    tab.renderOptionInputs(type);
+    tab.renderOptionInputs(type, hasConnections);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-tab.renderOptionInputs = function(type) {
+tab.renderOptionInputs = function(type, hasConnections) {
 
     var container = tab.panelElement(tab.config.optionsSuffix);
     var optionList = $.fn.zato.destinations.config.optionList[type];
@@ -289,6 +290,7 @@ tab.renderOptionInputs = function(type) {
             var select = document.createElement('select');
             select.className = tab.config.optionInputClass + ' ' + tab.config.optionSelectClass;
             select.setAttribute('data-option', optionConfig.id);
+            select.disabled = !hasConnections;
 
             for(var valueIdx = 0; valueIdx < optionConfig.values.length; valueIdx++) {
                 var valueOption = document.createElement('option');
@@ -305,6 +307,7 @@ tab.renderOptionInputs = function(type) {
             input.className = tab.config.optionInputClass + ' ' + tab.config.optionTextClass;
             input.setAttribute('data-option', optionConfig.id);
             input.placeholder = optionConfig.placeholder;
+            input.disabled = !hasConnections;
             container.appendChild(input);
         }
     }
@@ -383,13 +386,13 @@ tab.buildBadge = function(destination, destinationIdx, typeLabelMap) {
     badge.className = tab.config.badgeClass;
 
     var text = document.createElement('span');
+    text.className = tab.config.badgeTextClass;
     text.textContent = tab.badgeLabel(destination, typeLabelMap);
     badge.appendChild(text);
 
     var remove = document.createElement('a');
     remove.href = 'javascript:void(0)';
     remove.className = tab.config.badgeRemoveClass;
-    remove.appendChild($.fn.zato.new_remove_icon());
     remove.onclick = function() {
         tab.removeDestination(destinationIdx);
     };

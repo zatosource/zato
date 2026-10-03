@@ -11,6 +11,9 @@ import time
 from http.client import OK
 from json import dumps, loads
 
+# PyYAML
+from yaml import safe_load
+
 # Requests
 import requests
 
@@ -20,8 +23,8 @@ from zato.common.api import OAuth
 # Zato - test helpers
 import keycloak_
 
-from conftest import build_config_yaml, run_enmasse, run_enmasse_export
-from conftest import Call_Service_Name, EC_Outconn_Name, EC_Sec_Def_Name, Env_RSA_Rotated, FHIR_Outconn_Name, \
+from bearer_outgoing_config import build_config_yaml, run_enmasse, run_enmasse_export
+from bearer_outgoing_config import Call_Service_Name, EC_Outconn_Name, EC_Sec_Def_Name, Env_RSA_Rotated, FHIR_Outconn_Name, \
     FHIR_Patient_ID, FHIR_Read_Service_Name, FHIR_Sec_Def_Name, Key_ID_RSA_Primary, Key_ID_RSA_Rotated, RSA_Outconn_Name, \
     RSA_Sec_Def_Name, Unknown_Outconn_Name, Unknown_Sec_Def_Name
 
@@ -208,14 +211,24 @@ def test_private_key_is_never_exported(zato_server:'stranydict') -> 'None':
 
     exported = run_enmasse_export(zato_server['server_directory'])
 
-    assert RSA_Sec_Def_Name in exported
-    assert EC_Sec_Def_Name in exported
-    assert 'private_key' not in exported
+    # No PEM block leaves the server in any form ..
     assert 'PRIVATE KEY' not in exported
 
-    # The non-secret private key JWT fields do travel with the export
-    assert f'client_auth_method: {OAuth.Client_Auth_Method.Private_Key_JWT}' in exported
-    assert f'key_id: {Key_ID_RSA_Primary}' in exported
+    # .. and no definition carries its key, which is checked on the parsed YAML because the exporter
+    # quotes some values and the name of the method, private_key_jwt, contains the key's own name ..
+    security = safe_load(exported)['security']
+    definitions = {item['name']: item for item in security}
+
+    for item in security:
+        assert 'private_key' not in item, item['name']
+
+    # .. while the non-secret private key JWT fields do travel with the export.
+    rsa_definition = definitions[RSA_Sec_Def_Name]
+    ec_definition = definitions[EC_Sec_Def_Name]
+
+    assert rsa_definition['client_auth_method'] == OAuth.Client_Auth_Method.Private_Key_JWT
+    assert rsa_definition['key_id'] == Key_ID_RSA_Primary
+    assert ec_definition['client_auth_method'] == OAuth.Client_Auth_Method.Private_Key_JWT
 
 # ################################################################################################################################
 

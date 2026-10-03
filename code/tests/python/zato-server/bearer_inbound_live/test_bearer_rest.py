@@ -25,7 +25,7 @@ from zato.common.bearer_token_verifier import JWKS_Fetch_Interval
 # Zato - test helpers
 import keycloak_
 
-from conftest import build_config_yaml, run_enmasse
+from bearer_inbound_config import build_config_yaml, run_enmasse
 
 # ################################################################################################################################
 # ################################################################################################################################

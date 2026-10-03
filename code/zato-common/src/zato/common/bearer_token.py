@@ -250,7 +250,6 @@ class BearerTokenManager:
         out = {
             config.client_id_field: config.username,
             'grant_type': config.grant_type,
-            'scope': config.scopes,
         }
 
         if config.client_auth_method == OAuth.Client_Auth_Method.Private_Key_JWT:

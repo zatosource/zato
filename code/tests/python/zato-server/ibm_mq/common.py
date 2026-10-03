@@ -33,10 +33,18 @@ _service_name = 'demo.ibm-mq.test'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def channel_config(mq_server:'MQServer', *, name:'str', queue:'str', remove_jms_headers:'bool') -> 'anydict':
+def channel_config(
+    mq_server:'MQServer',
+    *,
+    channel_id:'int',
+    name:'str',
+    queue:'str',
+    remove_jms_headers:'bool',
+    ) -> 'anydict':
     """ Builds a channel connection config the bridge accepts in a reload command.
     """
     out = {
+        'id': channel_id,
         'name': name,
         'type_': 'channel-ibm-mq',
         'address': mq_server.address,
@@ -101,7 +109,7 @@ def run_send_and_consume_scenario(harness:'QueueBridgeHarness', channel_name:'st
     assert reply['status'] == 'ok', f'Send failed: {reply}'
 
     # .. the channel consumes it and publishes a recv event ..
-    event = harness.wait_for_recv_event()
+    event = harness.wait_for_recv_event(channel_name)
 
     assert event['channel_name'] == channel_name
     assert event['service'] == _service_name
@@ -138,7 +146,7 @@ def run_reply_scenario(harness:'QueueBridgeHarness', client:'MQTestClient', chan
     )
 
     # .. the channel consumes it and the recv event carries the reply-to details ..
-    event = harness.wait_for_recv_event()
+    event = harness.wait_for_recv_event(channel_name)
 
     assert b64decode(event['payload']) == request
     assert event['reply_to_queue'] == ContainerCtx.Reply_Queue
@@ -170,6 +178,7 @@ def run_rfh2_scenario(
     harness:'QueueBridgeHarness',
     client:'MQTestClient',
     *,
+    channel_name:'str',
     queue:'str',
     remove_jms_headers:'bool',
     ) -> 'None':
@@ -186,7 +195,7 @@ def run_rfh2_scenario(
     _ = client.put(queue, message, format=MQClientCtx.Format_RFH2)
 
     # .. the channel consumes it and exposes the flattened MQRFH2 headers either way ..
-    event = harness.wait_for_recv_event()
+    event = harness.wait_for_recv_event(channel_name)
     headers = json.loads(event['headers'])
 
     assert headers['jms.Dst'] == 'queue:///' + queue

@@ -36,6 +36,8 @@ from zato.common.util.config import get_config_object, update_config_file  # noq
 
 # Zato - test helpers
 import keycloak_  # noqa: E402
+from bearer_inbound_config import build_config_yaml, JWT_Channel_Path, run_enmasse, Static_Channel_Path, Static_Token, \
+    Zato_Bin  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,25 +57,11 @@ def pytest_report_teststatus(report:'any_', config:'any_') -> 'tupnone':
 # ################################################################################################################################
 # ################################################################################################################################
 
-_zato_base = os.environ['ZATO_TEST_BASE_DIR']
-_zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
-
 _password = 'test.invoke.' + CryptoManager.generate_hex_string()
-
-# Names of the definitions and channels the tests use
-Static_Sec_Def_Name = 'test.bearer.inbound.static'
-JWT_Sec_Def_Name    = 'test.bearer.inbound.jwt'
-
-Static_Channel_Path = '/test/bearer/static'
-JWT_Channel_Path    = '/test/bearer/jwt'
-
-# The exact token static-mode callers must present
-Static_Token = 'test.static.' + CryptoManager.generate_hex_string()
 
 _process_kill_timeout = 5
 _server_wait_timeout  = 120
 _quickstart_timeout   = 180
-_enmasse_timeout      = 60
 _ping_poll_interval   = 0.5
 
 _server_process = None
@@ -152,69 +140,6 @@ def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_enmasse(server_directory:'str', enmasse_yaml:'str') -> 'None':
-    """ Imports the given enmasse YAML into a running server.
-    """
-    tmp_yaml = os.path.join(tempfile.gettempdir(), f'zato-bearer-inbound-live-{os.getpid()}.yaml')
-
-    try:
-        with open(tmp_yaml, 'w') as yaml_file:
-            _ = yaml_file.write(enmasse_yaml)
-
-        result = subprocess.run(
-            [_zato_bin, 'enmasse', server_directory, '--verbose', '--import', '--input', tmp_yaml],
-            capture_output=True, text=True, timeout=_enmasse_timeout,
-        )
-
-        if result.returncode != 0:
-            raise RuntimeError(f'enmasse --import failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
-
-    finally:
-        if os.path.isfile(tmp_yaml):
-            os.unlink(tmp_yaml)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def build_config_yaml(department:'str'=keycloak_.Department_Accounting) -> 'str':
-    """ Returns the enmasse YAML with both bearer token definitions and their REST channels.
-    The department parameter lets tests redeploy the JWT definition with a different claim filter.
-    """
-    token_url = keycloak_.get_token_url()
-    issuer = keycloak_.get_issuer()
-
-    out = f'''\
-security:
-  - name: {Static_Sec_Def_Name}
-    type: bearer_token
-    static_token: "{Static_Token}"
-
-  - name: {JWT_Sec_Def_Name}
-    type: bearer_token
-    username: {keycloak_.Client_Accounting}
-    password: "{keycloak_.Secret_Accounting}"
-    auth_endpoint: {token_url}
-    issuer: {issuer}
-    audience: {keycloak_.Audience_Main}
-    claims:
-      - {keycloak_.Claim_Department}={department}
-
-channel_rest:
-  - name: test.bearer.inbound.static.channel
-    service: demo.ping
-    url_path: {Static_Channel_Path}
-    security: {Static_Sec_Def_Name}
-
-  - name: test.bearer.inbound.jwt.channel
-    service: demo.ping
-    url_path: {JWT_Channel_Path}
-    security: {JWT_Sec_Def_Name}
-'''
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 @pytest.fixture(scope='session')
 def zato_server() -> 'any_':
     """ Session-scoped fixture - brings up Keycloak, spins up a Zato quickstart environment,
@@ -229,7 +154,7 @@ def zato_server() -> 'any_':
     _temp_directory = tempfile.mkdtemp(prefix='zato_bearer_inbound_live_test_')
 
     quickstart_command = [
-        _zato_bin, 'quickstart', 'create', _temp_directory,
+        Zato_Bin, 'quickstart', 'create', _temp_directory,
         '--servers', '1',
         '--password', _password,
         '--server-api-client-for-scheduler-password', _password,
@@ -258,7 +183,7 @@ def zato_server() -> 'any_':
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
 
     _server_process = subprocess.Popen(
-        [_zato_bin, 'start', server_directory, '--fg'],
+        [Zato_Bin, 'start', server_directory, '--fg'],
         env=server_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

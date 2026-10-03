@@ -29,9 +29,16 @@ def test_ibm_mq(ibm_mq_server:'MQServer') -> 'None':
 
     # One channel strips MQRFH2 headers, the other keeps them in the payload
     channels = [
-        channel_config(ibm_mq_server, name='test.ibm-mq.channel', queue=ContainerCtx.Request_Queue, remove_jms_headers=True),
         channel_config(
             ibm_mq_server,
+            channel_id=1,
+            name='test.ibm-mq.channel',
+            queue=ContainerCtx.Request_Queue,
+            remove_jms_headers=True,
+        ),
+        channel_config(
+            ibm_mq_server,
+            channel_id=2,
             name='test.ibm-mq.channel.keep-headers',
             queue=ContainerCtx.Keep_Headers_Queue,
             remove_jms_headers=False,
@@ -67,10 +74,22 @@ def test_ibm_mq(ibm_mq_server:'MQServer') -> 'None':
         run_reply_scenario(harness, client, 'test.ibm-mq.channel')
 
         # .. MQRFH2 headers are stripped from the payload when the channel says so ..
-        run_rfh2_scenario(harness, client, queue=ContainerCtx.Request_Queue, remove_jms_headers=True)
+        run_rfh2_scenario(
+            harness,
+            client,
+            channel_name='test.ibm-mq.channel',
+            queue=ContainerCtx.Request_Queue,
+            remove_jms_headers=True,
+        )
 
         # .. and kept in the payload when it does not.
-        run_rfh2_scenario(harness, client, queue=ContainerCtx.Keep_Headers_Queue, remove_jms_headers=False)
+        run_rfh2_scenario(
+            harness,
+            client,
+            channel_name='test.ibm-mq.channel.keep-headers',
+            queue=ContainerCtx.Keep_Headers_Queue,
+            remove_jms_headers=False,
+        )
 
     finally:
         client.disconnect()
