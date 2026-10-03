@@ -13,6 +13,7 @@ import os
 
 # Zato
 from zato.common.db_env.common import Type_SQLite
+from zato.common.test.conftest_base_pubsub import find_free_port
 from zato.common.test.rabbitmq_ import RabbitMQProcess
 
 # local
@@ -70,13 +71,6 @@ SQLite_File_Name = 'pubsub.db'
 # ################################################################################################################################
 
 class ModuleCtx:
-
-    # Host ports of the queue delivery suites' own, so they can run alongside the perf and backend suites
-    PostgreSQL_Port     = 25472
-    PostgreSQL_SSL_Port = 25473
-    MySQL_Port          = 23372
-    MySQL_SSL_Port      = 23373
-    Oracle_Port         = 21572
 
     Container_Prefix = 'zato-queue-delivery-'
 
@@ -186,10 +180,11 @@ def _start_postgresql(needs_ssl:'bool', certificates:'CertificatePaths', suite_n
 
     if needs_ssl:
         name = Backend_PostgreSQL_SSL
-        port = ModuleCtx.PostgreSQL_SSL_Port
     else:
         name = Backend_PostgreSQL
-        port = ModuleCtx.PostgreSQL_Port
+
+    # The OS hands out ports from 1024 up, so a fixed host port can be taken by any socket of the run
+    port = find_free_port()
 
     container_name = _get_container_name(suite_name, name)
 
@@ -212,10 +207,10 @@ def _start_mysql(needs_ssl:'bool', certificates:'CertificatePaths', suite_name:'
 
     if needs_ssl:
         name = Backend_MySQL_SSL
-        port = ModuleCtx.MySQL_SSL_Port
     else:
         name = Backend_MySQL
-        port = ModuleCtx.MySQL_Port
+
+    port = find_free_port()
 
     container_name = _get_container_name(suite_name, name)
 
@@ -244,7 +239,7 @@ def _start_oracle(suite_name:'str') -> 'Backend':
 
     server = start_oracle(
         container_name=container_name,
-        port=ModuleCtx.Oracle_Port,
+        port=find_free_port(),
         username=ModuleCtx.Username,
         password=ModuleCtx.Oracle_Password,
     )
