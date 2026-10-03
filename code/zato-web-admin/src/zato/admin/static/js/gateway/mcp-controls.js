@@ -436,7 +436,7 @@ $.fn.zato.gateway.mcp._init_chip_list = function(action, config) {
 
     // The same container and list classes the Chosen multi-selects render with,
     // so the stylesheet the detectors wear dresses the chips here too ..
-    var container = $('<div/>', {'class': 'chosen-container chosen-container-multi ' + config.container_class});
+    var container = $('<div/>', {'class': 'chosen-container chosen-container-multi mcp-chip-list ' + config.container_class});
     var choices = $('<ul/>', {'class': 'chosen-choices'});
     var search_field = $('<li/>', {'class': 'search-field'});
     // The autocomplete attribute goes through attr - in the creation map,

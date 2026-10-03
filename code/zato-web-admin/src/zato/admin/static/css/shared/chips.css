@@ -23,6 +23,7 @@
  * --zato-chip-rim-hover            Its rim under the pointer
  * --zato-chip-font-size            Its words
  * --zato-chip-font-weight          Their weight
+ * --zato-chip-line-height          Their line, tall enough that the words' descenders survive the clip of the ellipsis
  * --zato-chip-remove-size          The remove mark's face
  * --zato-chip-remove-icon-size     The x on it
  * --zato-chip-remove-hover-fill    The face under the pointer
@@ -40,6 +41,7 @@
     --zato-chip-rim-hover: color-mix(in srgb, var(--zato-chip-ink) 65%, transparent);
     --zato-chip-font-size: 12px;
     --zato-chip-font-weight: 400;
+    --zato-chip-line-height: 16px;
     --zato-chip-remove-size: 14px;
     --zato-chip-remove-icon-size: 10px;
     --zato-chip-remove-hover-fill: color-mix(in srgb, var(--zato-chip-ink) 18%, transparent);
@@ -67,7 +69,7 @@
     border-radius: var(--zato-chip-radius);
     font-size: var(--zato-chip-font-size);
     font-weight: var(--zato-chip-font-weight);
-    line-height: 1;
+    line-height: var(--zato-chip-line-height);
     color: var(--zato-chip-ink);
     background: var(--zato-chip-fill);
     box-shadow: none;
