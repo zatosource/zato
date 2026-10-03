@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 
 # Test support
-from queue_delivery.client import as_dict, get_client, send
+from queue_delivery.client import as_dict, get_client, send, wait_for_queue_empty
 from queue_delivery.type_under_test import Attempts_Per_Round, Connection_Keys, TestConfig
 
 # ################################################################################################################################
@@ -143,6 +143,11 @@ def send_to_dlq(client:'AdminClient', conn_name:'str', receiver:'RecordingReceiv
 
     dlq = wait_for_dlq_count(client, conn_name, 1)
     assert len(dlq['messages']) == 1, dlq
+
+    # The message lands in the DLQ a moment before its queue entry is acked, and a send made
+    # while that entry is still there goes behind it without a direct attempt
+    queue = wait_for_queue_empty(client, conn_name)
+    assert queue['depth'] == 0, queue
 
     out = dlq['messages'][0]
     return out

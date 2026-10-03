@@ -63,6 +63,10 @@ Retry_Timeout = 60.0
 # the connection's attempts to reconnect grew further and further apart, up to ten seconds between them
 Reconnect_Wait = 15.0
 
+# A message is in the DLQ or on the topic a moment before its queue entry is acked, which is how long that may take
+Queue_Empty_Timeout = 10.0
+Queue_Empty_Poll_Interval = 0.2
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -114,6 +118,25 @@ def names(kafka_suite:'ClusterSuite') -> 'Names':
 
 def _queue_depth(kafka_suite:'ClusterSuite', conn_name:'str') -> 'int':
     out:'int' = kafka_suite.client.invoke('test.queue-delivery.get-queue', {'conn_name': conn_name})['depth']
+    return out
+
+# ################################################################################################################################
+
+def _wait_for_queue_empty(kafka_suite:'ClusterSuite', conn_name:'str') -> 'int':
+    """ Blocks until a connection's queue is empty and returns its depth, which is not zero only if the time ran out.
+    """
+    deadline = time.monotonic() + Queue_Empty_Timeout
+
+    while time.monotonic() < deadline:
+
+        out = _queue_depth(kafka_suite, conn_name)
+
+        if out == 0:
+            return out
+
+        time.sleep(Queue_Empty_Poll_Interval)
+
+    out = _queue_depth(kafka_suite, conn_name)
     return out
 
 # ################################################################################################################################
@@ -180,7 +203,7 @@ def test_sends_while_kafka_is_down_queue_up_move_to_the_dlq_raise_the_alert_and_
 
         # .. and once the retry policy has run out for each, they are all in the DLQ with Kafka's timeout in the header
         dlq = kafka_suite.wait_for_dlq_count(conn_name, Message_Count, timeout=DLQ_Timeout)
-        assert _queue_depth(kafka_suite, conn_name) == 0
+        assert _wait_for_queue_empty(kafka_suite, conn_name) == 0
 
         in_dlq = [elem['document'][Key_Request][Key_Data] for elem in dlq['messages']]
         assert sorted(in_dlq) == sorted(payloads), in_dlq
@@ -217,7 +240,7 @@ def test_sends_while_kafka_is_down_queue_up_move_to_the_dlq_raise_the_alert_and_
     assert on_topic.count(warm_up.encode('utf8')) == 1
 
     assert kafka_suite.dlq(conn_name)['messages'] == []
-    assert _queue_depth(kafka_suite, conn_name) == 0
+    assert _wait_for_queue_empty(kafka_suite, conn_name) == 0
 
     # And a sweep says nothing about the connection any more
     since_id = get_newest_audit_event_id()

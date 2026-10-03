@@ -54,6 +54,11 @@ def fill_dlq(client:'AdminClient', conn_name:'str', receiver:'RecordingReceiver'
     out = wait_for_dlq_count(client, conn_name, count)
     assert len(out['messages']) == count, out
 
+    # The last message lands in the DLQ a moment before its queue entry is acked, and a send made
+    # while that entry is still there goes behind it without a direct attempt
+    queue = wait_for_queue_empty(client, conn_name)
+    assert queue['depth'] == 0, queue
+
     receiver.accept_all()
 
     return out
