@@ -9,7 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import shutil
+import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -21,8 +23,8 @@ from unittest import main, TestCase
 import requests
 
 # Zato
-from zato.common.test import get_free_tcp_port
 from zato.common.test.mcp_ import make_jsonrpc_initialize, wait_for_mcp_gateway
+from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
 
 # ################################################################################################################################
@@ -56,15 +58,23 @@ _GROUP2_MEMBER_PASSWORD = 'test-mcp-group2-' + os.urandom(4).hex()
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _find_free_port() -> 'int':
+    """ Lets the kernel pick a free port, the same as every other test in this directory does.
+    Scanning a fixed range and asking whether anything listens on a port is not enough -
+    the range sits inside the kernel's ephemeral range, so an outgoing connection may hold
+    the port as its source port, in which case nothing listens there yet the server's bind fails.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(('127.0.0.1', 0))
+        return sock.getsockname()[1]
+
+# ################################################################################################################################
+
 def _kill_proc(proc:'any_') -> 'None':
-    if proc:
-        if proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait(timeout=5)
+    """ The `zato start --fg` process is a launcher whose server runs two levels below it,
+    so the whole process group has to go, not only the launcher.
+    """
+    kill_process_tree(proc)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,8 +90,8 @@ class TestMCPAuth(TestCase):
         os.environ.pop('Zato_Needs_Config_Reload', None)
 
         cls._password = 'test.mcp_auth.' + os.urandom(8).hex()
-        cls._port = get_free_tcp_port()
-        cls._broker_port = get_free_tcp_port()
+        cls._port = _find_free_port()
+        cls._broker_port = _find_free_port()
         cls._tmpdir = tempfile.mkdtemp(prefix='zato_mcp_auth_test_')
         cls._server_proc = None
         cls._server_output_lines = []
@@ -135,6 +145,7 @@ class TestMCPAuth(TestCase):
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
         logger.info('[MCP-AUTH setUpClass] Server PID=%d', cls._server_proc.pid)
 
@@ -154,9 +165,10 @@ class TestMCPAuth(TestCase):
         )
 
         if wait_result.returncode != 0:
-            logger.info('[MCP-AUTH setUpClass] zato wait failed: %s %s', wait_result.stdout, wait_result.stderr)
+            print(f'\n--- zato wait stdout: ---\n{wait_result.stdout}\n--- zato wait stderr: ---\n{wait_result.stderr}',
+                file=sys.stderr)
             cls._dump_debug()
-            _kill_proc(cls._server_proc)
+            cls._stop_server()
             raise Exception(f'zato wait failed (exit {wait_result.returncode})')
 
         logger.info('[MCP-AUTH setUpClass] Server is ready')
@@ -307,9 +319,10 @@ mcp_gateway:
             logger.info('[MCP-AUTH setUpClass] enmasse exit_code=%d', enmasse_result.returncode)
 
             if enmasse_result.returncode != 0:
-                logger.info('[MCP-AUTH setUpClass] enmasse stdout:\n%s', enmasse_result.stdout)
-                logger.info('[MCP-AUTH setUpClass] enmasse stderr:\n%s', enmasse_result.stderr)
+                print(f'\n--- enmasse stdout: ---\n{enmasse_result.stdout}\n--- enmasse stderr: ---\n{enmasse_result.stderr}',
+                    file=sys.stderr)
                 cls._dump_debug()
+                cls._stop_server()
                 raise Exception(f'Enmasse import failed (exit {enmasse_result.returncode})')
 
         finally:
@@ -341,29 +354,44 @@ mcp_gateway:
 
     @classmethod
     def _dump_debug(cls) -> 'None':
-        logger.info('--- Server stdout at failure: ---')
+        """ Goes to stderr rather than through the logger, because an earlier test module may have
+        configured logging at a level above INFO, which is what used to swallow this output.
+        """
+        print('\n--- Server stdout at failure: ---', file=sys.stderr)
 
         for line in cls._server_output_lines[-40:]:
-            logger.info(line)
+            print(line, file=sys.stderr)
 
-        logger.info('--- End of server stdout ---')
+        print('--- End of server stdout ---', file=sys.stderr)
 
         server_log = os.path.join(cls._server_dir, 'logs', 'server.log')
 
         if os.path.isfile(server_log):
-            logger.info('--- server.log tail: ---')
+            print('\n--- server.log tail: ---', file=sys.stderr)
             with open(server_log) as log_file:
                 for line in log_file.readlines()[-50:]:
-                    logger.info(line.rstrip())
-            logger.info('--- End of server.log ---')
+                    print(line.rstrip(), file=sys.stderr)
+            print('--- End of server.log ---\n', file=sys.stderr)
+
+# ################################################################################################################################
+
+    @classmethod
+    def _stop_server(cls) -> 'None':
+        """ Stops the server's whole process group, lets the capture thread drain the pipe
+        and only then closes it, otherwise close() could block on the reader's lock.
+        """
+        proc:'any_' = cls._server_proc
+        _kill_proc(proc)
+        cls._server_thread.join(timeout=5)
+        proc.stdout.close()
+        cls._server_proc = None
 
 # ################################################################################################################################
 
     @classmethod
     def tearDownClass(cls) -> 'None':
         logger.info('[MCP-AUTH tearDownClass] Stopping server')
-        _kill_proc(cls._server_proc)
-        cls._server_proc = None
+        cls._stop_server()
 
         if cls._tmpdir:
             if os.path.isdir(cls._tmpdir):

@@ -205,7 +205,13 @@ class TestEnmassePrivateKeyJWT(TestCase):
         """
         created, _ = self._sync(self._definition(ModuleCtx.Env_Var_Reference))
         self.assertEqual(len(created['security']), 1)
-        self._assert_stored_key(self._get_row(), ModuleCtx.Missing)
+
+        # The placeholder carries a unique suffix after the variable's name
+        stored = load_opaque(self._get_row().opaque1)['private_key']
+        self.assertTrue(is_encrypted(stored), 'Private key is not encrypted')
+        decrypted = decrypt_secret(self.session, stored)
+        assert decrypted is not None
+        self.assertRegex(decrypted, f'^{ModuleCtx.Missing}_[0-9a-f]{{12}}$')
 
         os.environ[ModuleCtx.Env_Var] = self.key_a
 

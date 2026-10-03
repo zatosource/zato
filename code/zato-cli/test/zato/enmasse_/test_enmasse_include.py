@@ -273,7 +273,7 @@ include:
         self.assertIn('odoo', complete_config)
 
         # Verify the template has the expected number of each item
-        self.assertEqual(len(complete_config['security']), 15)
+        self.assertEqual(len(complete_config['security']), 16)
         self.assertEqual(len(complete_config['groups']), 2)
         self.assertEqual(len(complete_config['channel_rest']), 6)
         self.assertEqual(len(complete_config['scheduler']), 4)

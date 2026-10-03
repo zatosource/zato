@@ -557,7 +557,7 @@ outgoing_fhir:
           type: sftp
           connection: enmasse.sftp.archive
           options:
-            remote_path: /exports/{job_id}/{file_name}
+            remote_path: /exports/{{job_id}}/{{file_name}}
         - name: enmasse.kafka.outgoing.1
           type: kafka
           connection: enmasse.kafka.outgoing.1
