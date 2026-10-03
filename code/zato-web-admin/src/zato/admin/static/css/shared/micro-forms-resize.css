@@ -21,6 +21,14 @@
     z-index: 1;
 }
 
+/* A popover with nothing that grows tall is only dragged wider, and its grip
+   and the page mid-drag say so */
+.micro-form-wide-only .micro-form-grip,
+.micro-form-resizing-wide,
+.micro-form-resizing-wide * {
+    cursor: ew-resize;
+}
+
 /* ------------------------------------------------------------ */
 /* Height                                                        */
 /* ------------------------------------------------------------ */

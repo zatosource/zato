@@ -22,6 +22,7 @@ tab.zones = {
         action: 'fhir-bulk-export',
 
         fieldClass: 'fhir-bulk-export-zones-field',
+        growsClass: 'micro-form-grows',
         availableZoneClass: 'fhir-bulk-export-zone-available',
         optionsClass: 'fhir-bulk-export-zone-options',
         optionsLinkClass: 'zato-link-face fhir-bulk-export-zone-options-link',
@@ -143,8 +144,9 @@ zones.buildPicker = function() {
 
     var zonesConfig = zones.config;
 
+    // The zones are what a taller popover gives room to, which lets the popover be dragged taller at all
     var picker = document.createElement('div');
-    picker.className = 'badge-picker';
+    picker.className = 'badge-picker ' + zonesConfig.growsClass;
     picker.id = 'badge-picker-' + zonesConfig.action;
 
     picker.appendChild(zones.buildZone('available', zonesConfig.availableLabel, zonesConfig.availableZoneClass));

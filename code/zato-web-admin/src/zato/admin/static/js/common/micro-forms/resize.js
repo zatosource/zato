@@ -7,7 +7,9 @@
 // Dragging it changes the popover's width and height, the fields inside
 // follow the new width and the buttons keep to the bottom edge - the look of
 // that is static/css/shared/micro-forms-resize.css. A popover never shrinks
-// below what its content needs.
+// below what its content needs, and one with nothing that grows tall - no
+// textarea, no chips, no list a host marked with micro-form-grows - is only
+// ever dragged wider, its height staying what its fields give it.
 //
 // The size is kept in the browser's local storage under a key of the host's
 // popup id and the form's name, so the same form opens at the same size next
@@ -33,6 +35,12 @@ microForms.resizeConfig = {
     // The grip's classes and the page-wide cursor mid-resize, shared with the popup chrome
     gripClass: 'zato-popup-grip zato-popup-grip-right micro-form-grip',
     resizingClass: 'zato-popup-resizing-right',
+
+    // What makes a popover one that grows tall - anything else is dragged wider only,
+    // under a class of its own and a cursor saying so
+    growsSelector: 'textarea, .micro-form-chips, .micro-form-grows',
+    wideOnlyClass: 'micro-form-wide-only',
+    resizingWideClass: 'micro-form-resizing-wide',
 
     // How much of the window a restored popover leaves free on each side
     viewportMargin: 20
@@ -126,11 +134,27 @@ microForms.installResize = function(host, forms) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // Whether the popover holds anything a taller popover would give room to
+    forms.growsTall = function(container) {
+        var out = container.querySelector(resizeConfig.growsSelector) !== null;
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // A popover with nothing that grows tall keeps the height its content gives it, whatever height is asked for
     forms.applySize = function(container, width, height) {
+
         container.classList.add(resizeConfig.resizedClass);
         container.style.width = width + 'px';
-        container.style.height = height + 'px';
         container.style.maxWidth = 'none';
+
+        if(forms.growsTall(container)) {
+            container.style.height = height + 'px';
+        }
+        else {
+            container.style.height = '';
+        }
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -171,6 +195,15 @@ microForms.installResize = function(host, forms) {
 
         container.classList.add(resizeConfig.resizableClass);
 
+        // The grip of a popover dragged wider only shows the one direction it answers to
+        var growsTall = forms.growsTall(container);
+        var resizingClass = resizeConfig.resizingClass;
+
+        if(!growsTall) {
+            container.classList.add(resizeConfig.wideOnlyClass);
+            resizingClass = resizeConfig.resizingWideClass;
+        }
+
         if(container.classList.contains(resizeConfig.resizedClass)) {
             var natural = forms.naturalSize(container);
             var width = Math.max(container.offsetWidth, natural.width);
@@ -206,7 +239,7 @@ microForms.installResize = function(host, forms) {
 
             // The pointer spends the drag outside the grip, so the cursor is
             // held for the whole page instead of only for the corner
-            document.documentElement.classList.add(resizeConfig.resizingClass);
+            document.documentElement.classList.add(resizingClass);
 
             var onMove = function(move) {
                 var width = Math.max(startWidth + move.pageX - grabX, natural.width);
@@ -215,7 +248,7 @@ microForms.installResize = function(host, forms) {
             };
 
             var onUp = function() {
-                document.documentElement.classList.remove(resizeConfig.resizingClass);
+                document.documentElement.classList.remove(resizingClass);
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('mouseup', onUp);
                 forms.saveSize(sizeKey, container);
