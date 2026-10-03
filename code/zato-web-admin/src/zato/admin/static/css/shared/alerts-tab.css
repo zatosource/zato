@@ -102,8 +102,9 @@
 }
 
 /* A summary link is always on show here - on a wizard it goes away once its
-   switch is off, but a line of the tab has no switch of its own */
-.data-popup .alerts-tab-panel a.summary-link {
+   switch is off, but a line of the tab has no switch of its own. An empty answer
+   still hides it, as everywhere else, e.g. a FHIR system-level export has nothing to edit. */
+.data-popup .alerts-tab-panel a.summary-link:not(:has(.summary-link-text:empty)) {
     display: inline-flex;
     align-items: baseline;
     gap: 8px;
