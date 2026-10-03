@@ -59,8 +59,10 @@ class ModuleCtx:
     # The service every gateway exposes
     Echo_Service = 'demo.echo'
 
-    # A bearer definition verifying inbound tokens has a username column to fill, which nothing reads
-    Definition_Username = 'zato-mcp-oauth'
+    # A bearer definition verifying inbound tokens has a username column to fill, which nothing reads,
+    # one per definition because the database enforces unique usernames
+    Definition_Username         = 'zato-mcp-oauth'
+    Limited_Definition_Username = 'zato-mcp-oauth-limited'
 
     # How long the demo service has to appear in a gateway's tool list after the start
     Tools_Timeout       = 60

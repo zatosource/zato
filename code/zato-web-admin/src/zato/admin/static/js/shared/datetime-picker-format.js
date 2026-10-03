@@ -163,10 +163,10 @@ picker.range = function(from, to) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Today at the next full hour, seconds zeroed - what an empty field opens on
+// Now - what an empty field opens on
 picker.defaultValue = function() {
-    var now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+    var out = new Date();
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

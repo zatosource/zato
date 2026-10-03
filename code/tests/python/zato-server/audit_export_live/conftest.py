@@ -72,7 +72,7 @@ security:
       - {keycloak_oauth.Claim_Groups}={keycloak_oauth.Group_Billing_Agents}
   - name: {ModuleCtx.Limited_Definition_Name}
     type: bearer_token
-    username: {ModuleCtx.Definition_Username}
+    username: {ModuleCtx.Limited_Definition_Username}
     issuer: {issuer}
     audience: {keycloak_.Audience_Main}
     identity_claim: {keycloak_oauth.Claim_Username}

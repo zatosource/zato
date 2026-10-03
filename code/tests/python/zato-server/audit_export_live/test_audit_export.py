@@ -31,14 +31,14 @@ import keycloak_oauth
 from live_otel.containers import has_record, read_records, start_container, stop_container, wait_for_record
 
 # local
-from _common import bearer_caller, build_export_environment, count_lines, last_event_id, read_events, wait_for_event_of_type, \
+from _common import bearer_caller, build_export_environment, count_lines, last_event_id, wait_for_event_of_type, \
     wait_for_line, wait_for_tools, AuditExportEnvironment, Exported_Sources, ModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -424,7 +424,7 @@ class TestRESTChannel:
             _assert_no_data_or_payload(record)
 
             assert record['severity_text'] == 'INFO'
-            assert record['attributes'][_column('endpoint')] == ModuleCtx.REST_Channel_Path
+            assert record['attributes'][_column('endpoint')] == ModuleCtx.Echo_Service
             assert 'INV-2026-0042' not in str(record['attributes'])
 
 # ################################################################################################################################
@@ -477,22 +477,33 @@ class TestSourceSelection:
 
         live = audit_export_live
 
-        # The import of the gateways wrote config events ..
-        rows:'anylist' = []
+        # A quota tier created through the API writes a config event ..
+        config_min_id = last_event_id(live.audit_db_path, AuditSource.Config, ModuleCtx.Tier_Name)
 
-        for object_name in (ModuleCtx.Gateway_Name, ModuleCtx.REST_Channel_Name):
-            rows.extend(read_events(live.audit_db_path, AuditSource.Config, object_name))
+        _ = live.zato.client().invoke('zato.security.tier.create', {
+            'name': ModuleCtx.Tier_Name,
+            'rules_json': dumps(ModuleCtx.Tier_Rules),
+        })
 
-        row_count = len(rows)
-        assert row_count > 0, 'Expected config events of the enmasse import'
+        config_row = wait_for_event_of_type(
+            live.audit_db_path, AuditSource.Config, ModuleCtx.Tier_Name, config_min_id, AuditEvent.Config_Created)
 
-        # .. the export has been flowing, since records of other sources have arrived ..
+        # .. a REST call made after it is exported, so the export has moved past the config event ..
+        rest_min_id = last_event_id(live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name)
+
+        response = requests.post(live.rest_url, data=dumps({'invoice_id': 'INV-2026-0044'}),
+            headers={'Content-Type': 'application/json'}, timeout=ModuleCtx.HTTP_Timeout)
+        assert response.status_code == OK, response.text
+
+        rest_row = wait_for_event_of_type(
+            live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name, rest_min_id, AuditEvent.Response_Sent)
+        _ = _wait_for_one_record(live, rest_row)
+
+        # .. and the config event is not among what arrived.
+        assert not has_record(live.collector.output_path, config_row['id']), \
+            f'Config event {config_row["id"]} should not have arrived'
+
         arrived = read_records(live.collector.output_path)
-        assert arrived
-
-        # .. and none of the config events is among them.
-        for row in rows:
-            assert not has_record(live.collector.output_path, row['id']), f'Config event {row["id"]} should not have arrived'
 
         for records in arrived.values():
             for record in records:

@@ -48,24 +48,24 @@ bulk_export_level_choices = (
 def add_bulk_export_fields(form:'any_') -> 'None':
     """ Adds the Bulk export tab's fields to a create or edit form - what to export, on what schedule and where to.
     """
-    text_full = {'style':'width:100%'}
-
     form.fields[_bulk.Field_Is_Active] = _new_checkbox_field()
     form.fields[_bulk.Field_Level] = forms.ChoiceField(required=False, choices=bulk_export_level_choices,
-        initial=_bulk.Level.Group, widget=forms.Select())
-    form.fields[_bulk.Field_Group_ID] = forms.CharField(required=False, widget=forms.TextInput(attrs=text_full))
-    form.fields[_bulk.Field_Patient_IDs] = forms.CharField(required=False, widget=forms.TextInput(attrs=text_full))
-    form.fields[_bulk.Field_Types] = forms.CharField(required=False, widget=forms.TextInput(attrs=text_full))
-    form.fields[_bulk.Field_Since] = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
-    form.fields[_bulk.Field_Type_Filter] = forms.CharField(required=False, widget=forms.TextInput(attrs=text_full))
+        initial=_bulk.Level.Group, widget=forms.Select(attrs={'class':'fhir-bulk-export-level-select'}))
+
+    # The tab's popovers edit these, the fields themselves stay hidden
+    form.fields[_bulk.Field_Group_ID] = forms.CharField(required=False, widget=forms.TextInput())
+    form.fields[_bulk.Field_Patient_IDs] = forms.CharField(required=False, widget=forms.TextInput())
+    form.fields[_bulk.Field_Types] = forms.CharField(required=False, widget=forms.TextInput())
+    form.fields[_bulk.Field_Since] = forms.CharField(required=False, widget=forms.TextInput())
+    form.fields[_bulk.Field_Type_Filter] = forms.CharField(required=False, widget=forms.TextInput())
 
     # The schedule, in the shape of the scheduler tab of an outgoing REST connection
     form.fields[_bulk.Field_Run_Every] = forms.CharField(required=False,
-        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
+        widget=forms.TextInput(attrs={'class':'validate-digits'}))
     form.fields[_bulk.Field_Run_Unit] = forms.ChoiceField(required=False, choices=scheduler_run_unit_choices,
         initial=HTTP_SOAP.Invocation.Unit.Minutes, widget=forms.Select())
     form.fields[_bulk.Field_Start_Date] = forms.CharField(required=False,
-        widget=forms.TextInput(attrs={'style':'width:50%'}))
+        widget=forms.TextInput(attrs={'class':'fhir-bulk-export-start-date'}))
     form.fields[_bulk.Field_Job_ID] = forms.CharField(required=False, widget=forms.HiddenInput())
 
     # The destinations picker serialises its badges into this

@@ -62,6 +62,19 @@
     border-color: var(--zato-ui-accent);
 }
 
+/* In a popover dragged to a size of its own the box grows with it - two
+   boxes in one popover share the room the drag added. The height above
+   stays as the box's starting height, which is what it is at rest. */
+.micro-form-resized .micro-form-body > .micro-form-chips-field {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.micro-form-resized .micro-form-chips {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 /* The input wears no box of its own, the list's border is the field's */
 .micro-form .micro-form-chips-input,
 .micro-form .micro-form-chips-input:focus {

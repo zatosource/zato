@@ -1,80 +1,33 @@
 /* ------------------------------------------------------------ */
-/* FHIR bulk export tab - the destinations picker               */
+/* FHIR bulk export tab - the lines                             */
 /* ------------------------------------------------------------ */
 
 :root {
-    --fhir-bulk-export-badge-gap: 4px;
-    --fhir-bulk-export-picker-gap: 6px;
-    --fhir-bulk-export-control-height: 24px;
-    --fhir-bulk-export-type-width: 7em;
-    --fhir-bulk-export-connection-width: 16em;
-    --fhir-bulk-export-option-text-width: 30em;
-    --fhir-bulk-export-badge-paper: white;
+    --fhir-bulk-export-start-date-width: 15em;
+    --fhir-bulk-export-level-gap: 10px;
+    --fhir-bulk-export-level-font-size: 12px;
 }
 
-/* The badges are chips, from shared/chips.css - they stand on the dialog's grey,
-   not inside a white field, so their translucent fill is mixed over white here */
-.fhir-bulk-export-badges {
-    --zato-chip-fill: color-mix(in srgb, var(--zato-chip-ink) 8%, var(--fhir-bulk-export-badge-paper));
-    --zato-chip-fill-hover: color-mix(in srgb, var(--zato-chip-ink) 13%, var(--fhir-bulk-export-badge-paper));
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--fhir-bulk-export-badge-gap);
-}
-
-/* The line keeps one height whatever type is picked */
-.fhir-bulk-export-picker {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: var(--fhir-bulk-export-picker-gap);
-    min-height: var(--fhir-bulk-export-control-height);
-}
-
-.fhir-bulk-export-picker select,
-.fhir-bulk-export-picker input[type="text"],
-.fhir-bulk-export-picker button {
-    flex: 0 0 auto;
+.data-popup .fhir-bulk-export-tab-panel input.fhir-bulk-export-start-date {
     box-sizing: border-box;
-    height: var(--fhir-bulk-export-control-height);
+    width: var(--fhir-bulk-export-start-date-width);
 }
 
-.fhir-bulk-export-destination-type {
-    width: var(--fhir-bulk-export-type-width);
+/* The level select, then the link to what the level takes */
+.data-popup .fhir-bulk-export-tab-panel .fhir-bulk-export-level {
+    gap: var(--fhir-bulk-export-level-gap);
 }
 
-.fhir-bulk-export-destination-connection {
-    width: var(--fhir-bulk-export-connection-width);
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.fhir-bulk-export-destination-options {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--fhir-bulk-export-picker-gap);
-}
-
-.fhir-bulk-export-destination-options:empty {
-    display: none;
-}
-
-.fhir-bulk-export-destination-option-select {
+.data-popup .fhir-bulk-export-tab-panel select.fhir-bulk-export-level-select {
     width: auto;
+    font-size: var(--fhir-bulk-export-level-font-size);
 }
 
-.fhir-bulk-export-destination-option-text {
-    width: var(--fhir-bulk-export-option-text-width);
-}
+/* ------------------------------------------------------------ */
+/* FHIR bulk export tab - the popovers                          */
+/* ------------------------------------------------------------ */
 
-/* formalize.css hands the button a bold shadowed face with its own line box,
-   the words are centred by the flex box instead */
-.fhir-bulk-export-destination-add {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding-top: 0;
-    padding-bottom: 0;
-    line-height: 1;
-    text-shadow: none;
+/* The popover is outside the dialog's .ui-widget, so the buttons' font is set here */
+.fhir-bulk-export-popover button {
+    font-family: Verdana, Arial, sans-serif;
 }

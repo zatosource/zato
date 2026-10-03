@@ -45,7 +45,7 @@ _security_name_field = 'security_name'
 _security_export_key = 'security'
 
 # The fields both kinds of connection carry, each with the default it is not exported at
-_common_field_defaults = {
+_common_field_defaults:'anydict' = {
     'sasl_mechanism': '',
     'ssl': False,
     'ssl_ca_file': None,
@@ -54,10 +54,12 @@ _common_field_defaults = {
 }
 
 # A channel's fields, the topics and the routing rules excluded
-Channel_Field_Defaults = dict(_common_field_defaults)
+Channel_Field_Defaults:'anydict' = dict(_common_field_defaults)
 Channel_Field_Defaults.update({
     'group_id': '',
     'service': '',
+    'is_audit_log_active': True,
+    'is_audit_export_payload_active': False,
 })
 
 for _name, _default in _consumer.Defaults.items():
@@ -67,7 +69,7 @@ for _name, _default in _consumer.Defaults.items():
 Channel_Field_Defaults.update(Retry_Field_Defaults)
 
 # An outgoing connection's fields
-Outgoing_Field_Defaults = dict(_common_field_defaults)
+Outgoing_Field_Defaults:'anydict' = dict(_common_field_defaults)
 Outgoing_Field_Defaults.update({
     'topic': '',
     'is_audit_log_active': True,

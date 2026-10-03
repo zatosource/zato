@@ -23,9 +23,9 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/badge.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/chip-list.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/datetime-picker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/fhir-bulk-export-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/fhir-bulk-export-destinations.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -64,9 +64,11 @@
     {{ delivery_tab_config|json_script:"delivery-tab-config" }}
 
     {% comment %} FHIR {% endcomment %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/chip-list.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir-bulk-export-tab.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir-bulk-export-destinations.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir-bulk-export-destinations-zones.js"></script>
     {{ bulk_export_field_names|json_script:"fhir-bulk-export-field-names" }}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir.js"></script>
 

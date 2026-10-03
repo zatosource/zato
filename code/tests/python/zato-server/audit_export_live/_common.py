@@ -67,8 +67,25 @@ class ModuleCtx:
     # The service every gateway and channel exposes
     Echo_Service = 'demo.echo'
 
-    # A bearer definition verifying inbound tokens has a username column to fill, which nothing reads
-    Definition_Username = 'zato-audit-export'
+    # The quota tier created through the API, which writes a config event, and the rules it carries
+    Tier_Name  = 'test.audit.export.tier'
+    Tier_Rules = [{
+        'cidr_list': ['10.0.0.0/8'],
+        'time_range': [{
+            'is_all_day': True,
+            'disabled': False,
+            'disallowed': False,
+            'rate': 10,
+            'burst': 20,
+            'limit': 100,
+            'limit_unit': 'minute',
+        }]
+    }]
+
+    # A bearer definition verifying inbound tokens has a username column to fill, which nothing reads,
+    # one per definition because the database enforces unique usernames
+    Definition_Username         = 'zato-audit-export'
+    Limited_Definition_Username = 'zato-audit-export-limited'
 
     # How long the demo service has to appear in a gateway's tool list after the start
     Tools_Timeout       = 60
@@ -99,7 +116,7 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The sources the server exports - the config events of the enmasse import stay in the database only
+# The sources the server exports - config events stay in the database only
 Exported_Sources = f'{AuditSource.MCP},{AuditSource.REST_Channel}'
 
 # ################################################################################################################################

@@ -1,5 +1,5 @@
-// The Bulk export tab of an outgoing FHIR connection - the rows that follow the level select
-// and the destinations picker that serialises its badges into the form's hidden field.
+// The Bulk export tab of an outgoing FHIR connection - its sections of lines and the popovers
+// the lines open. The destinations popover is in fhir-bulk-export-destinations.js, loaded after this file.
 
 (function($) {
 
@@ -13,61 +13,180 @@ var tab = $.fn.zato.outgoing.hl7.fhir.bulk_export_tab;
 
 tab.config = {
 
-    // The levels the Group ID and Patient IDs rows follow
+    // Every element the popovers make is named after this
+    idPrefix: 'fhir-bulk-export',
+    idPrefixDjango: 'id_',
+
+    // The popovers open inside a dialog, so they wear the look of the dialog's other tabs and its plain buttons
+    popupClass: 'fhir-bulk-export-popover alerts-tab-micro-form',
+    showHowItWorks: false,
+    doneButtonClass: '',
+    otherButtonClass: '',
+
+    fieldClass: 'micro-form-field',
+
     levelGroup: 'group',
     levelPatient: 'patient',
 
-    rowGroupClass: 'fhir-bulk-export-row-group',
-    rowPatientClass: 'fhir-bulk-export-row-patient',
-
     // The form fields the tab reads and writes
     fieldLevel: 'bulk_export_level',
-    fieldDestinations: 'bulk_export_destinations',
+    fieldGroupID: 'bulk_export_group_id',
+    fieldPatientIDs: 'bulk_export_patient_ids',
+    fieldTypes: 'bulk_export_types',
+    fieldSince: 'bulk_export_since',
+    fieldTypeFilter: 'bulk_export_type_filter',
+    fieldRunEvery: 'bulk_export_run_every',
+    fieldRunUnit: 'bulk_export_run_unit',
     fieldStartDate: 'bulk_export_start_date',
+    fieldDestinations: 'bulk_export_destinations',
 
-    // The fields that are lists of names, each shown as chips
-    chipListFields: ['bulk_export_patient_ids', 'bulk_export_types', 'bulk_export_type_filter'],
+    // The lines that open a popover - the level line opens the one of the level picked, if that level takes anything,
+    // and the destinations line is bound by fhir-bulk-export-destinations.js
+    levelLine: 'level',
+    resourcesLine: 'resources',
+    scheduleLine: 'schedule',
 
-    // The parts of the picker, each under the panel's id
-    badgesSuffix: '-destination-badges',
-    badgesRowSuffix: '-destination-badges-row',
-    optionsSuffix: '-destination-options',
-    addSuffix: '-destination-add',
-    typeSelectSuffix: 'fhir-bulk-export-destination-type',
-    connectionSelectSuffix: 'fhir-bulk-export-destination-connection',
+    groupPopover: 'level_group',
+    patientPopover: 'level_patient',
 
-    badgeClass: 'zato-chip fhir-bulk-export-badge',
-    badgeTextClass: 'zato-chip-text',
-    badgeRemoveClass: 'zato-chip-remove fhir-bulk-export-badge-remove',
-    optionInputClass: 'fhir-bulk-export-destination-option',
-    optionSelectClass: 'fhir-bulk-export-destination-option-select',
-    optionTextClass: 'fhir-bulk-export-destination-option-text',
-    badgeSeparator: ' - ',
+    groupTitle: 'Group',
+    patientTitle: 'Patients',
+    resourcesTitle: 'Resources',
+    scheduleTitle: 'Schedule',
 
-    // The destination types a bulk export delivers to, in the order the picker offers them
-    typeOrder: ['sftp', 'kafka', 'hl7-fhir', 'service'],
+    labelGroupID: 'Group ID',
+    labelPatientIDs: 'Patient IDs',
+    labelTypes: 'Resource types',
+    labelTypeFilter: 'Type filters',
+    labelSince: 'Since',
+    labelRunEvery: 'Run every',
+    labelRunUnit: 'Unit',
 
-    noConnectionsLabel: 'No connections',
+    // A popover with chips is this wide, room for a handful of names on one line and for the chips to wrap,
+    // and one with a single short field is this wide
+    chipsPopoverWidth: '420px',
+    narrowPopoverWidth: '320px',
+
+    // A system-level export takes nothing, so its summary is empty, which hides the link,
+    // and a patient-level one says how many patients there are rather than naming them
+    summaryNoGroup: 'No group ID',
+    summaryNoPatients: 'No patient IDs',
+    summarySystem: '',
+    patientSingular: 'patient',
+    patientPlural: 'patients',
+    summaryAllTypes: 'All resource types',
+    summarySince: '{summary}, since {since}',
+    summaryFilters: '{summary}, {filters}',
+    summaryNotScheduled: 'Not scheduled',
+    summaryEvery: 'Every {count} {unit}',
+
+    filterSingular: 'type filter',
+    filterPlural: 'type filters',
+
+    // The scheduler names its units in the plural, a count of one reads with the singular
+    unitSingular: {
+        seconds: 'second',
+        minutes: 'minute',
+        hours: 'hour',
+        days: 'day'
+    },
+    countOne: 1,
+
+    // What a list of names in a summary is joined with
+    namesJoinText: ', ',
 
     // The element the page renders the tab's field names into
     fieldNamesId: 'fhir-bulk-export-field-names'
 };
 
-// What the picker holds - the connections grouped by type, loaded once per page, and the badges of the open dialog
+// What the tab holds - the connections grouped by type, loaded once per page, the destinations
+// of the open dialog and the badge whose options popover is open
 tab.state = {
     connectionData: null,
     fieldNames: [],
     panelId: '',
     fieldPrefix: '',
-    destinationList: []
+    destinationList: [],
+    optionsBadge: null
 };
+
+// The micro-forms kit installs the popover engine here
+tab.forms = {};
 
 // ////////////////////////////////////////////////////////////////////////
 
 tab.init = function() {
-    var fieldNamesElement = document.getElementById(tab.config.fieldNamesId);
+
+    var config = tab.config;
+
+    var fieldNamesElement = document.getElementById(config.fieldNamesId);
     tab.state.fieldNames = JSON.parse(fieldNamesElement.textContent);
+
+    $.fn.zato.micro_forms.setup(tab, {
+        descriptors: tab.buildDescriptors(),
+        popupClass: config.popupClass,
+        showHowItWorks: config.showHowItWorks,
+        doneButtonClass: config.doneButtonClass,
+        otherButtonClass: config.otherButtonClass,
+        showCancel: true,
+        onDone: tab.render
+    });
+
+    $.fn.zato.micro_forms.registerChipsKind(tab);
+
+    tab.initDestinations();
     tab.loadConnectionData();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The descriptors of the popovers the tab's lines open
+tab.buildDescriptors = function() {
+
+    var config = tab.config;
+    var chipsKind = $.fn.zato.micro_forms.chipsKind;
+    var out = {};
+
+    out[config.groupPopover] = {
+        title: config.groupTitle,
+        width: config.narrowPopoverWidth,
+        pages: [[
+            {field: config.fieldGroupID, label: config.labelGroupID, kind: 'text'}
+        ]]
+    };
+
+    out[config.patientPopover] = {
+        title: config.patientTitle,
+        width: config.chipsPopoverWidth,
+        pages: [[
+            {field: config.fieldPatientIDs, label: config.labelPatientIDs, kind: chipsKind}
+        ]]
+    };
+
+    out[config.resourcesLine] = {
+        title: config.resourcesTitle,
+        width: config.chipsPopoverWidth,
+        pages: [[
+            {field: config.fieldTypes, label: config.labelTypes, kind: chipsKind},
+            {field: config.fieldTypeFilter, label: config.labelTypeFilter, kind: chipsKind},
+            {field: config.fieldSince, label: config.labelSince, kind: 'text'}
+        ]]
+    };
+
+    out[config.scheduleLine] = {
+        title: config.scheduleTitle,
+        fitContent: true,
+        pages: [[
+            [
+                {field: config.fieldRunEvery, label: config.labelRunEvery, kind: 'number'},
+                {field: config.fieldRunUnit, label: config.labelRunUnit, kind: 'select'}
+            ]
+        ]]
+    };
+
+    $.extend(out, tab.destinationDescriptors());
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -113,7 +232,6 @@ tab.loadConnectionData = function() {
     var onLoaded = function(data, status) {
         if(status === 'success') {
             tab.state.connectionData = JSON.parse(data.responseText);
-            tab.renderConnectionSelect();
         }
     };
 
@@ -122,22 +240,15 @@ tab.loadConnectionData = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-tab.fieldId = function(fieldName) {
-    var out = 'id_' + tab.state.fieldPrefix + fieldName;
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
+// One of the tab's fields on the form bound at the moment
 tab.field = function(fieldName) {
-    var out = document.getElementById(tab.fieldId(fieldName));
+    var out = $('#' + tab.config.idPrefixDjango + tab.state.fieldPrefix + fieldName);
     return out;
 };
 
-// ////////////////////////////////////////////////////////////////////////
-
-tab.panelElement = function(suffix) {
-    var out = document.getElementById(tab.state.panelId + suffix);
+// The id of one element of the bound panel
+tab.elementId = function(part, lineName) {
+    var out = tab.state.panelId + '-' + part + '-' + lineName;
     return out;
 };
 
@@ -146,328 +257,150 @@ tab.panelElement = function(suffix) {
 // Binds the tab to one dialog - the create or the edit one - and reads what its form already holds.
 tab.bind = function(options) {
 
+    var config = tab.config;
+
     tab.state.panelId = options.panel_id;
     tab.state.fieldPrefix = options.field_prefix;
 
-    var levelSelect = tab.field(tab.config.fieldLevel);
-    levelSelect.onchange = tab.renderLevelRows;
-    tab.renderLevelRows();
+    tab.field(config.fieldLevel).off('change.bulk_export_tab').on('change.bulk_export_tab', tab.render);
 
-    tab.bindChipLists();
-
-    tab.renderTypeSelect();
-    tab.renderConnectionSelect();
-
-    var typeSelect = tab.field(tab.config.typeSelectSuffix);
-    typeSelect.onchange = tab.renderConnectionSelect;
-
-    var addButton = tab.panelElement(tab.config.addSuffix);
-    addButton.onclick = tab.addDestination;
-
-    tab.deserialize();
-    tab.renderBadges();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The list fields are chips - built once per dialog, redrawn from what the form holds every time it opens.
-tab.bindChipLists = function() {
-
-    var chipListFields = tab.config.chipListFields;
-
-    for(var fieldIdx = 0; fieldIdx < chipListFields.length; fieldIdx++) {
-        var input = tab.field(chipListFields[fieldIdx]);
-        $.fn.zato.chip_list.init(input);
-        $.fn.zato.chip_list.refresh(input);
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The Group ID row shows for a group export, the Patient IDs row for a patient-level one.
-tab.renderLevelRows = function() {
-
-    var level = tab.field(tab.config.fieldLevel).value;
-    var panel = document.getElementById(tab.state.panelId);
-
-    var groupRows = panel.getElementsByClassName(tab.config.rowGroupClass);
-    var patientRows = panel.getElementsByClassName(tab.config.rowPatientClass);
-
-    groupRows[0].hidden = level !== tab.config.levelGroup;
-    patientRows[0].hidden = level !== tab.config.levelPatient;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tab.typeLabelMap = function() {
-
-    var typeList = $.fn.zato.destinations.config.typeList;
-    var out = {};
-
-    for(var typeIdx = 0; typeIdx < typeList.length; typeIdx++) {
-        out[typeList[typeIdx].id] = typeList[typeIdx].label;
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tab.renderTypeSelect = function() {
-
-    var typeSelect = tab.field(tab.config.typeSelectSuffix);
-    var typeLabelMap = tab.typeLabelMap();
-    var typeOrder = tab.config.typeOrder;
-
-    typeSelect.innerHTML = '';
-
-    for(var typeIdx = 0; typeIdx < typeOrder.length; typeIdx++) {
-        var option = document.createElement('option');
-        option.value = typeOrder[typeIdx];
-        option.textContent = typeLabelMap[typeOrder[typeIdx]];
-        typeSelect.appendChild(option);
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The connections of the type picked, and the options that type carries.
-tab.renderConnectionSelect = function() {
-
-    // Nothing is bound yet when the connections arrive before a dialog opens
-    if(!tab.state.panelId) {
-        return;
-    }
-
-    var typeSelect = tab.field(tab.config.typeSelectSuffix);
-    var connectionSelect = tab.field(tab.config.connectionSelectSuffix);
-    var type = typeSelect.value;
-
-    connectionSelect.innerHTML = '';
-
-    var rows = [];
-    if(tab.state.connectionData) {
-        rows = tab.state.connectionData[type];
-    }
-
-    var hasConnections = rows.length > 0;
-
-    if(!hasConnections) {
-        var emptyOption = document.createElement('option');
-        emptyOption.value = '';
-        emptyOption.textContent = tab.config.noConnectionsLabel;
-        connectionSelect.appendChild(emptyOption);
-    }
-
-    for(var rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-        var option = document.createElement('option');
-        option.value = rows[rowIdx].name;
-        option.textContent = rows[rowIdx].name;
-        connectionSelect.appendChild(option);
-    }
-
-    // There is nothing to add without a connection to deliver through
-    connectionSelect.disabled = !hasConnections;
-    tab.panelElement(tab.config.addSuffix).disabled = !hasConnections;
-
-    tab.renderOptionInputs(type, hasConnections);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tab.renderOptionInputs = function(type, hasConnections) {
-
-    var container = tab.panelElement(tab.config.optionsSuffix);
-    var optionList = $.fn.zato.destinations.config.optionList[type];
-
-    container.innerHTML = '';
-
-    for(var optionIdx = 0; optionIdx < optionList.length; optionIdx++) {
-
-        var optionConfig = optionList[optionIdx];
-
-        if(optionConfig.kind === 'select') {
-            var select = document.createElement('select');
-            select.className = tab.config.optionInputClass + ' ' + tab.config.optionSelectClass;
-            select.setAttribute('data-option', optionConfig.id);
-            select.disabled = !hasConnections;
-
-            for(var valueIdx = 0; valueIdx < optionConfig.values.length; valueIdx++) {
-                var valueOption = document.createElement('option');
-                valueOption.value = optionConfig.values[valueIdx];
-                valueOption.textContent = optionConfig.values[valueIdx];
-                select.appendChild(valueOption);
-            }
-
-            container.appendChild(select);
-        }
-        else {
-            var input = document.createElement('input');
-            input.type = 'text';
-            input.className = tab.config.optionInputClass + ' ' + tab.config.optionTextClass;
-            input.setAttribute('data-option', optionConfig.id);
-            input.placeholder = optionConfig.placeholder;
-            input.disabled = !hasConnections;
-            container.appendChild(input);
-        }
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tab.readOptions = function() {
-
-    var container = tab.panelElement(tab.config.optionsSuffix);
-    var inputs = container.getElementsByClassName(tab.config.optionInputClass);
-    var out = {};
-
-    for(var inputIdx = 0; inputIdx < inputs.length; inputIdx++) {
-        var input = inputs[inputIdx];
-        if(input.value) {
-            out[input.getAttribute('data-option')] = input.value;
-        }
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tab.addDestination = function() {
-
-    var type = tab.field(tab.config.typeSelectSuffix).value;
-    var connection = tab.field(tab.config.connectionSelectSuffix).value;
-
-    // There is nothing to add without a connection to deliver through
-    if(!connection) {
-        return;
-    }
-
-    tab.state.destinationList.push({
-        type: type,
-        connection: connection,
-        isActive: true,
-        options: tab.readOptions()
+    $('#' + tab.elementId('edit', config.levelLine)).off('click.bulk_export_tab').on('click.bulk_export_tab', function() {
+        tab.openLevel(this);
     });
 
-    tab.serialize();
-    tab.renderBadges();
+    $('#' + tab.elementId('edit', config.resourcesLine)).off('click.bulk_export_tab').on('click.bulk_export_tab', function() {
+        tab.forms.open(config.resourcesLine, this, config.fieldTypes);
+    });
+
+    $('#' + tab.elementId('edit', config.scheduleLine)).off('click.bulk_export_tab').on('click.bulk_export_tab', function() {
+        tab.forms.open(config.scheduleLine, this, config.fieldRunEvery);
+    });
+
+    tab.bindDestinations();
+    tab.deserialize();
+    tab.render();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-tab.removeDestination = function(destinationIdx) {
+// Renders the summaries of the bound panel from the form
+tab.render = function() {
 
-    tab.state.destinationList.splice(destinationIdx, 1);
+    var config = tab.config;
 
-    tab.serialize();
-    tab.renderBadges();
+    document.getElementById(tab.elementId('summary', config.levelLine)).textContent = tab.formatLevelSummary();
+    document.getElementById(tab.elementId('summary', config.resourcesLine)).textContent = tab.formatResourcesSummary();
+    document.getElementById(tab.elementId('summary', config.scheduleLine)).textContent = tab.formatScheduleSummary();
+    document.getElementById(tab.elementId('summary', config.destinationLine)).textContent = tab.formatDestinationsSummary();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-tab.badgeLabel = function(destination, typeLabelMap) {
-
-    var parts = [typeLabelMap[destination.type], destination.connection];
-
-    for(var optionName in destination.options) {
-        parts.push(destination.options[optionName]);
-    }
-
-    var out = parts.join(tab.config.badgeSeparator);
+// The names a list field holds, joined the way a summary reads them
+tab.namesText = function(fieldName) {
+    var names = $.fn.zato.micro_forms.chipNames(tab.field(fieldName).val());
+    var out = names.join(tab.config.namesJoinText);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-tab.buildBadge = function(destination, destinationIdx, typeLabelMap) {
+tab.formatLevelSummary = function() {
 
-    var badge = document.createElement('span');
-    badge.className = tab.config.badgeClass;
+    var config = tab.config;
+    var level = tab.field(config.fieldLevel).val();
+    var out;
 
-    var text = document.createElement('span');
-    text.className = tab.config.badgeTextClass;
-    text.textContent = tab.badgeLabel(destination, typeLabelMap);
-    badge.appendChild(text);
+    if(level === config.levelGroup) {
+        out = tab.field(config.fieldGroupID).val().trim();
 
-    var remove = document.createElement('a');
-    remove.href = 'javascript:void(0)';
-    remove.className = tab.config.badgeRemoveClass;
-    remove.onclick = function() {
-        tab.removeDestination(destinationIdx);
-    };
-    badge.appendChild(remove);
-
-    return badge;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tab.renderBadges = function() {
-
-    var container = tab.panelElement(tab.config.badgesSuffix);
-    var typeLabelMap = tab.typeLabelMap();
-    var destinationList = tab.state.destinationList;
-
-    container.innerHTML = '';
-
-    for(var destinationIdx = 0; destinationIdx < destinationList.length; destinationIdx++) {
-        var badge = tab.buildBadge(destinationList[destinationIdx], destinationIdx, typeLabelMap);
-        container.appendChild(badge);
+        if(out === '') {
+            out = config.summaryNoGroup;
+        }
     }
+    else if(level === config.levelPatient) {
+        var patientCount = $.fn.zato.micro_forms.chipNames(tab.field(config.fieldPatientIDs).val()).length;
 
-    tab.panelElement(tab.config.badgesRowSuffix).hidden = destinationList.length === 0;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Writes the badges into the hidden field in the shape a connection stores them.
-tab.serialize = function() {
-
-    var serialized = [];
-    var destinationList = tab.state.destinationList;
-
-    for(var destinationIdx = 0; destinationIdx < destinationList.length; destinationIdx++) {
-
-        var destination = destinationList[destinationIdx];
-
-        serialized.push({
-            'name': destination.connection,
-            'type': destination.type,
-            'connection': destination.connection,
-            'is_active': destination.isActive,
-            'options': destination.options
-        });
-    }
-
-    tab.field(tab.config.fieldDestinations).value = serialized.length ? JSON.stringify(serialized) : '';
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Reads the hidden field back into badges - what a connection opened for editing starts out with.
-tab.deserialize = function() {
-
-    var stored = tab.field(tab.config.fieldDestinations).value;
-    var destinationList = [];
-
-    if(stored) {
-        var storedList = JSON.parse(stored);
-
-        for(var storedIdx = 0; storedIdx < storedList.length; storedIdx++) {
-
-            var entry = storedList[storedIdx];
-
-            destinationList.push({
-                type: entry.type,
-                connection: entry.connection,
-                isActive: entry.is_active,
-                options: entry.options
-            });
+        if(patientCount === 0) {
+            out = config.summaryNoPatients;
+        }
+        else {
+            out = $.fn.zato.count_text(patientCount, config.patientSingular, config.patientPlural);
         }
     }
 
-    tab.state.destinationList = destinationList;
+    // .. anything else is a system-level export.
+    else {
+        out = config.summarySystem;
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+tab.formatResourcesSummary = function() {
+
+    var config = tab.config;
+
+    var out = tab.namesText(config.fieldTypes);
+    if(out === '') {
+        out = config.summaryAllTypes;
+    }
+
+    var since = tab.field(config.fieldSince).val().trim();
+    if(since !== '') {
+        out = config.summarySince.replace('{summary}', out).replace('{since}', since);
+    }
+
+    var filterCount = $.fn.zato.micro_forms.chipNames(tab.field(config.fieldTypeFilter).val()).length;
+    if(filterCount > 0) {
+        var filters = $.fn.zato.count_text(filterCount, config.filterSingular, config.filterPlural);
+        out = config.summaryFilters.replace('{summary}', out).replace('{filters}', filters);
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+tab.formatScheduleSummary = function() {
+
+    var config = tab.config;
+    var runEvery = tab.field(config.fieldRunEvery).val();
+    var out;
+
+    if(runEvery === '') {
+        out = config.summaryNotScheduled;
+    }
+    else {
+        var count = parseInt(runEvery);
+        var unit = tab.field(config.fieldRunUnit).val();
+
+        if(count === config.countOne) {
+            unit = config.unitSingular[unit];
+        }
+
+        out = config.summaryEvery.replace('{count}', count).replace('{unit}', unit);
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Opens the popover of the level picked - the link is only on show for a level that takes something
+tab.openLevel = function(link) {
+
+    var config = tab.config;
+    var level = tab.field(config.fieldLevel).val();
+
+    if(level === config.levelGroup) {
+        tab.forms.open(config.groupPopover, link, config.fieldGroupID);
+    }
+    else {
+        tab.forms.open(config.patientPopover, link, config.fieldPatientIDs);
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////

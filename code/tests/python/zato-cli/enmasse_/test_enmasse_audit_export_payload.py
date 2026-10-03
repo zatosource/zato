@@ -187,10 +187,14 @@ channel_kafka:
 
   - name: enmasse.payload.channel.kafka.on.{suffix}
     address: kafka.example.com:9092
+    topic: enmasse.payload.on
+    service: demo.ping
     is_audit_export_payload_active: true
 
   - name: enmasse.payload.channel.kafka.off.{suffix}
     address: kafka.example.com:9092
+    topic: enmasse.payload.off
+    service: demo.ping
 
 outgoing_kafka:
 
@@ -314,6 +318,7 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
 
         import_path = os.path.join(tmp_dir, 'zato-enmasse-payload-import-' + suffix + '.yaml')
         export_path = os.path.join(tmp_dir, 'zato-enmasse-payload-export-' + suffix + '.yaml')
+        reimport_path = os.path.join(tmp_dir, 'zato-enmasse-payload-reimport-' + suffix + '.yaml')
         reimport_export_path = os.path.join(tmp_dir, 'zato-enmasse-payload-reimport-export-' + suffix + '.yaml')
 
         data = _Template.format(suffix=suffix)
@@ -330,8 +335,16 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
             exported = self._export(export_path, suffix)
             self._assert_flag_round_trip(exported, suffix)
 
-            # .. reimporting the export updates rather than duplicates ..
-            _ = self.invoke_enmasse(export_path)
+            # .. reimporting this test's objects as exported updates rather than duplicates - the rest
+            # of the export belongs to whatever else is in the environment, so it is left alone ..
+            reimport_data = {}
+            for object_type in Object_Types:
+                reimport_data[object_type] = list(exported[object_type].values())
+
+            with open_w(reimport_path) as f:
+                yaml.safe_dump(reimport_data, f)
+
+            _ = self.invoke_enmasse(reimport_path)
 
             # .. and a second export shows the same picture.
             reimported = self._export(reimport_export_path, suffix)
@@ -345,7 +358,7 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
             self.fail(f'Caught an exception during the payload flag import-export-reimport; stdout -> {stdout}')
 
         finally:
-            for path in [import_path, export_path, reimport_export_path]:
+            for path in [import_path, export_path, reimport_path, reimport_export_path]:
                 if os.path.exists(path):
                     os.remove(path)
 
