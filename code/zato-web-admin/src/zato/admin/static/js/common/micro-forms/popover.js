@@ -354,9 +354,14 @@ microForms.installPopover = function(host, forms) {
 // ////////////////////////////////////////////////////////////////////////
 
     // Lets the popover be dragged around by its header, through the shared
-    // popup drag machinery. The offset is applied to the tippy box itself,
-    // so tippy's own positioning stays untouched. A floating popover, one
-    // with a positionKey, keeps where it is let go, to open there next time.
+    // popup drag machinery. While the pointer moves, the offset is applied to
+    // the tippy box itself, so the box follows instantly. Once it is let go,
+    // the popover is re-anchored to the point its corner was dragged to, the
+    // way a floating one hangs off a point - tippy's own box then stands
+    // where the popover is seen, rather than where it opened with the box
+    // merely painted elsewhere, which is what a later resize would otherwise
+    // grow out of the page from. A floating popover, one with a positionKey,
+    // keeps where it is let go, to open there next time.
     forms._makeDraggable = function(tippyInstance, positionKey) {
 
         var handle = tippyInstance.popper.querySelector('.zato-popup-header');
@@ -365,8 +370,6 @@ microForms.installPopover = function(host, forms) {
         }
 
         var box = tippyInstance.popper.querySelector('.tippy-box');
-        var offsetX = 0;
-        var offsetY = 0;
 
         $.fn.zato.popup.install_drag(handle, {
 
@@ -378,12 +381,11 @@ microForms.installPopover = function(host, forms) {
                 // follow the pointer instantly instead
                 box.style.transitionProperty = 'visibility, opacity';
 
-                return {'x': offsetX, 'y': offsetY};
+                // Each drag starts from where the popover stands, the last one having been anchored there
+                return {'x': 0, 'y': 0};
             },
 
             on_move: function(x, y) {
-                offsetX = x;
-                offsetY = y;
                 box.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
 
                 var movedEvent = new CustomEvent(forms.config.movedEvent);
@@ -391,9 +393,33 @@ microForms.installPopover = function(host, forms) {
             },
 
             on_end: function() {
+
+                var rect = box.getBoundingClientRect();
+
                 if(positionKey !== null) {
                     forms.savePosition(positionKey, box);
                 }
+
+                forms._anchorAt(tippyInstance, box, rect.left, rect.top);
+            }
+        });
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Re-anchors an open popover so its top left corner stands on a point of the window
+    forms._anchorAt = function(tippyInstance, box, left, top) {
+
+        var referenceRect = forms._pointRect(left, top);
+
+        // The box is painted at the point by its transform - the anchor takes over from it
+        box.style.transform = '';
+
+        tippyInstance.setProps({
+            placement: popoverConfig.cornerPlacement,
+            popperOptions: {modifiers: forms._popperModifiers(false)},
+            getReferenceClientRect: function() {
+                return referenceRect;
             }
         });
     };

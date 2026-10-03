@@ -24,10 +24,17 @@ $.extend(tab.config, {
     // Wide enough for the two zones to each hold a tag, a name and the options next to it
     destinationPopoverWidth: '680px',
 
-    // The options popover is a host of its own, so it opens over the zones popover
+    // The options popover is a host of its own, so it opens over the zones popover. Its fields stand
+    // on one row, a select as wide as its choices and a text field taking the rest, and each type's
+    // popover is as wide as its text fields want.
     optionsIdPrefix: 'fhir-bulk-export-options',
+    optionsPopupClass: 'fhir-bulk-export-options-popover fhir-bulk-export-popover alerts-tab-micro-form',
+    optionsDescriptorPrefix: 'options_',
     optionsTitle: '{type} - {connection}',
-    optionsPopoverWidth: '360px',
+    optionsPopoverWidth: {
+        'sftp': '480px',
+        'hl7-fhir': '460px'
+    },
 
     // What tells a type and an option apart in the name of an options field
     optionsFieldSeparator: '__',
@@ -82,7 +89,7 @@ tab.initDestinations = function() {
 
     $.fn.zato.micro_forms.setup(tab.optionsHost, {
         descriptors: tab.buildOptionsDescriptors(),
-        popupClass: config.popupClass,
+        popupClass: config.optionsPopupClass,
         showHowItWorks: config.showHowItWorks,
         doneButtonClass: config.doneButtonClass,
         otherButtonClass: config.otherButtonClass,
@@ -177,7 +184,7 @@ tab.buildOptionsDescriptors = function() {
             return;
         }
 
-        var page = [];
+        var row = [];
 
         optionList[type].forEach(function(optionConfig) {
 
@@ -191,16 +198,23 @@ tab.buildOptionsDescriptors = function() {
                 spec.placeholder = optionConfig.placeholder;
             }
 
-            page.push(spec);
+            row.push(spec);
         });
 
-        out[type] = {
+        out[tab.optionsDescriptorName(type)] = {
             title: config.optionsTitle,
-            width: config.optionsPopoverWidth,
-            pages: [page]
+            width: config.optionsPopoverWidth[type],
+            pages: [[row]]
         };
     });
 
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+tab.optionsDescriptorName = function(type) {
+    var out = tab.config.optionsDescriptorPrefix + type;
     return out;
 };
 
@@ -239,9 +253,10 @@ tab.openOptions = function(type, connection, options, anchor) {
     });
 
     var title = config.optionsTitle.replace('{type}', tab.typeLabelMap()[type]).replace('{connection}', connection);
-    tab.optionsHost.forms.descriptors[type].title = title;
+    var descriptorName = tab.optionsDescriptorName(type);
+    tab.optionsHost.forms.descriptors[descriptorName].title = title;
 
-    tab.optionsHost.forms.open(type, anchor, tab.optionsFieldName(type, optionList[0].id));
+    tab.optionsHost.forms.open(descriptorName, anchor, tab.optionsFieldName(type, optionList[0].id));
 };
 
 // ////////////////////////////////////////////////////////////////////////

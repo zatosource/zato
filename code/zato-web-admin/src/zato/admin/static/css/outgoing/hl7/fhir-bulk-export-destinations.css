@@ -43,6 +43,21 @@
 }
 
 /* ------------------------------------------------------------ */
+/* The options popover                                           */
+/* ------------------------------------------------------------ */
+
+/* The fields of a type stand on one row - a select is as wide as its choices, in a popover dragged
+   wider too, where the kit would otherwise have the fields of a row share the width, and the text
+   fields take the rest */
+.micro-form.fhir-bulk-export-options-popover .micro-form-row .micro-form-field:has(> select) {
+    flex: 0 0 auto;
+}
+
+.micro-form.fhir-bulk-export-options-popover .micro-form-row .micro-form-field > select {
+    width: auto;
+}
+
+/* ------------------------------------------------------------ */
 /* The filter row                                                */
 /* ------------------------------------------------------------ */
 

@@ -115,8 +115,11 @@ microForms.defaults = {
 
     // Where a popover opens relative to its link, where it goes when it does not fit
     // there, and how close to the window's edge it is shifted to stay whole
+    // Under the link, its left edge on the link's - or its right edge on the link's when there is
+    // no room to the right, as under a link at the right of a popover, and over the link when
+    // there is no room below
     placement: 'bottom-start',
-    flipPlacements: ['top-start'],
+    flipPlacements: ['bottom-end', 'top-start', 'top-end'],
     viewportPadding: 24,
 
     // The attribute an option of a unit select keeps its plural label in
