@@ -105,9 +105,15 @@
    switch is off, but a line of the tab has no switch of its own */
 .data-popup .alerts-tab-panel a.summary-link {
     display: inline-flex;
-    align-items: center;
+    align-items: baseline;
     gap: 8px;
     line-height: 1.4;
+}
+
+/* The hint is a flex item here, with the gap above as its room - the margin it
+   carries for standing inline after a word would double it */
+.data-popup .alerts-tab-panel a.summary-link .zato-soft-hint {
+    margin-left: 0;
 }
 
 /* With Active off, every line but the Active line itself is dimmed and inert,

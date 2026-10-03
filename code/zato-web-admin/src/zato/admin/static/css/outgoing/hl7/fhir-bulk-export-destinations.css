@@ -12,8 +12,9 @@
     --fhir-bulk-export-zones-height: 22em;
     --fhir-bulk-export-tag-font-size: 10px;
     --fhir-bulk-export-tag-padding: 1px 6px;
-    --fhir-bulk-export-type-tag-service-background: #e8eef4;
-    --fhir-bulk-export-type-tag-service-color: #012845;
+    /* The purple the badge picker gives its bearer token badges - away from the FHIR blue next to it */
+    --fhir-bulk-export-type-tag-service-background: rgba(100, 40, 150, 0.1);
+    --fhir-bulk-export-type-tag-service-color: #5c2d91;
 }
 
 /* The tag saying what type a destination is, a notch smaller than a page badge */

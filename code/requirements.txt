@@ -83,7 +83,7 @@ pycryptodome==3.19.1
 pydantic==2.12.5
 pyftpdlib==2.2.0
 pygments==2.20.0
-PyJWT==2.13.0
+PyJWT==2.15.0
 pymongo==4.17.0
 PyMySQL==1.1.1
 pyOpenSSL==26.4.0
