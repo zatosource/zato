@@ -71,11 +71,9 @@ class Run(AdminService):
             if value:
                 overrides[name] = value
 
-        item = self._config_manager.outconn_hl7_fhir.get(conn_name)
-        if not item:
+        conn_config = self._config_manager.outconn_hl7_fhir.get(conn_name)
+        if not conn_config:
             raise BadRequest(self.cid, f'No such outgoing FHIR connection `{conn_name}`')
-
-        conn_config = item['config']
 
         # A schedule of a tab that was switched off runs nothing, an export asked for by name always runs
         if not overrides and not conn_config[_bulk.Field_Is_Active]:
@@ -109,7 +107,7 @@ class Deliver(AdminService):
         # A job started with destinations of its own delivers to them, any other to the connection's
         destinations = self.request.input.destinations
         if not destinations:
-            destinations = item['config'][_bulk.Field_Destinations]
+            destinations = item[_bulk.Field_Destinations]
 
         entries = parse_entries(destinations)
 

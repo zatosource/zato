@@ -130,7 +130,10 @@ def test_the_run_service_exports_the_connection(zato_server:'stranydict') -> 'No
     assert state.failures == []
 
     # One file per resource type, every one of them delivered
-    files = _by_type(state.files, 'resource_type')
+    files = {}
+    for file_state in state.files:
+        files[file_state.resource_type] = file_state
+
     assert sorted(files) == ['Observation', 'Patient']
     assert files['Patient'].count == 2
     assert files['Observation'].count == 1

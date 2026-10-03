@@ -189,10 +189,11 @@ def start_job(server:'ParallelServer', spec:'JobSpec') -> 'str':
     """ Starts the export program as a process of its own that outlives this server's workers,
     handing it the spec on stdin, and returns the job's id.
     """
-    py_path = os.path.join(os.path.dirname(sys.executable), 'py')
     log_path = os.path.join(server.logs_dir, _bulk.Log_File_Name)
 
-    command = [py_path, '-m', Program_Module]
+    # The interpreter itself, not a shell wrapper around it, because the pid recorded below
+    # must be the program's own or the program would find the job claimed by someone else and exit.
+    command = [sys.executable, '-m', Program_Module]
 
     with open(log_path, 'a') as log_file:
         process = Popen(command, stdin=PIPE, stdout=log_file, stderr=log_file, start_new_session=True)
@@ -262,7 +263,7 @@ def _resume_one_job(server:'ParallelServer', download_dir:'str', state:'JobState
             logger.info('Not resuming FHIR bulk export %s, connection `%s` no longer exists', state.job_id, state.conn_name)
             return
 
-        spec = build_job_spec(server, item['config'], {})
+        spec = build_job_spec(server, item, {})
 
         # .. the job keeps its id so its state and files are found again.
         spec.job_id = state.job_id

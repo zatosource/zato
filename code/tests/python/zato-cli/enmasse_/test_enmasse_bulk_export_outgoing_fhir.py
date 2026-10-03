@@ -469,7 +469,7 @@ class TestOutgoingFHIRBulkExportExport:
         FileWriter(str(path)).write({'outgoing_fhir': exported})
 
         written = path.read_text()
-        assert f'    bulk_export:\n      is_active: true\n      group_id: {_group_id}\n' in written
+        assert f"    bulk_export:\n      is_active: True\n      group_id: '{_group_id}'\n" in written
         assert f'      types:\n        - {_types[0]}\n        - {_types[1]}\n' in written
         assert f'      destinations:\n        - name: {_sftp_name}\n          type: sftp\n' in written
 
