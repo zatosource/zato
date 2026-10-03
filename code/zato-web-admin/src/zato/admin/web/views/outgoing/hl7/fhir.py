@@ -14,12 +14,23 @@ from zato.admin.web import alerts_tab, delivery_tab
 from zato.admin.web.forms import health_check_unit_for_form, health_check_unit_to_scheduler
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, \
-    extract_security_id, Index as _Index, invoke_action_handler, method_allowed, ping_connection, SecurityList
+    extract_security_id, get_js_dt_format, Index as _Index, invoke_action_handler, method_allowed, ping_connection, \
+    SecurityList
 from zato.common.alerting.object_config import alert_type_fhir, Field_Prefix
 from zato.common.api import GENERIC, generic_attrs, HL7, HTTP_SOAP, SEC_DEF_TYPE
 from zato.common.ext.bunch import Bunch
 from zato.common.hl7.fhir.fields import Bulk_Export_Fields, Bulk_Export_Names
 from zato.common.hl7.fields import get_defaults
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, stranydict
+
+    # Add dummy assignments to satisfy type checkers
+    any_ = any_
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,7 +93,7 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-    def on_before_append_item(self, item):
+    def on_before_append_item(self, item:'any_') -> 'any_':
 
         # The scheduler names the health check's unit in the plural, the form in the singular,
         # and a connection that was never given a health check carries no unit at all
@@ -116,7 +127,7 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'stranydict':
 
         security_list = SecurityList.from_service(
             self.req.zato.client,
@@ -128,7 +139,7 @@ class Index(_Index):
         create_form = CreateForm(self.req, security_list)
         edit_form = EditForm(self.req, security_list, prefix='edit')
 
-        return {
+        out:'stranydict' = {
             'show_search_form': True,
             'create_form': create_form,
             'edit_form': edit_form,
@@ -138,6 +149,11 @@ class Index(_Index):
             'delivery_tab_config': delivery_tab.get_delivery_tab_config(),
             'bulk_export_field_names': _bulk_export_field_names,
         }
+
+        # The Bulk export tab's start time picker needs the user's date and time format
+        out.update(get_js_dt_format(self.req.zato.user_profile))
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -152,7 +168,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict:'any_') -> 'None':
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
@@ -163,7 +179,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def pre_process_item(self, name, value):
+    def pre_process_item(self, name:'str', value:'any_') -> 'any_':
 
         # The Alerts tab's fields arrive as text and are stored typed - booleans, integers and stripped text
         if name.startswith(Field_Prefix):
@@ -173,7 +189,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def pre_process_input_dict(self, input_dict):
+    def pre_process_input_dict(self, input_dict:'any_') -> 'None':
         input_dict['pool_size'] = int(input_dict['pool_size'])
         input_dict['security_id'] = extract_security_id(input_dict)
 
@@ -199,7 +215,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} HL7 FHIR outgoing connection `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
@@ -229,7 +245,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
+def invoke(req:'any_', conn_id:'str', max_wait_time:'str', conn_name:'str', conn_slug:'str') -> 'TemplateResponse':
 
     return_data = {
         'conn_id': conn_id,
@@ -245,19 +261,19 @@ def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke_action(req, conn_name):
+def invoke_action(req:'any_', conn_name:'str') -> 'any_':
     return invoke_action_handler(req, 'zato.generic.connection.invoke', ('conn_name', 'conn_type', 'request_data', 'timeout'))
 
 # ################################################################################################################################
 
 @method_allowed('POST')
-def change_password(req):
+def change_password(req:'any_') -> 'any_':
     return _change_password(req, 'zato.generic.connection.change-password', success_msg='Password updated')
 
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req:'any_', id:'str', cluster_id:'str') -> 'any_':
     return ping_connection(req, 'zato.generic.connection.ping', id, 'HL7 FHIR connection')
 
 # ################################################################################################################################

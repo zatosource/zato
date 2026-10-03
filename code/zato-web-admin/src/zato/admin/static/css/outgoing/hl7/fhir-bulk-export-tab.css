@@ -7,8 +7,10 @@
     --fhir-bulk-export-badge-padding: 4px 8px;
     --fhir-bulk-export-badge-remove-gap: 6px;
     --fhir-bulk-export-picker-gap: 6px;
-    --fhir-bulk-export-picker-margin-top: 8px;
-    --fhir-bulk-export-option-width: 14em;
+    --fhir-bulk-export-control-height: 24px;
+    --fhir-bulk-export-type-width: 7em;
+    --fhir-bulk-export-connection-width: 16em;
+    --fhir-bulk-export-option-text-width: 12em;
 }
 
 .fhir-bulk-export-badges {
@@ -32,14 +34,47 @@
     color: inherit;
 }
 
+/* The line keeps one height whatever type is picked */
 .fhir-bulk-export-picker {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: var(--fhir-bulk-export-picker-gap);
-    margin-top: var(--fhir-bulk-export-picker-margin-top);
+    min-height: var(--fhir-bulk-export-control-height);
 }
 
-.fhir-bulk-export-destination-option {
-    width: var(--fhir-bulk-export-option-width);
+.fhir-bulk-export-picker select,
+.fhir-bulk-export-picker input[type="text"],
+.fhir-bulk-export-picker button {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    height: var(--fhir-bulk-export-control-height);
+}
+
+.fhir-bulk-export-destination-type {
+    width: var(--fhir-bulk-export-type-width);
+}
+
+.fhir-bulk-export-destination-connection {
+    width: var(--fhir-bulk-export-connection-width);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fhir-bulk-export-destination-options {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--fhir-bulk-export-picker-gap);
+}
+
+.fhir-bulk-export-destination-options:empty {
+    display: none;
+}
+
+.fhir-bulk-export-destination-option-select {
+    width: auto;
+}
+
+.fhir-bulk-export-destination-option-text {
+    width: var(--fhir-bulk-export-option-text-width);
 }

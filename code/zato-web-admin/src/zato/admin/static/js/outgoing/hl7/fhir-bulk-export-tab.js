@@ -23,9 +23,14 @@ tab.config = {
     // The form fields the tab reads and writes
     fieldLevel: 'bulk_export_level',
     fieldDestinations: 'bulk_export_destinations',
+    fieldStartDate: 'bulk_export_start_date',
+
+    // The fields that are lists of names, each shown as chips
+    chipListFields: ['bulk_export_patient_ids', 'bulk_export_types', 'bulk_export_type_filter'],
 
     // The parts of the picker, each under the panel's id
     badgesSuffix: '-destination-badges',
+    badgesRowSuffix: '-destination-badges-row',
     optionsSuffix: '-destination-options',
     addSuffix: '-destination-add',
     typeSelectSuffix: 'fhir-bulk-export-destination-type',
@@ -34,6 +39,8 @@ tab.config = {
     badgeClass: 'zato-badge zato-badge-blue fhir-bulk-export-badge',
     badgeRemoveClass: 'fhir-bulk-export-badge-remove',
     optionInputClass: 'fhir-bulk-export-destination-option',
+    optionSelectClass: 'fhir-bulk-export-destination-option-select',
+    optionTextClass: 'fhir-bulk-export-destination-option-text',
     badgeSeparator: ' - ',
 
     // The destination types a bulk export delivers to, in the order the picker offers them
@@ -60,6 +67,23 @@ tab.init = function() {
     var fieldNamesElement = document.getElementById(tab.config.fieldNamesId);
     tab.state.fieldNames = JSON.parse(fieldNamesElement.textContent);
     tab.loadConnectionData();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The date picker of the start time, in the user's own date and time format, for both dialogs
+tab.attachDatePickers = function() {
+
+    var prefixes = ['', 'edit-'];
+
+    for(var prefixIdx = 0; prefixIdx < prefixes.length; prefixIdx++) {
+        var fieldId = '#id_' + prefixes[prefixIdx] + tab.config.fieldStartDate;
+        $(fieldId).datetimepicker({
+            'dateFormat': $('#js_date_format').val(),
+            'timeFormat': $('#js_time_format').val(),
+            'ampm': $.fn.zato.to_bool($('#js_ampm').val())
+        });
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -128,6 +152,8 @@ tab.bind = function(options) {
     levelSelect.onchange = tab.renderLevelRows;
     tab.renderLevelRows();
 
+    tab.bindChipLists();
+
     tab.renderTypeSelect();
     tab.renderConnectionSelect();
 
@@ -139,6 +165,20 @@ tab.bind = function(options) {
 
     tab.deserialize();
     tab.renderBadges();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The list fields are chips - built once per dialog, redrawn from what the form holds every time it opens.
+tab.bindChipLists = function() {
+
+    var chipListFields = tab.config.chipListFields;
+
+    for(var fieldIdx = 0; fieldIdx < chipListFields.length; fieldIdx++) {
+        var input = tab.field(chipListFields[fieldIdx]);
+        $.fn.zato.chip_list.init(input);
+        $.fn.zato.chip_list.refresh(input);
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -209,7 +249,9 @@ tab.renderConnectionSelect = function() {
         rows = tab.state.connectionData[type];
     }
 
-    if(rows.length === 0) {
+    var hasConnections = rows.length > 0;
+
+    if(!hasConnections) {
         var emptyOption = document.createElement('option');
         emptyOption.value = '';
         emptyOption.textContent = tab.config.noConnectionsLabel;
@@ -222,6 +264,10 @@ tab.renderConnectionSelect = function() {
         option.textContent = rows[rowIdx].name;
         connectionSelect.appendChild(option);
     }
+
+    // There is nothing to add without a connection to deliver through
+    connectionSelect.disabled = !hasConnections;
+    tab.panelElement(tab.config.addSuffix).disabled = !hasConnections;
 
     tab.renderOptionInputs(type);
 };
@@ -241,7 +287,7 @@ tab.renderOptionInputs = function(type) {
 
         if(optionConfig.kind === 'select') {
             var select = document.createElement('select');
-            select.className = tab.config.optionInputClass;
+            select.className = tab.config.optionInputClass + ' ' + tab.config.optionSelectClass;
             select.setAttribute('data-option', optionConfig.id);
 
             for(var valueIdx = 0; valueIdx < optionConfig.values.length; valueIdx++) {
@@ -256,7 +302,7 @@ tab.renderOptionInputs = function(type) {
         else {
             var input = document.createElement('input');
             input.type = 'text';
-            input.className = tab.config.optionInputClass;
+            input.className = tab.config.optionInputClass + ' ' + tab.config.optionTextClass;
             input.setAttribute('data-option', optionConfig.id);
             input.placeholder = optionConfig.placeholder;
             container.appendChild(input);
@@ -366,6 +412,8 @@ tab.renderBadges = function() {
         var badge = tab.buildBadge(destinationList[destinationIdx], destinationIdx, typeLabelMap);
         container.appendChild(badge);
     }
+
+    tab.panelElement(tab.config.badgesRowSuffix).hidden = destinationList.length === 0;
 };
 
 // ////////////////////////////////////////////////////////////////////////

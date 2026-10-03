@@ -194,3 +194,9 @@
     padding-right: 14px;
     vertical-align: middle;
 }
+
+/* The label of a textarea stands at its top line */
+.data-popup .form-data td.form-data-label.form-data-label-top {
+    padding-top: 7px;
+    vertical-align: top;
+}

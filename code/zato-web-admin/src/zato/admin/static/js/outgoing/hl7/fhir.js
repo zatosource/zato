@@ -18,7 +18,10 @@ $.fn.zato.outgoing.hl7.fhir.config = {
     cluster_id: '1',
 
     // The delivery page link in a row names the connection type the page reads
-    delivery_conn_type: 'fhir'
+    delivery_conn_type: 'fhir',
+
+    // The default dialog is too narrow for the Bulk export tab's destinations picker
+    dialog_width: '55em'
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,6 +51,12 @@ $(document).ready(function() {
         'pool_size',
         'security_id',
     ]);
+
+    $('#create-div').dialog('option', 'width', $.fn.zato.outgoing.hl7.fhir.config.dialog_width);
+    $('#edit-div').dialog('option', 'width', $.fn.zato.outgoing.hl7.fhir.config.dialog_width);
+
+    $.fn.zato.outgoing.hl7.fhir.bulk_export_tab.attachDatePickers();
+
     // Generic connection names are unique per connection type,
     // so the check is scoped to this page's own type.
     var unique_constraints = [

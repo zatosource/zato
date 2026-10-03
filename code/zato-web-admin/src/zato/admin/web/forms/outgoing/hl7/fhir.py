@@ -57,8 +57,7 @@ def add_bulk_export_fields(form:'any_') -> 'None':
     form.fields[_bulk.Field_Patient_IDs] = forms.CharField(required=False, widget=forms.TextInput(attrs=text_full))
     form.fields[_bulk.Field_Types] = forms.CharField(required=False, widget=forms.TextInput(attrs=text_full))
     form.fields[_bulk.Field_Since] = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
-    form.fields[_bulk.Field_Type_Filter] = forms.CharField(required=False,
-        widget=forms.Textarea(attrs={'style':'width:100%; height:60px'}))
+    form.fields[_bulk.Field_Type_Filter] = forms.CharField(required=False, widget=forms.TextInput(attrs=text_full))
 
     # The schedule, in the shape of the scheduler tab of an outgoing REST connection
     form.fields[_bulk.Field_Run_Every] = forms.CharField(required=False,
@@ -66,7 +65,7 @@ def add_bulk_export_fields(form:'any_') -> 'None':
     form.fields[_bulk.Field_Run_Unit] = forms.ChoiceField(required=False, choices=scheduler_run_unit_choices,
         initial=HTTP_SOAP.Invocation.Unit.Minutes, widget=forms.Select())
     form.fields[_bulk.Field_Start_Date] = forms.CharField(required=False,
-        widget=forms.TextInput(attrs={'style':'width:50%; height:19px'}))
+        widget=forms.TextInput(attrs={'style':'width:50%'}))
     form.fields[_bulk.Field_Job_ID] = forms.CharField(required=False, widget=forms.HiddenInput())
 
     # The destinations picker serialises its badges into this

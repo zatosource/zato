@@ -49,7 +49,10 @@ _Timeout = 10000
 
 # What the tab is filled with
 _Group_ID = 'diabetes-registry'
-_Types = 'Patient, Observation'
+_Type_List = ['Patient', 'Observation']
+
+# The resource types are chips and the field behind them joins what was typed
+_Types = ', '.join(_Type_List)
 _Since = '2026-01-01T00:00:00Z'
 _Run_Every = '1'
 _Run_Unit = 'days'
@@ -91,6 +94,17 @@ def _panel(form_type:'str') -> 'str':
 def _is_row_visible(page:'Page', form_type:'str', row_class:'str') -> 'bool':
     out = page.is_visible(f'#{_panel(form_type)} tr.{row_class}')
     return out
+
+# ################################################################################################################################
+
+def _fill_chip_list(page:'Page', form_type:'str', name:'str', values:'list[str]') -> 'None':
+    """ Types each value into the chip list standing in for the field, Enter turning it into a chip.
+    """
+    text_field = f'{_field(form_type, name)} + .zato-chip-list input[type="text"]'
+
+    for value in values:
+        page.fill(text_field, value)
+        page.press(text_field, 'Enter')
 
 # ################################################################################################################################
 
@@ -159,7 +173,7 @@ class TestFHIROutconnBulkExport:
         _ = page.select_option(_field('create', 'bulk_export_level'), 'group')
         page.set_checked(_field('create', 'bulk_export_is_active'), True)
         page.fill(_field('create', 'bulk_export_group_id'), _Group_ID)
-        page.fill(_field('create', 'bulk_export_types'), _Types)
+        _fill_chip_list(page, 'create', 'bulk_export_types', _Type_List)
         page.fill(_field('create', 'bulk_export_since'), _Since)
         page.fill(_field('create', 'bulk_export_run_every'), _Run_Every)
         _ = page.select_option(_field('create', 'bulk_export_run_unit'), _Run_Unit)
