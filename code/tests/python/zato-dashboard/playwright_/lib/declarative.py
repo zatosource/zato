@@ -203,8 +203,8 @@ def fill_rest_invocation_tabs(page:'Page', options:'anydict', action:'str'='crea
     """
     prefix = 'edit-' if action == 'edit' else ''
 
-    # Scheduler tab - the start date field has a datetimepicker attached which rewrites
-    # the field on focus, hence it is set through jQuery, the same way the widget does it ..
+    # Scheduler tab - the start date field has a datetimepicker attached which opens a popup
+    # on focus, hence it is set through jQuery, the same way the widget does it ..
     if 'scheduler_run_every' in options:
         activate_rest_tab(page, action, 'scheduler')
         page.fill(f'#id_{prefix}scheduler_run_every', options['scheduler_run_every'])

@@ -99,18 +99,6 @@ $(document).ready(function() {
         });
     });
 
-    $(document).on('click', '.ui-datepicker-current', function() {
-        var inst = $.datepicker._curInst;
-        if(inst) {
-            var tp = $.datepicker._get(inst, 'timepicker');
-            if(tp) {
-                tp._onTimeChange();
-                tp._updateDateTime(inst);
-            }
-            $.datepicker._hideDatepicker();
-        }
-    });
-
     var one_time_attrs = ['name', 'start_date', 'service'];
     var interval_based_attrs = ['name', 'start_date', 'service'];
 

@@ -5134,7 +5134,7 @@ $(document).on('mousedown.zato-dialog-outside-close', function(e) {
     }
 
     var ignored_selector = '.ui-dialog, [data-tippy-root], #popup_container, .driver-popover, ' +
-        '.invoker-modal-overlay, .ui-datepicker, .zato-dropdown-menu';
+        '.invoker-modal-overlay, .zato-datetime-picker, .zato-dropdown-menu';
     if($(e.target).closest(ignored_selector).length) {
         return;
     }

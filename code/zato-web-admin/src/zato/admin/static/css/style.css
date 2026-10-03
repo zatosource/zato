@@ -549,13 +549,6 @@ select {
     box-shadow: 3px 3px 10px #666
 }
 
-.ui-datepicker {
-    border: 1px solid #aaaaaa;
-    background: #fff url(images/ui-bg_glass_75_ffffff_1x400.png) 50% 50% repeat-x;
-    color: #222222;
-    font-size: 0.9em
-}
-
 .ui-slider .ui-slider-handle {
     border: 1px solid #999
 }

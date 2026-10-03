@@ -1,0 +1,283 @@
+/*
+ * The date and time picker - three months side by side under the shared
+ * popup header, the time as selects below them. The chrome, the surface,
+ * the header and the drag cursors, comes from shared/popup.css, which has
+ * to be on the page with this file.
+ */
+
+/* ------------------------------------------------------------ */
+/* Datetime picker - the popup                                   */
+/* ------------------------------------------------------------ */
+
+.zato-datetime-picker {
+    --zato-datetime-picker-width: 640px;
+    --zato-datetime-picker-z-index: 100020;
+    --zato-datetime-picker-day-height: 22px;
+    --zato-datetime-picker-today: var(--zato-ui-accent-soft);
+    --zato-datetime-picker-month-other: #555;
+    --zato-datetime-picker-month-title-indent: 2px;
+    --zato-datetime-picker-today-ring: 1px;
+    --zato-datetime-picker-hover: color-mix(in srgb, var(--zato-ui-accent) 10%, transparent);
+    --zato-datetime-picker-select-width: 5.5em;
+    --zato-datetime-picker-select-height: 24px;
+    position: absolute;
+    z-index: var(--zato-datetime-picker-z-index);
+    width: var(--zato-datetime-picker-width);
+    box-sizing: border-box;
+    font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--zato-ui-text);
+}
+
+/* The formalize button face - the gradient, the glow on focus, the dent on
+   press, the white text shadow - is named away on every button in here */
+.zato-datetime-picker button,
+.zato-datetime-picker button:hover,
+.zato-datetime-picker button:focus,
+.zato-datetime-picker button:active {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    outline: 0;
+}
+
+.zato-datetime-picker-icon {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+
+/* ------------------------------------------------------------ */
+/* Datetime picker - the header                                  */
+/* ------------------------------------------------------------ */
+
+.zato-datetime-picker-header {
+    justify-content: space-between;
+    padding-right: 8px;
+}
+
+.zato-datetime-picker-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    border-radius: 3px;
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.zato-datetime-picker-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* Datetime picker - the body and the months                     */
+/* ------------------------------------------------------------ */
+
+.zato-datetime-picker-body {
+    padding: 12px 14px 10px;
+    background: var(--zato-popup-sand);
+    border-radius: 0 0 5px 5px;
+}
+
+.zato-datetime-picker-months {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.zato-datetime-picker-pages {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.zato-datetime-picker-arrow {
+    display: flex;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    color: var(--zato-ui-text-faint);
+    background: none;
+    border: 0;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.zato-datetime-picker-arrow:hover {
+    color: var(--zato-ui-text);
+    background: var(--zato-datetime-picker-hover);
+}
+
+.zato-datetime-picker-month {
+    flex: 1 1 0;
+}
+
+/* The ring's padding is pulled back by the same amount, so the text itself
+   stays flush with the grid's left edge */
+.zato-datetime-picker-month-title {
+    width: fit-content;
+    box-sizing: border-box;
+    margin: 0 0 7px calc(-1 * var(--zato-datetime-picker-month-title-indent));
+    padding: 0 var(--zato-datetime-picker-month-title-indent);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--zato-datetime-picker-month-other);
+    border: var(--zato-datetime-picker-today-ring) solid transparent;
+    border-radius: 3px;
+}
+
+/* The ring the current day wears, around the title of its month */
+.zato-datetime-picker-month-title-current {
+    color: var(--zato-datetime-picker-today);
+    border-color: var(--zato-datetime-picker-today);
+}
+
+/* The glyphs sit centred in their cells, so the grid is pulled left by the
+   room a centred weekday name leaves and its first column reads flush with
+   the month title above it */
+.zato-datetime-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    width: calc(100% + var(--zato-datetime-picker-month-title-indent));
+    margin-left: calc(-1 * var(--zato-datetime-picker-month-title-indent));
+}
+
+.zato-datetime-picker-grid-names span {
+    padding-bottom: 3px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--zato-ui-text);
+}
+
+.zato-datetime-picker-day,
+.zato-datetime-picker-day-blank {
+    height: var(--zato-datetime-picker-day-height);
+}
+
+.zato-datetime-picker-day {
+    box-sizing: border-box;
+    padding: 0;
+    font: inherit;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--zato-ui-text);
+    background: none;
+    border: var(--zato-datetime-picker-today-ring) solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.zato-datetime-picker-day:hover {
+    background: var(--zato-datetime-picker-hover);
+}
+
+.zato-datetime-picker-day-today {
+    color: var(--zato-datetime-picker-today);
+    border-color: var(--zato-datetime-picker-today);
+}
+
+.zato-datetime-picker-day-selected,
+.zato-datetime-picker-day-selected:hover {
+    color: #fff;
+    background: var(--zato-ui-accent);
+    border-color: var(--zato-ui-accent);
+}
+
+/* ------------------------------------------------------------ */
+/* Datetime picker - the time                                    */
+/* ------------------------------------------------------------ */
+
+.zato-datetime-picker-time {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--zato-popup-sand-line);
+}
+
+.zato-datetime-picker-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.zato-datetime-picker-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--zato-ui-text-muted);
+}
+
+/* The formalize select height of 1.8em is overridden by the explicit one here */
+.zato-datetime-picker-select {
+    width: var(--zato-datetime-picker-select-width);
+    height: var(--zato-datetime-picker-select-height);
+    box-sizing: border-box;
+    padding: 4px 8px;
+    font-family: Arial, "Liberation Sans", FreeSans, sans-serif;
+    font-size: 12px;
+    line-height: normal;
+    color: var(--zato-ui-text);
+    background: #fff;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+    outline: none;
+}
+
+.zato-datetime-picker-select:focus {
+    border-color: var(--zato-ui-accent);
+    box-shadow: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Datetime picker - the buttons row                             */
+/* ------------------------------------------------------------ */
+
+.zato-datetime-picker-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--zato-ui-border);
+}
+
+/* The same faces the kits' secondary and action buttons wear, with the
+   formalize gradient and shadows named away */
+.zato-datetime-picker-button {
+    padding: 6px 12px;
+    font: 600 var(--zato-ui-button-font-size)/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--primary-dark);
+    background: #fff;
+    border: 1px solid var(--primary-dark);
+    border-radius: 0;
+    box-shadow: none;
+    text-shadow: none;
+    cursor: pointer;
+}
+
+.zato-datetime-picker-button:hover {
+    background: var(--zato-datetime-picker-hover);
+}
+
+.zato-datetime-picker-button-primary {
+    color: #fff;
+    background: var(--primary-dark);
+}
+
+.zato-datetime-picker-button-primary:hover {
+    background: var(--zato-seablue-light1);
+    border-color: var(--zato-seablue-light1);
+}
