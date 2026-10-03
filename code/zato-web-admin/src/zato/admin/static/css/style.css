@@ -1,4 +1,5 @@
 @import url("shared/tokens.css");
+@import url("shared/chips.css");
 @import url("zato_action_button.css");
 
 @keyframes zato-spin {

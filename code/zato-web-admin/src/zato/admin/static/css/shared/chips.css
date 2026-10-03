@@ -1,0 +1,157 @@
+/*
+ * Chips - the one look every list of names in a form wears: the picks of
+ * every Chosen multi-select, the chips of the micro-form chips kind and the
+ * chip lists a page builds in Chosen's markup. Imported by style.css, which
+ * every page loads after chosen.css, so it is the last word on a chip.
+ *
+ * A chip is a translucent fill and a one-pixel rim, both in the accent, with
+ * its words in the accent at full strength - the message flow's chips read
+ * on white. Under the pointer the rim and the fill come up. The remove mark
+ * is lucide's x, drawn as a mask, on a face of its own that fills under the
+ * pointer.
+ *
+ * A chip of a page's own markup carries zato-chip, its words zato-chip-text
+ * and its remove mark zato-chip-remove.
+ *
+ * Token                            Purpose
+ * --zato-chip-height               A chip's height
+ * --zato-chip-radius               Its corners
+ * --zato-chip-ink                  Its words, its remove mark, and the hue of its fill and rim
+ * --zato-chip-fill                 Its face
+ * --zato-chip-fill-hover           Its face under the pointer
+ * --zato-chip-rim                  Its rim
+ * --zato-chip-rim-hover            Its rim under the pointer
+ * --zato-chip-font-size            Its words
+ * --zato-chip-font-weight          Their weight
+ * --zato-chip-remove-size          The remove mark's face
+ * --zato-chip-remove-icon-size     The x on it
+ * --zato-chip-remove-hover-fill    The face under the pointer
+ * --zato-chip-remove-icon          The x itself
+ * --zato-chip-hover-delay          How long a passing pointer goes unanswered
+ */
+
+:root {
+    --zato-chip-height: 20px;
+    --zato-chip-radius: 3px;
+    --zato-chip-ink: var(--zato-ui-accent);
+    --zato-chip-fill: color-mix(in srgb, var(--zato-chip-ink) 8%, transparent);
+    --zato-chip-fill-hover: color-mix(in srgb, var(--zato-chip-ink) 13%, transparent);
+    --zato-chip-rim: color-mix(in srgb, var(--zato-chip-ink) 30%, transparent);
+    --zato-chip-rim-hover: color-mix(in srgb, var(--zato-chip-ink) 65%, transparent);
+    --zato-chip-font-size: 12px;
+    --zato-chip-font-weight: 400;
+    --zato-chip-remove-size: 14px;
+    --zato-chip-remove-icon-size: 10px;
+    --zato-chip-remove-hover-fill: color-mix(in srgb, var(--zato-chip-ink) 18%, transparent);
+    --zato-chip-remove-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E");
+    --zato-chip-hover-delay: 0.12s;
+}
+
+/* ------------------------------------------------------------ */
+/* Chips - the chip                                              */
+/* ------------------------------------------------------------ */
+
+/* A chip never grows past the list it is in - a name too long for one line is
+   cut short with an ellipsis, since a chip keeps one height */
+.zato-chip,
+.chosen-container-multi .chosen-choices li.search-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    height: var(--zato-chip-height);
+    padding: 0 2px 0 7px;
+    border: 1px solid var(--zato-chip-rim);
+    border-radius: var(--zato-chip-radius);
+    font-size: var(--zato-chip-font-size);
+    font-weight: var(--zato-chip-font-weight);
+    line-height: 1;
+    color: var(--zato-chip-ink);
+    background: var(--zato-chip-fill);
+    box-shadow: none;
+    white-space: nowrap;
+    cursor: default;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.zato-chip:hover,
+.chosen-container-multi .chosen-choices li.search-choice:hover,
+.chosen-container-multi .chosen-choices li.search-choice-focus {
+    border-color: var(--zato-chip-rim-hover);
+    background: var(--zato-chip-fill-hover);
+    transition-delay: var(--zato-chip-hover-delay);
+}
+
+.zato-chip-text,
+.chosen-container-multi .chosen-choices li.search-choice > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow-wrap: normal;
+}
+
+/* ------------------------------------------------------------ */
+/* Chips - the remove mark                                       */
+/* ------------------------------------------------------------ */
+
+/* The remove mark may be a <button>, which formalize.css hands its grey 3D
+   face in each state, and Chosen forces its sprite onto its own mark with
+   !important - each of those is named back here */
+.zato-chip-remove,
+.zato-chip-remove:hover,
+.zato-chip-remove:focus,
+.zato-chip-remove:active,
+.chosen-container-multi .chosen-choices li.search-choice .search-choice-close,
+.chosen-container-multi .chosen-choices li.search-choice .search-choice-close:hover {
+    position: static;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: var(--zato-chip-remove-size);
+    height: var(--zato-chip-remove-size);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    font-size: 0;
+    background-color: transparent;
+    background-image: none !important;
+    box-shadow: none;
+    text-shadow: none;
+    outline: none;
+    opacity: 0.55;
+    cursor: pointer;
+    transition: opacity 0.15s, background-color 0.15s;
+}
+
+.zato-chip-remove::before,
+.chosen-container-multi .chosen-choices li.search-choice .search-choice-close::before {
+    content: '';
+    width: var(--zato-chip-remove-icon-size);
+    height: var(--zato-chip-remove-icon-size);
+    background-color: var(--zato-chip-ink);
+    mask: var(--zato-chip-remove-icon) center / contain no-repeat;
+}
+
+.zato-chip:hover .zato-chip-remove,
+.chosen-container-multi .chosen-choices li.search-choice:hover .search-choice-close {
+    opacity: 0.85;
+    transition-delay: var(--zato-chip-hover-delay);
+}
+
+.zato-chip .zato-chip-remove:hover,
+.chosen-container-multi .chosen-choices li.search-choice .search-choice-close:hover {
+    opacity: 1;
+    background-color: var(--zato-chip-remove-hover-fill);
+    transition-delay: var(--zato-chip-hover-delay);
+}
+
+/* A list that is out of play answers no pointer */
+.chosen-disabled .chosen-choices li.search-choice,
+.chosen-disabled .chosen-choices li.search-choice .search-choice-close {
+    pointer-events: none;
+}

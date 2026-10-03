@@ -337,16 +337,97 @@
 /* MCP wizard - OAuth below the Security picker                  */
 /* ------------------------------------------------------------ */
 
+/* The answers start in the column the Name and URL path inputs start in */
 .mcp-wizard-oauth {
+    --decision-line-label-width: var(--mcp-wizard-row-label-width);
     margin-top: 12px;
 }
 
-.mcp-wizard-oauth-scopes-slot input[type="text"] {
+.mcp-wizard-oauth .decision-line {
+    gap: var(--mcp-wizard-row-gap);
+}
+
+/* The scopes box takes the whole row, past the width a column of lines keeps */
+.mcp-wizard-oauth .decision-lines {
+    max-width: none;
+}
+
+.mcp-wizard-oauth-scopes-slot {
+    flex: 1 1 auto;
+}
+
+/* The box is taller than one line, so its label sits level with the first
+   row of chips rather than with the middle of the box */
+#mcp-wizard-line-oauth-scopes {
+    align-items: flex-start;
+}
+
+#mcp-wizard-line-oauth-scopes .decision-line-label {
+    margin-top: var(--mcp-scope-label-offset);
+}
+
+/* The chips wear the look every chip in the app shares, from shared/chips.css -
+   only the box they sit in is laid out here, with room for three rows of
+   them: the rows, the gaps between them, the box's padding and its border */
+.mcp-scope-list {
+    --mcp-scope-rows: 3;
+    --mcp-scope-gap: 4px;
+    --mcp-scope-padding: 2px;
+    --mcp-scope-box-height: calc(var(--mcp-scope-rows) * var(--zato-chip-height) + (var(--mcp-scope-rows) - 1) * var(--mcp-scope-gap) + 2 * var(--mcp-scope-padding) + 2px);
     width: 100%;
 }
 
-/* The scopes line follows the toggle - off means the line is visibly out of play */
-#mcp-wizard .mcp-wizard-line-disabled .decision-line-label,
-#mcp-wizard .mcp-wizard-line-disabled input[type="text"] {
+#mcp-wizard-line-oauth-scopes {
+    --mcp-scope-label-offset: 5px;
+}
+
+/* The chips wrap inside a box framed like the inputs above it, and the
+   text field takes whatever is left of the last line */
+.chosen-container-multi.mcp-scope-list .chosen-choices {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    align-items: center;
+    gap: var(--mcp-scope-gap);
+    box-sizing: border-box;
+    min-height: var(--mcp-scope-box-height);
+    padding: var(--mcp-scope-padding);
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+    background: #fff;
+}
+
+.chosen-container-multi.mcp-scope-list.chosen-container-active .chosen-choices {
+    border-color: var(--zato-ui-accent);
+    box-shadow: none;
+}
+
+/* In the box the gap spaces the chips, so they drop the margin Chosen gives them */
+.chosen-container-multi.mcp-scope-list .chosen-choices li.search-choice {
+    margin: 0;
+}
+
+.chosen-container-multi.mcp-scope-list .chosen-choices li.search-field {
+    flex: 1 1 8em;
+}
+
+.chosen-container-multi.mcp-scope-list .chosen-choices li.search-field input[type="text"] {
+    width: 100%;
+    height: var(--zato-chip-height);
+    margin: 0;
+    padding: 0 6px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--zato-ui-text);
+}
+
+/* The placeholder is a sample list, so it goes once there is a real one */
+.mcp-scope-list .chosen-choices:has(li.search-choice) li.search-field input[type="text"]::placeholder {
+    color: transparent;
+}
+
+/* The scopes line follows the toggle - the chip box dims itself through
+   chosen-disabled, the label is dimmed here */
+#mcp-wizard .mcp-wizard-line-disabled .decision-line-label {
     opacity: 0.5;
 }

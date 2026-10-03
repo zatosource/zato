@@ -34,12 +34,16 @@ microForms.chipsConfig = {
     removeClass: 'micro-form-chip-remove',
     inputClass: 'micro-form-chips-input',
 
+    // The classes of the look every chip in the app shares, from shared/chips.css
+    sharedChipClass: 'zato-chip',
+    sharedChipTextClass: 'zato-chip-text',
+    sharedRemoveClass: 'zato-chip-remove',
+
     // What the input after the chips says while it is empty
     addPlaceholder: 'Type and press Enter',
 
-    // The cross on a chip and what it says on hover
-    removeGlyph: '\u00d7',
-    removeTitle: 'Remove',
+    // What a screen reader hears the cross on a chip as
+    removeLabel: 'Remove',
 
     // The keys that turn what was typed into a chip
     addKeys: ['Enter', ','],
@@ -90,20 +94,19 @@ microForms.buildChip = function(name, onRemove) {
     var config = microForms.chipsConfig;
 
     var chip = document.createElement('span');
-    chip.className = config.chipClass;
+    chip.className = config.chipClass + ' ' + config.sharedChipClass;
     chip.dataset.name = name;
 
     var text = document.createElement('span');
-    text.className = config.chipTextClass;
+    text.className = config.chipTextClass + ' ' + config.sharedChipTextClass;
     text.textContent = name;
     chip.appendChild(text);
 
+    // The x is drawn by the shared stylesheet, the button itself holds no text
     var remove = document.createElement('button');
     remove.type = 'button';
-    remove.className = config.removeClass;
-    remove.title = config.removeTitle;
-    remove.setAttribute('aria-label', config.removeTitle + ' ' + name);
-    remove.textContent = config.removeGlyph;
+    remove.className = config.removeClass + ' ' + config.sharedRemoveClass;
+    remove.setAttribute('aria-label', config.removeLabel + ' ' + name);
 
     remove.addEventListener('click', function() {
         chip.remove();

@@ -344,28 +344,42 @@ $.fn.zato.gateway.mcp._init_pii_selects = function(action) {
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// URL policy - the allow list wears the same chip look as the PII multi-selects.
-// Each host is one chip and the underlying input keeps the whole list as the
-// one comma-separated line the endpoints read and write.
+// Chip lists - the URL allow list and the OAuth scopes wear the same chip look
+// as the PII multi-selects. Each value is one chip and the underlying input
+// keeps the whole list as the one line the endpoints read and write.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.gateway.mcp.host_list_config = {
     field_name: 'safeguards_url_allow_list',
-    separator: ', '
+    container_class: 'mcp-host-list',
+    value_attribute: 'data-host',
+    split_pattern: /,/,
+    separator: ', ',
+    commit_keys: ['Enter', ',']
+};
+
+// Scope tokens are delimited by spaces and may themselves contain commas, RFC 6749, section 3.3.
+$.fn.zato.gateway.mcp.scope_list_config = {
+    field_name: 'oauth_scopes',
+    container_class: 'mcp-scope-list',
+    value_attribute: 'data-scope',
+    split_pattern: /\s+/,
+    separator: ' ',
+    commit_keys: ['Enter', ' ']
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// What the underlying input currently holds, one host per entry.
-$.fn.zato.gateway.mcp._host_list_values = function(input) {
+// The parts of a line that are not blank, in the order they came in.
+$.fn.zato.gateway.mcp._chip_list_split = function(text, config) {
 
     var out = [];
-    var parts = input.val().split(',');
+    var parts = text.split(config.split_pattern);
 
     for (var part_idx = 0; part_idx < parts.length; part_idx++) {
-        var host = parts[part_idx].trim();
-        if (host) {
-            out.push(host);
+        var value = parts[part_idx].trim();
+        if (value) {
+            out.push(value);
         }
     }
 
@@ -375,17 +389,22 @@ $.fn.zato.gateway.mcp._host_list_values = function(input) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Redraws the chips from the underlying input, keeping the text field last.
-$.fn.zato.gateway.mcp._render_host_chips = function(input, choices) {
+$.fn.zato.gateway.mcp._render_chips = function(input, choices, config) {
 
     choices.find('li.search-choice').remove();
 
-    var hosts = $.fn.zato.gateway.mcp._host_list_values(input);
+    var values = $.fn.zato.gateway.mcp._chip_list_split(input.val(), config);
     var search_field = choices.find('li.search-field');
 
-    for (var host_idx = 0; host_idx < hosts.length; host_idx++) {
+    for (var value_idx = 0; value_idx < values.length; value_idx++) {
+
         var chip = $('<li/>', {'class': 'search-choice'});
-        chip.append($('<span/>', {'text': hosts[host_idx]}));
-        chip.append($('<a/>', {'class': 'search-choice-close', 'data-host': hosts[host_idx]}));
+        chip.append($('<span/>', {'text': values[value_idx]}));
+
+        var close_mark = $('<a/>', {'class': 'search-choice-close'});
+        close_mark.attr(config.value_attribute, values[value_idx]);
+        chip.append(close_mark);
+
         chip.insertBefore(search_field);
     }
 };
@@ -393,21 +412,31 @@ $.fn.zato.gateway.mcp._render_host_chips = function(input, choices) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.gateway.mcp._init_host_list = function(action) {
+    $.fn.zato.gateway.mcp._init_chip_list(action, $.fn.zato.gateway.mcp.host_list_config);
+};
 
-    var config = $.fn.zato.gateway.mcp.host_list_config;
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp._init_scope_list = function(action) {
+    $.fn.zato.gateway.mcp._init_chip_list(action, $.fn.zato.gateway.mcp.scope_list_config);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp._init_chip_list = function(action, config) {
 
     var prefix = action === 'edit' ? 'id_edit-' : 'id_';
     var input = $('#' + prefix + config.field_name);
 
     // The widget is built once for the page's lifetime
-    if (input.data('host-list-built')) {
+    if (input.data('chip-list-built')) {
         return;
     }
-    input.data('host-list-built', true);
+    input.data('chip-list-built', true);
 
     // The same container and list classes the Chosen multi-selects render with,
     // so the stylesheet the detectors wear dresses the chips here too ..
-    var container = $('<div/>', {'class': 'chosen-container chosen-container-multi mcp-host-list'});
+    var container = $('<div/>', {'class': 'chosen-container chosen-container-multi ' + config.container_class});
     var choices = $('<ul/>', {'class': 'chosen-choices'});
     var search_field = $('<li/>', {'class': 'search-field'});
     // The autocomplete attribute goes through attr - in the creation map,
@@ -423,54 +452,56 @@ $.fn.zato.gateway.mcp._init_host_list = function(action) {
     input.hide();
     container.insertAfter(input);
 
-    var render = function() {
-        $.fn.zato.gateway.mcp._render_host_chips(input, choices);
+    var current_values = function() {
+        return $.fn.zato.gateway.mcp._chip_list_split(input.val(), config);
     };
 
-    // .. whatever was typed becomes chips - commas split a pasted list -
+    var render = function() {
+        $.fn.zato.gateway.mcp._render_chips(input, choices, config);
+    };
+
+    // .. whatever was typed becomes chips - the separator splits a pasted list -
     // and the input hears about every change the way any field would ..
     var commit_text = function() {
 
-        var hosts = $.fn.zato.gateway.mcp._host_list_values(input);
-        var parts = text_field.val().split(',');
+        var values = current_values();
+        var typed = $.fn.zato.gateway.mcp._chip_list_split(text_field.val(), config);
         var added = false;
 
-        for (var part_idx = 0; part_idx < parts.length; part_idx++) {
-            var host = parts[part_idx].trim();
-            if (host) {
-                if (hosts.indexOf(host) === -1) {
-                    hosts.push(host);
-                    added = true;
-                }
+        for (var typed_idx = 0; typed_idx < typed.length; typed_idx++) {
+            var value = typed[typed_idx];
+            if (values.indexOf(value) === -1) {
+                values.push(value);
+                added = true;
             }
         }
 
         text_field.val('');
 
         if (added) {
-            input.val(hosts.join(config.separator));
+            input.val(values.join(config.separator));
             render();
             input.trigger('change');
         }
     };
 
-    var remove_host = function(host) {
+    var remove_value = function(value) {
 
-        var hosts = $.fn.zato.gateway.mcp._host_list_values(input);
-        var host_idx = hosts.indexOf(host);
+        var values = current_values();
+        var value_idx = values.indexOf(value);
 
-        hosts.splice(host_idx, 1);
-        input.val(hosts.join(config.separator));
+        values.splice(value_idx, 1);
+        input.val(values.join(config.separator));
         render();
         input.trigger('change');
     };
 
-    // .. Enter and comma add what was typed - the event stops here so the
+    // .. the commit keys add what was typed - the event stops here so the
     // form-wide Enter handling stays out of it - and Backspace in an empty
     // field takes the last chip back ..
     text_field.on('keydown', function(event) {
 
-        if (event.key === 'Enter' || event.key === ',') {
+        if (config.commit_keys.indexOf(event.key) !== -1) {
             event.preventDefault();
             event.stopPropagation();
             commit_text();
@@ -479,10 +510,10 @@ $.fn.zato.gateway.mcp._init_host_list = function(action) {
 
         if (event.key === 'Backspace') {
             if (!text_field.val()) {
-                var hosts = $.fn.zato.gateway.mcp._host_list_values(input);
-                if (hosts.length) {
+                var values = current_values();
+                if (values.length) {
                     event.preventDefault();
-                    remove_host(hosts[hosts.length - 1]);
+                    remove_value(values[values.length - 1]);
                 }
             }
         }
@@ -501,7 +532,17 @@ $.fn.zato.gateway.mcp._init_host_list = function(action) {
 
     // .. a chip's close mark removes it, a click anywhere else invites typing ..
     choices.on('click', '.search-choice-close', function() {
-        remove_host($(this).data('host'));
+        remove_value($(this).attr(config.value_attribute));
+    });
+
+    // .. a value cut short to fit the box carries the whole of it in its title ..
+    choices.on('mouseenter', 'li.search-choice > span', function() {
+        var is_cut_short = this.scrollWidth > this.clientWidth;
+        if (is_cut_short) {
+            this.setAttribute('title', this.textContent);
+        } else {
+            this.removeAttribute('title');
+        }
     });
 
     choices.on('click', function(event) {
@@ -518,7 +559,7 @@ $.fn.zato.gateway.mcp._init_host_list = function(action) {
         text_field.prop('disabled', is_disabled);
     };
 
-    input.on('host-list:updated', sync_disabled);
+    input.on('chip-list:updated', sync_disabled);
     sync_disabled();
 
     // .. and the chips open on whatever the input arrived with.
@@ -574,9 +615,9 @@ $.fn.zato.gateway.mcp._init_safeguard_toggles = function(action) {
                     dependent.trigger('chosen:updated');
                 }
 
-                // The host list widget mirrors it the same way
-                if (dependent.data('host-list-built')) {
-                    dependent.trigger('host-list:updated');
+                // The chip list widget mirrors it the same way
+                if (dependent.data('chip-list-built')) {
+                    dependent.trigger('chip-list:updated');
                 }
             });
         };

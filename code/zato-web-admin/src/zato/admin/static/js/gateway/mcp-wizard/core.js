@@ -149,7 +149,8 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, itemId);
         $.fn.zato.gateway.mcp.skills_badge_picker.load(ownConfig.pickerAction, itemId);
 
-        // .. the OAuth toggle, whose scopes line is only editable while it is on ..
+        // .. the OAuth scopes as chips and the toggle they are only editable under ..
+        $.fn.zato.gateway.mcp._init_scope_list(action);
         wizard._initOAuthToggle();
 
         // .. a live uniqueness indicator for the URL path - the name
@@ -222,6 +223,7 @@ wizard._initOAuthToggle = function() {
     var syncScopes = function() {
         var isOn = toggle.prop('checked');
         scopes.prop('disabled', !isOn);
+        scopes.trigger('chip-list:updated');
         $('#mcp-wizard-line-oauth-scopes').toggleClass('mcp-wizard-line-disabled', !isOn);
     };
 
