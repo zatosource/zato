@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 connection_extra_field_defaults = {
     'validate_tls': True,
     'is_audit_log_active': True,
+    'is_audit_export_payload_active': False,
 }
 
 # What the alert settings name the object as in the errors they raise

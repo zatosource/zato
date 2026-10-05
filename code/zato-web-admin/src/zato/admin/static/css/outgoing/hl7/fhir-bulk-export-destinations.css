@@ -1,0 +1,136 @@
+/*
+ * FHIR bulk export tab - the destinations popover of the Deliver to line, the badge picker
+ * of multi-select.css inside a micro-form popover. Loaded after multi-select.css and
+ * shared/micro-forms.css.
+ *
+ * Token                                      Purpose
+ * --fhir-bulk-export-zones-height            The starting height of the two zones
+ * --fhir-bulk-export-tag-font-size           The type tag on a badge
+ */
+
+:root {
+    --fhir-bulk-export-zones-height: 22em;
+    --fhir-bulk-export-tag-font-size: 10px;
+    --fhir-bulk-export-tag-padding: 1px 6px;
+    /* The purple the badge picker gives its bearer token badges - away from the FHIR blue next to it */
+    --fhir-bulk-export-type-tag-service-background: rgba(100, 40, 150, 0.1);
+    --fhir-bulk-export-type-tag-service-color: #5c2d91;
+}
+
+/* The tag saying what type a destination is, a notch smaller than a page badge */
+.fhir-bulk-export-type-tag {
+    flex: 0 0 auto;
+    margin-right: 8px;
+    padding: var(--fhir-bulk-export-tag-padding);
+    font-size: var(--fhir-bulk-export-tag-font-size);
+}
+
+.fhir-bulk-export-type-tag-service {
+    background: var(--fhir-bulk-export-type-tag-service-background);
+    color: var(--fhir-bulk-export-type-tag-service-color);
+}
+
+/* The popover is one field laid out as a column, the zones in it being what a resize grows */
+.fhir-bulk-export-popover .fhir-bulk-export-zones-field {
+    display: flex;
+    flex-direction: column;
+    width: auto;
+}
+
+.micro-form-resized .micro-form-body > .fhir-bulk-export-zones-field {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* The options popover                                           */
+/* ------------------------------------------------------------ */
+
+/* The fields of a type stand on one row - a select is as wide as its choices, in a popover dragged
+   wider too, where the kit would otherwise have the fields of a row share the width, and the text
+   fields take the rest */
+.micro-form.fhir-bulk-export-options-popover .micro-form-row .micro-form-field:has(> select) {
+    flex: 0 0 auto;
+}
+
+.micro-form.fhir-bulk-export-options-popover .micro-form-row .micro-form-field > select {
+    width: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* The filter row                                                */
+/* ------------------------------------------------------------ */
+
+.fhir-bulk-export-zones-field .badge-picker-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.fhir-bulk-export-zones-field .badge-picker-filter input[type="text"] {
+    flex: 1;
+}
+
+/* The filter row is built by hand, so its controls take the box the fields of a micro-form take */
+.fhir-bulk-export-zones-field .badge-picker-filter input[type="text"],
+.fhir-bulk-export-zones-field .badge-picker-filter select,
+.fhir-bulk-export-zones-field .badge-picker-filter .badge-filter-clear,
+.fhir-bulk-export-zones-field .badge-picker-filter .badge-filter-clear:hover,
+.fhir-bulk-export-zones-field .badge-picker-filter .badge-filter-clear:focus,
+.fhir-bulk-export-zones-field .badge-picker-filter .badge-filter-clear:active {
+    box-sizing: border-box;
+    height: var(--micro-form-input-height);
+    padding: 0 8px;
+    font-family: inherit;
+    font-size: var(--micro-form-select-font-size);
+    font-weight: 400;
+    color: var(--zato-ui-text);
+    background: #fff;
+    background-image: none;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+    box-shadow: none;
+    text-shadow: none;
+    outline: none;
+}
+
+.fhir-bulk-export-zones-field .badge-picker-filter input[type="text"]:focus,
+.fhir-bulk-export-zones-field .badge-picker-filter select:focus,
+.fhir-bulk-export-zones-field .badge-picker-filter .badge-filter-clear:hover {
+    border-color: var(--zato-ui-accent);
+}
+
+/* ------------------------------------------------------------ */
+/* The zones                                                     */
+/* ------------------------------------------------------------ */
+
+/* The zones start at their height and follow the popover from there */
+.fhir-bulk-export-zones-field .badge-picker {
+    flex: 1 1 auto;
+    height: var(--fhir-bulk-export-zones-height);
+    min-height: 0;
+}
+
+.fhir-bulk-export-zones-field .badge-zone-body {
+    min-height: 0;
+    max-height: none;
+    scrollbar-width: thin;
+}
+
+.fhir-bulk-export-zones-field .security-badge {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+/* The options of a badge read as a link after its name, once it is assigned - in the
+   Available zone the badge is a name to be picked and nothing more */
+.fhir-bulk-export-zone-options {
+    flex: 0 0 auto;
+    margin-left: 10px;
+    font-size: var(--micro-form-select-font-size);
+}
+
+.fhir-bulk-export-zone-available .fhir-bulk-export-zone-options {
+    display: none;
+}

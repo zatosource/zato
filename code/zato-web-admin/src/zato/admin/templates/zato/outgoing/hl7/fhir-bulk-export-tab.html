@@ -1,0 +1,86 @@
+{% comment %}
+Bulk export tab for outgoing FHIR connections - what to export, on what schedule and where the files go.
+
+Expects in the context:
+* form         - the create or edit form
+* panel_id     - the id of the tab panel
+* field_prefix - "" for create, "edit-" for edit
+{% endcomment %}
+
+<div class="dashboard-tab-panel alerts-tab-panel fhir-bulk-export-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
+    <div class="form-data alerts-tab-body">
+
+        <div class="alerts-tab-sections">
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Export</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle" id="{{ panel_id }}-line-is_active">
+                        <label class="decision-line-label" for="id_{{ field_prefix }}bulk_export_is_active">Active</label>
+                        <span class="decision-line-slot">{{ form.bulk_export_is_active }}</span>
+                    </div>
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover" id="{{ panel_id }}-line-level">
+                        <label class="decision-line-label" for="id_{{ field_prefix }}bulk_export_level">Level</label>
+                        <span class="decision-line-slot fhir-bulk-export-level">{{ form.bulk_export_level }}<a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-level"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-level"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover" id="{{ panel_id }}-line-resources">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-resources">Resources</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-resources"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-resources"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Schedule</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover" id="{{ panel_id }}-line-schedule">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-schedule">Run</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-schedule"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-schedule"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                    <div class="decision-line alerts-tab-line" id="{{ panel_id }}-line-start_date">
+                        <label class="decision-line-label" for="id_{{ field_prefix }}bulk_export_start_date">Start time</label>
+                        <span class="decision-line-slot">{{ form.bulk_export_start_date }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Destinations</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover" id="{{ panel_id }}-line-destination">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-destination">Deliver to</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-destination"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-destination"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Cleanup</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle" id="{{ panel_id }}-line-delete_files">
+                        <label class="decision-line-label" for="id_{{ field_prefix }}bulk_export_delete_files">Delete files</label>
+                        <span class="decision-line-slot">{{ form.bulk_export_delete_files }}</span>
+                    </div>
+                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle" id="{{ panel_id }}-line-delete_on_server">
+                        <label class="decision-line-label" for="id_{{ field_prefix }}bulk_export_delete_on_server">Delete on server</label>
+                        <span class="decision-line-slot">{{ form.bulk_export_delete_on_server }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="alerts-tab-hidden-fields" hidden>
+            {{ form.bulk_export_group_id }}
+            {{ form.bulk_export_patient_ids }}
+            {{ form.bulk_export_types }}
+            {{ form.bulk_export_since }}
+            {{ form.bulk_export_type_filter }}
+            {{ form.bulk_export_run_every }}
+            {{ form.bulk_export_run_unit }}
+            {{ form.bulk_export_job_id }}
+            {{ form.bulk_export_destinations }}
+        </div>
+
+    </div>
+</div>

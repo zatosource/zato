@@ -7,22 +7,22 @@
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
-	help install-deps \
+	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
-	test-hl7 hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
+	test-hl7 test-fhir-bulk-export test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
-	test-audit-log test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
+	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
+	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
-	test-all test test-all-reset test-clean-test-all test-perf \
+	test-all test-all-no-static test test-all-reset test-all-no-static-reset test-clean-test-all test-perf \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
@@ -294,6 +294,9 @@ install-deps: ## Create local venv and install test dependencies.
 	cd $(CURDIR)/code/tests && uv venv .venv --clear
 	cd $(CURDIR)/code/tests && uv pip install -r requirements.txt
 
+install-fhir-converter: ## Build the C-CDA to FHIR converter from source and install it next to the Python binary.
+	$(CURDIR)/../../zato-docker/build-scripts/08d-install-fhir-converter.sh $(CURDIR)/code/bin/fhir-converter
+
 health-install: ## Install health deps and build.
 	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
 	$(MAKE) -C $(Zato_Health) install
@@ -364,7 +367,7 @@ ruff:
 
 pyright:
 	@echo "Running every configured Python type check from $(CURDIR)/code"
-	cd $(CURDIR)/code && $(PYRIGHT) \
+	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) \
 		zato-common/src/zato/hl7v2/ \
 		zato-common/src/zato/common/hl7/fhir/fields.py \
 		zato-common/src/zato/common/pubsub/outgoing.py \
@@ -745,20 +748,100 @@ test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real 
 llm-console: ## Browser console for the local LLM - starts Ollama, the model and Open WebUI.
 	$(ZATO_PY) -u $(CURDIR)/code/tests/python/zato-server/mcp_llm_live/console.py
 
-test-bearer: ## Inbound bearer token live tests.
+test-bearer: ## Inbound and outgoing bearer token live tests, including private key JWT.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/security/ \
 		$(CURDIR)/code/tests/python/zato-server/bearer_inbound_live/ \
+		$(CURDIR)/code/tests/python/zato-server/bearer_outgoing_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_bearer -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_crud.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_private_key_jwt.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_groups.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_rest_channel.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_mcp_gateway.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
+test-fhir-bulk-export: ## FHIR bulk exports - the export program against the fake FHIR server, the file object, the destinations, enmasse, a live server and the Dashboard tab.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/fhir_bulk_export/ \
+		$(CURDIR)/code/tests/python/zato-server/destinations/test_dispatch.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_bulk_export_outgoing_fhir.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_fhir_bulk_export -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/fhir_bulk_export_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_fhir_bulk_export_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_fhir_outconn_bulk_export.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
+test-ccda: ## C-CDA to FHIR - the converter, the service facade, enmasse, a live server with C-CDA channels and the Dashboard form.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/hl7/ccda/ \
+		$(CURDIR)/code/tests/python/zato-server/ccda/ \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_ccda_channel.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ccda -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/ccda_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ccda_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_hl7_rest_channel_ccda.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
+test-documents: ## Documents in attachments, files and IHE XDM packages - the unpacker, the service input and a live server with the demo IMAP server.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/documents/ \
+		$(CURDIR)/code/tests/python/zato-server/documents/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_documents -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/documents_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_documents_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
+test-mcp-oauth: ## OAuth for MCP gateways - simulated clients signing in through Keycloak.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mcp_oauth_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_oauth -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
+test-audit-export: ## Audit log export to OpenTelemetry - the offline mapping and queue tests, the enmasse round trip of the payload flag, then a live server against a collector.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/audit_log/export/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_export -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_audit_export_payload.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_export_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/audit_export_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_export_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
@@ -855,16 +938,6 @@ test-aws: ## AWS connection tests through a live Zato server against a simulated
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_aws_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-kafka-live: ## Kafka SASL PLAIN and OAUTHBEARER round trips through a live Zato server against Azure Event Hubs.
-	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) \
-	Zato_Test_Kafka_Live=1 \
-	PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib \
-	$(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/kafka_live/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka_live -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
 # ############################################################################
 # Microsoft Fabric
 # ############################################################################
@@ -917,7 +990,7 @@ Fabric_Chapters = fabric-tutorial fabric-loading-tables fabric-lookup-tables fab
 	fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events fabric-reading-events \
 	fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems
 
-test-fabric-live: $(Fabric_Chapters) ## Microsoft Fabric tests through a live Zato server against the real Clinic Analytics workspace.
+test-fabric-live: $(Fabric_Chapters) ## Microsoft Fabric tests through a live Zato server against the real Clinic Analytics workspace, Kafka SASL PLAIN and OAUTHBEARER round trips through its eventstream included.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) \
 	Zato_Test_Fabric_Live=1 \
@@ -1046,13 +1119,30 @@ test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain an
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ibm_mq \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-kafka: ## Kafka end-to-end tests against a live broker in Docker, driven through the Dashboard.
-	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_kafka_end_to_end.py \
+test-kafka: ## Kafka unit tests - the Rust bridge and the enmasse round trips, no live servers.
+	. $(HOME)/.cargo/env && cd $(ZATO_RUST)/zato_queue_bridge && cargo test $(PYTEST_ARGS)
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_kafka.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		$(Zato_Log)
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+# The three suites below each start their own queue bridge, whose HTTP API listens on one fixed port,
+# which is why they run one after another and never side by side.
+test-kafka-live: ## Kafka tests against live Kafka in Docker - one instance plain and TLS, the three-instance cluster and queue delivery on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) Zato_Test_Kafka=1 $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/kafka/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka_live \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) Zato_Test_Kafka=1 $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/kafka_cluster/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_kafka_cluster \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) Zato_Test_Kafka=1 $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_kafka/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_kafka \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS, plus live Redis tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1242,7 +1332,7 @@ Zato_Test_Toolchain := \
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
-	test-ibm-mq test-kafka test-sdk test-hl7 test-llm test-rule-engine test-enmasse
+	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui
@@ -1253,37 +1343,54 @@ Zato_Test_Heavy := test-rest test-server test-rest-fuzz test-server-fuzz
 # Standalone performance suites, left out of test-all
 Zato_Test_Perf := test-pubsub-perf test-rule-engine-perf
 
+Zato_Test_Fuzz := test-rest-fuzz test-server-fuzz
+
 Zato_Test_All := \
 	$(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) \
 	$(Zato_Test_Live) $(Zato_Test_Browser) $(Zato_Test_Heavy)
 
+# Real functionality only - no static checks, no fuzzing and no mutation testing
+Zato_Test_No_Static := $(filter-out $(Zato_Test_Static) $(Zato_Test_Fuzz),$(Zato_Test_All))
+
 # Which target the run is currently on - written before the target starts, so a target that
 # fails or is interrupted leaves its own name behind and the next run picks up from there.
-# Removed once the list has been walked to the end.
-Zato_Test_Resume_File := $(CURDIR)/code/tests/.test-all-resume
+# Removed once the list has been walked to the end. Each walk has its own file.
+Zato_Test_Resume_File           := $(CURDIR)/code/tests/.test-all-resume
+Zato_Test_No_Static_Resume_File := $(CURDIR)/code/tests/.test-all-no-static-resume
 
 # Set to anything to ignore the resume file and walk the list from the beginning
 RESTART ?=
 
-test-all: ## Everything, resuming from the target that last failed. RESTART=1 to start from scratch.
-	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Resume_File); fi
+# Walks the targets in $(1) in order, resuming from the one named in the resume file $(2)
+define Zato_Test_Walk
+	@if [ -n "$(RESTART)" ]; then rm -f $(2); fi
 	@resume=''; \
-	if [ -f $(Zato_Test_Resume_File) ]; then \
-		resume=$$(cat $(Zato_Test_Resume_File)); \
+	if [ -f $(2) ]; then \
+		resume=$$(cat $(2)); \
 		echo ">>> Resuming from $$resume"; \
 	fi; \
-	for target in $(Zato_Test_All); do \
+	for target in $(1); do \
 		if [ -n "$$resume" ]; then \
 			if [ "$$target" != "$$resume" ]; then continue; fi; \
 			resume=''; \
 		fi; \
-		echo "$$target" > $(Zato_Test_Resume_File); \
+		echo "$$target" > $(2); \
 		$(MAKE) $$target || exit $$?; \
 	done; \
-	rm -f $(Zato_Test_Resume_File)
+	rm -f $(2)
+endef
+
+test-all: ## Everything, resuming from the target that last failed. RESTART=1 to start from scratch.
+	$(call Zato_Test_Walk,$(Zato_Test_All),$(Zato_Test_Resume_File))
+
+test-all-no-static: ## Everything except the static checks, fuzzing and mutation testing, resuming from the target that last failed. RESTART=1 to start from scratch.
+	$(call Zato_Test_Walk,$(Zato_Test_No_Static),$(Zato_Test_No_Static_Resume_File))
 
 test-all-reset: ## Forget where the last test-all stopped.
 	rm -f $(Zato_Test_Resume_File)
+
+test-all-no-static-reset: ## Forget where the last test-all-no-static stopped.
+	rm -f $(Zato_Test_No_Static_Resume_File)
 
 test-clean-test-all: ## Run test-all from a clean state instead of resuming a previous run.
 	$(MAKE) RESTART=1 test-all
@@ -1420,12 +1527,17 @@ vet: vet-zato ## Supply-chain audit everywhere.
 # the unsafe usage table stays the deliverable, and a run that fails for any other reason -
 # a compile error, a crash - still fails the target. No grep -q anywhere - with pipefail
 # a -q grep that quits early kills the pipe upstream and flips the pipeline's status.
+# The tolerated noise is also left out of what gets printed, together with geiger's
+# "Failed to match (ignoring source)" lines, the files its own parser cannot read and
+# the raw cargo artifact messages it echoes.
+GEIGER_NOISE := ^Failed to match \(ignoring source\) package:|^Failed to parse file:|^WARNING: Dependency file was never scanned:|^WARNING: .*No metrics found|^error: Found [0-9]+ warnings$$|^\{"\$$message_type":"artifact",
+
 geiger-zato: ## Report unsafe usage in public crate dependency trees.
 	. $(HOME)/.cargo/env && \
 	for crate in zato_common_core zato_server_core zato_scheduler_core; do \
 		out=$$(cargo geiger --manifest-path $(ZATO_RUST_DIR)/$$crate/Cargo.toml 2>&1); \
 		status=$$?; \
-		echo "$$out"; \
+		echo "$$out" | grep -Ev '$(GEIGER_NOISE)'; \
 		if [ $$status -ne 0 ]; then \
 			errline=$$(echo "$$out" | grep -E '^error: Found [0-9]+ warnings$$'); \
 			if [ -z "$$errline" ]; then exit $$status; fi; \

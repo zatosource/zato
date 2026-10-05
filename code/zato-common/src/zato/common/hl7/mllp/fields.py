@@ -126,6 +126,7 @@ Channel_Fields:'mllp_field_list' = [
     MLLPField('should_log_messages', False),
     MLLPField('should_return_errors', False),
     MLLPField('is_audit_log_active', True),
+    MLLPField('is_audit_export_payload_active', False),
 
     # Routing
     MLLPField('msh3_sending_app', ''),
@@ -196,6 +197,7 @@ Outgoing_Fields:'mllp_field_list' = [
     MLLPField('should_log_messages', False),
     MLLPField('logging_level', HL7.Default.logging_level),
     MLLPField('is_audit_log_active', True),
+    MLLPField('is_audit_export_payload_active', False),
 
     # How a send that did not go through is tried again - the same settings an outgoing REST connection has.
     MLLPField(_retry.Field_Max_Retries, _retry.Default_Max_Retries),

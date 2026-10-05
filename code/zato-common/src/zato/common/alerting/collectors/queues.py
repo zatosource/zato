@@ -33,6 +33,7 @@ _source_by_conn_type:'strdict' = {
     OutgoingType.SOAP: AuditSource.SOAP_Outgoing,
     OutgoingType.FHIR: AuditSource.FHIR,
     OutgoingType.MLLP: AuditSource.MLLP_Outgoing,
+    OutgoingType.KAFKA: AuditSource.Kafka_Outgoing,
 }
 
 # ################################################################################################################################

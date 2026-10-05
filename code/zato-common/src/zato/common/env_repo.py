@@ -8,10 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import re
 from json import dumps, loads
 from logging import getLogger
 
 # Zato
+from zato.common.github_app import get_repo_git_url
 from zato.common.typing_ import anydict, anydictnone, strnone
 
 # ################################################################################################################################
@@ -27,19 +29,26 @@ class Env_Repo:
     """
     Host_Link_Dir  = '/opt/zato/host-link'
     Local_Dir_Name = 'env-repo'
+    Private_Key    = 'id_ed25519'
     Public_Key     = 'id_ed25519.pub'
+    Key_Comment    = 'zato-dashboard'
     Request        = 'request.json'
     Status         = 'status.json'
     Current        = 'current.json'
 
-    Action_Check  = 'check'
-    Action_Switch = 'switch'
+    Action_Check      = 'check'
+    Action_Switch     = 'switch'
+    Action_Disconnect = 'disconnect'
+    Action_Pull       = 'pull'
 
-    State_Checking  = 'checking'
-    State_OK        = 'ok'
-    State_Switching = 'switching'
-    State_Switched  = 'switched'
-    State_Error     = 'error'
+    State_Checking     = 'checking'
+    State_OK           = 'ok'
+    State_Switching    = 'switching'
+    State_Switched     = 'switched'
+    State_Disconnected = 'disconnected'
+    State_Pulling      = 'pulling'
+    State_Pulled       = 'pulled'
+    State_Error        = 'error'
 
     Blueprint_Owner = 'zatosource'
     Blueprint_Name  = 'zato-project-blueprint'
@@ -47,9 +56,80 @@ class Env_Repo:
     # The name of the repository created from the template
     New_Repo_Name = 'zato-environment'
 
-    New_Repo_URL = 'https://github.com/new?template_owner={owner}&template_name={name}&owner={login}&name={new_name}&visibility=private'
-    Deploy_Key_URL = 'https://github.com/{login}/{new_name}/settings/keys/new'
-    Repo_SSH_URL = 'git@github.com:{login}/{new_name}.git'
+    Default_Branch = 'main'
+
+    New_Repo_URL   = 'https://github.com/new?template_owner={owner}&template_name={name}&name={new_name}&visibility=private'
+    Repo_SSH_URL   = 'git@github.com:{owner}/{name}.git'
+    Repo_HTTPS_URL = 'https://github.com/{owner}/{name}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# What a repository address may look like - a browser address, an SSH one or owner/name alone.
+_Repo_Name = r'(?P<owner>[A-Za-z0-9_.-]+)/(?P<name>[A-Za-z0-9_.-]+?)'
+
+_Repo_Patterns = [
+    re.compile(r'^(?:https?://)?(?:www\.)?github\.com/' + _Repo_Name + r'(?:\.git)?(?:[/?#].*)?$'),
+    re.compile(r'^(?:ssh://)?git@github\.com[:/]' + _Repo_Name + r'(?:\.git)?/?$'),
+    re.compile(r'^' + _Repo_Name + r'(?:\.git)?$'),
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Repo_Name:
+    """ The owner and name of a repository on GitHub, and the addresses built from them.
+    """
+    def __init__(self, owner:'str', name:'str') -> 'None':
+        self.owner = owner
+        self.name  = name
+
+    @property
+    def full_name(self) -> 'str':
+        out = f'{self.owner}/{self.name}'
+        return out
+
+    @property
+    def ssh_url(self) -> 'str':
+        out = Env_Repo.Repo_SSH_URL.format(owner=self.owner, name=self.name)
+        return out
+
+    @property
+    def https_url(self) -> 'str':
+        out = Env_Repo.Repo_HTTPS_URL.format(owner=self.owner, name=self.name)
+        return out
+
+    @property
+    def git_url(self) -> 'str':
+        out = get_repo_git_url(self.owner, self.name)
+        return out
+
+# ################################################################################################################################
+
+def parse_repo_name(text:'str') -> 'Repo_Name | None':
+    """ Returns the owner and name from any of the accepted address shapes, or None if the text is not one of them.
+    """
+    text = text.strip()
+
+    for pattern in _Repo_Patterns:
+        match = pattern.match(text)
+        if match:
+            out = Repo_Name(match.group('owner'), match.group('name'))
+            return out
+
+    return None
+
+# ################################################################################################################################
+
+def get_new_repo_url() -> 'str':
+
+    out = Env_Repo.New_Repo_URL.format(
+        owner=Env_Repo.Blueprint_Owner,
+        name=Env_Repo.Blueprint_Name,
+        new_name=Env_Repo.New_Repo_Name,
+    )
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -170,33 +250,6 @@ def write_request(action:'str', url:'str', branch:'str') -> 'None':
     write_json(Env_Repo.Request, data)
 
     logger.info('Request written to %s: action=%s url=%s branch=%s', get_link_dir(), action, url, branch)
-
-# ################################################################################################################################
-
-def get_new_repo_url(login:'str') -> 'str':
-
-    out = Env_Repo.New_Repo_URL.format(
-        owner=Env_Repo.Blueprint_Owner,
-        name=Env_Repo.Blueprint_Name,
-        login=login,
-        new_name=Env_Repo.New_Repo_Name,
-    )
-
-    return out
-
-# ################################################################################################################################
-
-def get_deploy_key_url(login:'str') -> 'str':
-
-    out = Env_Repo.Deploy_Key_URL.format(login=login, new_name=Env_Repo.New_Repo_Name)
-    return out
-
-# ################################################################################################################################
-
-def get_repo_ssh_url(login:'str') -> 'str':
-
-    out = Env_Repo.Repo_SSH_URL.format(login=login, new_name=Env_Repo.New_Repo_Name)
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

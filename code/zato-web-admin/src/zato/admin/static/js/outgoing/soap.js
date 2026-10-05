@@ -134,7 +134,8 @@
 
         $.fn.zato.delivery_tab.bind({
             panel_id: config.deliveryPanelIds[action],
-            field_prefix: fieldPrefix(action)
+            field_prefix: fieldPrefix(action),
+            has_queue: true
         });
     }
 

@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+from atexit import register as register_at_exit
 
 # SQLAlchemy
 from sqlalchemy import select
@@ -23,6 +24,9 @@ from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, A
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
+from zato.common.audit_log.export.api import ModuleCtx as ExportCtx, start_audit_export, stop_audit_export
+from zato.common.crypto.api import CryptoManager
+from zato.common.version import get_version
 from zato.x12.render import render_document
 
 # ################################################################################################################################
@@ -45,6 +49,18 @@ _screen_browser = 'audit-log-browser'
 
 # All the access events this module writes go through this one writer
 _access_log = AuditLog(_dashboard_server_name)
+
+# The access events also go to the OTLP collector if the dashboard is configured to export them,
+# each dashboard process being told apart from the others by a random instance id.
+_ = start_audit_export(
+    service_name=ExportCtx.Service_Dashboard,
+    server_name=_dashboard_server_name,
+    cluster_name='',
+    instance_id=CryptoManager.generate_hex_string(),
+    version=get_version().replace('Zato ', '', 1),
+)
+
+_ = register_at_exit(stop_audit_export)
 
 # The sources whose parsed view is rendered from the database by event id.
 _source_render_by_event_id = {

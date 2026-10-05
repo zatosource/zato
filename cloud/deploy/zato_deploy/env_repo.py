@@ -14,9 +14,11 @@ from datetime import datetime, timezone
 from logging import getLogger
 
 # Zato
-from zato_deploy.common import anydict, Env_Repo_Action, Env_Repo_State, Link_File, load_env_repo_config, Path, \
-    Restart_Reason, strlist, Systemd_Unit, write_env_file
-from zato_deploy.git import is_ssh_url, run_git
+from zato_deploy.common import anydict, Blueprint, Env_Repo_Action, Env_Repo_State, Link_File, load_env_repo_config, Path, \
+    read_env_file, Restart_Reason, strlist, Systemd_Unit, write_env_file
+from zato_deploy.git import is_repo_url, run_git
+from zato_deploy.github_app import GitHubAppError, uninstall_app
+from zato_deploy.repo_text import count_text, get_repo_label, summarize_changes
 from zato_deploy.process import run_command
 from zato_deploy.run_log import setup_logging
 
@@ -31,10 +33,12 @@ logger = getLogger(__name__)
 _Sync_Flag = '--sync'
 
 _Request_Keys = {'action', 'env_repo_url', 'env_repo_branch'}
-_Actions      = {Env_Repo_Action.Check, Env_Repo_Action.Switch}
+_Actions      = {Env_Repo_Action.Check, Env_Repo_Action.Switch, Env_Repo_Action.Disconnect, Env_Repo_Action.Pull}
 
 # How many lines of git's output the status keeps for the dashboard.
 _Max_Status_Lines = 40
+
+_Heads_Prefix = 'refs/heads/'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,7 +59,9 @@ class Status:
         self.action = action
         self.url    = url
         self.branch = branch
+        self.label  = get_repo_label(url)
         self.lines:'strlist' = []
+        self.branches:'strlist' = []
 
 # ################################################################################################################################
 
@@ -72,14 +78,17 @@ class Status:
 
         logger.info('Status %s - %s', state, message)
 
+        self.lines.append(message)
+
         data = {
-            'action':  self.action,
-            'url':     self.url,
-            'branch':  self.branch,
-            'state':   state,
-            'message': message,
-            'lines':   self.lines,
-            'time':    datetime.now(timezone.utc).isoformat(),
+            'action':   self.action,
+            'url':      self.url,
+            'branch':   self.branch,
+            'state':    state,
+            'message':  message,
+            'lines':    self.lines,
+            'branches': self.branches,
+            'time':     datetime.now(timezone.utc).isoformat(),
         }
 
         path = os.path.join(Path.Link_Dir, Link_File.Status)
@@ -120,8 +129,8 @@ def _read_request(path:'str') -> 'anydict':
     if out['action'] not in _Actions:
         raise RequestError(f'Unknown action: {out["action"]}')
 
-    if not is_ssh_url(out['env_repo_url']):
-        raise RequestError('Repository address must look like git@github.com:owner/name.git')
+    if not is_repo_url(out['env_repo_url']):
+        raise RequestError('Repository address must look like https://github.com/owner/name.git')
 
     return out
 
@@ -148,22 +157,25 @@ def _add_output_lines(status:'Status', text:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _check_access(status:'Status') -> 'None':
-    """ Asks GitHub for the branch with the deploy key, which is what a switch would do first.
+def _list_branches(status:'Status') -> 'None':
+    """ Runs git ls-remote with the App's token or the deploy key and keeps the branches it lists.
     """
-    status.write(Env_Repo_State.Checking, f'Checking access to {status.url}')
+    status.write(Env_Repo_State.Checking, f'Connecting to {status.label}')
 
-    result = run_git(['ls-remote', '--heads', status.url, status.branch], is_verbose=True)
+    result = run_git(['ls-remote', '--heads', status.url], is_verbose=True, url=status.url)
 
     _add_output_lines(status, result.stderr)
 
     if result.exit_code != 0:
-        raise RequestError(f'GitHub did not accept the deploy key for {status.url}, exit code {result.exit_code}')
+        raise RequestError(f'GitHub refused access to {status.label}, exit code {result.exit_code}')
 
-    if not result.stdout.strip():
-        raise RequestError(f'Branch {status.branch} not found in {status.url}')
+    # Each line is a commit, a tab and refs/heads/<branch>.
+    for line in result.stdout.splitlines():
+        _, _, ref = line.strip().partition('\t')
+        if ref.startswith(_Heads_Prefix):
+            status.branches.append(ref[len(_Heads_Prefix):])
 
-    _add_output_lines(status, result.stdout)
+    status.branches.sort()
 
 # ################################################################################################################################
 
@@ -189,7 +201,68 @@ def _switch(status:'Status') -> 'None':
     write_env_file(Path.Env_Repo_Config, values)
     status.add_line(f'Configuration written to {Path.Env_Repo_Config}')
 
-    status.write(Env_Repo_State.Switching, f'Switching to {status.url} at {status.branch}')
+    status.write(Env_Repo_State.Switching, f'Switching to {status.label} at {status.branch}, the environment restarts with it')
+
+# ################################################################################################################################
+
+def _disconnect(status:'Status') -> 'bool':
+    """ Takes the App's access away on GitHub and clears the configured repository, so the deployment restarts
+    with the public blueprint. Returns whether a restart is due, which it is not if the blueprint ran already.
+    """
+    try:
+        uninstall_app(Path.Link_Dir)
+    except GitHubAppError as exception:
+        raise RequestError(exception.message)
+
+    configured = read_env_file(Path.Env_Repo_Config)
+
+    if not configured['env_repo_url']:
+        status.write(Env_Repo_State.Disconnected, f'Disconnected from {status.label}')
+        return False
+
+    values = {
+        'env_repo_url':    '',
+        'env_repo_branch': '',
+    }
+
+    write_env_file(Path.Env_Repo_Config, values)
+    status.add_line(f'Configuration cleared in {Path.Env_Repo_Config}')
+
+    status.write(Env_Repo_State.Switching, f'Disconnected from {status.label}, the environment restarts with {get_repo_label(Blueprint.URL)}')
+    return True
+
+# ################################################################################################################################
+
+def _pull(status:'Status') -> 'None':
+    """ Brings the checkout up to date with GitHub, and nothing restarts - the running environment picks the files up
+    the way it picks up any other change to them.
+    """
+    if not os.path.isdir(Path.Env_Repo_Link):
+        raise RequestError(f'No checkout at {Path.Env_Repo_Link}')
+
+    repo_dir = os.path.realpath(Path.Env_Repo_Link)
+
+    status.write(Env_Repo_State.Pulling, f'Pulling {status.label} at {status.branch}')
+
+    before = run_git(['rev-parse', 'HEAD'], cwd=repo_dir).stdout.strip()
+    result = run_git(['pull', '--ff-only'], cwd=repo_dir, is_verbose=True, url=status.url)
+
+    _add_output_lines(status, result.stderr)
+    _add_output_lines(status, result.stdout)
+
+    if result.exit_code != 0:
+        raise RequestError(f'Pull of {status.label} failed, exit code {result.exit_code}')
+
+    after = run_git(['rev-parse', 'HEAD'], cwd=repo_dir).stdout.strip()
+
+    if before == after:
+        status.write(Env_Repo_State.Pulled, f'{status.label} at {status.branch} is up to date')
+        return
+
+    changes = run_git(['diff', '--name-status', before, after], cwd=repo_dir)
+    status.add_line(summarize_changes(changes.stdout))
+
+    status.write(Env_Repo_State.Pulled, f'Pulled {status.label} at {status.branch}, now at {after[:12]}')
 
 # ################################################################################################################################
 
@@ -210,14 +283,28 @@ def handle_request() -> 'None':
 
         status = Status(request['action'], request['env_repo_url'], request['env_repo_branch'])
 
-        _check_branch_name(status.branch)
-        _check_access(status)
+        if status.action == Env_Repo_Action.Disconnect:
+            is_switched = _disconnect(status)
 
-        if status.action == Env_Repo_Action.Switch:
+        elif status.action == Env_Repo_Action.Pull:
+            _pull(status)
+
+        elif status.action == Env_Repo_Action.Switch:
+            _list_branches(status)
+            _check_branch_name(status.branch)
+
+            if status.branch not in status.branches:
+                raise RequestError(f'Branch {status.branch} not found in {status.label}')
+
             _switch(status)
             is_switched = True
+
         else:
-            status.write(Env_Repo_State.OK, f'Access to {status.url} at {status.branch} works')
+            _list_branches(status)
+            if status.branches:
+                status.write(Env_Repo_State.OK, f'Connected to {status.label}, {count_text(len(status.branches), "branch", "branches")}')
+            else:
+                status.write(Env_Repo_State.OK, f'Connected to {status.label}, the repository is empty')
 
     except RequestError as exception:
         status.write(Env_Repo_State.Error, exception.message)
@@ -247,7 +334,7 @@ def sync() -> 'None':
     config = load_env_repo_config(Path.Env_Repo_Config)
     repo_dir = os.path.realpath(Path.Env_Repo_Link)
 
-    fetch = run_git(['fetch', 'origin', config.branch], cwd=repo_dir)
+    fetch = run_git(['fetch', 'origin', config.branch], cwd=repo_dir, url=config.url)
 
     if fetch.exit_code != 0:
         logger.info('Sync skipped, fetch of %s failed with exit code %d', config.branch, fetch.exit_code)

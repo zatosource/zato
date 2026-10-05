@@ -114,8 +114,16 @@ class RateLimitingManager:
 
 # ################################################################################################################################
 
-    def check_sec_def(self, sec_def_id:'int', client_ip:'str', now_us:'int', key_prefix:'str'='') -> 'SlottedCheckResult | None':
+    def check_sec_def(
+        self,
+        sec_def_id:'int',
+        client_ip:'str',
+        now_us:'int',
+        key_prefix:'str'='',
+        key_suffix:'str'='',
+        ) -> 'SlottedCheckResult | None':
         """ Checks rate limits for the given security definition and client IP.
+        The suffix separates the counters of callers who share one definition.
         """
         matcher = self._sec_def_matchers.get(sec_def_id)
 
@@ -124,7 +132,7 @@ class RateLimitingManager:
                 sec_def_id, type(sec_def_id).__name__, list(self._sec_def_matchers.keys()))
             return None
 
-        result = matcher.check(client_ip, self._token_buckets, self._fixed_windows, now_us, key_prefix)
+        result = matcher.check(client_ip, self._token_buckets, self._fixed_windows, now_us, key_prefix, key_suffix)
 
         logger.info('check_sec_def; sec_def_id:%s, client_ip:%s, key_prefix:%s, result:%s',
             sec_def_id, client_ip, key_prefix, result)

@@ -503,7 +503,7 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
             is_allowed=False, retry_after_us=1_000_000)
 
         request_ctx = _make_request_ctx()
-        request_ctx['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
+        request_ctx['zato.sec_def'] = {'type': 'basic_auth', 'id': 99, 'name': 'test.basic-auth'}
         config_manager = MagicMock()
 
         result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')
@@ -540,7 +540,7 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(is_allowed=True)
 
         request_ctx = _make_request_ctx()
-        request_ctx['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
+        request_ctx['zato.sec_def'] = {'type': 'basic_auth', 'id': 99, 'name': 'test.basic-auth'}
         config_manager = MagicMock()
 
         result = dispatcher.dispatch(_test_cid, '2025-01-01', request_ctx, config_manager, 'test-agent', '10.0.0.1')

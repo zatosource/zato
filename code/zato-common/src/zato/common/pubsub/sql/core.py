@@ -130,6 +130,9 @@ class SQLBackendCore:
         # receptions and deliveries involving these topics write no audit events.
         self.audit_disabled_topics:'strset' = set()
 
+        # Names of topics whose message payloads leave with the audit export
+        self.audit_payload_topics:'strset' = set()
+
         # One wake-up event per subscriber - publish sets them and blocking fetches wait on them.
         self._sub_events:'sub_event_dict' = {}
 
@@ -170,10 +173,29 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
+    def set_topic_payload_flag(self, topic_name:'str', is_export_payload_active:'bool') -> 'None':
+        """ Registers whether a topic's message payloads leave with the audit export.
+        """
+        if is_export_payload_active:
+            self.audit_payload_topics.add(topic_name)
+        else:
+            self.audit_payload_topics.discard(topic_name)
+
+# ################################################################################################################################
+
+    def is_topic_payload_exported(self, topic_name:'str') -> 'bool':
+        """ Whether a topic's message payloads leave with the audit export.
+        """
+        out = topic_name in self.audit_payload_topics
+        return out
+
+# ################################################################################################################################
+
     def delete_topic_audit_flag(self, topic_name:'str') -> 'None':
         """ Forgets about a topic's audit log state, e.g. because the topic was deleted or renamed.
         """
         self.audit_disabled_topics.discard(topic_name)
+        self.audit_payload_topics.discard(topic_name)
 
 # ################################################################################################################################
 

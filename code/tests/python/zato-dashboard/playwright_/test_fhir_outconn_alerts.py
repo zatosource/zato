@@ -56,8 +56,8 @@ _Default_Outcome_Codes = 'exception, transient, timeout, throttled, lock-error, 
 _Created_Outcome_Codes = 'exception, not-found'
 _Created_Outcome_Threshold = '5'
 
-# Where the tabs of the dialogs stand - Config first, Alerts right after it, Delivery last
-_Tab_Order = ['config', 'alerts', 'delivery']
+# Where the tabs of the dialogs stand - Config first, Bulk export and Alerts after it, Delivery last
+_Tab_Order = ['config', 'bulk-export', 'alerts', 'delivery']
 
 # The lines of the tab in the order they are read - the outcomes right after the status codes
 _Line_Order_Around_Outcomes = ['status_codes', 'operation_outcomes', 'connection_failures']
@@ -110,7 +110,7 @@ class TestFHIROutconnAlerts:
         open_fhir_page(page, base_url)
         open_create_dialog(page)
 
-        # The dialog opens on Config, with Alerts right after it ..
+        # The dialog opens on Config, with Bulk export and Alerts after it ..
         assert _active_tab(page, 'create') == 'config'
         assert _tab_names(page, 'create') == _Tab_Order
 

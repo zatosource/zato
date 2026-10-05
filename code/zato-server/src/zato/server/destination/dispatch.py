@@ -15,6 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # as part of its result, only a delivery that never got an answer at all raising.
 
 # stdlib
+from datetime import date
 from json import loads
 from typing import Protocol
 
@@ -22,9 +23,10 @@ from typing import Protocol
 from zato.common.api import SMTPMessage
 from zato.common.audit_log.common import Ack_Rejected_Marker, AuditClassification, AuditSource
 from zato.common.audit_log.request_context import Key_Address, Key_Headers, Key_Method, Key_Params
-from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Subject, \
-    Default_To, DestinationOption, DestinationType, Hop_Destination_Name
+from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Remote_Path, \
+    Default_Subject, Default_To, DestinationOption, DestinationType, Hop_Destination_Name
 from zato.common.destination.model import get_option, new_send_result, DestinationException
+from zato.common.hl7.fhir.bulk_export.file import BulkExportFile, BulkExportResource
 from zato.common.hl7.mllp.ack import get_ack_rejection
 from zato.common.pubsub.outgoing import SendResult
 from zato.hl7v2 import parse_hl7
@@ -53,6 +55,12 @@ class DestinationConnections(Protocol):
     fhir:  'any_'
     email: 'any_'
 
+    # Kafka is reached under the out namespace, the way a service reaches it, and a service
+    # destination is reached through invoke, the way a service invokes another one
+    out:    'any_'
+    sftp:   'any_'
+    invoke: 'any_'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -75,6 +83,15 @@ _er7_prefix = 'MSH'
 # What an SMTP delivery that did not go through is recorded as, the transport saying no more
 # than that it failed.
 _smtp_rejected_status = 'SMTP message was not sent'
+
+# What a Kafka message of a bulk export says about where it came from
+Kafka_Header_Job_ID        = 'job_id'
+Kafka_Header_Resource_Type = 'resource_type'
+Kafka_Header_File_Name     = 'file_name'
+
+# How a resource of a bulk export is written to a FHIR server - an update under its own id
+_bulk_export_fhir_method = 'PUT'
+_bulk_export_fhir_path   = '/{resource_type}/{resource_id}'
 
 # Which facade a call one outgoing connection recorded on its own behalf is repeated through
 _recorded_facade = {
@@ -221,6 +238,12 @@ def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', p
     method = get_option(entry, DestinationOption.Method, Default_Method)
     path = get_option(entry, DestinationOption.Path, Default_Path)
 
+    # A resource of a bulk export is written under its own id, whatever the destination names
+    if isinstance(payload, BulkExportResource):
+        method = _bulk_export_fhir_method
+        path = _bulk_export_fhir_path.format(resource_type=payload.file.resource_type, resource_id=payload.resource_id)
+        payload = payload.data
+
     if not path:
         raise DestinationException(f'Destination `{entry.name}` has no path to deliver to')
 
@@ -305,6 +328,89 @@ def _send_smtp(connections:'DestinationConnections', entry:'DestinationEntry', p
     return out
 
 # ################################################################################################################################
+
+def _send_kafka(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_',
+    cid:'str'='') -> 'HopSendResult':
+    """ Delivers to an outgoing Kafka connection. A FHIR resource of a bulk export travels under
+    its own id as the key, with the export it came from in the headers, plain text travels as it is.
+    """
+    invoker = connections.out.kafka[entry.connection]
+
+    # A bulk export hands over one resource at a time, each with where it came from ..
+    if isinstance(payload, BulkExportResource):
+        key = payload.resource_id
+        headers = {
+            Kafka_Header_Job_ID: payload.file.job_id,
+            Kafka_Header_Resource_Type: payload.file.resource_type,
+            Kafka_Header_File_Name: payload.file.file_name,
+        }
+        data = payload.data
+
+    # .. and anything else is a message with nothing to say about itself.
+    else:
+        key = None
+        headers = None
+        data = payload
+
+    result = invoker.send(data, key=key, headers=headers)
+
+    out = new_send_result(result)
+    return out
+
+# ################################################################################################################################
+
+def _send_sftp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_',
+    cid:'str'='') -> 'HopSendResult':
+    """ Delivers to an outgoing SFTP connection - a file of a bulk export is uploaded as it is on disk,
+    plain text is written to the remote path the destination names.
+    """
+    remote_path = get_option(entry, DestinationOption.Remote_Path, Default_Remote_Path)
+
+    if not remote_path:
+        raise DestinationException(f'Destination `{entry.name}` has no remote path to deliver to')
+
+    conn = connections.sftp[entry.connection]
+
+    # A file on disk goes up as a whole, under a path built from what the file is ..
+    if isinstance(payload, BulkExportFile):
+        remote_path = render_remote_path(remote_path, payload)
+        result = conn.upload(payload.path, remote_path, recursive=False, overwrite=True)
+
+    # .. and text is written to the path as given.
+    else:
+        result = conn.write(payload, remote_path, overwrite=True)
+
+    out = new_send_result(result)
+    return out
+
+# ################################################################################################################################
+
+def _send_service(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_',
+    cid:'str'='') -> 'HopSendResult':
+    """ Delivers to a service - the payload becomes the service's input as it is, a bulk export file included.
+    """
+    result = connections.invoke(entry.connection, payload, cid=cid)
+
+    out = new_send_result(result)
+    return out
+
+# ################################################################################################################################
+
+def render_remote_path(pattern:'str', file:'BulkExportFile') -> 'str':
+    """ Fills in the placeholders of an SFTP remote path with what the file is.
+    """
+    today = date.today().isoformat()
+
+    out = pattern.format(
+        job_id=file.job_id,
+        resource_type=file.resource_type,
+        file_name=file.file_name,
+        date=today,
+    )
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # Which adapter delivers to which type of destination - the keys are the type ids the Dashboard writes
@@ -313,6 +419,9 @@ _adapters:'strcalldict' = {
     DestinationType.MLLP: _send_mllp,
     DestinationType.FHIR: _send_fhir,
     DestinationType.SMTP: _send_smtp,
+    DestinationType.KAFKA: _send_kafka,
+    DestinationType.SFTP: _send_sftp,
+    DestinationType.SERVICE: _send_service,
 }
 
 # ################################################################################################################################

@@ -108,6 +108,10 @@ class OutgoingRESTExporter:
             if opaque.get('is_audit_log_active') is False:
                 exported_conn['is_audit_log_active'] = False
 
+            # Payloads leave with the audit export only when the flag is on, so only the on state is exported
+            if opaque.get('is_audit_export_payload_active') is True:
+                exported_conn['is_audit_export_payload_active'] = True
+
             # The alert settings moved away from their defaults, the status codes as the text they were typed as
             alerts = group_alerts(opaque, alert_type_rest)
             if alerts is not None:

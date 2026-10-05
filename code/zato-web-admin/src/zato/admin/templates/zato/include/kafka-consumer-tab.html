@@ -1,0 +1,47 @@
+{% comment %} The Consumer tab of a Kafka channel's create or edit form, included with panel_id and form {% endcomment %}
+<div class="dashboard-tab-panel alerts-tab-panel delivery-tab-panel kafka-consumer-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
+    <div class="form-data alerts-tab-body">
+
+        <div class="alerts-tab-sections">
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Reading</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-always-on-line" id="{{ panel_id }}-line-auto_offset_reset">
+                        <label class="decision-line-label" for="{{ form.auto_offset_reset.id_for_label }}">Start from</label>
+                        <span class="decision-line-slot">{{ form.auto_offset_reset }}</span>
+                    </div>
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="{{ panel_id }}-line-limits">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-limits">Limits</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-limits"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-limits"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Messages</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle alerts-tab-always-on-line" id="{{ panel_id }}-line-should_deliver_tombstones">
+                        <label class="decision-line-label" for="{{ form.should_deliver_tombstones.id_for_label }}">Deliver tombstones</label>
+                        <span class="decision-line-slot">{{ form.should_deliver_tombstones }}</span>
+                    </div>
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="{{ panel_id }}-line-dedup">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-dedup">Deduplication</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-dedup"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-dedup"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="alerts-tab-hidden-fields" hidden>
+            {{ form.max_message_size }}
+            {{ form.max_message_size_unit }}
+            {{ form.max_in_flight }}
+            {{ form.dedup_header }}
+            {{ form.dedup_ttl }}
+            {{ form.dedup_ttl_unit }}
+        </div>
+
+    </div>
+</div>

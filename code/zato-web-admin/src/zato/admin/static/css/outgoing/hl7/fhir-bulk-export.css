@@ -1,0 +1,38 @@
+/* ------------------------------------------------------------ */
+/* FHIR bulk exports - page heading                             */
+/* ------------------------------------------------------------ */
+
+:root {
+    --fhir-bulk-export-select-height: 17px;
+    --fhir-bulk-export-select-padding: 0 4px;
+    --fhir-bulk-export-select-radius: 6px;
+    --fhir-bulk-export-select-font-size: 11px;
+    --fhir-bulk-export-prompt-margin-top: 16px;
+}
+
+/* The site-wide form stylesheet gives every select a height of 1.8em, so the height is
+   stated here instead - no taller than the badge, or the select would raise the heading. */
+#fhir-bulk-export-conn-select {
+    box-sizing: border-box;
+    height: var(--fhir-bulk-export-select-height);
+    padding: var(--fhir-bulk-export-select-padding);
+    border: 1px solid var(--zato-ui-border);
+    border-radius: var(--fhir-bulk-export-select-radius);
+    font-size: var(--fhir-bulk-export-select-font-size);
+}
+
+/* ------------------------------------------------------------ */
+/* FHIR bulk exports - page prompt                              */
+/* ------------------------------------------------------------ */
+
+div.page_prompt {
+    margin-top: var(--fhir-bulk-export-prompt-margin-top);
+}
+
+/* ------------------------------------------------------------ */
+/* FHIR bulk exports - job status                               */
+/* ------------------------------------------------------------ */
+
+.fhir-bulk-export-status-failed {
+    color: var(--zato-ui-error);
+}

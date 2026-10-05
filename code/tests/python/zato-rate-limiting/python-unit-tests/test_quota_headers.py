@@ -64,7 +64,7 @@ def _make_request_ctx() -> 'stranydict':
         'wsgi.url_scheme': 'http',
         'zato.http.response.headers': {},
         'zato.http.response.status': '200 OK',
-        'zato.sec_def': {'type': 'apikey', 'id': 20},
+        'zato.sec_def': {'type': 'apikey', 'id': 20, 'name': 'test.apikey'},
     }
 
     return environ

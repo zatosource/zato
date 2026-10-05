@@ -149,6 +149,10 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, itemId);
         $.fn.zato.gateway.mcp.skills_badge_picker.load(ownConfig.pickerAction, itemId);
 
+        // .. the OAuth scopes as chips and the toggle they are only editable under ..
+        $.fn.zato.gateway.mcp._init_scope_list(action);
+        wizard._initOAuthToggle();
+
         // .. a live uniqueness indicator for the URL path - the name
         // has its own check through the kit config above ..
         $.fn.zato.validate_unique(wizard.fieldSelector('url_path'), 'http_soap', 'url_path');
@@ -205,6 +209,26 @@ wizard._rememberOwnValue = function(fieldName) {
 
     var field = wizard.field(fieldName);
     field.data('zato-original-value', field.val());
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The scopes line follows the OAuth toggle - enabled while OAuth is on,
+// disabled and left as it was otherwise.
+wizard._initOAuthToggle = function() {
+
+    var toggle = wizard.field('oauth');
+    var scopes = wizard.field('oauth_scopes');
+
+    var syncScopes = function() {
+        var isOn = toggle.prop('checked');
+        scopes.prop('disabled', !isOn);
+        scopes.trigger('chip-list:updated');
+        $('#mcp-wizard-line-oauth-scopes').toggleClass('mcp-wizard-line-disabled', !isOn);
+    };
+
+    toggle.on('change', syncScopes);
+    syncScopes();
 };
 
 // ////////////////////////////////////////////////////////////////////////

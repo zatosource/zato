@@ -163,9 +163,35 @@ async fn main() -> std::io::Result<()> {
         )
     })?;
 
+    let mut reply_conn = redis_client.get_connection().map_err(|err| {
+        std::io::Error::new(
+            std::io::ErrorKind::ConnectionRefused,
+            format!("Failed to connect to Redis (reply): {err}"),
+        )
+    })?;
+
     redis_streams::ensure_consumer_group(&mut command_conn);
 
-    let shared = Arc::new(bridge::BridgeShared::new());
+    // The runtime is built here rather than in the bridge loop so its handle is
+    // available to the command listener from the first command on.
+    let runtime = bridge::build_runtime()?;
+
+    let (reply_sender, reply_receiver) = std::sync::mpsc::channel();
+    let shared = Arc::new(bridge::BridgeShared::new(reply_sender, runtime.handle().clone()));
+
+    // Replies from sends and pings spawned on the runtime are published here, so the
+    // command thread's own connection is never shared across threads. The thread lives
+    // as long as the shared state holds its sender, which is until the process exits,
+    // so it is never joined.
+    let _reply_pub_thread = std::thread::Builder::new()
+        .name("zato-reply-pub".into())
+        .spawn(move || {
+            for event in reply_receiver {
+                redis_streams::publish_reply_event(&mut reply_conn, &event);
+            }
+            tracing::info!("Reply publisher thread exiting");
+        })
+        .map_err(|err| std::io::Error::other(format!("Failed to spawn reply publisher: {err}")))?;
 
     tracing::info!("Waiting for initial config reload from server");
     wait_for_initial_reload(&mut command_conn, &shared);
@@ -176,7 +202,7 @@ async fn main() -> std::io::Result<()> {
     let bridge_thread = std::thread::Builder::new()
         .name("zato-bridge-loop".into())
         .spawn(move || {
-            bridge::bridge_loop(&shared_for_loop, &recv_sender);
+            bridge::bridge_loop(&runtime, &shared_for_loop, &recv_sender);
         })
         .map_err(|err| std::io::Error::other(format!("Failed to spawn bridge loop thread: {err}")))?;
 

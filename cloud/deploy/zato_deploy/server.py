@@ -36,6 +36,8 @@ _Static_Files = {
     '/zato-deploy/fonts/Jost-Medium.ttf':           ('fonts/Jost-Medium.ttf',           'font/ttf'),
     '/zato-deploy/vendor/tippy/popperjs.core.js':   ('vendor/tippy/popperjs.core.js',   'text/javascript'),
     '/zato-deploy/vendor/tippy/tippy.js':           ('vendor/tippy/tippy.js',           'text/javascript'),
+    '/zato-deploy/shared/progress-log.css':         ('shared/progress-log.css',         'text/css'),
+    '/zato-deploy/shared/progress-log.js':          ('shared/progress-log.js',          'text/javascript'),
 }
 
 # ################################################################################################################################

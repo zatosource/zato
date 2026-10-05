@@ -111,6 +111,7 @@ class Create(ZatoCommand):
             session.add(openapi_handler_service)
 
             ping_service = self.add_ping_service(session, cluster)
+            self.add_mcp_oauth_metadata_channel(session, cluster)
 
             # Create Django security definition
             django_password = os.environ.get('Zato_Django_Password') or self.generate_password()
@@ -198,6 +199,17 @@ class Create(ZatoCommand):
         session.add(ping_no_sec_channel)
 
         return ping_service
+
+# ################################################################################################################################
+
+    def add_mcp_oauth_metadata_channel(self, session, cluster):
+        """ Adds the channel serving the OAuth protected resource metadata of MCP gateways.
+        """
+
+        # Zato
+        from zato.common.util.gateway import ensure_mcp_oauth_metadata_channel_exists
+
+        _ = ensure_mcp_oauth_metadata_channel_exists(session, cluster.id)
 
 # ################################################################################################################################
 

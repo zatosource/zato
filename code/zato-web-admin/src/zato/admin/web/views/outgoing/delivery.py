@@ -260,7 +260,7 @@ def _error_response(message:'str') -> 'HttpResponse':
 
 @method_allowed('GET')
 def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
-    """ The queue and the DLQ of an outgoing connection.
+    """ The queue and the DLQ of an outgoing connection, or the DLQ of a channel.
     """
     active_tab = req.GET['tab']
     query = req.GET.get('query', '')
@@ -281,12 +281,19 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
 
     data = tabs[active_tab]['data']
 
+    # A channel has only the DLQ to show.
+    has_queue = data['has_queue']
+
+    if not has_queue:
+        active_tab = Kind_DLQ
+
     out = TemplateResponse(req, _template, {
         'cluster_id': default_cluster_id,
         'active_tab': active_tab,
         'conn_type': conn_type,
         'conn_id': conn_id,
         'conn_name': data['conn_name'],
+        'has_queue': has_queue,
         'is_queue_browsable': data['is_queue_browsable'],
         'has_invoker': data['invoker'] is not None,
         'queue_tab': tabs[Kind_Queue],

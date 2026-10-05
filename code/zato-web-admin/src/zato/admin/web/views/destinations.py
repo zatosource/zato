@@ -40,6 +40,8 @@ logger = getLogger(__name__)
 _generic_type = {
     DestinationType.MLLP: GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
     DestinationType.FHIR: GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR,
+    DestinationType.KAFKA: GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA,
+    DestinationType.SFTP: GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
 }
 
 # What lists the e-mail connections a destination may deliver through
@@ -47,6 +49,9 @@ _smtp_service = 'zato.email.smtp.get-list'
 
 # What lists the REST connections a destination may deliver through
 _rest_service = 'zato.http-soap.get-list'
+
+# What lists the services a destination may deliver to
+_service_service = 'zato.service.get-list'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,6 +127,20 @@ def _get_smtp_names(req:'any_') -> 'strlist':
 
 # ################################################################################################################################
 
+def _get_service_names(req:'any_') -> 'strlist':
+    """ Returns the user-defined services, which is what a service destination delivers to.
+    """
+    request = {
+        'cluster_id': req.zato.cluster_id,
+        'paginate': False,
+        'cur_page': 1,
+    }
+
+    out = _get_names(req, _service_service, request)
+    return out
+
+# ################################################################################################################################
+
 def _as_rows(names:'strlist') -> 'anylist':
     """ Turns connection names into what the destinations tab reads them as - one object per
     connection, named by the only thing a destination stores about it.
@@ -142,6 +161,9 @@ def get_connection_list(req:'any_') -> 'HttpResponse':
         DestinationType.MLLP: _as_rows(_get_generic_names(req, DestinationType.MLLP)),
         DestinationType.FHIR: _as_rows(_get_generic_names(req, DestinationType.FHIR)),
         DestinationType.SMTP: _as_rows(_get_smtp_names(req)),
+        DestinationType.KAFKA: _as_rows(_get_generic_names(req, DestinationType.KAFKA)),
+        DestinationType.SFTP: _as_rows(_get_generic_names(req, DestinationType.SFTP)),
+        DestinationType.SERVICE: _as_rows(_get_service_names(req)),
     }
 
     data = dumps(connection_list)

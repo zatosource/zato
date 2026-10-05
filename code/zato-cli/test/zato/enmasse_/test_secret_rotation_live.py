@@ -44,6 +44,7 @@ from zato.common.typing_ import cast_  # noqa: E402
 from zato.common.util.open_ import open_w  # noqa: E402
 from zato.common.util.tcp import get_free_port  # noqa: E402
 from zato.server.service.internal import Listing_Secret_Keys  # noqa: E402
+from zato.server.service.internal.generic.connection import never_returned_keys  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -241,7 +242,7 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def _assert_listing_hides(self, service_names:'tuple', request:'anydict', *secrets:'str') -> 'None':
+    def _assert_listing_hides(self, service_names:'tuple', request:'anydict', secret_keys:'tuple', *secrets:'str') -> 'None':
         """ Asserts that none of the listing services returns any of the secrets, nor any key a secret is kept under -
         a listing carries no password in any form, encrypted or not.
         """
@@ -256,7 +257,7 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
                 self.assertNotIn(secret, text, f'{service_name} returned a secret')
 
             for item in items:
-                for key in Listing_Secret_Keys:
+                for key in secret_keys:
                     self.assertNotIn(key, item, f'{service_name} returned key `{key}`')
 
 # ################################################################################################################################
@@ -281,13 +282,16 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
 
     def _assert_security_listing_hides(self, *secrets:'str') -> 'None':
         request = {'cluster_id': self.client.cluster_id}
-        self._assert_listing_hides(ModuleCtx.Security_List_Services, request, *secrets)
+        self._assert_listing_hides(ModuleCtx.Security_List_Services, request, Listing_Secret_Keys, *secrets)
 
 # ################################################################################################################################
 
     def _assert_connection_listing_hides(self, type_:'str', *secrets:'str') -> 'None':
+        """ A generic connection's private_key is the path of a key file, which the edit form needs,
+        so its listing is held to the keys the generic listing itself never returns.
+        """
         request = {'cluster_id': self.client.cluster_id, 'type_': type_}
-        self._assert_listing_hides(('zato.generic.connection.get-list',), request, *secrets)
+        self._assert_listing_hides(('zato.generic.connection.get-list',), request, never_returned_keys, *secrets)
 
 # ################################################################################################################################
 # ################################################################################################################################

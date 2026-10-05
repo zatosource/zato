@@ -8,6 +8,8 @@ zato_deploy/env_repo.py
 zato_deploy/environment.py
 zato_deploy/firewall.py
 zato_deploy/git.py
+zato_deploy/github_app.py code/zato-common/src/zato/common/github_app.py
+zato_deploy/repo_text.py code/zato-common/src/zato/common/repo_text.py
 zato_deploy/host.py
 zato_deploy/main.py
 zato_deploy/process.py
@@ -21,6 +23,8 @@ static/fonts/Jost-Regular.ttf
 static/fonts/Jost-Medium.ttf
 static/vendor/tippy/popperjs.core.js
 static/vendor/tippy/tippy.js
+static/shared/progress-log.css code/zato-common/src/zato/common/webapp/ui/static/webapp/css/progress-log.css
+static/shared/progress-log.js code/zato-common/src/zato/common/webapp/ui/static/webapp/js/progress-log.js
 units/zato-deploy.service
 units/zato-env-repo.path
 units/zato-env-repo.service

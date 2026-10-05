@@ -394,16 +394,6 @@ fn build_mqmd_headers(descriptor: &structs::MQMD, headers: &mut Vec<(String, Str
     headers.push(("mqmd.put_date_time".to_string(), put_date_time));
 }
 
-/// Serializes header pairs into the JSON object string carried in recv events.
-fn headers_to_json(headers: &[(String, String)]) -> String {
-    let mut map = serde_json::Map::with_capacity(headers.len());
-    for (key, value) in headers {
-        let _ = map.insert(key.clone(), serde_json::Value::String(value.clone()));
-    }
-
-    serde_json::Value::Object(map).to_string()
-}
-
 // ################################################################################################################################
 
 /// Builds a recv event from one consumed message, parsing MQRFH2 headers when present.
@@ -434,11 +424,12 @@ fn build_recv_event(config: &ChannelConfig, data: Vec<u8>, descriptor: &structs:
     }
 
     RecvEvent {
+        channel_id: config.id(),
         channel_name: config.name.clone(),
         topic: config.queue.clone(),
         service: config.service.clone(),
         payload,
-        headers: headers_to_json(&headers),
+        headers: crate::wire::headers_to_json(&headers),
         reply_to_queue: mq_field_to_string(&descriptor.ReplyToQ),
         reply_to_queue_manager: mq_field_to_string(&descriptor.ReplyToQMgr),
         message_id: identifier_to_hex(&descriptor.MsgId),
@@ -569,7 +560,7 @@ const fn text_message_format() -> types::MessageFormat {
 
 /// Publishes a single message to the queue of an outgoing IBM MQ connection.
 ///
-/// Uses MQPUT1 through a one-shot connection, mirroring the Kafka one-shot producer.
+/// Uses MQPUT1 through a one-shot connection, so no connection is held between sends.
 pub fn publish_message(config: &OutgoingConfig, payload: &[u8]) -> Result<(), String> {
     let details = config.mq_details();
     let connection = connect(&details)?;

@@ -16,7 +16,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.destination.payload import new_overrides
 from zato.common.util.api import new_cid_server
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import FHIRFacade, MLLPFacade, RESTFacade
+from zato.server.connection.facade import FHIRFacade, KafkaFacade, MLLPFacade, RESTFacade, SFTPFacade
 from zato.server.destination.hook import build_transports, get_config, run_destinations
 
 # ################################################################################################################################
@@ -40,11 +40,14 @@ class ChannelConnections:
     mllp:  'MLLPFacade'
     fhir:  'FHIRFacade'
     email: 'EMailAPI | None'
+    out:   'ChannelOutgoing'
+    sftp:  'SFTPFacade'
 
 # ################################################################################################################################
 
     def init(self, server:'ParallelServer', cid:'str') -> 'None':
 
+        self.server = server
         config_manager = server.config_manager
 
         self.rest = RESTFacade()
@@ -56,12 +59,35 @@ class ChannelConnections:
         self.fhir = FHIRFacade()
         self.fhir.init(cid, config_manager)
 
+        self.out = ChannelOutgoing()
+        self.out.kafka = KafkaFacade()
+        self.out.kafka.init(config_manager, cid)
+
+        self.sftp = SFTPFacade()
+        self.sftp.init(cid, config_manager)
+
         # E-mail is a component a server may run without, and a destination that needs one
         # is told so rather than the whole fan-out failing to be built
         if server.fs_server_config.component_enabled.email:
             self.email = EMailAPI(config_manager.email_smtp_api, config_manager.email_imap_api)
         else:
             self.email = None
+
+# ################################################################################################################################
+
+    def invoke(self, name:'str', payload:'any_', **kwargs:'any_') -> 'any_':
+        """ Invokes a service the way a service invokes another one - a destination of the service type goes through this.
+        """
+        out = self.server.invoke(name, payload, **kwargs)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ChannelOutgoing:
+    """ The part of a service's out namespace a channel's fan-out reaches.
+    """
+    kafka: 'KafkaFacade'
 
 # ################################################################################################################################
 # ################################################################################################################################

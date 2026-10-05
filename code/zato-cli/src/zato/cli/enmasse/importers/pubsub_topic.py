@@ -94,6 +94,9 @@ class PubSubTopicImporter:
         # The audit log is on unless the YAML definition turns it off
         definition['is_audit_log_active'] = definition.get('is_audit_log_active', True)
 
+        # Payloads leave with the audit export only if the YAML definition says so
+        definition['is_audit_export_payload_active'] = definition.get('is_audit_export_payload_active', False)
+
         set_instance_opaque_attrs(instance, definition)
         session.add(instance)
         session.commit()
@@ -114,6 +117,9 @@ class PubSubTopicImporter:
 
         # The audit log is on unless the YAML definition turns it off
         definition['is_audit_log_active'] = definition.get('is_audit_log_active', True)
+
+        # Payloads leave with the audit export only if the YAML definition says so
+        definition['is_audit_export_payload_active'] = definition.get('is_audit_export_payload_active', False)
 
         set_instance_opaque_attrs(instance, definition)
         session.commit()
@@ -157,6 +163,18 @@ class PubSubTopicImporter:
 
         if yaml_is_audit_log_active != db_is_audit_log_active:
             logger.info('is_audit_log_active differs: YAML=%s, DB=%s', yaml_is_audit_log_active, db_is_audit_log_active)
+            return True
+
+        # Compare the payload export flag the same way - an absent flag means it is off
+        yaml_is_payload_active = yaml_def.get('is_audit_export_payload_active', False)
+
+        db_is_payload_active = False
+        if opaque1 := db_def.get('opaque1'):
+            opaque = loads(opaque1)
+            db_is_payload_active = opaque.get('is_audit_export_payload_active', False)
+
+        if yaml_is_payload_active != db_is_payload_active:
+            logger.info('is_audit_export_payload_active differs: YAML=%s, DB=%s', yaml_is_payload_active, db_is_payload_active)
             return True
 
         return False

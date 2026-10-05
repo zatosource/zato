@@ -541,6 +541,9 @@ class ConfigManager(_ConfigManagerBase):
 
             # Whether this connection's exchanges go to the audit log - it arrives as an opaque attribute
             'is_audit_log_active':config.get('is_audit_log_active'),
+
+            # Whether its payloads leave with the audit export - an opaque attribute too, off unless set
+            'is_audit_export_payload_active':config.get('is_audit_export_payload_active'),
         }
 
         # The AS4 fields arrive as opaque attributes, which hold only what the connection was saved
@@ -650,6 +653,9 @@ class ConfigManager(_ConfigManagerBase):
 
             # Whether this connection's traffic goes to the audit log - it arrives as an opaque attribute
             'is_audit_log_active':config.get('is_audit_log_active'),
+
+            # Whether its payloads leave with the audit export - an opaque attribute too, off unless set
+            'is_audit_export_payload_active':config.get('is_audit_export_payload_active'),
 
             # SOAP-specific and mutual-TLS details - they arrive as opaque attributes
             # and are absent from connections created before these fields existed.
@@ -1126,6 +1132,14 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _get_channel_listener_config(self, msg:'any_') -> 'any_':
+        """ The configuration a channel's listener runs with - the normalized one the config manager holds.
+        """
+        out = self.generic_conn_api[msg['type_']][msg['name']]
+        return out
+
+# ################################################################################################################################
+
     def _notify_queue_bridge_channel(self, action:'str', msg:'any_') -> 'None':
         bridge = getattr(self.server, '_queue_bridge', None)
         if not bridge:
@@ -1135,12 +1149,17 @@ class ConfigManager(_ConfigManagerBase):
             self.logger.info('Queue bridge channel %s: %s', action, name)
             config = dict(msg)
             self.server._enrich_queue_bridge_config(config)
+
+            # The listener starts before and stops after the bridge is told.
             if action == 'create':
+                self.server.on_queue_bridge_channel_created(self._get_channel_listener_config(msg))
                 bridge.add_channel(config)
             elif action == 'edit':
+                self.server.on_queue_bridge_channel_edited(self._get_channel_listener_config(msg))
                 bridge.edit_channel(config)
             elif action == 'delete':
                 bridge.delete_channel(name)
+                self.server.on_queue_bridge_channel_deleted(msg['id'])
         except Exception:
             self.logger.warning('Could not notify queue bridge about channel %s=%s: %s', action, msg.get('name', ''), format_exc())
 
@@ -1492,6 +1511,10 @@ class ConfigManager(_ConfigManagerBase):
                 # A topic whose audit log was turned off explicitly writes no audit events
                 if opaque.get('is_audit_log_active') is False:
                     self.server.pubsub_backend.set_topic_audit_flag(row.name, False)
+
+                # A topic's message payloads leave with the audit export only if the topic says so
+                if opaque.get('is_audit_export_payload_active') is True:
+                    self.server.pubsub_backend.set_topic_payload_flag(row.name, True)
 
                 # Topics without opaque attributes predate backend types and are built-in,
                 # and built-in topics never have registry entries.
@@ -2132,7 +2155,10 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_OAUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing OAuth security definition.
         """
-        # Update channels and outgoing connections ..
+        # Tokens obtained with the previous configuration must not be reused ..
+        self.server.bearer_token_manager.invalidate(msg.old_name)
+
+        # .. update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
 
@@ -2149,7 +2175,10 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_OAUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an OAuth security definition.
         """
-        # Update channels and outgoing connections ..
+        # A definition created later under the same name must not find this one's tokens ..
+        self.server.bearer_token_manager.invalidate(msg.name)
+
+        # .. update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_delete)
 
@@ -2160,7 +2189,10 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an OAuth security definition.
         """
-        # Update channels and outgoing connections ..
+        # Tokens obtained with the previous secret must not be reused ..
+        self.server.bearer_token_manager.invalidate(msg.name)
+
+        # .. update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_change_password)
 
@@ -3020,6 +3052,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # Every new topic announces its audit log state ..
         self.server.pubsub_backend.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
+        self.server.pubsub_backend.set_topic_payload_flag(msg.topic_name, msg.get('is_audit_export_payload_active', False))
 
         # .. and AMQP-backed topics additionally get a registry entry
         # .. along with the channel override if one is needed.
@@ -3050,6 +3083,7 @@ class ConfigManager(_ConfigManagerBase):
         # which also covers renames since the old name is forgotten first.
         self.server.pubsub_backend.delete_topic_audit_flag(old_name)
         self.server.pubsub_backend.set_topic_audit_flag(new_name, msg.is_audit_log_active)
+        self.server.pubsub_backend.set_topic_payload_flag(new_name, msg.get('is_audit_export_payload_active', False))
 
         # Handle name change ..
         if old_name != new_name:

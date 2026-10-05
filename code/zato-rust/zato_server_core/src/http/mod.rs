@@ -26,6 +26,7 @@ mod server;
 mod socket;
 
 pub use headers::extract_headers;
+pub use request::fractional_micros;
 pub use request::handle_http_request;
 pub use request::make_cid_public;
 pub use server::HTTPServer;

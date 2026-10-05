@@ -102,6 +102,9 @@ class BaseHTTPSOAPWrapper(AuthMixin):
         else:
             self.needs_audit = False
 
+        # The payloads leave with the audit export only if the connection says so
+        self.is_export_payload_active = bool(self.config.get('is_audit_export_payload_active'))
+
         self.set_address_data()
         self.set_auth()
 

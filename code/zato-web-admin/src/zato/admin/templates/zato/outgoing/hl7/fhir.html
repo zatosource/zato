@@ -22,6 +22,10 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/badge.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/datetime-picker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/fhir-bulk-export-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/fhir-bulk-export-destinations.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -30,7 +34,6 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 
@@ -42,6 +45,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/datetime-picker-format.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/datetime-picker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
@@ -59,6 +64,12 @@
     {{ delivery_tab_config|json_script:"delivery-tab-config" }}
 
     {% comment %} FHIR {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir-bulk-export-tab.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir-bulk-export-destinations.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir-bulk-export-destinations-zones.js"></script>
+    {{ bulk_export_field_names|json_script:"fhir-bulk-export-field-names" }}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -73,6 +84,7 @@
             '_audit_log',
             '_usage',
             '_delivery',
+            '_bulk_exports',
             '_edit',
             '_delete',
             '_ping',
@@ -88,7 +100,12 @@
             'health_check_run_unit',
             'health_check_job_id',
 
-            {% comment %} 8 - the Delivery tab, then the Alerts tab {% endcomment %}
+            {% comment %} 8 - the Bulk export tab {% endcomment %}
+            {% for field_name in bulk_export_field_names %}
+            '{{ field_name }}',
+            {% endfor %}
+
+            {% comment %} 9 - the Delivery tab, then the Alerts tab {% endcomment %}
         ].concat($.fn.zato.delivery_tab.columns()).concat($.fn.zato.alerts_tab.columns());
     }
     </script>
@@ -131,6 +148,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th> {% comment %} _delivery {% endcomment %}
+                        <th>&nbsp;</th> {% comment %} _bulk_exports {% endcomment %}
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -156,10 +174,15 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        {% comment %} 8 - the Delivery tab {% endcomment %}
+                        {% comment %} 8 - the Bulk export tab {% endcomment %}
+                        {% for field_name in bulk_export_field_names %}
+                        <th class='ignore'>&nbsp;</th>
+                        {% endfor %}
+
+                        {% comment %} 9 - the Delivery tab {% endcomment %}
                         {% include "zato/include/delivery-tab-headers.html" %}
 
-                        {% comment %} 9 - the Alerts tab {% endcomment %}
+                        {% comment %} 10 - the Alerts tab {% endcomment %}
                         {% for field_name in alerts_tab_config.storage_field_names %}
                         <th class='ignore'>&nbsp;</th>
                         {% endfor %}
@@ -191,6 +214,7 @@
                         <td><a href="/zato/audit-log/?source=fhir&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% if not item.is_audit_log_active %} <span class="form_hint">(off)</span>{% endif %}</td>
                         <td><a href="/zato/channel-usage/?sources=fhir&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a></td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="fhir" %}
+                        <td><a href="/zato/outgoing/hl7/fhir/bulk-export/{{ item.id }}/cluster/{{ cluster_id }}/">Bulk exports</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
@@ -211,10 +235,15 @@
                         <td class='ignore'>{{ item.health_check_run_unit|default:'' }}</td>
                         <td class='ignore'>{{ item.health_check_job_id|default:'' }}</td>
 
-                        {% comment %} 8 - the Delivery tab {% endcomment %}
+                        {% comment %} 8 - the Bulk export tab {% endcomment %}
+                        {% for field_name in bulk_export_field_names %}
+                        <td class='ignore'>{{ item|get_item:field_name }}</td>
+                        {% endfor %}
+
+                        {% comment %} 9 - the Delivery tab {% endcomment %}
                         {% include "zato/include/delivery-tab-cells.html" %}
 
-                        {% comment %} 9 - the Alerts tab {% endcomment %}
+                        {% comment %} 10 - the Alerts tab {% endcomment %}
                         {% for field_name in alerts_tab_config.storage_field_names %}
                         <td class='ignore'>{{ item|get_item:field_name }}</td>
                         {% endfor %}
@@ -223,7 +252,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='17'>No results</td>
+                        <td colspan='18'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -239,6 +268,7 @@
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="bulk-export" role="tab" aria-selected="false">Bulk export</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         {% include "zato/include/delivery-tab-button.html" %}
                     </div>
@@ -246,37 +276,31 @@
                     <div class="dashboard-tab-panel" id="out-fhir-create-tab-panel-config" role="tabpanel">
                     <table class="form-data">
                         <tr>
-                            <td class="form-label-cell"><label for="id_name">Name</label></td>
+                            <td class="form-data-label"><label for="id_name">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td></td>
-                            <td>
-                                <label for="id_is_active">
-                                    Active
-                                    {{ create_form.is_active }}
-                                </label>
-                                |
-                                <label for="id_is_audit_log_active">
-                                    Audit log
-                                    {{ create_form.is_audit_log_active }}
-                                </label>
-                            </td>
+                            <td class="form-data-label"><label for="id_is_active">Active</label></td>
+                            <td>{{ create_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td class="form-label-cell"><label for="id_address">Address</label></td>
+                            <td class="form-data-label"><label for="id_is_audit_log_active">Audit log</label></td>
+                            <td>{{ create_form.is_audit_log_active }}</td>
+                        </tr>
+                        <tr>
+                            <td class="form-data-label"><label for="id_address">Address</label></td>
                             <td>{{ create_form.address }}</td>
                         </tr>
                         <tr>
-                            <td class="form-label-cell"><label for="id_pool_size">Pool size</label></td>
+                            <td class="form-data-label"><label for="id_pool_size">Pool size</label></td>
                             <td>{{ create_form.pool_size }}</td>
                         </tr>
                         <tr>
-                            <td class="form-label-cell"><label for="id_security_id">Security</label></td>
+                            <td class="form-data-label"><label for="id_security_id">Security</label></td>
                             <td>{{ create_form.security_id }}</td>
                         </tr>
                         <tr>
-                            <td class="form-label-cell form-label-cell-top"><label for="id_extra">Extra</label></td>
+                            <td class="form-data-label form-data-label-top"><label for="id_extra">Extra</label></td>
                             <td>{{ create_form.extra }}</td>
                         </tr>
                     </table>
@@ -284,6 +308,8 @@
 
                     {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
                     {{ create_form.health_check_job_id }}
+
+                    {% include "zato/outgoing/hl7/fhir-bulk-export-tab.html" with panel_id="out-fhir-create-tab-panel-bulk-export" form=create_form field_prefix="" %}
 
                     {% include "zato/include/alerts-tab.html" with panel_id="out-fhir-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
@@ -311,6 +337,7 @@
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="bulk-export" role="tab" aria-selected="false">Bulk export</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                         {% include "zato/include/delivery-tab-button.html" %}
                     </div>
@@ -318,37 +345,31 @@
                     <div class="dashboard-tab-panel" id="out-fhir-edit-tab-panel-config" role="tabpanel">
                     <table class="form-data">
                         <tr>
-                            <td class="form-label-cell"><label for="id_edit-name">Name</label></td>
+                            <td class="form-data-label"><label for="id_edit-name">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td></td>
-                            <td>
-                                <label for="id_edit-is_active">
-                                    Active
-                                    {{ edit_form.is_active }}
-                                </label>
-                                |
-                                <label for="id_edit-is_audit_log_active">
-                                    Audit log
-                                    {{ edit_form.is_audit_log_active }}
-                                </label>
-                            </td>
+                            <td class="form-data-label"><label for="id_edit-is_active">Active</label></td>
+                            <td>{{ edit_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td class="form-label-cell"><label for="id_edit-address">Address</label></td>
+                            <td class="form-data-label"><label for="id_edit-is_audit_log_active">Audit log</label></td>
+                            <td>{{ edit_form.is_audit_log_active }}</td>
+                        </tr>
+                        <tr>
+                            <td class="form-data-label"><label for="id_edit-address">Address</label></td>
                             <td>{{ edit_form.address }}</td>
                         </tr>
                         <tr>
-                            <td class="form-label-cell"><label for="id_edit-pool_size">Pool size</label></td>
+                            <td class="form-data-label"><label for="id_edit-pool_size">Pool size</label></td>
                             <td>{{ edit_form.pool_size }}</td>
                         </tr>
                         <tr>
-                            <td class="form-label-cell"><label for="id_edit-security_id">Security</label></td>
+                            <td class="form-data-label"><label for="id_edit-security_id">Security</label></td>
                             <td>{{ edit_form.security_id }}</td>
                         </tr>
                         <tr>
-                            <td class="form-label-cell form-label-cell-top"><label for="id_edit-extra">Extra</label></td>
+                            <td class="form-data-label form-data-label-top"><label for="id_edit-extra">Extra</label></td>
                             <td>{{ edit_form.extra }}</td>
                         </tr>
                     </table>
@@ -356,6 +377,8 @@
 
                     {% comment %} The health check is a line of the Alerts tab, its job id rides along hidden {% endcomment %}
                     {{ edit_form.health_check_job_id }}
+
+                    {% include "zato/outgoing/hl7/fhir-bulk-export-tab.html" with panel_id="out-fhir-edit-tab-panel-bulk-export" form=edit_form field_prefix="edit-" %}
 
                     {% include "zato/include/alerts-tab.html" with panel_id="out-fhir-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 
@@ -377,6 +400,12 @@
                 </form>
             </div>
         </div>
+
+        <form>
+            <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
+            <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
+            <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
+        </form>
 
         {% endif %}
 

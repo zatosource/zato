@@ -36,6 +36,7 @@ from zato.common.api import DEPLOYMENT_STATUS, HTTP_SOAP, MS_SQL, NotGiven, SEC_
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.calls import record_remote_call
+from zato.common.audit_log.common import Export_Payload_Flag
 from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, record_sql_execution, Config_Audit_Log, \
      Level_Off as SQL_Audit_Off
 from zato.common.exception import Inactive
@@ -48,7 +49,7 @@ from zato.common.odb.ssl_config import get_ssl_connect_args
 from zato.common.oracledb import RowsOut
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
-from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, new_cid_server, \
+from zato.common.util.api import asbool, current_host, get_component_name, get_engine_url, new_cid, new_cid_server, \
      parse_extra_into_dict, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.time_ import utcnow
@@ -183,6 +184,7 @@ class SessionWrapper:
         self.audit_log = audit_log
         self.sql_audit_level = SQL_Audit_Off
         self.sql_audit_endpoint = ''
+        self.is_export_payload_active = False
 
     def init_session(self, *args, **kwargs):
         _ = spawn_greenlet(self._init_session, *args, **kwargs)
@@ -233,7 +235,8 @@ class SessionWrapper:
         if self.sql_audit_level != SQL_Audit_Off:
             _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, statement,
                 cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
-                params=params, duration_ms=duration_ms, error=format_exc())
+                params=params, duration_ms=duration_ms, error=format_exc(),
+                is_export_payload_active=self.is_export_payload_active)
 
         # .. while the completing event with the outcome and duration is always written -
         # it is what the alerting collectors measure.
@@ -256,7 +259,8 @@ class SessionWrapper:
         if self.sql_audit_level != SQL_Audit_Off:
             _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, statement,
                 cid=cid, endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
-                params=params, rows=rows, row_count=row_count, duration_ms=duration_ms)
+                params=params, rows=rows, row_count=row_count, duration_ms=duration_ms,
+                is_export_payload_active=self.is_export_payload_active)
 
         # .. while the completing event with the outcome and duration is always written -
         # it is what the alerting collectors measure.
@@ -585,6 +589,9 @@ class SQLConnectionPool:
             raise Exception(f'Unknown SQL audit level `{sql_audit_level}` in connection `{self.name}`, must be one of `{level_names}`')
 
         self.sql_audit_level = sql_audit_level
+
+        # The statements leave with the audit export only if the connection says so
+        self.is_export_payload_active = asbool(self.config.get(Export_Payload_Flag, False))
 
         # Snowflake turns engine URL query parameters into connect arguments,
         # so everything from the connection's extra goes onto the URL, not into create_engine.

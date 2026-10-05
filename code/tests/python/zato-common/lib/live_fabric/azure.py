@@ -98,6 +98,16 @@ def signed_in_user_id() -> 'str':
     return out
 
 # ################################################################################################################################
+
+def signed_in_user_name() -> 'str':
+    """ The user principal name of the signed-in user, which is what a capacity takes as its administrator.
+    """
+    user = _run_az('ad', 'signed-in-user', 'show')
+
+    out = user['userPrincipalName']
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def capacity_show() -> 'any_':
@@ -132,13 +142,33 @@ def capacity_state() -> 'str':
 
 # ################################################################################################################################
 
+def create_capacity() -> 'None':
+    """ Creates the capacity in the resource group's location, with the signed-in user as its administrator.
+    """
+    logger.info(f'Creating capacity {ModuleCtx.Capacity_Name} ({ModuleCtx.Capacity_SKU}) in {ModuleCtx.Resource_Group} ..')
+
+    sku_text = json.dumps({'name': ModuleCtx.Capacity_SKU, 'tier': 'Fabric'})
+    administration_text = json.dumps({'members': [signed_in_user_name()]})
+
+    _ = _run_az(
+        'fabric', 'capacity', 'create',
+        '--resource-group', ModuleCtx.Resource_Group,
+        '--capacity-name', ModuleCtx.Capacity_Name,
+        '--sku', sku_text,
+        '--administration', administration_text,
+        timeout=ModuleCtx.Az_Long_Timeout,
+    )
+
+# ################################################################################################################################
+
 def resume_capacity() -> 'None':
-    """ Makes sure the capacity is running - the call returns once it is.
+    """ Makes sure the capacity exists and is running - the call returns once it is.
     """
     state = capacity_state()
 
     if not state:
-        raise Exception(f'Capacity {ModuleCtx.Capacity_Name} does not exist in resource group {ModuleCtx.Resource_Group}')
+        create_capacity()
+        state = capacity_state()
 
     if state == _state_active:
         logger.info(f'Capacity {ModuleCtx.Capacity_Name} is active')

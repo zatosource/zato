@@ -41,6 +41,7 @@ _type_titles = {
     'channels':      'Channels',
     'mllp_channel':  'MLLP channels',
     'mllp_outgoing': 'MLLP outgoing',
+    'kafka_outgoing': 'Kafka outgoing',
     'common':        'Common',
 }
 
@@ -76,6 +77,7 @@ _type_cells = {
     'mllp_channel':  ['consecutive_failures', 'error_rate', 'window', 'ack_codes', 'max_latency', 'use_llm'],
     'mllp_outgoing': ['consecutive_failures', 'error_rate', 'window', 'ack_codes', 'connection_failures', 'max_latency',
         'dlq_messages', 'queue_depth', 'use_llm'],
+    'kafka_outgoing': ['dlq_messages', 'queue_depth', 'use_llm'],
     'common':        ['certificate_warning', 'outstanding_backlog', 'feed_silence', None, None],
 }
 

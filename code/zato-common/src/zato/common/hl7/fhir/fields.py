@@ -32,6 +32,30 @@ fhir_field_list = field_list
 _retry = HTTP_SOAP.Retry
 _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
+_bulk = HL7.BulkExport
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The Bulk export tab - what to export, when, and where the files go.
+Bulk_Export_Fields:'fhir_field_list' = [
+    FHIRField(_bulk.Field_Is_Active, False),
+    FHIRField(_bulk.Field_Level, _bulk.Level.Group),
+    FHIRField(_bulk.Field_Group_ID, ''),
+    FHIRField(_bulk.Field_Patient_IDs, ''),
+    FHIRField(_bulk.Field_Types, ''),
+    FHIRField(_bulk.Field_Since, ''),
+    FHIRField(_bulk.Field_Type_Filter, ''),
+    FHIRField(_bulk.Field_Run_Every, ''),
+    FHIRField(_bulk.Field_Run_Unit, HTTP_SOAP.Invocation.Unit.Minutes),
+    FHIRField(_bulk.Field_Start_Date, ''),
+    FHIRField(_bulk.Field_Job_ID, ''),
+    FHIRField(_bulk.Field_Destinations, ''),
+    FHIRField(_bulk.Field_Delete_Files, True),
+    FHIRField(_bulk.Field_Delete_On_Server, True),
+]
+
+Bulk_Export_Names = get_names(Bulk_Export_Fields)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,6 +70,7 @@ Outgoing_Fields:'fhir_field_list' = [
     FHIRField('security_id', 0),
 
     FHIRField('is_audit_log_active', True),
+    FHIRField('is_audit_export_payload_active', False),
 
     # How a send that did not go through is tried again - the same settings an outgoing REST connection has.
     FHIRField(_retry.Field_Max_Retries, _retry.Default_Max_Retries),
@@ -61,6 +86,9 @@ Outgoing_Fields:'fhir_field_list' = [
     FHIRField(_dlq.Field_Retry_Interval, _dlq.Default_Retry_Interval),
     FHIRField(_dlq.Field_Forward_To, _dlq.Default_Forward_To),
     FHIRField(_dlq.Field_Keep_Header, _dlq.Default_Keep_Header),
+
+    # What the connection exports in bulk, when and where to.
+    *Bulk_Export_Fields,
 ]
 
 # ################################################################################################################################
@@ -97,11 +125,15 @@ Outgoing_Security_Name_Key = 'security'
 
 def get_enmasse_outgoing_names() -> 'strtuple':
     """ The outgoing field names as enmasse presents them, which is every stored field except that
-    the security definition appears under the name YAML refers to it by.
+    the security definition appears under the name YAML refers to it by and the bulk export fields
+    travel together under one key of their own.
     """
     names:'strlist' = []
 
     for name in Outgoing_Names:
+
+        if name in Bulk_Export_Names:
+            continue
 
         if name == Outgoing_Security_Id_Key:
             names.append(Outgoing_Security_Name_Key)

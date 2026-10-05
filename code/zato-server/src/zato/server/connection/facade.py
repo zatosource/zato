@@ -52,7 +52,7 @@ if 0:
     from zato.common.hl7.mllp.ack import AckResult
     from zato.common.pubsub.outgoing import SendResult as QueueSendResult
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, anydict, callnone, strbytes, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, callnone, intnone, strbytes, strnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict
@@ -60,6 +60,7 @@ if 0:
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
     from zato.server.generic.api.outconn_as2 import as2_payload, OutconnAS2Wrapper
     from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
+    from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
     from zato.server.queue_bridge.client import QueueBridgeClient
     from zato.server.service import Service
     _HL7FHIRConnection = _HL7FHIRConnection
@@ -299,17 +300,21 @@ class RESTInvoker:
 
 # ################################################################################################################################
 
-    def call_rest_func(self, func_name:'str', conn_name:'str', *args:'any_', **kwargs:'str') -> 'any_':
+    def call_rest_func(self, func_name:'str', conn_name:'str', *args:'any_', cid:'str'='', **kwargs:'any_') -> 'any_':
 
         # .. the actual method to invoke ..
         func = getattr(self.conn, func_name)
+
+        # .. a correlation ID given explicitly wins, otherwise the calling service's one is used ..
+        if not cid:
+            cid = self.container.cid
 
         # .. if we have a function to call before the actual method should be invoked, do it now ..
         if self.container.before_call_func:
             self.container.before_call_func(func_name, conn_name, self.conn, *args, **kwargs)
 
         # .. do invoke the actual function ..
-        result = func(self.container.cid, *args, **kwargs)
+        result = func(cid, *args, **kwargs)
 
         # .. if we have a function to call after the actual method was invoked, do it now ..
         if self.container.after_call_func:
@@ -348,37 +353,37 @@ class RESTInvoker:
 
 # ################################################################################################################################
 
-    def invoke(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes the connection with no arguments needed at all - the HTTP method,
         query string, path params, headers and body come from the connection's
         declarative invocation profile.
         """
         return self.call_wrapper('rest_invoke', *args, **kwargs)
 
-    def get(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def get(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('get', *args, **kwargs)
 
-    def delete(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def delete(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('delete', *args, **kwargs)
 
-    def options(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def options(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('options', *args, **kwargs)
 
-    def post(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def post(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('post', *args, **kwargs)
 
     send = post
 
-    def put(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def put(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('put', *args, **kwargs)
 
-    def patch(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def patch(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('patch', *args, **kwargs)
 
-    def ping(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def ping(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('ping', *args, **kwargs)
 
-    def upload(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def upload(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('upload', *args, **kwargs)
 
 # ################################################################################################################################
@@ -718,12 +723,16 @@ class KeysightContainer:
 # ################################################################################################################################
 
 class KafkaInvoker:
+    """ What a service sends to one outgoing Kafka connection through.
+    """
     _conn_name: 'str'
-    _queue_bridge: 'QueueBridgeClient'
+    _wrapper: 'OutconnKafkaWrapper'
+    _cid: 'str'
 
-    def __init__(self, conn_name:'str', queue_bridge:'QueueBridgeClient') -> 'None':
+    def __init__(self, conn_name:'str', wrapper:'OutconnKafkaWrapper', cid:'str') -> 'None':
         self._conn_name = conn_name
-        self._queue_bridge = queue_bridge
+        self._wrapper = wrapper
+        self._cid = cid
 
     def __repr__(self) -> 'str':
         return f'KafkaInvoker({self._conn_name} at {hex(id(self))})'
@@ -733,62 +742,61 @@ class KafkaInvoker:
 
 # ################################################################################################################################
 
-    def send(self, data:'any_') -> 'None':
-        if isinstance(data, bytes):
-            to_send = data
-        elif isinstance(data, str):
-            to_send = data.encode('utf-8')
-        else:
-            to_send = json.dumps(data).encode('utf-8')
+    def send(
+        self,
+        data:'any_',
+        *,
+        key:'strnone'=None,
+        headers:'anydictnone'=None,
+        partition:'intnone'=None,
+        ) -> 'any_':
+        """ Sends one message with an optional key, headers and partition. Returns where the message landed or,
+        with the connection's queue switch on, a SendResult.
+        """
+        out = self._wrapper.send(data, key=key, headers=headers, partition=partition, cid=self._cid)
+        return out
 
-        reply = self._queue_bridge.send_message(self._conn_name, to_send) # type: anydict
+# ################################################################################################################################
 
-        status = reply['status']
-        if status == 'ok':
-            return
+    def delete(self, key:'str', *, headers:'anydictnone'=None) -> 'any_':
+        """ Sends a tombstone for one key.
+        """
+        out = self._wrapper.send('', key=key, headers=headers, cid=self._cid, is_tombstone=True)
+        return out
 
-        if status == 'error':
-            raise Exception('Kafka send to `{}` failed: {}'.format(self._conn_name, reply['data']))
+# ################################################################################################################################
 
-        raise Exception('Kafka send to `{}` timed out'.format(self._conn_name))
+    def publish(self, data:'any_', **kwargs:'any_') -> 'any_':
+        """ Queues one message for delivery through the connection, returning as soon as it is stored.
+        """
+        out = self._wrapper.publish(data, **kwargs)
+        return out
 
 # ################################################################################################################################
 
     def ping(self) -> 'None':
-        """ Fetches broker metadata through the connection.
+        """ Fetches the metadata of the connection's Kafka instances through the bridge.
         """
-        reply:'anydict' = self._queue_bridge.ping(self._conn_name)
-        status = reply['status']
-
-        # The ping went through ..
-        if status == 'ok':
-            return
-
-        # .. the bridge reported an error ..
-        elif status == 'error':
-            error = reply['data']
-            raise Exception(f'Kafka ping of `{self._conn_name}` failed: {error}')
-
-        # .. the bridge did not answer in time.
-        else:
-            raise Exception(f'Kafka ping of `{self._conn_name}` timed out')
+        self._wrapper.ping()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class KafkaFacade:
     _outconn_kafka: 'anydict'
-    _queue_bridge: 'QueueBridgeClient'
+    _cid: 'str'
 
-    def init(self, config_manager:'ConfigManager') -> 'None':
+    def init(self, config_manager:'ConfigManager', cid:'str'='') -> 'None':
         self._outconn_kafka = config_manager.outconn_kafka
-        self._queue_bridge = config_manager.server._queue_bridge
+        self._cid = cid
 
 # ################################################################################################################################
 
     def __getitem__(self, name:'str') -> 'KafkaInvoker':
-        self._outconn_kafka[name]
-        return KafkaInvoker(name, self._queue_bridge)
+        item = self._outconn_kafka[name]
+
+        out = KafkaInvoker(name, item.conn, self._cid)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

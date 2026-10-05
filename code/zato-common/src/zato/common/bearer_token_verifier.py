@@ -20,14 +20,14 @@ from requests import get as requests_get
 
 # Zato
 from zato.common.crypto.api import is_string_equal
-from zato.common.model.security import BearerTokenVerifyConfig
+from zato.common.model.security import BearerRefusalReason, BearerTokenVerifyConfig, BearerTokenVerifyResult
 from zato.common.util.api import parse_extra_into_dict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydictnone, stranydict
+    from zato.common.typing_ import any_, anydictnone, stranydict, strlist
     from zato.server.connection.cache import CacheAPI
 
 # ################################################################################################################################
@@ -67,6 +67,9 @@ _jwks_fetch_key_prefix = 'zato.sec.bearer-token.jwks-fetch.'
 
 # What jwt_decode must always validate
 _decode_options:'any_' = {'require': ['exp', 'iss', 'aud']}
+
+# How jwt_decode reads a token it is not asked to trust
+_unverified_options:'any_' = {'verify_signature': False}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,8 +164,38 @@ def build_verify_config(sec_def:'stranydict') -> 'BearerTokenVerifyConfig':
     # .. the audience is required for a definition to match inbound JWTs at all ..
     out.audience = sec_def.get('audience') or ''
 
-    # .. and claims are optional name and required-value pairs.
+    # .. claims are optional name and required-value pairs ..
     out.claims = parse_claims(sec_def.get('claims'))
+
+    # .. and the identity claim names the caller within the definition.
+    out.identity_claim = sec_def.get('identity_claim') or ''
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def read_unverified_claims(token:'str') -> 'stranydict':
+    """ Returns the claims of a JWT without checking its signature, or an empty dict
+    if the token cannot be parsed at all. Nothing in the result is to be trusted.
+    """
+    try:
+        out = jwt_decode(token, options=_unverified_options)
+    except InvalidTokenError:
+        out = {}
+
+    return out
+
+# ################################################################################################################################
+
+def _refused(reason:'str', claims:'stranydict', claim:'str'='') -> 'BearerTokenVerifyResult':
+    """ Builds a refusal result carrying the given reason and whatever claims could be read.
+    """
+    out = BearerTokenVerifyResult()
+    out.is_ok = False
+    out.reason = reason
+    out.claim = claim
+    out.claims = claims
 
     return out
 
@@ -183,6 +216,26 @@ class BearerTokenVerifier:
         """ Verifies a token against one definition. Returns the token's claims on success -
         an empty dict for static tokens - or None if the token does not match.
         """
+        result = self.verify_result(cid, channel_name, token, config)
+
+        if result.is_ok:
+            out = result.claims
+        else:
+            out = None
+
+        return out
+
+# ################################################################################################################################
+
+    def verify_result(
+        self,
+        cid:'str',
+        channel_name:'str',
+        token:'str',
+        config:'BearerTokenVerifyConfig',
+        ) -> 'BearerTokenVerifyResult':
+        """ Verifies a token against one definition and says why it was refused if it was.
+        """
         # Static definitions carry the exact expected token ..
         if config.static_token:
             out = self._verify_static(cid, channel_name, token, config)
@@ -197,23 +250,39 @@ class BearerTokenVerifier:
         else:
             logger.info('Bearer token definition `%s` is not configured for inbound use; channel=%s; cid=%s',
                 config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.No_Definition_Matched, {})
+            return out
 
 # ################################################################################################################################
 
-    def _verify_static(self, cid:'str', channel_name:'str', token:'str', config:'BearerTokenVerifyConfig') -> 'anydictnone':
+    def _verify_static(
+        self,
+        cid:'str',
+        channel_name:'str',
+        token:'str',
+        config:'BearerTokenVerifyConfig',
+        ) -> 'BearerTokenVerifyResult':
         """ Compares the token against the configured static one in constant time.
         """
         if is_string_equal(token, config.static_token):
-            return {}
+            out = BearerTokenVerifyResult()
+            out.is_ok = True
         else:
             logger.info('Invalid static bearer token; sec_def=%s; channel=%s; cid=%s',
                 config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.No_Definition_Matched, {})
+
+        return out
 
 # ################################################################################################################################
 
-    def _verify_jwt(self, cid:'str', channel_name:'str', token:'str', config:'BearerTokenVerifyConfig') -> 'anydictnone':
+    def _verify_jwt(
+        self,
+        cid:'str',
+        channel_name:'str',
+        token:'str',
+        config:'BearerTokenVerifyConfig',
+        ) -> 'BearerTokenVerifyResult':
         """ Verifies a JWT locally - signature via JWKS, expiry, issuer and audience, then the configured claims.
         """
         # The header can be read without verification - it names the key and the algorithm ..
@@ -222,7 +291,12 @@ class BearerTokenVerifier:
         except InvalidTokenError as e:
             logger.info('Bearer token is not a valid JWT (%s); sec_def=%s; channel=%s; cid=%s',
                 e, config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Malformed, {})
+            return out
+
+        # .. anything refused from here on can still say who the token was for, which is what
+        # .. the unverified claims are kept for ..
+        unverified = read_unverified_claims(token)
 
         # .. only the pinned algorithm is ever accepted ..
         algorithm = header.get('alg')
@@ -230,7 +304,8 @@ class BearerTokenVerifier:
         if algorithm != JWT_Algorithm:
             logger.info('Bearer token uses unsupported algorithm `%s`; sec_def=%s; channel=%s; cid=%s',
                 algorithm, config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Unsupported_Algorithm, unverified)
+            return out
 
         # .. a key ID is needed to pick the signing key from the JWKS document ..
         key_id = header.get('kid') or ''
@@ -238,14 +313,16 @@ class BearerTokenVerifier:
         if not key_id:
             logger.info('Bearer token has no key ID; sec_def=%s; channel=%s; cid=%s',
                 config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Unknown_Key, unverified)
+            return out
 
         # .. the key lives in the issuer's JWKS document, so a definition that names none of them
         # .. has nothing to verify against ..
         if not config.jwks_url:
             logger.info('Bearer token definition `%s` has no JWKS URL and no issuer to derive one from; '
                 'channel=%s; cid=%s', config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Unknown_Key, unverified)
+            return out
 
         # .. find the signing key, refetching the JWKS document if the key is unknown ..
         key = self._get_signing_key(config.jwks_url, key_id)
@@ -253,7 +330,8 @@ class BearerTokenVerifier:
         if key is None:
             logger.info('No JWKS key matches key ID `%s` from `%s`; sec_def=%s; channel=%s; cid=%s',
                 key_id, config.jwks_url, config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Unknown_Key, unverified)
+            return out
 
         # .. now, the actual verification - signature, expiry, issuer and audience ..
         try:
@@ -268,23 +346,28 @@ class BearerTokenVerifier:
         except ExpiredSignatureError:
             logger.info('Bearer token has expired; sec_def=%s; channel=%s; cid=%s',
                 config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Expired, unverified)
+            return out
         except InvalidAudienceError:
             logger.info('Bearer token has a wrong audience, expected `%s`; sec_def=%s; channel=%s; cid=%s',
                 config.audience, config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Wrong_Audience, unverified)
+            return out
         except InvalidIssuerError:
             logger.info('Bearer token has a wrong issuer, expected `%s`; sec_def=%s; channel=%s; cid=%s',
                 config.issuer, config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Wrong_Issuer, unverified)
+            return out
         except InvalidSignatureError:
             logger.info('Bearer token has an invalid signature; sec_def=%s; channel=%s; cid=%s',
                 config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Bad_Signature, unverified)
+            return out
         except InvalidTokenError as e:
             logger.info('Bearer token is invalid (%s); sec_def=%s; channel=%s; cid=%s',
                 e, config.sec_def_name, channel_name, cid)
-            return None
+            out = _refused(BearerRefusalReason.Malformed, unverified)
+            return out
 
         # .. the signature checks out, so the configured claims are matched last ..
         out = self._match_claims(cid, channel_name, claims, config)
@@ -298,9 +381,11 @@ class BearerTokenVerifier:
         channel_name:'str',
         claims:'stranydict',
         config:'BearerTokenVerifyConfig',
-        ) -> 'anydictnone':
+        ) -> 'BearerTokenVerifyResult':
         """ Checks that every configured claim is present in the token with the required value.
         """
+        matched:'strlist' = []
+
         for name in sorted(config.claims):
             expected = config.claims[name]
 
@@ -308,7 +393,8 @@ class BearerTokenVerifier:
             if name not in claims:
                 logger.info('Bearer token is missing claim `%s`; sec_def=%s; channel=%s; cid=%s',
                     name, config.sec_def_name, channel_name, cid)
-                return None
+                out = _refused(BearerRefusalReason.Claim_Missing, claims, name)
+                return out
 
             actual = claims[name]
 
@@ -317,17 +403,26 @@ class BearerTokenVerifier:
                 if expected not in actual:
                     logger.info('Bearer token claim `%s` does not contain `%s`; sec_def=%s; channel=%s; cid=%s',
                         name, expected, config.sec_def_name, channel_name, cid)
-                    return None
+                    out = _refused(BearerRefusalReason.Claim_Mismatch, claims, name)
+                    return out
 
             # .. and a scalar claim matches by equality.
             else:
                 if actual != expected:
                     logger.info('Bearer token claim `%s` is `%s` instead of `%s`; sec_def=%s; channel=%s; cid=%s',
                         name, actual, expected, config.sec_def_name, channel_name, cid)
-                    return None
+                    out = _refused(BearerRefusalReason.Claim_Mismatch, claims, name)
+                    return out
+
+            matched.append(f'{name}={expected}')
 
         # Everything matched so the claims can be handed back to the caller.
-        return claims
+        out = BearerTokenVerifyResult()
+        out.is_ok = True
+        out.claims = claims
+        out.claims_matched = matched
+
+        return out
 
 # ################################################################################################################################
 

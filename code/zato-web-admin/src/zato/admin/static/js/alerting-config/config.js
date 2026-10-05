@@ -240,6 +240,7 @@ config.typeHelp = {
     channels: 'Alert rules for channels of every kind - the share of failed requests over time.',
     mllp_channel: 'Alert rules for HL7 MLLP channels - failures in a row, error rates, negative acknowledgments, slow acknowledgments and silent channels.',
     mllp_outgoing: 'Alert rules for HL7 MLLP outgoing connections - failures in a row, error rates, negative acknowledgments, connection failures, slow acknowledgments, queue backlogs and messages in the DLQ.',
+    kafka_outgoing: 'Alert rules for Kafka outgoing connections - queue backlogs and messages in the DLQ.',
     common: 'Alert rules that watch the environment as a whole - expiring certificates, backlogs and silent feeds.',
     notifications: 'Where alerts go by default - the webhooks, the email connection and its addressing, and the Dashboard address the links point to. A rule naming its own target overrides these.'
 };

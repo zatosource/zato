@@ -26,3 +26,4 @@ playwright
 hl7
 aiosmtpd
 fhir.resources
+confluent-kafka

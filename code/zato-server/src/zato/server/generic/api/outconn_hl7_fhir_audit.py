@@ -89,6 +89,7 @@ class FHIRAuditMixin:
 
     zato_config: 'stranydict'
     zato_audit_log: 'AuditLog'
+    zato_is_export_payload_active: 'bool'
 # ################################################################################################################################
 
     def _record_request(
@@ -141,6 +142,7 @@ class FHIRAuditMixin:
             outcome=AuditOutcome.OK,
             data=stored_data,
             attrs=attrs,
+            is_export_payload_active=self.zato_is_export_payload_active,
         )
 
         return attrs
@@ -167,6 +169,7 @@ class FHIRAuditMixin:
             duration_ms=duration_ms,
             data=str(exception),
             attrs=attrs,
+            is_export_payload_active=self.zato_is_export_payload_active,
         )
 
 # ################################################################################################################################
@@ -200,6 +203,7 @@ class FHIRAuditMixin:
             duration_ms=duration_ms,
             data=response.text,
             attrs=attrs,
+            is_export_payload_active=self.zato_is_export_payload_active,
         )
 
 # ################################################################################################################################

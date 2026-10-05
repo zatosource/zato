@@ -324,14 +324,16 @@ class AS2ChannelRuntime:
         # while a request that matched no partnership is always recorded.
         if out.partnership:
             needs_audit = out.partnership.is_audit_log_active
+            is_export_payload_active = out.partnership.is_audit_export_payload_active
         else:
             needs_audit = True
+            is_export_payload_active = False
 
         # The arrival and the MDN that went back are recorded as non-repudiation evidence -
         # a replay records nothing new because its first delivery already did.
         if needs_audit:
             audit_log = self._get_audit_log()
-            record_inbound_result(audit_log, out, body, cid)
+            record_inbound_result(audit_log, out, body, cid, is_export_payload_active=is_export_payload_active)
 
         # A replay gets the stored MDN back, byte for byte - nothing is routed.
         if out.is_duplicate:

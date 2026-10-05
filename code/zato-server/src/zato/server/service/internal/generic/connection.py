@@ -12,13 +12,13 @@ from copy import deepcopy
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HTTP_SOAP, KAFKA, \
+from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HL7, HTTP_SOAP, KAFKA, \
     SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import conn_type_to_alert_type, get_field_kinds as get_alert_field_kinds, \
     storage_name as alert_storage_name
 from zato.common.alerting.validate_numbers import Number_Kinds as Alert_Number_Kinds
-from zato.common.audit_log.common import AuditEvent
+from zato.common.audit_log.common import AuditEvent, Export_Payload_Flag as _audit_export_payload_field
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
 from zato.common.exception import BadRequest
@@ -30,6 +30,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
+from zato.common.util.delivery_config import apply_delivery_defaults, Delivery_Int_Fields, validate_delivery_fields
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.rule_engine_api import on_rule_engine_api_create_edit, on_rule_engine_api_delete
@@ -39,8 +40,8 @@ from zato.server.generic.connection import GenericConnection
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.internal.generic.alert_settings import prepare_generic_alert_settings
-from zato.server.service.internal.health_check import delete_health_check_job, has_health_check_config, sync_health_check_job, \
-    validate_run_every
+from zato.server.service.internal.health_check import delete_health_check_job, has_bulk_export_config, has_health_check_config, \
+    sync_bulk_export_job, sync_health_check_job, validate_run_every
 from zato.server.service.internal.outgoing.file_transfer.schedule import delete_connection_jobs, resync_connection_jobs
 from zato.server.service.meta import DeleteMeta
 
@@ -71,9 +72,15 @@ extra_delete_attrs = ['type_']
 # ################################################################################################################################
 
 _health_check = HTTP_SOAP.HealthCheck
+_bulk = HL7.BulkExport
 
 # The generic connection types that carry a health check job, each with the connection type its job links back to
 _health_check_link_types = {
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: SchedulerLink.ConnType.FHIR_Outgoing,
+}
+
+# The generic connection types that carry a bulk export job - FHIR connections alone
+_bulk_export_link_types = {
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: SchedulerLink.ConnType.FHIR_Outgoing,
 }
 
@@ -105,6 +112,28 @@ def on_kafka_create_edit(service:'Service', data:'Bunch', model:'any_', old_name
         msg = f'Kafka SASL mechanism `{sasl_mechanism}` requires a {expected_name} security definition, ' + \
             f'not {actual_name}'
         raise BadRequest(service.cid, msg)
+
+# ################################################################################################################################
+
+# The generic connection types that carry the queue switch and the DLQ settings
+_delivery_settings_types = (
+    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA,
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA,
+)
+
+def prepare_kafka_delivery_settings(service:'Service', data:'Bunch') -> 'None':
+    """ Fills in and validates the delivery settings of a Kafka connection being written.
+    """
+    apply_delivery_defaults(data)
+
+    # A channel has no queue in front of it.
+    if data['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+        data[HTTP_SOAP.Queue.Field_Use_Queue] = False
+
+    try:
+        validate_delivery_fields(data)
+    except ValueError as e:
+        raise BadRequest(service.cid, str(e))
 
 # ################################################################################################################################
 
@@ -143,6 +172,11 @@ def delete_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_')
         opaque = parse_instance_opaque_attr(instance)
         delete_health_check_job(service, opaque.get(_health_check.Field_Job_ID))
 
+    # .. as does the bulk export job of a FHIR connection.
+    if instance.type_ in _bulk_export_link_types:
+        opaque = parse_instance_opaque_attr(instance)
+        delete_health_check_job(service, opaque.get(_bulk.Field_Job_ID))
+
     before_snapshot = get_model_snapshot(instance)
 
     record_service_config_change(
@@ -172,6 +206,9 @@ extra_secret_keys = (
 
     # OData, Microsoft Fabric and Microsoft Power Automate
     'client_secret',
+
+    # Kafka
+    KAFKA.Field_SSL_Key_Password,
 
 )
 
@@ -235,6 +272,15 @@ skip_simple_type = {
     'as4_peer_signing_cert',
     'as4_peer_encryption_cert',
     'as4_trust_anchors',
+
+    # Kafka fields that are text even when they look like a number, a boolean or JSON - acks of `1` or `0`
+    # are what Kafka calls these settings, not a count or a flag
+    'topic',
+    KAFKA.Producer.Field_Acks,
+    KAFKA.Consumer.Field_Topics,
+    KAFKA.Consumer.Field_Routing,
+    KAFKA.Consumer.Field_Dedup_Header,
+    HTTP_SOAP.DLQ.Field_Forward_To,
 }
 
 # The alert settings that are text - a status codes list of `500` alone, an outcome codes list or an ack codes
@@ -261,6 +307,15 @@ for _alert_type in set(conn_type_to_alert_type.values()):
 # so nothing else says they are numbers.
 int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
 int_attrs = int_attrs + list(MLLP_Channel_Int_Names) + list(MLLP_Outgoing_Int_Names) + list(FHIR_Outgoing_Int_Names)
+
+# The Kafka integer fields
+int_attrs = int_attrs + list(KAFKA.Consumer.IntFieldList) + list(KAFKA.Producer.IntFieldList) + list(Delivery_Int_Fields)
+int_attrs = int_attrs + [
+    HTTP_SOAP.Retry.Field_Max_Retries,
+    HTTP_SOAP.Retry.Field_Sleep_Time,
+    HTTP_SOAP.Retry.Field_Backoff_Threshold,
+    HTTP_SOAP.Retry.Field_Backoff_Multiplier,
+]
 
 # ################################################################################################################################
 
@@ -366,6 +421,9 @@ class _CreateEdit(_BaseService):
         # Make sure that specific keys are integers
         ensure_ints(data)
 
+        if data.get('type_') in _delivery_settings_types:
+            prepare_kafka_delivery_settings(self, data)
+
         # The cluster ID may be missing on input, e.g. in API calls that give only the object's ID,
         # or it may have been turned into a bool by the simple-type parser above (1 becomes True),
         # so it is always set to our own server's cluster here.
@@ -433,6 +491,13 @@ class _CreateEdit(_BaseService):
                 data[_health_check.Field_Run_Every] = run_every
                 conn.opaque[_health_check.Field_Run_Every] = run_every
 
+        # The same goes for a bulk export schedule
+        if data.type_ in _bulk_export_link_types:
+            if has_bulk_export_config(data):
+                run_every = validate_run_every(self, data[_bulk.Field_Run_Every], data[_bulk.Field_Run_Unit], 'Bulk export')
+                data[_bulk.Field_Run_Every] = run_every
+                conn.opaque[_bulk.Field_Run_Every] = run_every
+
         # AS2 outgoing connections are stored in the external database when one is configured,
         # under their local ids, without the offset they are known under everywhere else.
         is_ext = needs_ext_db(data.type_)
@@ -492,6 +557,21 @@ class _CreateEdit(_BaseService):
                         if previous_job_id := model_opaque.get(_health_check.Field_Job_ID):
                             data[_health_check.Field_Job_ID] = previous_job_id
                             conn.opaque[_health_check.Field_Job_ID] = previous_job_id
+
+                if data.type_ in _bulk_export_link_types:
+                    model_opaque = parse_instance_opaque_attr(model)
+                    if not data.get(_bulk.Field_Job_ID):
+                        if previous_job_id := model_opaque.get(_bulk.Field_Job_ID):
+                            data[_bulk.Field_Job_ID] = previous_job_id
+                            conn.opaque[_bulk.Field_Job_ID] = previous_job_id
+
+                # The audit export's payload flag is set through enmasse only and has no field in the Dashboard,
+                # so an edit that does not carry it keeps what was stored.
+                if _audit_export_payload_field not in data:
+                    model_opaque = parse_instance_opaque_attr(model)
+                    if stored_payload_flag := model_opaque.get(_audit_export_payload_field):
+                        data[_audit_export_payload_field] = stored_payload_flag
+                        conn.opaque[_audit_export_payload_field] = stored_payload_flag
 
                 # Use the secret that was given on input because it may be a new one.
                 # Otherwise, if no secret is given on input, it means that we are not changing it
@@ -593,6 +673,10 @@ class _CreateEdit(_BaseService):
         # the job pings the connection and each ping lands in the audit log under the connection's health source.
         if data.type_ in _health_check_link_types:
             sync_health_check_job(self, data, public_id, _health_check_link_types[data.type_])
+
+        # .. and so can its bulk export job, which starts an export on the tab's schedule.
+        if data.type_ in _bulk_export_link_types:
+            sync_bulk_export_job(self, data, public_id, _bulk_export_link_types[data.type_])
 
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import date
 from json import dumps
 
 # pytest
@@ -16,17 +17,21 @@ import pytest
 from zato.common.audit_log.common import AuditClassification
 from zato.common.destination.constants import DestinationType
 from zato.common.destination.model import new_entry, DestinationException
+from zato.common.hl7.fhir.bulk_export.file import BulkExportFile, BulkExportResource, new_file
 from zato.common.typing_ import cast_
-from zato.server.destination.dispatch import send
+from zato.server.destination.dispatch import render_remote_path, send
 
-from service_stub import ServiceStub, FHIR_Response, MLLP_Rejected_Status, MLLP_Rejected_Text, MLLP_Response, \
-    REST_Queued_Response, REST_Rejected_Response, REST_Rejected_Status, REST_Rejected_Text, REST_Response, SMTP_Response
+from service_stub import ServiceStub, FHIR_Response, Kafka_Response, MLLP_Rejected_Status, MLLP_Rejected_Text, \
+    MLLP_Response, REST_Queued_Response, REST_Rejected_Response, REST_Rejected_Status, REST_Rejected_Text, REST_Response, \
+    Service_Response, SFTP_Response, SMTP_Response
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.server.service import Service
+    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,6 +41,18 @@ _rest_connection = 'rest.billing'
 _mllp_connection = 'hl7.forward.ehr'
 _fhir_connection = 'fhir.ehr'
 _smtp_connection = 'smtp.notifications'
+_kafka_connection = 'kafka.exports'
+_sftp_connection = 'sftp.archive'
+_service_name = 'my.export.handler'
+
+# One file of a bulk export, as the deliver service hands it to a destination
+_job_id = 'job-1'
+_export_connection = 'fhir.exports'
+_resource_type = 'Patient'
+_resource_lines = [
+    {'resourceType': _resource_type, 'id': 'p1'},
+    {'resourceType': _resource_type, 'id': 'p2'},
+]
 
 # What arrived on the channel
 _request_payload = 'MSH|^~\\&|SENDER|FACILITY|RECEIVER|FACILITY|20260101120000||ADT^A01|MSG00001|P|2.5'
@@ -57,6 +74,22 @@ def _as_service(stub:'ServiceStub') -> 'Service':
     """ The dispatcher takes a service, and everything it reaches for on one the stub offers.
     """
     out = cast_('Service', stub)
+    return out
+
+# ################################################################################################################################
+
+def _new_export_file(tmp_path:'Path') -> 'BulkExportFile':
+    """ Writes the file's lines to disk and returns the reference a destination is handed.
+    """
+    path = tmp_path / f'{_resource_type}.1.ndjson'
+
+    lines = []
+    for resource in _resource_lines:
+        lines.append(dumps(resource))
+
+    _ = path.write_text('\n'.join(lines) + '\n')
+
+    out = new_file(_job_id, _export_connection, _resource_type, len(_resource_lines), str(path), 'http://fhir/files/1')
     return out
 
 # ################################################################################################################################
@@ -355,6 +388,165 @@ class TestQueuedDeliveries:
 
         # There is no response body to keep either, the message not having been sent yet.
         assert result.response_text == ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestKafka:
+
+    def test_a_resource_of_an_export_travels_under_its_own_id_with_the_file_in_the_headers(self, tmp_path:'Path') -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        file = _new_export_file(tmp_path)
+        line = list(file.lines())[0]
+        resource = BulkExportResource(file, line)
+
+        entry = new_entry(_kafka_connection, DestinationType.KAFKA, _kafka_connection)
+
+        result = send(service, entry, resource)
+
+        assert result.response == Kafka_Response
+        assert result.is_rejected is False
+
+        connection, data, key, headers = stub.out.kafka.calls[0]
+
+        assert connection == _kafka_connection
+        assert data == line.decode('utf8')
+        assert key == 'p1'
+        assert headers == {'job_id': _job_id, 'resource_type': _resource_type, 'file_name': file.file_name}
+
+# ################################################################################################################################
+
+    def test_plain_text_travels_as_it_is(self) -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        entry = new_entry(_kafka_connection, DestinationType.KAFKA, _kafka_connection)
+
+        _ = send(service, entry, _request_payload)
+
+        _, data, key, headers = stub.out.kafka.calls[0]
+
+        assert data == _request_payload
+        assert key is None
+        assert headers is None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSFTP:
+
+    def test_a_file_of_an_export_is_uploaded_under_the_path_the_destination_names(self, tmp_path:'Path') -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        file = _new_export_file(tmp_path)
+
+        entry = new_entry(_sftp_connection, DestinationType.SFTP, _sftp_connection,
+            options={'remote_path': '/exports/{job_id}/{resource_type}/{file_name}'})
+
+        result = send(service, entry, file)
+
+        assert result.response == SFTP_Response
+
+        connection, local_path, remote_path, recursive, overwrite = stub.sftp.uploads[0]
+
+        assert connection == _sftp_connection
+        assert local_path == file.path
+        assert remote_path == f'/exports/{_job_id}/{_resource_type}/{file.file_name}'
+        assert recursive is False
+        assert overwrite is True
+
+        # Nothing was written as text, the file went up as it is on disk
+        assert stub.sftp.writes == []
+
+# ################################################################################################################################
+
+    def test_a_destination_without_a_path_uploads_under_the_default_one(self, tmp_path:'Path') -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        file = _new_export_file(tmp_path)
+
+        entry = new_entry(_sftp_connection, DestinationType.SFTP, _sftp_connection)
+
+        _ = send(service, entry, file)
+
+        _, _, remote_path, _, _ = stub.sftp.uploads[0]
+
+        assert remote_path == f'/{_job_id}/{file.file_name}'
+
+# ################################################################################################################################
+
+    def test_plain_text_is_written_to_the_path_as_given(self) -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        entry = new_entry(_sftp_connection, DestinationType.SFTP, _sftp_connection, options={'remote_path': '/inbox/adt.hl7'})
+
+        _ = send(service, entry, _request_payload)
+
+        connection, data, remote_path, overwrite = stub.sftp.writes[0]
+
+        assert connection == _sftp_connection
+        assert data == _request_payload
+        assert remote_path == '/inbox/adt.hl7'
+        assert overwrite is True
+
+        assert stub.sftp.uploads == []
+
+# ################################################################################################################################
+
+    def test_a_destination_with_an_empty_path_is_refused(self, tmp_path:'Path') -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        file = _new_export_file(tmp_path)
+
+        entry = new_entry(_sftp_connection, DestinationType.SFTP, _sftp_connection, options={'remote_path': ''})
+
+        with pytest.raises(DestinationException) as raised:
+            _ = send(service, entry, file)
+
+        assert 'no remote path' in str(raised.value)
+
+# ################################################################################################################################
+
+    def test_the_date_placeholder_is_today(self, tmp_path:'Path') -> 'None':
+        file = _new_export_file(tmp_path)
+
+        rendered = render_remote_path('/{date}/{file_name}', file)
+
+        today = date.today().isoformat()
+        assert rendered == f'/{today}/{file.file_name}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestService:
+
+    def test_a_service_is_invoked_with_the_file_as_it_is(self, tmp_path:'Path') -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        file = _new_export_file(tmp_path)
+
+        entry = new_entry(_service_name, DestinationType.SERVICE, _service_name)
+
+        result = send(service, entry, file, cid='cid-export-1')
+
+        assert result.response == Service_Response
+
+        name, request, cid = stub.invocations[0]
+
+        assert name == _service_name
+        assert request is file
+        assert cid == 'cid-export-1'
+
+        # What the service receives reads its resources straight from the file
+        assert list(request) == _resource_lines
+        assert len(request) == len(_resource_lines)
 
 # ################################################################################################################################
 # ################################################################################################################################

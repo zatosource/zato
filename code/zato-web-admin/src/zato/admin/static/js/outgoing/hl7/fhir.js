@@ -25,6 +25,7 @@ $.fn.zato.outgoing.hl7.fhir.config = {
 
 $(document).ready(function() {
     $.fn.zato.alerts_tab.init({config_id: 'out-fhir-alerts-tab-config'});
+    $.fn.zato.outgoing.hl7.fhir.bulk_export_tab.init();
 
     $.fn.zato.live_form_updates.register('create', [
         {object_type: 'security', target_select: '#id_security_id'}
@@ -47,6 +48,9 @@ $(document).ready(function() {
         'pool_size',
         'security_id',
     ]);
+
+    $.fn.zato.outgoing.hl7.fhir.bulk_export_tab.attachDatePickers();
+
     // Generic connection names are unique per connection type,
     // so the check is scoped to this page's own type.
     var unique_constraints = [
@@ -76,10 +80,11 @@ $.fn.zato.outgoing.hl7.fhir.field_descriptions = {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// The three tabs of a create or edit dialog - the connection's own fields, the Alerts tab and the Delivery tab
+// The four tabs of a create or edit dialog - the connection's own fields, the Bulk export, Alerts and Delivery tabs
 $.fn.zato.outgoing.hl7.fhir.tab_labels = function() {
     let out = {
         config: 'Config',
+        'bulk-export': 'Bulk export',
         alerts: $.fn.zato.alerts_tab.tab_label(),
         delivery: 'Delivery'
     };
@@ -88,15 +93,20 @@ $.fn.zato.outgoing.hl7.fhir.tab_labels = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// The Alerts and Delivery tabs read and write the rendered Django form of one dialog at a time
+// The Bulk export, Alerts and Delivery tabs read and write the rendered Django form of one dialog at a time
 $.fn.zato.outgoing.hl7.fhir._bind_tabs = function(action, field_prefix) {
+    $.fn.zato.outgoing.hl7.fhir.bulk_export_tab.bind({
+        panel_id: 'out-fhir-' + action + '-tab-panel-bulk-export',
+        field_prefix: field_prefix
+    });
     $.fn.zato.alerts_tab.bind({
         panel_id: 'out-fhir-' + action + '-tab-panel-alerts',
         field_prefix: field_prefix
     });
     $.fn.zato.delivery_tab.bind({
         panel_id: 'out-fhir-' + action + '-tab-panel-delivery',
-        field_prefix: field_prefix
+        field_prefix: field_prefix,
+        has_queue: true
     });
 }
 
@@ -171,6 +181,7 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format('<td><a href="/zato/channel-usage/?sources=fhir&objects={0}&cluster=1">Usage</a></td>', encodeURIComponent(item.name));
     var config = $.fn.zato.outgoing.hl7.fhir.config;
     row += $.fn.zato.delivery_tab.link_cell(config.delivery_conn_type, item, config.cluster_id);
+    row += String.format('<td><a href="/zato/outgoing/hl7/fhir/bulk-export/{0}/cluster/{1}/">Bulk exports</a></td>', item.id, config.cluster_id);
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{0}');\">Delete</a>", item.id));
@@ -192,10 +203,13 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format("<td class='ignore'>{0}</td>", item.health_check_run_unit);
     row += String.format("<td class='ignore'>{0}</td>", item.health_check_job_id);
 
-    // 8 - the Delivery tab's fields ride in the row for the edit form to read ..
+    // 8 - the Bulk export tab's fields
+    row += $.fn.zato.outgoing.hl7.fhir.bulk_export_tab.rowCells(item);
+
+    // 9 - the Delivery tab's fields ride in the row for the edit form to read ..
     row += $.fn.zato.delivery_tab.row_cells(item);
 
-    // 9 - .. and so do the Alerts tab's.
+    // 10 - .. and so do the Alerts tab's.
     row += $.fn.zato.alerts_tab.hidden_cells(item);
 
     if(include_tr) {

@@ -101,6 +101,9 @@ class _HL7MLLPConnection:
         else:
             self.name = ''
 
+        # The payloads leave with the audit export only if the connection says so
+        self.is_export_payload_active = asbool(config.get('is_audit_export_payload_active', False))
+
         # How a direct send that could not be delivered is tried again
         self.retry_policy = RetryPolicy.from_config(config, _retry)
 
@@ -173,7 +176,8 @@ class _HL7MLLPConnection:
 
             _ = audit_message_sent(
                 self.audit_log, self.name, message_text,
-                cid=cid, msg_id=control_id, attrs=get_wire_attrs(msh_line), endpoint=self.address)
+                cid=cid, msg_id=control_id, attrs=get_wire_attrs(msh_line), endpoint=self.address,
+                is_export_payload_active=self.is_export_payload_active)
 
         send_start = monotonic()
 
@@ -190,7 +194,8 @@ class _HL7MLLPConnection:
                 duration_ms = int((monotonic() - send_start) * _ms_per_second)
                 _ = audit_ack_received(
                     self.audit_log, self.name, ACKStatus.Timeout,
-                    cid=cid, msg_id=control_id, duration_ms=duration_ms)
+                    cid=cid, msg_id=control_id, duration_ms=duration_ms,
+                    is_export_payload_active=self.is_export_payload_active)
             raise
 
         # The acknowledgment arrived - its code decides the outcome on its own row
@@ -198,7 +203,8 @@ class _HL7MLLPConnection:
             duration_ms = int((monotonic() - send_start) * _ms_per_second)
             _ = audit_ack_received(
                 self.audit_log, self.name, out.ack_code,
-                cid=cid, msg_id=control_id, duration_ms=duration_ms, error_text=out.error_text)
+                cid=cid, msg_id=control_id, duration_ms=duration_ms, error_text=out.error_text,
+                is_export_payload_active=self.is_export_payload_active)
 
         return out
 

@@ -36,6 +36,7 @@ from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views import groups
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
+from zato.admin.web.views.outgoing.hl7 import fhir_bulk_export as out_hl7_fhir_bulk_export
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
@@ -355,6 +356,9 @@ urlpatterns += [
     url(r'^zato/security/oauth/outconn/client-credentials/get-token/$',
         login_required(oauth_outconn_client_credentials.get_token),
             name='security-oauth-outconn-client-credentials-get-token'),
+    url(r'^zato/security/oauth/outconn/client-credentials/public-key/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(oauth_outconn_client_credentials.get_public_key),
+            name='security-oauth-outconn-client-credentials-public-key'),
     url(r'^zato/security/oauth/outconn/client-credentials/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(oauth_outconn_client_credentials.Delete()), name=oauth_outconn_client_credentials.Delete.url_name),
     ]
@@ -589,6 +593,10 @@ urlpatterns += [
         login_required(out_hl7_fhir.invoke_action), name='outgoing-hl7-fhir-invoke-action'),
     url(r'^zato/outgoing/hl7/fhir/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
         login_required(out_hl7_fhir.invoke), name='outgoing-hl7-fhir-invoke'),
+    url(r'^zato/outgoing/hl7/fhir/bulk-export/(?P<conn_id>[^/]*)/cluster/(?P<cluster_id>[^/]*)/run/$',
+        login_required(out_hl7_fhir_bulk_export.run), name='outgoing-hl7-fhir-bulk-export-run'),
+    url(r'^zato/outgoing/hl7/fhir/bulk-export/(?P<conn_id>[^/]*)/cluster/(?P<cluster_id>[^/]*)/$',
+        login_required(out_hl7_fhir_bulk_export.index), name='outgoing-hl7-fhir-bulk-export'),
 
     # .. HL7 MLLP
 
@@ -1281,6 +1289,11 @@ urlpatterns += [
     url(r'^zato/outgoing/delivery/save/$',
         login_required(out_delivery.save), name='out-delivery-save'),
 
+    # .. the DLQ of a channel, served by the delivery page
+
+    path('zato/channel/delivery/<str:conn_type>/<int:conn_id>/',
+        login_required(out_delivery.index), name='channel-delivery'),
+
     # .. Redis
 
     url(r'^zato/redis/$',
@@ -1731,18 +1744,26 @@ urlpatterns += [
     url(r'^zato/updates/download-logs$',
         login_required(updates.download_logs), name='updates-download-logs'),
 
-    # Environment repository
+    # GitHub repository
 
     url(r'^zato/env-repo/$',
         login_required(env_repo.env_repo_view.index), name='env-repo'),
     url(r'^zato/env-repo/status$',
         login_required(env_repo.env_repo_view.get_status), name='env-repo-status'),
-    url(r'^zato/env-repo/links$',
-        login_required(env_repo.env_repo_view.get_links), name='env-repo-links'),
     url(r'^zato/env-repo/check$',
         login_required(env_repo.env_repo_view.check), name='env-repo-check'),
     url(r'^zato/env-repo/switch$',
         login_required(env_repo.env_repo_view.switch), name='env-repo-switch'),
+    url(r'^zato/env-repo/disconnect$',
+        login_required(env_repo.env_repo_view.disconnect), name='env-repo-disconnect'),
+    url(r'^zato/env-repo/pull$',
+        login_required(env_repo.env_repo_view.pull), name='env-repo-pull'),
+    url(r'^zato/env-repo/github-app/setup$',
+        login_required(env_repo.env_repo_view.github_app_setup), name='env-repo-github-app-setup'),
+    url(r'^zato/env-repo/github-app/installed$',
+        login_required(env_repo.env_repo_view.github_app_installed), name='env-repo-github-app-installed'),
+    url(r'^zato/env-repo/github-app/repos$',
+        login_required(env_repo.env_repo_view.github_app_repos), name='env-repo-github-app-repos'),
 
     # Monitoring - Grafana Cloud
 

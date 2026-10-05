@@ -1,132 +1,110 @@
-{% extends "zato/settings-base.html" %}
+{% extends "zato/index.html" %}
 
-{% block page_title %}{{ page_config.title }}{% endblock %}
+{% block html_title %}{{ page_config.title }}{% endblock %}
 
-{% block extra_page_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/env-repo.css">
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/time-slots.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/rate-limiting.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/progress-log.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/env-repo.css">
 {% endblock %}
 
-{% block extra_page_js %}
-<script type="text/javascript" src="/static/js/env-repo.js" nonce="{{ CSP_NONCE }}"></script>
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/progress-log.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/index.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/address.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/actions.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/repos.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/env-repo/requests.js"></script>
 {% endblock %}
 
-{% block left_content %}
-<h3>{{ page_config.version_section_title }}</h3>
-<div class="progress-panel">
-    <div class="info-container">
-        <div class="info-row">
-            <div class="info-label">{{ page_config.current_repo_label }}</div>
-            <div class="info-value env-repo-long-value">
-                <span id="current-url" title="{{ current_url }}">{{ current_url }}</span>
-                <span class="copy-icon" data-copy="current-url" title="Copy to clipboard">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                </span>
-            </div>
-        </div>
-        <div class="info-row">
-            <div class="info-label">{{ page_config.current_branch_label }}</div>
-            <div class="info-value">
-                <span id="current-branch">{{ current_branch }}</span>
-            </div>
-        </div>
-        <div class="info-row">
-            <div class="info-label">{{ page_config.current_commit_label }}</div>
-            <div class="info-value">
-                <span id="current-commit">{{ current_commit }}</span>
-            </div>
-        </div>
-        <div class="info-row">
-            <div class="info-label">{{ page_config.public_key_label }}</div>
-            <div class="info-value env-repo-long-value">
-                {% if public_key %}
-                <span id="public-key" title="{{ public_key }}">{{ public_key }}</span>
-                <span class="copy-icon" data-copy="public-key" title="Copy to clipboard">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                </span>
-                {% else %}
-                <span id="public-key" title="Not available without the deployment program">Not available</span>
-                {% endif %}
-            </div>
-        </div>
-        <div class="info-row">
-            <div class="info-label">{{ page_config.repo_url_label }}</div>
-            <div class="info-value">
-                <input type="text" id="repo-url" value="" placeholder="git@github.com:owner/{{ new_repo_name }}.git">
-            </div>
-        </div>
-        <div class="info-row">
-            <div class="info-label">{{ page_config.repo_branch_label }}</div>
-            <div class="info-value">
-                <input type="text" id="repo-branch" value="main" placeholder="main">
-            </div>
-        </div>
-    </div>
+{% block "content" %}
 
-    <div class="button-container">
-        <div class="button-wrapper">
-            <img src="/static/gfx/spinner.svg" class="button-spinner">
-            <span class="status-message test-success">OK</span>
-            <button class="secondary-button" id="check-button">
-                {{ page_config.check_button_label }}
-            </button>
-        </div>
-        <button class="action-button" id="update-button">
-            {{ page_config.action_button_label }}
-        </button>
-    </div>
+<div id="markup" class="env-repo-markup">
+<h2 class="zato env-repo-title">
+    <svg class="env-repo-github" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    {{ page_config.title }}
+</h2>
 
-    <div class="progress-item hidden" id="progress-check">
-        <div class="progress-icon"></div>
-        <div class="progress-content">
-            <div class="progress-platform">
-                {{ page_config.step1_label }}
-                <span class="copy-icon progress-error-copy hidden" data-copy="check-error" title="Copy to clipboard">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                </span>
-            </div>
-            <div class="progress-text" id="check-error">Waiting...</div>
-        </div>
-    </div>
-    <div class="progress-item hidden" id="progress-switch">
-        <div class="progress-icon"></div>
-        <div class="progress-content">
-            <div class="progress-platform">
-                {{ page_config.step2_label }}
-                <span class="copy-icon progress-error-copy hidden" data-copy="switch-error" title="Copy to clipboard">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                </span>
-            </div>
-            <div class="progress-text" id="switch-error">Waiting...</div>
-        </div>
-    </div>
+<form id="repo-form" method="get" action="" autocomplete="on" data-app-state="{{ app_state }}" data-install-url="{{ app_install_url }}" data-new-install-url="{{ app_new_install_url }}" data-mode="{{ mode }}" data-is-checked="{% if is_checked %}1{% else %}0{% endif %}" data-is-host="{% if is_host %}1{% else %}0{% endif %}">
+<table class="rate-limiting-form">
+    <tr>
+        <td class="rate-limiting-form-label">
+            <label for="repo-url">{{ page_config.address_label }}</label>
+        </td>
+        <td>
+            <span class="env-repo-field">
+                <input type="text" id="repo-url" name="github-repository" class="env-repo-input" value="{{ address }}" placeholder="GitHub repository, e.g. https://github.com/owner/{{ new_repo_name }}" autocomplete="on" spellcheck="false" data-current-url="{{ current_url }}" data-current-branch="{{ current_branch }}" list="repo-list" />
+                <span class="how-it-works-badge env-repo-chip {% if is_checked %}env-repo-chip-on{% else %}env-repo-chip-off{% endif %}" id="connection-chip"
+                    data-not-connected-label="{{ page_config.not_connected_label }}"
+                    data-connected-label="{{ page_config.connected_label }}">{% if is_checked %}{{ page_config.connected_label }}{% else %}{{ page_config.not_connected_label }}{% endif %}</span>
+            </span>
+            <datalist id="repo-list">{% for repo in repos %}<option value="https://github.com/{{ repo }}"></option>{% endfor %}</datalist>
+        </td>
+    </tr>
+    <tr>
+        <td class="rate-limiting-form-label">
+            <label for="repo-branch">{{ page_config.branch_label }}</label>
+        </td>
+        <td>
+            <span class="env-repo-branch" id="branch-cell">
+                <span id="branch-placeholder" data-shown="{% if branches %}false{% else %}true{% endif %}"><span class="form_hint">---</span></span>
+                <img src="/static/gfx/spinner.svg" class="info-spinner" id="branch-spinner" data-shown="false" alt="">
+                <select id="repo-branch" data-shown="{% if branches %}true{% else %}false{% endif %}">{% for branch in branches %}<option value="{{ branch }}"{% if branch == selected_branch %} selected{% endif %}>{{ branch }}</option>{% endfor %}</select>
+            </span>
+        </td>
+    </tr>
+</table>
+
+<div class="rate-limiting-actions">
+    <span class="env-repo-side">
+        <a href="#" class="env-repo-link{% if not is_checked %} env-repo-link-disabled{% endif %}" id="disconnect-button" data-is-connected="{% if current_url %}1{% else %}0{% endif %}">{{ page_config.disconnect_label }}</a>
+        <img src="/static/gfx/spinner.svg" class="info-spinner env-repo-side-spinner hidden" id="disconnect-spinner" alt="">
+    </span>
+    <span class="rate-limiting-save-group">
+        <span class="status-message" id="env-repo-status"></span>
+        <input type="button" id="push-button" value="{{ page_config.push_label }}"{% if not is_checked %} disabled{% endif %} />
+        <input type="submit" id="action-button" value="{% if mode == 'allow' %}{{ page_config.allow_label }}{% elif is_checked %}{{ page_config.pull_label }}{% else %}{{ page_config.connect_label }}{% endif %}"{% if mode == 'allow' %} class="env-repo-attention"{% endif %}
+            data-connect-label="{{ page_config.connect_label }}"
+            data-allow-label="{{ page_config.allow_label }}"
+            data-pull-label="{{ page_config.pull_label }}"
+            data-new-repo-url="{{ new_repo_url }}"
+            data-new-repo-label="{{ page_config.new_repo_label }}"
+            data-new-repo-hint="{{ page_config.new_repo_hint }}" />
+    </span>
 </div>
-{% endblock %}
+</form>
 
-{% block right_content %}
-                <h3>{{ page_config.config_section_title }}</h3>
-                <div class="config-panel">
-                    <div class="config-item">
-                        <div class="config-label">{{ page_config.github_login_label }}</div>
-                        <input type="text" id="github-login" class="env-repo-login" placeholder="octocat">
-                    </div>
-                    <div class="env-repo-steps">
-                        <div class="env-repo-step">
-                            <span class="env-repo-step-number">1</span>
-                            <a href="#" id="create-repo-link" class="dashboard-link env-repo-link" target="_blank" rel="noopener">{{ page_config.create_repo_label }}</a>
-                        </div>
-                        <div class="env-repo-step">
-                            <span class="env-repo-step-number">2</span>
-                            <a href="#" id="add-key-link" class="dashboard-link env-repo-link" target="_blank" rel="noopener">{{ page_config.add_key_label }}</a>
-                        </div>
-                    </div>
-                </div>
+<form id="github-app-form" method="post" action="{{ manifest_action }}" class="hidden">
+    <input type="hidden" name="manifest" value="{{ manifest }}" />
+</form>
 
-                <div class="logs-section show">
-                    <h3>{{ page_config.logs_section_title }}</h3>
-                    <div class="links-panel">
-                        <div class="env-repo-log" id="env-repo-log">
-                            <div class="env-repo-log-empty">No results</div>
-                        </div>
-                    </div>
-                </div>
+<div class="env-repo-progress" id="progress-log" data-status="{{ initial_status }}"></div>
+
+<div class="env-repo-flow">
+
+    <div class="env-repo-step env-repo-key-help hidden" id="key-help">
+        <span class="env-repo-step-body">
+            <span class="env-repo-step-title">{{ page_config.key_help_text }}</span>
+            <span class="env-repo-key">
+                <span id="public-key">{{ public_key }}</span>
+                <span class="env-repo-copy" id="copy-key" title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </span>
+            </span>
+            <a href="#" id="deploy-key-link" class="env-repo-link" target="_blank" rel="noopener">
+                {{ page_config.key_help_label }}
+                <svg class="env-repo-external" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+            </a>
+        </span>
+    </div>
+
+</div>
+
+</div>
+
 {% endblock %}

@@ -173,7 +173,7 @@ class Session:
             server_directory=server_directory,
             server_port=server_port,
             broker_port=broker_port,
-            extra_server_env={},
+            extra_server_env=dict(self.type_under_test.server_environment),
             patch_server_conf_bind=True,
         )
 

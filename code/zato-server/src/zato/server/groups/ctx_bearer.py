@@ -11,15 +11,17 @@ from logging import getLogger
 from operator import attrgetter
 
 # Zato
-from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config
+from zato.common.bearer_token_identity import resolve_identity
+from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config, read_unverified_claims
 from zato.common.crypto.api import is_string_equal
+from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from gevent.lock import RLock
-    from zato.common.model.security import BearerTokenVerifyConfig
+    from zato.common.model.security import BearerTokenVerifyConfig, BearerTokenVerifyResult
     from zato.common.typing_ import boolnone, callable_, dict_, intnone, stranydict
     from zato.server.base.parallel import ParallelServer
 
@@ -33,6 +35,21 @@ logger = getLogger(__name__)
 
 # Sorts bearer token definitions by their names so JWT matching is deterministic
 _by_sec_def_name = attrgetter('verify_config.sec_def_name')
+
+# When several JWT definitions refuse one token, the refusal reported is the one that got furthest
+# through verification - a claim mismatch says more than a malformed token does.
+_refusal_rank = {
+    BearerRefusalReason.No_Definition_Matched: 0,
+    BearerRefusalReason.Malformed: 1,
+    BearerRefusalReason.Unsupported_Algorithm: 2,
+    BearerRefusalReason.Unknown_Key: 3,
+    BearerRefusalReason.Bad_Signature: 4,
+    BearerRefusalReason.Wrong_Issuer: 5,
+    BearerRefusalReason.Wrong_Audience: 6,
+    BearerRefusalReason.Expired: 7,
+    BearerRefusalReason.Claim_Missing: 8,
+    BearerRefusalReason.Claim_Mismatch: 9,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,8 +96,23 @@ class BearerTokenCtx:
 
     def check_security_bearer_token(self, cid:'str', channel_name:'str', token:'str') -> 'intnone':
 
+        info = self.check_bearer_token(cid, channel_name, token)
+
+        if info.is_ok:
+            out = info.security_id
+        else:
+            out = None
+
+        return out
+
+# ################################################################################################################################
+
+    def check_bearer_token(self, cid:'str', channel_name:'str', token:'str') -> 'BearerAuthInfo':
+        """ Checks a token against every bearer definition in the channel's groups and says
+        which one matched and who the caller is, or why none of them did.
+        """
         # Our response to produce
-        out = None
+        out = BearerAuthInfo()
 
         # Split the definitions into the static ones and the JWT ones ..
         static_items:'bearer_sec_def_list' = []
@@ -96,21 +128,85 @@ class BearerTokenCtx:
         # .. so that the time taken does not reveal whether a token exists or how much of it matched ..
         for item in static_items:
             if is_string_equal(token, item.verify_config.static_token):
-                out = item.security_id
+                out.is_ok = True
+                out.security_id = item.security_id
+                out.sec_def_name = item.verify_config.sec_def_name
+                out.identity = item.verify_config.sec_def_name
 
         # .. JWT definitions are tried in deterministic name order and the first full match wins ..
-        if out is None:
-            verifier = self._get_bearer_token_verifier()
-            jwt_items.sort(key=_by_sec_def_name)
+        if not out.is_ok:
+            out = self._check_jwt_items(cid, channel_name, token, jwt_items)
 
-            for item in jwt_items:
-                claims = verifier.verify(cid, channel_name, token, item.verify_config)
-                if claims is not None:
-                    out = item.security_id
-                    break
+        if not out.is_ok:
+            logger.info(f'Invalid bearer token; reason={out.reason}; channel={channel_name}; cid={cid}')
 
-        if out is None:
-            logger.info(f'Invalid bearer token; channel={channel_name}; cid={cid}')
+        return out
+
+# ################################################################################################################################
+
+    def _check_jwt_items(
+        self,
+        cid:'str',
+        channel_name:'str',
+        token:'str',
+        jwt_items:'bearer_sec_def_list',
+        ) -> 'BearerAuthInfo':
+        """ Tries the JWT definitions in name order. The first full match wins, otherwise the refusal
+        that got furthest is the one reported.
+        """
+        verifier = self._get_bearer_token_verifier()
+        jwt_items.sort(key=_by_sec_def_name)
+
+        # Our response to produce
+        out = BearerAuthInfo()
+        out.is_jwt = True
+        out.reason = BearerRefusalReason.No_Definition_Matched
+
+        # The best refusal seen so far and the definition it came from
+        best_rank = -1
+
+        for item in jwt_items:
+            config = item.verify_config
+            result = verifier.verify_result(cid, channel_name, token, config)
+
+            if result.is_ok:
+                out = self._build_jwt_match(item, result)
+                break
+
+            rank = _refusal_rank[result.reason]
+
+            if rank > best_rank:
+                best_rank = rank
+                out.security_id = 0
+                out.sec_def_name = config.sec_def_name
+                out.identity_claim = config.identity_claim
+                out.identity = resolve_identity(config.sec_def_name, config.identity_claim, result.claims)
+                out.reason = result.reason
+                out.claim = result.claim
+                out.claims = result.claims
+
+        # With no JWT definitions at all, the token's own claims are still worth recording
+        if not jwt_items:
+            out.claims = read_unverified_claims(token)
+
+        return out
+
+# ################################################################################################################################
+
+    def _build_jwt_match(self, item:'_BearerTokenSecDef', result:'BearerTokenVerifyResult') -> 'BearerAuthInfo':
+        """ Builds the caller's auth info out of a JWT that one definition accepted.
+        """
+        config = item.verify_config
+
+        out = BearerAuthInfo()
+        out.is_ok = True
+        out.is_jwt = True
+        out.security_id = item.security_id
+        out.sec_def_name = config.sec_def_name
+        out.identity_claim = config.identity_claim
+        out.identity = resolve_identity(config.sec_def_name, config.identity_claim, result.claims)
+        out.claims = result.claims
+        out.claims_matched = result.claims_matched
 
         return out
 

@@ -36,7 +36,10 @@ $.fn.zato.destinations.config = {
         {id: 'rest',     label: 'REST'},
         {id: 'hl7-mllp', label: 'MLLP'},
         {id: 'hl7-fhir', label: 'FHIR'},
-        {id: 'smtp',     label: 'Email'}
+        {id: 'smtp',     label: 'Email'},
+        {id: 'kafka',    label: 'Kafka'},
+        {id: 'sftp',     label: 'SFTP'},
+        {id: 'service',  label: 'Service'}
     ],
     optionList: {
         'rest': [
@@ -50,7 +53,12 @@ $.fn.zato.destinations.config = {
         'smtp': [
             {id: 'to',      label: 'To',      kind: 'text', placeholder: 'name@example.com'},
             {id: 'subject', label: 'Subject', kind: 'text', placeholder: 'Subject line'}
-        ]
+        ],
+        'kafka': [],
+        'sftp': [
+            {id: 'remote_path', label: 'Remote path', kind: 'text', placeholder: '/{job_id}/{file_name}'}
+        ],
+        'service': []
     }
 };
 

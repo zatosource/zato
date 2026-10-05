@@ -56,6 +56,10 @@ _endpoint_column_len = 500
 # Attribute values are capped so they always fit an indexable column
 Attr_Value_Max_Len = _short_column_len
 
+# The per-object flag, stored in opaque attributes next to is_audit_log_active, that lets
+# an object's payloads leave the process with the OTLP export. Off unless set.
+Export_Payload_Flag = 'is_audit_export_payload_active'
+
 # ################################################################################################################################
 
 class AuditSource:
@@ -74,7 +78,11 @@ class AuditSource:
     MCP           = 'mcp'
     MLLP_Channel  = 'mllp-channel'
     MLLP_Outgoing = 'mllp-outgoing'
+    Kafka_Channel  = 'kafka-channel'
+    Kafka_Outgoing = 'kafka-outgoing'
     FHIR          = 'fhir'
+    FHIR_Bulk_Export = 'fhir-bulk-export'
+    CCDA          = 'ccda'
     Config        = 'config'
     Scheduler     = 'scheduler'
     LLM           = 'llm'
@@ -137,7 +145,11 @@ _source_label = {
     AuditSource.MCP: 'MCP',
     AuditSource.MLLP_Channel: 'MLLP channel',
     AuditSource.MLLP_Outgoing: 'MLLP outgoing',
+    AuditSource.Kafka_Channel: 'Kafka channel',
+    AuditSource.Kafka_Outgoing: 'Kafka outgoing',
     AuditSource.FHIR: 'FHIR outgoing',
+    AuditSource.FHIR_Bulk_Export: 'FHIR bulk export',
+    AuditSource.CCDA: 'C-CDA',
     AuditSource.Config: 'Log access',
     AuditSource.Scheduler: 'Scheduler',
     AuditSource.LLM: 'LLM',
@@ -194,6 +206,11 @@ class MCPAttr:
     Tokens_Before = 'tokens_before'
     Tokens_After  = 'tokens_after'
 
+    # Who the caller was, which OAuth client the person signed in through and why a refused caller was turned away
+    Identity      = 'identity'
+    Client        = 'client'
+    Reason        = 'reason'
+
 # ################################################################################################################################
 
 # The searchable attributes each source's events carry in the event_attr table -
@@ -202,14 +219,18 @@ source_attr_names = {
     AuditSource.MLLP_Channel: ('msg_type', 'mrn', 'facility', 'ack_status'),
     AuditSource.MLLP_Outgoing: ('msg_type', 'mrn', 'facility', 'ack_status'),
     AuditSource.FHIR: ('resource_type', 'method'),
+    AuditSource.FHIR_Bulk_Export: ('job_id', 'phase', 'resource_type', 'file_name', 'count'),
+    AuditSource.CCDA: ('root_template', 'resource_count', 'document_size', 'reason'),
     AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
     AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name', 'service', 'checksum', 'current_run'),
 
     # The model a completion was asked of and why the provider stopped generating - stop, length, refusal, tool_use.
     AuditSource.LLM: (LLMAttr.Model, LLMAttr.Finish_Reason),
 
-    # The JSON-RPC method of a gateway's request, the error code of a failed call and what refused a tool's response.
-    AuditSource.MCP: (MCPAttr.Method, MCPAttr.Error_Code, MCPAttr.Reject_Kind),
+    # The JSON-RPC method of a gateway's request, the error code of a failed call, what refused a tool's response,
+    # and the person, the OAuth client and the refusal reason of a request that went through the bearer check.
+    AuditSource.MCP: (MCPAttr.Method, MCPAttr.Error_Code, MCPAttr.Reject_Kind, MCPAttr.Identity, MCPAttr.Client,
+        MCPAttr.Reason),
 
     # The channel type the invocation came in through.
     AuditSource.Service: ('channel',),

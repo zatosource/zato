@@ -16,7 +16,7 @@ from sqlalchemy import and_, select
 from zato.common.alerting.object_config import conn_type_to_alert_type
 from zato.common.api import CONNECTION, GENERIC, Groups, MCP
 from zato.common.odb.model import GenericConn, GenericObject, HTTPSOAP
-from zato.common.util.gateway import ensure_mcp_rest_channel
+from zato.common.util.gateway import ensure_mcp_rest_channel, validate_oauth_security
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
@@ -69,6 +69,10 @@ class GatewayMCPImporter(GenericConnectionImporter):
         'services': [],
         'security_groups': [],
         'is_audit_log_active': False,
+
+        # OAuth with the customer's own identity provider - the scopes go out only when OAuth is on
+        'oauth': False,
+        'oauth_scopes': '',
 
         # Skills served as prompts
         'skills': [],
@@ -205,8 +209,17 @@ class GatewayMCPImporter(GenericConnectionImporter):
 
 # ################################################################################################################################
 
+    def _validate_oauth(self, connection_def:'anydict', session:'SASession') -> 'None':
+        """ A gateway with OAuth on is imported only with a bearer definition that can verify tokens.
+        """
+        security_groups = self._resolve_security_groups(connection_def, session)
+        validate_oauth_security(session, connection_def, security_groups, self.importer.cluster_id)
+
+# ################################################################################################################################
+
     def create_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
         self._normalize_services(connection_def)
+        self._validate_oauth(connection_def, session)
         instance = super().create_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
         return instance
@@ -215,6 +228,7 @@ class GatewayMCPImporter(GenericConnectionImporter):
 
     def update_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
         self._normalize_services(connection_def)
+        self._validate_oauth(connection_def, session)
         instance = super().update_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
         return instance

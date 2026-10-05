@@ -104,7 +104,7 @@ def _clone(progress:'Progress', config:'EnvRepoConfig') -> 'str':
     repo_dir = os.path.join(Path.Env_Repos_Dir, timestamp)
 
     progress.log(f'Cloning {config.url} at {config.branch}')
-    result = run_git(['clone', '--branch', config.branch, '--single-branch', config.url, repo_dir], is_verbose=True)
+    result = run_git(['clone', '--branch', config.branch, '--single-branch', config.url, repo_dir], is_verbose=True, url=config.url)
 
     if result.exit_code != 0:
         shutil.rmtree(repo_dir, ignore_errors=True)
@@ -128,10 +128,10 @@ def _clone(progress:'Progress', config:'EnvRepoConfig') -> 'str':
 
 # ################################################################################################################################
 
-def _pull(progress:'Progress', repo_dir:'str') -> 'None':
+def _pull(progress:'Progress', config:'EnvRepoConfig', repo_dir:'str') -> 'None':
     """ Brings the checkout up to date, and if that fails, the boot goes on with what the checkout has.
     """
-    result = run_git(['pull', '--ff-only'], cwd=repo_dir, is_verbose=True)
+    result = run_git(['pull', '--ff-only'], cwd=repo_dir, is_verbose=True, url=config.url)
 
     if result.exit_code == 0:
         progress.log(_get_last_line(result.stdout))
@@ -238,7 +238,7 @@ def prepare_environment(progress:'Progress') -> 'Environment':
     repo_dir = _get_current_checkout(config)
 
     if repo_dir:
-        _pull(progress, repo_dir)
+        _pull(progress, config, repo_dir)
     else:
         repo_dir = _clone(progress, config)
 

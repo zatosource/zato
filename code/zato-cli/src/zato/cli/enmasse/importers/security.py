@@ -12,14 +12,17 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
-from zato.cli.enmasse.util.secrets import Auto_Password_Prefix, decrypt_secret, encrypt_secret, ensure_encrypted, \
-    is_encrypted, is_usable_secret
+from zato.cli.enmasse.util.secrets import Auto_Password_Prefix, decrypt_secret, encrypt_kept_opaque_secrets, \
+    encrypt_opaque_secrets, encrypt_secret, ensure_encrypted, is_encrypted, is_usable_secret, load_opaque, secret_needs_update
+from zato.common.api import OAuth as COMMON_OAUTH
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import loads
 from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, MTLSSecurity, NTLM, OAuth, SPNEGOSecurity, to_json, \
     WSSecurity
 from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, spnego_list, \
     wss_list
+from zato.common.private_key_jwt import PrivateKeyJWTError, validate_definition
+from zato.common.typing_ import cast_
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -46,6 +49,32 @@ _comparison_skip_keys = ('type', 'name', 'rate_limiting')
 
 # How many bits of randomness an auto-generated password carries.
 _auto_password_bits = 128
+
+# The opaque keys of a bearer token definition that hold secrets - they are compared through decryption and never logged.
+_bearer_token_secret_keys = COMMON_OAUTH.Secret_Fields
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def validate_private_key_jwt(item:'anydict') -> 'None':
+    """ Checks a bearer token definition that signs its token requests - a key the YAML gives must parse and match
+    the algorithm, and a certificate, if any, must belong to the key. A placeholder standing in for an environment
+    variable that was not set is not a key and is not checked here.
+    """
+    if item.get('client_auth_method') != COMMON_OAUTH.Client_Auth_Method.Private_Key_JWT:
+        return
+
+    private_key = item.get('private_key')
+    if not is_usable_secret(private_key):
+        return
+
+    jwt_algorithm = item['jwt_algorithm']
+    certificate = item.get('certificate') or ''
+
+    try:
+        _ = validate_definition(cast_('str', private_key), jwt_algorithm, certificate)
+    except PrivateKeyJWTError as e:
+        raise ValueError(f'Security definition `{item["name"]}` -> {e}') from e
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -197,6 +226,13 @@ class SecurityImporter:
                         item['grant_type'] = 'client_credentials'
                     if 'data_format' not in item:
                         item['data_format'] = 'form'
+                    if 'client_auth_method' not in item:
+                        item['client_auth_method'] = COMMON_OAUTH.Default.Client_Auth_Method
+                    if 'jwt_algorithm' not in item:
+                        item['jwt_algorithm'] = COMMON_OAUTH.Default.JWT_Algorithm
+
+                    # A key that does not parse must stop the import before anything is written
+                    validate_private_key_jwt(item)
 
             logger.info('Checking YAML def: name=%s type=%s', name, sec_type)
 
@@ -218,6 +254,16 @@ class SecurityImporter:
                         continue
                     if key == 'username' and sec_type == 'apikey':
                         continue
+
+                    # Secrets kept in opaque attributes, such as a private key, are compared through decryption,
+                    # and a definition that has none stored yet is updated as soon as the YAML gives one.
+                    if key in _bearer_token_secret_keys:
+                        if secret_needs_update(session, value, db_def.get(key)):
+                            logger.info('Secret mismatch for %s.%s', name, key)
+                            needs_update = True
+                            break
+                        continue
+
                     if key not in db_def:
                         continue
 
@@ -381,6 +427,10 @@ class SecurityImporter:
 
             security_def['password'] = encrypt_secret(session, password)
 
+        # A private key lands in opaque attributes and is encrypted on its way there
+        if sec_type == 'bearer_token':
+            encrypt_opaque_secrets(security_def, {}, _bearer_token_secret_keys, session, is_create=True)
+
         if sec_type == 'basic_auth':
             auth = self._create_basic_auth(security_def, cluster)
         elif sec_type == 'apikey':
@@ -465,12 +515,16 @@ class SecurityImporter:
             _ = sec_def.pop('password', None)
 
         db_def = db_defs[def_name]
+        stored_opaque = load_opaque(db_def.get('opaque1'))
 
-        if 'opaque1' in db_def and db_def['opaque1']:
-            opaque_data = loads(db_def['opaque1'])
-            for key, value in opaque_data.items():
-                if key not in sec_def:
-                    sec_def[key] = value
+        # A private key the YAML gives replaces the stored one encrypted, one it does not give in a usable form
+        # leaves the stored one in place, and a stored one still in clear text is written back encrypted.
+        if sec_type == 'bearer_token':
+            encrypt_opaque_secrets(sec_def, stored_opaque, _bearer_token_secret_keys, session, is_create=False)
+
+        for key, value in stored_opaque.items():
+            if key not in sec_def:
+                sec_def[key] = value
 
         for item in db_def:
             if item not in sec_def and item not in ('id', 'type', 'definition', 'opaque1'):
@@ -518,6 +572,14 @@ class SecurityImporter:
             if not db_def:
                 continue
 
+            model = self.get_class_by_type(db_def['type'])
+
+            # A bearer token may keep a private key in clear text from before keys were encrypted on import
+            if db_def['type'] == 'bearer_token':
+                definition = session.query(model).filter_by(id=db_def['id']).one()
+                if encrypt_kept_opaque_secrets(session, definition, _bearer_token_secret_keys):
+                    logger.info('Encrypted the stored private key of %s in place', name)
+
             # The column is nullable and not every type has one
             stored = db_def.get('password')
             if stored is None:
@@ -526,7 +588,6 @@ class SecurityImporter:
             if is_encrypted(stored):
                 continue
 
-            model = self.get_class_by_type(db_def['type'])
             definition = session.query(model).filter_by(id=db_def['id']).one()
             definition.password = encrypt_secret(session, stored)
             session.add(definition)

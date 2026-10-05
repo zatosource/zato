@@ -108,6 +108,9 @@ class AS4Wrapper:
 
         self.needs_audit = is_audit_log_active
 
+        # The payloads leave with the audit export only if the configuration says so
+        self.is_export_payload_active = bool(config.get('is_audit_export_payload_active'))
+
         if self.needs_audit:
             self.audit_log = AuditLog(self.server.name)
 
@@ -213,7 +216,7 @@ class AS4Wrapper:
 
         record_send_result(self.audit_log, pmode.initiator.party_id, pmode.responder.party_id, result,
             payloads=parts, service=pmode.service, action=pmode.action, original_sender=original_sender,
-            final_recipient=final_recipient, cid=cid)
+            final_recipient=final_recipient, cid=cid, is_export_payload_active=self.is_export_payload_active)
 
 # ################################################################################################################################
 
@@ -224,7 +227,8 @@ class AS4Wrapper:
         if not self.needs_audit:
             return
 
-        record_pull_result(self.audit_log, pmode.responder.party_id, pmode.initiator.party_id, result, cid=cid)
+        record_pull_result(self.audit_log, pmode.responder.party_id, pmode.initiator.party_id, result, cid=cid,
+            is_export_payload_active=self.is_export_payload_active)
 
 # ################################################################################################################################
 

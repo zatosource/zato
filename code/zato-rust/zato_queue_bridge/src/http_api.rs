@@ -54,7 +54,7 @@ struct ConnectionInfo {
     ssl: bool,
 }
 
-/// Returns the Kafka topic or, when empty, the IBM MQ queue of a connection.
+/// Returns the Kafka topics or, when there are none, the IBM MQ queue of a connection.
 fn topic_or_queue(topic: &str, queue: &str) -> String {
     if topic.is_empty() { queue.to_string() } else { topic.to_string() }
 }
@@ -69,7 +69,7 @@ async fn get_connections(state: web::Data<AppState>) -> HttpResponse {
                 name: config.name.clone(),
                 conn_type: "channel".into(),
                 address: config.address.clone(),
-                topic: topic_or_queue(&config.topic, &config.queue),
+                topic: topic_or_queue(&config.topics_text(), &config.queue),
                 ssl: config.ssl,
             });
         }
@@ -129,7 +129,7 @@ async fn get_connection_status(state: web::Data<AppState>, params: web::Query<Co
             name: config.name.clone(),
             conn_type: "channel".into(),
             address: config.address.clone(),
-            topic: topic_or_queue(&config.topic, &config.queue),
+            topic: topic_or_queue(&config.topics_text(), &config.queue),
             ssl: config.ssl,
             group_id: Some(config.group_id.clone()),
             service: Some(config.service.clone()),

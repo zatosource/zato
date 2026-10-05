@@ -12,7 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps, loads
-from zato.common.test import _test_sec_def_id
+from zato.common.test import _test_identity
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config, Size_Cap_Mode_Block
 from zato.server.connection.mcp.handler import MCPHandler, _mcp_protocol_version
@@ -71,7 +71,7 @@ def _call_tool(handler:'MCPHandler', arguments:'anydict') -> 'stranydict':
     """
 
     session_manager = handler.session_manager
-    session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+    session_id = session_manager.create(_mcp_protocol_version, _test_identity)
 
     request = {
         'jsonrpc': '2.0',
@@ -81,7 +81,7 @@ def _call_tool(handler:'MCPHandler', arguments:'anydict') -> 'stranydict':
     }
     raw = dumps(request)
 
-    mcp_response = handler.handle_raw_request(raw, _test_sec_def_id, session_id=session_id)
+    mcp_response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
     assert mcp_response.status_code == OK
 

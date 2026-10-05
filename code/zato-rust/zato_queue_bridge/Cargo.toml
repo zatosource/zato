@@ -20,7 +20,8 @@ path = "src/bin/queue_bridge.rs"
 [features]
 default = ["kafka", "ibm-mq"]
 # Static libcurl for the OAUTHBEARER token endpoint, linked only by the cmake build of librdkafka.
-kafka = ["rdkafka", "rdkafka/ssl", "rdkafka/curl-static", "rdkafka/cmake-build"]
+# zstd and libz make every compression type an outgoing connection offers work, snappy and lz4 are built in.
+kafka = ["rdkafka", "rdkafka/ssl", "rdkafka/curl-static", "rdkafka/cmake-build", "rdkafka/zstd", "rdkafka/libz"]
 ibm-mq = ["mqi", "libmqm-sys", "openssl"]
 
 [dependencies]

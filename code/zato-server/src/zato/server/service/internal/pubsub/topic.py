@@ -180,6 +180,7 @@ class Create(AdminService):
                 pubsub_msg.action = PUBSUB.TOPIC_CREATE.value
                 pubsub_msg.topic_name = input.name
                 pubsub_msg.is_audit_log_active = input.is_audit_log_active
+                pubsub_msg.is_audit_export_payload_active = input.get('is_audit_export_payload_active', False)
 
                 for name in _backend_fields:
                     pubsub_msg[name] = input[name]
@@ -283,6 +284,10 @@ class Edit(AdminService):
                     pubsub_msg.old_topic_name = old_name
                     pubsub_msg.is_active = input.is_active
                     pubsub_msg.is_audit_log_active = input.is_audit_log_active
+
+                    # The payload export flag has no Dashboard field, so the servers are told what is stored
+                    stored_opaque = parse_instance_opaque_attr(topic)
+                    pubsub_msg.is_audit_export_payload_active = stored_opaque.get('is_audit_export_payload_active', False)
 
                     # Carry both the new backend fields and the previous channel name
                     # so servers can move the channel override if needed.

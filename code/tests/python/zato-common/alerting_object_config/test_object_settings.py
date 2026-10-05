@@ -18,7 +18,8 @@ from sqlalchemy.orm import sessionmaker
 from zato.common.alerting.collectors.common import Measure_Auth_Failures, Measure_Error_Rate, Measure_File_Runs, \
     Measure_Latency, Measure_Status_Codes
 from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, \
-    alert_type_llm, alert_type_mcp, alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap, \
+    alert_type_kafka_outgoing, alert_type_llm, alert_type_mcp, alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, \
+    alert_type_soap, \
     encode_email_connection, Email_Conn_Type_IMAP, get_defaults, to_storage
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
     get_llm_connection, get_muted_rule_names, get_names_with_toggle, get_silence_expected_names, is_object_active, \
@@ -173,8 +174,8 @@ class TestLoadObjectSettings:
             settings = load_object_settings(session, _cluster_id)
 
         assert settings == {alert_type_file_transfer: {}, alert_type_fhir: {}, alert_type_llm: {}, alert_type_mcp: {}, \
-            alert_type_mllp_channel: {}, alert_type_mllp_outgoing: {}, alert_type_channels: {}, alert_type_rest: {}, \
-            alert_type_soap: {}}
+            alert_type_mllp_channel: {}, alert_type_mllp_outgoing: {}, alert_type_kafka_outgoing: {}, alert_type_channels: {}, \
+            alert_type_rest: {}, alert_type_soap: {}}
 
 # ################################################################################################################################
 

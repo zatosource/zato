@@ -188,6 +188,7 @@ class OutgoingSOAPImporter:
         connection_extra_field_defaults = {
             'validate_tls': True,
             'is_audit_log_active': True,
+            'is_audit_export_payload_active': False,
         }
 
         # The alert settings leave the definition before it reaches the row's own attributes

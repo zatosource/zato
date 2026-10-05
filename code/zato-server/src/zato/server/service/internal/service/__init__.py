@@ -48,6 +48,7 @@ Service = Service
 # by the scheduler's own UI so a linked job can be edited there, even though they are internal.
 _linked_job_services = [
     EMAIL.IMAP.Scheduler.Dispatch_Service,
+    HL7.BulkExport.Dispatch_Service,
     HTTP_SOAP.HealthCheck.Dispatch_Service,
     HTTP_SOAP.Invocation.Dispatch_Service,
 ]

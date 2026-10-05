@@ -132,6 +132,10 @@ class IMAPExporter:
             if item.get('is_audit_log_active') is False:
                 imap_conn['is_audit_log_active'] = False
 
+            # Payloads leave with the audit export only when the flag is on, so only the on state is exported
+            if item.get('is_audit_export_payload_active') is True:
+                imap_conn['is_audit_export_payload_active'] = True
+
             exported_imap.append(imap_conn)
 
         logger.info('Successfully prepared %d IMAP connection definitions for export', len(exported_imap))

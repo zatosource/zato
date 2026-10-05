@@ -10,15 +10,23 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import re
 import shlex
+from logging import getLogger
 
 # Zato
 from zato_deploy.common import Path, strlist, strstrdict
+from zato_deploy.github_app import get_git_auth_for_url, GitHubAppError, is_https_url
 from zato_deploy.process import CommandResult, run_command
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The only shape of a private repository address that is accepted, an SSH one on GitHub.
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The shape of a repository address that the deploy key is for, an SSH one on GitHub. The other accepted shape,
+# an HTTPS one, is what the GitHub App reads.
 _SSH_URL_Pattern = re.compile(r'^git@github\.com:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git$')
 
 _Remote_Timeout = 120
@@ -29,6 +37,13 @@ _Remote_Timeout = 120
 def is_ssh_url(url:'str') -> 'bool':
 
     out = bool(_SSH_URL_Pattern.match(url))
+    return out
+
+# ################################################################################################################################
+
+def is_repo_url(url:'str') -> 'bool':
+
+    out = is_ssh_url(url) or is_https_url(url)
     return out
 
 # ################################################################################################################################
@@ -64,12 +79,30 @@ def get_git_env(is_verbose:'bool'=False) -> 'strstrdict':
 
 # ################################################################################################################################
 
-def run_git(arguments:'strlist', cwd:'str | None'=None, is_verbose:'bool'=False) -> 'CommandResult':
-
+def run_git(arguments:'strlist', cwd:'str | None'=None, is_verbose:'bool'=False, url:'str'='') -> 'CommandResult':
+    """ Runs git, and if the address is one the GitHub App reads, with a token for it in the request headers.
+    """
     command = ['git']
+
+    if url:
+        command.extend(get_git_auth(url))
+
     command.extend(arguments)
 
     out = run_command(command, get_git_env(is_verbose), cwd=cwd, timeout=_Remote_Timeout)
+    return out
+
+# ################################################################################################################################
+
+def get_git_auth(url:'str') -> 'strlist':
+    """ Returns the arguments that let git read the address with the App's token, or nothing if that is not how it is read.
+    """
+    try:
+        out = get_git_auth_for_url(Path.Link_Dir, url)
+    except GitHubAppError as exception:
+        logger.warning('No token for %s: %s', url, exception.message)
+        out = []
+
     return out
 
 # ################################################################################################################################

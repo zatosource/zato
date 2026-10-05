@@ -189,6 +189,9 @@ _mcp_columns = [
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Tool', 'type': 'text'},
     {'key': 'ext_client_id', 'label': 'Caller', 'type': 'text'},
+    {'key': 'identity', 'label': 'Identity', 'type': 'text'},
+    {'key': 'client', 'label': 'Client', 'type': 'text'},
+    {'key': 'reason', 'label': 'Reason', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
@@ -242,6 +245,48 @@ _fhir_columns = [
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
     {'key': 'action', 'label': 'Actions', 'type': 'action'},
+]
+
+# All the events of one bulk export job share the job's id as their cid.
+_fhir_bulk_export_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
+    {'key': 'phase', 'label': 'Phase', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Request', 'type': 'text'},
+    {'key': 'resource_type', 'label': 'Resource', 'type': 'text'},
+    {'key': 'file_name', 'label': 'File', 'type': 'text'},
+    {'key': 'count', 'label': 'Count', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'status', 'label': 'Status', 'type': 'text'},
+    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
+_kafka_channel_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Channel', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Topic', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'status', 'label': 'Status', 'type': 'text'},
+    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
+_kafka_outgoing_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Topic', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
 _llm_columns = [
@@ -328,6 +373,18 @@ _test_transfer_columns = [
     {'key': 'status', 'label': 'Status', 'type': 'text'},
 ]
 
+_ccda_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'object_name', 'label': 'Service', 'type': 'text'},
+    {'key': 'root_template', 'label': 'Document', 'type': 'text'},
+    {'key': 'resource_count', 'label': 'Resources', 'type': 'text'},
+    {'key': 'document_size', 'label': 'Document size', 'type': 'text'},
+    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 # The columns of the all-events page - the ones every source shares, plus the source itself.
 _all_sources_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
@@ -364,7 +421,10 @@ _source_columns = {
     'mcp': _mcp_columns,
     'mllp-channel': _mllp_columns,
     'mllp-outgoing': _mllp_columns,
+    'kafka-channel': _kafka_channel_columns,
+    'kafka-outgoing': _kafka_outgoing_columns,
     'fhir': _fhir_columns,
+    'fhir-bulk-export': _fhir_bulk_export_columns,
     'scheduler': _scheduler_columns,
     'service': _service_columns,
     'llm': _llm_columns,
@@ -374,6 +434,7 @@ _source_columns = {
     'microsoft-health': _microsoft_health_columns,
     'certificate': _certificate_columns,
     'test-transfer': _test_transfer_columns,
+    'ccda': _ccda_columns,
 }
 
 # ################################################################################################################################
@@ -384,7 +445,7 @@ _source_columns = {
 _source_attr_columns = source_attr_names
 
 # The sources whose payloads live in the event_body table rather than the data column.
-_source_body_preview = {'mllp-channel', 'mllp-outgoing', 'service'}
+_source_body_preview = {'mllp-channel', 'mllp-outgoing', 'kafka-channel', 'service'}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -409,7 +470,7 @@ _all_outcomes = (AuditOutcome.OK, AuditOutcome.Error, AuditOutcome.Expired)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_outcomes(source:'str') -> 'strtuple':
+def get_source_outcomes(source:'str') -> 'strtuple':
     """ Returns the outcomes the source's events report. An empty source is the all-events page.
     """
     if source == '':

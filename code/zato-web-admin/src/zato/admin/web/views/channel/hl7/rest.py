@@ -12,7 +12,7 @@ from urllib.parse import quote
 # Zato
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, Index as _Index
-from zato.common.api import CONNECTION, DATA_FORMAT, generic_attrs, HL7, SEC_DEF_TYPE, Sec_Def_Type_Name, URL_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, DATA_FORMAT, generic_attrs, SEC_DEF_TYPE, Sec_Def_Type_Name, URL_TYPE, ZATO_NONE
 from zato.common.audit_log.common import AuditSource
 from zato.common.model.hl7 import HL7RESTChannelConfigObject
 
@@ -46,6 +46,9 @@ class Index(_Index):
     def on_before_append_item(self, item):
         if item.security_id and item.security_id != ZATO_NONE:
             item.sec_type_name = Sec_Def_Type_Name[item.sec_type]
+
+        # The version select on the edit form is keyed by the channel's data format
+        item.hl7_version = item.data_format
 
         # What the channel's audit log link carries - the template adds it to the audit log page's URL.
         object_name = quote(item.name)
@@ -81,13 +84,15 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['transport'] = URL_TYPE.PLAIN_HTTP
         initial_input_dict['should_validate'] = True
         initial_input_dict['should_parse_on_input'] = True
-        initial_input_dict['data_format'] = HL7.Const.Version.v2.id
         initial_input_dict['data_encoding'] = 'utf-8'
 
 # ################################################################################################################################
 
     def pre_process_input_dict(self, input_dict):
         input_dict['security_id'] = extract_security_id(input_dict)
+
+        # The version chosen on the form is what the channel stores as its data format
+        input_dict['data_format'] = input_dict['hl7_version']
 
 # ################################################################################################################################
 

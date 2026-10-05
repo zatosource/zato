@@ -24,7 +24,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anydictnone, anylist
+    from zato.common.typing_ import anydict, anydictnone, anylist, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,8 +40,10 @@ class ModuleCtx:
     # Redis streams the bridge communicates through
     Command_Stream = 'zato:queue_bridge:stream:command'
     Reply_Stream   = 'zato:queue_bridge:stream:reply'
-    Recv_Stream    = 'zato:queue_bridge:stream:recv'
     Request_Stream = 'zato:queue_bridge:stream:request'
+
+    # The prefix of a channel's recv stream, the channel's id follows
+    Recv_Stream_Prefix = 'zato:queue_bridge:stream:recv:'
 
     # Consumer group details for the reply stream, the same the server uses
     Consumer_Group = 'server'
@@ -71,8 +73,13 @@ class QueueBridgeHarness:
     def __init__(self) -> 'None':
         self.redis = Redis(decode_responses=True)
         self.process:'subprocess.Popen | None' = None
-        self.recv_last_id = '0-0'
         self.request_last_id = '0-0'
+
+        # Channel names to the recv streams the bridge publishes their messages to
+        self.recv_streams:'strdict' = {}
+
+        # Recv streams to the ID of the last event read from each
+        self.recv_last_ids:'strdict' = {}
 
 # ################################################################################################################################
 
@@ -82,8 +89,8 @@ class QueueBridgeHarness:
         _ = self.redis.delete(
             ModuleCtx.Command_Stream,
             ModuleCtx.Reply_Stream,
-            ModuleCtx.Recv_Stream,
             ModuleCtx.Request_Stream,
+            *self.recv_streams.values(),
         )
 
 # ################################################################################################################################
@@ -129,7 +136,13 @@ class QueueBridgeHarness:
         if not os.path.exists(ModuleCtx.MQ_Client_Lib):
             raise Exception(f'IBM MQ client library not found at `{ModuleCtx.MQ_Client_Lib}`, run `make mq-client` first')
 
-        # Start from clean streams so nothing from previous runs interferes ..
+        # Each channel's messages arrive on a recv stream of its own ..
+        for channel in channels:
+            stream = f'{ModuleCtx.Recv_Stream_Prefix}{channel["id"]}'
+            self.recv_streams[channel['name']] = stream
+            self.recv_last_ids[stream] = '0-0'
+
+        # .. start from clean streams so nothing from previous runs interferes ..
         self._clean_streams()
         self._ensure_reply_group()
 
@@ -246,22 +259,23 @@ class QueueBridgeHarness:
 
 # ################################################################################################################################
 
-    def wait_for_recv_event(self) -> 'anydict':
-        """ Blocks until the bridge publishes the next recv event and returns its fields.
+    def wait_for_recv_event(self, channel_name:'str') -> 'anydict':
+        """ Blocks until the bridge publishes the next recv event of a channel and returns its fields.
         """
+        stream = self.recv_streams[channel_name]
         deadline = monotonic() + ModuleCtx.Recv_Timeout
 
         while monotonic() < deadline:
-            result = cast_('anylist', self.redis.xread({ModuleCtx.Recv_Stream: self.recv_last_id}, count=1, block=1000))
+            result = cast_('anylist', self.redis.xread({stream: self.recv_last_ids[stream]}, count=1, block=1000))
 
             for _stream_name, messages in result:
                 for message_id, fields in messages:
-                    self.recv_last_id = message_id
+                    self.recv_last_ids[stream] = message_id
 
                     out = dict(fields)
                     return out
 
-        raise Exception('No recv event arrived from the queue bridge in time')
+        raise Exception(f'No recv event arrived from the queue bridge in time for channel `{channel_name}`')
 
 # ################################################################################################################################
 # ################################################################################################################################

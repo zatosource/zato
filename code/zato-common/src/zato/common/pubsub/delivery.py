@@ -47,10 +47,13 @@ class DeliveryExhausted(Exception):
     """ Raised when a round of delivery ran out of attempts.
     """
 
-    def __init__(self, error:'str', attempts:'int') -> 'None':
+    def __init__(self, error:'str', attempts:'int', error_class:'str') -> 'None':
         super().__init__(error)
         self.error = error
         self.attempts = attempts
+
+        # The class name of the exception the last attempt raised.
+        self.error_class = error_class
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,7 +137,7 @@ def deliver_with_policy(
                 continue
 
             logger.info('Queue delivery round over cid=%s, conn=%s, attempts=%s, reason=%s', cid, conn_name, attempts_made, e)
-            raise DeliveryExhausted(str(e), attempts_made) from e
+            raise DeliveryExhausted(str(e), attempts_made, e.__class__.__name__) from e
 
 # ################################################################################################################################
 

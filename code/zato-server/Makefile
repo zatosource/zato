@@ -29,7 +29,7 @@ MUTANT_FILES = \
 	-f src/logging.rs
 
 MUTANT_EXCLUDES = \
-	'with_gevent_io|fd_read|fd_write_all|build_response|handle_http_request|get_cached_attrs|chrono_to_py_datetime|log_rest_summary|log_access|init_rest_log|init_access_log|init_writer'
+	'with_gevent_io|fd_read|fd_write_all|build_response|handle_http_request|get_cached_attrs|chrono_to_py_datetime|log_rest_summary|log_access|init_rest_log|init_access_log|init_writer|extract_string_list|get_ctx_string|get_channel_field|adjust_requests_in_flight|set_request_timestamps|resolve_remote_addr|build_error_body|payload_to_bytes|collect_response_headers|write_access_log|record_prometheus_metrics|write_rest_summary'
 
 test:
 	echo "Running tests in $(Zato_Package_Name)"

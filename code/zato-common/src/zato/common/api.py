@@ -22,8 +22,10 @@ from zato.common.defaults import http_plain_server_port
 # ################################################################################################################################
 
 if 0:
+    from zato.common.documents.model import doclist
     from zato.common.ext.imbox import Imbox
     from zato.common.typing_ import any_, iterator_, stranydict, strnone
+    doclist = doclist
     Imbox = Imbox
     iterator_ = iterator_
     stranydict = stranydict
@@ -533,6 +535,157 @@ class KAFKA:
         SASL_MECHANISM.OAUTHBEARER.id: SEC_DEF_TYPE.OAUTH,
     }
 
+    class COMPRESSION:
+        """ Codecs an outgoing connection compresses messages with.
+        """
+        NONE = NameId('None', 'none')
+        GZIP = NameId('gzip', 'gzip')
+        SNAPPY = NameId('Snappy', 'snappy')
+        LZ4 = NameId('LZ4', 'lz4')
+        ZSTD = NameId('Zstandard', 'zstd')
+
+        def __iter__(self) -> 'iterator_':
+            return iter((self.NONE, self.GZIP, self.SNAPPY, self.LZ4, self.ZSTD))
+
+    class ACKS:
+        """ How many brokers acknowledge a message before a send counts as done.
+        """
+        ALL = NameId('All Kafka instances', 'all')
+        LEADER = NameId('One Kafka instance', '1')
+        NONE = NameId('No confirmation', '0')
+
+        def __iter__(self) -> 'iterator_':
+            return iter((self.ALL, self.LEADER, self.NONE))
+
+    class Producer:
+        """ The producer settings of an outgoing connection.
+        """
+        Field_Compression = 'compression'
+        Field_Acks = 'acks'
+        Field_Is_Idempotent = 'is_idempotent'
+        Field_Max_Message_Size = 'max_message_size'
+        Field_Linger_Ms = 'linger_ms'
+        Field_Send_Timeout = 'send_timeout'
+
+        Default_Compression = 'none' # KAFKA.COMPRESSION.NONE
+        Default_Acks = 'all' # KAFKA.ACKS.ALL
+        Default_Is_Idempotent = True
+        Default_Max_Message_Size = 1_000_000
+        Default_Linger_Ms = 0
+        Default_Send_Timeout = 5
+
+        FieldList = (
+            Field_Compression,
+            Field_Acks,
+            Field_Is_Idempotent,
+            Field_Max_Message_Size,
+            Field_Linger_Ms,
+            Field_Send_Timeout,
+        )
+
+        IntFieldList = (Field_Max_Message_Size, Field_Linger_Ms, Field_Send_Timeout)
+
+        Defaults = {
+            Field_Compression: Default_Compression,
+            Field_Acks: Default_Acks,
+            Field_Is_Idempotent: Default_Is_Idempotent,
+            Field_Max_Message_Size: Default_Max_Message_Size,
+            Field_Linger_Ms: Default_Linger_Ms,
+            Field_Send_Timeout: Default_Send_Timeout,
+        }
+
+    class AUTO_OFFSET_RESET:
+        """ Where a consumer group without a committed offset starts reading a topic from.
+        """
+        LATEST = NameId('Latest', 'latest')
+        EARLIEST = NameId('Earliest', 'earliest')
+
+        def __iter__(self) -> 'iterator_':
+            out = iter((self.LATEST, self.EARLIEST))
+            return out
+
+    class Consumer:
+        """ The consumer settings of a channel.
+        """
+        Field_Topics = 'topics'
+        Field_Auto_Offset_Reset = 'auto_offset_reset'
+        Field_Max_Message_Size = 'max_message_size'
+        Field_Max_In_Flight = 'max_in_flight'
+        Field_Should_Deliver_Tombstones = 'should_deliver_tombstones'
+        Field_Dedup_Header = 'dedup_header'
+        Field_Dedup_TTL = 'dedup_ttl'
+        Field_Routing = 'routing'
+
+        Default_Topics = ''
+        Default_Auto_Offset_Reset = 'latest'
+        Default_Max_Message_Size = 1_000_000
+        Default_Max_In_Flight = 100
+        Default_Should_Deliver_Tombstones = False
+        Default_Dedup_Header = ''
+        Default_Dedup_TTL = 86_400 * 7
+        Default_Routing = ''
+
+        FieldList = (
+            Field_Topics,
+            Field_Auto_Offset_Reset,
+            Field_Max_Message_Size,
+            Field_Max_In_Flight,
+            Field_Should_Deliver_Tombstones,
+            Field_Dedup_Header,
+            Field_Dedup_TTL,
+            Field_Routing,
+        )
+
+        IntFieldList = (Field_Max_Message_Size, Field_Max_In_Flight, Field_Dedup_TTL)
+        BoolFieldList = (Field_Should_Deliver_Tombstones,)
+
+        Defaults = {
+            Field_Topics: Default_Topics,
+            Field_Auto_Offset_Reset: Default_Auto_Offset_Reset,
+            Field_Max_Message_Size: Default_Max_Message_Size,
+            Field_Max_In_Flight: Default_Max_In_Flight,
+            Field_Should_Deliver_Tombstones: Default_Should_Deliver_Tombstones,
+            Field_Dedup_Header: Default_Dedup_Header,
+            Field_Dedup_TTL: Default_Dedup_TTL,
+            Field_Routing: Default_Routing,
+        }
+
+        # The Redis key prefix of a channel's dedup values, the channel's id and the value follow.
+        Dedup_Key_Prefix = 'zato:kafka:dedup:'
+
+    class Routing:
+        """ The keys of one routing rule of a channel - the rules travel as a JSON list of such mappings.
+        """
+        Key_Topic = 'topic'
+        Key_Header_Name = 'header_name'
+        Key_Header_Value = 'header_value'
+        Key_Service = 'service'
+
+        KeyList = (Key_Topic, Key_Header_Name, Key_Header_Value, Key_Service)
+
+    class Header:
+        """ The headers a service receives next to a message's own, and the ones a send can carry.
+        """
+        Key = 'kafka.key'
+        Topic = 'kafka.topic'
+        Partition = 'kafka.partition'
+        Offset = 'kafka.offset'
+        Timestamp = 'kafka.timestamp'
+        Is_Tombstone = 'kafka.is_tombstone'
+        Channel = 'kafka.channel'
+
+        # A header whose value is not text arrives base64-encoded under its name with this suffix.
+        B64_Suffix = '.b64'
+
+        # The bridge's value of a tombstone header.
+        Is_Tombstone_True = 'true'
+
+    class Default:
+        Address = 'localhost:9092'
+
+    # The password of the client's TLS key, stored encrypted and never listed back
+    Field_SSL_Key_Password = 'ssl_key_password'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -565,6 +718,8 @@ class DATA_FORMAT(Attrs):
     CSV = 'csv'
     DICT = 'dict'
     FORM_DATA = 'form'
+    HL7 = 'hl7'
+    HL7_CCDA = 'hl7-ccda'
     JSON = 'json'
     POST = 'post'
 
@@ -1015,8 +1170,9 @@ class SchedulerLink:
     class KindType:
         Scheduler = 'scheduler'
         HealthCheck = 'health_check'
+        BulkExport = 'bulk_export'
 
-    KindList = (KindType.Scheduler, KindType.HealthCheck)
+    KindList = (KindType.Scheduler, KindType.HealthCheck, KindType.BulkExport)
 
     FieldList = (Conn_Type, Conn_ID, Kind)
 
@@ -2021,12 +2177,36 @@ class MicrosoftFabric:
 
 class OAuth:
 
+    class Client_Auth_Method:
+        Client_Secret = 'client_secret'
+        Private_Key_JWT = 'private_key_jwt'
+
+    class JWT_Algorithm:
+        RS256 = 'RS256'
+        RS384 = 'RS384'
+        PS256 = 'PS256'
+        ES384 = 'ES384'
+
+    # The algorithms a client assertion can be signed with, in the order the Dashboard lists them.
+    JWT_Algorithms = (JWT_Algorithm.RS384, JWT_Algorithm.RS256, JWT_Algorithm.PS256, JWT_Algorithm.ES384)
+
+    # The RFC 7523 value of client_assertion_type in a token request.
+    Assertion_Type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+
+    # How long a client assertion stays valid, measured from the moment it is signed.
+    Assertion_Lifetime_Seconds = 300
+
+    # The opaque fields of a definition that are stored encrypted and never returned.
+    Secret_Fields = ('private_key',)
+
     class Default:
         Auth_Server_URL = 'https://example.com/oauth2/token'
         Scopes = [] # There are no default scopes
         Client_ID_Field = 'client_id'
         Client_Secret_Field = 'client_secret'
         Grant_Type = 'client_credentials'
+        Client_Auth_Method = 'client_secret'
+        JWT_Algorithm = 'RS384'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2048,6 +2228,18 @@ class IO:
     Bearer_Token_Format = [
         NameId('JSON', DATA_FORMAT.JSON),
         NameId('Form data', DATA_FORMAT.FORM_DATA)
+    ]
+
+    Bearer_Token_Client_Auth_Method = [
+        NameId('Client secret', OAuth.Client_Auth_Method.Client_Secret),
+        NameId('Private key JWT', OAuth.Client_Auth_Method.Private_Key_JWT),
+    ]
+
+    Bearer_Token_JWT_Algorithm = [
+        NameId(OAuth.JWT_Algorithm.RS384),
+        NameId(OAuth.JWT_Algorithm.RS256),
+        NameId(OAuth.JWT_Algorithm.PS256),
+        NameId(OAuth.JWT_Algorithm.ES384),
     ]
 
 # ################################################################################################################################
@@ -2135,6 +2327,19 @@ class SMTPMessage:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _uid_as_str(uid:'any_') -> 'str':
+    """ Generic IMAP servers report uids as bytes while Microsoft 365 uses str, this normalizes them.
+    """
+    if isinstance(uid, bytes):
+        out = uid.decode('utf-8')
+    else:
+        out = uid
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class IMAPMessage:
     def __init__(self, uid:'str', conn:'Imbox', data:'any_') -> 'None':
         self.uid = uid
@@ -2151,6 +2356,41 @@ class IMAPMessage:
 
     def mark_seen(self):
         raise NotImplementedError('Must be implemented by subclasses')
+
+    def to_dict(self) -> 'stranydict':
+        """ The message as a JSON-friendly dict - what the audit log records and what a service returning the message
+        it received answers with. Attachments are described by name, type and size rather than carried along.
+        """
+        attachments = []
+
+        for attachment in self.data.attachments:
+            attachments.append({
+                'filename': attachment['filename'],
+                'content_type': attachment['content-type'],
+                'size': attachment['size'],
+            })
+
+        out:'stranydict' = {
+            'uid': _uid_as_str(self.uid),
+            'subject': self.data.subject,
+            'sent_from': self.data.sent_from,
+            'body': self.data.body,
+            'attachments': attachments,
+        }
+        return out
+
+    def documents(self) -> 'doclist':
+        """ The documents of every attachment of this message, in the order the attachments come in.
+        """
+        from zato.common.documents.unpack import read_documents
+
+        out = []
+
+        for attachment in self.data.attachments:
+            data = attachment['content'].getvalue()
+            out.extend(read_documents(data, file_name=attachment['filename'], mime_type=attachment['content-type']))
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2188,6 +2428,96 @@ class IMAPAttachment:
         self_id = hex(id(self))
         return '<{} at {}, filename:`{}`, content_type:`{}`, size:`{}`, msg_uid:`{}`>'.format(
             class_name, self_id, self.filename, self.content_type, self.size, self.msg_uid)
+
+    def to_dict(self) -> 'stranydict':
+        """ The attachment as a JSON-friendly dict - what the audit log records and what a service returning the attachment
+        it received answers with. The bytes become text, size is still the byte count.
+        """
+        out:'stranydict' = {
+            'msg_uid': _uid_as_str(self.msg_uid),
+            'subject': self.subject,
+            'sent_from': self.sent_from,
+            'filename': self.filename,
+            'content_type': self.content_type,
+            'size': self.size,
+            'content_id': self.content_id,
+            'data': self.data.decode('utf8', 'replace'),
+        }
+        return out
+
+    def documents(self) -> 'doclist':
+        """ The documents this attachment carries - the attachment itself unless it is an archive, in which case
+        each file inside, and each document the metadata names if the archive is an IHE XDM package.
+        """
+        from zato.common.documents.unpack import read_documents
+
+        out = read_documents(self.data, file_name=self.filename, mime_type=self.content_type)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Documents:
+    """ Documents arriving inside email attachments, files and archives, and how the containers they come in are read.
+    """
+
+    # What every zip archive begins with
+    Zip_Magic = b'PK\x03\x04'
+
+    # The type of a document whose container says nothing about it and whose name tells nothing either
+    Default_Mime_Type = 'application/octet-stream'
+
+    # The types that the names of clinical documents mean, the same on every system - anything else is left
+    # to what the system itself knows about file names
+    Mime_Types = {
+        '.xml':  'application/xml',
+        '.cda':  'application/cda+xml',
+        '.ccda': 'application/cda+xml',
+        '.pdf':  'application/pdf',
+        '.json': 'application/json',
+        '.txt':  'text/plain',
+        '.zip':  'application/zip',
+    }
+
+    class Source:
+        Attachment = 'attachment'
+        Zip = 'zip'
+        XDM = 'xdm'
+
+    class Reason:
+        Bad_Zip = 'bad-zip'
+        No_Metadata = 'no-metadata'
+        Missing_File = 'missing-file'
+        Hash_Mismatch = 'hash-mismatch'
+        Size_Mismatch = 'size-mismatch'
+
+    class XDM:
+        """ IHE Cross-Enterprise Document Media Interchange - a zip with the documents of each submission set
+        in a subdirectory of IHE_XDM, described by the ebRIM metadata file next to them.
+        """
+        Dir = 'IHE_XDM'
+        Metadata_File = 'METADATA.XML'
+
+        # What a Direct message's subject carries when the message holds an XDM package
+        Subject_Marker = 'XDM/1.0/DDM'
+
+        # The metadata's XML namespaces
+        NS_RIM = 'urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0'
+        NS_LCM = 'urn:oasis:names:tc:ebxml-regrep:xsd:lcm:3.0'
+
+        class Slot:
+            URI = 'URI'
+            Hash = 'hash'
+            Size = 'size'
+            Creation_Time = 'creationTime'
+            Language_Code = 'languageCode'
+
+        # The classification and identification schemes of a document entry
+        class Scheme:
+            Class_Code = 'urn:uuid:41a5887f-8865-4c09-adf7-e362475b143a'
+            Type_Code  = 'urn:uuid:f0306f51-975f-434e-a61c-c59651d33983'
+            Patient_ID = 'urn:uuid:58a6f841-87b3-4a3e-92fd-a8ffeff98427'
+            Unique_ID  = 'urn:uuid:2e82c1f6-a085-4c72-9da3-8640a32e42ab'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2433,10 +2763,11 @@ class HL7:
     class Const:
 
         class Version:
-            v2 = NameId('HL7 v2.x', 'hl7-v2')
+            v2   = NameId('HL7 v2.x', 'hl7-v2')
+            ccda = NameId('C-CDA', 'hl7-ccda')
 
             def __iter__(self):
-                return iter((self.v2,))
+                return iter((self.v2, self.ccda))
 
         class ImplClass:
             zato = 'zato'
@@ -2457,6 +2788,125 @@ class HL7:
 
             def __iter__(self):
                 return iter((self.No_Auth, self.Basic_Auth, self.OAuth))
+
+    class BulkExport:
+        """ The FHIR Bulk Data $export an outgoing FHIR connection runs - its field names, the job
+        that runs it and the services that start it and deliver its files.
+        """
+
+        class Level:
+            Group   = 'group'
+            Patient = 'patient'
+            System  = 'system'
+
+        LevelList = (Level.Group, Level.Patient, Level.System)
+
+        # The path each level kicks the export off at - the group one has the group ID filled in
+        Kickoff_Path = {
+            Level.Group:   '/Group/{group_id}/$export',
+            Level.Patient: '/Patient/$export',
+            Level.System:  '/$export',
+        }
+
+        # Prefix of the names of the jobs auto-created for connections with a schedule
+        Job_Prefix = 'bulk-export.'
+
+        # The service a job invokes to start an export, and the one that hands each file to its destinations
+        Dispatch_Service = 'zato.hl7.fhir.bulk-export.run'
+        Deliver_Service  = 'zato.hl7.fhir.bulk-export.deliver'
+
+        # Where the files are downloaded to - an environment variable, or a directory under the server's work dir
+        Env_Dir     = 'Zato_FHIR_Bulk_Export_Dir'
+        Default_Dir = 'fhir-bulk-export'
+
+        # How long to wait between polls when the server does not say, and how many times a file download is tried
+        Default_Retry_After = 10
+        Download_Retries    = 3
+
+        # What the output files are, and the type of the files that list what the server could not export
+        Content_Type        = 'application/fhir+ndjson'
+        Error_Resource_Type = 'OperationOutcome'
+
+        # The name of the file an export's state is kept in, and of the log the program writes
+        State_File_Name = 'state.json'
+        Log_File_Name   = 'fhir-bulk-export.log'
+
+        # The connection fields the tab holds
+        Field_Is_Active        = 'bulk_export_is_active'
+        Field_Level            = 'bulk_export_level'
+        Field_Group_ID         = 'bulk_export_group_id'
+        Field_Patient_IDs      = 'bulk_export_patient_ids'
+        Field_Types            = 'bulk_export_types'
+        Field_Since            = 'bulk_export_since'
+        Field_Type_Filter      = 'bulk_export_type_filter'
+        Field_Run_Every        = 'bulk_export_run_every'
+        Field_Run_Unit         = 'bulk_export_run_unit'
+        Field_Start_Date       = 'bulk_export_start_date'
+        Field_Job_ID           = 'bulk_export_job_id'
+        Field_Destinations     = 'bulk_export_destinations'
+        Field_Delete_Files     = 'bulk_export_delete_files'
+        Field_Delete_On_Server = 'bulk_export_delete_on_server'
+
+        # The fields of the schedule, in the order the job sync reads them
+        ScheduleFieldList = (Field_Run_Every, Field_Run_Unit, Field_Start_Date, Field_Job_ID)
+
+        # The fields a run may be started with by hand, overriding the tab
+        OverrideFieldList = ('level', 'group_id', 'patient_ids', 'types', 'since', 'type_filter', 'destinations')
+
+        # The YAML key enmasse keeps the tab under, and the prefix stripped off each field inside it
+        Enmasse_Key   = 'bulk_export'
+        Field_Prefix  = 'bulk_export_'
+
+        # The phases an export's audit events are recorded under
+        class Phase:
+            Kickoff  = 'kick-off'
+            Poll     = 'poll'
+            Manifest = 'manifest'
+            Download = 'download'
+            Deliver  = 'deliver'
+            Cleanup  = 'cleanup'
+            Done     = 'done'
+            Failed   = 'failed'
+
+        # The statuses a job goes through
+        class Status:
+            Running = 'running'
+            Done    = 'done'
+            Failed  = 'failed'
+
+    class CCDA:
+        """ The conversion of C-CDA documents to FHIR bundles - the data format of channels that convert
+        on arrival and where the converter that does the work is installed.
+        """
+
+        # The data format of an HL7 REST channel that converts each document before its service runs
+        Data_Format = 'hl7-ccda'
+
+        # Where the converter is installed - an environment variable, or a directory next to the Python interpreter
+        Env_Dir          = 'Zato_FHIR_Converter_Dir'
+        Default_Dir_Name = 'fhir-converter'
+
+        # The converter's binary and the directory of its templates, both under the directory above
+        Binary_Name        = 'Microsoft.Health.Fhir.Liquid.Converter.Tool'
+        Templates_Dir_Name = 'templates'
+        Templates_Set_Name = 'Ccda'
+
+        # How long one conversion may take, in seconds
+        Timeout = 60.0
+
+        # The template used when a document names no template of its own, and the type of the bundles returned
+        Default_Root_Template = 'CCD'
+        Bundle_Type           = 'transaction'
+
+        # The content type of the documents themselves
+        Content_Type = 'application/cda+xml'
+
+        # Why a conversion did not happen
+        class Reason:
+            Not_Installed    = 'not-installed'
+            Not_CDA          = 'not-cda'
+            Converter_Failed = 'converter-failed'
+            Timeout          = 'timeout'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2528,6 +2978,20 @@ class PubSub:
         DLQ_Job_Name             = 'zato.pubsub.dlq'
         DLQ_Job_Interval_Minutes = 1
         DLQ_Rule_Service         = 'zato.pubsub.dlq.run'
+
+    class Inbound:
+        """ The DLQs of channels - a channel has no queue in front of it, only the DLQ its failed messages move to.
+        """
+
+        # The DLQ topic and sub key prefixes, followed by the channel's type and name or id
+        DLQ_Topic_Prefix = 'zato.in.dlq.'
+        DLQ_Sub_Key_Prefix = 'zato.in.dlq.'
+
+    class Direction:
+        """ Which way a connection with a DLQ moves messages.
+        """
+        In = 'in'
+        Out = 'out'
 
     class REST_Server:
 

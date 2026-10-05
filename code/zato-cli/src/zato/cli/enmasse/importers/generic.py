@@ -98,6 +98,13 @@ class GenericConnectionImporter:
 
 # ################################################################################################################################
 
+    def sync_linked_jobs(self, session:'SASession', merged_def:'anydict', connection:'any_') -> 'None':
+        """ May be overridden by subclasses to create or update the scheduler jobs a connection of this type
+        links to besides its health check, each storing its job ID back in the definition.
+        """
+
+# ################################################################################################################################
+
     def resolve_references(self, connection_def:'anydict') -> 'None':
         """ May be overridden by subclasses to turn the names a YAML definition refers other objects
         by into the ids that are stored. Runs before validation, so what validation sees is what
@@ -275,6 +282,7 @@ class GenericConnectionImporter:
         # .. and so can its health check job, whose ID is then stored with the connection
         if self.health_check_conn_type:
             sync_health_check_job(self.importer, session, merged_def, connection, self.health_check_conn_type)
+            self.sync_linked_jobs(session, merged_def, connection)
             set_instance_opaque_attrs(connection, merged_def)
 
         return connection
@@ -327,6 +335,7 @@ class GenericConnectionImporter:
         # its ID landing in the opaque attributes with everything else
         if self.health_check_conn_type:
             sync_health_check_job(self.importer, session, merged_def, connection, self.health_check_conn_type)
+            self.sync_linked_jobs(session, merged_def, connection)
 
         # Each secret lands in one place only - encrypted in the opaque attributes if a wrapper reads it there,
         # otherwise nowhere but the secret column

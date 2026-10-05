@@ -30,6 +30,7 @@ def test_ibm_mq_ssl(ibm_mq_ssl_server:'MQServer', certificate_paths:'Certificate
     """
     channel = channel_config(
         ibm_mq_ssl_server,
+        channel_id=1,
         name='test.ibm-mq.channel',
         queue=ContainerCtx.Request_Queue,
         remove_jms_headers=True,

@@ -31,13 +31,16 @@ class TestReprocess:
         """
         audit_log = AuditLog('test-server')
 
-        options = {
-            'payload': 'ISA*00*Test payload of an 810 invoice',
-            'filename': 'invoice-810.edi',
-            'content_type': 'application/edi-x12',
-            'cid': 'cid-received',
-            }
-        record_message_received(audit_log, 'PartnerCorp', 'ZatoRetail', '<invoice-810@partnercorp>', **options)
+        record_message_received(
+            audit_log,
+            'PartnerCorp',
+            'ZatoRetail',
+            '<invoice-810@partnercorp>',
+            payload='ISA*00*Test payload of an 810 invoice',
+            filename='invoice-810.edi',
+            content_type='application/edi-x12',
+            cid='cid-received',
+        )
 
         return audit_log
 

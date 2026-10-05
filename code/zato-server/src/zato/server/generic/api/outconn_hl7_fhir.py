@@ -26,13 +26,14 @@ import requests
 # Zato
 from zato.common.api import HL7, HTTP_SOAP
 from zato.common.audit_log.api import AuditLog
+from zato.common.audit_log.common import Export_Payload_Flag
 from zato.common.bearer_token import normalize_scopes
 from zato.common.hl7.fhir.fields import Outgoing_Bool_Names, Outgoing_Config_Defaults, Outgoing_Int_Names
 from zato.common.json_internal import dumps
 from zato.common.pubsub.outgoing import Attempts_None, Key_Data, Key_Method, Key_Params, Key_Path, OutgoingPublisher, \
     OutgoingType, SendRejected, SendResult
 from zato.common.typing_ import cast_
-from zato.common.util.api import new_cid_server
+from zato.common.util.api import asbool, new_cid_server
 from zato.common.util.http_retry import send_with_retry
 from zato.common.util.retry import RetryPolicy
 from zato.server.connection.queue import Wrapper
@@ -46,7 +47,7 @@ if 0:
     from requests import Response
     from zato.common.ext.bunch import Bunch
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, stranydict, strdictnone
+    from zato.common.typing_ import any_, stranydict, strdictnone, strlistnone
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -139,6 +140,7 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
         # A connection whose audit log is on writes a request and a response event per call, and a health check
         # writes its pair whether or not the audit log is on, so the log itself is always at hand
         self.zato_is_audit_log_active = self.zato_config['is_audit_log_active']
+        self.zato_is_export_payload_active = asbool(self.zato_config.get(Export_Payload_Flag, False))
         self.zato_audit_log = AuditLog(self.zato_config['server'].name)
 
         # Whether a write that did not go through waits in the connection's queue, and how a direct
@@ -178,6 +180,40 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
         request = self._build_request_part(_publish_method, resource['resourceType'], resource, None)
 
         out = self.zato_publisher.publish_request('', Attempts_None, request, **kwargs)
+        return out
+
+# ################################################################################################################################
+
+    def export(
+        self,
+        *,
+        level:'str'=HL7.BulkExport.Level.Group,
+        group_id:'str'='',
+        patient_ids:'strlistnone'=None,
+        types:'strlistnone'=None,
+        since:'str'='',
+        type_filter:'strlistnone'=None,
+        destinations:'any_'=None,
+        ) -> 'str':
+        """ Starts a bulk export of this connection with what is given here in place of the tab's settings
+        and returns the id of the job started - the files land where the connection's tab says, or at the
+        destinations given here.
+        """
+        request = {
+            'conn_name': self.zato_config['name'],
+            'level': level,
+            'group_id': group_id,
+            'patient_ids': patient_ids,
+            'types': types,
+            'since': since,
+            'type_filter': type_filter,
+            'destinations': destinations,
+        }
+
+        server = self.zato_config['server'] # type: ParallelServer
+        response = server.invoke(HL7.BulkExport.Dispatch_Service, request, cid=self.zato_cid)
+
+        out = response['job_id']
         return out
 
 # ################################################################################################################################

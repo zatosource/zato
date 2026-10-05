@@ -32,7 +32,7 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # Keys that never map to database columns directly - they are handled separately.
-_non_column_keys = ('id', 'service', 'security', 'security_name', 'is_audit_log_active')
+_non_column_keys = ('id', 'service', 'security', 'security_name', 'is_audit_log_active', 'is_audit_export_payload_active')
 
 # Keys the comparison handles on its own, which is fewer than the columns exclude - the audit log
 # flag is compared like any other stored value even though it is not a column of its own.
@@ -50,6 +50,7 @@ def _with_audit_log_flag(item:'anydict') -> 'anydict':
     """
     out = dict(item)
     out['is_audit_log_active'] = item.get('is_audit_log_active', True)
+    out['is_audit_export_payload_active'] = item.get('is_audit_export_payload_active', False)
 
     return out
 

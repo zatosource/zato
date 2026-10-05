@@ -13,6 +13,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import CONNECTION, MISC, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
+from zato.common.audit_log.common import Export_Payload_Flag
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.ext_db.api import needs_ext_db, to_local_id, to_public_id
 from zato.common.odb.model import HTTPSOAP
@@ -269,6 +270,12 @@ class Edit(_CreateEdit):
 
                 session.add(item)
                 session.commit()
+
+                # The audit export's payload flag has no Dashboard field, so an edit that does not carry it
+                # tells the servers what is stored rather than turning the flag off until a restart.
+                if input.get(Export_Payload_Flag) is None:
+                    stored_opaque = parse_instance_opaque_attr(item)
+                    input[Export_Payload_Flag] = stored_opaque.get(Export_Payload_Flag, False)
 
                 if input.connection == CONNECTION.CHANNEL:
                     if service:

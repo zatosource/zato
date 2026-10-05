@@ -14,5 +14,5 @@ from django import forms
 class AuthenticationForm(forms.Form):
     """ A form to log a user in.
     """
-    username = forms.CharField(max_length=254)
-    password = forms.CharField(strip=False, widget=forms.PasswordInput)
+    username = forms.CharField(max_length=254, widget=forms.TextInput(attrs={'autocomplete':'username'}))
+    password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'autocomplete':'current-password'}))

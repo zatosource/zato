@@ -380,7 +380,7 @@ def restart_server() -> 'None':
         server_directory=TestConfig.server_directory,
         server_port=TestConfig.server_port,
         broker_port=broker_port,
-        extra_server_env={},
+        extra_server_env=dict(TestConfig.type_under_test.server_environment),
         patch_server_conf_bind=False,
     )
 

@@ -15,9 +15,7 @@ import re
 from zato.admin.web import alerts_tab
 from zato.common.alerting.object_config import alert_type_mcp
 from zato.common.api import API_Key, Groups, SEC_DEF_TYPE
-from zato.common.defaults import http_plain_server_port
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
-from zato.common.util.tcp import get_current_ip
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 
 # ################################################################################################################################
@@ -68,6 +66,7 @@ _shaping_checkbox_fields = (
     'validate_input',
     'is_audit_log_active',
     'allow_agent_filters',
+    'oauth',
     'safeguards_strip_nulls',
     'safeguards_collapse_whitespace',
     'safeguards_strip_base64',
@@ -112,7 +111,7 @@ _choice_field_defaults = {
 
 # All the response shaping fields the dashboard persists in the gateway's opaque configuration.
 _shaping_fields = _shaping_checkbox_fields + _shaping_int_fields + _shaping_list_fields + _shaping_choice_fields + \
-    ('characters_per_token', 'safeguards_url_allow_list')
+    ('characters_per_token', 'safeguards_url_allow_list', 'oauth_scopes')
 
 # What each response shaping field renders as in the data table when a gateway's config predates it
 # or when a falsy value was filtered out on the way from the backend.
@@ -130,6 +129,8 @@ _shaping_display_defaults = {
     'safeguards_normalize_unicode':        False,
     'safeguards_sanitize_markup':          False,
     'safeguards_url_policy_enabled':       False,
+    'oauth':                               False,
+    'oauth_scopes':                        '',
     'max_response_size':                   '',
     'min_size_threshold':                  '',
     'characters_per_token':                Default_Characters_Per_Token,
@@ -153,9 +154,6 @@ _export_schema_url = 'https://static.modelcontextprotocol.io/schemas/2025-12-11/
 # The version of the exported document
 _export_version = '1.0.0'
 
-# Used when the server address is not configured through the environment
-_default_server_address = f'http://{get_current_ip()}:{http_plain_server_port}'
-
 # Characters that cannot appear in the exported document's name
 _slug_invalid_characters = re.compile('[^a-z0-9._-]+')
 
@@ -176,6 +174,12 @@ _sec_type_to_export_header = {
     SEC_DEF_TYPE.BASIC_AUTH: {
         'name': 'Authorization',
         'description': 'Basic Auth credentials',
+        'isRequired': True,
+        'isSecret': True,
+    },
+    SEC_DEF_TYPE.OAUTH: {
+        'name': 'Authorization',
+        'description': 'Bearer token',
         'isRequired': True,
         'isSecret': True,
     },

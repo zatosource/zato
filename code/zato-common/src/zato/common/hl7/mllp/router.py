@@ -78,6 +78,9 @@ class ChannelRoute:
     # When True, messages arriving on this channel are written to the audit log
     is_audit_log_active:'bool'
 
+    # When True, the messages' payloads leave the process with the audit log's OTLP export
+    is_audit_export_payload_active:'bool'
+
     # How this channel's messages are framed, read and interpreted, and who may send them
     settings:'RouteSettings'
 
@@ -177,6 +180,7 @@ class HL7MessageRouter:
         msh12_version_id:'str' = '',
         is_default:'bool' = False,
         is_audit_log_active:'bool' = False,
+        is_audit_export_payload_active:'bool' = False,
         settings:'RouteSettings | None' = None,
         ) -> 'None':
         """ Registers a new routing rule. All match fields are optional - empty string means match any.
@@ -212,6 +216,7 @@ class HL7MessageRouter:
         route.msh12_version_id          = msh12_version_id
         route.is_default                = is_default
         route.is_audit_log_active       = is_audit_log_active
+        route.is_audit_export_payload_active = is_audit_export_payload_active
         route.settings                  = settings
 
         # A channel has one rule - a rule built again for the same channel, which is what a configuration

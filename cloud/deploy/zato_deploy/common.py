@@ -163,8 +163,10 @@ class Link_File:
 # ################################################################################################################################
 
 class Env_Repo_Action:
-    Check  = 'check'
-    Switch = 'switch'
+    Check      = 'check'
+    Switch     = 'switch'
+    Disconnect = 'disconnect'
+    Pull       = 'pull'
 
 # ################################################################################################################################
 
@@ -172,7 +174,10 @@ class Env_Repo_State:
     Checking  = 'checking'
     OK        = 'ok'
     Error     = 'error'
-    Switching = 'switching'
+    Switching    = 'switching'
+    Disconnected = 'disconnected'
+    Pulling      = 'pulling'
+    Pulled       = 'pulled'
 
 # ################################################################################################################################
 

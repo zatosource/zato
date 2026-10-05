@@ -24,9 +24,12 @@ from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, MISC, SEC_D
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.hl7.audit import get_wire_attrs, get_wire_msa_control_id
 from zato.common.hl7.mllp.dedup import extract_control_id
+from zato.common.bearer_token_identity import Auth_Info_Key, Identity_Key
 from zato.common.bearer_token_verifier import extract_bearer_token
 from zato.common.const import ServiceConst
+from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
+from zato.common.hl7.ccda.exception import CCDAError
 from zato.common.json_ import dumps
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import current_time_us
@@ -44,6 +47,7 @@ from zato.common.util.url_dispatcher import normalize_path_info, to_internal_acc
 from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.as2 import AS2ChannelRuntime
 from zato.server.connection.as4 import AS4ChannelRuntime
+from zato.server.connection.ccda import CCDAFacade
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.connection.http_soap import response_cache
 from zato.server.connection.http_soap.cors import add_cors_response_headers, handle_preflight_request, is_allowed_origin
@@ -96,6 +100,8 @@ _transport_soap = URL_TYPE.SOAP
 _transport_as2 = URL_TYPE.AS2
 _transport_as4 = URL_TYPE.AS4
 _data_format_hl7_v2 = HL7.Const.Version.v2.id
+_data_format_ccda = HL7.CCDA.Data_Format
+_ccda_reason_not_cda = HL7.CCDA.Reason.Not_CDA
 _default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
@@ -123,6 +129,17 @@ _sec_def_key_prefix_map = {
 
 # Where the dashboard reads an internal error's own message from.
 _header_zato_message = 'X-Zato-Message'
+
+# ################################################################################################################################
+
+def _build_refusal_info(reason:'str') -> 'BearerAuthInfo':
+    """ Builds the auth info of a request that no credential of the channel's groups accepted.
+    """
+    out = BearerAuthInfo()
+    out.is_ok = False
+    out.reason = reason
+
+    return out
 
 # A header value is a single line, so these are what it cannot contain and what stands in for them.
 _header_line_breaks = ('\r', '\n')
@@ -936,6 +953,13 @@ class RequestDispatcher:
                 msg = 'No client error wrapper for transport:`{}`, data_format:`{}`'.format(
                     channel_item.get('transport'), channel_item.get('data_format'))
                 logger.log(TRACE1, msg)
+
+            # With no wrapper, the arguments of an exception leave as one piece of text
+            if isinstance(response, tuple):
+                parts = []
+                for item in response:
+                    parts.append(str(item))
+                response = ' '.join(parts)
         else:
             response = error_wrapper(cid, response)
 
@@ -1313,6 +1337,9 @@ class RequestDispatcher:
         else:
             status = ''
 
+        # .. the payload leaves with the audit export only if the channel says so ..
+        is_export_payload_active = bool(channel_item.get('is_audit_export_payload_active'))
+
         # .. now, write out the event.
         self.audit_log.insert(
             source,
@@ -1328,6 +1355,7 @@ class RequestDispatcher:
             data=data,
             attrs=attrs,
             ext_client_id=ext_client_id,
+            is_export_payload_active=is_export_payload_active,
         )
 
 # ################################################################################################################################
@@ -1355,8 +1383,15 @@ class RequestDispatcher:
         # .. build the key prefix ..
         key_prefix = _sec_def_key_prefix_map[sec_def_type].format(sec_def_id)
 
+        # .. a person resolved out of a token gets counters of their own under the definition's rules ..
+        key_suffix = ''
+        identity = request_ctx.get(Identity_Key) or ''
+
+        if identity != sec_def_info['name']:
+            key_suffix = f'{identity}:'
+
         # .. and check rate limiting.
-        out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix)
+        out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix, key_suffix)
 
         return out
 
@@ -1462,9 +1497,13 @@ class RequestDispatcher:
         # Handle bearer tokens via groups ..
         if bearer_token:
 
-            # .. run the validation now ..
-            if security_id := security_groups_ctx.check_security_bearer_token(cid, channel_name, bearer_token):
-                sec_def = self.url_data.oauth_get_by_id(security_id)
+            # .. run the validation now, leaving what it established for the service behind the channel ..
+            auth_info = security_groups_ctx.check_bearer_token(cid, channel_name, bearer_token)
+            request_ctx[Auth_Info_Key] = auth_info
+
+            if auth_info.is_ok:
+                sec_def = self.url_data.oauth_get_by_id(auth_info.security_id)
+                request_ctx[Identity_Key] = auth_info.identity
             else:
                 logger.warning('Invalid bearer token (groups)')
                 raise Forbidden(cid)
@@ -1480,6 +1519,7 @@ class RequestDispatcher:
                 sec_def = self.url_data.basic_auth_get_by_id(security_id)
             else:
                 logger.warning('Invalid Basic Auth credentials (groups)')
+                request_ctx[Auth_Info_Key] = _build_refusal_info(BearerRefusalReason.No_Definition_Matched)
                 raise Forbidden(cid)
 
         # Handle API keys via groups ..
@@ -1490,10 +1530,12 @@ class RequestDispatcher:
                 sec_def = self.url_data.apikey_get_by_id(security_id)
             else:
                 logger.warning('Invalid API key (groups)')
+                request_ctx[Auth_Info_Key] = _build_refusal_info(BearerRefusalReason.No_Definition_Matched)
                 raise Forbidden(cid)
 
         else:
             logger.warning('Received neither Basic Auth, bearer token nor API key (groups)')
+            request_ctx[Auth_Info_Key] = _build_refusal_info(BearerRefusalReason.No_Credentials)
             raise Forbidden(cid)
 
         # A credential that matched has a definition behind it, and that definition is what the
@@ -1503,6 +1545,10 @@ class RequestDispatcher:
             logger.error('Could not look up the security definition a credential matched; channel=%s; cid=%s',
                 channel_name, cid)
             raise Forbidden(cid)
+
+        # Credentials other than bearer tokens are their definition's name and nothing more
+        if Identity_Key not in request_ctx:
+            request_ctx[Identity_Key] = sec_def['name']
 
         # Now we can enrich the request context with information
         # that will become self.channel.security for services.
@@ -1616,12 +1662,29 @@ class RequestHandler:
         if channel_item['data_format'] == ModuleCtx.IO_FORM_DATA:
             request_ctx['zato.request.payload'] = post_data
 
+        # What the service receives - the bytes as they came, unless the data format says otherwise
+        payload:'any_' = raw_request
+
         # An HL7 channel hands its service the message as text, the same as an MLLP channel does
         if channel_item['data_format'] == _data_format_hl7_v2:
-            raw_request = raw_request.decode('utf-8')
+            payload = raw_request.decode('utf-8')
+
+        # A C-CDA channel converts the document first and hands its service the resulting bundle ..
+        elif channel_item['data_format'] == _data_format_ccda:
+            ccda = CCDAFacade()
+            ccda.init(cid, self.server, channel_item['name'])
+            try:
+                payload = ccda.to_fhir(raw_request)
+            except CCDAError as e:
+
+                # .. a document that is not CDA at all is the caller's error, anything else is ours.
+                if e.reason == _ccda_reason_not_cda:
+                    raise BadRequest(cid, e.msg, needs_msg=True)
+                else:
+                    raise
 
         # Invoke the service ..
-        response = service.update_handle(self._set_response_data, service, raw_request,
+        response = service.update_handle(self._set_response_data, service, payload,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
             cast_('ConfigDispatcher', config_manager.config_dispatcher),
             config_manager, cid, request_ctx=request_ctx,

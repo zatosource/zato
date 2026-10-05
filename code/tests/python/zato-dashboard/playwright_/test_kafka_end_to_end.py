@@ -16,6 +16,7 @@ import time
 import pytest
 
 # Zato
+from zato.common.api import KAFKA
 from zato.common.crypto.api import CryptoManager
 from live_kafka.containers import create_topic, start_kafka, stop_container
 from kafka_channel import create_kafka_channel, delete_kafka_channel
@@ -211,12 +212,14 @@ class TestKafkaEndToEnd:
         # topics created after subscription on their next metadata refresh, minutes later.
         create_topic(kafka_server.container_name, topic_name)
 
-        # The channel - it consumes from the topic and routes to the receiver service ..
+        # The channel - it consumes from the topic and routes to the receiver service. It starts from the earliest
+        # offset because the send below may well land before the consumer has its partition assigned.
         channel_id = create_kafka_channel(page, base_url, channel_name, {
             'address': kafka_server.address,
-            'topic': topic_name,
+            'topics': topic_name,
             'group_id': group_id,
             'service': _Receiver_Service,
+            'auto_offset_reset': KAFKA.AUTO_OFFSET_RESET.EARLIEST.id,
         })
 
         # .. and the outgoing connection pointed at the same topic.

@@ -649,7 +649,7 @@ class TestMCPWizard:
 
         # .. and leaving the field commits what was typed there.
         wizard_page.type_into_host_field(page, 'blur.example.com')
-        page.click('#mcp-wizard-safety-header')
+        page.locator(text_field).blur()
 
         chip = f'{wizard_page.Host_List_Selector} li.search-choice:has-text("blur.example.com")'
         _ = page.wait_for_selector(chip, state='visible', timeout=_UI_Timeout)

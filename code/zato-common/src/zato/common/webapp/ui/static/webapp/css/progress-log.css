@@ -1,0 +1,319 @@
+/* A panel that shows the lines of a running job as they arrive - a header with a live dot, a source label,
+   a progress percentage and a Copy button, a thin progress bar under the header, and the lines themselves,
+   each with its time. Every value it reads is defined here, a host page that needs other colours or sizes
+   sets these variables on the panel's container. */
+
+.progress-log {
+    --progress-log-font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    --progress-log-font-size: 0.7812rem;
+    --progress-log-header-font-size: 0.75rem;
+    --progress-log-line-height: 1.7;
+    --progress-log-border: #d8dce0;
+    --progress-log-border-strong: #b0b0b0;
+    --progress-log-radius: 5px;
+    --progress-log-background: #fdfefe;
+    --progress-log-header-background: #f8fafc;
+    --progress-log-text: #2c3e50;
+    --progress-log-text-muted: #666666;
+    --progress-log-text-faint: #999999;
+    --progress-log-ok: #067f39;
+    --progress-log-ok-glow: rgba(6, 127, 57, 0.35);
+    --progress-log-error: #c0392b;
+    --progress-log-accent: #5794d0;
+    --progress-log-accent-end: #06b6d4;
+    --progress-log-accent-soft: rgba(87, 148, 208, 0.08);
+    --progress-log-accent-soft-strong: rgba(87, 148, 208, 0.18);
+    --progress-log-track: #e2e6ea;
+    --progress-log-min-height: 6.875rem;
+    --progress-log-lines-shown: 12;
+    --progress-log-padding-x: 1.125rem;
+    --progress-log-padding-y: 0.75rem;
+    --progress-log-max-height: calc(
+        var(--progress-log-lines-shown) * var(--progress-log-font-size) * var(--progress-log-line-height)
+        + 2 * var(--progress-log-padding-y)
+    );
+    --progress-log-fade: 2.75rem;
+    --progress-log-hover-delay: 120ms;
+
+    display: flex;
+    flex-direction: column;
+    min-height: var(--progress-log-min-height);
+    border: 1px solid var(--progress-log-border);
+    border-radius: var(--progress-log-radius);
+    background: var(--progress-log-background);
+    overflow: hidden;
+    min-width: 0;
+}
+
+.progress-log[data-hidden="true"] {
+    display: none;
+}
+
+/* The dark theme, the one of the deployment page. */
+.progress-log[data-theme="dark"] {
+    --progress-log-border: rgba(255, 255, 255, 0.06);
+    --progress-log-border-strong: rgba(255, 255, 255, 0.12);
+    --progress-log-background: rgba(13, 17, 23, 0.82);
+    --progress-log-header-background: transparent;
+    --progress-log-text: #f1f5f9;
+    --progress-log-text-muted: #94a3b8;
+    --progress-log-text-faint: #64748b;
+    --progress-log-ok: #6fae84;
+    --progress-log-ok-glow: rgba(111, 174, 132, 0.35);
+    --progress-log-error: #ef4444;
+    --progress-log-accent: #3b82f6;
+    --progress-log-accent-end: #06b6d4;
+    --progress-log-accent-soft: rgba(59, 130, 246, 0.08);
+    --progress-log-accent-soft-strong: rgba(96, 165, 250, 0.18);
+    --progress-log-track: rgba(255, 255, 255, 0.07);
+
+    /* The translucent panel colour over a solid dark one, so a light host page does not show through. */
+    background-color: #0a0e1a;
+    background-image: linear-gradient(var(--progress-log-background), var(--progress-log-background));
+}
+
+/* ------------------------------------------------------------ */
+/* Header                                                       */
+/* ------------------------------------------------------------ */
+
+.progress-log-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem 0.5rem var(--progress-log-padding-x);
+    border-bottom: 1px solid var(--progress-log-border);
+    background: var(--progress-log-header-background);
+    font-family: var(--progress-log-font-mono);
+    font-size: var(--progress-log-header-font-size);
+    line-height: 1;
+    color: var(--progress-log-text-faint);
+}
+
+.progress-log-live {
+    flex: none;
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    background: var(--progress-log-text-faint);
+}
+
+.progress-log[data-state="live"] .progress-log-live {
+    background: var(--progress-log-ok);
+    box-shadow: 0 0 0.5rem var(--progress-log-ok-glow);
+    animation: progress-log-pulse 1.5s ease-in-out infinite;
+}
+
+.progress-log[data-state="done"] .progress-log-live {
+    background: var(--progress-log-ok);
+}
+
+.progress-log[data-state="failed"] .progress-log-live {
+    background: var(--progress-log-error);
+}
+
+.progress-log-source {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.progress-log-percent {
+    margin-left: auto;
+    color: var(--progress-log-text);
+}
+
+.progress-log-percent:empty {
+    display: none;
+}
+
+.progress-log[data-state="done"] .progress-log-percent {
+    color: var(--progress-log-ok);
+}
+
+.progress-log[data-state="failed"] .progress-log-percent {
+    color: var(--progress-log-error);
+}
+
+.progress-log-copy {
+    flex: none;
+    margin-left: auto;
+    padding: 0.1875rem 0.625rem;
+    border: 1px solid var(--progress-log-border-strong);
+    border-radius: 0;
+    font: inherit;
+    line-height: normal;
+    color: var(--progress-log-text-muted);
+    background: transparent;
+    box-shadow: none;
+    text-shadow: none;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.progress-log-percent:not(:empty) + .progress-log-copy {
+    margin-left: 0;
+}
+
+.progress-log-copy:hover {
+    border-color: var(--progress-log-accent);
+    color: var(--progress-log-text);
+    background: var(--progress-log-accent-soft);
+    box-shadow: none;
+    text-shadow: none;
+    transition-delay: var(--progress-log-hover-delay);
+}
+
+.progress-log-copy:active {
+    background: var(--progress-log-accent-soft-strong);
+    transition-delay: 0s;
+}
+
+/* A page's own focus ring for buttons stays off this one, a click leaves nothing behind once the tooltip is gone */
+.progress-log-copy:focus,
+.progress-log-copy:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Progress bar                                                 */
+/* ------------------------------------------------------------ */
+
+.progress-log-bar {
+    position: relative;
+    flex: none;
+    height: 0.1875rem;
+    overflow: hidden;
+    background: var(--progress-log-track);
+}
+
+.progress-log-bar[data-hidden="true"] {
+    display: none;
+}
+
+.progress-log-bar-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    background: var(--progress-log-accent);
+    transition: width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), background-color 0.5s ease;
+}
+
+.progress-log[data-state="live"] .progress-log-bar-fill {
+    background: linear-gradient(90deg, var(--progress-log-accent), var(--progress-log-accent-end));
+}
+
+.progress-log[data-state="live"] .progress-log-bar-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    animation: progress-log-shimmer 1.4s linear infinite;
+}
+
+.progress-log[data-state="done"] .progress-log-bar-fill {
+    background: var(--progress-log-ok);
+}
+
+.progress-log[data-state="failed"] .progress-log-bar-fill {
+    background: var(--progress-log-error);
+}
+
+/* ------------------------------------------------------------ */
+/* Lines                                                        */
+/* ------------------------------------------------------------ */
+
+.progress-log-lines {
+    flex: 1;
+    min-height: 0;
+    max-height: var(--progress-log-max-height);
+    padding: var(--progress-log-padding-y) var(--progress-log-padding-x);
+    overflow-y: auto;
+    font-family: var(--progress-log-font-mono);
+    font-size: var(--progress-log-font-size);
+    line-height: var(--progress-log-line-height);
+    color: var(--progress-log-text-muted);
+    mask-image: linear-gradient(to bottom, transparent, #000 var(--progress-log-fade));
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--progress-log-fade));
+}
+
+.progress-log-lines::-webkit-scrollbar {
+    width: 1.25rem;
+}
+
+.progress-log-lines::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.progress-log-lines::-webkit-scrollbar-thumb {
+    background: var(--progress-log-border-strong);
+}
+
+.progress-log-lines::-webkit-scrollbar-thumb:hover {
+    background: var(--progress-log-text-faint);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .progress-log-lines {
+        scrollbar-width: auto;
+        scrollbar-color: var(--progress-log-text-faint) transparent;
+    }
+}
+
+.progress-log-line {
+    display: flex;
+    gap: 1rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.progress-log-line-time {
+    flex: none;
+    color: var(--progress-log-text-faint);
+    opacity: 0.7;
+}
+
+.progress-log-line-time:empty {
+    display: none;
+}
+
+.progress-log-line:last-child .progress-log-line-text {
+    color: var(--progress-log-text);
+}
+
+.progress-log-line[data-kind="ok"] .progress-log-line-text {
+    color: var(--progress-log-ok);
+}
+
+.progress-log-line[data-kind="error"] .progress-log-line-text {
+    color: var(--progress-log-error);
+}
+
+/* ------------------------------------------------------------ */
+/* Motion                                                       */
+/* ------------------------------------------------------------ */
+
+@keyframes progress-log-pulse {
+    50% {
+        opacity: 0.35;
+        transform: scale(0.55);
+    }
+}
+
+@keyframes progress-log-shimmer {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .progress-log-live,
+    .progress-log-bar-fill::after {
+        animation-duration: 6s;
+    }
+}

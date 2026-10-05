@@ -163,10 +163,40 @@
     padding-top: 6px;
 }
 
+/* A group heading with a switch of its own, e.g. "SSL" with "Use SSL" - the
+   heading stands in the label column and the switch in the value column, where
+   the fields under it start, the two cells sharing the heading's rule. The switch
+   is written the way the fields are, not the way the heading is, and being a
+   checkbox it is taller than the heading's text, so it is what sets the row's
+   height - the heading's own padding stays. */
+.data-popup .form-data td.form-data-section.form-data-label {
+    vertical-align: middle;
+}
+
+.data-popup .form-data td.form-data-section .form-data-section-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.data-popup .form-data td.form-data-section .form-data-section-toggle input[type="checkbox"] {
+    margin: 0;
+}
+
 /* A label cell as wide as its longest label and no wider. */
 .data-popup .form-data td.form-data-label {
     width: 1%;
     white-space: nowrap;
     padding-right: 14px;
     vertical-align: middle;
+}
+
+/* The label of a textarea stands at its top line */
+.data-popup .form-data td.form-data-label.form-data-label-top {
+    padding-top: 7px;
+    vertical-align: top;
 }

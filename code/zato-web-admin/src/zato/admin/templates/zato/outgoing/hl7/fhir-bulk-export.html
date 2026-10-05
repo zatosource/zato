@@ -1,0 +1,121 @@
+{% extends "zato/index.html" %}
+
+{% comment %}
+The Bulk exports page of one outgoing FHIR connection - each row is one export job read from
+the audit log. The view provides:
+
+* conn_id           - the connection the jobs belong to
+* conn_name         - its name
+* conn_name_encoded - its name URL-encoded, for the audit log link
+* connection_list   - all outgoing FHIR connections, with the URL of each one's Bulk exports page
+* back_url          - the connection list
+* run_url           - where the Run now link posts to
+* audit_source      - the audit log source the jobs are filed under
+* items             - the jobs themselves
+{% endcomment %}
+
+{% block html_title %}FHIR bulk exports{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tokens.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/fhir-bulk-export.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} FHIR bulk exports {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/fhir-bulk-export.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    <div id="markup">
+        <h2 class="zato">{% include "zato/include/header-brand.html" with badge="FHIR bulk exports" %}<select id="fhir-bulk-export-conn-select">
+            {% for item in connection_list %}
+            <option value="{{ item.url }}"{% if item.name == conn_name %} selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+        </select></h2>
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.hl7.fhir.bulk_export.run()">Run now</a> |
+            <a href="{{ back_url }}" class="common">Connection list</a> |
+            <a href="/zato/audit-log/?source={{ audit_source }}&amp;object_name={{ conn_name_encoded }}&amp;cluster={{ cluster_id }}" class="common">Audit log</a>
+        </div>
+
+        <table class="zato-table" id="data-table">
+            <thead>
+                <tr class='ignore'>
+                    <th>&nbsp;</th>
+
+                    {% comment %} 1 {% endcomment %}
+                    <th><a href="#">Job ID</a></th>
+                    <th><a href="#">Started</a></th>
+                    <th><a href="#">Finished</a></th>
+                    <th><a href="#">Status</a></th>
+
+                    {% comment %} 2 {% endcomment %}
+                    <th class="text-center"><a href="#">Files</a></th>
+                    <th class="text-center"><a href="#">Resources</a></th>
+                    <th class="text-center"><a href="#">Errors</a></th>
+
+                    {% comment %} 3 {% endcomment %}
+                    <th>&nbsp;</th>
+
+                </tr>
+            </thead>
+
+            <tbody>
+            {% if items %}
+                {% for item in items %}
+                <tr id='tr_{{ item.job_id }}'>
+                    <td class='numbering'>&nbsp;</td>
+
+                    {% comment %} 1 {% endcomment %}
+                    <td>{{ item.job_id }}</td>
+                    <td>{{ item.started }}</td>
+                    <td>{{ item.finished }}</td>
+                    <td class="fhir-bulk-export-status-{{ item.status|lower }}">{{ item.status }}{% if item.status == 'Running' %} <span class="form_hint">({{ item.phase }})</span>{% endif %}</td>
+
+                    {% comment %} 2 {% endcomment %}
+                    <td class="text-center">{{ item.files }}</td>
+                    <td class="text-center">{{ item.resources }}</td>
+                    <td class="text-center">{% if item.error %}<span data-tippy-content="{{ item.error }}">{{ item.errors }}</span>{% else %}{{ item.errors }}{% endif %}</td>
+
+                    {% comment %} 3 {% endcomment %}
+                    <td><a href="{{ item.audit_log_url }}">Audit log</a></td>
+
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr class='ignore'>
+                    <td colspan='9'>No results</td>
+                </tr>
+            {% endif %}
+
+            </tbody>
+        </table>
+
+        {% comment %} The Run now link reads these {% endcomment %}
+        <input type="hidden" id="fhir-bulk-export-conn-name" value="{{ conn_name }}" />
+        <input type="hidden" id="fhir-bulk-export-run-url" value="{{ run_url }}" />
+
+    </div>
+
+{% endblock %}

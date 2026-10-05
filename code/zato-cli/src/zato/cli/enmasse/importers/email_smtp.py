@@ -138,6 +138,9 @@ class SMTPImporter:
         # The audit log is on unless the YAML definition turns it off
         smtp_def['is_audit_log_active'] = smtp_def.get('is_audit_log_active', True)
 
+        # Payloads leave with the audit export only if the YAML definition says so
+        smtp_def['is_audit_export_payload_active'] = smtp_def.get('is_audit_export_payload_active', False)
+
         # Set any opaque attributes from the configuration
         set_instance_opaque_attrs(smtp_conn, smtp_def)
 
@@ -181,6 +184,9 @@ class SMTPImporter:
 
         # The audit log is on unless the YAML definition turns it off
         smtp_def['is_audit_log_active'] = smtp_def.get('is_audit_log_active', True)
+
+        # Payloads leave with the audit export only if the YAML definition says so
+        smtp_def['is_audit_export_payload_active'] = smtp_def.get('is_audit_export_payload_active', False)
 
         # Set any opaque attributes
         set_instance_opaque_attrs(smtp_conn, smtp_def)

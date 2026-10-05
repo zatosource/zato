@@ -94,11 +94,12 @@ _top_level_order = [
 _object_order:'anydict' = {}
 
 _object_order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'use_digest', 'sign', 'encrypt', \
-    'issuer', 'subject', 'audience', 'jwks_url', 'claims:list', 'signing_key', 'signing_certificate_chain', \
+    'issuer', 'subject', 'audience', 'jwks_url', 'claims:list', 'identity_claim', 'signing_key', 'signing_certificate_chain', \
     'decryption_key', 'peer_certificate', 'trust_anchors', 'cert_path', 'key_path', 'ca_certs_path', \
     'client_cert_fingerprint', 'client_cert_subject_dn', 'principal', 'keytab_path', 'target_spn', \
-    'needs_delegation', 'auth_endpoint', 'client_id_field', \
-    'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', \
+    'needs_delegation', 'auth_endpoint', 'client_auth_method', 'client_id_field', \
+    'client_secret_field', 'jwt_algorithm', 'key_id', 'assertion_audience', 'certificate', \
+    'grant_type', 'scopes', 'data_format', 'extra_fields:list', \
     'static_header', 'is_static_token', 'static_token', 'static_prefix', 'rate_limiting:list', 'quota_tier',
 
 _object_order['on_prem_gateway'] = 'name', 'is_active', 'hosts:list',
@@ -107,19 +108,21 @@ _object_order['quota_tier'] = 'name', 'description', 'rules:list',
 _object_order['groups']     = 'name', 'quota_tier', 'members:list',
 
 _object_order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'method', \
-    'content_type', 'timeout', 'is_audit_log_active', 'should_include_in_openapi', 'gateway_service_list:list', \
+    'content_type', 'timeout', 'is_audit_log_active', 'is_audit_export_payload_active', 'should_include_in_openapi', \
+    'gateway_service_list:list', \
     'groups:list', \
     'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor', \
     'alerts:dict',
 _object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
-    'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', \
+    'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', 'is_audit_export_payload_active', \
     'groups:list', 'rate_limiting:list', 'response_cache:dict', 'alerts:dict',
 
 _object_order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'content_type', \
-    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active') + Retry_Fields + Delivery_Fields + \
+    'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active', 'is_audit_export_payload_active') + Retry_Fields + Delivery_Fields + \
     Invocation_Order_Fields_REST + ('alerts:dict',)
 _object_order['outgoing_soap'] = ('name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', \
-    'content_type', 'timeout', 'tls_verify', 'is_audit_log_active', 'use_ws_addressing', 'use_mtom', \
+    'content_type', 'timeout', 'tls_verify', 'is_audit_log_active', 'is_audit_export_payload_active', 'use_ws_addressing', \
+    'use_mtom', \
     'tls_client_cert', 'tls_client_key', 'body_credentials') + Retry_Fields + Delivery_Fields + Invocation_Order_Fields_SOAP + \
     ('alerts:dict',)
 
@@ -135,7 +138,8 @@ _object_order['odata'] = 'name', 'is_active', 'address', 'odata_version', 'auth_
 _object_order['sap'] = _object_order['odata']
 
 _object_order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username', 'extra:list', 'pool_size', \
-    'timeout', 'audit_log', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', 'ssl_verify',
+    'timeout', 'audit_log', 'is_audit_export_payload_active', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', \
+    'ssl_verify',
 
 _object_order['outgoing_as2'] = 'name', 'is_active', 'as2_from', 'as2_to', 'endpoint_url', 'isa_qualifier', 'isa_id', \
     'gs_id', 'unb_id', 'sign', 'sign_algorithm', 'encrypt', 'encryption_algorithm', 'compress', \
@@ -146,18 +150,21 @@ _object_order['outgoing_as2'] = 'name', 'is_active', 'as2_from', 'as2_to', 'endp
     'warn_on_duplicate_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', \
     'inbound_topic', 'inbound_service', 'as2_partner_cert', 'as2_partner_next_cert', \
     'as2_partner_next_cert_from', 'as2_signing_cert_chain', 'as2_next_decryption_cert', \
-    'as2_peer_signing_cert', 'as2_peer_encryption_cert', 'as2_trust_anchors',
+    'as2_peer_signing_cert', 'as2_peer_encryption_cert', 'as2_trust_anchors', \
+    'is_audit_log_active', 'is_audit_export_payload_active',
 _object_order['channel_as4'] = 'name', 'is_active', 'url_path', 'service', 'security', 'as4_profile', 'as4_from_party', \
     'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', 'as4_final_recipient', \
     'as4_extra_pmodes', 'as4_serviced_participants', 'as4_inbound_topic', 'as4_token_type', 'as4_username', \
     'as4_password', 'as4_signing_key', 'as4_signing_cert_chain', 'as4_decryption_key', 'as4_saml_assertion', \
-    'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors',
+    'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors', \
+    'is_audit_log_active', 'is_audit_export_payload_active',
 _object_order['outgoing_as4'] = 'name', 'is_active', 'host', 'url_path', 'timeout', 'validate_tls', 'as4_profile', \
     'as4_from_party', 'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', \
     'as4_final_recipient', 'as4_extra_pmodes', 'as4_use_discovery', 'as4_sml_domain', 'as4_retry_max_attempts', \
     'as4_retry_interval', 'as4_missing_receipt_after', 'as4_token_type', 'as4_username', 'as4_password', \
     'as4_signing_key', 'as4_signing_cert_chain', 'as4_decryption_key', 'as4_saml_assertion', \
-    'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors',
+    'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors', \
+    'is_audit_log_active', 'is_audit_export_payload_active',
 
 # The scopes field carries no :list marker because it is a string when the definition
 # has one line of scopes and a list when it has more, so the writer picks the shape itself.
@@ -186,8 +193,10 @@ _object_order['outgoing_amqp'] = 'name', 'is_active', 'address', 'username', 'co
 _object_order['channel_azure_service_bus']  = _object_order['channel_amqp']
 _object_order['outgoing_azure_service_bus'] = _object_order['outgoing_amqp']
 
-_object_order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service', \
-    'security', 'sasl_mechanism',
+_object_order['channel_kafka'] = ('name', 'is_active', 'address', 'topics:list', 'group_id', 'service', \
+    'security', 'sasl_mechanism', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', 'ssl_key_password', \
+    'auto_offset_reset', 'max_message_size', 'max_in_flight', 'should_deliver_tombstones', 'dedup_header', 'dedup_ttl', \
+    'routing:list', 'is_audit_log_active', 'is_audit_export_payload_active') + Retry_Fields + Delivery_Fields
 
 # The connections a gateway exposes as tools - each allow list is a YAML list.
 _mcp_connection_list_fields = tuple(f'{key}:list' for key in MCP.Connection_List_Keys)
@@ -206,15 +215,21 @@ _object_order['rule_engine_api']  = 'name', 'is_active', 'url_path', 'rulesets:l
 _object_order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
 _object_order['outgoing_grpc']    = 'name', 'is_active', 'address', 'security', 'is_tls', 'tls_ca_certs_file', \
     'proto_path', 'stub_module', 'stub_class', 'ping_timeout', 'max_send_message_size', 'max_recv_message_size',
-_object_order['outgoing_kafka']   = 'name', 'is_active', 'address', 'topic', 'security', 'sasl_mechanism',
+_object_order['outgoing_kafka']   = ('name', 'is_active', 'address', 'topic', 'security', 'sasl_mechanism', \
+    'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', 'ssl_key_password', \
+    'compression', 'acks', 'is_idempotent', 'max_message_size', 'linger_ms', 'send_timeout', \
+    'is_audit_log_active', 'is_audit_export_payload_active') + Retry_Fields + Delivery_Fields
 
 _object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names + ('alerts:dict',)
 _object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names + ('alerts:dict',)
-_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + ('alerts:dict',)
+_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + \
+    ('bulk_export:dict', 'alerts:dict')
 
 _object_order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
-    'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with',
-_object_order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username',
+    'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with', \
+    'is_audit_log_active', 'is_audit_export_payload_active',
+_object_order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username', 'is_audit_log_active', \
+    'is_audit_export_payload_active',
 
 _object_order['odoo']           = 'name', 'is_active', 'host', 'port', 'database', 'user'
 # The address_list field carries no :list marker because it is a string when the definition
@@ -236,7 +251,7 @@ _object_order['ftp']            = 'name', 'is_active', 'host', 'port', 'username
 _object_order['alerts'] = 'is_active', 'consecutive_failures', 'warning_failures', 'error_failures', 'window', \
     'arrival_overdue', 'test_transfers', 'use_llm', 'email_connection', 'llm_connection',
 
-_object_order['pubsub_topic']        = 'name', 'description'
+_object_order['pubsub_topic']        = 'name', 'description', 'is_audit_log_active', 'is_audit_export_payload_active'
 _object_order['pubsub_permission']   = 'security', 'pub', 'sub'
 _object_order['pubsub_subscription'] = 'security', 'delivery_type', 'push_rest_endpoint', 'push_service', \
     'max_retry_time', 'topic_list'

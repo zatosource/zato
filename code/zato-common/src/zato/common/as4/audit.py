@@ -193,6 +193,7 @@ def record_message_sent(
     final_recipient:'str' = '',
     cid:'str' = '',
     correl_id:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records that a user message was pushed to the partner, with every payload stored alongside
     so a later resend or resubmit can send all of them again and with the request bytes kept as the
@@ -236,6 +237,7 @@ def record_message_sent(
         'size': _payload_size(payloads),
         'data': data,
         'attrs': {'service': service, 'action': action, 'conversation_id': result.conversation_id},
+        'is_export_payload_active': is_export_payload_active,
     }
 
     _ = audit_log.insert(AuditSource.AS4, AuditEvent.Message_Sent, party_pair(from_party, to_party), **values)
@@ -254,6 +256,7 @@ def record_message_handed_over(
     payloads:'part_list',
     raw_message:'bytes' = b'',
     cid:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records that a user message was handed over in answer to a pull request. The evidence is the
     same a push leaves, because the message did go out and a receipt for it is what closes the
@@ -286,6 +289,7 @@ def record_message_handed_over(
         'size': _payload_size(payloads),
         'data': data,
         'attrs': {'service': service, 'action': action, 'conversation_id': conversation_id},
+        'is_export_payload_active': is_export_payload_active,
     }
 
     _ = audit_log.insert(AuditSource.AS4, AuditEvent.Message_Sent, party_pair(from_party, to_party), **values)
@@ -303,6 +307,7 @@ def record_receipt_received(
     errors:'anylist | None' = None,
     is_matched:'bool' = True,
     cid:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records that a receipt came back for a message sent earlier - the half of the pair that
     says the partner acknowledged what was delivered. The event is stored under the message id of
@@ -330,7 +335,8 @@ def record_receipt_received(
     }
     data = dumps(details)
 
-    values = {'cid': cid, 'msg_id': ref_to_message_id, 'outcome': outcome, 'data': data}
+    values = {'cid': cid, 'msg_id': ref_to_message_id, 'outcome': outcome, 'data': data,
+        'is_export_payload_active': is_export_payload_active}
 
     _ = audit_log.insert(AuditSource.AS4, AuditEvent.Receipt_Received, party_pair(from_party, to_party), **values)
 
@@ -346,6 +352,7 @@ def record_errors_received(
     raw_message:'bytes' = b'',
     is_matched:'bool' = True,
     cid:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records that the partner answered a sent message with error signals and no receipt at all.
     The row sits on the receipt half of the pair so the message it refers to stops counting
@@ -360,7 +367,8 @@ def record_errors_received(
     }
     data = dumps(details)
 
-    values = {'cid': cid, 'msg_id': ref_to_message_id, 'outcome': AuditOutcome.Error, 'data': data}
+    values = {'cid': cid, 'msg_id': ref_to_message_id, 'outcome': AuditOutcome.Error, 'data': data,
+        'is_export_payload_active': is_export_payload_active}
 
     _ = audit_log.insert(AuditSource.AS4, AuditEvent.Receipt_Received, party_pair(from_party, to_party), **values)
 
@@ -377,6 +385,7 @@ def record_message_received(
     outcome:'str' = AuditOutcome.OK,
     cid:'str' = '',
     correl_id:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records that a user message arrived from the partner, with every payload stored losslessly
     so a later reprocess can re-publish all of them, and the wire bytes kept as delivery evidence.
@@ -412,6 +421,7 @@ def record_message_received(
         'size': _payload_size(payloads),
         'data': data,
         'attrs': attrs,
+        'is_export_payload_active': is_export_payload_active,
     }
 
     pair = party_pair(user_message.from_party, user_message.to_party)
@@ -429,6 +439,7 @@ def record_receipt_sent(
     raw_message:'bytes' = b'',
     error_code:'str' = '',
     cid:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records the signal that went back to the partner - a receipt when the message was accepted
     and an ebMS error signal when it was not, with the bytes of it kept as delivery evidence.
@@ -441,7 +452,8 @@ def record_receipt_sent(
     details = {'error_code': error_code, 'raw_message': encode_wire_bytes(raw_message)}
     data = dumps(details)
 
-    values = {'cid': cid, 'msg_id': ref_to_message_id, 'outcome': outcome, 'data': data}
+    values = {'cid': cid, 'msg_id': ref_to_message_id, 'outcome': outcome, 'data': data,
+        'is_export_payload_active': is_export_payload_active}
 
     _ = audit_log.insert(AuditSource.AS4, AuditEvent.Receipt_Sent, party_pair(from_party, to_party), **values)
 
@@ -488,6 +500,7 @@ def record_send_result(
     final_recipient:'str' = '',
     cid:'str' = '',
     correl_id:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records everything one push produced - the message-sent event with the request bytes and
     every payload, plus the receipt-received event when a receipt rode back on the response.
@@ -497,7 +510,7 @@ def record_send_result(
     """
     record_message_sent(audit_log, from_party, to_party, result, payloads=payloads, service=service,
         action=action, original_sender=original_sender, final_recipient=final_recipient, cid=cid,
-        correl_id=correl_id)
+        correl_id=correl_id, is_export_payload_active=is_export_payload_active)
 
     receipt = result.receipt
 
@@ -505,12 +518,13 @@ def record_send_result(
     if receipt:
         record_receipt_received(audit_log, from_party, to_party, receipt,
             ref_to_message_id=result.message_id, raw_message=result.response_body,
-            errors=result.errors, cid=cid)
+            errors=result.errors, cid=cid, is_export_payload_active=is_export_payload_active)
 
     # .. and a response that carried errors instead of a receipt closes the pair too.
     elif result.errors:
         record_errors_received(audit_log, from_party, to_party, ref_to_message_id=result.message_id,
-            errors=result.errors, raw_message=result.response_body, cid=cid)
+            errors=result.errors, raw_message=result.response_body, cid=cid,
+            is_export_payload_active=is_export_payload_active)
 
 # ################################################################################################################################
 
@@ -523,6 +537,7 @@ def record_inbound_result(
     own_party:'str' = '',
     partner_party:'str' = '',
     reconciler:'ReceiptReconciler | None' = None,
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records everything one inbound request produced - the message-received event with the bytes
     as they arrived, the receipt-sent event for the signal that went back, and a receipt-received
@@ -550,12 +565,13 @@ def record_inbound_result(
                 error_code = ''
 
             record_message_received(audit_log, user_message, payloads=result.payloads,
-                raw_message=body, error=error_code, outcome=outcome, cid=cid)
+                raw_message=body, error=error_code, outcome=outcome, cid=cid,
+                is_export_payload_active=is_export_payload_active)
 
             # The signal that answered the message, whichever kind it was.
             record_receipt_sent(audit_log, user_message.from_party, user_message.to_party,
                 ref_to_message_id=user_message.message_id, raw_message=result.body,
-                error_code=error_code, cid=cid)
+                error_code=error_code, cid=cid, is_export_payload_active=is_export_payload_active)
 
     # Signals delivered on their own belong to a message that was sent from here, so the pair
     # they close is the one the sending direction opened - which is this pair reversed.
@@ -570,12 +586,12 @@ def record_inbound_result(
         if signal.is_receipt:
             record_receipt_received(audit_log, from_party, to_party, signal,
                 ref_to_message_id=ref_to_message_id, raw_message=body, errors=signal.errors,
-                is_matched=is_matched, cid=cid)
+                is_matched=is_matched, cid=cid, is_export_payload_active=is_export_payload_active)
 
         elif signal.errors:
             record_errors_received(audit_log, from_party, to_party,
                 ref_to_message_id=ref_to_message_id, errors=signal.errors, raw_message=body,
-                is_matched=is_matched, cid=cid)
+                is_matched=is_matched, cid=cid, is_export_payload_active=is_export_payload_active)
 
 # ################################################################################################################################
 
@@ -585,6 +601,8 @@ def record_pull_result(
     to_party:'str',
     result:'PullResult',
     cid:'str' = '',
+    *,
+    is_export_payload_active:'bool' = False,
     ) -> 'None':
     """ Records everything one pull produced - the message-received event for the message that was
     pulled and the receipt-sent event for the acknowledgement posted back for it. A pull that found
@@ -596,11 +614,11 @@ def record_pull_result(
         return
 
     record_message_received(audit_log, user_message, payloads=result.payloads,
-        raw_message=result.response_body, cid=cid)
+        raw_message=result.response_body, cid=cid, is_export_payload_active=is_export_payload_active)
 
     if result.receipt_sent:
         record_receipt_sent(audit_log, from_party, to_party, ref_to_message_id=user_message.message_id,
-            raw_message=result.receipt_body, cid=cid)
+            raw_message=result.receipt_body, cid=cid, is_export_payload_active=is_export_payload_active)
 
 # ################################################################################################################################
 # ################################################################################################################################

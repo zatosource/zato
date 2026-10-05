@@ -156,6 +156,10 @@ class ChannelExporter:
             if channel_row.get('is_audit_log_active') is False:
                 exported_channel['is_audit_log_active'] = False
 
+            # Payloads leave with the audit export only when the flag is on, so only the on state is exported
+            if channel_row.get('is_audit_export_payload_active') is True:
+                exported_channel['is_audit_export_payload_active'] = True
+
             # Channels are included in OpenAPI documents by default so only the off state is exported
             if channel_row.get('should_include_in_openapi') is False:
                 exported_channel['should_include_in_openapi'] = False

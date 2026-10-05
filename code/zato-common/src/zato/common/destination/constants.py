@@ -17,10 +17,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 class DestinationType:
     """ The kinds of outgoing connection a destination points at.
     """
-    REST = 'rest'
-    MLLP = 'hl7-mllp'
-    FHIR = 'hl7-fhir'
-    SMTP = 'smtp'
+    REST    = 'rest'
+    MLLP    = 'hl7-mllp'
+    FHIR    = 'hl7-fhir'
+    SMTP    = 'smtp'
+    KAFKA   = 'kafka'
+    SFTP    = 'sftp'
+    SERVICE = 'service'
 
 # ################################################################################################################################
 
@@ -38,11 +41,12 @@ class DeliveryMode:
 class DestinationOption:
     """ The per-type options a destination carries alongside the connection it names.
     """
-    Method  = 'method'
-    Path    = 'path'
-    Params  = 'params'
-    To      = 'to'
-    Subject = 'subject'
+    Method      = 'method'
+    Path        = 'path'
+    Params      = 'params'
+    To          = 'to'
+    Subject     = 'subject'
+    Remote_Path = 'remote_path'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,6 +57,9 @@ Known_Destination_Types = (
     DestinationType.MLLP,
     DestinationType.FHIR,
     DestinationType.SMTP,
+    DestinationType.KAFKA,
+    DestinationType.SFTP,
+    DestinationType.SERVICE,
 )
 
 # The delivery modes a channel may actually be configured with
@@ -96,6 +103,13 @@ Default_Params = None
 # The recipient and the subject line an email destination uses when its options do not name them
 Default_To = ''
 Default_Subject = ''
+
+# Where an SFTP destination puts a file when its options do not say - the placeholders are
+# filled in from the file delivered, and a path ending in a slash is a directory the file name is appended to.
+Default_Remote_Path = '/{job_id}/{file_name}'
+
+# The placeholders an SFTP destination's remote path may carry
+Remote_Path_Placeholders = ('job_id', 'resource_type', 'file_name', 'date')
 
 # ################################################################################################################################
 # ################################################################################################################################

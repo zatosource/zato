@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from base64 import b64decode
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -32,8 +31,8 @@ from redis.exceptions import RedisError
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch, bunchify
-from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, \
-    On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, KAFKA, \
+    OAuth, On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
@@ -63,7 +62,7 @@ from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_c
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
-from zato.common.util.gateway import ensure_mcp_gateway_exists
+from zato.common.util.gateway import ensure_mcp_gateway_exists, ensure_mcp_oauth_metadata_channel_exists
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.log_destinations import delete_log_destination, get_log_destinations, ping_log_destination, \
@@ -82,6 +81,7 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.delivery import PushDelivery
 from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigStore
+from zato.server.connection.ccda import log_converter_status
 from zato.server.connection.mcp.session import MCPSessionReaper
 from zato.server.connection.outgoing_delivery import register_delivery_handlers
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
@@ -90,6 +90,7 @@ from zato.server.generic.connection import GenericConnection
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 from zato.server.queue_bridge.client import QueueBridgeClient
+from zato.server.queue_bridge.recv import ChannelListeners
 from zato.server.quota_tiers import QuotaTiersManager
 from zato.server.rule_engine_api import start_rule_engine_change_listener
 from zato.server.scheduler_.adapter import SchedulerODBAdapter
@@ -148,6 +149,9 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 # How often, at most, a still-failing Redis stream listener logs a reminder (in seconds).
 _listener_error_log_interval = 60.0
 
+# The prefixes of an encrypted secret
+_secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
+
 # The OAuth scope sent to the token endpoint when the definition has none.
 _default_kafka_oauth_scope = ''
 
@@ -167,6 +171,11 @@ def _enrich_kafka_oauth(config_manager:'ConfigManager', config:'anydict', securi
     """ Fills in the OAuth client credentials and token endpoint from a Bearer token definition.
     """
     sec_def = config_manager.oauth_get_by_id(security_id)
+
+    # Kafka clients authenticate with a client secret only, so a definition that signs assertions cannot be used here
+    if sec_def.get('client_auth_method') == OAuth.Client_Auth_Method.Private_Key_JWT:
+        raise Exception(f'Kafka connection `{config["name"]}` cannot use bearer token definition `{sec_def["name"]}` ' + \
+            'because it authenticates with a private key JWT and Kafka supports client secrets only')
 
     if scopes := sec_def.get('scopes'):
         scopes = normalize_scopes(scopes)
@@ -307,6 +316,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.needs_x_zato_cid = False
         self._queue_bridge = cast_('QueueBridgeClient', None)
         self._queue_bridge_started = False
+        self._channel_listeners = cast_('ChannelListeners', None)
         self._scheduler_started = False
         self.rate_limiting_manager = RateLimitingManager()
 
@@ -382,6 +392,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             # The audit log for invocations of user-defined services.
             self.service_audit_log = AuditLog(self.name)
+
+            # Whether C-CDA documents can be converted on this server
+            log_converter_status()
 
             internal = self.service_store.import_internal_services(internal_service_modules, self.base_dir, self.sync_internal)
             locally_deployed.extend(internal)
@@ -921,6 +934,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.cluster = self.odb.cluster
         self.cluster_id = self.cluster.id
         self.cluster_name = self.cluster.name
+
+        # The OTLP export of the audit log, on only if an endpoint is configured
+        self._start_audit_export()
+
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
@@ -1083,6 +1100,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._start_openapi_console_listener()
 
         self._start_rule_engine_change_listener()
+
+        # FHIR bulk exports that a previous process of this server left unfinished carry on now
+        self._resume_fhir_bulk_exports()
 
         self.log_environment_details()
 
@@ -1527,27 +1547,21 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _invoke_queue_service(self, service_name:'str', data:'any_', headers:'anydict') -> 'any_':
-        """ Invoked by the recv listener greenlet when a message is received
-        from an external queue (Kafka, IBM MQ, etc.) via the queue bridge binary.
-        A JSON message is parsed into self.request.input, any other message is passed through as bytes.
-        """
-        request_ctx = {'zato.request.headers': headers}
-        response = self.invoke(service_name, data, data_format=DATA_FORMAT.JSON, request_ctx=request_ctx)
-        return response
-
-# ################################################################################################################################
-
     def _enrich_queue_bridge_config(self, config:'anydict') -> 'None':
         """ Resolves the connection's secret and its security definition into the credential fields the bridge expects.
         """
         if secret := config.get('secret'):
 
             # A secret stored encrypted is decrypted before the bridge sees it.
-            if secret.startswith((SECRETS.Encrypted_Indicator, SECRETS.PREFIX)):
+            if secret.startswith(_secret_prefixes):
                 secret = self.decrypt(secret)
 
             config['password'] = secret
+
+        # The TLS key's password is stored encrypted, IBM MQ connections do not have it.
+        if key_password := config.get(KAFKA.Field_SSL_Key_Password):
+            if key_password.startswith(_secret_prefixes):
+                config[KAFKA.Field_SSL_Key_Password] = self.decrypt(key_password)
 
         # Connections without a security definition have no such key.
         security_id = config.get('security_id')
@@ -1587,6 +1601,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                             outgoing.append(config)
 
             self._queue_bridge = QueueBridgeClient()
+            self._channel_listeners = ChannelListeners(self)
+            self._start_channel_listeners(channel_types)
+
             channel_noun = 'channel' if len(channels) == 1 else 'channels'
             outgoing_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
             logger.info('Sending reload to queue bridge with %d %s and %d %s',
@@ -1595,9 +1612,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self._queue_bridge_started = True
 
             self._start_queue_bridge_request_listener()
-            self._start_queue_bridge_recv_listener()
 
-            logger.info('Queue bridge client connected, recv listener started')
+            logger.info('Queue bridge client connected, channel listeners started')
         except Exception:
             logger.warning('Queue bridge could not be started: %s', format_exc())
 
@@ -1628,10 +1644,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), channel_noun, len(outgoing), outgoing_noun)
         self._queue_bridge.reload(channels=channels, outgoing=outgoing)
 
+        # The listeners follow the channels the config manager holds now - the normalized configurations, not the raw rows.
+        if self._channel_listeners:
+            listener_configs = []
+            for type_ in channel_types:
+                listener_configs.extend(self.config_manager.generic_conn_api[type_].values())
+            self._channel_listeners.sync(listener_configs)
+
 # ################################################################################################################################
 
     def _ensure_stream_group(self, redis_conn:'any_', stream:'str', group_name:'str') -> 'None':
-        """ Creates a Redis stream and its consumer group idempotently.
+        """ Creates a Redis stream and its consumer group idempotently - the scheduler's streams come up
+        before the queue bridge does, so this cannot go through the bridge client.
         """
         try:
             _ = redis_conn.xgroup_create(stream, group_name, id='$', mkstream=True)
@@ -1745,83 +1769,39 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _start_queue_bridge_recv_listener(self) -> 'None':
-        """ Starts a dedicated greenlet that consumes recv events from the queue bridge via Redis Streams.
+    def _start_channel_listeners(self, channel_types:'strtuple') -> 'None':
+        """ Starts one listener per channel the queue bridge consumes, out of the channels the config manager knows.
         """
-        recv_redis = self._queue_bridge.new_redis_conn()
-
-        recv_stream = 'zato:queue_bridge:stream:recv'
-        group_name = 'server-recv'
-        consumer_name = 'server-recv-0'
-
-        self._ensure_stream_group(recv_redis, recv_stream, group_name)
-
-        def _recv_listener_loop() -> 'None':
-
-            error_since = 0.0
-            last_logged = 0.0
-
-            while True:
+        for type_ in channel_types:
+            for config in self.config_manager.generic_conn_api[type_].values():
                 try:
-                    result = cast_('anylist', recv_redis.xreadgroup(
-                        groupname=group_name,
-                        consumername=consumer_name,
-                        streams={recv_stream: '>'},
-                        count=10,
-                        block=1000,
-                    ))
+                    self._channel_listeners.start(config)
+                except Exception:
+                    logger.warning('Channel listener could not be started for `%s`: %s', config['name'], format_exc())
 
-                    # We are able to read from the stream again, so the error condition, if any, has cleared.
-                    if error_since:
-                        logger.info('Queue bridge recv listener recovered')
-                        error_since = 0.0
+# ################################################################################################################################
 
-                    if not result:
-                        continue
+    def on_queue_bridge_channel_created(self, config:'anydict') -> 'None':
+        """ Starts the listener of a channel the bridge consumes.
+        """
+        if self._channel_listeners:
+            self._channel_listeners.start(config)
 
-                    for stream_name, messages in result:
-                        for msg_id, fields in messages:
-                            service_name = fields['service']
-                            payload_b64 = fields['payload']
-                            payload = b64decode(payload_b64)
+# ################################################################################################################################
 
-                            headers_json = fields['headers']
-                            if headers_json:
-                                headers = json_loads(headers_json)
-                            else:
-                                headers = {}
+    def on_queue_bridge_channel_edited(self, config:'anydict') -> 'None':
+        """ Updates the listener of a channel the bridge consumes.
+        """
+        if self._channel_listeners:
+            self._channel_listeners.update(config)
 
-                            response = self._invoke_queue_service(service_name, payload, headers)
+# ################################################################################################################################
 
-                            # Messages that carry a reply-to queue get the service's response
-                            # sent back automatically, with no action needed in the service itself.
-                            reply_to_queue = fields['reply_to_queue']
-                            if reply_to_queue and response:
-                                if isinstance(response, bytes):
-                                    reply_data = response
-                                elif isinstance(response, str):
-                                    reply_data = response.encode('utf8')
-                                else:
-                                    reply_data = json_dumps(response).encode('utf8')
-
-                                _ = self._queue_bridge.send_reply(
-                                    fields['channel_name'],
-                                    reply_to_queue,
-                                    fields['reply_to_queue_manager'],
-                                    fields['message_id'],
-                                    reply_data,
-                                )
-
-                            _ = recv_redis.xack(stream_name, group_name, msg_id)
-
-                except Exception as exc:
-                    error_since, last_logged = self._handle_stream_listener_error(
-                        'queue bridge recv', exc, recv_redis, (recv_stream,), group_name, error_since, last_logged)
-                    sleep(1)
-
-        _ = spawn(_recv_listener_loop)
-
-        logger.info('Queue bridge recv listener greenlet started')
+    def on_queue_bridge_channel_deleted(self, channel_id:'int') -> 'None':
+        """ Stops the listener of a channel the bridge consumes and deletes its stream.
+        """
+        if self._channel_listeners:
+            self._channel_listeners.stop(channel_id, needs_stream_delete=True)
 
 # ################################################################################################################################
 
@@ -1833,6 +1813,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             start_openapi_console_listener(self)
         except Exception:
             logger.warning('OpenAPI console listener could not be started: %s', format_exc())
+
+# ################################################################################################################################
+
+    def _resume_fhir_bulk_exports(self) -> 'None':
+        """ Starts the export program again for each FHIR bulk export left unfinished - the workers take turns
+        and each skips the jobs another one already started.
+        """
+        try:
+            from zato.server.hl7.fhir.bulk_export import resume_unfinished_jobs
+            resume_unfinished_jobs(self)
+        except Exception:
+            logger.warning('FHIR bulk exports could not be resumed: %s', format_exc())
 
 # ################################################################################################################################
 
@@ -1904,6 +1896,26 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def _start_audit_export(self) -> 'None':
+        """ Starts the OTLP export of the audit log if an endpoint is configured. A configuration that cannot
+        be read is logged and leaves the export off, the server itself starts regardless.
+        """
+        from zato.common.audit_log.export.api import ModuleCtx as ExportCtx, start_audit_export
+        from zato.common.version import get_version
+
+        # The version is reported without the product name in front of it
+        version = get_version().replace('Zato ', '', 1)
+
+        _ = start_audit_export(
+            service_name=ExportCtx.Service_Server,
+            server_name=self.name,
+            cluster_name=self.cluster_name,
+            instance_id=self.deployment_key,
+            version=version,
+        )
+
+# ################################################################################################################################
+
     def _pre_initialize(self) -> 'None':
 
         with closing(self.odb.session()) as session:
@@ -1911,6 +1923,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             # The built-in channels and gateways ..
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_gateway_exists(session, self.cluster_id)
+            mcp_oauth_metadata_created = ensure_mcp_oauth_metadata_channel_exists(session, self.cluster_id)
 
             # .. the AS2 jobs, which always live in the main ODB ..
             as2_rotation_job_created = ensure_as2_rotation_job_exists(session, self.cluster_id)
@@ -1935,6 +1948,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             created_flags = [
                 openapi_created,
                 mcp_created,
+                mcp_oauth_metadata_created,
                 as2_rotation_job_created,
                 as2_async_mdn_job_created,
                 as2_resend_job_created,
@@ -1957,6 +1971,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if mcp_created:
                 logger.info('Created MCP gateway')
+
+            if mcp_oauth_metadata_created:
+                logger.info('Created MCP OAuth protected resource metadata channel')
 
             if as2_rotation_job_created:
                 logger.info('Created AS2 rotation completion job')
@@ -2155,6 +2172,28 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def ping_log_destination(self, vendor:'str', destination_id:'int') -> 'strdict':
         out = ping_log_destination(self.repo_location, vendor, destination_id)
+        return out
+
+# ################################################################################################################################
+
+    def get_env_repo_dir(self) -> 'anydict':
+        """ Returns where the dashboard keeps checkouts of repositories for this server.
+        """
+        # Zato
+        from zato.server.env_repo import get_repo_dir
+
+        out = {'repo_dir': get_repo_dir(self)}
+        return out
+
+# ################################################################################################################################
+
+    def deploy_env_repo(self, path:'str', files:'strlist', is_full:'bool') -> 'anydict':
+        """ Deploys a checkout of a repository the dashboard pulled, see zato.server.env_repo.deploy.
+        """
+        # Zato
+        from zato.server.env_repo import deploy
+
+        out = deploy(self, path, files, is_full)
         return out
 
 # ################################################################################################################################
@@ -2665,6 +2704,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
+
+            # Audit events still queued for the collector go out before the process ends
+            from zato.common.audit_log.export.api import stop_audit_export
+            stop_audit_export()
 
             logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 

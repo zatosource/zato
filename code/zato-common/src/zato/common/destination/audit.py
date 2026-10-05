@@ -18,8 +18,8 @@ from json import dumps
 
 # Zato
 from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
-from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Subject, \
-    Default_To, DestinationOption, DestinationType, Hop_Destination_Name
+from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Remote_Path, \
+    Default_Subject, Default_To, DestinationOption, DestinationType, Hop_Destination_Name
 from zato.common.destination.model import get_option, new_entry, DestinationException
 
 # ################################################################################################################################
@@ -40,6 +40,9 @@ _source_by_type = {
     DestinationType.MLLP: AuditSource.MLLP_Outgoing,
     DestinationType.FHIR: AuditSource.FHIR,
     DestinationType.SMTP: AuditSource.Email_SMTP,
+    DestinationType.KAFKA: AuditSource.Kafka_Outgoing,
+    DestinationType.SFTP: AuditSource.File_Outgoing,
+    DestinationType.SERVICE: AuditSource.Service,
 }
 
 # Which destination type a recorded delivery went to, read the other way round
@@ -65,8 +68,14 @@ _stored_options = {
         DestinationOption.Subject: Default_Subject,
     },
 
-    # An MLLP delivery is the message itself and nothing else
+    DestinationType.SFTP: {
+        DestinationOption.Remote_Path: Default_Remote_Path,
+    },
+
+    # An MLLP delivery, a Kafka message and a service invocation are the payload itself and nothing else
     DestinationType.MLLP: {},
+    DestinationType.KAFKA: {},
+    DestinationType.SERVICE: {},
 }
 
 # ################################################################################################################################

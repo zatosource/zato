@@ -201,6 +201,9 @@ class _ConnectionsStub:
         self.mllp = None
         self.fhir = None
         self.email = self._EMail(self._Item(new_smtp_connection()))
+        self.out = None
+        self.sftp = None
+        self.invoke = None
 
 # ################################################################################################################################
 

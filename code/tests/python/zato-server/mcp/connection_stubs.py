@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from zato.common.api import MCP
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps
-from zato.common.test import _test_sec_def_id
+from zato.common.test import _test_identity
 from zato.common.typing_ import anytuple, cast_, list_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
@@ -384,7 +384,7 @@ def run_tools_call(handler:'MCPHandler', tool_name:'str', arguments:'anydict') -
     """ One tools/call through the handler, with a fresh session - returns the MCPResponse.
     """
 
-    session_id = handler.session_manager.create(_mcp_protocol_version, _test_sec_def_id)
+    session_id = handler.session_manager.create(_mcp_protocol_version, _test_identity)
 
     request = {
         'jsonrpc': '2.0',
@@ -393,7 +393,7 @@ def run_tools_call(handler:'MCPHandler', tool_name:'str', arguments:'anydict') -
         'params': {'name': tool_name, 'arguments': arguments},
     }
 
-    out = handler.handle_raw_request(dumps(request), _test_sec_def_id, session_id=session_id)
+    out = handler.handle_raw_request(dumps(request), _test_identity, session_id=session_id)
     return out
 
 # ################################################################################################################################

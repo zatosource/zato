@@ -79,11 +79,11 @@ class TestTopLevelOrder(TestCase):
 
         # The fields the reference documents.
         expected = {
-            'channel_rest': ['is_audit_log_active', 'method', 'content_type', 'timeout',
+            'channel_rest': ['is_audit_log_active', 'is_audit_export_payload_active', 'method', 'content_type', 'timeout',
                 'should_include_in_openapi', 'gateway_service_list:list'],
-            'outgoing_rest': ['is_audit_log_active'],
-            'channel_soap': ['is_audit_log_active'],
-            'outgoing_soap': ['is_audit_log_active', 'use_ws_addressing', 'use_mtom',
+            'outgoing_rest': ['is_audit_log_active', 'is_audit_export_payload_active'],
+            'channel_soap': ['is_audit_log_active', 'is_audit_export_payload_active'],
+            'outgoing_soap': ['is_audit_log_active', 'is_audit_export_payload_active', 'use_ws_addressing', 'use_mtom',
                 'tls_client_cert', 'tls_client_key', 'body_credentials'],
             'sql': ['extra:list', 'pool_size', 'is_active', 'timeout', 'audit_log'],
             'mcp_gateway': ['invoke_timeout', 'session_ttl'],

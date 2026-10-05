@@ -41,7 +41,7 @@
 {% endif %}
 
 <div style="width:45%;margin: 0px auto -1px auto;padding-top:10px">
-    <form id="login-form" novalidate method="post" action="{% url "login" %}">
+    <form id="login-form" novalidate method="post" action="{% url "login" %}" autocomplete="on">
         {% csrf_token %}
         <table class="form-data" border=""  style="table-layout: fixed; width:100%; padding-top:20px !important">
             <tr>

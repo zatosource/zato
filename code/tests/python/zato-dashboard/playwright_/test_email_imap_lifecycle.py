@@ -65,7 +65,7 @@ def _create_connection(page:'Page', name:'str', invoke_with:'str') -> 'None':
 
     # .. expand the scheduler options and fill them all in, including the invoke-with mode -
     # .. the service select is a chosen widget which hides the underlying select element
-    # .. and the start date field has a datetimepicker attached which rewrites the field on focus,
+    # .. and the start date field has a datetimepicker attached which opens a popup on focus,
     # .. hence both are set through jQuery, the same way the widgets themselves do it ..
     page.click('#create-div a[href*="scheduler-options-block"]')
     page.fill('#id_scheduler_run_every', '5')

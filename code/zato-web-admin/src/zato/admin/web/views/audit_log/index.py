@@ -17,8 +17,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_sources_section_title, _all_sources_title, \
-    _endpoint_page_url, _event_type_label, _get_outcomes, _object_page_url, _poll_url, _run_page_url, _source_columns, \
+from zato.admin.web.views.audit_log.columns import get_source_outcomes, _all_sources_columns, _all_sources_section_title, \
+    _all_sources_title, _endpoint_page_url, _event_type_label, _object_page_url, _poll_url, _run_page_url, _source_columns, \
     _source_endpoint_label, _source_event_label, _source_except_label, _source_label, _source_object_label, \
     _source_page_url, _source_title
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding
@@ -118,7 +118,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
     columns_json = json.dumps(columns)
 
     # .. and offers filters for the outcomes this source's events actually report
-    outcomes_json = json.dumps(list(_get_outcomes(source)))
+    outcomes_json = json.dumps(list(get_source_outcomes(source)))
 
     # The per-event-type resubmit labels of each source, keyed by source, so any row
     # of any listing knows what its action link is to say

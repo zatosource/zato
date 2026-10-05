@@ -466,6 +466,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
                     msh12_version_id=self.config.msh12_version_id,
                     is_default=asbool(self.config.is_default),
                     is_audit_log_active=asbool(self.config.is_audit_log_active),
+                    is_audit_export_payload_active=asbool(self.config.get('is_audit_export_payload_active', False)),
                     settings=self._build_route_settings(),
                 )
 

@@ -101,17 +101,19 @@ def handle_batch_payload(
     # .. and the channel it is filed under is what says afterwards whether it was audited ..
     audit_log = server.audit_log
     audit_channel_name = ''
+    is_export_payload_active = False
 
     # .. all the batch's audit events share one correlation id ..
     if audit_log and matched_route and matched_route.is_audit_log_active:
 
         audit_cid = new_cid_server()
         audit_channel_name = matched_route.channel_name
+        is_export_payload_active = matched_route.is_audit_export_payload_active
 
         # .. the parent row for the batch plus a child row per contained message ..
         _ = audit_batch_received(
             audit_log, audit_channel_name, raw,
-            cid=audit_cid, endpoint=connection_context.endpoint)
+            cid=audit_cid, endpoint=connection_context.endpoint, is_export_payload_active=is_export_payload_active)
     else:
         audit_cid = ''
 
@@ -166,7 +168,8 @@ def handle_batch_payload(
 
         _ = audit_ack_sent(
             audit_log, audit_channel_name, ack_code, ack_string,
-            cid=audit_cid, msg_id=control_id, facility=wire_attrs['facility'])
+            cid=audit_cid, msg_id=control_id, facility=wire_attrs['facility'],
+            is_export_payload_active=is_export_payload_active)
 
     server.send_framed(active_socket, ack_string, settings, connection_context)
 

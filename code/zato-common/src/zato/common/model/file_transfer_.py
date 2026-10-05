@@ -13,7 +13,9 @@ from zato.common.typing_ import dataclass
 # ################################################################################################################################
 
 if 0:
+    from zato.common.documents.model import doclist
     from zato.common.typing_ import stranydict
+    doclist = doclist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,6 +169,15 @@ class FileTransferItem:
             'last_modified': self.last_modified,
             'data': self.data.decode('utf8', 'replace'),
         }
+        return out
+
+    def documents(self) -> 'doclist':
+        """ The documents this file carries - the file itself unless it is an archive, in which case each file inside,
+        and each document the metadata names if the archive is an IHE XDM package.
+        """
+        from zato.common.documents.unpack import read_documents
+
+        out = read_documents(self.data, file_name=self.file_name)
         return out
 
 # ################################################################################################################################

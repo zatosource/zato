@@ -1,0 +1,33 @@
+/* ------------------------------------------------------------ */
+/* FHIR bulk export tab - the lines                             */
+/* ------------------------------------------------------------ */
+
+:root {
+    --fhir-bulk-export-start-date-width: 15em;
+    --fhir-bulk-export-level-gap: 10px;
+    --fhir-bulk-export-level-font-size: 12px;
+}
+
+.data-popup .fhir-bulk-export-tab-panel input.fhir-bulk-export-start-date {
+    box-sizing: border-box;
+    width: var(--fhir-bulk-export-start-date-width);
+}
+
+/* The level select, then the link to what the level takes */
+.data-popup .fhir-bulk-export-tab-panel .fhir-bulk-export-level {
+    gap: var(--fhir-bulk-export-level-gap);
+}
+
+.data-popup .fhir-bulk-export-tab-panel select.fhir-bulk-export-level-select {
+    width: auto;
+    font-size: var(--fhir-bulk-export-level-font-size);
+}
+
+/* ------------------------------------------------------------ */
+/* FHIR bulk export tab - the popovers                          */
+/* ------------------------------------------------------------ */
+
+/* The popover is outside the dialog's .ui-widget, so the buttons' font is set here */
+.fhir-bulk-export-popover button {
+    font-family: Verdana, Arial, sans-serif;
+}

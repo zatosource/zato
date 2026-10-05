@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Zato</title>
+<link rel="stylesheet" href="/zato-deploy/shared/progress-log.css">
 <style>
 
 /* ------------------------------------------------------------ */
@@ -159,13 +160,6 @@ body {
 
 .deploy-status {
     padding-top: 0.375rem;
-}
-
-@keyframes deploy-pulse {
-    50% {
-        opacity: 0.35;
-        transform: scale(0.55);
-    }
 }
 
 /* ------------------------------------------------------------ */
@@ -548,61 +542,16 @@ body[data-state="ready"] .deploy-progress-elapsed {
     padding: 0 var(--deploy-page-padding) 1.75rem;
 }
 
-.deploy-log-panel {
-    display: flex;
-    flex-direction: column;
+/* The shared panel in its dark theme, filling the rest of the screen with square corners and no height cap,
+   its background left translucent so the page's gradient shows through. */
+.deploy-log .progress-log {
+    --progress-log-font-mono: var(--deploy-font-mono);
+    --progress-log-radius: 0;
+    --progress-log-max-height: none;
+    --progress-log-hover-delay: var(--deploy-hover-delay);
+
     flex: 1;
-    min-height: 6.875rem;
-    border: 1px solid var(--deploy-border);
     background: var(--deploy-bg-panel);
-}
-
-.deploy-log-header {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    padding: 0.5rem 0.75rem 0.5rem 1.125rem;
-    border-bottom: 1px solid var(--deploy-border);
-    font-family: var(--deploy-font-mono);
-    font-size: 0.75rem;
-    color: var(--deploy-text-faint);
-}
-
-.deploy-log-live {
-    width: 0.375rem;
-    height: 0.375rem;
-    background: var(--deploy-green);
-    box-shadow: 0 0 0.5rem var(--deploy-green-glow);
-    animation: deploy-pulse 1.5s ease-in-out infinite;
-}
-
-body[data-state="failed"] .deploy-log-live {
-    background: var(--deploy-red);
-    box-shadow: none;
-    animation: none;
-}
-
-.deploy-log-copy {
-    margin-left: auto;
-    padding: 0.1875rem 0.625rem;
-    border: 1px solid var(--deploy-border-strong);
-    font: inherit;
-    color: var(--deploy-text-muted);
-    background: transparent;
-    cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.deploy-log-copy:hover {
-    border-color: var(--deploy-accent);
-    color: var(--deploy-text);
-    background: var(--deploy-accent-soft);
-    transition-delay: var(--deploy-hover-delay);
-}
-
-.deploy-log-copy:active {
-    background: var(--deploy-accent-soft-strong);
-    transition-delay: 0s;
 }
 
 .tippy-box[data-theme~="zato-deploy"] {
@@ -621,68 +570,6 @@ body[data-state="failed"] .deploy-log-live {
 
 .tippy-box[data-theme~="zato-deploy"] > .tippy-content {
     padding: 0.375rem 0.625rem;
-}
-
-.deploy-log-lines {
-    flex: 1;
-    min-height: 0;
-    padding: 0.75rem 1.125rem;
-    overflow-y: auto;
-    font-family: var(--deploy-font-mono);
-    font-size: 0.7812rem;
-    line-height: 1.7;
-    color: var(--deploy-text-muted);
-    mask-image: linear-gradient(to bottom, transparent, #000 2.75rem);
-    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 2.75rem);
-}
-
-.deploy-log-lines::-webkit-scrollbar {
-    width: 1.25rem;
-}
-
-.deploy-log-lines::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.deploy-log-lines::-webkit-scrollbar-thumb {
-    background: var(--deploy-border-strong);
-}
-
-.deploy-log-lines::-webkit-scrollbar-thumb:hover {
-    background: var(--deploy-text-faint);
-}
-
-/* Browsers without these selectors can only choose between their own two widths. */
-@supports not selector(::-webkit-scrollbar) {
-    .deploy-log-lines {
-        scrollbar-width: auto;
-        scrollbar-color: var(--deploy-text-faint) transparent;
-    }
-}
-
-.deploy-log-line {
-    display: flex;
-    gap: 1rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.deploy-log-line-time {
-    flex: none;
-    color: var(--deploy-text-faint);
-    opacity: 0.7;
-}
-
-.deploy-log-line:last-child .deploy-log-line-text {
-    color: var(--deploy-text);
-}
-
-.deploy-log-line[data-kind="ok"] .deploy-log-line-text {
-    color: var(--deploy-green);
-}
-
-.deploy-log-line[data-kind="error"] .deploy-log-line-text {
-    color: var(--deploy-red);
 }
 
 /* ------------------------------------------------------------ */
@@ -751,8 +638,7 @@ body[data-state="failed"] .deploy-log-live {
 @media (prefers-reduced-motion: reduce) {
     .deploy-stage-spinner,
     .deploy-stage-spinner-arc,
-    .deploy-progress-fill::after,
-    .deploy-log-live {
+    .deploy-progress-fill::after {
         animation-duration: 6s;
     }
 }
@@ -800,20 +686,14 @@ body[data-state="failed"] .deploy-log-live {
     </main>
 
     <section class="deploy-log">
-        <div class="deploy-log-panel">
-            <div class="deploy-log-header">
-                <span class="deploy-log-live"></span>
-                <span id="deploy-log-source"></span>
-                <button class="deploy-log-copy" id="deploy-log-copy" type="button">Copy</button>
-            </div>
-            <div class="deploy-log-lines" id="deploy-log-lines"></div>
-        </div>
+        <div id="deploy-log"></div>
     </section>
 
 </div>
 
 <script src="/zato-deploy/vendor/tippy/popperjs.core.js"></script>
 <script src="/zato-deploy/vendor/tippy/tippy.js"></script>
+<script src="/zato-deploy/shared/progress-log.js"></script>
 <script>
 
 var zatoDeploy = {};
@@ -825,27 +705,18 @@ zatoDeploy.config = {
     handoffPollIntervalMs: 200,
     estimateCap: 0.92,
     logLinesKept: 120,
-    logLinesAnimated: 3,
-    logScrollStickiness: 40,
     titleFailed: 'Deployment failed',
     redirectLabel: 'Redirecting to Zato in ',
     readyLabel: 'Environment ready',
     redirectSteps: 3,
     redirectStepMs: 700,
     fadeOutMs: 600,
-    copiedLabel: 'Copied to clipboard',
-    copiedShownMs: 1200,
-    copiedPlacement: 'left',
-    copiedOffset: [0, 10],
     tooltipTheme: 'zato-deploy',
     svgNamespace: 'http://www.w3.org/2000/svg',
 };
 
 zatoDeploy.state = {
     phase: 'running',
-    lastLogId: 0,
-    isLogFollowed: true,
-    logLines: [],
     title: '',
     timer: null,
 };
@@ -868,19 +739,19 @@ zatoDeploy.init = function() {
     elements.percent = document.getElementById('deploy-percent');
     elements.elapsed = document.getElementById('deploy-elapsed');
     elements.stages = document.getElementById('deploy-stages');
-    elements.logSource = document.getElementById('deploy-log-source');
-    elements.logLines = document.getElementById('deploy-log-lines');
-    elements.logCopy = document.getElementById('deploy-log-copy');
     elements.stageRows = [];
     elements.progressFills = [];
     elements.progressSegments = [];
 
     elements.progressReady.textContent = zatoDeploy.config.readyLabel;
-    elements.logCopy.addEventListener('click', zatoDeploy.copyLog);
-    elements.logLines.addEventListener('scroll', zatoDeploy.onLogScroll);
 
-    // The log panel changes its size as the rest of the page fills in and as fonts load.
-    new ResizeObserver(zatoDeploy.followLog).observe(elements.logLines);
+    zatoDeploy.log = progressLog.create({
+        container: document.getElementById('deploy-log'),
+        theme: 'dark',
+        linesKept: zatoDeploy.config.logLinesKept,
+        tooltipTheme: zatoDeploy.config.tooltipTheme,
+    });
+    zatoDeploy.log.setState('live');
 
     elements.hostName.textContent = window.location.hostname;
 
@@ -926,7 +797,8 @@ zatoDeploy.scheduleNext = function() {
 // The Dashboard answers in place of the progress once the deployment is over, which resolves to null.
 zatoDeploy.fetchProgress = function() {
 
-    var url = zatoDeploy.config.progressUrl + '?after=' + zatoDeploy.state.lastLogId;
+    var lastId = zatoDeploy.log.lastId === null ? 0 : zatoDeploy.log.lastId;
+    var url = zatoDeploy.config.progressUrl + '?after=' + lastId;
 
     return fetch(url, {cache: 'no-store'}).then(function(response) {
         if(!zatoDeploy.isProgressResponse(response)) {
@@ -1055,6 +927,7 @@ zatoDeploy.updatePhase = function(snapshot) {
 
     zatoDeploy.state.phase = phase;
     document.body.setAttribute('data-state', phase);
+    zatoDeploy.log.setState(phase === 'running' ? 'live' : phase === 'ready' ? 'done' : 'failed');
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -1457,125 +1330,10 @@ zatoDeploy.renderProgress = function(snapshot) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Each poll returns only the lines after the last one already shown.
 zatoDeploy.renderLog = function(log) {
-
-    var config = zatoDeploy.config;
-    var state = zatoDeploy.state;
-    var container = zatoDeploy.elements.logLines;
-    var lines = log.lines;
-
-    zatoDeploy.elements.logSource.textContent = log.source;
-
-    // Each poll returns only the lines after the last one already shown.
-    if(lines.length === 0) {
-        return;
-    }
-
-    var isAnimated = lines.length <= config.logLinesAnimated;
-
-    for(var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-
-        var line = lines[lineIndex];
-        state.logLines.push(line);
-
-        var row = document.createElement('div');
-        row.className = 'deploy-log-line';
-        if(line.kind !== null) {
-            row.setAttribute('data-kind', line.kind);
-        }
-
-        var time = document.createElement('span');
-        time.className = 'deploy-log-line-time';
-        time.textContent = zatoDeploy.formatTime(line.time);
-
-        var text = document.createElement('span');
-        text.className = 'deploy-log-line-text';
-        text.textContent = line.text;
-
-        row.appendChild(time);
-        row.appendChild(text);
-        container.appendChild(row);
-
-        if(isAnimated) {
-            row.animate([
-                {opacity: 0, transform: 'translateY(6px)'},
-                {opacity: 1, transform: 'none'}
-            ], {duration: 300, easing: 'ease-out'});
-        }
-    }
-
-    while(container.childElementCount > config.logLinesKept) {
-        container.firstElementChild.remove();
-    }
-
-    zatoDeploy.followLog();
-    state.lastLogId = lines[lines.length - 1].id;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Only the user's own scrolling decides whether the log follows its last line,
-// a scroll back to the bottom resumes it, and changes in the layout never stop it.
-zatoDeploy.onLogScroll = function() {
-
-    var container = zatoDeploy.elements.logLines;
-    var distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-
-    zatoDeploy.state.isLogFollowed = distanceFromBottom < zatoDeploy.config.logScrollStickiness;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-zatoDeploy.followLog = function() {
-
-    var container = zatoDeploy.elements.logLines;
-
-    if(zatoDeploy.state.isLogFollowed) {
-        container.scrollTop = container.scrollHeight;
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-zatoDeploy.copyLog = function() {
-
-    var lines = zatoDeploy.state.logLines;
-    var text = [];
-
-    for(var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-        text.push(zatoDeploy.formatTime(lines[lineIndex].time) + '  ' + lines[lineIndex].text);
-    }
-
-    navigator.clipboard.writeText(text.join('\n')).then(zatoDeploy.confirmCopied);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-zatoDeploy.confirmCopied = function() {
-
-    var config = zatoDeploy.config;
-    var button = zatoDeploy.elements.logCopy;
-
-    // One element holds one tooltip at a time, and the one from a moment ago may still be on screen.
-    if(button._tippy) {
-        button._tippy.destroy();
-    }
-
-    var tooltip = tippy(button, {
-        content: config.copiedLabel,
-        placement: config.copiedPlacement,
-        offset: config.copiedOffset,
-        theme: config.tooltipTheme,
-        trigger: 'manual',
-        arrow: true,
-        appendTo: document.body
-    });
-
-    tooltip.show();
-
-    setTimeout(function() {
-        tooltip.destroy();
-    }, config.copiedShownMs);
+    zatoDeploy.log.setSource(log.source);
+    zatoDeploy.log.append(log.lines);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -1596,14 +1354,6 @@ zatoDeploy.formatDuration = function(seconds) {
 zatoDeploy.formatClock = function(seconds) {
     var whole = Math.max(0, Math.floor(seconds));
     return zatoDeploy.padNumber(Math.floor(whole / 60)) + ':' + zatoDeploy.padNumber(whole % 60);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-zatoDeploy.formatTime = function(epochSeconds) {
-    var date = new Date(epochSeconds * 1000);
-    var padNumber = zatoDeploy.padNumber;
-    return padNumber(date.getHours()) + ':' + padNumber(date.getMinutes()) + ':' + padNumber(date.getSeconds());
 };
 
 // ////////////////////////////////////////////////////////////////////////

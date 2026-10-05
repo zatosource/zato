@@ -53,6 +53,11 @@ class CreateForm(forms.Form):
     # Whether this gateway's traffic is recorded in the audit log - on by default for new gateways
     is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
+    # OAuth with the customer's own identity provider - the scopes the gateway's clients ask for
+    oauth = forms.BooleanField(required=False)
+    oauth_scopes = forms.CharField(required=False, widget=forms.TextInput(
+        attrs={'style':'width:100%', 'placeholder':'api://zato-mcp/tools.access offline_access'}))
+
     # Response shaping - the filter expression itself has no form field, an editor pane
     # holds it in the page and the page's JS injects it as a hidden input on submit.
     allow_agent_filters = forms.BooleanField(required=False)

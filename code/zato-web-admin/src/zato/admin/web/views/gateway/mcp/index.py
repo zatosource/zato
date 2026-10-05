@@ -181,6 +181,13 @@ class _CreateEdit(CreateEdit):
                     hosts.append(host)
         input_dict['safeguards_url_allow_list'] = hosts
 
+        # .. the scopes are one space-separated line and mean nothing while OAuth is off ..
+        scopes = input_dict['oauth_scopes'] or ''
+        if input_dict['oauth']:
+            input_dict['oauth_scopes'] = ' '.join(scopes.split())
+        else:
+            input_dict['oauth_scopes'] = ''
+
         # Collect services from the badge picker hidden inputs ..
         service_names:'strlist' = []
 

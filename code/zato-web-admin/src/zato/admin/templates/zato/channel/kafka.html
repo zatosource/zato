@@ -1,10 +1,26 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}Kafka channels{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-chips.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms-resize.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/decision-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/summary-link.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/kafka.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/channel/kafka.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -21,33 +37,64 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 
+    {% comment %} Form tabs, the Consumer, Routing and Delivery tabs {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/popover.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/delivery-tab.js"></script>
+    {{ delivery_tab_config|json_script:"delivery-tab-config" }}
+
     {% comment %} Kafka {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/kafka.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/kafka-consumer-tab.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/kafka-routing-tab.js"></script>
+    {{ consumer_tab_config|json_script:"kafka-consumer-tab-config" }}
 
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
             '_selection',
+
+            {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
             'address',
-            'topic',
+            '_topics',
             'group_id',
             'service',
             'security',
+
+            {% comment %} 2 {% endcomment %}
+            '_delivery',
             '_edit',
             '_delete',
+
+            {% comment %} 3 {% endcomment %}
             'id',
             'is_active',
+
+            {% comment %} 4 - SSL {% endcomment %}
             'ssl',
             'ssl_ca_file',
             'ssl_cert_file',
             'ssl_key_file',
+
+            {% comment %} 5 - security {% endcomment %}
             'security_id',
             'sec_type',
-            'sasl_mechanism'
-        ]
+            'sasl_mechanism',
+
+            {% comment %} 6 - the Consumer and Routing tabs, then 7 - the Delivery tab {% endcomment %}
+        ].concat($.fn.zato.channel.kafka.consumer_tab.columns()).concat($.fn.zato.delivery_tab.columns());
     }
     </script>
 
@@ -78,24 +125,44 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Address</a></th>
-                        <th><a href="#">Topic</a></th>
-                        <th><a href="#">Group ID</a></th>
+                        <th><a href="#">Topics</a></th>
+                        <th><a href="#">Group</a></th>
                         <th><a href="#">Service</a></th>
                         <th><a href="#">Security</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th>&nbsp;</th> {% comment %} _delivery {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 4 - SSL {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 - security {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 - the Consumer and Routing tabs {% endcomment %}
+                        {% for field_name in consumer_tab_config.field_names %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        {% endfor %}
+
+                        {% comment %} 7 - the Delivery tab {% endcomment %}
+                        {% include "zato/include/delivery-tab-headers.html" %}
+
                 </thead>
 
                 <tbody>
@@ -104,12 +171,14 @@
                     <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
-                        <td>{{ item.topic }}</td>
+                        <td>{{ item.topics_text }}</td>
                         <td>{{ item.group_id }}</td>
-                        <td>{{ item.service }}</td>
+                        <td><a href="{% url "service-ide" "service" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
                         <td>
                             {% if item.security_name %}
                                 {% if item.sec_type == 'oauth' %}
@@ -122,22 +191,40 @@
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
+
+                        {% comment %} 2 {% endcomment %}
+                        {% include "zato/include/channel-dlq-link.html" with conn_type="kafka-channel" %}
                         <td><a href="javascript:$.fn.zato.channel.kafka.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.kafka.delete_('{{ item.id }}')">Delete</a></td>
+
+                        {% comment %} 3 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 4 - SSL {% endcomment %}
                         <td class='ignore'>{{ item.ssl }}</td>
                         <td class='ignore'>{{ item.ssl_ca_file }}</td>
                         <td class='ignore'>{{ item.ssl_cert_file }}</td>
                         <td class='ignore'>{{ item.ssl_key_file }}</td>
+
+                        {% comment %} 5 - security {% endcomment %}
                         <td class='ignore'>{% if item.sec_type %}{{ item.sec_type }}/{{ item.security_id }}{% endif %}</td>
                         <td class='ignore'>{{ item.sec_type }}</td>
                         <td class='ignore'>{{ item.sasl_mechanism }}</td>
+
+                        {% comment %} 6 - the Consumer and Routing tabs {% endcomment %}
+                        {% for field_name in consumer_tab_config.field_names %}
+                        <td class='ignore'>{{ item|get_item:field_name }}</td>
+                        {% endfor %}
+
+                        {% comment %} 7 - the Delivery tab {% endcomment %}
+                        {% include "zato/include/delivery-tab-cells.html" %}
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='20'>No results</td>
+                        <td colspan='40'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -150,63 +237,93 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "channel-kafka-create" %}" method="post" id="create-form">
-                    <table class="form-data fit-labels">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="consumer" role="tab" aria-selected="false">Consumer</button>
+                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
+                        {% include "zato/include/delivery-tab-button.html" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="channel-kafka-create-tab-panel-config" role="tabpanel">
+                    <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_name">Name</label></td>
+                            <td class="form-data-label"><label for="id_name">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_is_active">Active</label></td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td></td>
+                            <td>
+                                <label for="id_is_active">
+                                    Active
+                                    {{ create_form.is_active }}
+                                </label>
+                            </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_address">Address</label></td>
+                            <td class="form-data-label"><label for="id_address">Address</label></td>
                             <td>{{ create_form.address }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_topic">Topic</label></td>
-                            <td>{{ create_form.topic }}</td>
+                            <td class="form-data-label"><label for="id_topics">Topics</label></td>
+                            <td>{{ create_form.topics }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_group_id">Group ID</label></td>
+                            <td class="form-data-label"><label for="id_group_id">Group</label></td>
                             <td>{{ create_form.group_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_service">Service</label></td>
+                            <td class="form-data-label"><label for="id_service">Service</label></td>
                             <td>{{ create_form.service }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Extra</td>
-                            <td>
-                                <a href="javascript:$.fn.zato.toggle_visibility('.create-auth-block')">Authentication</a>
-                                |
-                                <a href="javascript:$.fn.zato.toggle_visibility('.create-ssl-block')">SSL options</a>
-                            </td>
+                            <td colspan="2" class="form-data-section">Authentication</td>
                         </tr>
-                        <tr class="create-auth-block hidden">
-                            <td style="vertical-align:middle"><label for="id_sasl_mechanism">SASL mechanism</label></td>
+                        <tr>
+                            <td class="form-data-label"><label for="id_sasl_mechanism">SASL</label></td>
                             <td>{{ create_form.sasl_mechanism }}</td>
                         </tr>
-                        <tr class="create-auth-block hidden">
-                            <td style="vertical-align:middle"><label for="id_security_id">Security</label></td>
+                        <tr>
+                            <td class="form-data-label"><label for="id_security_id">Security</label></td>
                             <td>{{ create_form.security_id }}</td>
                         </tr>
-                        <tr class="create-ssl-block hidden">
-                            <td style="vertical-align:middle"><label for="id_ssl">Use SSL</label></td>
-                            <td>{{ create_form.ssl }}</td>
+
+                        <tr>
+                            <td class="form-data-section form-data-label">SSL</td>
+                            <td class="form-data-section">
+                                <label class="form-data-section-toggle" for="id_ssl">
+                                    Use SSL
+                                    {{ create_form.ssl }}
+                                </label>
+                            </td>
                         </tr>
-                        <tr class="create-ssl-block hidden">
-                            <td style="vertical-align:middle"><label for="id_ssl_ca_file">CA file</label></td>
+                        <tr class="create-ssl-block">
+                            <td class="form-data-label"><label for="id_ssl_ca_file">CA file</label></td>
                             <td>{{ create_form.ssl_ca_file }}</td>
                         </tr>
-                        <tr class="create-ssl-block hidden">
-                            <td style="vertical-align:middle"><label for="id_ssl_cert_file">Cert file</label></td>
+                        <tr class="create-ssl-block">
+                            <td class="form-data-label"><label for="id_ssl_cert_file">Cert file</label></td>
                             <td>{{ create_form.ssl_cert_file }}</td>
                         </tr>
-                        <tr class="create-ssl-block hidden">
-                            <td style="vertical-align:middle"><label for="id_ssl_key_file">Key file</label></td>
+                        <tr class="create-ssl-block">
+                            <td class="form-data-label"><label for="id_ssl_key_file">Key file</label></td>
                             <td>{{ create_form.ssl_key_file }}</td>
                         </tr>
+                        <tr class="create-ssl-block">
+                            <td class="form-data-label"><label for="id_ssl_key_password">Key password</label></td>
+                            <td>{{ create_form.ssl_key_password }}</td>
+                        </tr>
+                    </table>
+                    </div>
+
+                    {% include "zato/include/kafka-consumer-tab.html" with panel_id="channel-kafka-create-tab-panel-consumer" form=create_form %}
+
+                    {% include "zato/include/kafka-routing-tab.html" with panel_id="channel-kafka-create-tab-panel-routing" form=create_form %}
+
+                    {% include "zato/include/delivery-tab.html" with panel_id="channel-kafka-create-tab-panel-delivery" form=create_form %}
+
+                    <table class="form-data">
                         <tr>
                             <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
@@ -225,63 +342,93 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "channel-kafka-edit" %}" method="post" id="edit-form">
-                    <table class="form-data fit-labels">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="consumer" role="tab" aria-selected="false">Consumer</button>
+                        <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
+                        {% include "zato/include/delivery-tab-button.html" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="channel-kafka-edit-tab-panel-config" role="tabpanel">
+                    <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-name">Name</label></td>
+                            <td class="form-data-label"><label for="id_edit-name">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-is_active">Active</label></td>
-                            <td>{{ edit_form.is_active }}</td>
+                            <td></td>
+                            <td>
+                                <label for="id_edit-is_active">
+                                    Active
+                                    {{ edit_form.is_active }}
+                                </label>
+                            </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-address">Address</label></td>
+                            <td class="form-data-label"><label for="id_edit-address">Address</label></td>
                             <td>{{ edit_form.address }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-topic">Topic</label></td>
-                            <td>{{ edit_form.topic }}</td>
+                            <td class="form-data-label"><label for="id_edit-topics">Topics</label></td>
+                            <td>{{ edit_form.topics }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-group_id">Group ID</label></td>
+                            <td class="form-data-label"><label for="id_edit-group_id">Group</label></td>
                             <td>{{ edit_form.group_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-service">Service</label></td>
+                            <td class="form-data-label"><label for="id_edit-service">Service</label></td>
                             <td>{{ edit_form.service }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Extra</td>
-                            <td>
-                                <a href="javascript:$.fn.zato.toggle_visibility('.edit-auth-block')">Authentication</a>
-                                |
-                                <a href="javascript:$.fn.zato.toggle_visibility('.edit-ssl-block')">SSL options</a>
-                            </td>
+                            <td colspan="2" class="form-data-section">Authentication</td>
                         </tr>
-                        <tr class="edit-auth-block hidden">
-                            <td style="vertical-align:middle"><label for="id_edit-sasl_mechanism">SASL mechanism</label></td>
+                        <tr>
+                            <td class="form-data-label"><label for="id_edit-sasl_mechanism">SASL</label></td>
                             <td>{{ edit_form.sasl_mechanism }}</td>
                         </tr>
-                        <tr class="edit-auth-block hidden">
-                            <td style="vertical-align:middle"><label for="id_edit-security_id">Security</label></td>
+                        <tr>
+                            <td class="form-data-label"><label for="id_edit-security_id">Security</label></td>
                             <td>{{ edit_form.security_id }}</td>
                         </tr>
-                        <tr class="edit-ssl-block hidden">
-                            <td style="vertical-align:middle"><label for="id_edit-ssl">Use SSL</label></td>
-                            <td>{{ edit_form.ssl }}</td>
+
+                        <tr>
+                            <td class="form-data-section form-data-label">SSL</td>
+                            <td class="form-data-section">
+                                <label class="form-data-section-toggle" for="id_edit-ssl">
+                                    Use SSL
+                                    {{ edit_form.ssl }}
+                                </label>
+                            </td>
                         </tr>
-                        <tr class="edit-ssl-block hidden">
-                            <td style="vertical-align:middle"><label for="id_edit-ssl_ca_file">CA file</label></td>
+                        <tr class="edit-ssl-block">
+                            <td class="form-data-label"><label for="id_edit-ssl_ca_file">CA file</label></td>
                             <td>{{ edit_form.ssl_ca_file }}</td>
                         </tr>
-                        <tr class="edit-ssl-block hidden">
-                            <td style="vertical-align:middle"><label for="id_edit-ssl_cert_file">Cert file</label></td>
+                        <tr class="edit-ssl-block">
+                            <td class="form-data-label"><label for="id_edit-ssl_cert_file">Cert file</label></td>
                             <td>{{ edit_form.ssl_cert_file }}</td>
                         </tr>
-                        <tr class="edit-ssl-block hidden">
-                            <td style="vertical-align:middle"><label for="id_edit-ssl_key_file">Key file</label></td>
+                        <tr class="edit-ssl-block">
+                            <td class="form-data-label"><label for="id_edit-ssl_key_file">Key file</label></td>
                             <td>{{ edit_form.ssl_key_file }}</td>
                         </tr>
+                        <tr class="edit-ssl-block">
+                            <td class="form-data-label"><label for="id_edit-ssl_key_password">Key password</label></td>
+                            <td>{{ edit_form.ssl_key_password }}</td>
+                        </tr>
+                    </table>
+                    </div>
+
+                    {% include "zato/include/kafka-consumer-tab.html" with panel_id="channel-kafka-edit-tab-panel-consumer" form=edit_form %}
+
+                    {% include "zato/include/kafka-routing-tab.html" with panel_id="channel-kafka-edit-tab-panel-routing" form=edit_form %}
+
+                    {% include "zato/include/delivery-tab.html" with panel_id="channel-kafka-edit-tab-panel-delivery" form=edit_form %}
+
+                    <table class="form-data">
                         <tr>
                             <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>

@@ -1,158 +1,329 @@
-.settings-sidebar {
-    flex: 0 0 360px;
-    width: 360px;
-    min-width: 0;
-    box-sizing: border-box;
+/* ------------------------------------------------------------ */
+/* GitHub repository - page width                               */
+/* ------------------------------------------------------------ */
+
+.env-repo-markup > h2.zato,
+.env-repo-markup table.rate-limiting-form,
+.env-repo-markup .rate-limiting-actions,
+.env-repo-markup .env-repo-progress,
+.env-repo-markup .env-repo-flow {
+    width: 100%;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.env-repo-long-value {
+/* ------------------------------------------------------------ */
+/* GitHub repository - heading                                  */
+/* ------------------------------------------------------------ */
+
+#markup > h2.zato.env-repo-title {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    min-width: 0;
-    max-width: 360px;
+    gap: 8px;
 }
 
-.env-repo-long-value span:first-child {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.env-repo-github {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    flex: 0 0 auto;
 }
 
-.env-repo-login {
-    font-family: monospace;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--primary-dark);
-    background: var(--white);
-    border: 2px solid var(--primary-dark);
-    padding: 0px 3px;
-    margin-left: 10px;
+/* ------------------------------------------------------------ */
+/* GitHub repository - form                                     */
+/* ------------------------------------------------------------ */
+
+/* The field and the chip in its right end */
+.env-repo-field {
+    position: relative;
+    display: block;
+}
+
+table.rate-limiting-form input[type="text"].env-repo-input {
+    width: 100%;
     box-sizing: border-box;
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: 180px;
+    padding-right: 96px;
 }
 
-.env-repo-login:focus {
-    outline: none;
-    background: var(--background-light);
+/* The list of repositories opens on typing, the arrow the browser adds for it stays out of the field */
+table.rate-limiting-form input[type="text"].env-repo-input::-webkit-calendar-picker-indicator {
+    display: none !important;
 }
 
-.env-repo-steps {
+table.rate-limiting-form input[type="text"].env-repo-error {
+    border-color: #c0392b;
+    box-shadow: 0 0 0 2px #c0392b1a;
+}
+
+/* The placeholder, the spinner and the list share one cell, stacked on top of each other, so the row keeps
+   the height of the tallest of them whichever is on show, and each fades in or out where it stands. */
+.env-repo-branch {
+    display: inline-grid;
+    align-items: center;
+    justify-items: start;
+    vertical-align: middle;
+}
+
+.env-repo-branch > * {
+    grid-area: 1 / 1;
+    transition: opacity 0.6s ease, visibility 0.6s;
+}
+
+.env-repo-branch > [data-shown="false"] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.env-repo-branch > .info-spinner {
+    margin-right: 0;
+    top: 0;
+}
+
+/* The page's selects render as list boxes, this one is a menu with its text in the middle */
+table.rate-limiting-form select#repo-branch {
+    -webkit-appearance: menulist !important;
+    appearance: auto;
+    height: auto;
+    line-height: normal;
+    padding: 3px 6px;
+    vertical-align: middle;
+}
+
+/* ------------------------------------------------------------ */
+/* GitHub repository - actions                                  */
+/* ------------------------------------------------------------ */
+
+.env-repo-markup .rate-limiting-actions {
+    margin-top: 9px;
+}
+
+.env-repo-external {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+    flex: 0 0 auto;
+}
+
+/* ------------------------------------------------------------ */
+/* GitHub repository - progress                                 */
+/* ------------------------------------------------------------ */
+
+.env-repo-markup .env-repo-progress {
+    --progress-log-font-mono: var(--time-slot-mono);
+    --progress-log-font-size: 11px;
+    --progress-log-header-font-size: 11px;
+    --progress-log-lines-shown: 7;
+
+    box-sizing: border-box;
+    margin-top: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* GitHub repository - deploy key                               */
+/* ------------------------------------------------------------ */
+
+.env-repo-flow {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 6px;
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 12px;
+    min-width: 0;
 }
 
 .env-repo-step {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    font-size: 13px;
-    min-width: 0;
-}
-
-.env-repo-link {
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-
-.env-repo-step-number {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
+    padding: 10px 14px;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    background: #fdfefe;
     font-size: 12px;
-    font-weight: 600;
-    color: var(--white);
-    background: var(--primary-dark);
-    flex: 0 0 auto;
+    color: #2c3e50;
+    min-width: 0;
 }
 
-.env-repo-link-disabled {
-    color: #999;
-    cursor: default;
+.env-repo-step.hidden {
+    display: none;
 }
 
-.logs-section {
-    margin-top: 32px;
-    position: relative;
-}
-
-.env-repo-log {
+.env-repo-step-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 12px;
-    background: var(--background-light);
-    font-size: 13px;
+    gap: 4px;
+    flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
 }
 
-.env-repo-log > * {
-    min-width: 0;
-    max-width: 100%;
+.env-repo-step-title {
+    font-weight: 600;
 }
 
-.env-repo-log-header {
+.env-repo-key {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 6px 0;
+    padding: 6px 8px;
+    border: 1px dashed #b0b0b0;
+    border-radius: 3px;
+    background: #f8f9fa;
+    font-family: var(--time-slot-mono);
+    font-size: 11px;
+    color: #1a56a8;
+    min-width: 0;
 }
 
-.env-repo-log-time {
-    color: #333;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-}
-
-.env-repo-log-state {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 8px;
-    color: var(--white);
-    background: var(--primary-dark);
-}
-
-.env-repo-log-state.ok,
-.env-repo-log-state.switched {
-    background: #067f39;
-}
-
-.env-repo-log-state.error {
-    background: #b3261e;
-}
-
-.env-repo-log-message {
-    color: #333;
-    overflow-wrap: anywhere;
-}
-
-.env-repo-log-lines {
-    box-sizing: border-box;
-    width: 100%;
-    margin: 6px 0 0 0;
-    padding: 8px;
-    max-height: 260px;
-    overflow: auto;
-    font-family: monospace;
-    font-size: 12px;
-    color: #333;
-    background: var(--white);
+.env-repo-key span:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
     white-space: pre-wrap;
     word-break: break-all;
 }
 
-.env-repo-log-empty {
-    color: #333;
-    font-size: 14px;
-    text-align: center;
-    margin-top: 10px;
+.env-repo-copy {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.1s;
+}
+
+.env-repo-copy:hover {
+    opacity: 1;
+}
+
+.env-repo-copy svg {
+    width: 14px;
+    height: 14px;
+    fill: #1a56a8;
+}
+
+.env-repo-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    line-height: 19px;
+}
+
+.env-repo-link.hidden {
+    display: none;
+}
+
+.env-repo-side {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+}
+
+/* The spinner stands to the right of the Disconnect link while the disconnect runs */
+.env-repo-side-spinner {
+    margin-left: 8px;
+    margin-right: 0;
+    top: 0;
+    vertical-align: top;
+    align-self: center;
+}
+
+.env-repo-side-spinner.hidden {
+    display: none;
+}
+
+#github-app-form.hidden {
+    display: none;
+}
+
+/* The link and Push are there whether or not the page is connected, only greyed out while it is not,
+   so nothing moves when it connects */
+.env-repo-link.env-repo-link-disabled {
+    color: #9aa0a6;
+    pointer-events: none;
+}
+
+.rate-limiting-actions input[type="button"]:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.rate-limiting-actions input[type="button"] {
+    font-size: 11px;
+}
+
+/* Allow access is the one thing to do when GitHub refuses, so it pulses in green until it is clicked -
+   the fill breathes and a ring of light runs round it, and both stop for anyone who asked for less motion */
+.rate-limiting-actions input[type="submit"].env-repo-attention {
+    position: relative;
+    color: #ffffff;
+    border-color: #2f8f4e;
+    background: linear-gradient(to bottom, #4caf6a, #2f8f4e);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    animation: env-repo-attention-pulse 1.4s ease-in-out infinite, env-repo-attention-ring 2.4s linear infinite;
+}
+
+.rate-limiting-actions input[type="submit"].env-repo-attention:hover {
+    background: linear-gradient(to bottom, #5cbf7a, #3a9f5e);
+}
+
+@keyframes env-repo-attention-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 106, 0.75); }
+    60%      { box-shadow: 0 0 0 9px rgba(76, 175, 106, 0); }
+}
+
+@keyframes env-repo-attention-ring {
+    0%   { outline: 2px solid rgba(76, 175, 106, 0.0);  outline-offset: 2px; }
+    25%  { outline: 2px solid rgba(76, 175, 106, 0.9);  outline-offset: 3px; }
+    50%  { outline: 2px solid rgba(255, 255, 255, 0.9); outline-offset: 4px; }
+    75%  { outline: 2px solid rgba(76, 175, 106, 0.9);  outline-offset: 3px; }
+    100% { outline: 2px solid rgba(76, 175, 106, 0.0);  outline-offset: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rate-limiting-actions input[type="submit"].env-repo-attention {
+        animation: none;
+        box-shadow: 0 0 0 3px rgba(76, 175, 106, 0.45);
+    }
+}
+
+/* The hint by the Connect button */
+.env-repo-hint {
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.env-repo-hint a {
+    color: #ffd54a;
+    text-decoration: none;
+}
+
+/* The chip is the How does it work badge in grey or green, and it only reads, so it is neither clicked nor raised */
+.env-repo-chip,
+.env-repo-chip:hover {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: text;
+    user-select: text;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.env-repo-chip.env-repo-chip-off,
+.env-repo-chip.env-repo-chip-off:hover {
+    color: #4b4b4f;
+    background: linear-gradient(to bottom, rgba(150, 150, 155, 0.3), rgba(130, 130, 135, 0.25));
+}
+
+.env-repo-chip.env-repo-chip-on,
+.env-repo-chip.env-repo-chip-on:hover {
+    color: #2f5a3a;
+    background: linear-gradient(to bottom, rgba(150, 190, 155, 0.4), rgba(125, 170, 135, 0.35));
 }

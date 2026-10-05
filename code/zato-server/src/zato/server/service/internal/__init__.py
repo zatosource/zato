@@ -38,7 +38,7 @@ success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
 
 # The keys a listing never carries - the raw opaque column is among them because its JSON may hold a token of its own.
-Listing_Secret_Keys = ('password', 'secret', 'static_token', GENERIC.ATTR_NAME)
+Listing_Secret_Keys = ('password', 'secret', 'static_token', 'private_key', GENERIC.ATTR_NAME)
 
 # A value starting with either of these is encrypted already and is stored as it is.
 Secret_Prefixes = (SECRETS.PREFIX, SECRETS.Encrypted_Indicator)
@@ -276,6 +276,11 @@ class ServerInvoker(AdminService):
         elif func_name == 'get_sdk_secret_field_names':
             type_ = self.request.raw['type_']
             response = func(type_)
+        elif func_name == 'deploy_env_repo':
+            path = self.request.raw['path']
+            files = self.request.raw.get('files') or []
+            is_full = bool(self.request.raw.get('is_full'))
+            response = func(path, files, is_full)
         else:
             response = func()
 

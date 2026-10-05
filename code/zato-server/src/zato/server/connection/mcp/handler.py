@@ -120,7 +120,7 @@ class MCPHandler:
         self,
         session_id:'strnone',
         protocol_version_header:'strnone',
-        sec_def_id:'int',
+        identity:'str',
         ) -> 'MCPResponse | None':
         """ Validates session existence, identity, and protocol version match.
         Returns an MCPResponse with a 400 error if the session is invalid, or None if everything is fine.
@@ -131,7 +131,7 @@ class MCPHandler:
         # If a session id was supplied, it must be valid ..
         if session_id:
 
-            validation_result = self.session_manager.validate(session_id, sec_def_id)
+            validation_result = self.session_manager.validate(session_id, identity)
 
             if validation_result != Session_Valid:
                 logger.info('MCP: Invalid or expired session `%s`', printable(session_id))
@@ -171,7 +171,7 @@ class MCPHandler:
     def handle_raw_request(
         self,
         raw_data:'bytes',
-        sec_def_id:'int',
+        identity:'str',
         session_id:'strnone' = None,
         remote_address:'str' = '',
         protocol_version_header:'strnone' = None,
@@ -270,7 +270,7 @@ class MCPHandler:
                         return out
 
             # .. validate session and protocol version ..
-            validation_error = self._validate_session(session_id, protocol_version_header, sec_def_id)
+            validation_error = self._validate_session(session_id, protocol_version_header, identity)
 
             if validation_error:
                 return validation_error
@@ -303,7 +303,7 @@ class MCPHandler:
 
             # .. dispatch the request, receiving both the body and the ID of any session
             # that initialize may have created, keeping all state local to this call ..
-            dispatch_result = self._dispatch_single(parsed, session_is_valid, sec_def_id, remote_address)
+            dispatch_result = self._dispatch_single(parsed, session_is_valid, identity, remote_address)
 
             out.body = dispatch_result.body
             out.status_code = OK
@@ -322,7 +322,7 @@ class MCPHandler:
         self,
         message:'anydict',
         session_is_valid:'bool',
-        sec_def_id:'int',
+        identity:'str',
         remote_address:'str',
         ) -> 'DispatchResult':
         """ Routes a single JSON-RPC request to the appropriate handler method.
@@ -369,7 +369,7 @@ class MCPHandler:
         # .. route to the handler for this method.
         if method == _method_initialize:
 
-            out = self._handle_initialize(request_id, params, sec_def_id, remote_address)
+            out = self._handle_initialize(request_id, params, identity, remote_address)
             return out
 
         if method == 'tools/list':
@@ -415,7 +415,7 @@ class MCPHandler:
         self,
         request_id:'any_',
         params:'anydict',
-        sec_def_id:'int',
+        identity:'str',
         remote_address:'str',
         ) -> 'DispatchResult':
         """ Handles the MCP initialize request.
@@ -434,7 +434,7 @@ class MCPHandler:
         # .. create a new session for this client, recording the version it is bound to,
         # rejecting if the per-identity cap has been reached ..
         try:
-            new_session_id = self.session_manager.create(_mcp_protocol_version, sec_def_id, remote_address)
+            new_session_id = self.session_manager.create(_mcp_protocol_version, identity, remote_address)
         except ValueError as e:
             logger.info('MCP: %s', e)
             body = make_error_response(request_id, _error_invalid_request, _message_bad_request)
@@ -621,7 +621,7 @@ class MCPHandler:
     def handle_delete_session(
         self,
         session_id:'strnone',
-        sec_def_id:'int',
+        identity:'str',
         protocol_version_header:'strnone' = None,
         ) -> 'MCPResponse':
         """ Handles an HTTP DELETE request to terminate an MCP session.
@@ -640,7 +640,7 @@ class MCPHandler:
         # .. check if the session exists and belongs to the caller.
         # For DELETE, an unknown or expired session is 404 (resource not found).
         # An identity mismatch returns 400 to reject without confirming whether the session exists ..
-        validation_result = self.session_manager.validate(session_id, sec_def_id)
+        validation_result = self.session_manager.validate(session_id, identity)
 
         if validation_result == Session_Invalid_Identity:
             out.body = None

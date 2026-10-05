@@ -108,6 +108,7 @@ def _get_message_summary(data:'any_') -> 'str':
 
 def _insert_imap_audit_event(
     audit_log:'AuditLog',
+    is_export_payload_active:'bool',
     event_type:'str',
     conn_name:'str',
     *,
@@ -131,6 +132,7 @@ def _insert_imap_audit_event(
         outcome=outcome,
         data=data,
         attachments=attachments,
+        is_export_payload_active=is_export_payload_active,
     )
 
 # ################################################################################################################################
@@ -161,6 +163,7 @@ class GenericIMAPMessage(IMAPMessage):
     audit_folder: 'str'
     audit_cid: 'str'
     needs_audit: 'bool'
+    is_export_payload_active: 'bool'
 
     def delete(self) -> 'None':
 
@@ -174,13 +177,13 @@ class GenericIMAPMessage(IMAPMessage):
             # Record the failed deletion before letting the exception propagate
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Deleted, self.audit_conn_name,
                     cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
             raise
 
         else:
             if self.needs_audit:
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Deleted, self.audit_conn_name,
                     cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
@@ -197,13 +200,13 @@ class GenericIMAPMessage(IMAPMessage):
             # Record the failed operation before letting the exception propagate
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
                     cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
             raise
 
         else:
             if self.needs_audit:
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
                     cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
@@ -218,6 +221,7 @@ class Microsoft365IMAPMessage(IMAPMessage):
     audit_folder: 'str'
     audit_cid: 'str'
     needs_audit: 'bool'
+    is_export_payload_active: 'bool'
 
     def delete(self) -> 'None':
 
@@ -228,13 +232,13 @@ class Microsoft365IMAPMessage(IMAPMessage):
             # Record the failed deletion before letting the exception propagate
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Deleted, self.audit_conn_name,
                     cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
             raise
 
         else:
             if self.needs_audit:
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Deleted, self.audit_conn_name,
                     cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
@@ -248,13 +252,13 @@ class Microsoft365IMAPMessage(IMAPMessage):
             # Record the failed operation before letting the exception propagate
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
                     cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
             raise
 
         else:
             if self.needs_audit:
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
                     cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
@@ -325,6 +329,9 @@ class _IMAPConnection(BaseConnection):
         # Each connection can have its audit log turned off individually
         self.needs_audit = config['is_audit_log_active']
 
+        # The payloads leave with the audit export only if the connection says so
+        self.is_export_payload_active = bool(config.get('is_audit_export_payload_active'))
+
     def get(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError('Must be implemented by subclasses')
 
@@ -369,6 +376,7 @@ class GenericIMAPConnection(_IMAPConnection):
                     message.audit_folder = folder
                     message.audit_cid = cid
                     message.needs_audit = self.needs_audit
+                    message.is_export_payload_active = self.is_export_payload_active
 
                     # .. record the received message in the audit log, its attachments included ..
                     if self.needs_audit:
@@ -376,7 +384,7 @@ class GenericIMAPConnection(_IMAPConnection):
                         data = _get_message_summary(msg)
                         attachment_envelopes = _build_attachment_envelopes(msg.attachments)
 
-                        _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
+                        _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Received, self.config.name,
                             cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data,
                             attachments=attachment_envelopes)
 
@@ -395,7 +403,7 @@ class GenericIMAPConnection(_IMAPConnection):
                 else:
                     event_type = AuditEvent.Message_Received
 
-                _insert_imap_audit_event(self.audit_log, event_type, self.config.name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, event_type, self.config.name,
                     cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
             raise
 
@@ -419,13 +427,13 @@ class GenericIMAPConnection(_IMAPConnection):
                 else:
                     event_type = AuditEvent.Request_Sent
 
-                _insert_imap_audit_event(self.audit_log, event_type, self.config.name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, event_type, self.config.name,
                     cid=cid, outcome=AuditOutcome.Error, data=error)
             raise
 
         # A ping is traffic like any other to the audit log
         if self.needs_audit:
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+            _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Request_Sent, self.config.name,
                 cid=cid, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
@@ -445,7 +453,7 @@ class GenericIMAPConnection(_IMAPConnection):
                     # .. and record the deletion in the audit log.
                     if self.needs_audit:
                         msg_id = _uid_as_str(uid)
-                        _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.config.name,
+                        _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Deleted, self.config.name,
                             cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
 
                 _ = conn.connection.expunge()
@@ -455,7 +463,7 @@ class GenericIMAPConnection(_IMAPConnection):
             # Record the failure before letting the exception propagate
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.config.name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Deleted, self.config.name,
                     cid=cid, outcome=AuditOutcome.Error, data=error)
             raise
 
@@ -476,7 +484,7 @@ class GenericIMAPConnection(_IMAPConnection):
                     # .. and record the operation in the audit log.
                     if self.needs_audit:
                         msg_id = _uid_as_str(uid)
-                        _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.config.name,
+                        _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Marked_Seen, self.config.name,
                             cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
 
         except Exception:
@@ -484,7 +492,7 @@ class GenericIMAPConnection(_IMAPConnection):
             # Record the failure before letting the exception propagate
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.config.name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Marked_Seen, self.config.name,
                     cid=cid, outcome=AuditOutcome.Error, data=error)
             raise
 
@@ -630,13 +638,14 @@ class Microsoft365IMAPConnection(_IMAPConnection):
                     imap_message.audit_folder = folder
                     imap_message.audit_cid = cid
                     imap_message.needs_audit = self.needs_audit
+                    imap_message.is_export_payload_active = self.is_export_payload_active
 
                     # .. record the received message in the audit log, its attachments included ..
                     if self.needs_audit:
                         data = _get_message_summary(imap_message.data)
                         attachment_envelopes = _build_attachment_envelopes(imap_message.data.attachments)
 
-                        _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
+                        _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Received, self.config['name'],
                             cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data,
                             attachments=attachment_envelopes)
 
@@ -652,7 +661,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
             # Record the failure before letting the exception propagate
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Message_Received, self.config['name'],
                     cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
             raise
 
@@ -684,12 +693,12 @@ class Microsoft365IMAPConnection(_IMAPConnection):
         except Exception:
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Request_Sent, self.config.name,
                     cid=cid, outcome=AuditOutcome.Error, data=error)
             raise
 
         if self.needs_audit:
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+            _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Request_Sent, self.config.name,
                 cid=cid, outcome=AuditOutcome.OK, data=join_addresses(msg.to))
 
 # ################################################################################################################################
@@ -706,13 +715,13 @@ class Microsoft365IMAPConnection(_IMAPConnection):
         except Exception:
             if self.needs_audit:
                 error = format_exc()
-                _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+                _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Request_Sent, self.config.name,
                     cid=cid, outcome=AuditOutcome.Error, data=error)
             raise
 
         # A ping is traffic like any other to the audit log
         if self.needs_audit:
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+            _insert_imap_audit_event(self.audit_log, self.is_export_payload_active, AuditEvent.Request_Sent, self.config.name,
                 cid=cid, outcome=AuditOutcome.OK)
 
         return result

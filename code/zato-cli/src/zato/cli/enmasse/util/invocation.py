@@ -10,8 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps as json_dumps, loads as json_loads
 
 # Zato
-from zato.common.api import HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
+from zato.common.api import HL7, HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
 from zato.common.odb.model import Job
+from zato.common.util.api import as_bool, utcnow
 from zato.common.util.interval import interval_from_unit
 
 # ################################################################################################################################
@@ -33,6 +34,7 @@ if 0:
 _invocation = HTTP_SOAP.Invocation
 _health_check = HTTP_SOAP.HealthCheck
 _retry = HTTP_SOAP.Retry
+_bulk = HL7.BulkExport
 
 # The retry config fields shared by outgoing REST and SOAP connections,
 # each mapped to its shared default value.
@@ -342,6 +344,63 @@ def sync_health_check_job(
         extra=extra,
     )
     conn_def[_health_check.Field_Job_ID] = job.id
+
+# ################################################################################################################################
+
+def sync_bulk_export_job(
+    importer,  # type: EnmasseYAMLImporter
+    session,   # type: SASession
+    conn_def,  # type: anydict
+    conn,      # type: any_
+    conn_type, # type: str
+    ) -> 'None':
+    """ Creates or updates the bulk export job of an outgoing FHIR connection being imported, storing the job ID
+    back in the definition so it lands in the connection's opaque attributes. A definition without a run-every
+    asks for no job and leaves whatever job there is alone.
+    """
+    run_every = conn_def.get(_bulk.Field_Run_Every)
+
+    if not run_every:
+        return
+
+    run_unit = conn_def.get(_bulk.Field_Run_Unit)
+    if not run_unit:
+        run_unit = _invocation.Unit.Minutes
+    conn_def[_bulk.Field_Run_Unit] = run_unit
+
+    # A job without a start time of its own starts now
+    start_date = conn_def.get(_bulk.Field_Start_Date)
+    if not start_date:
+        start_date = utcnow().isoformat()
+
+    # The job runs only while both the connection and its bulk export are active
+    is_conn_active = as_bool(conn_def.get('is_active', True))
+    is_export_active = as_bool(conn_def.get(_bulk.Field_Is_Active, False))
+
+    job_conn_def = dict(conn_def)
+    job_conn_def['is_active'] = is_conn_active and is_export_active
+
+    extra = json_dumps({
+        _health_check.Extra_Conn_ID: conn.id,
+        _health_check.Extra_Conn_Name: conn.name,
+        _health_check.Extra_Conn_Type: conn_type,
+    })
+
+    job = _sync_one_invocation_job(
+        importer,
+        session,
+        job_conn_def,
+        conn,
+        kind=SchedulerLink.KindType.BulkExport,
+        conn_type=conn_type,
+        job_name=_bulk.Job_Prefix + conn.name,
+        job_service=_bulk.Dispatch_Service,
+        run_every=run_every,
+        run_unit=run_unit,
+        start_date=start_date,
+        extra=extra,
+    )
+    conn_def[_bulk.Field_Job_ID] = job.id
 
 # ################################################################################################################################
 # ################################################################################################################################

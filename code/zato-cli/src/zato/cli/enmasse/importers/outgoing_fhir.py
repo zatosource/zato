@@ -8,18 +8,23 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.alerting.object_config import conn_type_to_alert_type
-from zato.common.api import GENERIC, SchedulerLink
-from zato.common.hl7.fhir.fields import Outgoing_Column_Defaults, Outgoing_Opaque_Defaults, Outgoing_Security_Id_Key, \
-    Outgoing_Security_Name_Key
+from zato.common.api import GENERIC, HL7, SchedulerLink
+from zato.common.destination.model import dump_entries, parse_entries
+from zato.common.hl7.fhir.fields import Bulk_Export_Names, Outgoing_Column_Defaults, Outgoing_Opaque_Defaults, \
+    Outgoing_Security_Id_Key, Outgoing_Security_Name_Key
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 from zato.cli.enmasse.util.delivery import prepare_delivery_fields
+from zato.cli.enmasse.util.invocation import sync_bulk_export_job
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, anydict
 
+    SASession = SASession
+    any_ = any_
     anydict = anydict
 
 # ################################################################################################################################
@@ -27,6 +32,18 @@ if 0:
 
 # How an error message names this kind of connection
 _connection_type = 'outgoing FHIR'
+
+_bulk = HL7.BulkExport
+
+# The bulk export fields a hand-written file holds as lists, stored as one value per line
+_bulk_list_fields = (_bulk.Field_Types, _bulk.Field_Type_Filter)
+_bulk_list_separator = '\n'
+
+# The bulk export field a hand-written file holds as a destination list of its own
+_bulk_destinations_field = _bulk.Field_Destinations
+
+# Every bulk export field a file may set - the job ID is environment-local and never travels through enmasse
+_importable_bulk_names = set(Bulk_Export_Names) - {_bulk.Field_Job_ID}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,6 +78,7 @@ class OutgoingFHIRImporter(GenericConnectionImporter):
         of the security definition its requests go out authenticated with.
         """
         self._resolve_security(connection_def)
+        self._flatten_bulk_export(connection_def)
 
 # ################################################################################################################################
 
@@ -69,6 +87,45 @@ class OutgoingFHIRImporter(GenericConnectionImporter):
         the field does not take - a switch that is not a boolean, a negative count, an action that is not one of the four.
         """
         prepare_delivery_fields(connection_def, _connection_type)
+
+# ################################################################################################################################
+
+    def sync_linked_jobs(self, session:'SASession', merged_def:'anydict', connection:'any_') -> 'None':
+        """ The bulk export job of the connection, if its definition schedules one.
+        """
+        sync_bulk_export_job(self.importer, session, merged_def, connection, self.health_check_conn_type)
+
+# ################################################################################################################################
+
+    def _flatten_bulk_export(self, connection_def:'anydict') -> 'None':
+        """ A hand-written file keeps the Bulk export tab under one mapping of its own, while a connection
+        stores each of its fields flat under a prefix - lists become one value per line and the destinations
+        become the JSON text the Dashboard writes, one stored form no matter which of the two wrote it.
+        """
+        bulk_export = connection_def.pop(_bulk.Enmasse_Key, None)
+
+        # A connection without the mapping keeps what each field defaults to
+        if not bulk_export:
+            return
+
+        name = connection_def['name']
+
+        for key, value in bulk_export.items():
+
+            field_name = _bulk.Field_Prefix + key
+
+            if field_name not in _importable_bulk_names:
+                raise Exception(f'Outgoing FHIR connection `{name}` has an unknown bulk export field `{key}`')
+
+            if field_name in _bulk_list_fields:
+                if isinstance(value, list):
+                    value = _bulk_list_separator.join(value)
+
+            elif field_name == _bulk_destinations_field:
+                entries = parse_entries(value)
+                value = dump_entries(entries)
+
+            connection_def[field_name] = value
 
 # ################################################################################################################################
 

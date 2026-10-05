@@ -50,7 +50,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
     {% endif %}
     {% if transport == 'plain_http' %}
-    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/datetime-picker.css">
     {% endif %}
 {% endblock %}
 
@@ -77,7 +77,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
     {% if transport == 'plain_http' %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/datetime-picker-format.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/datetime-picker.js"></script>
     {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>

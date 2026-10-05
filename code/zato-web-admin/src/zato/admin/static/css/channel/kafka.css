@@ -1,0 +1,39 @@
+/* ------------------------------------------------------------ */
+/* Kafka channels - the Consumer tab                             */
+/* ------------------------------------------------------------ */
+
+.data-popup .kafka-consumer-tab-panel {
+    --alerts-tab-select-width: 10em;
+}
+
+/* ------------------------------------------------------------ */
+/* Kafka channels - the Routing tab                              */
+/* ------------------------------------------------------------ */
+
+.data-popup .kafka-routing-tab-rule .kafka-routing-tab-rule-number {
+    min-width: 2em;
+}
+
+.data-popup .kafka-routing-tab-rule .kafka-routing-tab-delete {
+    margin-left: 1em;
+    white-space: nowrap;
+}
+
+.data-popup .kafka-routing-tab-arrow {
+    width: 1em;
+    height: 1em;
+    margin: 0 0.4em;
+    vertical-align: -0.15em;
+}
+
+.data-popup .kafka-routing-tab-actions {
+    padding: 0.4em 0 0 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Kafka channels - the list page                                */
+/* ------------------------------------------------------------ */
+
+.kafka-channel-dlq-cell {
+    white-space: nowrap;
+}

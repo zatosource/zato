@@ -92,6 +92,7 @@ zato-rule-engine-dashboard.db
 .pytest_cache_playwright/
 
 # Where test-all remembers which target it stopped on
+.test-all-no-static-resume
 .test-all-resume
 
 # Cosmic-ray mutation testing

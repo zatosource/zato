@@ -222,6 +222,22 @@ $(document).ready(function() {
                         </div>
                     </div>
 
+                    <div class="wizard-section mcp-wizard-oauth" id="mcp-wizard-oauth">
+                        <div class="decision-lines">
+
+                            <div class="decision-line" id="mcp-wizard-line-oauth">
+                                <label class="decision-line-label" for="{{ form.oauth.id_for_label }}">OAuth</label>
+                                <span class="decision-line-slot">{{ form.oauth }}</span>
+                            </div>
+
+                            <div class="decision-line" id="mcp-wizard-line-oauth-scopes">
+                                <label class="decision-line-label" for="{{ form.oauth_scopes.id_for_label }}">Scopes</label>
+                                <span class="decision-line-slot mcp-wizard-oauth-scopes-slot">{{ form.oauth_scopes }}</span>
+                            </div>
+
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Step 2 - response shaping and the folded options -->

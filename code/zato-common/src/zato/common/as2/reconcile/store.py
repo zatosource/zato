@@ -27,12 +27,13 @@ from zato.common.json_internal import dumps
 if 0:
     from datetime import datetime
     from zato.common.as2.reconcile.common import pending_mdn_list, PendingMDN
-    from zato.common.typing_ import any_, anydict, anylist, anylistnone
+    from zato.common.typing_ import any_, anydict, anylist, anylistnone, stranydict
     any_ = any_
     anydict = anydict
     anylist = anylist
     anylistnone = anylistnone
     datetime = datetime
+    stranydict = stranydict
     pending_mdn_list = pending_mdn_list
     PendingMDN = PendingMDN
 
@@ -66,6 +67,7 @@ class MDNReconciler:
         delivery_kind:'str' = DeliveryKind.Original,
         http_status:'int' = 0,
         outcome:'str' = AuditOutcome.OK,
+        is_export_payload_active:'bool' = False,
         ) -> 'None':
         """ Records that a message left for the partner - the send half of the reconciliation pair.
         The MIC computed at send time and the URL an asynchronous MDN is expected on travel
@@ -97,7 +99,8 @@ class MDNReconciler:
             ReconcileAttr.HTTP_Status: http_status,
         }
 
-        values = {'cid': cid, 'msg_id': message_id, 'correl_id': correl_id, 'outcome': outcome, 'data': data, 'attrs': attrs}
+        values:'stranydict' = {'cid': cid, 'msg_id': message_id, 'correl_id': correl_id, 'outcome': outcome, 'data': data,
+            'attrs': attrs, 'is_export_payload_active': is_export_payload_active}
 
         self.audit_log.insert(AuditSource.AS2, AuditEvent.Message_Sent, pair, **values)
 
@@ -109,6 +112,7 @@ class MDNReconciler:
         outcome:'str' = AuditOutcome.OK,
         cid:'str' = '',
         data:'str' = '',
+        is_export_payload_active:'bool' = False,
         ) -> 'None':
         """ Records that an MDN arrived - matched or not, the arrival is always recorded,
         because an MDN for an unknown or already-reconciled Message-ID is accepted
@@ -119,7 +123,8 @@ class MDNReconciler:
         # The sent message this receipt answers names the event by its identity pair.
         pending = self.match(message_id)
 
-        self.record_mdn_received_for(message_id, pending, outcome=outcome, cid=cid, data=data)
+        self.record_mdn_received_for(message_id, pending, outcome=outcome, cid=cid, data=data,
+            is_export_payload_active=is_export_payload_active)
 
 # ################################################################################################################################
 
@@ -130,6 +135,7 @@ class MDNReconciler:
         outcome:'str' = AuditOutcome.OK,
         cid:'str' = '',
         data:'str' = '',
+        is_export_payload_active:'bool' = False,
         ) -> 'None':
         """ Records the arrival of an MDN whose sent message the caller has already resolved,
         because the alternative is running the same match query a second time for every
@@ -143,7 +149,8 @@ class MDNReconciler:
         else:
             pair = ''
 
-        values = {'cid': cid, 'msg_id': message_id, 'outcome': outcome, 'data': data}
+        values:'stranydict' = {'cid': cid, 'msg_id': message_id, 'outcome': outcome, 'data': data,
+            'is_export_payload_active': is_export_payload_active}
 
         self.audit_log.insert(AuditSource.AS2, AuditEvent.MDN_Received, pair, **values)
 

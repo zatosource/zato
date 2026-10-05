@@ -26,6 +26,12 @@ from zato.common.ext.bunch import Bunch
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -43,7 +49,8 @@ class Index(_Index):
     output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
         'static_header', 'is_static_token', 'static_prefix', \
-        'issuer', 'jwks_url', 'audience', 'claims'
+        'issuer', 'jwks_url', 'audience', 'claims', 'identity_claim', \
+        'client_auth_method', 'has_private_key', 'jwt_algorithm', 'key_id', 'assertion_audience', 'certificate'
     output_repeated = True
 
     def handle(self):
@@ -64,8 +71,10 @@ class _CreateEdit(CreateEdit):
     input_optional = 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
         'static_header', 'is_static_token', 'static_prefix', \
-        'issuer', 'jwks_url', 'audience', 'claims'
+        'issuer', 'jwks_url', 'audience', 'claims', 'identity_claim', \
+        'client_auth_method', 'private_key', 'jwt_algorithm', 'key_id', 'assertion_audience', 'certificate'
     output_required = 'id', 'name'
+    output_optional = 'has_private_key',
 
     def success_message(self, item):
         return 'Bearer token definition `{}` {} successfully'.format(item.name, self.verb)
@@ -118,6 +127,31 @@ class Delete(_Delete):
 @method_allowed('POST')
 def change_secret(req):
     return _change_password(req, 'zato.security.oauth.change-password', success_msg='Secret updated')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_public_key(req:'any_', id:'str', cluster_id:'str') -> 'HttpResponse':
+    """ Returns the public half of a definition's private key - the PEM form followed by the JWK set,
+    both of which authorization servers accept when the client is registered with them.
+    """
+    response = req.zato.client.invoke('zato.security.oauth.get-public-key', {'id': id})
+
+    if not response.ok:
+        return HttpResponse(response.details, status=HTTPStatus.INTERNAL_SERVER_ERROR, content_type='text/plain')
+
+    data = response.data
+
+    body  = '# Bearer token definition: {}\n'.format(data['name'])
+    body += '# Algorithm: {}\n'.format(data['jwt_algorithm'])
+    body += '# Key ID: {}\n\n'.format(data['key_id'])
+    body += data['public_key_pem']
+    body += '\n'
+    body += dumps(data['jwks'], indent=2)
+    body += '\n'
+
+    return HttpResponse(body, content_type='text/plain')
 
 # ################################################################################################################################
 # ################################################################################################################################

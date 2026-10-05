@@ -349,11 +349,17 @@ class ZatoEnvironment:
 
 # ################################################################################################################################
 
-    def stop(self) -> 'None':
-        """ Ends the processes in the reverse of the order they started in and removes the directory.
+    def restart(self, extra_environment:'strstrdict') -> 'None':
+        """ Stops the server and starts it again on the same port with everything it had on disk.
         """
-        if self in _environments:
-            _environments.remove(self)
+        self._stop_processes()
+        self.start(extra_environment)
+
+# ################################################################################################################################
+
+    def _stop_processes(self) -> 'None':
+        """ Ends the processes in the reverse of the order they started in.
+        """
 
         # The listener goes before the server so that it does not race the server's shutdown
         kill_process_tree(self._listener_process)
@@ -361,6 +367,16 @@ class ZatoEnvironment:
 
         kill_process_tree(self._server_process)
         self._server_process = None
+
+# ################################################################################################################################
+
+    def stop(self) -> 'None':
+        """ Ends the processes and removes the directory.
+        """
+        if self in _environments:
+            _environments.remove(self)
+
+        self._stop_processes()
 
         if os.path.isdir(self.directory):
             shutil.rmtree(self.directory, ignore_errors=True)
