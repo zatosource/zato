@@ -300,17 +300,21 @@ class RESTInvoker:
 
 # ################################################################################################################################
 
-    def call_rest_func(self, func_name:'str', conn_name:'str', *args:'any_', **kwargs:'str') -> 'any_':
+    def call_rest_func(self, func_name:'str', conn_name:'str', *args:'any_', cid:'str'='', **kwargs:'any_') -> 'any_':
 
         # .. the actual method to invoke ..
         func = getattr(self.conn, func_name)
+
+        # .. a correlation ID given explicitly wins, otherwise the calling service's one is used ..
+        if not cid:
+            cid = self.container.cid
 
         # .. if we have a function to call before the actual method should be invoked, do it now ..
         if self.container.before_call_func:
             self.container.before_call_func(func_name, conn_name, self.conn, *args, **kwargs)
 
         # .. do invoke the actual function ..
-        result = func(self.container.cid, *args, **kwargs)
+        result = func(cid, *args, **kwargs)
 
         # .. if we have a function to call after the actual method was invoked, do it now ..
         if self.container.after_call_func:
@@ -349,37 +353,37 @@ class RESTInvoker:
 
 # ################################################################################################################################
 
-    def invoke(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes the connection with no arguments needed at all - the HTTP method,
         query string, path params, headers and body come from the connection's
         declarative invocation profile.
         """
         return self.call_wrapper('rest_invoke', *args, **kwargs)
 
-    def get(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def get(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('get', *args, **kwargs)
 
-    def delete(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def delete(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('delete', *args, **kwargs)
 
-    def options(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def options(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('options', *args, **kwargs)
 
-    def post(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def post(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('post', *args, **kwargs)
 
     send = post
 
-    def put(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def put(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('put', *args, **kwargs)
 
-    def patch(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def patch(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('patch', *args, **kwargs)
 
-    def ping(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def ping(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('ping', *args, **kwargs)
 
-    def upload(self, *args:'any_', **kwargs:'str') -> 'any_':
+    def upload(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.call_wrapper('upload', *args, **kwargs)
 
 # ################################################################################################################################

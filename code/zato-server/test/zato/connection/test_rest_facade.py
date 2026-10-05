@@ -30,6 +30,7 @@ if 0:
 
 class ModuleCtx:
     CID = 'abc-123'
+    CID_Other = 'xyz-789'
     Conn_Name = 'CRM and Billing'
     Conn_Name_FS = 'CRM_and_Billing'
     Conn_Name_Exact = 'ExactNameConn'
@@ -261,6 +262,102 @@ class RESTFacadeTestCase(TestCase):
         _ = conn.post('my-data')
 
         self.assertEqual(wrapper.calls, [('post', (ModuleCtx.CID, 'my-data'), {})])
+
+# ################################################################################################################################
+
+    def test_each_verb_without_arguments_injects_cid(self) -> 'None':
+
+        for verb in Invoker_Verbs:
+
+            wrapper = self.get_wrapper(ModuleCtx.Conn_Name)
+            wrapper.calls.clear()
+
+            conn = self.facade[ModuleCtx.Conn_Name]
+            func = getattr(conn, verb)
+
+            result = func()
+
+            self.assertEqual(result, f'{verb}-response')
+            self.assertEqual(wrapper.calls, [(verb, (ModuleCtx.CID,), {})])
+
+# ################################################################################################################################
+
+    def test_keyword_only_arguments_inject_cid(self) -> 'None':
+
+        wrapper = self.get_wrapper(ModuleCtx.Conn_Name)
+        conn = self.facade[ModuleCtx.Conn_Name]
+
+        _ = conn.get(params={'my-key': 'my-value'}, headers={'My-Header': 'my-header-value'})
+
+        expected_kwargs = {'params': {'my-key': 'my-value'}, 'headers': {'My-Header': 'my-header-value'}}
+        self.assertEqual(wrapper.calls, [('get', (ModuleCtx.CID,), expected_kwargs)])
+
+# ################################################################################################################################
+
+    def test_positional_cid_and_keyword_arguments(self) -> 'None':
+
+        wrapper = self.get_wrapper(ModuleCtx.Conn_Name)
+        conn = self.facade[ModuleCtx.Conn_Name]
+
+        _ = conn.get(ModuleCtx.CID, params={'my-key': 'my-value'})
+
+        self.assertEqual(wrapper.calls, [('get', (ModuleCtx.CID,), {'params': {'my-key': 'my-value'}})])
+
+# ################################################################################################################################
+
+    def test_cid_keyword_overrides_service_cid(self) -> 'None':
+
+        for verb in Invoker_Verbs:
+
+            wrapper = self.get_wrapper(ModuleCtx.Conn_Name)
+            wrapper.calls.clear()
+
+            conn = self.facade[ModuleCtx.Conn_Name]
+            func = getattr(conn, verb)
+
+            result = func('my-data', cid=ModuleCtx.CID_Other, my_param='my-value')
+
+            self.assertEqual(result, f'{verb}-response')
+            self.assertEqual(wrapper.calls, [(verb, (ModuleCtx.CID_Other, 'my-data'), {'my_param': 'my-value'})])
+
+# ################################################################################################################################
+
+    def test_cid_keyword_without_other_arguments(self) -> 'None':
+
+        wrapper = self.get_wrapper(ModuleCtx.Conn_Name)
+        conn = self.facade[ModuleCtx.Conn_Name]
+
+        _ = conn.get(cid=ModuleCtx.CID_Other)
+
+        self.assertEqual(wrapper.calls, [('get', (ModuleCtx.CID_Other,), {})])
+
+# ################################################################################################################################
+
+    def test_empty_cid_keyword_falls_back_to_service_cid(self) -> 'None':
+
+        wrapper = self.get_wrapper(ModuleCtx.Conn_Name)
+        conn = self.facade[ModuleCtx.Conn_Name]
+
+        _ = conn.post('my-data', cid='')
+
+        self.assertEqual(wrapper.calls, [('post', (ModuleCtx.CID, 'my-data'), {})])
+
+# ################################################################################################################################
+
+    def test_cid_keyword_is_not_passed_to_hooks(self) -> 'None':
+
+        facade = _HooksRESTFacade()
+        facade.init(ModuleCtx.CID, self.out_plain_http)
+
+        wrapper = self.get_wrapper(ModuleCtx.Conn_Name)
+        conn = facade[ModuleCtx.Conn_Name]
+
+        _ = conn.post('my-data', cid=ModuleCtx.CID_Other)
+
+        before_call, after_call = facade.hook_calls
+
+        self.assertEqual(before_call, ('before', 'post', ModuleCtx.Conn_Name, wrapper, ('my-data',), {}))
+        self.assertEqual(after_call, ('after', 'post', ModuleCtx.Conn_Name, wrapper, 'post-response', ('my-data',), {}))
 
 # ################################################################################################################################
 
