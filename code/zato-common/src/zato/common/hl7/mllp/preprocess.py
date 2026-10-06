@@ -17,9 +17,11 @@ from zato.common.util.api import pluralize
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import stranydict
     from zato.hl7v2 import HL7Message
     from zato.hl7v2_rs import ToleranceConfig
     HL7Message = HL7Message
+    stranydict = stranydict
     ToleranceConfig = ToleranceConfig
 
 # ################################################################################################################################
@@ -376,6 +378,28 @@ def build_tolerance_config(**toggles:'bool') -> 'ToleranceConfig':
     for name, value in toggles.items():
         setattr(out, name, value)
 
+    return out
+
+# ################################################################################################################################
+
+def build_channel_tolerance_config(config:'stranydict') -> 'ToleranceConfig':
+    """ Builds the parser's tolerance configuration from a channel's configuration, which has one
+    value per name in Tolerance_Names. Both the channel, which parses a message as it arrives, and
+    a reprocess of a stored message, which parses it again for the same channel, build the
+    configuration here, so that the service receives the same structured message in both cases.
+    """
+
+    # Imported here so that the field list, which reads the shared defaults, is not pulled in
+    # by every caller of this module
+    from zato.common.hl7.mllp.fields import Tolerance_Names
+    from zato.common.util.api import asbool
+
+    toggles = {}
+
+    for name in Tolerance_Names:
+        toggles[name] = asbool(config[name])
+
+    out = build_tolerance_config(**toggles)
     return out
 
 # ################################################################################################################################

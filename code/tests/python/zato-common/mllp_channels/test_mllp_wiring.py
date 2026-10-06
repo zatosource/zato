@@ -122,8 +122,12 @@ def _make_config(**overrides:'object') -> 'MagicMock':
     defaults.update(overrides)
     config = MagicMock()
 
+    # The wrapper reads its configuration both as attributes and, for the tolerance toggles,
+    # by key, the way a Bunch supports both
     for key, value in defaults.items():
         setattr(config, key, value)
+
+    config.__getitem__.side_effect = defaults.__getitem__
 
     return config
 
@@ -284,6 +288,26 @@ class TestRouteSettingsWiring(_WiringTestCase):
         self.assertFalse(settings.should_split_concatenated_messages)
         self.assertFalse(settings.should_force_standard_delimiters)
         self.assertFalse(settings.should_use_msh18_encoding)
+
+# ################################################################################################################################
+
+    def test_the_tolerance_toggles_reach_the_parser_configuration(self) -> 'None':
+        """ Each tolerance toggle reaches the route's parser configuration as the channel has it, so
+        a channel whose toggles differ from the parser's defaults parses under its own.
+        """
+        wrapper = self.make_wrapper(
+            normalize_obx2_value_type=False,
+            fix_off_by_one_field_index=True,
+        )
+
+        wrapper._init_impl()
+
+        tolerance_config = self.get_only_route_settings().tolerance_config
+
+        self.assertFalse(tolerance_config.normalize_obx2_value_type)
+        self.assertTrue(tolerance_config.fix_off_by_one_field_index)
+        self.assertTrue(tolerance_config.replace_invalid_obx2_value_type)
+        self.assertTrue(tolerance_config.allow_short_encoding_characters)
 
 # ################################################################################################################################
 

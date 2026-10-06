@@ -14,9 +14,9 @@ from threading import Lock
 from zato.common.api import CHANNEL
 from zato.common.audit_log.api import AuditLog
 from zato.common.defaults import default_cluster_id
-from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_message_size, Tolerance_Names
+from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_message_size
 from zato.common.hl7.mllp.haproxy import resolve_internal_port
-from zato.common.hl7.mllp.preprocess import build_tolerance_config
+from zato.common.hl7.mllp.preprocess import build_channel_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
 from zato.common.hl7.mllp.settings import extract_common_name, ListenerConfig, RouteSettings
@@ -304,20 +304,6 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _build_tolerance_config(self) -> 'object':
-        """ Builds the parser's tolerance configuration from this channel's own toggles, whose
-        names come from the same list the form and enmasse are built from.
-        """
-        toggles = {}
-
-        for name in Tolerance_Names:
-            toggles[name] = asbool(self.config[name])
-
-        out = build_tolerance_config(**toggles)
-        return out
-
-# ################################################################################################################################
-
     def _build_route_settings(self) -> 'RouteSettings':
         """ Builds how this channel's own messages are framed, read and interpreted, which is what
         the listener applies to each message that matches this channel and to no other.
@@ -348,7 +334,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             should_log_messages=asbool(self.config.should_log_messages),
             should_return_errors=asbool(self.config.should_return_errors),
 
-            tolerance_config=self._build_tolerance_config(),
+            tolerance_config=build_channel_tolerance_config(self.config),
 
             dedup_ttl_value=self.config.dedup_ttl_value,
             dedup_ttl_unit=self.config.dedup_ttl_unit,

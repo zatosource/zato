@@ -26,6 +26,7 @@ from zato.common.audit_log.resubmit import get_stored_payload, load_event as loa
     require_resendable_request, resend_hop, run_once, Action_Reprocess, Action_Resend, DuplicateResubmitException, \
     ResubmitException
 from zato.common.destination.audit import get_hop_entry
+from zato.common.hl7.mllp.preprocess import build_channel_tolerance_config
 from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
 from zato.common.json_internal import dumps
 from zato.common.model.file_transfer_ import FileTransferItem
@@ -528,11 +529,13 @@ class ReprocessHL7Message(AdminService):
                 # pipeline, so the channel rides along with the invocation to be read there ..
                 if service_name:
 
-                    # A live delivery hands the service a parsed message when the channel
-                    # parses on input, so a reprocess hands it the same shape - without
-                    # re-validating, because the message was already accepted once.
+                    # A live delivery gives the service a parsed message when the channel
+                    # parses on input, so a reprocess gives it the same shape, parsed under the
+                    # channel's own tolerance toggles - without re-validating, because the
+                    # message was already accepted once.
                     if asbool(config['should_parse_on_input']):
-                        service_payload = parse_hl7(payload, validate=False)
+                        tolerance_config = build_channel_tolerance_config(config)
+                        service_payload = parse_hl7(payload, validate=False, tolerance=tolerance_config)
                     else:
                         service_payload = payload
 

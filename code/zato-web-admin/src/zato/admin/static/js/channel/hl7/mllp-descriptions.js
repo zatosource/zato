@@ -86,7 +86,8 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     // Deduplication
     'id_dedup_ttl_value': 'How long to remember message control IDs (MSH-10). ' +
         'Duplicates within this window are acknowledged but not delivered to the service. ' +
-        'Zero turns deduplication off.',
+        'Zero turns deduplication off. Up to 100,000 control IDs are remembered per channel, ' +
+        'the oldest making room for new ones once that many are held.',
     'id_dedup_ttl_unit': 'Time unit for the dedup window (minutes, hours, or days).',
 
     // Logging

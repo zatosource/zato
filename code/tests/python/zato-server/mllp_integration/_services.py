@@ -45,10 +45,14 @@ class TestHL7MLLPEcho(Service):
 
     def handle(self):
 
-        # The MLLP channel delivers text while the REST channel delivers bytes
+        # An MLLP channel that does not parse on input delivers text, the REST channel delivers bytes
+        # and an MLLP channel that parses on input delivers a structured message, which is recorded
+        # as the ER7 text it serializes to.
         message = self.request.raw_request
         if isinstance(message, bytes):
             message = message.decode('utf-8')
+        elif not isinstance(message, str):
+            message = message.to_er7()
 
         with open(_messages_file, 'a') as file_handle:
             _ = file_handle.write(json.dumps(message) + '\\n')
