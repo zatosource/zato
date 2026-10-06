@@ -111,9 +111,10 @@ class TestChannelCounters(TestCase):
         # .. the callback ran once because the second arrival was a duplicate ..
         self.assertEqual(len(callback.messages), 1)
 
-        # .. and both acknowledgments count on the channel's own state.
+        # .. and both receipts and both acknowledgments count on the channel's own state,
+        # .. since a duplicate was received all the same, as the listener's state already holds.
+        self.assertEqual(channel_state.received, 2)
         self.assertEqual(channel_state.acked, 2)
-        self.assertEqual(channel_state.received, 1)
 
 # ################################################################################################################################
 
