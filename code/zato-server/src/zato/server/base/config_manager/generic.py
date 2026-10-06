@@ -158,7 +158,7 @@ class Generic(ConfigManagerImpl):
 
 # ################################################################################################################################
 
-    def _delete_generic_connection(self, msg:'stranydict', needs_queue_delete:'bool'=True) -> 'None':
+    def _delete_generic_connection(self, msg:'stranydict', needs_queue_delete:'bool'=True, is_edit:'bool'=False) -> 'None':
 
         conn_dict, conn_value = self._find_conn_info(msg['id'], msg['name'])
         if not conn_dict:
@@ -168,11 +168,15 @@ class Generic(ConfigManagerImpl):
             # Delete the connection object ..
             conn = conn_dict.conn # type: Wrapper
 
-            # .. provide the reason code if the connection type supports it ..
+            # .. provide the reason code if the connection type supports it, and tell a connection type
+            # .. that shares a resource with others whether this delete is the first half of an edit ..
             has_delete_reasons = getattr(conn, 'has_delete_reasons', None)
+            has_edit_aware_delete = getattr(conn, 'has_edit_aware_delete', False)
 
             if has_delete_reasons:
                 conn.delete(reason=COMMON_GENERIC.DeleteReason)
+            elif has_edit_aware_delete:
+                conn.delete(is_edit=is_edit)
             else:
                 conn.delete()
 
@@ -320,7 +324,7 @@ class Generic(ConfigManagerImpl):
         with hold:
 
             # Delete the connection, although not the queue in front of it, which this edit keeps
-            self._delete_generic_connection(msg, needs_queue_delete=False)
+            self._delete_generic_connection(msg, needs_queue_delete=False, is_edit=True)
 
             # Recreate it now but make sure to include the secret too
             msg['secret'] = secret

@@ -17,6 +17,7 @@ from zato.common.api import GENERIC, HL7
 from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
 from zato.common.ext.bunch import Bunch
 from zato.common.typing_ import cast_
+from zato.server.base.config_manager.generic import Generic
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper, delete_rest_channel, _shared_state
 from zato.server.service.internal.generic import connection as conn_module
 
@@ -34,6 +35,7 @@ if 0:
 
 # The port the listener is taken to have settled on, which nothing here depends on the value of
 _test_internal_port = 19000
+_test_channel_id = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -439,6 +441,107 @@ class TestListenerWiring(_WiringTestCase):
         self.assertIsNone(_shared_state.server, 'The listener outlived its last channel')
 
         listener.stop.assert_called_once()
+
+# ################################################################################################################################
+
+    def test_an_edit_of_the_only_channel_keeps_the_listener(self) -> 'None':
+        """ An edit is a delete followed by a create of the same channel, and the listener that channel
+        alone uses stays up through both, so the connections senders have open on it are kept.
+        """
+
+        wrapper = self.make_wrapper(name='only')
+        wrapper._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+
+        wrapper.delete(is_edit=True)
+
+        edited = self.make_wrapper(name='only')
+        edited._init_impl()
+
+        listener.stop.assert_not_called()
+        self.assertIs(_shared_state.server, listener, 'The edit replaced the listener')
+        self.assertEqual(_shared_state.listener_channel_count, 1)
+
+# ################################################################################################################################
+
+    def test_an_edit_that_makes_the_only_channel_rest_only_stops_the_listener(self) -> 'None':
+        """ A channel edited to receive over REST only leaves the listener, and when it was the
+        listener's only user the listener stops with the edit rather than running for nobody.
+        """
+
+        wrapper = self.make_wrapper(name='only')
+        wrapper._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+
+        wrapper.delete(is_edit=True)
+
+        edited = self.make_wrapper(name='only', rest_only=True)
+        edited._init_impl()
+
+        listener.stop.assert_called_once()
+        self.assertIsNone(_shared_state.server, 'The listener outlived its last channel')
+        self.assertEqual(_shared_state.listener_channel_count, 0)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestTheConfigManagerTellsTheChannelAboutAnEdit(_WiringTestCase):
+    """ The config manager edits a connection by deleting and creating it, and the MLLP channel is told
+    which of the two a delete is, since the listener it shares stays up through an edit.
+    """
+
+# ################################################################################################################################
+
+    def _make_manager(self, wrapper:'ChannelHL7MLLPWrapper') -> 'Generic':
+        """ A config manager that knows one MLLP channel, without the rest of the server.
+        """
+        manager = Generic.__new__(Generic)
+
+        conn_dict = Bunch()
+        conn_dict.id = _test_channel_id
+        conn_dict.name = wrapper.config.name
+        conn_dict.type_ = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+        conn_dict.conn = wrapper
+
+        manager.generic_conn_api = {
+            GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: {wrapper.config.name: conn_dict},
+        }
+        manager._note_as2_config_change = MagicMock()
+        manager.delete_outgoing_dlq = MagicMock()
+
+        return manager
+
+# ################################################################################################################################
+
+    def test_the_delete_half_of_an_edit_keeps_the_listener(self) -> 'None':
+
+        wrapper = self.make_wrapper(name='only')
+        wrapper._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+        manager = self._make_manager(wrapper)
+
+        manager._delete_generic_connection({'id': _test_channel_id, 'name': 'only'}, needs_queue_delete=False, is_edit=True)
+
+        listener.stop.assert_not_called()
+        self.assertIs(_shared_state.server, listener)
+
+# ################################################################################################################################
+
+    def test_a_delete_that_is_not_an_edit_stops_the_listener(self) -> 'None':
+
+        wrapper = self.make_wrapper(name='only')
+        wrapper._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+        manager = self._make_manager(wrapper)
+
+        manager._delete_generic_connection({'id': _test_channel_id, 'name': 'only'})
+
+        listener.stop.assert_called_once()
+        self.assertIsNone(_shared_state.server)
 
 # ################################################################################################################################
 # ################################################################################################################################

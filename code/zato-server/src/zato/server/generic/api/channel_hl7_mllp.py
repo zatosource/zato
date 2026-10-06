@@ -181,6 +181,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
     wrapper_type = 'HL7 MLLP channel'
     build_if_not_active = True
 
+    # The listener is shared, so the delete half of an edit must not stop it - the create half
+    # that follows registers this channel on it again
+    has_edit_aware_delete = True
+
     def __init__(self, *args:'object', **kwargs:'object') -> 'None':
         super().__init__(*args, **kwargs)
 
@@ -422,6 +426,13 @@ class ChannelHL7MLLPWrapper(Wrapper):
             rest_only = asbool(self.config.rest_only)
 
             if rest_only:
+
+                # .. a channel edited from the listener to REST only was the delete half's reason
+                # to leave the listener running, and if it was the last user the listener stops now ..
+                if _shared_state.listener_channel_count <= 0:
+                    self._stop_shared_server()
+                    _shared_state.listener_channel_count = 0
+
                 self.is_connected = True
                 return
 
@@ -464,7 +475,12 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _delete(self) -> 'None':
+    def delete(self, *, is_edit:'bool'=False) -> 'None':
+        self._delete(is_edit=is_edit)
+
+# ################################################################################################################################
+
+    def _delete(self, *, is_edit:'bool'=False) -> 'None':
 
         with _shared_state.lock:
 
@@ -475,6 +491,11 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
                 _shared_state.router.remove_route(self.config.name)
                 _shared_state.listener_channel_count -= 1
+
+                # .. the create half of an edit builds this channel again at once, so the listener stays
+                # .. up with every connection senders have open on it ..
+                if is_edit:
+                    return
 
                 # .. stop the shared server if no channels are left using it ..
                 if _shared_state.listener_channel_count <= 0:
