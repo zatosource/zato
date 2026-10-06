@@ -16,9 +16,6 @@ from zato.common.api import PubSub
 from zato.common.pubsub.outgoing import get_outgoing_topic_name
 from zato.common.test.rabbitmq_ import declare_and_bind
 
-# Test support
-from queue_delivery.type_under_test import Conn_Without_Queue, Connection_Keys
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -76,16 +73,15 @@ def get_exchange_name(type_under_test:'TypeUnderTest') -> 'str':
 # ################################################################################################################################
 
 def get_queued_topic_names(type_under_test:'TypeUnderTest') -> 'strlist':
-    """ The topics of every connection with the queue switch on.
+    """ The topics of every connection with the queue switch on - the type says which of its connections have none.
     """
     out = []
 
-    for key in Connection_Keys:
+    for key, conn_name in type_under_test.connections.items():
 
-        if key == Conn_Without_Queue:
+        if key in type_under_test.keys_without_queue:
             continue
 
-        conn_name = type_under_test.connections[key]
         topic_name = get_outgoing_topic_name(type_under_test.conn_type, conn_name)
         out.append(topic_name)
 
@@ -149,6 +145,16 @@ def build_amqp_config(broker:'RabbitMQProcess', type_under_test:'TypeUnderTest')
         'pubsub_topic': pubsub_topic,
     }
 
+    return out
+
+# ################################################################################################################################
+
+def build_amqp_yaml(broker:'RabbitMQProcess', type_under_test:'TypeUnderTest') -> 'str':
+    """ The broker's definitions alone as enmasse YAML, for a suite that imports them apart from its connections.
+    """
+    config = build_amqp_config(broker, type_under_test)
+
+    out = safe_dump(config, sort_keys=False)
     return out
 
 # ################################################################################################################################

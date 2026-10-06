@@ -15,7 +15,7 @@ from threading import RLock
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.dlq import DLQ_Sub_Key_Prefixes, get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key, parse_dlq_sub_key
-from zato.common.pubsub.outgoing import find_outgoing_conn, get_direction, get_outgoing_sub_key, is_inbound, \
+from zato.common.pubsub.outgoing import find_outgoing_conn, get_direction, get_outgoing_sub_key, has_queue, \
     locate_outgoing_conn, parse_outgoing_sub_key
 from zato.server.base.config_manager.common import ConfigManagerImpl
 
@@ -180,11 +180,11 @@ class OutgoingDLQs(ConfigManagerImpl):
             else:
                 dlq_depth = 0
 
-            if is_inbound(conn_type):
-                queue_depth = 0
-            else:
+            if has_queue(conn_type):
                 queue_sub_key = get_outgoing_sub_key(conn_type, conn_id)
                 queue_depth = self.outgoing_queue_depth.get(queue_sub_key)
+            else:
+                queue_depth = 0
 
             out.append({
                 'conn_type': conn_type,

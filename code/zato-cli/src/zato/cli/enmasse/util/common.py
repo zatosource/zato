@@ -182,6 +182,9 @@ def get_value_from_environment(value:'any_') -> 'str':
             default = f'{EnvVariable.Missing_Value_Prefix}{env_key}_{uuid.uuid4().hex[:12]}'
             value = os.environ.get(env_key, default)
 
+            if env_key not in os.environ:
+                logger.warning('Environment variable `%s` is not set, using `%s` instead', env_key, default)
+
             try:
                 value = asbool(value)
             except Exception:
@@ -199,6 +202,9 @@ def get_value_from_environment(value:'any_') -> 'str':
     default = f'{EnvVariable.Missing_Value_Prefix}{env_key}_{uuid.uuid4().hex[:12]}'
 
     value = os.environ.get(env_key, default)
+
+    if env_key not in os.environ:
+        logger.warning('Environment variable `%s` is not set, using `%s` instead', env_key, default)
 
     try:
         value = asbool(value)

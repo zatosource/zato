@@ -20,6 +20,12 @@ from zato.server.base.config_manager import ConfigManager, _pubsub_amqp_bridge_s
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import callable_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _ConfigManagerStub:
     """ Runs the real topic backend registry code of ConfigManager
     with everything around it mocked out.
@@ -33,6 +39,7 @@ class _ConfigManagerStub:
     on_config_event_PUBSUB_TOPIC_CREATE = ConfigManager.on_config_event_PUBSUB_TOPIC_CREATE
     on_config_event_PUBSUB_TOPIC_EDIT = ConfigManager.on_config_event_PUBSUB_TOPIC_EDIT
     on_config_event_PUBSUB_TOPIC_DELETE = ConfigManager.on_config_event_PUBSUB_TOPIC_DELETE
+    amqp_stop_all = ConfigManager.amqp_stop_all
 
     def __init__(self) -> 'None':
         self.server = MagicMock()
@@ -345,6 +352,50 @@ class TestTopicDeleteHandler(unittest.TestCase):
         # The AMQP topic's entry and override are untouched
         self.assertIn('topic.amqp', self.stub._topic_backends)
         self.assertEqual(self.stub.channel_config_1['service_name'], _pubsub_amqp_bridge_service)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAMQPStopAll(unittest.TestCase):
+    """ amqp_stop_all flags every connector before it waits for any of them and then removes them all.
+    """
+
+    def setUp(self) -> 'None':
+        self.stub = _ConfigManagerStub()
+        self.calls:'list[str]' = []
+
+        for name, connector in self.stub.amqp_api.connectors.items():
+            connector.name = name
+            connector.request_stop.side_effect = self._record('request_stop', name)
+
+        self.stub.amqp_api.delete.side_effect = self._record_delete
+
+# ################################################################################################################################
+
+    def _record(self, verb:'str', name:'str') -> 'callable_':
+        def _inner() -> 'None':
+            self.calls.append(f'{verb}:{name}')
+        return _inner
+
+# ################################################################################################################################
+
+    def _record_delete(self, name:'str') -> 'None':
+        self.calls.append(f'delete:{name}')
+
+# ################################################################################################################################
+
+    def test_every_connector_is_flagged_before_any_is_removed(self) -> 'None':
+
+        self.stub.amqp_stop_all()
+
+        expected = [
+            'request_stop:channel.1',
+            'request_stop:channel.2',
+            'delete:channel.1',
+            'delete:channel.2',
+        ]
+
+        self.assertEqual(self.calls, expected)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from contextlib import nullcontext
 from threading import RLock
 from traceback import format_exc
 
@@ -16,17 +17,19 @@ from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.api import AS2, AS4, CONNECTION, MISC, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.api import AS2, AS4, CONNECTION, HTTP_SOAP, MISC, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config, extract_bearer_token
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
+from zato.common.pubsub.outgoing import http_soap_inbound_types
 from zato.common.soap.common import SOAPSecurityException
 from zato.common.soap.envelope import parse_envelope
 from zato.common.soap.security.wss import enforce_wss, invalidate_keystores
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.channel import channel_specificity
+from zato.common.util.delivery_config import apply_delivery_defaults, Delivery_Fields
 from zato.common.util.url_dispatcher import get_match_target, resolve_match_slash
 from zato.server.connection.http_soap import Unauthorized
 from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData
@@ -44,6 +47,8 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+_queue = HTTP_SOAP.Queue
 
 # Fields that inbound bearer token verification reads from a definition's opaque attributes
 _oauth_inbound_keys = ('is_static_token', 'static_token', 'issuer', 'jwks_url', 'audience', 'claims')
@@ -994,6 +999,20 @@ class URLData(PyURLData):
             for name in AS2.Common_Fields + AS2.Channel_Fields:
                 channel_item[name] = msg.get(name)
 
+        # REST and SOAP channels carry the queue switch, the retry and DLQ settings and the static queue response,
+        # at their defaults for a channel written before the settings existed
+        if channel_item['transport'] in http_soap_inbound_types:
+            for name in Delivery_Fields + HTTP_SOAP.Retry.FieldList:
+                channel_item[name] = msg.get(name)
+
+            apply_delivery_defaults(channel_item)
+
+            queue_response = msg.get(_queue.Field_Queue_Response)
+            if queue_response is None:
+                queue_response = _queue.Default_Queue_Response
+
+            channel_item[_queue.Field_Queue_Response] = queue_response
+
         if msg.get('security_id'):
             channel_item['sec_type'] = msg['sec_type']
 
@@ -1116,21 +1135,46 @@ class URLData(PyURLData):
     def on_config_event_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
         """
-        with self.url_sec_lock:
-            # Only edits have 'old_name', creates don't. So for edits we delete
-            # the channel and later recreate it while create actions do not have anything to delete.
-            if msg.get('old_name'):
-                old_data = self._delete_channel(msg)
-            else:
-                old_data = {}
+        old_name = msg.get('old_name')
+        is_rename = bool(old_name) and old_name != msg['name']
 
-            self._create_channel(msg, old_data)
+        # Only REST and SOAP channels have a queue - the queue of a renamed one has its topic moved to the new name,
+        # and both that and the swap of the channel's data happen with the queue held still, so no round of its
+        # delivery resolves the topic from a name that is on its way out.
+        has_queue = msg['transport'] in http_soap_inbound_types
+        is_queue_rename = has_queue and is_rename
+
+        if is_queue_rename:
+            inbound_type = http_soap_inbound_types[msg['transport']]
+            hold = self.config_manager.hold_outgoing_queue(inbound_type, msg['id'])
+        else:
+            inbound_type = ''
+            hold = nullcontext()
+
+        with hold:
+            with self.url_sec_lock:
+                # Only edits have 'old_name', creates don't. So for edits we delete
+                # the channel and later recreate it while create actions do not have anything to delete.
+                if old_name:
+                    old_data = self._delete_channel(msg)
+                else:
+                    old_data = {}
+
+                self._create_channel(msg, old_data)
+
+            if is_queue_rename:
+                self.config_manager.rename_outgoing_subscription(inbound_type, msg['id'], old_name, msg['name'])
 
     def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP channel.
         """
         with self.url_sec_lock:
             self._delete_channel(msg)
+
+        # A deleted channel takes its queue with it, along with whatever that queue still held
+        if msg['transport'] in http_soap_inbound_types:
+            inbound_type = http_soap_inbound_types[msg['transport']]
+            self.config_manager.delete_outgoing_subscription(inbound_type, msg['id'], msg['name'])
 
 # ################################################################################################################################
 # ################################################################################################################################

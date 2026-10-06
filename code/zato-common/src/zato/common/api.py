@@ -1036,7 +1036,7 @@ class HTTP_SOAP:
         FieldList = (Field_Max_Retries, Field_Sleep_Time, Field_Backoff_Threshold, Field_Backoff_Multiplier)
 
     class Queue:
-        """ The queue switch of outgoing connections, stored in the opaque attributes.
+        """ The queue switch of outgoing connections and channels, stored in the opaque attributes.
         """
 
         Field_Use_Queue = 'use_queue'
@@ -1044,6 +1044,15 @@ class HTTP_SOAP:
         Default_Use_Queue = False
 
         FieldList = (Field_Use_Queue,)
+
+        # The static response a channel with the queue on returns, stored in the opaque attributes
+        Field_Queue_Response = 'queue_response'
+
+        Default_Queue_Response = ''
+
+        # The elements of the default acknowledgement of a queued request
+        Ack_Is_OK = 'is_ok'
+        Ack_CID = 'cid'
 
     class DLQ:
         """ The DLQ config of outgoing connections, stored in the opaque attributes.

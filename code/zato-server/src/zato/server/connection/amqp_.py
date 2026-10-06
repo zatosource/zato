@@ -712,6 +712,16 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
+    def request_stop(self) -> 'None':
+        """ Tells every consumer to stop without waiting for any of them, so that the consumers of many channels wind down
+        in parallel and the subsequent stop finds them already finished.
+        """
+        for consumers in self._consumers.values():
+            for consumer in consumers:
+                consumer.keep_running = False
+
+# ################################################################################################################################
+
     def on_amqp_message(self, body, msg, channel_name, channel_config, _AMQPMessage=_AMQPMessage, _CHANNEL_AMQP=CHANNEL.AMQP,
         _RECEIVED='RECEIVED', _ZATO_ACK_MODE_ACK=AMQP.ACK_MODE.ACK.id):
         """ Invoked each time a message is taken off an AMQP queue.

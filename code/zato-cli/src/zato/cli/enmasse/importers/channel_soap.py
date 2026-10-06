@@ -11,7 +11,8 @@ import logging
 from json import loads
 
 # Zato
-from zato.cli.enmasse.util import preprocess_item, security_needs_update
+from zato.cli.enmasse.util import Channel_Delivery_Fields, channel_delivery_needs_update, prepare_channel_delivery_fields, \
+    preprocess_item, security_needs_update, take_channel_delivery_attrs
 from zato.cli.enmasse.util.alerts import alerts_need_update, take_alert_attrs
 from zato.common.alerting.object_config import Alerts_Key, alert_type_channels
 from zato.common.api import CONNECTION, URL_TYPE
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Keys that never map to database columns directly - they are handled separately.
 _non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'response_cache', 'use_mtom', 'is_audit_log_active',
-    'is_audit_export_payload_active')
+    'is_audit_export_payload_active') + Channel_Delivery_Fields
 
 # What the alert settings name the object as in the errors they raise
 _connection_type = 'channel_soap'
@@ -108,6 +109,10 @@ class ChannelSOAPImporter:
                     if key in ('security', 'security_name', 'groups', 'rate_limiting', 'response_cache', 'service', Alerts_Key):
                         continue
 
+                    # The delivery keys are compared on their own, with their defaults standing in for absent values
+                    if key in Channel_Delivery_Fields:
+                        continue
+
                     # A field the database row does not have yet means an update too.
                     if key not in db_def:
                         logger.info('Field %s.%s not in DB yet, will update', name, key)
@@ -137,6 +142,10 @@ class ChannelSOAPImporter:
 
                 # Check the alert settings
                 if alerts_need_update(item, db_def, alert_type_channels):
+                    needs_update = True
+
+                # Check the queue switch, the retry and DLQ settings and the static queue response
+                if channel_delivery_needs_update(item, db_def):
                     needs_update = True
 
                 if needs_update:
@@ -260,6 +269,11 @@ class ChannelSOAPImporter:
 
         # Payloads leave with the audit export only if the YAML definition says so
         opaque_attrs['is_audit_export_payload_active'] = channel_def.get('is_audit_export_payload_active', False)
+
+        # The queue switch, the retry and DLQ settings and the static queue response, validated and with their defaults filled in
+        prepare_channel_delivery_fields(channel_def, _connection_type)
+        delivery_attrs = take_channel_delivery_attrs(channel_def)
+        opaque_attrs.update(delivery_attrs)
 
         return opaque_attrs
 

@@ -105,7 +105,7 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.rule_engine.api import RulesManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
-        listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
+        listnone, modelnone, stranydict, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
@@ -208,6 +208,13 @@ class SchedulerLogCapture(logging.Handler):
 
 before_handle_hooks = ('before_handle',)
 after_handle_hooks = ('after_handle',)
+
+class Invoke_Mode:
+    """ What an invocation of a service runs - everything, or only the hook that shapes the response
+    of a channel whose queue is on.
+    """
+    Full = 'full'
+    Queue_Response_Only = 'queue-response-only'
 
 # The almost identical methods below are defined separately because they are used in critical paths
 # where every if counts.
@@ -392,6 +399,10 @@ class Service:
     # A service with this flag on receives the requests its channel's security definition rate limit refused -
     # it answers them 429 and audits them itself, finding the check result under Rate_Limit_Result_Key in request_ctx.
     handles_rate_limit_rejection:'bool' = False
+
+    # Whether the class overrides get_queue_response - computed once per class by ServiceStore,
+    # so a channel with the queue on never instantiates a service that has nothing to say about its response.
+    has_get_queue_response:'bool' = False
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     aws = AWSFacade()
@@ -832,6 +843,36 @@ class Service:
 
 # ################################################################################################################################
 
+    def _run_handle(self, service:'Service', channel:'str', request_ctx:'stranydict') -> 'None':
+        """ Runs the service proper - the hook before it, handle itself and the hook after it.
+        """
+
+        # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
+
+        # Called before .handle - catches exceptions
+        if service.call_hooks and service.before_handle: # type: ignore
+            call_hook_no_service(service.before_handle)
+
+        # .. attach scheduler log capture handler if this is a scheduler-initiated invocation
+        # .. whose run has a record in the audit log - with the audit log off there is none ..
+        _scheduler_log_handler = None
+        _scheduler_zato_ctx = request_ctx.get('zato.zato_ctx')
+        if _scheduler_zato_ctx is not None and 'scheduler_job_id' in _scheduler_zato_ctx:
+            if _scheduler_audit_event_id := _scheduler_zato_ctx['scheduler_audit_event_id']:
+                _scheduler_log_handler = SchedulerLogCapture(_scheduler_audit_event_id)
+                service.logger.addHandler(_scheduler_log_handler)
+
+        try:
+            self._invoke(service, channel)
+        finally:
+            if _scheduler_log_handler is not None:
+                service.logger.removeHandler(_scheduler_log_handler)
+
+        if service.call_hooks and service.after_handle: # type: ignore
+            call_hook_no_service(service.after_handle)
+
+# ################################################################################################################################
+
     def update_handle(self,
         set_response_func, # type: callable_
         service,       # type: Service
@@ -906,6 +947,10 @@ class Service:
         merge_channel_params = kwargs.get('merge_channel_params', True)
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
+        # A channel whose queue is on runs the hook that shapes its response and nothing else
+        invoke_mode = kwargs.get('invoke_mode', Invoke_Mode.Full)
+        is_queue_response_only = invoke_mode == Invoke_Mode.Queue_Response_Only
+
         service.update(service, channel, server, config_dispatcher, # type: ignore
             config_manager, cid, payload, raw_request, transport, data_format, request_ctx,
             job_type=job_type, channel_params=channel_params,
@@ -913,6 +958,10 @@ class Service:
             in_reply_to=request_ctx.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
+
+        # The hook reads the id of the message the channel has just stored
+        if is_queue_response_only:
+            service.request.queue.msg_id = kwargs['queue_msg_id']
 
         # Only invocations of user-defined services are recorded in the audit log.
         service_info = server.service_store.services[service.impl_name]
@@ -937,10 +986,17 @@ class Service:
             record_service_response(server.service_audit_log, service.name, cid, channel, caller,
                 service.response.payload, duration_milliseconds, error_traceback, request_ctx)
 
+        # The hook of a queued channel is never filtered out, there is nothing to filter yet.
+        if is_queue_response_only:
+            is_accepted = True
+
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
         # implemented by user services.
-        if (not self.accept) or service.accept(): # type: ignore
+        else:
+            is_accepted = (not self.accept) or service.accept() # type: ignore
+
+        if is_accepted:
 
             # Assumes it goes fine by default
             e, exc_formatted = None, None
@@ -953,29 +1009,11 @@ class Service:
                 # The request goes on record before anything runs.
                 _record_request()
 
-                # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
+                if is_queue_response_only:
+                    service.get_queue_response()
 
-                # Called before .handle - catches exceptions
-                if service.call_hooks and service.before_handle: # type: ignore
-                    call_hook_no_service(service.before_handle)
-
-                # .. attach scheduler log capture handler if this is a scheduler-initiated invocation
-                # .. whose run has a record in the audit log - with the audit log off there is none ..
-                _scheduler_log_handler = None
-                _scheduler_zato_ctx = request_ctx.get('zato.zato_ctx')
-                if _scheduler_zato_ctx is not None and 'scheduler_job_id' in _scheduler_zato_ctx:
-                    if _scheduler_audit_event_id := _scheduler_zato_ctx['scheduler_audit_event_id']:
-                        _scheduler_log_handler = SchedulerLogCapture(_scheduler_audit_event_id)
-                        service.logger.addHandler(_scheduler_log_handler)
-
-                try:
-                    self._invoke(service, channel)
-                finally:
-                    if _scheduler_log_handler is not None:
-                        service.logger.removeHandler(_scheduler_log_handler)
-
-                if service.call_hooks and service.after_handle: # type: ignore
-                    call_hook_no_service(service.after_handle)
+                else:
+                    self._run_handle(service, channel, request_ctx)
 
             except Exception as ex:
                 e = ex
@@ -985,13 +1023,15 @@ class Service:
 
                     # A channel that declares destinations delivers to them here, the one it replies
                     # from going first so that its answer can be the answer the caller gets. A service
-                    # that failed produced nothing to deliver, so nothing is delivered.
+                    # that failed produced nothing to deliver, so nothing is delivered, and neither
+                    # has the hook of a queued channel, whose handle has not run yet.
                     if not e:
-                        destination_result = run_destinations_for_service(service, channel_item)
+                        if not is_queue_response_only:
+                            destination_result = run_destinations_for_service(service, channel_item)
 
-                        if destination_result:
-                            if destination_result.has_response:
-                                service.response.payload = destination_result.response
+                            if destination_result:
+                                if destination_result.has_response:
+                                    service.response.payload = destination_result.response
 
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
@@ -1383,6 +1423,12 @@ class Service:
     def after_handle(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked right after the actual service has been invoked, regardless
         of whether the service raised an exception or not.
+        """
+
+    def get_queue_response(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
+        """ Invoked by a channel whose queue is on, once the request is stored in the queue and before handle runs,
+        to shape the response the caller gets - self.request is the caller's request and self.request.queue.msg_id
+        is the id of the message just stored.
         """
 
     def finalize_handle(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore

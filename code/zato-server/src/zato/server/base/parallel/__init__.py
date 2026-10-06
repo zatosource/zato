@@ -2103,9 +2103,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. actually set up the configuration ..
         self.set_up_config(self) # type: ignore
 
+        # .. the AMQP connectors are built anew below, so the ones running now stop first,
+        # or their consumers would keep reading from the queues alongside the new ones ..
+        self.config_manager.amqp_stop_all()
+
         # .. now reload it ..
         self.config_manager.init()
         self.config_manager.init_pubsub()
+
+        # .. the new AMQP consumers read the service to invoke from freshly built configs,
+        # so the topics backed by an AMQP channel point them at the pub/sub bridge again ..
+        self.config_manager._sync_pubsub_topics()
 
         # .. MCP gateways are skipped in init_generic_connections, and by the time
         # a config reload runs, all services are already deployed, so their wrappers

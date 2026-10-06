@@ -32,7 +32,7 @@ from orjson import dumps
 from zato.common.ext.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, AS4 as COMMON_AS4, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     HTTP_SOAP, PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+     HTTP_SOAP, PARAMS_PRIORITY, PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
@@ -2229,6 +2229,7 @@ class ConfigManager(_ConfigManagerBase):
             'channel': channel,
             'payload': payload,
             'data_format': kwargs.get('data_format'),
+            'transport': kwargs.get('transport'),
             'service': service,
             'cid': cid,
             'is_async': kwargs.get('is_async'),
@@ -2236,6 +2237,9 @@ class ConfigManager(_ConfigManagerBase):
             'zato_ctx': kwargs.get('zato_ctx'),
             'request_ctx': kwargs.get('request_ctx'),
             'channel_item': kwargs.get('channel_item'),
+            'channel_params': kwargs.get('channel_params'),
+            'url_match': kwargs.get('url_match'),
+            'zato_response_headers_container': kwargs.get('zato_response_headers_container'),
         }, channel, '', needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
 
 # ################################################################################################################################
@@ -2268,6 +2272,21 @@ class ConfigManager(_ConfigManagerBase):
         if extra_request_ctx:
             request_ctx.update(extra_request_ctx)
 
+        # A caller that invokes on behalf of a channel, e.g. the queue of an HTTP channel, hands over the channel's
+        # item and the parameters its request carried, so the service reads them as it would in a direct invocation
+        channel_item = msg.get('channel_item')
+        if channel_item is not None:
+            request_ctx['zato.channel_item'] = channel_item
+            merge_channel_params = channel_item['merge_url_params_req']
+            params_priority = channel_item['params_pri']
+        else:
+            merge_channel_params = True
+            params_priority = PARAMS_PRIORITY.DEFAULT
+
+        channel_params = msg.get('channel_params')
+        if channel_params is None:
+            channel_params = {}
+
         data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')
 
@@ -2288,7 +2307,10 @@ class ConfigManager(_ConfigManagerBase):
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.config_dispatcher, self, cid,
             job_type=msg.get('job_type'), request_ctx=request_ctx,
-            environ=msg.get('environ'))
+            environ=msg.get('environ'),
+            url_match=msg.get('url_match'), channel_params=channel_params,
+            merge_channel_params=merge_channel_params, params_priority=params_priority,
+            zato_response_headers_container=msg.get('zato_response_headers_container'))
 
         if skip_response_elem:
             response = dumps(response)

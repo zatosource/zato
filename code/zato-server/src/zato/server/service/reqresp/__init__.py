@@ -165,6 +165,19 @@ class AMQPRequestData:
 
 # ################################################################################################################################
 
+class QueueRequestData:
+    """ What a service's get_queue_response hook knows about the message a channel with the queue on has just stored.
+    """
+    __slots__ = ('msg_id',)
+
+    def __init__(self) -> 'None':
+        self.msg_id = ''
+
+    def __repr__(self) -> 'str':
+        return make_repr(self)
+
+# ################################################################################################################################
+
 class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
@@ -173,7 +186,7 @@ class Request:
 
     __slots__ = ('service', 'logger', 'payload', 'raw', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_request_ctx', 'channel_params',
-        'merge_channel_params', 'http', 'amqp', 'soap', 'enforce_string_encoding', 'headers', '_edifact')
+        'merge_channel_params', 'http', 'amqp', 'soap', 'queue', 'enforce_string_encoding', 'headers', '_edifact')
 
     def __init__(
         self,
@@ -195,6 +208,9 @@ class Request:
         self.merge_channel_params = True
         self.amqp = cast_('AMQPRequestData', None)
         self.soap = None # type: any_
+
+        # The message a channel with the queue on stored, empty in every other invocation
+        self.queue = QueueRequestData()
 
         # Message headers from queue bridge channels (e.g. IBM MQ MQMD and MQRFH2 fields)
         self.headers = {} # type: stranydict

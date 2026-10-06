@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.cli.enmasse.util.delivery import Delivery_Fields
+from zato.cli.enmasse.util.delivery import Channel_Delivery_Fields, Delivery_Fields
 from zato.cli.enmasse.util.invocation import Health_Check_Fields, Invocation_Order_Fields_REST, Invocation_Order_Fields_SOAP, \
     Retry_Fields
 from zato.common.api import MCP
@@ -107,15 +107,15 @@ _object_order['on_prem_gateway'] = 'name', 'is_active', 'hosts:list',
 _object_order['quota_tier'] = 'name', 'description', 'rules:list',
 _object_order['groups']     = 'name', 'quota_tier', 'members:list',
 
-_object_order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'method', \
+_object_order['channel_rest'] = ('name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'method', \
     'content_type', 'timeout', 'is_audit_log_active', 'is_audit_export_payload_active', 'should_include_in_openapi', \
     'gateway_service_list:list', \
     'groups:list', \
-    'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor', \
-    'alerts:dict',
-_object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
+    'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor') + \
+    Channel_Delivery_Fields + ('alerts:dict',)
+_object_order['channel_soap'] = ('name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
     'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', 'is_audit_export_payload_active', \
-    'groups:list', 'rate_limiting:list', 'response_cache:dict', 'alerts:dict',
+    'groups:list', 'rate_limiting:list', 'response_cache:dict') + Channel_Delivery_Fields + ('alerts:dict',)
 
 _object_order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'content_type', \
     'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active', 'is_audit_export_payload_active') + Retry_Fields + Delivery_Fields + \

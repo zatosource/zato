@@ -1,0 +1,182 @@
+pubsub_topic:
+
+  # Where the channel that forwards its DLQ messages sends them
+  - name: test.queue-delivery.forwarded
+
+channel_soap:
+
+  # The switch off - the service runs as the request arrives and its own response goes back, nothing reaches a queue
+  - name: test.queue-delivery.channel.plain
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/plain
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    is_audit_log_active: true
+
+  # The switch on with a couple of quick retries and no DLQ - the channel most tests call, whose messages stay
+  # at the head of the queue for as long as the service refuses them, which is what the ordering tests rely on
+  - name: test.queue-delivery.channel.orders
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/orders
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    is_audit_log_active: true
+    max_retries: 2
+    retry_sleep_time: 1
+    retry_backoff_threshold: 10
+    retry_backoff_multiplier: 1
+    use_queue: true
+    use_dlq: false
+
+  # The switch on and no retries at all - a message that fails once has exhausted them
+  - name: test.queue-delivery.channel.no-retries
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/no-retries
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    max_retries: 0
+    use_queue: true
+    use_dlq: false
+
+  # The switch on and the DLQ on with the rule leaving messages alone - a message that exhausted its retries
+  # moves to the DLQ and stays there until someone acts on it
+  - name: test.queue-delivery.channel.dlq-keep
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/dlq-keep
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    dlq_action: keep
+
+  # The switch on and the DLQ off - a message that exhausted its retries stays at the head of the queue
+  - name: test.queue-delivery.channel.no-dlq
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/no-dlq
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    use_dlq: false
+
+  # The DLQ rule puts a message back into the queue, a couple of times, quickly
+  - name: test.queue-delivery.channel.dlq-retry
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/dlq-retry
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    dlq_action: retry
+    dlq_retries: 2
+    dlq_retry_interval: 1
+
+  # The DLQ rule forwards a message to a topic, with its DLQ header
+  - name: test.queue-delivery.channel.dlq-forward
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/dlq-forward
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    dlq_action: forward
+    dlq_retry_interval: 1
+    dlq_forward_to: test.queue-delivery.forwarded
+
+  # The DLQ rule discards a message
+  - name: test.queue-delivery.channel.dlq-discard
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/dlq-discard
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    max_retries: 1
+    retry_sleep_time: 1
+    use_queue: true
+    dlq_action: discard
+    dlq_retry_interval: 1
+
+  # A static response that is a JSON document
+  - name: test.queue-delivery.channel.static
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/static
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    use_queue: true
+    use_dlq: false
+    queue_response: '{"accepted": true, "source": "static"}'
+
+  # A static response that is an XML document
+  - name: test.queue-delivery.channel.static-xml
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/static-xml
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    use_queue: true
+    use_dlq: false
+    queue_response: '<ack><accepted>true</accepted></ack>'
+
+  # A static response that is plain text
+  - name: test.queue-delivery.channel.static-text
+    service: test.queue-delivery.channel.target
+    url_path: /soap/channel/static-text
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    use_queue: true
+    use_dlq: false
+    queue_response: ACCEPTED
+
+  # The service overrides get_queue_response
+  - name: test.queue-delivery.channel.hooked
+    service: test.queue-delivery.channel.hooked
+    url_path: /soap/channel/hooked
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    use_queue: true
+    use_dlq: false
+
+  # The service overrides get_queue_response and the channel has a static response too - the hook wins
+  - name: test.queue-delivery.channel.hooked-static
+    service: test.queue-delivery.channel.hooked
+    url_path: /soap/channel/hooked-static
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    use_queue: true
+    use_dlq: false
+    queue_response: '{"accepted": true, "source": "static"}'
+
+  # The service's hook sleeps before it answers while handle runs alongside it
+  - name: test.queue-delivery.channel.slow-hook
+    service: test.queue-delivery.channel.slow-hook
+    url_path: /soap/channel/slow-hook
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    use_queue: true
+    use_dlq: false
+
+  # The service counts its instantiations and has no hook until a redeploy gives it one
+  - name: test.queue-delivery.channel.counting
+    service: test.queue-delivery.channel.counting
+    url_path: /soap/channel/counting
+    data_format: xml
+    soap_action: urn:test:queue-delivery:submit
+    soap_version: "1.1"
+    use_queue: true
+    use_dlq: false

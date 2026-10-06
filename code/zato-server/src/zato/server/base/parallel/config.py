@@ -11,7 +11,7 @@ from contextlib import closing
 from logging import getLogger
 
 # Zato
-from zato.common.api import GENERIC
+from zato.common.api import GENERIC, HTTP_SOAP
 from zato.common.ext.bunch import Bunch
 from zato.common.const import SECRETS
 from zato.common.ext_db.api import get_ext_db_session, get_ext_http_soap_list, is_ext_db_configured, \
@@ -19,8 +19,10 @@ from zato.common.ext_db.api import get_ext_db_session, get_ext_http_soap_list, i
 from zato.common.json_internal import loads
 from zato.common.odb.query import http_soap_list
 from zato.common.odb.query.generic import connection_list
+from zato.common.pubsub.outgoing import http_soap_inbound_types
 from zato.common.typing_ import cast_
 from zato.common.util.config import resolve_name
+from zato.common.util.delivery_config import apply_delivery_defaults
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target, resolve_match_slash
 from zato.server.config import ConfigDict
@@ -39,6 +41,8 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+_queue = HTTP_SOAP.Queue
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -280,6 +284,14 @@ class ConfigLoader:
             # built out of it here, so both find the same thing.
             if channel.get('http_accept') is None:
                 channel['http_accept'] = ''
+
+            # REST and SOAP channels carry the queue switch, the retry and DLQ settings and the static queue response,
+            # at their defaults for a channel written before the settings existed, such as the ones a cluster is born with.
+            if channel['transport'] in http_soap_inbound_types:
+                apply_delivery_defaults(channel)
+
+                if channel.get(_queue.Field_Queue_Response) is None:
+                    channel[_queue.Field_Queue_Response] = _queue.Default_Queue_Response
 
             channel['match_target'] = get_match_target(channel, http_methods_allowed_re=self.http_methods_allowed_re)
 

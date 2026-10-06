@@ -10,6 +10,7 @@
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
@@ -667,7 +668,25 @@ test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections, live, 
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery: test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp ## Queue delivery of every kind of outgoing connection.
+test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a SQLite ODB, then live on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_channel_rest.py \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_channel_rest/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_channel_rest \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-queue-delivery-channel-soap: ## The queue of SOAP channels - enmasse with a SQLite ODB, then live on every pub/sub backend.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_channel_soap.py \
+		$(CURDIR)/code/tests/python/zato-server/queue_delivery_channel_soap/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_channel_soap \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-queue-delivery: test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp test-queue-delivery-channel-rest test-queue-delivery-channel-soap ## Queue delivery of every kind of outgoing connection and of REST and SOAP channels.
 
 test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level load and mass recovery.
 	$(Zato_Log_Reset)

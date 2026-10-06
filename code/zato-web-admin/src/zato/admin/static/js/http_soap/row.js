@@ -206,14 +206,16 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format('<td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{0}/?cluster={1}">Cache</a></td>', item.id, cluster_id);
     }
 
-    /* Audit log (REST and SOAP channels, REST outgoing connections) */
+    /* Audit log (REST and SOAP channels, REST outgoing connections) and the Delivery queue link */
     if(is_channel && !is_soap) {
         row += String.format('<td><a href="/zato/audit-log/?source=rest-channel&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
         row += String.format('<td><a href="/zato/channel-usage/?sources=rest-channel&objects={0}&cluster={1}">Usage</a></td>', encodeURIComponent(item.name), cluster_id);
+        row += $.fn.zato.delivery_tab.link_cell('rest-channel', item, cluster_id);
     }
 
     if(is_channel && is_soap) {
         row += String.format('<td><a href="/zato/audit-log/?source=soap-channel&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
+        row += $.fn.zato.delivery_tab.link_cell('soap-channel', item, cluster_id);
     }
 
     if(is_outgoing && !is_soap) {
@@ -264,8 +266,10 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         $.each(invocation_fields, function(ignored, name) {
             row += String.format("<td class='ignore'>{0}</td>", item[name] ? item[name] : '');
         });
+    }
 
-        /* 41 - the Delivery tab */
+    /* 41 - the Delivery tab of REST outgoing connections and of REST and SOAP channels */
+    if($.fn.zato.http_soap.has_delivery_tab()) {
         row += $.fn.zato.delivery_tab.row_cells(item);
     }
 

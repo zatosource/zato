@@ -285,10 +285,9 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
     }
     else if($.fn.zato.http_soap.is_rest_outgoing()) {
 
-        // An outgoing connection's Alerts and Delivery tab lines are described next to its own fields
+        // An outgoing connection's Alerts tab lines are described next to its own fields
         descriptions = $.extend({},
             $.fn.zato.http_soap.rest_outgoing_field_descriptions,
-            $.fn.zato.delivery_tab.descriptions(),
             $.fn.zato.alerts_tab.descriptions());
         fieldSelector = 'table.form-data tr, .decision-line';
     }
@@ -302,6 +301,11 @@ $.fn.zato.http_soap.init_how_it_works = function(action) {
     }
     else {
         return;
+    }
+
+    // The Delivery tab's lines are described wherever the page carries the tab
+    if($.fn.zato.http_soap.has_delivery_tab()) {
+        descriptions = $.extend(descriptions, $.fn.zato.delivery_tab.descriptions());
     }
 
     $.fn.zato.how_it_works.init({
@@ -324,7 +328,9 @@ $.fn.zato.http_soap.create = function(object_type) {
     if($.fn.zato.http_soap.is_rest_outgoing()) {
         $.fn.zato.http_soap.populate_param_rows('create');
         $.fn.zato.http_soap.toggle_callback('create');
+    }
 
+    if($.fn.zato.http_soap.has_delivery_tab()) {
         $.fn.zato.delivery_tab.bind({
             panel_id: 'http-soap-create-tab-panel-delivery',
             field_prefix: '',
@@ -369,8 +375,10 @@ $.fn.zato.http_soap.edit = function(id) {
 
         // The health check line of the Alerts tab reads its hidden inputs, populated the same way
         $.fn.zato.health_check.populate('edit', item);
+    }
 
-        // The Delivery tab reads the form the item was populated into
+    // The Delivery tab reads the form the item was populated into
+    if($.fn.zato.http_soap.has_delivery_tab()) {
         $.fn.zato.delivery_tab.bind({
             panel_id: 'http-soap-edit-tab-panel-delivery',
             field_prefix: 'edit-',

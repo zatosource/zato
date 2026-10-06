@@ -298,6 +298,13 @@ class Connector:
 
 # ################################################################################################################################
 
+    def request_stop(self) -> 'None':
+        """ Tells the connector to begin winding down without waiting for it to finish - subclasses with consumers
+        of their own flag them here so that a subsequent .stop finds them already finished.
+        """
+
+# ################################################################################################################################
+
     def get_conn_report(self) -> 'None':
         raise NotImplementedError('Needs to be implemented by subclasses')
 

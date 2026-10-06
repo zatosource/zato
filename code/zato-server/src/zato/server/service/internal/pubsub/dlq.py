@@ -20,7 +20,7 @@ from zato.common.facade import PubSubFacade
 from zato.common.pubsub.delivery import DeliveryExhausted
 from zato.common.pubsub.dlq import get_dlq_topic_name, Header_Moved_Time, Header_Rounds, Header_Source, Header_Source_Topic, \
     Key_DLQ, move_to_dlq, parse_dlq_sub_key, strip_dlq_header
-from zato.common.pubsub.outgoing import Attempts_None, deliver_envelope, find_outgoing_conn, get_dlq_settings, is_inbound, \
+from zato.common.pubsub.outgoing import Attempts_None, deliver_envelope, find_outgoing_conn, get_dlq_settings, has_queue, \
     Key_Attempts, Key_CID, Key_DLQ_Rounds, Key_Request, locate_outgoing_conn, OutgoingPublisher
 from zato.common.util.time_ import utcnow
 from zato.server.service import Bool
@@ -128,7 +128,8 @@ class _RetryMixin(_DLQService):
         rounds = header[Header_Rounds] + 1
         envelope = strip_dlq_header(document)
 
-        if is_inbound(conn_type):
+        # A connection type without a queue has its service invoked right here.
+        if not has_queue(conn_type):
             out = self._retry_inbound(sub_key, msg_id, envelope, header, rounds)
             return out
 

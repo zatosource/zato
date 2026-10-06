@@ -12,8 +12,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.cli.enmasse.util.common import assign_security, get_engine_from_type, get_non_default_response_cache, \
     get_type_from_engine, get_value_from_environment, preprocess_item, Renamed_Keys, security_needs_update, \
     SQL_Default_Pool_Size, SQL_TYPE_MAP
-from zato.cli.enmasse.util.delivery import delivery_needs_update, Delivery_Fields, export_delivery_fields, \
-    prepare_delivery_fields
+from zato.cli.enmasse.util.delivery import Channel_Delivery_Fields, channel_delivery_needs_update, delivery_needs_update, \
+    Delivery_Fields, export_channel_delivery_fields, export_delivery_fields, prepare_channel_delivery_fields, \
+    prepare_delivery_fields, take_channel_delivery_attrs
 from zato.cli.enmasse.util.invocation import as_row_list, export_invocation_fields, export_retry_fields, \
     Invocation_Fields_REST, Invocation_Fields_SOAP, Invocation_Row_Fields, Retry_Fields, serialize_invocation_rows, \
     sync_invocation_jobs
@@ -26,8 +27,11 @@ from zato.cli.enmasse.util.writer import FileWriter
 # For flake8
 assign_security = assign_security
 as_row_list = as_row_list
+Channel_Delivery_Fields = Channel_Delivery_Fields
+channel_delivery_needs_update = channel_delivery_needs_update
 delivery_needs_update = delivery_needs_update
 Delivery_Fields = Delivery_Fields
+export_channel_delivery_fields = export_channel_delivery_fields
 export_delivery_fields = export_delivery_fields
 export_invocation_fields = export_invocation_fields
 export_retry_fields = export_retry_fields
@@ -42,6 +46,7 @@ get_value_from_environment = get_value_from_environment
 Invocation_Fields_REST = Invocation_Fields_REST
 Invocation_Fields_SOAP = Invocation_Fields_SOAP
 Invocation_Row_Fields = Invocation_Row_Fields
+prepare_channel_delivery_fields = prepare_channel_delivery_fields
 prepare_delivery_fields = prepare_delivery_fields
 preprocess_item = preprocess_item
 Renamed_Keys = Renamed_Keys
@@ -51,6 +56,7 @@ serialize_invocation_rows = serialize_invocation_rows
 SQL_Default_Pool_Size = SQL_Default_Pool_Size
 SQL_TYPE_MAP = SQL_TYPE_MAP
 sync_invocation_jobs = sync_invocation_jobs
+take_channel_delivery_attrs = take_channel_delivery_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################

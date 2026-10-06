@@ -418,11 +418,11 @@ class SecurityImporter:
         security_def = dict(security_def)
 
         # A definition whose type has a password gets a generated one if the YAML gives none,
-        # and whichever it is, it is stored encrypted.
+        # or names an environment variable that is not set, and whichever it is, it is stored encrypted.
         if sec_type in _types_with_password:
             password = security_def.get('password')
 
-            if not password:
+            if not is_usable_secret(password):
                 password = Auto_Password_Prefix + CryptoManager.generate_hex_string(_auto_password_bits)
 
             security_def['password'] = encrypt_secret(session, password)

@@ -49,6 +49,25 @@ class AMQP(ConfigManagerImpl):
 
 # ################################################################################################################################
 
+    def amqp_stop_all(
+        self:'ConfigManager', # type: ignore
+    ) -> 'None':
+        """ Stops every AMQP connector along with its consumers and producers, which is what has to happen before
+        the connectors are built anew from the configuration, or the consumers that exist now would keep reading
+        from their queues alongside the new ones.
+        """
+        connectors = list(self.amqp_api.connectors.values())
+
+        # Every consumer is told to stop first, so they all wind down within one drain timeout ..
+        for connector in connectors:
+            connector.request_stop()
+
+        # .. and only then is each connector stopped and removed, which is where the waiting happens.
+        for connector in connectors:
+            _ = self.amqp_api.delete(connector.name)
+
+# ################################################################################################################################
+
     def on_config_event_OUTGOING_AMQP_CREATE(
         self:'ConfigManager', # type: ignore
         msg:'Bunch',

@@ -16,8 +16,8 @@ from traceback import format_exc
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
-from zato.common.pubsub.outgoing import Direction_In, Direction_Out, get_direction, get_outgoing_topic_name, is_dlq_active, \
-    is_inbound, Key_CID, Key_Conn_ID, Key_Conn_Name, Key_Conn_Type, Key_DLQ_Rounds, Key_Msg_ID, Key_Pub_Time, \
+from zato.common.pubsub.outgoing import Direction_In, Direction_Out, get_direction, get_outgoing_topic_name, has_queue, \
+    is_dlq_active, Key_CID, Key_Conn_ID, Key_Conn_Name, Key_Conn_Type, Key_DLQ_Rounds, Key_Msg_ID, Key_Pub_Time, \
     locate_outgoing_conn
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
@@ -189,9 +189,9 @@ def move_to_dlq(
     config_manager = server.config_manager
     dlq_topic_name, current_name = config_manager.ensure_outgoing_dlq(conn_type, conn_id)
 
-    # A channel has no queue of its own.
+    # A connection type without a queue of its own has no source topic to name.
     if not source_topic:
-        if not is_inbound(conn_type):
+        if has_queue(conn_type):
             source_topic = get_outgoing_topic_name(conn_type, current_name)
 
     document = dict(envelope)

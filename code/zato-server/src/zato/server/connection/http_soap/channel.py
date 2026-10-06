@@ -19,7 +19,7 @@ from traceback import format_exc
 from typing import NamedTuple
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, MISC, SEC_DEF_TYPE, IO, \
+from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, SEC_DEF_TYPE, IO, \
     TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.hl7.audit import get_wire_attrs, get_wire_msa_control_id
@@ -51,6 +51,7 @@ from zato.server.connection.ccda import CCDAFacade
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.connection.http_soap import response_cache
 from zato.server.connection.http_soap.cors import add_cors_response_headers, handle_preflight_request, is_allowed_origin
+from zato.server.connection.http_soap.channel_queue import QueuedChannelHandler
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
     parse_soap_request, resolve_soap_payload
 from zato.server.groups.ctx import SecurityGroupsCtx
@@ -106,6 +107,7 @@ _default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
 _http_options = 'OPTIONS'
+_queue = HTTP_SOAP.Queue
 
 # ################################################################################################################################
 
@@ -1561,6 +1563,7 @@ class RequestHandler:
     """
     def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
+        self.queued_handler = QueuedChannelHandler(server, self._set_response_data, self._get_flattened)
 
 # ################################################################################################################################
 
@@ -1649,11 +1652,8 @@ class RequestHandler:
     ) -> 'any_':
         """ Create a new instance of a service and invoke it.
         """
-        service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
-        if not is_active:
-            logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
-            raise NotFound(cid, response_404.format(
-                path_info, request_ctx.get('REQUEST_METHOD'), request_ctx.get('HTTP_ACCEPT'), cid))
+        service_store = self.server.service_store
+        impl_name = channel_item.service_impl_name
 
         # Add any path params matched to the request context so it can be easily accessible later on
         request_ctx['zato.http.path_params'] = url_match
@@ -1683,7 +1683,24 @@ class RequestHandler:
                 else:
                     raise
 
-        # Invoke the service ..
+        # A channel whose queue is on stores the request and acknowledges it instead of invoking the service now -
+        # the service is not even instantiated here unless it has the hook that shapes the response ..
+        if channel_item[_queue.Field_Use_Queue]:
+            service_data = service_store.service_data(impl_name)
+            service_class = service_data['service_class']
+
+            if not service_data['is_active']:
+                self._raise_inactive(cid, service_class.get_name(), path_info, request_ctx)
+
+            out = self.queued_handler.handle(cid, service_class, payload, raw_request, url_match, channel_item, request_ctx,
+                config_manager, channel_params, zato_response_headers_container)
+            return out
+
+        service, is_active = service_store.new_instance(impl_name)
+        if not is_active:
+            self._raise_inactive(cid, service.get_name(), path_info, request_ctx)
+
+        # .. otherwise, invoke the service ..
         response = service.update_handle(self._set_response_data, service, payload,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
             cast_('ConfigDispatcher', config_manager.config_dispatcher),
@@ -1695,6 +1712,15 @@ class RequestHandler:
 
         # .. and return it to the caller.
         return response
+
+# ################################################################################################################################
+
+    def _raise_inactive(self, cid:'str', service_name:'str', path_info:'str', request_ctx:'stranydict') -> 'None':
+        """ An inactive service is not there as far as the caller is concerned.
+        """
+        logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service_name, cid)
+        raise NotFound(cid, response_404.format(
+            path_info, request_ctx.get('REQUEST_METHOD'), request_ctx.get('HTTP_ACCEPT'), cid))
 
 # ################################################################################################################################
 

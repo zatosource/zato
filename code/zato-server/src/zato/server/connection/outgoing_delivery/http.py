@@ -12,10 +12,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from urllib.parse import urlencode
 
 # Zato
-from zato.common.api import HTTP_SOAP
-from zato.common.pubsub.outgoing import Body_Mode_JSON, Body_Mode_XML, detect_body_mode, Key_Data, Key_Headers, Key_Method, \
-    Key_Operation, Key_Params, Key_Path, OutgoingInvoker, OutgoingPage
+from zato.common.api import CHANNEL, HTTP_SOAP, URL_TYPE
+from zato.common.pubsub.outgoing import Body_Mode_JSON, Body_Mode_XML, detect_body_mode, encode_payload, Key_Data, \
+    Key_Data_Format, Key_Headers, Key_Method, Key_Operation, Key_Params, Key_Path, Key_Path_Params, Key_Service, \
+    Key_Transport, OutgoingInvoker, OutgoingPage
+from zato.common.soap.common import SOAP_Action_Header
 from zato.common.util.retry import RetryPolicy
+from zato.server.connection.http_soap.channel_queue import build_delivery_request_ctx
+from zato.server.connection.http_soap.channel_soap import parse_soap_request, resolve_soap_payload
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +42,12 @@ _fact_content_type = 'Content type'
 _fact_headers      = 'Headers'
 _fact_soap_headers = 'SOAP headers'
 _fact_query_string = 'Query string'
+_fact_path_params  = 'Path parameters'
+_fact_data_format  = 'Data format'
+
+# The WSGI keys a channel's queued request carries its content type and its SOAP action under
+_wsgi_content_type = 'CONTENT_TYPE'
+_soap_action_header_key = 'HTTP_{}'.format(SOAP_Action_Header.upper())
 
 # What a FHIR connection sends, which is always this
 _fhir_content_type = 'application/json'
@@ -182,7 +192,14 @@ def get_http_retry_policy(wrapper:'any_') -> 'RetryPolicy':
 def get_http_dlq_settings(wrapper:'any_') -> 'stranydict':
     """ The DLQ settings of an outgoing REST, SOAP, FHIR or MLLP connection, with defaults filled in.
     """
-    config = wrapper.config
+    out = _dlq_settings_from_config(wrapper.config)
+    return out
+
+# ################################################################################################################################
+
+def _dlq_settings_from_config(config:'stranydict') -> 'stranydict':
+    """ The DLQ settings one config carries, with defaults filled in for the fields it does not say.
+    """
     out = {}
 
     for field, default in _dlq_defaults.items():
@@ -342,6 +359,146 @@ fhir_page = OutgoingPage()
 fhir_page.destination = get_fhir_destination
 fhir_page.details_facts = get_fhir_details_facts
 fhir_page.body_mode = get_fhir_body_mode
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _locate_http_channel(server:'ParallelServer', transport:'str', conn_id:'int') -> 'anytuple':
+    """ A REST or SOAP channel by its id, as its name and its channel item - the item stands where an outgoing
+    connection's wrapper does, the service reads it as self.channel.config.
+    """
+    url_data = server.config_manager.request_dispatcher.url_data
+
+    for item in url_data.channel_data:
+        if item['transport'] == transport:
+            if item['id'] == conn_id:
+                out = (item['name'], item)
+                return out
+
+    return ()
+
+# ################################################################################################################################
+
+def locate_rest_channel(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ A REST channel by its id, as its name and its channel item.
+    """
+    out = _locate_http_channel(server, URL_TYPE.PLAIN_HTTP, conn_id)
+    return out
+
+# ################################################################################################################################
+
+def locate_soap_channel(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ A SOAP channel by its id, as its name and its channel item.
+    """
+    out = _locate_http_channel(server, URL_TYPE.SOAP, conn_id)
+    return out
+
+# ################################################################################################################################
+
+def deliver_to_http_channel(server:'ParallelServer', cid:'str', channel_item:'any_', request:'stranydict') -> 'None':
+    """ Makes one attempt to run the service of a REST or SOAP channel with a request its queue stored - a full invocation,
+    with the hooks around handle and the destinations after it, and an exception out of it is the failed attempt.
+    """
+    request_ctx = build_delivery_request_ctx(channel_item, request)
+    raw_request = encode_payload(request)
+
+    # A SOAP channel's service reads the operation element as its payload and the envelope's context as self.request.soap,
+    # the same as it would had the request just arrived - the envelope was stored as it came, so it is parsed now.
+    if channel_item['transport'] == URL_TYPE.SOAP:
+
+        # A caller that declared no content type is parsed by the body alone, as it was when the request arrived
+        content_type = request_ctx.get(_wsgi_content_type)
+        if content_type is None:
+            content_type = ''
+
+        soap_action_header = request_ctx.get(_soap_action_header_key)
+
+        soap_context = parse_soap_request(cid, raw_request, content_type, channel_item, soap_action_header)
+        request_ctx['zato.request.soap'] = soap_context
+
+        resolve_soap_payload(cid, soap_context, request_ctx)
+        request_ctx['zato.request.payload'] = soap_context.payload
+
+    # The channel's parameters are built the way the channel builds them for a request that has just arrived
+    request_handler = server.config_manager.request_dispatcher.request_handler
+
+    if channel_item['merge_url_params_req']:
+        channel_params = request_handler.create_channel_params(
+            request[Key_Path_Params], channel_item, request_ctx, raw_request, None)
+    else:
+        channel_params = {}
+
+    _ = server.invoke(
+        request[Key_Service],
+        raw_request,
+        channel=CHANNEL.HTTP_SOAP,
+        data_format=request[Key_Data_Format],
+        transport=request[Key_Transport],
+        request_ctx=request_ctx,
+        channel_params=channel_params,
+        url_match=request[Key_Path_Params],
+        channel_item=channel_item,
+        cid=cid,
+        zato_response_headers_container={},
+    )
+
+# ################################################################################################################################
+
+def get_channel_retry_policy(channel_item:'any_') -> 'RetryPolicy':
+    """ The retry policy of a REST or SOAP channel's queue - the channel item carries the same fields an outgoing
+    connection's config does.
+    """
+    out = RetryPolicy.from_config(channel_item, _retry)
+    return out
+
+# ################################################################################################################################
+
+def get_channel_dlq_settings(channel_item:'any_') -> 'stranydict':
+    """ The DLQ settings of a REST or SOAP channel's queue, with defaults filled in.
+    """
+    out = _dlq_settings_from_config(channel_item)
+    return out
+
+# ################################################################################################################################
+
+def get_http_channel_destination(channel_item:'any_', request:'stranydict') -> 'str':
+    """ Where a channel's queued request goes - the method and the path it arrived at, and the service that runs it.
+    """
+    out = f'{request[Key_Method]} {request[Key_Path]} -> {request[Key_Service]}'
+    return out
+
+# ################################################################################################################################
+
+def get_http_channel_details_facts(request:'stranydict') -> 'dictlist':
+    """ The request facts the details window lists of a channel's queued request.
+    """
+    content_type = get_http_content_type(request)
+
+    out = [
+        {'label': _fact_method, 'value': request[Key_Method]},
+        {'label': _fact_path, 'value': request[Key_Path]},
+        {'label': _fact_path_params, 'value': request[Key_Path_Params]},
+        {'label': _fact_query_string, 'value': request[Key_Params]},
+        {'label': _fact_content_type, 'value': content_type},
+        {'label': _fact_headers, 'value': request[Key_Headers]},
+        {'label': _fact_data_format, 'value': request[Key_Data_Format]},
+    ]
+
+    return out
+
+# ################################################################################################################################
+
+# What the delivery page shows of a REST channel's queued requests
+rest_channel_page = OutgoingPage()
+rest_channel_page.destination = get_http_channel_destination
+rest_channel_page.details_facts = get_http_channel_details_facts
+rest_channel_page.body_mode = get_http_body_mode
+
+# What the delivery page shows of a SOAP channel's queued requests - the body is the envelope as it arrived
+soap_channel_page = OutgoingPage()
+soap_channel_page.destination = get_http_channel_destination
+soap_channel_page.details_facts = get_http_channel_details_facts
+soap_channel_page.body_mode = get_soap_body_mode
 
 # ################################################################################################################################
 # ################################################################################################################################

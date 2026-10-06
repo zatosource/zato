@@ -14,7 +14,7 @@ from json import dumps, loads
 # Zato
 from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, Header_Error, Header_Moved_Time, Header_Reason, Key_DLQ
 from zato.common.pubsub.outgoing import find_outgoing_conn, get_dlq_settings, get_outgoing_sub_key, get_outgoing_topic_name, \
-    get_page_description, invoker_to_dict, is_inbound, Key_Attempts, Key_CID, Key_Data, Key_DLQ_Rounds, Key_Pub_Time, \
+    get_page_description, has_queue, invoker_to_dict, Key_Attempts, Key_CID, Key_Data, Key_DLQ_Rounds, Key_Pub_Time, \
     Key_Request
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService
@@ -178,10 +178,10 @@ class GetMessageList(_BrowseService):
         conn_name, wrapper = self._get_conn(conn_type, conn_id)
         page = get_page_description(conn_type)
 
-        # A channel has no queue, and a queue on an external pub/sub backend cannot be browsed.
-        has_queue = not is_inbound(conn_type)
+        # A queue on an external pub/sub backend cannot be browsed.
+        conn_has_queue = has_queue(conn_type)
 
-        if has_queue:
+        if conn_has_queue:
             topic_name = get_outgoing_topic_name(conn_type, conn_name)
             topic_backend = self.server.config_manager.get_pubsub_topic_backend(topic_name)
             is_queue_browsable = topic_backend is None
@@ -220,7 +220,7 @@ class GetMessageList(_BrowseService):
             items.append(_to_row(msg_id, document, destination))
 
         # The depths of both tabs go along with either
-        if has_queue:
+        if conn_has_queue:
             queue_sub_key = get_outgoing_sub_key(conn_type, conn_id)
             queue_depth = self.server.config_manager.outgoing_queue_depth.get(queue_sub_key)
         else:
@@ -233,7 +233,7 @@ class GetMessageList(_BrowseService):
 
         self.response.payload = {
             'conn_name': conn_name,
-            'has_queue': has_queue,
+            'has_queue': conn_has_queue,
             'is_queue_browsable': is_queue_browsable,
             'queue_depth': queue_depth,
             'dlq_depth': dlq_depth,

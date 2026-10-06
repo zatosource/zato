@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from base64 import b64decode, b64encode
 from dataclasses import dataclass
 from json import dumps
 from logging import getLogger
@@ -56,7 +57,7 @@ Key_DLQ_Rounds = 'dlq_rounds'
 Key_Request    = 'request'
 
 # The keys of the request part - an HTTP type stores a method, a SOAP type an operation, a FHIR type a method and a path,
-# a Kafka type a key and a partition, a Kafka channel a service
+# a Kafka type a key and a partition, a Kafka channel a service, an HTTP channel a service with the request it received
 Key_Method    = 'method'
 Key_Operation = 'operation'
 Key_Path      = 'path'
@@ -67,6 +68,9 @@ Key_Key          = 'key'
 Key_Partition    = 'partition'
 Key_Is_Tombstone = 'is_tombstone'
 Key_Service      = 'service'
+Key_Data_Format  = 'data_format'
+Key_Path_Params  = 'path_params'
+Key_Transport    = 'transport'
 
 # Whether the data is base64 text
 Key_Is_Base64 = 'is_base64'
@@ -96,6 +100,9 @@ audit_disabled_conn_types:'strset' = set()
 
 # The direction of each connection type
 conn_directions:'strdict' = {}
+
+# Connection types that have a DLQ but no queue of their own
+queue_less_conn_types:'strset' = set()
 
 # The Ace modes a message's body is shown in
 Body_Mode_JSON = 'json'
@@ -128,11 +135,19 @@ class InboundType:
     """ The kinds of channel whose failed messages have a DLQ.
     """
     KAFKA = 'kafka-channel'
+    REST  = 'rest-channel'
+    SOAP  = 'soap-channel'
 
 # Which kind of outgoing connection an HTTP/SOAP connection is, by its transport
 http_soap_outgoing_types = {
     URL_TYPE.PLAIN_HTTP: OutgoingType.REST,
     URL_TYPE.SOAP: OutgoingType.SOAP,
+}
+
+# Which kind of channel an HTTP/SOAP channel is, by its transport
+http_soap_inbound_types = {
+    URL_TYPE.PLAIN_HTTP: InboundType.REST,
+    URL_TYPE.SOAP: InboundType.SOAP,
 }
 
 # ################################################################################################################################
@@ -273,6 +288,7 @@ def register_outgoing_conn_type(
     dlq_settings:'callable_ | None'=None,
     page:'OutgoingPage | None'=None,
     direction:'str'=Direction_Out,
+    has_queue:'bool'=True,
     ) -> 'None':
     """ Registers one type of connection with its locator, handler, retry policy, DLQ settings and what
     the delivery page shows of its messages.
@@ -280,6 +296,9 @@ def register_outgoing_conn_type(
     conn_locators[conn_type] = locator
     delivery_handlers[conn_type] = handler
     conn_directions[conn_type] = direction
+
+    if not has_queue:
+        queue_less_conn_types.add(conn_type)
 
     if retry_policy:
         retry_policy_builders[conn_type] = retry_policy
@@ -307,6 +326,40 @@ def is_inbound(conn_type:'str') -> 'bool':
     """ Whether one connection type is a channel.
     """
     out = get_direction(conn_type) == Direction_In
+    return out
+
+# ################################################################################################################################
+
+def has_queue(conn_type:'str') -> 'bool':
+    """ Whether one connection type has a queue of its own in front of its deliveries.
+    """
+    out = conn_type not in queue_less_conn_types
+    return out
+
+# ################################################################################################################################
+
+def decode_payload(payload:'bytes') -> 'anytuple':
+    """ A message's payload as the text an envelope stores and whether that text is base64.
+    """
+    try:
+        out = (payload.decode('utf8'), False)
+    except UnicodeDecodeError:
+        out = (b64encode(payload).decode('ascii'), True)
+
+    return out
+
+# ################################################################################################################################
+
+def encode_payload(request:'stranydict') -> 'bytes':
+    """ The bytes a service is invoked with, out of what an envelope stores.
+    """
+    data = request[Key_Data]
+
+    if request[Key_Is_Base64]:
+        out = b64decode(data)
+    else:
+        out = data.encode('utf8')
+
     return out
 
 # ################################################################################################################################

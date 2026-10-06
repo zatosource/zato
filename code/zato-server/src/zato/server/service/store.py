@@ -44,7 +44,8 @@ from zato.common.marshal_.api import Model as DataClassModel
 from zato.common.marshal_.io import DataClassIO
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
-from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
+from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, \
+    visit_py_source
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
 from zato.server.config import ConfigDict
@@ -482,6 +483,9 @@ class ServiceStore:
             class_.has_io = True
         except AttributeError:
             class_.has_io = False
+
+        # A channel with the queue on reads this flag instead of calling the hook to find out if there is one
+        class_.has_get_queue_response = bool(is_func_overridden(class_.get_queue_response))
 
         if class_.has_io:
 

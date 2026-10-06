@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.admin.web import alerts_tab, delivery_tab, from_user_to_utc, from_utc_to_user
+from zato.admin.web.delivery_tab import has_delivery_tab
 from zato.admin.web.forms import health_check_unit_for_form, health_check_unit_to_scheduler
 from zato.admin.web.views import get_security_id_from_select, get_security_groups_from_checkbox_list
 from zato.common.alerting.object_config import get_alert_type
@@ -131,19 +132,21 @@ def get_edit_create_message(params:'any_', prefix:'str'='', user_profile:'any_'=
     if run_unit := message[_health_check.Field_Run_Unit]:
         message[_health_check.Field_Run_Unit] = health_check_unit_to_scheduler[run_unit]
 
-    # The retry fields exist only in the forms of outgoing connections too - they are sent
+    # The retry fields exist in the forms of outgoing connections and of the channels with the Delivery tab - they are sent
     # as integers, with the shared defaults filling in for anything left empty in a form.
-    if params['connection'] == 'outgoing':
+    carries_delivery_tab = has_delivery_tab(params['connection'], params['transport'])
+
+    if params['connection'] == 'outgoing' or carries_delivery_tab:
         for name, default in _retry_field_defaults.items():
             if value := params.get(prefix + name):
                 message[name] = int(value)
             else:
                 message[name] = default
 
-        # The queue switch and the DLQ config exist only in the forms of outgoing REST connections
-        if params['transport'] == URL_TYPE.PLAIN_HTTP:
-            message.update(delivery_tab.get_message_fields(params, prefix))
-            delivery_tab.join_unit_fields(params, prefix, message)
+    # The queue switch and the DLQ config exist only in the forms with the Delivery tab
+    if carries_delivery_tab:
+        message.update(delivery_tab.get_message_fields(params, prefix))
+        delivery_tab.join_unit_fields(params, prefix, message)
 
     # The start date is entered in the user's own timezone and format and it is stored in UTC
     if scheduler_start_date := message['scheduler_start_date']:
@@ -182,17 +185,9 @@ def fill_row_from_item(
     for name in generic_attrs:
         setattr(http_soap, name, item.get(name))
 
-    # The declarative invocation details are opaque attributes so they are absent
-    # from connections that never set them.
-    if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
-        for name in _invocation_field_names:
-            setattr(http_soap, name, item.get(name))
-
-        # The scheduler names the health check's unit in the plural, the form in the singular
-        http_soap[_health_check.Field_Run_Unit] = health_check_unit_for_form(item.get(_health_check.Field_Run_Unit))
-
-        # The retry fields are opaque attributes too - connections that predate them
-        # carry no values, in which case the shared defaults are displayed.
+    # The Delivery tab's fields are opaque attributes - channels and connections that predate them
+    # carry no values, in which case the shared defaults are displayed.
+    if has_delivery_tab(connection, transport):
         for name, default in _retry_field_defaults.items():
             value = item.get(name)
             if value is None:
@@ -201,6 +196,15 @@ def fill_row_from_item(
 
         delivery_tab.fill_row(http_soap, item)
         delivery_tab.split_unit_fields(http_soap)
+
+    # The declarative invocation details are opaque attributes so they are absent
+    # from connections that never set them.
+    if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
+        for name in _invocation_field_names:
+            setattr(http_soap, name, item.get(name))
+
+        # The scheduler names the health check's unit in the plural, the form in the singular
+        http_soap[_health_check.Field_Run_Unit] = health_check_unit_for_form(item.get(_health_check.Field_Run_Unit))
 
         # The start date is stored in UTC and displayed in the user's own timezone and format
         if scheduler_start_date := http_soap.get('scheduler_start_date'):

@@ -12,7 +12,7 @@ import logging
 from sqlalchemy import and_, select
 
 # Zato
-from zato.cli.enmasse.util import get_non_default_response_cache
+from zato.cli.enmasse.util import export_channel_delivery_fields, get_non_default_response_cache
 from zato.cli.enmasse.util.alerts import group_alerts
 from zato.common.alerting.object_config import Alerts_Key, alert_type_channels
 from zato.common.api import CONNECTION, Groups, MISC, URL_TYPE
@@ -173,6 +173,9 @@ class ChannelExporter:
 
                 if deprecation_successor := channel_row.get('deprecation_successor'):
                     exported_channel['deprecation_successor'] = deprecation_successor
+
+            # The queue switch, the retry and DLQ settings and the static queue response, only what differs from the defaults
+            export_channel_delivery_fields(exported_channel, channel_row)
 
             # Alert settings moved away from their defaults travel as one nested mapping
             alerts = group_alerts(channel_row, alert_type_channels)
