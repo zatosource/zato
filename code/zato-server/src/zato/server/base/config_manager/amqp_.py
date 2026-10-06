@@ -13,7 +13,8 @@ from traceback import format_exc
 
 # Zato
 from zato.common.util.api import spawn_greenlet
-from zato.server.base.config_manager.common import ConfigManagerImpl
+from zato.server.base.config_manager.common import _pubsub_amqp_bridge_service, ConfigManagerImpl
+from zato.server.connection.amqp_queue import get_queue_depth
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,7 +46,26 @@ class AMQP(ConfigManagerImpl):
         connector_config = deepcopy(msg)
         connector_config.is_active = True
 
-        self.amqp_api.create(msg.name, connector_config, self.invoke, needs_start=True)
+        self.amqp_api.create(msg.name, connector_config, self.on_amqp_channel_message, needs_start=True)
+
+# ################################################################################################################################
+
+    def on_amqp_channel_message(
+        self:'ConfigManager', # type: ignore
+        service_name:'str',
+        body:'any_',
+        **kwargs:'any_',
+    ) -> 'any_':
+        """ What an AMQP channel's consumer invokes for each message it receives. A channel that a broker-backed topic
+        reads its messages back through hands the message over to pub/sub, every other channel invokes its own service.
+        The decision is made here, per message, so it is never stale - the channel's own configuration is not touched.
+        """
+        channel_name = kwargs['zato_ctx']['zato.channel_item']['name']
+
+        if self.is_pubsub_amqp_channel(channel_name):
+            service_name = _pubsub_amqp_bridge_service
+
+        return self.invoke(service_name, body, **kwargs)
 
 # ################################################################################################################################
 
@@ -65,6 +85,30 @@ class AMQP(ConfigManagerImpl):
         # .. and only then is each connector stopped and removed, which is where the waiting happens.
         for connector in connectors:
             _ = self.amqp_api.delete(connector.name)
+
+# ################################################################################################################################
+
+    def amqp_get_channel_queue_depth(
+        self:'ConfigManager', # type: ignore
+        channel_name:'str',
+    ) -> 'int':
+        """ How many messages wait in the queue an AMQP channel reads from, asked of the broker itself, which is how
+        the depth of a queue that lives in a broker is known before the channel's consumers start taking from it.
+        """
+        channels = self.config_store.channel_amqp.get_config_list()
+
+        for item in channels:
+            if item['name'] == channel_name:
+                channel = item
+                break
+        else:
+            raise ValueError(f'No such AMQP channel `{channel_name}`')
+
+        # The connector decrypts the password in place when it is created, which has not happened yet for this channel
+        password = self.server.decrypt(channel['password'])
+
+        out = get_queue_depth(channel_name, channel['address'], channel['username'], password, channel['queue'])
+        return out
 
 # ################################################################################################################################
 

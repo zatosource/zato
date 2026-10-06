@@ -1872,6 +1872,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         for sub_key in self.config_manager._push_subs:
             self.pubsub_push_delivery.start_sub_key(sub_key)
 
+        # Pub/sub can deliver now, so the AMQP channels that topics in a broker read their messages back through can start
+        self.config_manager.init_pubsub_amqp_channels()
+
         logger.info('PubSub SQL backend started')
 
 # ################################################################################################################################
@@ -2111,9 +2114,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.config_manager.init()
         self.config_manager.init_pubsub()
 
-        # .. the new AMQP consumers read the service to invoke from freshly built configs,
-        # so the topics backed by an AMQP channel point them at the pub/sub bridge again ..
-        self.config_manager._sync_pubsub_topics()
+        # .. pub/sub is up at this point, so the AMQP channels its topics read from start right away ..
+        self.config_manager.init_pubsub_amqp_channels()
 
         # .. MCP gateways are skipped in init_generic_connections, and by the time
         # a config reload runs, all services are already deployed, so their wrappers

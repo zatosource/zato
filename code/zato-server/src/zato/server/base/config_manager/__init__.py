@@ -46,7 +46,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
-from zato.server.base.config_manager.common import ConfigManagerImpl
+from zato.server.base.config_manager.common import _pubsub_amqp_bridge_service, ConfigManagerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.as4 import AS4Wrapper
 from zato.server.connection.cache import CacheAPI
@@ -121,8 +121,8 @@ _needs_details = asbool(os.environ.get('Zato_Needs_Details'))
 
 _pubsub_max_retry_time = 20 # PubSub.Max_Retry_Time
 
-# The service that AMQP channels dispatch to while they are referenced by an AMQP-backed topic
-_pubsub_amqp_bridge_service = 'zato.pubsub.topic.on-amqp-message'
+# Re-exported for the tests and the harnesses that import it from here
+_pubsub_amqp_bridge_service = _pubsub_amqp_bridge_service
 
 # Connection config keys that are not sent to the queue bridge.
 _queue_bridge_skipped_keys = ('conn', 'parent')
@@ -452,6 +452,9 @@ class ConfigManager(_ConfigManagerBase):
         # Create all the expected connections and objects
         self.init_sql()
         self.init_http_soap()
+
+        # Which topics live in a broker, and which AMQP channels read them back, has to be known before the channels start
+        self._load_pubsub_topic_backends()
 
         # AMQP
         self.init_amqp()
@@ -806,19 +809,28 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _create_amqp_channel(self, item:'any_') -> 'None':
+        """ Creates one AMQP channel along with its connector.
+        """
+        name = item['name']
+        try:
+            self.amqp_connection_create(item)
+            self.amqp_api.create_channel(name, item)
+        except Exception:
+            logger.warning('Could not create AMQP channel `%s`, e:`%s`', name, format_exc())
+
+# ################################################################################################################################
+
     def init_amqp(self) -> 'None':
-        """ Initializes all AMQP connections.
+        """ Initializes all AMQP connections, except for the channels that pub/sub topics read their messages back through -
+        the broker hands a waiting message over the moment a consumer connects, so those wait for pub/sub to be up.
         """
         channels = self.config_store.channel_amqp.get_config_list()
         outconns = self.config_store.out_amqp.get_config_list()
 
         for item in channels:
-            name = item['name']
-            try:
-                self.amqp_connection_create(item)
-                self.amqp_api.create_channel(name, item)
-            except Exception:
-                logger.warning('Could not create AMQP channel `%s`, e:`%s`', name, format_exc())
+            if not self.is_pubsub_amqp_channel(item['name']):
+                self._create_amqp_channel(item)
 
         for item in outconns:
             name = item['name']
@@ -827,6 +839,18 @@ class ConfigManager(_ConfigManagerBase):
                 self.amqp_api.create_outconn(name, item)
             except Exception:
                 logger.warning('Could not create AMQP outconn `%s`, e:`%s`', name, format_exc())
+
+# ################################################################################################################################
+
+    def init_pubsub_amqp_channels(self) -> 'None':
+        """ Creates the AMQP channels that pub/sub topics read their messages back through. This runs once pub/sub is up,
+        so the first message a consumer receives already has somewhere to go.
+        """
+        channels = self.config_store.channel_amqp.get_config_list()
+
+        for item in channels:
+            if self.is_pubsub_amqp_channel(item['name']):
+                self._create_amqp_channel(item)
 
 # ################################################################################################################################
 
@@ -1486,109 +1510,76 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _sync_pubsub_topics(self) -> 'None':
-        """ Loads AMQP-backed topics from ODB into the in-memory backend registry,
-        applies channel overrides for topics that reference an AMQP channel
-        and registers topics whose audit log was turned off.
+    def _read_pubsub_topics(self) -> 'anylist':
+        """ Returns the name and the opaque attributes of each of the cluster's topics.
         """
         from contextlib import closing
         from zato.common.odb.model import PubSubTopic
         from zato.common.util.sql import parse_instance_opaque_attr
 
-        _amqp = PubSub.Backend_Type.AMQP
+        out = []
 
         with closing(self.server.odb.session()) as session:
 
             rows = session.query(PubSubTopic).filter(
                 PubSubTopic.cluster_id == self.server.cluster_id).all()
 
-            topic_backends = {} # type: dict[str, dict]
-
             for row in rows:
-
                 opaque = parse_instance_opaque_attr(row)
+                out.append((row.name, opaque))
 
-                # A topic whose audit log was turned off explicitly writes no audit events
-                if opaque.get('is_audit_log_active') is False:
-                    self.server.pubsub_backend.set_topic_audit_flag(row.name, False)
+        return out
 
-                # A topic's message payloads leave with the audit export only if the topic says so
-                if opaque.get('is_audit_export_payload_active') is True:
-                    self.server.pubsub_backend.set_topic_payload_flag(row.name, True)
+# ################################################################################################################################
 
-                # Topics without opaque attributes predate backend types and are built-in,
-                # and built-in topics never have registry entries.
-                if 'backend_type' not in opaque:
-                    continue
+    def _load_pubsub_topic_backends(self) -> 'None':
+        """ Loads the AMQP-backed topics from the ODB into the in-memory backend registry. This runs before any connector
+        is built, so the AMQP channels that such topics read their messages back through dispatch to pub/sub from the first
+        message they receive.
+        """
+        _amqp = PubSub.Backend_Type.AMQP
 
-                if opaque['backend_type'] != _amqp:
-                    continue
+        topic_backends = {} # type: dict[str, dict]
 
-                topic_backends[row.name] = {
-                    'backend_type': _amqp,
-                    'amqp_outconn_name': opaque['amqp_outconn_name'],
-                    'amqp_exchange': opaque['amqp_exchange'],
-                    'amqp_routing_key': opaque['amqp_routing_key'],
-                    'amqp_channel_name': opaque['amqp_channel_name'],
-                    'original_service_name': '',
-                }
+        for topic_name, opaque in self._read_pubsub_topics():
+
+            # Topics without opaque attributes predate backend types and are built-in,
+            # and built-in topics never have registry entries.
+            if 'backend_type' not in opaque:
+                continue
+
+            if opaque['backend_type'] != _amqp:
+                continue
+
+            topic_backends[topic_name] = {
+                'backend_type': _amqp,
+                'amqp_outconn_name': opaque['amqp_outconn_name'],
+                'amqp_exchange': opaque['amqp_exchange'],
+                'amqp_routing_key': opaque['amqp_routing_key'],
+                'amqp_channel_name': opaque['amqp_channel_name'],
+            }
 
         self._topic_backends = topic_backends
 
-        # Each topic that points to an AMQP channel needs that channel's consumers
-        # to dispatch to the bridge service instead of the channel's own service.
-        for backend_config in self._topic_backends.values():
-            if backend_config['amqp_channel_name']:
-                self._apply_amqp_channel_override(backend_config)
-
         topic_count = len(self._topic_backends)
         suffix = 'topic' if topic_count == 1 else 'topics'
-        logger.info('Synced %d AMQP-backed pub/sub %s to the backend registry', topic_count, suffix)
+        logger.info('Loaded %d AMQP-backed pub/sub %s into the backend registry', topic_count, suffix)
 
 # ################################################################################################################################
 
-    def _apply_amqp_channel_override(self, backend_config:'strdict') -> 'None':
-        """ Points an AMQP channel's in-memory service at the pub/sub bridge, remembering the original
-        service name so it can be restored later. The channel's database row is never touched.
+    def _sync_pubsub_topics(self) -> 'None':
+        """ Registers with the pub/sub backend the topics whose audit log was turned off and the ones whose payloads
+        leave with the audit export.
         """
-        channel_name = backend_config['amqp_channel_name']
+        for topic_name, opaque in self._read_pubsub_topics():
 
-        # The channel may not exist, e.g. the topic was configured before the channel was created.
-        connector = self.amqp_api.connectors.get(channel_name)
-        if not connector:
-            logger.warning('AMQP channel `%s` not found, pub/sub bridge override not applied', channel_name)
-            return
+            # A topic whose audit log was turned off explicitly writes no audit events
+            if opaque.get('is_audit_log_active') is False:
+                self.server.pubsub_backend.set_topic_audit_flag(topic_name, False)
 
-        channel_config = connector.channels[channel_name]
-
-        # Remember the original service so it can be restored when the topic no longer uses this channel.
-        backend_config['original_service_name'] = channel_config['service_name']
-
-        # Consumers read the service name from this shared config object for each message,
-        # so mutating it here takes effect immediately for all of them.
-        channel_config['service_name'] = _pubsub_amqp_bridge_service
-
-        logger.info('Applied pub/sub bridge override to AMQP channel `%s` (was `%s`)',
-            channel_name, backend_config['original_service_name'])
-
-# ################################################################################################################################
-
-    def _remove_amqp_channel_override(self, backend_config:'strdict') -> 'None':
-        """ Restores an AMQP channel's original in-memory service name after the topic
-        that referenced the channel was edited or deleted.
-        """
-        channel_name = backend_config['amqp_channel_name']
-
-        # The channel itself may have been deleted in the meantime.
-        connector = self.amqp_api.connectors.get(channel_name)
-        if not connector:
-            return
-
-        channel_config = connector.channels[channel_name]
-        channel_config['service_name'] = backend_config['original_service_name']
-
-        logger.info('Removed pub/sub bridge override from AMQP channel `%s` (restored `%s`)',
-            channel_name, backend_config['original_service_name'])
+            # A topic's message payloads leave with the audit export only if the topic says so
+            if opaque.get('is_audit_export_payload_active') is True:
+                self.server.pubsub_backend.set_topic_payload_flag(topic_name, True)
 
 # ################################################################################################################################
 
@@ -1599,7 +1590,25 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def pubsub_publish_to_amqp(self, backend_config:'strdict', data:'any_', topic_name:'str', cid:'str') -> 'PublishResult':
+    def is_pubsub_amqp_channel(self, channel_name:'str') -> 'bool':
+        """ Whether an AMQP-backed topic reads its messages back through this channel.
+        """
+        for backend_config in self._topic_backends.values():
+            if backend_config['amqp_channel_name'] == channel_name:
+                return True
+
+        return False
+
+# ################################################################################################################################
+
+    def pubsub_publish_to_amqp(
+        self,
+        backend_config:'strdict',
+        data:'any_',
+        topic_name:'str',
+        cid:'str',
+        msg_id:'str'='',
+        ) -> 'PublishResult':
         """ Publishes a message to the AMQP broker configured for a topic. Returns the same
         result shape as the built-in Redis backend so the caller-facing API is identical.
         """
@@ -1610,9 +1619,13 @@ class ConfigManager(_ConfigManagerBase):
             routing_key=backend_config['amqp_routing_key'],
         )
 
-        # The broker does not return any identifier so a new one is generated here.
+        # The broker does not return any identifier, so the message keeps the id its publisher gave it,
+        # which is what the audit log has to carry too, and one is generated only if the publisher gave none.
+        if not msg_id:
+            msg_id = new_msg_id()
+
         result = PublishResult()
-        result.msg_id = new_msg_id()
+        result.msg_id = msg_id
 
         # The audit log stores payloads as text so free-text search covers them.
         if isinstance(data, str):
@@ -3076,8 +3089,7 @@ class ConfigManager(_ConfigManagerBase):
         self.server.pubsub_backend.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
         self.server.pubsub_backend.set_topic_payload_flag(msg.topic_name, msg.get('is_audit_export_payload_active', False))
 
-        # .. and AMQP-backed topics additionally get a registry entry
-        # .. along with the channel override if one is needed.
+        # .. and AMQP-backed topics additionally get a registry entry.
         if msg.backend_type == PubSub.Backend_Type.AMQP:
 
             backend_config = {
@@ -3086,12 +3098,8 @@ class ConfigManager(_ConfigManagerBase):
                 'amqp_exchange': msg.amqp_exchange,
                 'amqp_routing_key': msg.amqp_routing_key,
                 'amqp_channel_name': msg.amqp_channel_name,
-                'original_service_name': '',
             }
             self._topic_backends[msg.topic_name] = backend_config
-
-            if backend_config['amqp_channel_name']:
-                self._apply_amqp_channel_override(backend_config)
 
 # ################################################################################################################################
 
@@ -3146,16 +3154,14 @@ class ConfigManager(_ConfigManagerBase):
             self._resync_topic_subscriptions(new_name)
 
         # Handle backend changes - the entry is rebuilt from scratch, which also covers renames
-        # and moving the override from one channel to another ..
+        # and a topic moving from one channel to another ..
         backend_type = getattr(msg, 'backend_type', None)
 
         # .. messages without backend fields come from paths that do not manage backends ..
         if backend_type is not None:
 
-            # .. drop the previous entry, restoring the previously overridden channel, if any ..
-            old_entry = self._topic_backends.pop(old_name, None)
-            if old_entry and old_entry['amqp_channel_name']:
-                self._remove_amqp_channel_override(old_entry)
+            # .. drop the previous entry ..
+            _ = self._topic_backends.pop(old_name, None)
 
             # .. and re-register under the new name if the topic is still AMQP-backed.
             if backend_type == PubSub.Backend_Type.AMQP:
@@ -3166,12 +3172,8 @@ class ConfigManager(_ConfigManagerBase):
                     'amqp_exchange': msg.amqp_exchange,
                     'amqp_routing_key': msg.amqp_routing_key,
                     'amqp_channel_name': msg.amqp_channel_name,
-                    'original_service_name': '',
                 }
                 self._topic_backends[new_name] = backend_config
-
-                if backend_config['amqp_channel_name']:
-                    self._apply_amqp_channel_override(backend_config)
 
 # ################################################################################################################################
 
@@ -3245,11 +3247,8 @@ class ConfigManager(_ConfigManagerBase):
         # .. remove in-memory subscription and push delivery configs for this topic ..
         self._remove_topic_sub_configs(topic_name)
 
-        # .. and if the topic was AMQP-backed, drop its registry entry
-        # .. and restore the channel it overrode, if any.
-        old_entry = self._topic_backends.pop(topic_name, None)
-        if old_entry and old_entry['amqp_channel_name']:
-            self._remove_amqp_channel_override(old_entry)
+        # .. and if the topic was AMQP-backed, drop its registry entry.
+        _ = self._topic_backends.pop(topic_name, None)
 
 # ################################################################################################################################
 

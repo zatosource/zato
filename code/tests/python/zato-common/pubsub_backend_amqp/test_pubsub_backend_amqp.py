@@ -10,8 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from common import run_inbound_delivery_scenario, run_outconn_publish_scenario, \
-    run_override_lifecycle_scenario, run_redelivery_scenario
+from common import run_inbound_delivery_scenario, run_outconn_publish_scenario, run_queue_depth_scenario, \
+    run_topic_lifecycle_scenario, run_redelivery_scenario
 from live_amqp.env import audit_log_env
 
 # ################################################################################################################################
@@ -30,7 +30,8 @@ def test_pubsub_backend_amqp(rabbitmq_broker:'RabbitMQProcess', tmp_path:'os.Pat
         run_outconn_publish_scenario(rabbitmq_broker)
         run_inbound_delivery_scenario(rabbitmq_broker)
         run_redelivery_scenario(rabbitmq_broker)
-        run_override_lifecycle_scenario(rabbitmq_broker)
+        run_topic_lifecycle_scenario(rabbitmq_broker)
+        run_queue_depth_scenario(rabbitmq_broker)
 
 # ################################################################################################################################
 # ################################################################################################################################

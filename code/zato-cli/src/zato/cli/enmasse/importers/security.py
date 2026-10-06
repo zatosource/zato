@@ -22,7 +22,6 @@ from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, MTLSSecurity, N
 from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, spnego_list, \
     wss_list
 from zato.common.private_key_jwt import PrivateKeyJWTError, validate_definition
-from zato.common.typing_ import cast_
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -72,7 +71,7 @@ def validate_private_key_jwt(item:'anydict') -> 'None':
     certificate = item.get('certificate') or ''
 
     try:
-        _ = validate_definition(cast_('str', private_key), jwt_algorithm, certificate)
+        _ = validate_definition(private_key, jwt_algorithm, certificate)
     except PrivateKeyJWTError as e:
         raise ValueError(f'Security definition `{item["name"]}` -> {e}') from e
 

@@ -140,11 +140,12 @@ class SQLImporter:
         else:
             out.extra = _empty_extra
 
-        # .. a definition without a password gets a generated one and either way it is stored encrypted ..
-        if password := sql_definition.get('password'):
-            out.password = encrypt_secret(session, password)
-        else:
-            out.password = encrypt_secret(session, CryptoManager.generate_password(to_str=True))
+        # .. a definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted ..
+        password = sql_definition.get('password')
+        if not is_usable_secret(password):
+            password = CryptoManager.generate_password(to_str=True)
+        out.password = encrypt_secret(session, password)
 
         # .. payloads leave with the audit export only if the YAML definition says so ..
         sql_definition['is_audit_export_payload_active'] = sql_definition.get('is_audit_export_payload_active', False)

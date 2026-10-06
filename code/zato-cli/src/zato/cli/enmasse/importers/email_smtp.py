@@ -127,10 +127,10 @@ class SMTPImporter:
         # Optional username - empty string if not provided
         smtp_conn.username = smtp_def.get('username', '') or ''
 
-        # Set password if provided, otherwise generate one, and store it encrypted either way
-        if 'password' in smtp_def:
-            password = smtp_def['password']
-        else:
+        # A definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted
+        password = smtp_def.get('password')
+        if not is_usable_secret(password):
             password = uuid4().hex
 
         smtp_conn.password = encrypt_secret(session, password)

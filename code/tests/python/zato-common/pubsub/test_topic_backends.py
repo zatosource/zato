@@ -32,10 +32,12 @@ class _ConfigManagerStub:
     """
 
     # The real methods under test, bound to this stub
+    _read_pubsub_topics = ConfigManager._read_pubsub_topics
+    _load_pubsub_topic_backends = ConfigManager._load_pubsub_topic_backends
     _sync_pubsub_topics = ConfigManager._sync_pubsub_topics
-    _apply_amqp_channel_override = ConfigManager._apply_amqp_channel_override
-    _remove_amqp_channel_override = ConfigManager._remove_amqp_channel_override
     get_pubsub_topic_backend = ConfigManager.get_pubsub_topic_backend
+    is_pubsub_amqp_channel = ConfigManager.is_pubsub_amqp_channel
+    on_amqp_channel_message = ConfigManager.on_amqp_channel_message
     on_config_event_PUBSUB_TOPIC_CREATE = ConfigManager.on_config_event_PUBSUB_TOPIC_CREATE
     on_config_event_PUBSUB_TOPIC_EDIT = ConfigManager.on_config_event_PUBSUB_TOPIC_EDIT
     on_config_event_PUBSUB_TOPIC_DELETE = ConfigManager.on_config_event_PUBSUB_TOPIC_DELETE
@@ -52,6 +54,9 @@ class _ConfigManagerStub:
         self._remove_topic_sub_configs = MagicMock()
         self._resync_topic_subscriptions = MagicMock()
 
+        # What the dispatch hands the message to once it has decided on the service
+        self.invoke = MagicMock()
+
         # Two AMQP channels, each with its own connector, as in the real amqp_api
         self.channel_config_1 = {'service_name': 'original.service.1'}
         self.channel_config_2 = {'service_name': 'original.service.2'}
@@ -67,6 +72,14 @@ class _ConfigManagerStub:
             'channel.1': connector_1,
             'channel.2': connector_2,
         }
+
+# ################################################################################################################################
+
+    def assert_channels_untouched(self, test:'unittest.TestCase') -> 'None':
+        """ The channels' own configuration is never written to, whatever the topics do.
+        """
+        test.assertEqual(self.channel_config_1['service_name'], 'original.service.1')
+        test.assertEqual(self.channel_config_2['service_name'], 'original.service.2')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,10 +106,28 @@ def _make_amqp_msg(topic_name:'str', channel_name:'str'='', exchange:'str'='my.e
     return msg
 
 # ################################################################################################################################
+
+def _make_channel_kwargs(channel_name:'str') -> 'dict':
+    """ The keyword arguments an AMQP consumer passes along with each message.
+    """
+    out = {
+        'channel': 'amqp',
+        'data_format': None,
+        'zato_ctx': {
+            'zato.channel_item': {
+                'id': 1,
+                'name': channel_name,
+                'is_internal': False,
+            },
+        },
+    }
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
-class TestSyncPubSubTopics(unittest.TestCase):
-    """ _sync_pubsub_topics keeps only AMQP topics from opaque1.
+class TestLoadPubSubTopicBackends(unittest.TestCase):
+    """ _load_pubsub_topic_backends keeps only AMQP topics from opaque1.
     """
 
     def setUp(self) -> 'None':
@@ -111,7 +142,7 @@ class TestSyncPubSubTopics(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_keeps_only_amqp_topics(self) -> 'None':
+    def test_load_keeps_only_amqp_topics(self) -> 'None':
 
         amqp_opaque = {
             'backend_type': PubSub.Backend_Type.AMQP,
@@ -137,7 +168,7 @@ class TestSyncPubSubTopics(unittest.TestCase):
         ]
         self._set_odb_rows(rows)
 
-        self.stub._sync_pubsub_topics()
+        self.stub._load_pubsub_topic_backends()
 
         # Only the AMQP topic has a registry entry ..
         self.assertEqual(list(self.stub._topic_backends), ['topic.amqp'])
@@ -153,7 +184,7 @@ class TestSyncPubSubTopics(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_applies_channel_override(self) -> 'None':
+    def test_load_makes_the_topics_channel_a_pubsub_one(self) -> 'None':
 
         amqp_opaque = {
             'backend_type': PubSub.Backend_Type.AMQP,
@@ -165,19 +196,103 @@ class TestSyncPubSubTopics(unittest.TestCase):
 
         self._set_odb_rows([_make_topic_row('topic.amqp', amqp_opaque)])
 
+        self.stub._load_pubsub_topic_backends()
+
+        # The first channel is the one the topic reads from, the second is not, and neither config was written to
+        self.assertTrue(self.stub.is_pubsub_amqp_channel('channel.1'))
+        self.assertFalse(self.stub.is_pubsub_amqp_channel('channel.2'))
+        self.stub.assert_channels_untouched(self)
+
+# ################################################################################################################################
+
+    def test_sync_registers_the_audit_flags_only(self) -> 'None':
+
+        off_opaque = {
+            'is_audit_log_active': False,
+        }
+
+        payload_opaque = {
+            'is_audit_export_payload_active': True,
+        }
+
+        rows = [
+            _make_topic_row('topic.audit.off', off_opaque),
+            _make_topic_row('topic.payload.on', payload_opaque),
+            _make_topic_row('topic.plain', {}),
+        ]
+        self._set_odb_rows(rows)
+
         self.stub._sync_pubsub_topics()
 
-        # The channel now dispatches to the bridge and the original is remembered
-        self.assertEqual(self.stub.channel_config_1['service_name'], _pubsub_amqp_bridge_service)
+        backend = self.stub.server.pubsub_backend
+        backend.set_topic_audit_flag.assert_called_once_with('topic.audit.off', False)
+        backend.set_topic_payload_flag.assert_called_once_with('topic.payload.on', True)
 
-        entry = self.stub._topic_backends['topic.amqp']
-        self.assertEqual(entry['original_service_name'], 'original.service.1')
+        # The registry is not what the sync is about
+        self.assertEqual(self.stub._topic_backends, {})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAMQPChannelDispatch(unittest.TestCase):
+    """ on_amqp_channel_message hands a message to pub/sub if a topic reads from the channel, else to the channel's service.
+    """
+
+    def setUp(self) -> 'None':
+        self.stub = _ConfigManagerStub()
+
+        create_msg = _make_amqp_msg('topic.amqp', channel_name='channel.1')
+        self.stub.on_config_event_PUBSUB_TOPIC_CREATE(create_msg)
+
+# ################################################################################################################################
+
+    def test_a_channel_a_topic_reads_from_dispatches_to_pubsub(self) -> 'None':
+
+        kwargs = _make_channel_kwargs('channel.1')
+
+        _ = self.stub.on_amqp_channel_message('original.service.1', 'body-1', **kwargs)
+
+        self.stub.invoke.assert_called_once_with(_pubsub_amqp_bridge_service, 'body-1', **kwargs)
+        self.stub.assert_channels_untouched(self)
+
+# ################################################################################################################################
+
+    def test_any_other_channel_dispatches_to_its_own_service(self) -> 'None':
+
+        kwargs = _make_channel_kwargs('channel.2')
+
+        _ = self.stub.on_amqp_channel_message('original.service.2', 'body-2', **kwargs)
+
+        self.stub.invoke.assert_called_once_with('original.service.2', 'body-2', **kwargs)
+        self.stub.assert_channels_untouched(self)
+
+# ################################################################################################################################
+
+    def test_the_decision_follows_the_registry_per_message(self) -> 'None':
+
+        kwargs = _make_channel_kwargs('channel.1')
+
+        # The topic is gone, so the next message goes to the channel's own service ..
+        delete_msg = Bunch()
+        delete_msg.topic_name = 'topic.amqp'
+        self.stub.on_config_event_PUBSUB_TOPIC_DELETE(delete_msg)
+
+        _ = self.stub.on_amqp_channel_message('original.service.1', 'body-after-delete', **kwargs)
+        self.stub.invoke.assert_called_with('original.service.1', 'body-after-delete', **kwargs)
+
+        # .. and once the topic is back, so is pub/sub.
+        self.stub.on_config_event_PUBSUB_TOPIC_CREATE(_make_amqp_msg('topic.amqp', channel_name='channel.1'))
+
+        _ = self.stub.on_amqp_channel_message('original.service.1', 'body-after-create', **kwargs)
+        self.stub.invoke.assert_called_with(_pubsub_amqp_bridge_service, 'body-after-create', **kwargs)
+
+        self.stub.assert_channels_untouched(self)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestTopicCreateHandler(unittest.TestCase):
-    """ TOPIC_CREATE adds a registry entry and applies the channel override.
+    """ TOPIC_CREATE adds a registry entry.
     """
 
     def setUp(self) -> 'None':
@@ -185,13 +300,12 @@ class TestTopicCreateHandler(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_create_adds_entry_and_overrides_channel(self) -> 'None':
+    def test_create_adds_entry(self) -> 'None':
 
         msg = _make_amqp_msg('topic.amqp', channel_name='channel.1')
 
         self.stub.on_config_event_PUBSUB_TOPIC_CREATE(msg)
 
-        # The registry entry is in place ..
         entry = self.stub._topic_backends['topic.amqp']
 
         self.assertEqual(entry['backend_type'], PubSub.Backend_Type.AMQP)
@@ -199,35 +313,32 @@ class TestTopicCreateHandler(unittest.TestCase):
         self.assertEqual(entry['amqp_exchange'], 'my.exchange')
         self.assertEqual(entry['amqp_channel_name'], 'channel.1')
 
-        # .. the channel dispatches to the bridge ..
-        self.assertEqual(self.stub.channel_config_1['service_name'], _pubsub_amqp_bridge_service)
-
-        # .. and the original service name is remembered.
-        self.assertEqual(entry['original_service_name'], 'original.service.1')
+        self.assertTrue(self.stub.is_pubsub_amqp_channel('channel.1'))
+        self.stub.assert_channels_untouched(self)
 
 # ################################################################################################################################
 
-    def test_create_without_channel_does_not_touch_channels(self) -> 'None':
+    def test_create_without_channel_makes_no_channel_a_pubsub_one(self) -> 'None':
 
         msg = _make_amqp_msg('topic.amqp', channel_name='')
 
         self.stub.on_config_event_PUBSUB_TOPIC_CREATE(msg)
 
         self.assertIn('topic.amqp', self.stub._topic_backends)
-        self.assertEqual(self.stub.channel_config_1['service_name'], 'original.service.1')
-        self.assertEqual(self.stub.channel_config_2['service_name'], 'original.service.2')
+        self.assertFalse(self.stub.is_pubsub_amqp_channel('channel.1'))
+        self.assertFalse(self.stub.is_pubsub_amqp_channel('channel.2'))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestTopicEditHandler(unittest.TestCase):
-    """ TOPIC_EDIT updates the entry and moves the channel override.
+    """ TOPIC_EDIT updates the entry and with it which channel is a pub/sub one.
     """
 
     def setUp(self) -> 'None':
         self.stub = _ConfigManagerStub()
 
-        # Start from an AMQP topic that overrides channel.1
+        # Start from an AMQP topic that reads from channel.1
         create_msg = _make_amqp_msg('topic.amqp', channel_name='channel.1')
         self.stub.on_config_event_PUBSUB_TOPIC_CREATE(create_msg)
 
@@ -258,31 +369,29 @@ class TestTopicEditHandler(unittest.TestCase):
         self.assertEqual(entry['amqp_exchange'], 'new.exchange')
         self.assertEqual(entry['amqp_routing_key'], 'new.key')
 
-        # The channel is still overridden and the original is still remembered
-        self.assertEqual(self.stub.channel_config_1['service_name'], _pubsub_amqp_bridge_service)
-        self.assertEqual(entry['original_service_name'], 'original.service.1')
+        self.assertTrue(self.stub.is_pubsub_amqp_channel('channel.1'))
+        self.stub.assert_channels_untouched(self)
 
 # ################################################################################################################################
 
-    def test_edit_moves_override_to_another_channel(self) -> 'None':
+    def test_edit_moves_the_topic_to_another_channel(self) -> 'None':
 
         msg = self._make_edit_msg(amqp_channel_name='channel.2')
 
         self.stub.on_config_event_PUBSUB_TOPIC_EDIT(msg)
 
-        # The first channel got its original service back ..
-        self.assertEqual(self.stub.channel_config_1['service_name'], 'original.service.1')
-
-        # .. and the second one is now overridden.
-        self.assertEqual(self.stub.channel_config_2['service_name'], _pubsub_amqp_bridge_service)
+        # The first channel is a plain one again and the second one is the topic's now
+        self.assertFalse(self.stub.is_pubsub_amqp_channel('channel.1'))
+        self.assertTrue(self.stub.is_pubsub_amqp_channel('channel.2'))
 
         entry = self.stub._topic_backends['topic.amqp']
         self.assertEqual(entry['amqp_channel_name'], 'channel.2')
-        self.assertEqual(entry['original_service_name'], 'original.service.2')
+
+        self.stub.assert_channels_untouched(self)
 
 # ################################################################################################################################
 
-    def test_edit_to_builtin_removes_entry_and_restores_channel(self) -> 'None':
+    def test_edit_to_builtin_removes_entry(self) -> 'None':
 
         msg = self._make_edit_msg(
             backend_type=PubSub.Backend_Type.Builtin,
@@ -294,11 +403,9 @@ class TestTopicEditHandler(unittest.TestCase):
 
         self.stub.on_config_event_PUBSUB_TOPIC_EDIT(msg)
 
-        # The registry no longer knows the topic ..
         self.assertNotIn('topic.amqp', self.stub._topic_backends)
-
-        # .. and the channel got its original service back.
-        self.assertEqual(self.stub.channel_config_1['service_name'], 'original.service.1')
+        self.assertFalse(self.stub.is_pubsub_amqp_channel('channel.1'))
+        self.stub.assert_channels_untouched(self)
 
 # ################################################################################################################################
 
@@ -312,14 +419,14 @@ class TestTopicEditHandler(unittest.TestCase):
         self.assertNotIn('topic.amqp', self.stub._topic_backends)
         self.assertIn('topic.amqp.renamed', self.stub._topic_backends)
 
-        # The channel stays overridden throughout
-        self.assertEqual(self.stub.channel_config_1['service_name'], _pubsub_amqp_bridge_service)
+        # The channel is the topic's throughout
+        self.assertTrue(self.stub.is_pubsub_amqp_channel('channel.1'))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestTopicDeleteHandler(unittest.TestCase):
-    """ TOPIC_DELETE removes the entry and restores the channel.
+    """ TOPIC_DELETE removes the entry.
     """
 
     def setUp(self) -> 'None':
@@ -330,7 +437,7 @@ class TestTopicDeleteHandler(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_delete_removes_entry_and_restores_channel(self) -> 'None':
+    def test_delete_removes_entry(self) -> 'None':
 
         msg = Bunch()
         msg.topic_name = 'topic.amqp'
@@ -338,7 +445,8 @@ class TestTopicDeleteHandler(unittest.TestCase):
         self.stub.on_config_event_PUBSUB_TOPIC_DELETE(msg)
 
         self.assertNotIn('topic.amqp', self.stub._topic_backends)
-        self.assertEqual(self.stub.channel_config_1['service_name'], 'original.service.1')
+        self.assertFalse(self.stub.is_pubsub_amqp_channel('channel.1'))
+        self.stub.assert_channels_untouched(self)
 
 # ################################################################################################################################
 
@@ -349,9 +457,8 @@ class TestTopicDeleteHandler(unittest.TestCase):
 
         self.stub.on_config_event_PUBSUB_TOPIC_DELETE(msg)
 
-        # The AMQP topic's entry and override are untouched
         self.assertIn('topic.amqp', self.stub._topic_backends)
-        self.assertEqual(self.stub.channel_config_1['service_name'], _pubsub_amqp_bridge_service)
+        self.assertTrue(self.stub.is_pubsub_amqp_channel('channel.1'))
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -138,6 +138,7 @@ class _StubConfigManager:
     rename_outgoing_subscription = ConfigManager.rename_outgoing_subscription
     delete_outgoing_subscription = ConfigManager.delete_outgoing_subscription
     restore_outgoing_subscriptions = ConfigManager.restore_outgoing_subscriptions
+    _get_broker_pending_counts = ConfigManager._get_broker_pending_counts
 
     init_outgoing_dlqs = ConfigManager.init_outgoing_dlqs
     ensure_outgoing_dlq = ConfigManager.ensure_outgoing_dlq

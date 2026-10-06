@@ -15,6 +15,7 @@ from zato.common.json_internal import dumps, loads
 # ################################################################################################################################
 
 if 0:
+    from typing import TypeGuard
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.typing_ import any_, anydict, strnone, strtuple
@@ -72,7 +73,7 @@ def is_encrypted(value:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def is_usable_secret(value:'any_') -> 'bool':
+def is_usable_secret(value:'any_') -> 'TypeGuard[str]':
     """ Returns True for a non-empty string that is not a placeholder standing in for an environment variable
     that was not set - only such a value is a secret the YAML actually gives.
     """
@@ -208,7 +209,7 @@ def encrypt_opaque_secrets(
         # written back encrypted if it is still in clear text ..
         stored_value = stored.get(name)
         if is_usable_secret(stored_value):
-            definition[name] = ensure_encrypted(session, cast_('str', stored_value))
+            definition[name] = ensure_encrypted(session, stored_value)
             continue
 
         # .. an empty default is not a secret and stays, so a wrapper finds the key it expects ..
@@ -233,8 +234,6 @@ def encrypt_kept_opaque_secrets(session:'SASession', row:'any_', keys:'strtuple'
 
         if not is_usable_secret(value):
             continue
-
-        value = cast_('str', value)
 
         if is_encrypted(value):
             continue

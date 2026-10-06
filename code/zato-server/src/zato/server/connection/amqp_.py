@@ -96,6 +96,25 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 
 # ################################################################################################################################
 
+def _add_auth_placeholders(address:'str') -> 'str':
+
+    if '://' in address:
+        protocol_part, server_part = address.split('://', 1)
+        return f'{protocol_part}://' + '{username}:{password}@' + server_part
+    else:
+        return '{username}:{password}@' + address
+
+# ################################################################################################################################
+
+def get_conn_url(address:'str', username:'str', password:'str') -> 'str':
+    """ The URL a connection to a broker is opened with - the address of a definition with its credentials in it.
+    """
+    conn_url = _add_auth_placeholders(address)
+    out = conn_url.format(username=username, password=password)
+    return out
+
+# ################################################################################################################################
+
 def _is_azure_service_bus(address:'str') -> 'bool':
     return 'servicebus.windows.net' in address
 
@@ -753,26 +772,15 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _add_auth_placeholders(self, address:'str') -> 'str':
-
-        if '://' in address:
-            protocol_part, server_part = address.split('://', 1)
-            return f'{protocol_part}://' + '{username}:{password}@' + server_part
-        else:
-            return '{username}:{password}@' + address
-
-# ################################################################################################################################
-
     def _get_conn_string(self, needs_password:'bool'=True) -> 'str':
 
-        conn_string = self.config.address
-        conn_string = self._add_auth_placeholders(conn_string) # type: ignore
-        conn_string = conn_string.format(
-            username=self.config.username, # type: ignore
-            password=self.config.password if needs_password else SECRET_SHADOW
-        )
+        if needs_password:
+            password = self.config.password
+        else:
+            password = SECRET_SHADOW
 
-        return conn_string
+        out = get_conn_url(self.config.address, self.config.username, password)
+        return out
 
 # ################################################################################################################################
 

@@ -44,7 +44,6 @@ class TestBridgeChannelToTopicMapping(unittest.TestCase):
             'amqp_exchange': 'my.exchange',
             'amqp_routing_key': 'topic.amqp',
             'amqp_channel_name': 'channel.1',
-            'original_service_name': 'original.service',
         }
 
 # ################################################################################################################################

@@ -22,7 +22,7 @@ from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent,
 from zato.common.facade import PubSubFacade
 from zato.common.test.rabbitmq_ import declare_and_bind, drain_queue, get_queue_depth, publish_to_exchange
 from zato.common.typing_ import cast_
-from zato.server.base.config_manager import _pubsub_amqp_bridge_service
+from zato.server.connection.amqp_queue import get_queue_depth as get_server_queue_depth
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,6 +51,10 @@ _wait_poll_seconds = 0.05
 # How long a queue drain waits to prove that nothing extra arrives, in seconds.
 _drain_seconds = 2
 
+# The credentials a private test broker accepts.
+_broker_username = 'guest'
+_broker_password = 'guest'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -77,6 +81,15 @@ def get_audit_events(topic_name:'str') -> 'dictlist':
     for row in rows:
         out.append(dict(row))
 
+    return out
+
+# ################################################################################################################################
+
+def server_queue_depth(address:'str', queue:'str') -> 'int':
+    """ The depth of a queue read the way a server reads it at startup - through the connection class
+    its connectors use, which is what makes this the same code path on a TLS broker.
+    """
+    out = get_server_queue_depth('contract.depth.channel', address, _broker_username, _broker_password, queue)
     return out
 
 # ################################################################################################################################
@@ -197,7 +210,7 @@ def run_inbound_delivery_scenario(broker:'RabbitMQProcess') -> 'None':
 
         wait_until(_queue_empty, 'the consumed message was acked')
 
-        # .. the channel's own service never ran - the topic's override took the message ..
+        # .. the channel's own service never ran - the topic took the message ..
         assert harness.channel_invocations == [], f'Unexpected channel invocations -> {harness.channel_invocations}'
 
         # .. and both deliveries left audit events, one per subscriber.
@@ -296,37 +309,38 @@ def _count_outcomes(topic_name:'str') -> 'tuple[int, int]':
 
 # ################################################################################################################################
 
-def run_override_lifecycle_scenario(broker:'RabbitMQProcess') -> 'None':
-    """ Registering a topic against a channel points the channel's consumers at the pub/sub
-    delivery service, removing the topic restores the channel's own service, and registering
-    the topic again applies the override once more - the create, delete and re-create cycle.
+def run_topic_lifecycle_scenario(broker:'RabbitMQProcess') -> 'None':
+    """ While a topic reads from a channel the channel's messages go to pub/sub, once the topic is gone they go
+    to the channel's own service, and registering the topic again turns them back - the create, delete and re-create
+    cycle, with the channel's own configuration untouched throughout.
     """
-    topic_name = 'topic.amqp.contract.override'
-    channel_name = 'pubsub.contract.override.channel'
-    exchange = 'pubsub.contract.override.exchange'
-    queue = 'pubsub.contract.override.queue'
-    routing_key = 'pubsub.contract.override.key'
-    service_sub_key = 'zpsk.rest.contract.override'
+    topic_name = 'topic.amqp.contract.lifecycle'
+    channel_name = 'pubsub.contract.lifecycle.channel'
+    exchange = 'pubsub.contract.lifecycle.exchange'
+    queue = 'pubsub.contract.lifecycle.queue'
+    routing_key = 'pubsub.contract.lifecycle.key'
+    service_sub_key = 'zpsk.rest.contract.lifecycle'
     channel_service = 'contract.channel-own-service'
-    push_service = 'contract.override.push-service'
+    push_service = 'contract.lifecycle.push-service'
 
     harness = PubSubAMQPHarness(get_broker_address(broker), _server_name)
 
     try:
         declare_and_bind(broker.amqp_url, exchange, queue, routing_key)
 
-        # The channel starts with its own service ..
+        # The channel has its own service ..
         channel_config = harness.create_channel(channel_name, queue, channel_service)
         assert channel_config['service_name'] == channel_service
 
-        # .. registering the topic applies the override in place ..
+        # .. registering the topic makes the channel one that pub/sub reads from, with the config as it was ..
         _ = harness.register_amqp_topic(topic_name, channel_name=channel_name)
-        assert channel_config['service_name'] == _pubsub_amqp_bridge_service
+        assert harness.is_pubsub_amqp_channel(channel_name) is True
+        assert channel_config['service_name'] == channel_service
 
         harness.add_service_push_subscription(topic_name, service_sub_key, push_service)
 
         # .. a message now goes to the topic's push subscriber ..
-        publish_to_exchange(broker.amqp_url, exchange, routing_key, 'override payload 1')
+        publish_to_exchange(broker.amqp_url, exchange, routing_key, 'lifecycle payload 1')
 
         def _first_delivered() -> 'bool':
             return len(harness.server.service_invocations) == 1
@@ -334,28 +348,30 @@ def run_override_lifecycle_scenario(broker:'RabbitMQProcess') -> 'None':
         wait_until(_first_delivered, 'the first message reached the push subscriber')
         assert harness.channel_invocations == []
 
-        # .. deleting the topic restores the channel's own service ..
+        # .. deleting the topic leaves the channel with its own service, which it never lost ..
         harness.remove_amqp_topic(topic_name)
+        assert harness.is_pubsub_amqp_channel(channel_name) is False
         assert channel_config['service_name'] == channel_service
 
         # .. and the next message goes to that service, not to pub/sub ..
-        publish_to_exchange(broker.amqp_url, exchange, routing_key, 'override payload 2')
+        publish_to_exchange(broker.amqp_url, exchange, routing_key, 'lifecycle payload 2')
 
         def _channel_service_ran() -> 'bool':
             return len(harness.channel_invocations) == 1
 
-        wait_until(_channel_service_ran, 'the channel service received the message after the override was removed')
+        wait_until(_channel_service_ran, 'the channel service received the message after the topic was removed')
 
         invocation = harness.channel_invocations[0]
         assert invocation['service_name'] == channel_service
-        assert invocation['body'] == 'override payload 2'
+        assert invocation['body'] == 'lifecycle payload 2'
         assert len(harness.server.service_invocations) == 1
 
-        # .. re-creating the topic applies the override again.
+        # .. re-creating the topic turns the channel's messages back to pub/sub.
         _ = harness.register_amqp_topic(topic_name, channel_name=channel_name)
-        assert channel_config['service_name'] == _pubsub_amqp_bridge_service
+        assert harness.is_pubsub_amqp_channel(channel_name) is True
+        assert channel_config['service_name'] == channel_service
 
-        publish_to_exchange(broker.amqp_url, exchange, routing_key, 'override payload 3')
+        publish_to_exchange(broker.amqp_url, exchange, routing_key, 'lifecycle payload 3')
 
         def _second_delivered() -> 'bool':
             return len(harness.server.service_invocations) == 2
@@ -364,6 +380,38 @@ def run_override_lifecycle_scenario(broker:'RabbitMQProcess') -> 'None':
 
     finally:
         harness.stop()
+
+# ################################################################################################################################
+
+def run_queue_depth_scenario(broker:'RabbitMQProcess') -> 'None':
+    """ The depth a server reads from a broker at startup is the number of messages waiting in the queue,
+    and reading it leaves the messages where they are.
+    """
+    exchange = 'pubsub.contract.depth.exchange'
+    queue = 'pubsub.contract.depth.queue'
+    routing_key = 'pubsub.contract.depth.key'
+    waiting_count = 3
+
+    declare_and_bind(broker.amqp_url, exchange, queue, routing_key)
+
+    # An empty queue has a depth of zero ..
+    depth = server_queue_depth(get_broker_address(broker), queue)
+    assert depth == 0, f'Unexpected depth of an empty queue -> {depth}'
+
+    # .. the messages a previous run of a server left behind ..
+    for index in range(waiting_count):
+        publish_to_exchange(broker.amqp_url, exchange, routing_key, f'depth payload {index}')
+
+    # .. are what the depth says, read twice to show that reading takes nothing off the queue ..
+    depth = server_queue_depth(get_broker_address(broker), queue)
+    assert depth == waiting_count, f'Unexpected depth -> {depth}'
+
+    depth = server_queue_depth(get_broker_address(broker), queue)
+    assert depth == waiting_count, f'Unexpected depth on the second read -> {depth}'
+
+    # .. and the messages themselves are all still there.
+    messages = drain_queue(broker.amqp_url, queue, timeout=_drain_seconds)
+    assert len(messages) == waiting_count, f'Unexpected messages -> {messages}'
 
 # ################################################################################################################################
 

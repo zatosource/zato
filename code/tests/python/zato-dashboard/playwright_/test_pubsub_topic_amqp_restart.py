@@ -66,7 +66,7 @@ _Config_Propagation_Delay = 1.0
 _Consumer_Wait_Timeout = 60
 
 # State shared between the restart tests - the registry test configures and restarts,
-# the override test verifies the inbound side of the same, already restarted server
+# the inbound test verifies the inbound side of the same, already restarted server
 _shared_state = {} # type: dict
 
 # ################################################################################################################################
@@ -121,8 +121,7 @@ def module_receiver() -> 'receivergen':
 # ################################################################################################################################
 
 class TestPubSubTopicAMQPRestart:
-    """ Restart tests - the registry and the channel override are rebuilt from the ODB
-    at startup, without any config events since.
+    """ Restart tests - the registry is rebuilt from the ODB at startup, without any config events since.
     """
 
     def test_restart_rebuilds_registry(
@@ -133,8 +132,8 @@ class TestPubSubTopicAMQPRestart:
         module_receiver:'WebhookReceiver',
         ) -> 'None':
         """ After a server restart, with no config events fired since startup,
-        a publish through the overlay still routes to AMQP, proving _sync_pubsub_topics
-        rebuilt the registry from opaque1.
+        a publish through the overlay still routes to AMQP, proving the registry
+        was rebuilt from opaque1.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -167,7 +166,7 @@ class TestPubSubTopicAMQPRestart:
         _ = create_amqp_topic(
             page, base_url, topic_name, outconn_name, exchange, rabbitmq_broker['routing_key'], channel_name)
 
-        # .. a REST push subscriber for the inbound side, verified by the override test ..
+        # .. a REST push subscriber for the inbound side, verified by the inbound test ..
         sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'restart')
         _ = create_permission(page, base_url, sec_info['name'], 'subscriber', 'sub', topic_name)
 
@@ -184,7 +183,7 @@ class TestPubSubTopicAMQPRestart:
         # .. rebuilt from the ODB, with no config events fired since startup ..
         restart_server(zato_dashboard)
 
-        # .. share the setup with the override test ..
+        # .. share the setup with the inbound test ..
         _shared_state['topic_name'] = topic_name
         _shared_state['channel_queue'] = channel_queue
         _shared_state['channel_binding_key'] = channel_binding_key
@@ -208,15 +207,15 @@ class TestPubSubTopicAMQPRestart:
 
 # ################################################################################################################################
 
-    def test_restart_reapplies_override(
+    def test_restart_keeps_the_inbound_side(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         module_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ After the restart, an injected message still reaches the REST receiver
-        through the bridge, proving the channel override was reapplied by the startup sync.
+        """ After the restart, an injected message still reaches the REST receiver through
+        the channel the topic reads from, proving the rebuilt registry drives the channel's dispatch.
         """
         amqp_url = rabbitmq_broker['amqp_url']
         exchange = rabbitmq_broker['exchange']
@@ -234,7 +233,7 @@ class TestPubSubTopicAMQPRestart:
 
         publish_to_exchange(amqp_url, exchange, channel_binding_key, body)
 
-        # .. and the receiver got it through the bridge.
+        # .. and the receiver got it through the topic.
         messages = module_receiver.wait_for_delivery(1)
 
         assert len(messages) == 1, f'Expected exactly one delivery, got: {messages}'

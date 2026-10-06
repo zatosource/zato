@@ -137,10 +137,10 @@ class ChannelAMQPImporter:
         channel.frame_max = _default_frame_max
         channel.heartbeat = _default_heartbeat
 
-        # Set the password if provided, otherwise generate one, and store it encrypted either way
-        if 'password' in channel_def:
-            password = channel_def['password']
-        else:
+        # A definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted
+        password = channel_def.get('password')
+        if not is_usable_secret(password):
             password = CryptoManager.generate_password(to_str=True)
 
         channel.password = encrypt_secret(session, password)
@@ -314,10 +314,10 @@ class OutgoingAMQPImporter:
         connection.frame_max = _default_frame_max
         connection.heartbeat = _default_heartbeat
 
-        # Set the password if provided, otherwise generate one, and store it encrypted either way
-        if 'password' in connection_def:
-            password = connection_def['password']
-        else:
+        # A definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted
+        password = connection_def.get('password')
+        if not is_usable_secret(password):
             password = CryptoManager.generate_password(to_str=True)
 
         connection.password = encrypt_secret(session, password)

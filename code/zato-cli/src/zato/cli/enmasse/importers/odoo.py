@@ -126,10 +126,10 @@ class OdooImporter:
                 logger.error('Missing required field %s for odoo connection %s', field, odoo_def.get('name', 'unknown'))
                 raise ValueError(f'Missing required field {field} for odoo connection')
 
-        # Set password if provided, otherwise generate one, and store it encrypted either way
-        if 'password' in odoo_def:
-            password = odoo_def['password']
-        else:
+        # A definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted
+        password = odoo_def.get('password')
+        if not is_usable_secret(password):
             password = uuid4().hex
 
         odoo_conn.password = encrypt_secret(session, password)

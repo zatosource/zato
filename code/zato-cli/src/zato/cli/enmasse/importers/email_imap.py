@@ -192,10 +192,10 @@ class IMAPImporter:
         else:
             imap_def['server_type'] = EMail_Common.IMAP.ServerType.Generic
 
-        # Set password if provided, otherwise generate one, and store it encrypted either way
-        if 'password' in imap_def:
-            password = imap_def['password']
-        else:
+        # A definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted
+        password = imap_def.get('password')
+        if not is_usable_secret(password):
             password = uuid4().hex
 
         imap_conn.password = encrypt_secret(session, password)

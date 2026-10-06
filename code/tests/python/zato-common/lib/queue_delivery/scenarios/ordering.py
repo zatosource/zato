@@ -8,9 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # A message never overtakes the ones waiting before it, on every pub/sub backend.
 
-# pytest
-import pytest
-
 # Zato
 from zato.common.pubsub.outgoing import Attempts_Direct, Attempts_None, Key_Attempts, Key_Data, Key_Request
 
@@ -19,11 +16,6 @@ from queue_delivery.client import get_client, get_queue, is_broker_backend, rest
     wait_for_queue_depth
 from queue_delivery.scenarios.base import ScenarioBase
 from queue_delivery.type_under_test import Conn_Orders
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_restart_skip_reason = 'The depth of a queue in a broker is not read back at startup'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,9 +140,6 @@ class OrderingScenarios(ScenarioBase):
     def test_a_restart_reads_the_depth_back_and_nothing_overtakes_the_waiting_messages(self) -> 'None':
         """ Two messages wait when the server stops.
         """
-        if is_broker_backend():
-            pytest.skip(_restart_skip_reason)
-
         client = get_client()
         receiver = self.receiver(Conn_Orders)
         conn_name = self.conn(Conn_Orders)
@@ -172,7 +161,10 @@ class OrderingScenarios(ScenarioBase):
 
         queue = get_queue(client, conn_name)
         assert queue['depth'] == 2
-        assert len(queue['messages']) == 2
+
+        # A queue in a broker cannot be browsed, its depth is all the server knows of it
+        if not is_broker_backend():
+            assert len(queue['messages']) == 2
 
         third = send(client, conn_name, {'seq': 3})
 

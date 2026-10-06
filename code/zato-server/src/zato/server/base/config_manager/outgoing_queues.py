@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from contextlib import contextmanager
 from threading import RLock
+from traceback import format_exc
 
 # Zato
 from zato.common.api import PubSub
@@ -88,6 +89,8 @@ class OutgoingQueues(ConfigManagerImpl):
     rename_outgoing_dlq: 'callable_'
     delete_outgoing_dlq: 'callable_'
     restore_outgoing_dlqs: 'callable_'
+    get_pubsub_topic_backend: 'callable_'
+    amqp_get_channel_queue_depth: 'callable_'
 
     def init_outgoing_queues(self) -> 'None':
         """ Sets up what the queues of outgoing connections are tracked with.
@@ -259,6 +262,9 @@ class OutgoingQueues(ConfigManagerImpl):
         sub_key_list = self.server.pubsub_backend.get_sub_keys_by_prefix(PubSub.Outgoing.Sub_Key_Prefix)
         restored_count = 0
 
+        # The topic of each queue brought back, by sub key
+        restored_topics = {}
+
         # The DLQs share the prefix and are brought back on their own
         self.restore_outgoing_dlqs(sub_key_list)
 
@@ -289,6 +295,7 @@ class OutgoingQueues(ConfigManagerImpl):
             sub_config = get_outgoing_sub_config(sub_key, topic_name)
             self._push_subs[sub_key] = [sub_config]
             self._outgoing_sub_key_cache.add(sub_key)
+            restored_topics[sub_key] = topic_name
 
             restored_count += 1
 
@@ -300,11 +307,42 @@ class OutgoingQueues(ConfigManagerImpl):
             if is_dlq_sub_key(sub_key):
                 del pending_counts[sub_key]
 
+        # A queue that lives in a broker keeps its messages there, so the broker is the one that knows its depth
+        pending_counts.update(self._get_broker_pending_counts(restored_topics))
+
         self.outgoing_queue_depth.set_counts(pending_counts)
 
         suffix = 'queue' if restored_count == 1 else 'queues'
 
         logger.info('Restored %d outgoing connection %s, messages waiting: %s', restored_count, suffix, pending_counts)
+
+# ################################################################################################################################
+
+    def _get_broker_pending_counts(self, restored_topics:'anydict') -> 'anydict':
+        """ How many messages wait in each queue whose topic lives in a broker, by sub key - the broker is asked through
+        the channel the topic reads its messages back with, before that channel's consumers start.
+        """
+        out = {}
+
+        for sub_key, topic_name in restored_topics.items():
+
+            backend_config = self.get_pubsub_topic_backend(topic_name)
+
+            # A topic without a backend of its own keeps its messages in the pub/sub database, whose counts are in already
+            if not backend_config:
+                continue
+
+            channel_name = backend_config['amqp_channel_name']
+
+            try:
+                out[sub_key] = self.amqp_get_channel_queue_depth(channel_name)
+
+            # A broker that cannot be reached now leaves the depth as the database has it, and the server still starts
+            except Exception:
+                logger.warning('Could not read the depth of queue `%s` from its broker through channel `%s`, e:`%s`',
+                    sub_key, channel_name, format_exc())
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
