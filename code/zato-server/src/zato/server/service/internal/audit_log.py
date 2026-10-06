@@ -520,6 +520,10 @@ class ReprocessHL7Message(AdminService):
 
             def invoke_service(service_name:'str', payload:'str') -> 'None':
 
+                # Everything runs under the reprocess's own cid, the same as a live delivery runs under
+                # the cid the message arrived under, so the new row and every delivery it fanned out to
+                # read as one trail.
+
                 # A channel with a service of its own fans out at the end of that service's
                 # pipeline, so the channel rides along with the invocation to be read there ..
                 if service_name:
@@ -532,13 +536,13 @@ class ReprocessHL7Message(AdminService):
                     else:
                         service_payload = payload
 
-                    _ = self.server.invoke(service_name, service_payload,
+                    _ = self.server.invoke(service_name, service_payload, cid=self.cid,
                         channel=CHANNEL.HL7_MLLP, zato_ctx={'zato.channel_item': channel_item})
 
                 # .. and one without a service delivers the message as it stands, the same as
                 # it does when a message arrives on it live.
                 else:
-                    _ = run_for_channel(self.server, channel_item, payload)
+                    _ = run_for_channel(self.server, channel_item, payload, cid=self.cid)
 
             audit_log = AuditLog(self.server.name)
 

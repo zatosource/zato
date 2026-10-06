@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, NOT_FOUND, REQUEST_TIMEOUT, \
-    SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
+from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, INTERNAL_SERVER_ERROR, NOT_FOUND, \
+    REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
 
 # requests
 from requests.exceptions import ConnectionError as RequestsConnectionError, SSLError as RequestsSSLError, \
@@ -707,6 +707,36 @@ def derive_classification(outcome:'str', status:'str' = '', application_outcome:
         # .. and anything unmatched stays unclassified.
         else:
             out = ''
+
+    return out
+
+# ################################################################################################################################
+
+# The client errors that say the server could not take the request right now rather than that the request is wrong
+_transient_client_errors = (REQUEST_TIMEOUT, TOO_MANY_REQUESTS)
+
+# ################################################################################################################################
+
+def derive_http_classification(status_code:'int') -> 'str':
+    """ Classifies a rejection by the HTTP status it came with - a client error is permanent, except for the ones
+    saying the server could not take the request right now, and a server error is transient.
+    """
+
+    # A server error is something the same request can get past later ..
+    if status_code >= INTERNAL_SERVER_ERROR:
+        out = AuditClassification.Transient
+
+    # .. so is a client error that only says the server was busy or slow ..
+    elif status_code in _transient_client_errors:
+        out = AuditClassification.Transient
+
+    # .. any other client error needs the request to change first ..
+    elif status_code >= BAD_REQUEST:
+        out = AuditClassification.Permanent
+
+    # .. and anything below that is not a rejection at all.
+    else:
+        out = ''
 
     return out
 

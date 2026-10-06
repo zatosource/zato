@@ -26,8 +26,8 @@ from zato.common.util.open_ import open_rb
 from zato.server.connection.http_soap.invocation import build_jsonata_context, maybe_run_callback, merge_declarative_request
 from zato.server.connection.http_soap.outgoing.audit import record_request_sent, record_response_received, \
     record_transport_error
-from zato.server.connection.http_soap.outgoing.common import get_rest_rejection_error, is_rest_rejection, logger, \
-    Read_Methods, Response, _needs_serialization
+from zato.server.connection.http_soap.outgoing.common import get_rest_rejection_error, is_rest_rejection, \
+    is_rest_rejection_permanent, logger, Read_Methods, Response, _needs_serialization
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -405,7 +405,8 @@ class RESTCallMixin:
             response = self._send_prepared(cid, prepared, args, kwargs)
 
             if is_rest_rejection(response):
-                raise SendRejected(get_rest_rejection_error(response), response)
+                is_permanent = is_rest_rejection_permanent(response)
+                raise SendRejected(get_rest_rejection_error(response), response, is_permanent=is_permanent)
 
             return response
 
@@ -453,7 +454,8 @@ class RESTCallMixin:
         response = self._send_prepared(cid, prepared, (), kwargs)
 
         if is_rest_rejection(response):
-            raise SendRejected(get_rest_rejection_error(response), response)
+            is_permanent = is_rest_rejection_permanent(response)
+            raise SendRejected(get_rest_rejection_error(response), response, is_permanent=is_permanent)
 
         return response
 

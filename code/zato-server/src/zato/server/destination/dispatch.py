@@ -21,7 +21,7 @@ from typing import Protocol
 
 # Zato
 from zato.common.api import SMTPMessage
-from zato.common.audit_log.common import Ack_Rejected_Marker, AuditClassification, AuditSource
+from zato.common.audit_log.common import Ack_Rejected_Marker, AuditClassification, AuditSource, derive_http_classification
 from zato.common.audit_log.request_context import Key_Address, Key_Headers, Key_Method, Key_Params
 from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Remote_Path, \
     Default_Subject, Default_To, DestinationOption, DestinationType, Hop_Destination_Name
@@ -102,21 +102,50 @@ _recorded_facade = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+def unwrap_send_result(result:'any_') -> 'any_':
+    """ Reads what a connection with the queue switch on came back with. A direct attempt the endpoint
+    answered, accepting or refusing for good, hands over the endpoint's own answer, a queued message
+    hands over the result saying so, and a message that was neither delivered nor queued is a failure
+    to deliver, which raises.
+    """
+    if not isinstance(result, SendResult):
+        return result
+
+    if result.is_ok:
+        out = result.response
+
+    elif result.is_rejected:
+        out = result.response
+
+    elif result.is_in_queue:
+        out = result
+
+    # .. nothing took the message, so nothing can be said to have happened to it.
+    else:
+        raise DestinationException(result.error)
+
+    return out
+
+# ################################################################################################################################
+
 def http_send_result(response:'any_') -> 'HopSendResult':
     """ Turns what an outgoing REST or SOAP call answered with into a delivery result, shared
     by the live fan-out and by a resend.
     """
+    response = unwrap_send_result(response)
 
     # A connection with the queue switch on answers with what became of the message rather than
     # with a response of its own, so there is no status to read a rejection off.
     if isinstance(response, SendResult):
         out = new_send_result(response)
 
-    # An error status is the endpoint's answer, not a failure to reach it. The status line alone
+    # An error status is the endpoint's answer, not a failure to reach it. The status code alone
     # is what the row is classified by, the body travelling as the row's response body.
     elif not response.ok:
         status = f'HTTP {response.status_code} {response.reason}'
-        out = new_send_result(response, is_rejected=True, status=status, response_text=response.text)
+        classification = derive_http_classification(response.status_code)
+        out = new_send_result(response, is_rejected=True, status=status, response_text=response.text,
+            classification=classification)
 
     else:
         out = new_send_result(response, response_text=response.text)
@@ -208,6 +237,7 @@ def _send_mllp(connections:'DestinationConnections', entry:'DestinationEntry', p
     invoker = connections.mllp[entry.connection]
 
     result = invoker.send(payload, needs_audit=False)
+    result = unwrap_send_result(result)
 
     # A connection with the queue switch on answers with what became of the message rather than
     # with an acknowledgment, the way a REST destination with the switch on does
@@ -283,9 +313,11 @@ def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', p
             raise
 
         status = f'HTTP {rejected_response.status_code} {rejected_response.reason}'
+        classification = derive_http_classification(rejected_response.status_code)
         _, body = get_fhir_rejection(rejected_response)
 
-        out = new_send_result(body, is_rejected=True, status=status, response_text=rejected_response.text)
+        out = new_send_result(body, is_rejected=True, status=status, response_text=rejected_response.text,
+            classification=classification)
 
     else:
         out = new_send_result(response)

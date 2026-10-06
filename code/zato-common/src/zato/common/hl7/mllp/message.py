@@ -63,15 +63,19 @@ _Parse_Error_Text     = 'Message parsing or validation failed'
 def handle_duplicate(
     server:'any_',
     active_socket:'socket.socket',
+    message_text:'str',
     msh_line:'str',
     control_id:'str',
     settings:'RouteSettings',
     connection_context:'ConnectionContext',
-    channel_name:'str',
+    matched_route:'ChannelRoute',
     ) -> 'None':
     """ Answers a message the matched channel has already seen within its own TTL window.
-    A duplicate is acknowledged positively and its callback is not invoked.
+    A duplicate is acknowledged positively and its callback is not invoked. It was received all
+    the same, so a channel that audits keeps its receipt and its acknowledgment like any other's.
     """
+    channel_name = matched_route.channel_name
+
     if settings.should_log_messages:
         logger.info('Duplicate message (MSH-10: %s) from %s, skipping', control_id, connection_context.endpoint)
 
@@ -79,9 +83,28 @@ def handle_duplicate(
     server.state.on_ack_sent()
 
     channel_state = server.get_channel_state(channel_name)
+    channel_state.on_message_received()
     channel_state.on_ack_sent()
 
     ack_string = build_ack(msh_line, Accepted_Ack_Code)
+
+    audit_log = server.audit_log
+
+    if audit_log and matched_route.is_audit_log_active:
+
+        audit_cid = new_cid_server()
+        audit_attrs = get_wire_attrs(msh_line)
+        is_export_payload_active = matched_route.is_audit_export_payload_active
+
+        _ = audit_message_received(
+            audit_log, channel_name, message_text,
+            cid=audit_cid, msg_id=control_id, attrs=audit_attrs, endpoint=connection_context.endpoint,
+            is_export_payload_active=is_export_payload_active)
+        _ = audit_ack_sent(
+            audit_log, channel_name, Accepted_Ack_Code, ack_string,
+            cid=audit_cid, msg_id=control_id, facility=audit_attrs['facility'],
+            is_export_payload_active=is_export_payload_active)
+
     server.send_framed(active_socket, ack_string, settings, connection_context)
 
 # ################################################################################################################################
@@ -148,8 +171,8 @@ def handle_message(
                 # .. only deduplicate if the message actually has a control ID ..
                 if control_id:
                     if settings.deduplicator.is_duplicate(control_id):
-                        handle_duplicate(server, active_socket, msh_line, control_id, settings,
-                            connection_context, matched_route.channel_name)
+                        handle_duplicate(server, active_socket, message_text, msh_line, control_id, settings,
+                            connection_context, matched_route)
                         continue
 
         # .. a matched message counts on its channel's own state too ..

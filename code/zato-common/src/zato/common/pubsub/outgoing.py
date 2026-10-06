@@ -16,7 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub, URL_TYPE
 from zato.common.facade import PubSubFacade
-from zato.common.pubsub.delivery import deliver_with_policy
+from zato.common.pubsub.delivery import deliver_with_policy, SendRejected
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
 from zato.common.util.retry import RetryPolicy
@@ -490,17 +490,8 @@ class SendResult:
     # Why the message is not delivered
     error: 'str' = ''
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SendRejected(Exception):
-    """ Raised by a direct attempt when the endpoint turned the message down.
-    """
-
-    def __init__(self, error:'str', response:'any_'=None) -> 'None':
-        super().__init__(error)
-        self.error = error
-        self.response = response
+    # The endpoint said the message itself is wrong, so it was not queued and the response is its answer
+    is_rejected: 'bool' = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -635,6 +626,11 @@ class OutgoingPublisher:
             except SendRejected as e:
                 out.error = e.error
                 out.response = e.response
+
+                # The endpoint said the message itself is wrong, so the queue would only hand it the same answer again
+                if e.is_permanent:
+                    out.is_rejected = True
+                    return out
 
             except Exception as e:
                 out.error = str(e)

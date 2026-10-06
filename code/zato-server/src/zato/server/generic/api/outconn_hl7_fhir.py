@@ -26,7 +26,7 @@ import requests
 # Zato
 from zato.common.api import HL7, HTTP_SOAP
 from zato.common.audit_log.api import AuditLog
-from zato.common.audit_log.common import Export_Payload_Flag
+from zato.common.audit_log.common import AuditClassification, derive_http_classification, Export_Payload_Flag
 from zato.common.bearer_token import normalize_scopes
 from zato.common.hl7.fhir.fields import Outgoing_Bool_Names, Outgoing_Config_Defaults, Outgoing_Int_Names
 from zato.common.json_internal import dumps
@@ -119,6 +119,16 @@ def is_fhir_rejection(response:'Response') -> 'bool':
         return False
 
     out = response.status_code != _status_not_modified
+    return out
+
+# ################################################################################################################################
+
+def _is_rejection_permanent(response:'Response') -> 'bool':
+    """ Whether the status the server turned a write down with says the request itself is wrong.
+    """
+    classification = derive_http_classification(response.status_code)
+
+    out = classification == AuditClassification.Permanent
     return out
 
 # ################################################################################################################################
@@ -367,7 +377,8 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
 
             if is_fhir_rejection(response):
                 error, body = get_fhir_rejection(response)
-                raise SendRejected(error, body)
+                is_permanent = _is_rejection_permanent(response)
+                raise SendRejected(error, body, is_permanent=is_permanent)
 
             out = self._read_response(response, False)
             return out
@@ -392,7 +403,8 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
 
         if is_fhir_rejection(response):
             error, body = get_fhir_rejection(response)
-            raise SendRejected(error, body)
+            is_permanent = _is_rejection_permanent(response)
+            raise SendRejected(error, body, is_permanent=is_permanent)
 
 # ################################################################################################################################
 

@@ -926,8 +926,10 @@ class HL7MLLPInvoker:
         def attempt() -> 'AckResult':
             ack = self._send_direct(wrapper, data, needs_audit, needs_retry=False)
 
+            # An AE is the receiving application saying the message itself is wrong, an AR that it could not take it now
             if rejection := get_ack_rejection(ack):
-                raise SendRejected(rejection, ack)
+                is_permanent = not ack.should_retry
+                raise SendRejected(rejection, ack, is_permanent=is_permanent)
 
             return ack
 

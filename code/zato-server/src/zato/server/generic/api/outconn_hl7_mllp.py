@@ -316,8 +316,10 @@ class OutconnHL7MLLPWrapper(Wrapper):
         with self.client() as connection:
             ack = connection.invoke(request[Key_Data], cid=cid, needs_retry=False)
 
+        # An AE is the receiving application saying the message itself is wrong, an AR that it could not take it now
         if rejection := get_ack_rejection(ack):
-            raise SendRejected(rejection, ack)
+            is_permanent = not ack.should_retry
+            raise SendRejected(rejection, ack, is_permanent=is_permanent)
 
         return ack
 

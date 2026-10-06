@@ -12,8 +12,10 @@ from logging import getLogger
 
 # Zato
 from zato.common.hl7.audit import audit_ack_sent, audit_batch_received, get_wire_attrs
+from zato.common.hl7.mllp.ack import Condition_Segment_Sequence_Error
 from zato.common.hl7.mllp.dedup import extract_control_id
-from zato.common.hl7.mllp.reply import Accepted_Ack_Code, Rejection_Ack_Code, invoke_callback, resolve_reply
+from zato.common.hl7.mllp.reply import Accepted_Ack_Code, Rejection_Ack_Code, Unmatched_Object_Name, invoke_callback, \
+    resolve_reply
 from zato.common.util.api import new_cid_server
 
 # ################################################################################################################################
@@ -43,7 +45,18 @@ logger = getLogger(__name__)
 # What the sender is told when a batch matched no channel
 _No_Channel_Error_Text = 'No matching channel for this batch'
 
+# What the sender is told when its batch holds no message at all
+_No_Message_Error_Text = 'Batch contains no MSH segment'
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+def get_first_line(data:'str') -> 'str':
+    """ Returns the first segment of a payload, the batch or file header a batch opens with.
+    """
+    out = data.split('\r', 1)[0]
+    return out
+
 # ################################################################################################################################
 
 def extract_first_msh_line(data:'str') -> 'str':
@@ -79,11 +92,16 @@ def handle_batch_payload(
     # .. having already been made on the frame's own first line ..
     msh_line = extract_first_msh_line(raw)
 
-    # .. if the batch contains no MSH at all, there is nothing to ACK ..
-    if not msh_line:
+    # .. a batch with no MSH at all contains no message, which the sender waiting on an acknowledgment
+    # .. is told rather than left with a connection that goes quiet - the header the batch opens
+    # .. with names the sender and the receiver in the same places an MSH does, so the answer
+    # .. is built from that ..
+    has_message = bool(msh_line)
+
+    if not has_message:
         server.state.on_error()
         logger.warning('Batch payload from %s contains no MSH segment', connection_context.endpoint)
-        return
+        msh_line = get_first_line(raw)
 
     raw_length = len(raw)
 
@@ -97,18 +115,24 @@ def handle_batch_payload(
     else:
         channel_state = None
 
-    # .. a batch is audited when its channel says so - with no route there is no channel to ask,
-    # .. and the channel it is filed under is what says afterwards whether it was audited ..
+    # .. a batch is audited when its channel says so, and one that matched nothing is always audited,
+    # .. filed under the reserved name a single message that matched nothing is filed under too,
+    # .. since there is no channel whose audit setting could be consulted ..
     audit_log = server.audit_log
     audit_channel_name = ''
     is_export_payload_active = False
 
+    if audit_log:
+        if matched_route is None:
+            audit_channel_name = Unmatched_Object_Name
+        elif matched_route.is_audit_log_active:
+            audit_channel_name = matched_route.channel_name
+            is_export_payload_active = matched_route.is_audit_export_payload_active
+
     # .. all the batch's audit events share one correlation id ..
-    if audit_log and matched_route and matched_route.is_audit_log_active:
+    if audit_channel_name:
 
         audit_cid = new_cid_server()
-        audit_channel_name = matched_route.channel_name
-        is_export_payload_active = matched_route.is_audit_export_payload_active
 
         # .. the parent row for the batch plus a child row per contained message ..
         _ = audit_batch_received(
@@ -117,8 +141,15 @@ def handle_batch_payload(
     else:
         audit_cid = ''
 
+    # .. a batch with nothing in it is turned away, whichever channel it matched ..
+    if not has_message:
+        callback_response = None
+        ack_code          = Rejection_Ack_Code
+        error_text        = _No_Message_Error_Text
+        error_condition   = Condition_Segment_Sequence_Error
+
     # .. no route found - reject the entire batch ..
-    if matched_route is None:
+    elif matched_route is None:
         logger.warning('No matching MLLP channel for batch from %s (MSH: %s)',
             connection_context.endpoint, msh_line)
         callback_response = None

@@ -124,6 +124,10 @@ def narrow_to(channel_item:'stranydict', names:'strlist') -> 'stranydict':
     if not selected.entries:
         raise DestinationException(f'Channel `{channel_item["name"]}` has no destination among `{names}`')
 
+    # .. and so is naming only destinations that are paused, the message reaching none of them
+    if not has_active_entries(selected):
+        raise DestinationException(f'Channel `{channel_item["name"]}` has no active destination among `{names}`')
+
     out = dict(channel_item)
 
     out['destinations'] = dump_entries(selected.entries)

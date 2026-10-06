@@ -27,9 +27,10 @@ from zato.common.typing_ import dict_field, list_field
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, stranydict, strlist
+    from zato.common.typing_ import any_, anylist, stranydict, strlist, strset
     anylist = anylist
     stranydict = stranydict
+    strset = strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,12 +237,20 @@ def parse_config(
     delivery_mode:'str' = Default_Delivery_Mode,
     ) -> 'ChannelDestinationConfig':
     """ Builds one channel's destination configuration out of the three values it stores,
-    refusing a configuration that names a reply nobody produces or a delivery mode
-    that does not exist.
+    refusing a configuration that names a reply nobody produces, a delivery mode
+    that does not exist or two destinations that nothing addressing them could tell apart.
     """
     entries = parse_entries(destinations)
 
-    # An unset respond-from means the service answers the caller ..
+    # A destination is addressed by its name alone, so two of one name cannot both be there ..
+    names:'strset' = set()
+
+    for entry in entries:
+        if entry.name in names:
+            raise DestinationException(f'Channel `{channel_name}` has two destinations named `{entry.name}`')
+        names.add(entry.name)
+
+    # .. an unset respond-from means the service answers the caller ..
     if not respond_from:
         respond_from = Respond_From_Service
 
