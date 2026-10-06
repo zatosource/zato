@@ -120,6 +120,10 @@ class ChannelDestinationConfig:
     # How the destinations that do not produce the reply receive their message.
     delivery_mode: str = Default_Delivery_Mode
 
+    # Whether the payload of each delivery leaves the process with the audit export - the channel's own
+    # switch, because the rows of the fan-out belong to the trail of the message the channel received.
+    is_export_payload_active: bool = False
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -260,6 +264,8 @@ def parse_config(
     destinations:'any_',
     respond_from:'str' = Respond_From_Service,
     delivery_mode:'str' = Default_Delivery_Mode,
+    *,
+    is_export_payload_active:'bool' = False,
     ) -> 'ChannelDestinationConfig':
     """ Builds one channel's destination configuration out of the three values it stores,
     refusing a configuration that names a reply nobody produces, a delivery mode
@@ -294,6 +300,7 @@ def parse_config(
     out.entries = entries
     out.respond_from = respond_from
     out.delivery_mode = delivery_mode
+    out.is_export_payload_active = is_export_payload_active
 
     if respond_from != Respond_From_Service:
         if not get_entry(out, respond_from):

@@ -176,6 +176,27 @@ class TestReadingTheChannelConfiguration:
 
 # ################################################################################################################################
 
+    def test_the_export_switch_of_the_channel_reaches_its_configuration(self) -> 'None':
+        channel_item = _new_channel_item(_get_stored_list())
+        channel_item['is_audit_export_payload_active'] = True
+
+        config = get_config(channel_item)
+
+        assert config
+        assert config.is_export_payload_active is True
+
+# ################################################################################################################################
+
+    def test_a_channel_without_the_export_switch_does_not_export(self) -> 'None':
+        channel_item = _new_channel_item(_get_stored_list())
+
+        config = get_config(channel_item)
+
+        assert config
+        assert config.is_export_payload_active is False
+
+# ################################################################################################################################
+
     def test_a_channel_that_declares_none_has_no_configuration_at_all(self) -> 'None':
         channel_item = _new_channel_item('')
 

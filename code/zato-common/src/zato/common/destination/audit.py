@@ -161,6 +161,7 @@ def record_hop(
     error:'str' = '',
     classification:'str' = '',
     response_text:'str' = '',
+    is_export_payload_active:'bool' = False,
     ) -> 'intnone':
     """ Records one delivery attempt to one destination, whether it succeeded or not, so the
     delivery history of every destination of a channel has no holes in it. What came back is
@@ -208,6 +209,7 @@ def record_hop(
         data=stored_data,
         attrs=attrs,
         bodies=bodies,
+        is_export_payload_active=is_export_payload_active,
     )
 
     return out

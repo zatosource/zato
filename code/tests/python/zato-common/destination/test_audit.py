@@ -8,9 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from json import loads
+from unittest.mock import patch
 
 # Zato
-from zato.common.audit_log.api import AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditLog, AuditOutcome, AuditSource
 from zato.common.destination.audit import get_hop_entry
 from zato.common.destination.constants import DeliveryMode, DestinationOption, DestinationType, Respond_From_Service
 from zato.common.destination.coordinator import deliver
@@ -23,6 +24,15 @@ from connection_recorder import get_attr_map, get_hop_rows, get_stored_list, new
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anylist, intnone
+    any_ = any_
+    anylist = anylist
+    intnone = intnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The classification a failure another attempt can get past is recorded with
 _transient_classification = 'transient'
 
@@ -30,6 +40,28 @@ _transient_classification = 'transient'
 # ################################################################################################################################
 
 class TestAuditTrail:
+
+    def test_a_recorded_delivery_exports_its_payload_when_the_channel_does(self) -> 'None':
+        recorder = ConnectionRecorder()
+        context = new_test_context(recorder, is_export_payload_active=True)
+        config = parse_config(Channel_Name, get_stored_list(), Respond_From_Service, DeliveryMode.In_Order)
+
+        # The flag is not stored with the row, it decides what the export receives, so the writes
+        # themselves are observed
+        flags:'anylist' = []
+        original_insert = AuditLog.insert
+
+        def recording_insert(audit_log:'AuditLog', *args:'any_', **kwargs:'any_') -> 'intnone':
+            flags.append(kwargs['is_export_payload_active'])
+            out = original_insert(audit_log, *args, **kwargs)
+            return out
+
+        with patch.object(AuditLog, 'insert', recording_insert):
+            _ = deliver(context, config, new_overrides(), Request_Payload)
+
+        assert flags == [True, True, True]
+
+# ################################################################################################################################
 
     def test_every_destination_is_recorded_under_the_message_that_came_in(self) -> 'None':
         recorder = ConnectionRecorder()

@@ -21,6 +21,7 @@ from zato.common.destination.constants import Default_Delivery_Mode, Respond_Fro
 from zato.common.destination.coordinator import deliver, new_context, new_transports
 from zato.common.destination.model import dump_entries, has_active_entries, parse_config, select_entries, \
     DestinationException
+from zato.common.util.api import asbool
 from zato.server.destination.dispatch import send as dispatch_send
 
 # ################################################################################################################################
@@ -92,11 +93,18 @@ def get_config(channel_item:'stranydict') -> 'ChannelDestinationConfig | None':
     if not channel_item.get('destinations'):
         return None
 
+    # The export switch is stored by the channel types that have an audit log of their own, an MLLP channel
+    # and a REST one, and the item of any other channel type has no such key
+    is_export_payload_active = False
+    if 'is_audit_export_payload_active' in channel_item:
+        is_export_payload_active = asbool(channel_item['is_audit_export_payload_active'])
+
     out = parse_config(
         channel_item['name'],
         channel_item['destinations'],
         channel_item.get('respond_from', Respond_From_Service),
         channel_item.get('delivery_mode', Default_Delivery_Mode),
+        is_export_payload_active=is_export_payload_active,
     )
 
     if not has_active_entries(out):
@@ -150,7 +158,8 @@ def run_destinations(
     """
     audit_log = AuditLog(server_name)
 
-    context = new_context(config.channel_name, cid, transports, audit_log)
+    context = new_context(config.channel_name, cid, transports, audit_log,
+        is_export_payload_active=config.is_export_payload_active)
 
     out = deliver(context, config, overrides, request_payload)
     return out

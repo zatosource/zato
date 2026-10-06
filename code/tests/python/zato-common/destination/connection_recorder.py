@@ -230,14 +230,21 @@ def get_stored_list() -> 'anylist':
 
 # ################################################################################################################################
 
-def new_test_context(recorder:'ConnectionRecorder', *, retry_count:'int'=0) -> 'DeliveryContext':
-    """ Returns the context one delivery run shares, with the retries the test allows.
+def new_test_context(
+    recorder:'ConnectionRecorder',
+    *,
+    retry_count:'int'=0,
+    is_export_payload_active:'bool'=False,
+    ) -> 'DeliveryContext':
+    """ Returns the context one delivery run shares, with the retries the test allows and the
+    channel's export switch.
     """
     audit_log = AuditLog(Server_Name)
     transports = recorder.make()
 
     out = new_context(Channel_Name, CID, transports, audit_log,
-        retry_count=retry_count, retry_sleep_seconds=Retry_Sleep_Seconds)
+        retry_count=retry_count, retry_sleep_seconds=Retry_Sleep_Seconds,
+        is_export_payload_active=is_export_payload_active)
 
     return out
 
