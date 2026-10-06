@@ -30,8 +30,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long to wait until a short-lived token has provably expired, in seconds
-_past_token_expiry_seconds = keycloak_.Short_Token_Lifespan + 2
+# How long to wait until a token that expires within a session has provably expired, in seconds
+_past_token_expiry_seconds = keycloak_.In_Session_Token_Lifespan + 2
 
 # The admin service that changes a basic auth password
 _service_change_password = 'zato.security.basic-auth.change-password'
@@ -98,12 +98,13 @@ class TestIdentityOverTime:
 
     def test_a_keycloak_token_expires_mid_session(self, zato_server:'anydict', keycloak:'None') -> 'None':
 
-        token = keycloak_.get_token(keycloak_.Client_Short_Lived, keycloak_.Secret_Short_Lived)
+        # The token lives long enough to open a session and make a call, yet runs out within the test ..
+        token = keycloak_.get_token(keycloak_.Client_Expires_In_Session, keycloak_.Secret_Expires_In_Session)
         headers = _helpers.bearer_headers(token)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main, auth=None)
 
-        # The session works while the token lives ..
+        # .. the session works while the token lives ..
         session_id = _helpers.open_session(client, extra_headers=headers)
 
         response = client.jsonrpc('tools/list', session_id=session_id, extra_headers=headers)
