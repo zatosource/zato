@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import re
 
 # Zato
 from zato.common.util.api import pluralize
@@ -53,6 +54,9 @@ _MSH_Whole_Length = 12
 
 # Batch/File header prefixes - used as a tuple for startswith matching
 _Batch_Prefixes = ('BHS|', 'FHS|')
+
+# Where the first segment ends, whichever of the line endings the sender used
+_first_line_pattern = re.compile('\r\n|\r|\n')
 
 # Encoding map from MSH-18 values to Python codec names - an empty or
 # unrecognized MSH-18 maps to the channel's default encoding instead.
@@ -274,12 +278,9 @@ def decode_with_msh18(raw_bytes:'bytes', default_encoding:'str' = 'utf-8') -> 's
     # First, do a preliminary ASCII decode of just the MSH line to read MSH-18 ..
     preliminary = raw_bytes.decode('ascii', errors='replace')
 
-    first_cr = preliminary.find('\r')
-
-    if first_cr == -1:
-        msh_line = preliminary
-    else:
-        msh_line = preliminary[:first_cr]
+    # .. the line ends at whichever terminator the sender used, because the endings are normalized
+    # .. only after the bytes are decoded, so a frame with LF endings is still in them here ..
+    msh_line = _first_line_pattern.split(preliminary, 1)[0]
 
     # .. extract MSH-18 (character set).
     # When splitting MSH on '|', MSH-1 is the separator itself so

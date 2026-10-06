@@ -257,6 +257,33 @@ class TestNarrowingOneMessageToSomeDestinations:
             raise Exception('A channel with no destinations was expected to be refused')
 
 # ################################################################################################################################
+
+    def test_naming_only_destinations_that_are_paused_is_refused(self) -> 'None':
+        """ A paused destination is skipped by every delivery, so a message narrowed to paused
+        ones alone would reach nothing while the caller was told it went through.
+        """
+        stored = _get_stored_list()
+        stored[1]['is_active'] = False
+
+        channel_item = _new_channel_item(stored)
+
+        try:
+            _ = narrow_to(channel_item, [_rest_connection])
+        except DestinationException as e:
+            assert 'no active destination' in str(e)
+            assert _rest_connection in str(e)
+        else:
+            raise Exception('A selection of paused destinations alone was expected to be refused')
+
+        # The one that is not paused is still there to be named
+        narrowed = narrow_to(channel_item, [_mllp_connection])
+        config = get_config(narrowed)
+
+        assert config
+        assert len(config.entries) == 1
+        assert config.entries[0].name == _mllp_connection
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestDeliveringWhatAServiceHandled:

@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the connection's own audit log was turned off for the call.
 
 # stdlib
-from http.client import INTERNAL_SERVER_ERROR, OK
+from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, OK
 
 # Zato
 from zato.common.audit_log.common import Ack_Rejected_Marker
@@ -68,6 +68,27 @@ REST_Rejected_Text = 'Refused by the endpoint'
 REST_Rejected_Response = RESTResponseStub(False, INTERNAL_SERVER_ERROR, 'Internal Server Error', REST_Rejected_Text)
 REST_Rejected_Status = f'HTTP {INTERNAL_SERVER_ERROR} Internal Server Error'
 
+# What a REST endpoint that will never take the message answers with
+REST_Refused_Text = 'The order has no customer'
+REST_Refused_Response = RESTResponseStub(False, BAD_REQUEST, 'Bad Request', REST_Refused_Text)
+REST_Refused_Status = f'HTTP {BAD_REQUEST} Bad Request'
+
+# What a connection with the queue switch on answers with when its direct attempt got through
+REST_Queue_Accepted_Response = SendResult()
+REST_Queue_Accepted_Response.is_ok = True
+REST_Queue_Accepted_Response.response = REST_Response
+
+# What a connection with the queue switch on answers with when the endpoint refused the message for good
+REST_Queue_Refused_Response = SendResult()
+REST_Queue_Refused_Response.is_rejected = True
+REST_Queue_Refused_Response.response = REST_Refused_Response
+REST_Queue_Refused_Response.error = REST_Refused_Status
+
+# What a connection with the queue switch on answers with when neither the endpoint nor the queue took the message
+REST_Queue_Lost_Error = 'The database is not available'
+REST_Queue_Lost_Response = SendResult()
+REST_Queue_Lost_Response.error = REST_Queue_Lost_Error
+
 # What an HL7 receiver that turned the message down answers with, and how that reads on the row
 MLLP_Rejected_Error = 'Unknown patient identifier'
 MLLP_Rejected_Text = 'AR'
@@ -122,9 +143,15 @@ class RESTFacadeRecorder:
         # Connections whose queue switch is on, so a send hands the message over.
         self.queued:'strlist' = []
 
+        # Connections answering every call with exactly what they are mapped to here.
+        self.answering:'anydict' = {}
+
     def __getitem__(self, connection:'str') -> 'RESTInvokerRecorder':
 
-        if connection in self.queued:
+        if connection in self.answering:
+            response = self.answering[connection]
+
+        elif connection in self.queued:
             response = REST_Queued_Response
 
         elif connection in self.rejecting:
@@ -153,16 +180,30 @@ class AckResultStub:
 class MLLPInvokerRecorder:
     """ Stands in for the invoker self.mllp hands out.
     """
-    def __init__(self, connection:'str', calls:'anylist', ack:'AckResultStub') -> 'None':
+    def __init__(self, connection:'str', calls:'anylist', ack:'any_') -> 'None':
         self.connection = connection
         self.calls = calls
         self.ack = ack
 
-    def send(self, payload:'any_', *, needs_audit:'bool'=True) -> 'AckResultStub':
+    def send(self, payload:'any_', *, needs_audit:'bool'=True) -> 'any_':
         self.calls.append((self.connection, payload, needs_audit))
         return self.ack
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+# What an HL7 receiver answers a message it refused for good with
+MLLP_Refused_Error = 'Required field PID-3 is missing'
+MLLP_Refused_Text = 'AE'
+MLLP_Refused_Ack = AckResultStub(MLLP_Refused_Text, is_accepted=False, ack_code='AE', error_text=MLLP_Refused_Error)
+MLLP_Refused_Status = f'{Ack_Rejected_Marker} AE {MLLP_Refused_Error}'
+
+# What an MLLP connection with the queue switch on answers with when the receiver refused the message for good
+MLLP_Queue_Refused_Response = SendResult()
+MLLP_Queue_Refused_Response.is_rejected = True
+MLLP_Queue_Refused_Response.response = MLLP_Refused_Ack
+MLLP_Queue_Refused_Response.error = MLLP_Refused_Error
+
 # ################################################################################################################################
 
 class MLLPFacadeRecorder:
@@ -173,10 +214,17 @@ class MLLPFacadeRecorder:
         self.calls:'anylist' = []
         self.rejecting:'strlist' = []
 
+        # Connections answering every send with exactly what they are mapped to here.
+        self.answering:'anydict' = {}
+
     def __getitem__(self, connection:'str') -> 'MLLPInvokerRecorder':
 
-        if connection in self.rejecting:
+        if connection in self.answering:
+            ack = self.answering[connection]
+
+        elif connection in self.rejecting:
             ack = AckResultStub(MLLP_Rejected_Text, is_accepted=False, ack_code='AR', error_text=MLLP_Rejected_Error)
+
         else:
             ack = AckResultStub(MLLP_Response)
 

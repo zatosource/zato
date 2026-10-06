@@ -39,6 +39,10 @@ _accepted_response = 'HTTP 200 accepted'
 _rejected_response = 'HTTP 500 rejected'
 _rejected_error = 'HTTP 500 Internal Server Error'
 
+# What an endpoint that will never take this message answers with
+_refused_response = 'HTTP 400 refused'
+_refused_error = 'HTTP 400 Bad Request'
+
 _timeout_error = 'Timeout error: the endpoint did not answer'
 
 _queue_error = 'The database is not available'
@@ -67,6 +71,9 @@ class _Attempt:
 
         elif self.outcome == 'rejected':
             raise SendRejected(_rejected_error, _rejected_response)
+
+        elif self.outcome == 'refused':
+            raise SendRejected(_refused_error, _refused_response, is_permanent=True)
 
         else:
             raise Exception(_timeout_error)
@@ -121,10 +128,12 @@ class SendOrQueueTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def _assert_flags_are_consistent(self, result:'SendResult') -> 'None':
-        """ The two flags are never both on.
+        """ Of the three flags, at most one is ever on.
         """
         self.assertIsInstance(result, SendResult)
-        self.assertFalse(result.is_ok and result.is_in_queue)
+
+        flags_on = [result.is_ok, result.is_in_queue, result.is_rejected].count(True)
+        self.assertLessEqual(flags_on, 1)
 
 # ################################################################################################################################
 
@@ -157,7 +166,7 @@ class SendOrQueueTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_a_rejected_message_goes_to_the_queue(self) -> 'None':
+    def test_a_message_turned_down_for_now_goes_to_the_queue(self) -> 'None':
 
         attempt = _Attempt('rejected')
         result = self.publisher.send_or_queue(_cid, _request, attempt)
@@ -165,6 +174,7 @@ class SendOrQueueTestCase(unittest.TestCase):
         self._assert_flags_are_consistent(result)
         self.assertFalse(result.is_ok)
         self.assertTrue(result.is_in_queue)
+        self.assertFalse(result.is_rejected)
         self._assert_msg_id_is_the_envelope_one(result)
 
         self.assertEqual(result.error, _rejected_error)
@@ -172,6 +182,44 @@ class SendOrQueueTestCase(unittest.TestCase):
 
         self.assertEqual(attempt.calls, 1)
         self.assertEqual(self.depth.get(self.sub_key), 1)
+
+# ################################################################################################################################
+
+    def test_a_message_turned_down_for_good_is_not_queued(self) -> 'None':
+        """ The endpoint said the message itself is wrong, so the queue would only hand it
+        the same answer again - the result says so and the answer travels with it.
+        """
+        attempt = _Attempt('refused')
+        result = self.publisher.send_or_queue(_cid, _request, attempt)
+
+        self._assert_flags_are_consistent(result)
+        self.assertFalse(result.is_ok)
+        self.assertFalse(result.is_in_queue)
+        self.assertTrue(result.is_rejected)
+
+        self.assertEqual(result.error, _refused_error)
+        self.assertEqual(result.response, _refused_response)
+        self.assertEqual(result.msg_id, '')
+
+        self.assertEqual(attempt.calls, 1)
+        self.server.pubsub_backend.publish.assert_not_called()
+        self.assertEqual(self.depth.get(self.sub_key), 0)
+
+# ################################################################################################################################
+
+    def test_a_message_turned_down_for_good_behind_others_waits_its_turn(self) -> 'None':
+        """ With others already in the queue nothing touches the wire, so the endpoint's
+        refusal is not known yet and the message waits like any other.
+        """
+        self.depth.raise_(self.sub_key)
+
+        attempt = _Attempt('refused')
+        result = self.publisher.send_or_queue(_cid, _request, attempt)
+
+        self._assert_flags_are_consistent(result)
+        self.assertTrue(result.is_in_queue)
+        self.assertFalse(result.is_rejected)
+        self.assertEqual(attempt.calls, 0)
 
 # ################################################################################################################################
 
@@ -268,7 +316,7 @@ class SendOrQueueTestCase(unittest.TestCase):
     def test_nothing_raises(self) -> 'None':
         """ Nothing raises.
         """
-        outcomes = ('accepted', 'rejected', 'timeout')
+        outcomes = ('accepted', 'rejected', 'refused', 'timeout')
         results:'anylist' = []
 
         for outcome in outcomes:
@@ -289,7 +337,7 @@ class SendOrQueueTestCase(unittest.TestCase):
                     self._assert_flags_are_consistent(result)
                     results.append(result)
 
-        self.assertEqual(len(results), 12)
+        self.assertEqual(len(results), 16)
 
 # ################################################################################################################################
 # ################################################################################################################################

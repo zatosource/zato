@@ -21,9 +21,11 @@ from zato.common.hl7.fhir.bulk_export.file import BulkExportFile, BulkExportReso
 from zato.common.typing_ import cast_
 from zato.server.destination.dispatch import render_remote_path, send
 
-from service_stub import ServiceStub, FHIR_Response, Kafka_Response, MLLP_Rejected_Status, MLLP_Rejected_Text, \
-    MLLP_Response, REST_Queued_Response, REST_Rejected_Response, REST_Rejected_Status, REST_Rejected_Text, REST_Response, \
-    Service_Response, SFTP_Response, SMTP_Response
+from service_stub import ServiceStub, FHIR_Response, Kafka_Response, MLLP_Queue_Refused_Response, MLLP_Refused_Status, \
+    MLLP_Refused_Text, MLLP_Rejected_Status, MLLP_Rejected_Text, MLLP_Response, REST_Queue_Accepted_Response, \
+    REST_Queue_Lost_Error, REST_Queue_Lost_Response, REST_Queue_Refused_Response, REST_Queued_Response, \
+    REST_Refused_Response, REST_Refused_Status, REST_Refused_Text, REST_Rejected_Response, REST_Rejected_Status, \
+    REST_Rejected_Text, REST_Response, REST_Response_Text, Service_Response, SFTP_Response, SMTP_Response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -388,6 +390,81 @@ class TestQueuedDeliveries:
 
         # There is no response body to keep either, the message not having been sent yet.
         assert result.response_text == ''
+
+# ################################################################################################################################
+
+    def test_a_direct_attempt_that_got_through_is_read_as_the_endpoint_answer(self) -> 'None':
+        """ A connection with the queue switch on tries the wire first, and what the endpoint
+        answered an attempt that got through with is the delivery's answer, not the wrapper around it.
+        """
+        stub = _new_service()
+        stub.rest.answering[_rest_connection] = REST_Queue_Accepted_Response
+        service = _as_service(stub)
+
+        entry = new_entry(_rest_connection, DestinationType.REST, _rest_connection)
+
+        result = send(service, entry, _request_payload)
+
+        assert result.is_rejected is False
+        assert result.response is REST_Response
+        assert result.response_text == REST_Response_Text
+        assert result.status == ''
+
+# ################################################################################################################################
+
+    def test_a_direct_attempt_the_endpoint_refused_for_good_is_a_rejection(self) -> 'None':
+        """ A refusal the queue would only repeat is the endpoint's own answer, so the row
+        reads as a rejection with the endpoint's status rather than as a message in the queue.
+        """
+        stub = _new_service()
+        stub.rest.answering[_rest_connection] = REST_Queue_Refused_Response
+        service = _as_service(stub)
+
+        entry = new_entry(_rest_connection, DestinationType.REST, _rest_connection)
+
+        result = send(service, entry, _request_payload)
+
+        assert result.is_rejected is True
+        assert result.response is REST_Refused_Response
+        assert result.status == REST_Refused_Status
+        assert result.response_text == REST_Refused_Text
+        assert result.classification == AuditClassification.Permanent
+
+# ################################################################################################################################
+
+    def test_a_message_neither_sent_nor_queued_is_a_failure_to_deliver(self) -> 'None':
+        """ Nothing took the message, so nothing can be said to have happened to it - the delivery
+        raises, the way one whose transport failed does, rather than reporting a success.
+        """
+        stub = _new_service()
+        stub.rest.answering[_rest_connection] = REST_Queue_Lost_Response
+        service = _as_service(stub)
+
+        entry = new_entry(_rest_connection, DestinationType.REST, _rest_connection)
+
+        with pytest.raises(DestinationException) as raised:
+            _ = send(service, entry, _request_payload)
+
+        assert REST_Queue_Lost_Error in str(raised.value)
+
+# ################################################################################################################################
+
+    def test_an_hl7_receiver_refusing_for_good_through_the_queue_switch_is_a_rejection(self) -> 'None':
+        """ The acknowledgment the receiver refused with is the delivery's answer, and a channel
+        replying from this destination still relays that acknowledgment to its own sender.
+        """
+        stub = _new_service()
+        stub.mllp.answering[_mllp_connection] = MLLP_Queue_Refused_Response
+        service = _as_service(stub)
+
+        entry = new_entry(_mllp_connection, DestinationType.MLLP, _mllp_connection)
+
+        result = send(service, entry, _request_payload)
+
+        assert result.is_rejected is True
+        assert result.status == MLLP_Refused_Status
+        assert result.response == MLLP_Refused_Text
+        assert result.classification == AuditClassification.Permanent
 
 # ################################################################################################################################
 # ################################################################################################################################

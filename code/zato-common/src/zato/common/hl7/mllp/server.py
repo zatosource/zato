@@ -16,7 +16,7 @@ from gevent import spawn
 from gevent.lock import BoundedSemaphore
 
 # Zato
-from zato.common.hl7.audit import audit_ack_sent, get_wire_attrs
+from zato.common.hl7.audit import audit_ack_sent, audit_message_received, get_wire_attrs
 from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.ack import build_ack, Condition_Data_Type_Error, ErrorCondition
 from zato.common.hl7.mllp.codec import FrameReader, frame_encode
@@ -305,8 +305,10 @@ class HL7MLLPServer:
         # so the reader starts with it rather than with an empty buffer
         reader = FrameReader(client_socket, self.router.get_start_sequences(), config.read_buffer_size, initial_bytes)
 
-        # Default settings for a frame that matched nothing, whose channel is by definition unknown
+        # Default settings for a frame that matched nothing, whose channel is by definition unknown,
+        # read under the listener's own ceilings like any channel's would be
         unmatched_settings = RouteSettings()
+        unmatched_settings.apply_listener_bounds(config)
 
         # Until a message matches a route the wait between messages is the listener's own,
         # because there is no channel yet whose idle deadline could apply instead
@@ -368,7 +370,7 @@ class HL7MLLPServer:
                 # .. a sender the matched channel does not accept is told so and nothing is invoked ..
                 if matched_route is not None:
                     if not self._is_sender_allowed(matched_route, connection_context):
-                        self._on_sender_refused(client_socket, msh_line, matched_route, connection_context)
+                        self._on_sender_refused(client_socket, msh_line, message_bytes, matched_route, connection_context)
                         continue
 
                 self._handle_message(client_socket, message_bytes, connection_context, matched_route, settings)
@@ -413,12 +415,14 @@ class HL7MLLPServer:
         self,
         active_socket:'socket.socket',
         msh_line:'str',
+        message_bytes:'bytes',
         route:'ChannelRoute',
         connection_context:'ConnectionContext',
         ) -> 'None':
         """ Records and answers a message whose channel does not accept the connection it came on.
         The refusal is attributed to the channel that matched, so it lands in that channel's
-        counters and audit trail rather than nowhere.
+        counters and audit trail rather than nowhere - the receipt of the message and the
+        acknowledgment that answered it, on one correlation id, like any other message the channel audits.
         """
         channel_state = self.get_channel_state(route.channel_name)
         channel_state.on_message_received()
@@ -437,6 +441,15 @@ class HL7MLLPServer:
             audit_cid = new_cid_server()
             control_id = extract_control_id(msh_line)
             wire_attrs = get_wire_attrs(msh_line)
+
+            # The message was never decoded for a channel that would not have it, so what the receipt
+            # holds is the bytes read as the channel's own encoding
+            message_text = message_bytes.decode(settings.default_character_encoding, errors='replace')
+
+            _ = audit_message_received(
+                self.audit_log, route.channel_name, message_text,
+                cid=audit_cid, msg_id=control_id, attrs=wire_attrs, endpoint=connection_context.endpoint,
+                is_export_payload_active=route.is_audit_export_payload_active)
 
             _ = audit_ack_sent(
                 self.audit_log, route.channel_name, Rejection_Ack_Code, ack_string,

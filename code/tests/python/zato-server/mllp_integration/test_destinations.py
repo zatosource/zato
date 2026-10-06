@@ -1009,7 +1009,47 @@ class TestChannelDestinations:
 
 # ################################################################################################################################
 
-    def test_11_cleanup(self, zato_client:'any_') -> 'None':
+    def test_11_a_reprocess_records_its_deliveries_under_its_own_cid(
+        self,
+        zato_client:'any_',
+        zato_server:'dict',
+        ) -> 'None':
+        """ A stored message sent through its channel again fans out under the cid of the reprocess,
+        the same as a live message fans out under the cid it arrived under, so the new row and every
+        delivery it led to read as one trail - through a service and without one alike.
+        """
+        audit_db_path = zato_server['audit_db_path']
+
+        # The fan-out channel runs a service, the plain one has none - each path has a cid to pass on
+        for channel_name, control_id, hop_count in (
+            (_fanout_channel, 'DEST-FANOUT-001', 3),
+            (_plain_channel, 'DEST-PLAIN-001', 1),
+        ):
+            events = _get_events(audit_db_path, channel_name, AuditEvent.Message_Received, control_id)
+            original = events[0]
+
+            response = zato_client.invoke('zato.audit-log.hl7.reprocess', {'event_id': original['id']})
+            report = json.loads(response['response_data'])
+
+            assert report['is_ok'], report
+            assert report['control_id'] == control_id, report
+
+            # Every delivery the reprocess led to is recorded under the cid the report names ..
+            hops = _wait_for_hops(audit_db_path, report['cid'], hop_count)
+
+            assert len(hops) == hop_count, (channel_name, hops)
+
+            # .. each of them a delivery of this channel that went through ..
+            for row in hops:
+                assert row['outcome'] == AuditOutcome.OK, row
+                assert _get_attr_map(audit_db_path, row['id'])['channel_name'] == channel_name
+
+            # .. and none of them landed under the cid of the message's first arrival.
+            assert len(_get_hops(audit_db_path, original['cid'])) == hop_count
+
+# ################################################################################################################################
+
+    def test_12_cleanup(self, zato_client:'any_') -> 'None':
         """ Deletes everything this module created, so the other test modules start from the
         same clean slate as before.
         """

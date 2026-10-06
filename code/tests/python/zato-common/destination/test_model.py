@@ -187,6 +187,29 @@ class TestConfiguration:
         assert config.delivery_mode == DeliveryMode.Same_Time
 
 # ################################################################################################################################
+
+    def test_two_destinations_of_one_name_cannot_both_be_there(self) -> 'None':
+        """ A destination is addressed by its name alone - by a resend, by a reply producer, by a
+        reprocess naming the ones to catch up - so a second one of the same name is one nothing
+        could ever reach on its own.
+        """
+        entries = loads(_get_stored_list())
+
+        # A REST connection of the very same name as the MLLP one
+        entries.append({
+            'name': _mllp_connection,
+            'type': DestinationType.REST,
+            'connection': _mllp_connection,
+            'is_active': True,
+            'options': {'method': 'POST'},
+        })
+
+        with pytest.raises(DestinationException) as raised:
+            _ = parse_config(_channel_name, dumps(entries))
+
+        assert f'two destinations named `{_mllp_connection}`' in str(raised.value)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestLookups:
