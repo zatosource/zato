@@ -9,11 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 from threading import Lock
-from traceback import format_exc
 
 # Zato
 from zato.common.api import CHANNEL
 from zato.common.audit_log.api import AuditLog
+from zato.common.defaults import default_cluster_id
 from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_message_size, Tolerance_Names
 from zato.common.hl7.mllp.haproxy import resolve_internal_port
 from zato.common.hl7.mllp.preprocess import build_tolerance_config
@@ -33,11 +33,13 @@ from zato.server.destination.hook import get_message_text
 if 0:
     from zato.common.typing_ import any_, anylist, callable_, stranydict
     from zato.server.base.parallel import ParallelServer
+    from zato.server.service import Service
     any_ = any_
     anylist = anylist
     callable_ = callable_
     stranydict = stranydict
     ParallelServer = ParallelServer
+    Service = Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,11 +59,6 @@ channel_int_config_keys = Channel_Int_Names
 # What a channel is left accepting when the security definition it names cannot be resolved.
 # No certificate carries this, so the channel refuses everything rather than everything through.
 _Unresolvable_Common_Name = '\x00unresolvable'
-
-# What serialises the workers that all hold the same channel when its REST bridge is deleted
-_Rest_Channel_Lock_Prefix = 'zato.channel.hl7.mllp.rest-channel.'
-_Rest_Channel_Lock_Ttl    = 30
-_Rest_Channel_Lock_Block  = 30
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -498,44 +495,31 @@ class ChannelHL7MLLPWrapper(Wrapper):
                     self._stop_shared_server()
                     _shared_state.listener_channel_count = 0
 
-            self._delete_rest_channel()
-
-# ################################################################################################################################
-
-    def _delete_rest_channel(self) -> 'None':
-        """ Removes the backing REST channel of a channel that had one. Every worker process holds
-        the same channel and runs this, so the work is done under a cluster-wide lock and whoever
-        gets there second finds it already gone and leaves it alone.
-        """
-        rest_channel_id = self.config.rest_channel_id
-
-        if not rest_channel_id:
-            return
-
-        server = self.parallel_server
-        lock_name = f'{_Rest_Channel_Lock_Prefix}{rest_channel_id}'
-
-        with server.zato_lock_manager(lock_name, ttl=_Rest_Channel_Lock_Ttl, block=_Rest_Channel_Lock_Block):
-
-            # Another worker holding the same channel may already have deleted it, and asking
-            # is what tells that apart from a deletion that genuinely failed
-            try:
-                _ = server.invoke('zato.http-soap.get', {'id': rest_channel_id, 'cluster_id': 1})
-            except Exception:
-                logger.info('Backing REST channel id=%s is already gone', rest_channel_id)
-                return
-
-            try:
-                _ = server.invoke('zato.http-soap.delete', {'id': rest_channel_id, 'cluster_id': 1})
-                logger.info('Deleted backing REST channel id=%s for MLLP channel `%s`',
-                    rest_channel_id, self.config.name)
-            except Exception:
-                logger.warning('Could not delete backing REST channel id=%s; e:`%s`', rest_channel_id, format_exc())
-
 # ################################################################################################################################
 
     def _ping(self) -> 'None':
         pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def delete_rest_channel(service:'Service', rest_channel_id:'int | None') -> 'None':
+    """ Deletes the REST channel backing an MLLP channel that has one. This runs in the service that deletes
+    the MLLP channel, once, rather than in the teardown of the channel's wrapper - every worker runs that
+    teardown, and so does an edit, which keeps the REST channel.
+    """
+    if not rest_channel_id:
+        return
+
+    # A REST channel the Dashboard has already deleted is not an error
+    request = {
+        'id': rest_channel_id,
+        'cluster_id': default_cluster_id,
+        'should_raise_if_missing': False,
+    }
+
+    _ = service.invoke('zato.http-soap.delete', request)
+    logger.info('Deleted backing REST channel id=%s', rest_channel_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

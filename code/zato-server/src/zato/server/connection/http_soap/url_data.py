@@ -21,6 +21,7 @@ from zato.common.api import AS2, AS4, CONNECTION, HTTP_SOAP, MISC, SEC_DEF_TYPE,
 from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config, extract_bearer_token
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
+from zato.common.destination.constants import Channel_Fan_Out_Fields
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub.outgoing import http_soap_inbound_types
 from zato.common.soap.common import SOAPSecurityException
@@ -1012,6 +1013,12 @@ class URLData(PyURLData):
                 queue_response = _queue.Default_Queue_Response
 
             channel_item[_queue.Field_Queue_Response] = queue_response
+
+            # The fan-out of a channel that has one, which the pipeline reads from this item - a REST
+            # channel backing an HL7 MLLP one has the MLLP channel's, and a channel saved without one has no key
+            for name in Channel_Fan_Out_Fields:
+                if name in msg:
+                    channel_item[name] = msg[name]
 
         if msg.get('security_id'):
             channel_item['sec_type'] = msg['sec_type']

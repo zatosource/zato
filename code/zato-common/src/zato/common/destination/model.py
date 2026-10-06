@@ -20,7 +20,7 @@ from json import dumps, loads
 
 # Zato
 from zato.common.destination.constants import Active_Delivery_Modes, Default_Delivery_Mode, Default_Is_Active, \
-    Known_Destination_Types, Respond_From_Service
+    DestinationOption, DestinationType, Known_Destination_Types, Known_Methods, Respond_From_Service
 from zato.common.typing_ import dict_field, list_field
 
 # ################################################################################################################################
@@ -37,6 +37,12 @@ if 0:
 
 #  Type aliases
 destination_entry_list = list['DestinationEntry']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The destination types that make an HTTP call and name the method the call is made with
+_types_with_method = (DestinationType.REST, DestinationType.FHIR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -187,12 +193,31 @@ def parse_entry(entry_data:'stranydict') -> 'DestinationEntry':
     # A destination is addressed by a name of its own, defaulting to the connection it delivers through.
     name = entry_data.get('name', connection)
 
+    options = entry_data.get('options', {})
+
+    # A method the destination cannot be delivered with is refused at save time, so the error reaches the
+    # user who configured it, rather than at delivery time, where it would be raised once per message.
+    if destination_type in _types_with_method:
+        if DestinationOption.Method in options:
+            method = options[DestinationOption.Method]
+            if method not in Known_Methods:
+                raise DestinationException(f'Destination `{connection}` cannot be delivered to with method `{method}`')
+
+    # The search parameters of a FHIR destination are a query string, the form the Dashboard panel stores
+    # them in, so a value of any other type is refused at save time.
+    if destination_type == DestinationType.FHIR:
+        if DestinationOption.Params in options:
+            params = options[DestinationOption.Params]
+            if not isinstance(params, str):
+                raise DestinationException(
+                    f'Destination `{connection}` requires its search parameters as a query string, not `{params!r}`')
+
     out = new_entry(
         name,
         destination_type,
         connection,
         is_active=entry_data.get('is_active', Default_Is_Active),
-        options=entry_data.get('options', {}),
+        options=options,
     )
 
     return out

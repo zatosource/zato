@@ -48,7 +48,8 @@ $.fn.zato.destinations.config = {
         'hl7-mllp': [],
         'hl7-fhir': [
             {id: 'method', label: 'Method', kind: 'select', values: ['POST', 'PUT', 'PATCH', 'GET', 'DELETE']},
-            {id: 'path',   label: 'Path',   kind: 'text',   placeholder: '/Patient'}
+            {id: 'path',   label: 'Path',   kind: 'text',   placeholder: '/Patient'},
+            {id: 'params', label: 'Search parameters', kind: 'text', placeholder: 'patient=1&_count=10'}
         ],
         'smtp': [
             {id: 'to',      label: 'To',      kind: 'text', placeholder: 'name@example.com'},

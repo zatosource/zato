@@ -24,7 +24,7 @@ from zato.common.const import SECRETS
 from zato.common.exception import BadRequest
 from zato.common.hl7.fhir.fields import Outgoing_Int_Names as FHIR_Outgoing_Int_Names
 from zato.common.hl7.mllp.fields import Channel_Int_Names as MLLP_Channel_Int_Names, \
-    Outgoing_Int_Names as MLLP_Outgoing_Int_Names
+    Channel_Rest_Channel_Id_Key as MLLP_Rest_Channel_Id_Key, Outgoing_Int_Names as MLLP_Outgoing_Int_Names
 from zato.common.ext_db.api import is_ext_object_id, needs_ext_db, to_local_id, to_public_id
 from zato.common.json_internal import loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
@@ -35,6 +35,7 @@ from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.rule_engine_api import on_rule_engine_api_create_edit, on_rule_engine_api_delete
 from zato.server.config_audit import get_model_snapshot, record_service_config_change
+from zato.server.generic.api.channel_hl7_mllp import delete_rest_channel as delete_mllp_rest_channel
 from zato.server.generic.api.outconn_sdk import get_secret_field_names
 from zato.server.generic.connection import GenericConnection
 from zato.server.service.internal import AdminService, ChangePasswordBase
@@ -172,10 +173,16 @@ def delete_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_')
         opaque = parse_instance_opaque_attr(instance)
         delete_health_check_job(service, opaque.get(_health_check.Field_Job_ID))
 
-    # .. as does the bulk export job of a FHIR connection.
+    # .. as does the bulk export job of a FHIR connection ..
     if instance.type_ in _bulk_export_link_types:
         opaque = parse_instance_opaque_attr(instance)
         delete_health_check_job(service, opaque.get(_bulk.Field_Job_ID))
+
+    # .. and the REST channel backing an HL7 MLLP one, which is deleted here, once, rather than by each worker's
+    # teardown of the channel's wrapper - the same teardown an edit runs, which keeps that channel.
+    if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP:
+        opaque = parse_instance_opaque_attr(instance)
+        delete_mllp_rest_channel(service, opaque.get(MLLP_Rest_Channel_Id_Key))
 
     before_snapshot = get_model_snapshot(instance)
 

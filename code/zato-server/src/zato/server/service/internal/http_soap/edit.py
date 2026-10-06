@@ -26,6 +26,7 @@ from zato.server.service.internal.http_soap.alert_settings import alert_input, p
 from zato.server.service.internal.http_soap.common import _as2_input, _as4_input, _CreateEdit, _invocation_input, \
     _is_declarative, _normalize_retry_config, _pem_secret_fields, _retry_input, _validate_invocation_config
 from zato.server.service.internal.http_soap.delivery_settings import delivery_input, prepare_delivery_settings
+from zato.server.service.internal.http_soap.destination_settings import destination_input, prepare_destination_settings
 from zato.server.service.internal.http_soap.health_check import preserve_job_ids, sync_linked_jobs
 
 # ################################################################################################################################
@@ -52,7 +53,8 @@ class Edit(_CreateEdit):
         *_as4_input, \
         *_as2_input, \
         *alert_input, \
-        *delivery_input
+        *delivery_input, \
+        *destination_input
     output = '-id', '-name'
 
     def handle(self):
@@ -204,6 +206,9 @@ class Edit(_CreateEdit):
 
                 # An outgoing REST connection edited by a caller that sent no delivery settings keeps the ones it has
                 prepare_delivery_settings(self, input, skip_opaque, opaque)
+
+                # A channel edited by a caller that sent no fan-out keeps the one it has
+                prepare_destination_settings(input, skip_opaque, opaque)
 
                 # Secrets are never returned to the Dashboard, so an edit form cannot send them back.
                 for name in _pem_secret_fields:

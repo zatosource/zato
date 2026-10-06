@@ -25,6 +25,7 @@ from zato.server.service.internal.http_soap.alert_settings import alert_input, p
 from zato.server.service.internal.http_soap.common import _as2_input, _as4_input, _CreateEdit, _invocation_input, \
     _is_declarative, _normalize_retry_config, _retry_input, _validate_invocation_config
 from zato.server.service.internal.http_soap.delivery_settings import delivery_input, prepare_delivery_settings
+from zato.server.service.internal.http_soap.destination_settings import destination_input, prepare_destination_settings
 from zato.server.service.internal.http_soap.health_check import sync_linked_jobs
 
 # ################################################################################################################################
@@ -51,7 +52,8 @@ class Create(_CreateEdit):
         *_as4_input, \
         *_as2_input, \
         *alert_input, \
-        *delivery_input
+        *delivery_input, \
+        *destination_input
     output = 'id', 'name', '-url_path'
 
     def handle(self):
@@ -96,6 +98,9 @@ class Create(_CreateEdit):
 
         # A new outgoing REST connection starts with every delivery setting the caller did not send at its default
         prepare_delivery_settings(self, input, skip_opaque, {})
+
+        # A new channel has only the fan-out the caller sent, which is none for most of them
+        prepare_destination_settings(input, skip_opaque, {})
 
         # AS4 private keys are stored encrypted
         self._encrypt_as4_secrets(input)

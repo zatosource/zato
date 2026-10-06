@@ -8,14 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import ExitStack
+from json import dumps
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 # Zato
-from zato.common.api import HL7
+from zato.common.api import GENERIC, HL7
 from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
+from zato.common.ext.bunch import Bunch
 from zato.common.typing_ import cast_
-from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper, _shared_state
+from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper, delete_rest_channel, _shared_state
+from zato.server.service.internal.generic import connection as conn_module
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -591,65 +594,112 @@ class TestRestOnlyMode(_WiringTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestRestChannelCleanup(_WiringTestCase):
-    """ Tests for the backing REST channel cleanup on MLLP channel delete.
+class TestTheBackingRestChannelIsNotDeletedByTheWrapper(_WiringTestCase):
+    """ The wrapper's teardown runs on every worker and on every edit, an edit being a delete followed
+    by a create, so it does not delete the REST channel backing the MLLP one - that channel is deleted
+    once, by the service that deletes the MLLP channel.
     """
 
 # ################################################################################################################################
 
-    def test_delete_invokes_http_soap_delete(self) -> 'None':
-        """ Deleting an MLLP channel with rest_channel_id invokes zato.http-soap.delete.
-        """
-        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
+    def test_tearing_the_wrapper_down_leaves_the_rest_channel_in_place(self) -> 'None':
 
-        # .. init first so the channel is counted ..
+        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
         wrapper._init_impl()
 
-        # .. now delete ..
-        wrapper._delete()
+        # What the config manager does for an edit as well as for a delete
+        wrapper.delete()
 
-        # .. verify the server's invoke was called to delete the REST channel ..
-        self.get_invoker(wrapper).invoke.assert_called_with('zato.http-soap.delete', {
+        invoked_services = [one.args[0] for one in self.get_invoker(wrapper).invoke.call_args_list]
+        self.assertNotIn('zato.http-soap.delete', invoked_services)
+
+# ################################################################################################################################
+
+    def test_an_edit_keeps_the_rest_channel_the_channel_was_saved_with(self) -> 'None':
+
+        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
+        wrapper._init_impl()
+
+        # An edit is the teardown followed by a build with the new config, which keeps the same id
+        wrapper.delete()
+
+        edited = self.make_wrapper(use_rest=True, rest_channel_id=42, name='test-mllp-channel')
+        edited._init_impl()
+
+        for one in (wrapper, edited):
+            invoked_services = [call.args[0] for call in self.get_invoker(one).invoke.call_args_list]
+            self.assertNotIn('zato.http-soap.delete', invoked_services)
+
+        self.assertEqual(edited.config.rest_channel_id, 42)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDeletingTheChannelDeletesItsRestChannel(TestCase):
+    """ The service that deletes an MLLP channel removes the REST channel it was saved with, and only that one.
+    """
+
+# ################################################################################################################################
+
+    def test_the_rest_channel_the_channel_was_saved_with_is_deleted(self) -> 'None':
+
+        service = MagicMock()
+        delete_rest_channel(service, 42)
+
+        service.invoke.assert_called_once_with('zato.http-soap.delete', {
             'id': 42,
             'cluster_id': 1,
+            'should_raise_if_missing': False,
         })
 
 # ################################################################################################################################
 
-    def test_delete_no_rest_channel_no_invoke(self) -> 'None':
-        """ Deleting an MLLP channel without rest_channel_id does not invoke zato.http-soap.delete.
-        """
-        wrapper = self.make_wrapper(use_rest=False, rest_channel_id=0)
+    def test_a_channel_saved_without_a_rest_channel_deletes_none(self) -> 'None':
 
-        wrapper._init_impl()
-        wrapper._delete()
-
-        # .. invoke was only called from _invoke_service context, not for REST cleanup ..
-        self.get_invoker(wrapper).invoke.assert_not_called()
+        for rest_channel_id in (0, None):
+            service = MagicMock()
+            delete_rest_channel(service, rest_channel_id)
+            service.invoke.assert_not_called()
 
 # ################################################################################################################################
 
-    def test_delete_leaves_alone_a_rest_channel_already_gone(self) -> 'None':
-        """ Every worker holding the channel runs this, so whoever finds the REST channel
-        already deleted must not try to delete it a second time.
-        """
+    def test_the_delete_service_removes_the_rest_channel_of_an_mllp_channel(self) -> 'None':
 
-        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
-        wrapper._init_impl()
+        instance = MagicMock()
+        instance.type_ = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+        instance.name = 'adt-feed'
+        instance.opaque1 = dumps({'rest_channel_id': 42, 'use_rest': True})
 
-        # Asking after a channel that is no longer there is what raises
-        def _invoke(service_name:'str', request:'object') -> 'object':
-            if service_name == 'zato.http-soap.get':
-                raise Exception('No such channel')
-            return None
+        service = MagicMock()
 
-        invoker = self.get_invoker(wrapper)
-        invoker.invoke.side_effect = _invoke
+        with ExitStack() as stack:
+            _ = stack.enter_context(patch.object(conn_module, 'get_model_snapshot'))
+            _ = stack.enter_context(patch.object(conn_module, 'record_service_config_change'))
+            conn_module.delete_hook(service, Bunch(), instance, MagicMock())
 
-        wrapper._delete()
+        service.invoke.assert_called_once_with('zato.http-soap.delete', {
+            'id': 42,
+            'cluster_id': 1,
+            'should_raise_if_missing': False,
+        })
 
-        invoked_services = [one.args[0] for one in invoker.invoke.call_args_list]
-        self.assertNotIn('zato.http-soap.delete', invoked_services)
+# ################################################################################################################################
+
+    def test_the_delete_service_leaves_other_channels_alone(self) -> 'None':
+
+        instance = MagicMock()
+        instance.type_ = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+        instance.name = 'adt-feed'
+        instance.opaque1 = dumps({'rest_channel_id': 0, 'use_rest': False})
+
+        service = MagicMock()
+
+        with ExitStack() as stack:
+            _ = stack.enter_context(patch.object(conn_module, 'get_model_snapshot'))
+            _ = stack.enter_context(patch.object(conn_module, 'record_service_config_change'))
+            conn_module.delete_hook(service, Bunch(), instance, MagicMock())
+
+        service.invoke.assert_not_called()
 
 # ################################################################################################################################
 # ################################################################################################################################

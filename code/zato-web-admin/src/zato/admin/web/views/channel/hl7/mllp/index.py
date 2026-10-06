@@ -18,6 +18,7 @@ from zato.admin.web.views.channel.hl7.mllp.common import _alert_field_names, _al
     _REST_Channel_Name_Prefix, _Row_Edit_Prefix, logger
 from zato.common.alerting.object_config import Field_Prefix
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, ZATO_NONE
+from zato.common.destination.constants import Channel_Fan_Out_Fields
 from zato.common.destination.model import count_entries
 from zato.common.hl7.mllp.fields import get_match_label, resolve_max_message_size, Channel_Defaults, Matcher_Labels
 from zato.common.hl7.mllp.settings import describe_bounds_violations
@@ -387,6 +388,11 @@ class _CreateEdit(CreateEdit):
             'match_slash': False,
             'merge_url_params_req': True,
         }
+
+        # The backing channel is given the fan-out of the MLLP channel it backs, so a message
+        # received over REST reaches the same destinations, in the same way, as one received over MLLP
+        for name in Channel_Fan_Out_Fields:
+            out[name] = self.req.POST[prefix + name]
 
         return out
 

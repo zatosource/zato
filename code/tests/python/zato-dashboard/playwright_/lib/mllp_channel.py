@@ -117,11 +117,13 @@ def create_channel(
     destinations:'anylist | None' = None,
     respond_from:'str' = '',
     delivery_mode:'str' = '',
+    rest_url_path:'str' = '',
     ) -> 'None':
-    """ Walks the wizard to create a channel - the name and the routing criteria on step 1,
-    the service, the destinations, the delivery mode and the reply producer on step 2, and
-    the review and finish on step 3. Destinations are a list of dicts with the connection,
-    type, is_active flag and options of each, in the shape the wizard itself serializes.
+    """ Walks the wizard to create a channel - the name, the routing criteria and the REST bridge
+    on step 1, the service, the destinations, the delivery mode and the reply producer on step 2,
+    and the review and finish on step 3. Destinations are a list of dicts with the connection,
+    type, is_active flag and options of each, in the shape the wizard itself serializes. A REST
+    URL path turns the REST slider on, the bridge then listening on that path.
     """
     navigate_to_channels(page, base_url)
 
@@ -143,6 +145,11 @@ def create_channel(
     # .. auditing is one of the wizard's logging options, its field posted with the form ..
     if is_audit_log_active:
         page.evaluate('$("#id_is_audit_log_active").prop("checked", true)')
+
+    # .. the REST slider sets the bridge flag, and the path is the one field the bridge requires ..
+    if rest_url_path:
+        page.check('#mllp-wizard-toggle-rest')
+        page.evaluate(f'$.fn.zato.channel.hl7.mllp.wizard.field("rest_url_path").val("{rest_url_path}")')
 
     page.click('#mllp-wizard-next')
     time.sleep(0.2)

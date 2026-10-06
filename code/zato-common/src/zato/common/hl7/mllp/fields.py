@@ -258,6 +258,9 @@ Channel_Security_Name_Key = 'security'
 # JSON text the Dashboard writes while YAML holds it as a list, so both sides of enmasse name it here.
 Channel_Destinations_Key = 'destinations'
 
+# The field holding the id of the REST channel that backs a channel with the REST bridge on, zero without one
+Channel_Rest_Channel_Id_Key = 'rest_channel_id'
+
 # ################################################################################################################################
 
 def get_enmasse_channel_names() -> 'strtuple':

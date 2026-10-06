@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Setting .payload changes what all of them are sent, setting one by name changes that one alone,
 # and setting one to nothing drops it for this message. A service that says nothing leaves every
 # destination receiving the message the way it arrived, which is what lets a channel have no
-# service at all.
+# service at all. A name that matches none of the channel's destinations is ignored - no message
+# is sent for it and no other destination is affected by it.
 
 # Zato
 from zato.common.destination.payload import new_overrides, resolve_payload

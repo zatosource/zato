@@ -39,13 +39,12 @@ _Minimum_Encoding_Characters_Length = 4
 # MSH field separator position in MSH|...|
 _MSH_Prefix = 'MSH|'
 
-# What ends every segment of a message
-_Segment_Terminator = '\r'
-
-# Where a second message in one frame begins. Line endings have already been normalised to CR by
-# the time a payload is split, so a header that opens a message always follows a segment terminator
-# and one that appears mid-field never does.
-_Concatenated_Message_Prefix = _Segment_Terminator + _MSH_Prefix
+# Where a second message in one frame begins - a header that opens a message always follows the end
+# of a segment and one that appears mid-field never does. The split accepts any of the three line
+# endings, because the normalization of line endings is a toggle of its own and a payload is split
+# the same way whether or not that toggle is on. The ending is captured so that each message but the
+# last keeps the one it arrived with.
+_concatenated_message_pattern = re.compile('(\r\n|\r|\n)MSH\\|')
 
 # How many pipe-separated parts a whole MSH segment has. MSH-12, the version id, is the last
 # field the standard requires, and splitting a segment that carries it gives twelve parts -
@@ -177,27 +176,29 @@ def split_concatenated_messages(data:'str') -> 'list[str]':
         return []
 
     # A second message can only begin where a segment ended, so the split is anchored on a
-    # segment terminator followed by the header. An MSH| inside a free-text field is text ..
-    parts = data.split(_Concatenated_Message_Prefix)
+    # line ending followed by the header. An MSH| inside a free-text field is text ..
+    parts = _concatenated_message_pattern.split(data)
 
     # .. and a payload holding one message is that message, whatever its fields say ..
     if len(parts) == 1:
         return [data]
 
-    messages:'list[str]' = []
-    last_index = len(parts) - 1
+    # .. the pattern captures the line ending, so the parts alternate between the text of a message
+    # .. and the ending that closed it - the first part is the first message's text, every ending
+    # .. that follows belongs to the message before it, and every text that follows an ending lost
+    # .. the header the split consumed.
+    messages:'list[str]'  = []
+    message_text:'str' = parts[0]
 
-    for index, part in enumerate(parts):
+    for index in range(1, len(parts), 2):
 
-        # .. every part but the first lost the header the split consumed ..
-        if index:
-            part = _MSH_Prefix + part
+        line_ending = parts[index]
+        next_text = parts[index + 1]
 
-        # .. and every part but the last lost the terminator that ended it.
-        if index != last_index:
-            part = part + _Segment_Terminator
+        messages.append(message_text + line_ending)
+        message_text = _MSH_Prefix + next_text
 
-        messages.append(part)
+    messages.append(message_text)
 
     logger.warning('Split %d concatenated messages from a single MLLP frame', len(messages))
 

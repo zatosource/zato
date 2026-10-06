@@ -252,6 +252,34 @@ class TestFHIR:
         assert 'has no path' in str(raised.value)
 
 # ################################################################################################################################
+
+    def test_a_fhir_search_is_made_with_the_parameters_the_destination_names(self) -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        # The parameters are the query string the panel stores them as ..
+        entry = new_entry(_fhir_connection, DestinationType.FHIR, _fhir_connection,
+            options={'method': 'GET', 'path': '/Observation', 'params': 'patient=1&_count=10'})
+
+        _ = send(service, entry, '')
+
+        # .. and the client receives them as the mapping it sends.
+        assert stub.fhir.params_calls[0] == {'patient': '1', '_count': '10'}
+
+# ################################################################################################################################
+
+    def test_a_fhir_destination_naming_no_parameters_searches_with_none(self) -> 'None':
+        stub = _new_service()
+        service = _as_service(stub)
+
+        entry = new_entry(_fhir_connection, DestinationType.FHIR, _fhir_connection,
+            options={'method': 'GET', 'path': '/Observation'})
+
+        _ = send(service, entry, '')
+
+        assert stub.fhir.params_calls[0] is None
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestEmail:

@@ -18,13 +18,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import date
 from json import loads
 from typing import Protocol
+from urllib.parse import parse_qsl
 
 # Zato
 from zato.common.api import SMTPMessage
 from zato.common.audit_log.common import Ack_Rejected_Marker, AuditClassification, AuditSource, derive_http_classification
 from zato.common.audit_log.request_context import Key_Address, Key_Headers, Key_Method, Key_Params
 from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Remote_Path, \
-    Default_Subject, Default_To, DestinationOption, DestinationType, Hop_Destination_Name
+    Default_Subject, Default_To, DestinationOption, DestinationType, Hop_Destination_Name, Known_Methods
 from zato.common.destination.model import get_option, new_send_result, DestinationException
 from zato.common.hl7.fhir.bulk_export.file import BulkExportFile, BulkExportResource
 from zato.common.hl7.mllp.ack import get_ack_rejection
@@ -37,7 +38,7 @@ from zato.server.generic.api.outconn_hl7_fhir_audit import get_fhir_rejection
 
 if 0:
     from zato.common.destination.model import DestinationEntry, HopSendResult
-    from zato.common.typing_ import any_, stranydict, strcalldict
+    from zato.common.typing_ import any_, stranydict, strcalldict, strdictnone
     HopSendResult = HopSendResult
 
 # ################################################################################################################################
@@ -64,14 +65,12 @@ class DestinationConnections(Protocol):
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The method a REST destination is invoked with, by the name the Dashboard offers it under
-_rest_invoker_method = {
-    'GET':    'get',
-    'POST':   'post',
-    'PUT':    'put',
-    'PATCH':  'patch',
-    'DELETE': 'delete',
-}
+# The invoker method a REST destination is delivered with, keyed by the method name the Dashboard offers -
+# one entry per method in Known_Methods, the set parse_entry validates a destination against
+_rest_invoker_method = {}
+
+for _method in Known_Methods:
+    _rest_invoker_method[_method] = _method.lower()
 
 # The methods that carry what is being delivered in their request body
 _rest_methods_with_body = ('POST', 'PUT', 'PATCH')
@@ -98,6 +97,22 @@ _recorded_facade = {
     AuditSource.REST_Outgoing: 'rest',
     AuditSource.SOAP_Outgoing: 'soap',
 }
+
+# ################################################################################################################################
+
+def _get_fhir_params(entry:'DestinationEntry') -> 'strdictnone':
+    """ Returns the search parameters a FHIR destination is called with, as the mapping the client sends.
+    A destination configured through the Dashboard or enmasse names them as a query string, e.g.
+    patient=1&_count=10, and a destination rebuilt from a row the FHIR client recorded itself,
+    outconn_hl7_fhir_audit.py _record_request, names them as the mapping that row stores.
+    """
+    params = get_option(entry, DestinationOption.Params, Default_Params)
+
+    if isinstance(params, str):
+        params = dict(parse_qsl(params, keep_blank_values=True))
+
+    out = params
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -298,7 +313,7 @@ def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', p
             payload = loads(payload)
 
     client = connections.fhir[entry.connection]
-    params = get_option(entry, DestinationOption.Params, Default_Params)
+    params = _get_fhir_params(entry)
 
     # The client raises for every status fhirpy raises for, with the response the status came
     # on riding along on the exception.

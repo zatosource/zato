@@ -110,6 +110,43 @@ class TestParsing:
 
 # ################################################################################################################################
 
+    def test_a_method_nothing_can_be_delivered_with_is_refused_when_the_destination_is_saved(self) -> 'None':
+
+        # A REST destination ..
+        with pytest.raises(DestinationException) as raised:
+            _ = parse_entries([{'type': DestinationType.REST, 'connection': _rest_connection, 'options': {'method': 'TRACE'}}])
+
+        assert 'with method `TRACE`' in str(raised.value)
+
+        # .. and a FHIR destination as well, each refused at save time ..
+        with pytest.raises(DestinationException) as raised:
+            _ = parse_entries([{'type': DestinationType.FHIR, 'connection': _fhir_connection, 'options': {'method': 'trace'}}])
+
+        assert 'with method `trace`' in str(raised.value)
+
+        # .. while every method the panel offers is accepted.
+        for method in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
+            entries = parse_entries([{'type': DestinationType.REST, 'connection': _rest_connection, 'options': {'method': method}}])
+            assert get_option(entries[0], 'method', '') == method
+
+# ################################################################################################################################
+
+    def test_a_fhir_destination_names_its_search_parameters_as_a_query_string(self) -> 'None':
+
+        entries = parse_entries([{'type': DestinationType.FHIR, 'connection': _fhir_connection,
+            'options': {'method': 'GET', 'path': '/Observation', 'params': 'patient=1&_count=10'}}])
+
+        assert get_option(entries[0], 'params', None) == 'patient=1&_count=10'
+
+        # A mapping is not the form the panel stores, so it is refused
+        with pytest.raises(DestinationException) as raised:
+            _ = parse_entries([{'type': DestinationType.FHIR, 'connection': _fhir_connection,
+                'options': {'method': 'GET', 'path': '/Observation', 'params': {'patient': '1'}}}])
+
+        assert 'as a query string' in str(raised.value)
+
+# ################################################################################################################################
+
     def test_a_destination_with_no_connection_is_refused(self) -> 'None':
         with pytest.raises(DestinationException):
             _ = parse_entries([{'type': DestinationType.REST}])
