@@ -266,7 +266,7 @@ class AlertingRun(AdminService):
 
         # With nothing published there is nothing to match against.
         if not rules:
-            self.logger.info('Alerting sweep found no published alert rules')
+            self.logger.debug('Alerting sweep found no published alert rules')
             return
 
         # The live channel metrics the feed-silent collector runs over.
@@ -406,7 +406,7 @@ class AlertingCertCheck(AdminService):
         checked = run_certificate_probe(audit_log, targets, now, cid=self.cid)
 
         connection_label = pluralize(checked, 'connection')
-        self.logger.info('Certificate check measured %s', connection_label)
+        self.logger.debug('Certificate check measured %s', connection_label)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -472,7 +472,7 @@ class AlertingMicrosoftHealth(AdminService):
         recorded = run_health_probe(audit_log, conn_name, fetch, now, cid=self.cid)
 
         service_label = pluralize(recorded, 'service')
-        self.logger.info('Microsoft health probe recorded %s through `%s`', service_label, conn_name)
+        self.logger.debug('Microsoft health probe recorded %s through `%s`', service_label, conn_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -597,7 +597,7 @@ class AlertingTestTransfer(AdminService):
             checked += 1
 
         connection_label = pluralize(checked, 'connection')
-        self.logger.info('Test transfer probe checked %s', connection_label)
+        self.logger.debug('Test transfer probe checked %s', connection_label)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -658,7 +658,7 @@ class AlertingSetNotificationConfig(AdminService):
         if changed:
             _push_job_to_scheduler(self, Alerting.Job_Name)
 
-        self.logger.info('Alerting notification config saved (changed=%s)', changed)
+        self.logger.debug('Alerting notification config saved (changed=%s)', changed)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -682,7 +682,7 @@ class AlertingSetTestTransferState(AdminService):
         if changed:
             _push_job_to_scheduler(self, Alerting.Test_Transfer_Job_Name)
 
-        self.logger.info('Test transfer job `%s` set to is_active=%s (changed=%s)',
+        self.logger.debug('Test transfer job `%s` set to is_active=%s (changed=%s)',
             Alerting.Test_Transfer_Job_Name, is_active, changed)
 
 # ################################################################################################################################
@@ -709,7 +709,7 @@ class Explain(AdminService):
         payload = self.request.payload
 
         if not isinstance(payload, dict):
-            self.logger.info('Alert explanation received no alert payload, nothing to do')
+            self.logger.debug('Alert explanation received no alert payload, nothing to do')
             return
 
         explanation = get_explanation(self, payload)

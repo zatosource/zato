@@ -68,8 +68,8 @@ $.fn.zato.micro_forms.setup(wizard, {
                 ],
                 [
                     [
-                        {field: 'max_msg_size',     label: 'Max ACK size (bytes)', kind: 'number', width: '190px'},
-                        {field: 'read_buffer_size', label: 'Read buffer (bytes)',  kind: 'number', width: '190px'}
+                        {field: 'max_msg_size',     label: 'Max size (bytes)',    kind: 'number', width: '190px'},
+                        {field: 'read_buffer_size', label: 'Read buffer (bytes)', kind: 'number', width: '190px'}
                     ]
                 ]
             ]

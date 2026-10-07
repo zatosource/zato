@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import socket
 import ssl
 from logging import getLogger
+from time import monotonic
 
 # Zato
 from zato.common.hl7.exception import HL7Exception
@@ -91,7 +92,8 @@ class HL7MLLPClient:
 # ################################################################################################################################
 
     def send(self, data:'bytes', control_id:'str' = '') -> 'AckResult':
-        """ Sends a framed HL7 message and returns a validated AckResult.
+        """ Sends a framed HL7 message and returns a validated AckResult. The acknowledgment is held to the control
+        id given, so a message with no MSH-10 is answered correctly only by an acknowledgment with an empty MSA-2.
         """
 
         # A message over the size this connection was configured for is turned away here rather
@@ -138,17 +140,10 @@ class HL7MLLPClient:
             if self.should_log_messages:
                 logger.info('Received ACK: %d bytes', len(ack_bytes))
 
-            # .. decode and validate the ACK ..
+            # .. decode and validate the ACK.
             ack_string = ack_bytes.decode('utf-8', errors='replace')
 
-            if control_id:
-                out = validate_ack(ack_string, control_id)
-            else:
-                out = AckResult()
-                out.is_accepted = True
-                out.ack_code = 'AA'
-                out.ack_text = ack_string
-
+            out = validate_ack(ack_string, control_id)
             return out
 
         finally:
@@ -157,14 +152,24 @@ class HL7MLLPClient:
 # ################################################################################################################################
 
     def _receive_ack(self, active_socket:'socket.socket') -> 'bytes':
-        """ Reads from the socket until a complete MLLP-framed ACK is received.
-        Uses FrameDecoder to handle TCP fragmentation across multiple recv calls.
+        """ Reads from the socket until a complete MLLP-framed ACK is received. The receive timeout is one deadline
+        for the whole acknowledgment, however many reads it arrives in.
         """
 
         decoder = FrameDecoder(self.start_sequence, self.end_sequence, self.max_message_size)
+        deadline = monotonic() + self.receive_timeout
 
         while True:
 
+            # Each read is given what remains of the deadline ..
+            remaining = deadline - monotonic()
+
+            if remaining <= 0:
+                raise HL7Exception('Timed out waiting for ACK response')
+
+            active_socket.settimeout(remaining)
+
+            # .. and a read that returns nothing within it is the deadline passing ..
             try:
                 chunk = active_socket.recv(self.read_buffer_size)
             except socket.timeout:

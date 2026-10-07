@@ -151,7 +151,8 @@ class _HL7MLLPConnection:
         ) -> 'AckResult':
         """ Sends data and returns an AckResult, of whatever code the receiving system answered with. The input may
         be ER7 text, raw bytes or a parsed message object, e.g. when a service forwards the parsed input its channel
-        gave it. A send that no acknowledgment came back from is tried again under the connection's retry policy,
+        gave it. Bytes are sent as given, in whatever encoding they are in, and text is sent as UTF-8. A send that
+        no acknowledgment came back from is tried again under the connection's retry policy,
         unless the caller retries on its own, as the queue does. The audit pair is written under the caller's
         correlation id, and a resubmit turns the pair off because it records its own events.
         """
@@ -160,8 +161,11 @@ class _HL7MLLPConnection:
         # and what the control id is extracted from ..
         message_text = to_message_text(data)
 
-        # .. and the wire itself carries bytes.
-        data = message_text.encode('utf-8')
+        # .. and the wire carries the bytes given as they are, or the text as UTF-8 when none were.
+        if isinstance(data, bytes):
+            wire_data = data
+        else:
+            wire_data = message_text.encode('utf-8')
 
         # The control id correlates the ACK with the message - it also lets the client
         # validate that the ACK actually acknowledges what was sent.
@@ -182,7 +186,7 @@ class _HL7MLLPConnection:
         send_start = monotonic()
 
         def send() -> 'AckResult':
-            out = self.impl.send(data, control_id)
+            out = self.impl.send(wire_data, control_id)
             return out
 
         # A send that raises means no acknowledgment ever arrived - a transient

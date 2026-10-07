@@ -9,10 +9,35 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import ssl
 
+# Zato
+from zato.common.hl7.exception import HL7Exception
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict
+
+    anydict = anydict
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 _Minimum_TLS_Version = ssl.TLSVersion.TLSv1_2
+
+# What a definition that names a client certificate without a CA bundle is refused with
+_Certificate_Without_CA = 'A client certificate requires a CA bundle'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def validate_client_paths(config:'anydict') -> 'None':
+    """ A client certificate is loaded only into a context that verifies the server, so a definition that
+    names one without a CA bundle is refused. Either path may be absent from the definition.
+    """
+    if config.get('tls_cert_path'):
+        if not config.get('tls_ca_path'):
+            raise HL7Exception(_Certificate_Without_CA)
 
 # ################################################################################################################################
 # ################################################################################################################################

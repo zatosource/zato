@@ -22,10 +22,12 @@ from zato.common.audit_log.common import AuditEvent, Export_Payload_Flag as _aud
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
 from zato.common.exception import BadRequest
+from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.fhir.fields import Outgoing_Int_Names as FHIR_Outgoing_Int_Names
 from zato.common.hl7.mllp.fields import Channel_Int_Names as MLLP_Channel_Int_Names, \
     Channel_Rest_Channel_Id_Key as MLLP_Rest_Channel_Id_Key, Channel_Text_Names as MLLP_Channel_Text_Names, \
     Outgoing_Int_Names as MLLP_Outgoing_Int_Names
+from zato.common.hl7.mllp.tls import validate_client_paths as validate_mllp_client_paths
 from zato.common.ext_db.api import is_ext_object_id, needs_ext_db, to_local_id, to_public_id
 from zato.common.json_internal import loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
@@ -118,6 +120,16 @@ def on_kafka_create_edit(service:'Service', data:'Bunch', model:'any_', old_name
 
 # ################################################################################################################################
 
+def on_mllp_outgoing_create_edit(service:'Service', data:'Bunch', model:'any_', old_name:'any_') -> 'None':
+    """ Checks that an HL7 MLLP outgoing connection's client certificate comes with a CA bundle.
+    """
+    try:
+        validate_mllp_client_paths(data)
+    except HL7Exception as e:
+        raise BadRequest(service.cid, str(e))
+
+# ################################################################################################################################
+
 # The generic connection types that carry the queue switch and the DLQ settings
 _delivery_settings_types = (
     COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA,
@@ -144,6 +156,7 @@ hook = {
     COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: on_kafka_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: on_mcp_gateway_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: on_rule_engine_api_create_edit,
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: on_mllp_outgoing_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: on_kafka_create_edit,
 }
 

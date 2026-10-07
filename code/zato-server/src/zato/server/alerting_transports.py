@@ -50,7 +50,7 @@ def build_alert_transports(service:'Service', email_from:'str') -> 'AlertTranspo
 
         # The email component may be disabled in server.conf.
         if not service.email:
-            logger.info('Could not send an alerting email; is component_enabled.email set to True in server.conf?')
+            logger.debug('Could not send an alerting email; is component_enabled.email set to True in server.conf?')
             return
 
         # The default notification connection is an SMTP one, an object's own names its kind itself.
@@ -67,19 +67,19 @@ def build_alert_transports(service:'Service', email_from:'str') -> 'AlertTranspo
             store = service.email.imap
             kind_label = 'Microsoft 365'
         else:
-            logger.info('Email connection `%s` is of an unknown kind, skipping an email to `%s`', email_connection, addresses)
+            logger.debug('Email connection `%s` is of an unknown kind, skipping an email to `%s`', email_connection, addresses)
             return
 
         # A connection that does not exist sends nothing ..
         try:
             item = store.get(name, True)
         except KeyError:
-            logger.info('No %s connection `%s` exists, skipping an email to `%s`', kind_label, name, addresses)
+            logger.debug('No %s connection `%s` exists, skipping an email to `%s`', kind_label, name, addresses)
             return
 
         # .. and neither does an inactive one.
         if not item.config['is_active']:
-            logger.info('%s connection `%s` is inactive, skipping an email to `%s`', kind_label, name, addresses)
+            logger.debug('%s connection `%s` is inactive, skipping an email to `%s`', kind_label, name, addresses)
             return
 
         message = SMTPMessage()
@@ -100,13 +100,13 @@ def build_alert_transports(service:'Service', email_from:'str') -> 'AlertTranspo
 
         # A connection that does not exist or is inactive sends nothing.
         if conn_name not in service.slack.conn_dict:
-            logger.info('No Slack connection `%s` exists, skipping the notification', conn_name)
+            logger.debug('No Slack connection `%s` exists, skipping the notification', conn_name)
             return
 
         item = service.slack.conn_dict[conn_name]
 
         if not item['is_active']:
-            logger.info('Slack connection `%s` is inactive, skipping the notification', conn_name)
+            logger.debug('Slack connection `%s` is inactive, skipping the notification', conn_name)
             return
 
         _ = service.slack.send(conn_name, channel, text)
@@ -115,13 +115,13 @@ def build_alert_transports(service:'Service', email_from:'str') -> 'AlertTranspo
 
         # A connection that does not exist or is inactive sends nothing.
         if conn_name not in service.microsoft.teams.conn_dict:
-            logger.info('No Microsoft Teams connection `%s` exists, skipping the notification', conn_name)
+            logger.debug('No Microsoft Teams connection `%s` exists, skipping the notification', conn_name)
             return
 
         item = service.microsoft.teams.conn_dict[conn_name]
 
         if not item['is_active']:
-            logger.info('Microsoft Teams connection `%s` is inactive, skipping the notification', conn_name)
+            logger.debug('Microsoft Teams connection `%s` is inactive, skipping the notification', conn_name)
             return
 
         _ = service.microsoft.teams.send(conn_name, to, html)

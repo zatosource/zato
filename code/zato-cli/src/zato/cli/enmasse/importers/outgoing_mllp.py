@@ -9,7 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.alerting.object_config import conn_type_to_alert_type
 from zato.common.api import GENERIC
+from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.fields import Outgoing_Column_Defaults, Outgoing_Opaque_Defaults
+from zato.common.hl7.mllp.tls import validate_client_paths
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 from zato.cli.enmasse.util.delivery import prepare_delivery_fields
 
@@ -55,9 +57,16 @@ class OutgoingMLLPImporter(GenericConnectionImporter):
 
     def validate_definition(self, connection_def:'anydict') -> 'None':
         """ The field list fills in and types the delivery fields on its own, what it does not do is reject a value
-        the field does not take - a switch that is not a boolean, a negative count, an action that is not one of the four.
+        the field does not take - a switch that is not a boolean, a negative count, an action that is not one of the four,
+        a client certificate without a CA bundle.
         """
         prepare_delivery_fields(connection_def, _connection_type)
+
+        try:
+            validate_client_paths(connection_def)
+        except HL7Exception as e:
+            name = connection_def['name']
+            raise Exception(f'{e} for {_connection_type} connection `{name}`')
 
 # ################################################################################################################################
 # ################################################################################################################################

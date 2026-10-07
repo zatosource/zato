@@ -22,7 +22,8 @@ $.fn.zato.outgoing.hl7.mllp.field_descriptions = {
         'The default matches the MLLP standard.',
     'id_end_seq': 'MLLP frame end bytes, in hex, e.g. 1c 0d. Sent after each message. ' +
         'The default matches the MLLP standard.',
-    'id_max_msg_size': 'The biggest acknowledgment accepted, in bytes. Larger replies are rejected.',
+    'id_max_msg_size': 'The biggest message sent and the biggest acknowledgment accepted, in bytes. ' +
+        'A larger message is not sent and a larger reply is rejected.',
     'id_read_buffer_size': 'Size of the socket read buffer, in bytes. ' +
         'The default of 32768 rarely needs changing.',
     'id_recv_timeout': 'How long to wait for the acknowledgment, in milliseconds. Default is 250.',
