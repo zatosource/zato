@@ -332,19 +332,20 @@ class MessageAction(_BrowseService):
         _, sub_key = self._get_names(kind, conn_type, conn_id, conn_name)
 
         if kind == Kind_DLQ:
-            self._act_on_dlq(sub_key, action, msg_id_list)
+            count = self._act_on_dlq(sub_key, action, msg_id_list)
         else:
-            self._discard_from_queue(conn_type, conn_id, sub_key, msg_id_list)
+            count = self._discard_from_queue(conn_type, conn_id, sub_key, msg_id_list)
 
         self.response.payload = {
             'action': action,
-            'count': len(msg_id_list),
+            'count': count,
         }
 
 # ################################################################################################################################
 
-    def _act_on_dlq(self, sub_key:'str', action:'str', msg_id_list:'strlist') -> 'None':
-        """ Runs one DLQ service on each message named.
+    def _act_on_dlq(self, sub_key:'str', action:'str', msg_id_list:'strlist') -> 'int':
+        """ Runs one DLQ service on each message named and returns how many it ran on - a message the DLQ no longer
+        holds raises out of its service, so every message the loop completes was acted on.
         """
         service_name = _dlq_action_services[action]
 
@@ -352,13 +353,19 @@ class MessageAction(_BrowseService):
             request:'anydict' = {'sub_key': sub_key, 'msg_id': msg_id}
             _ = self.invoke(service_name, request)
 
+        out = len(msg_id_list)
+        return out
+
 # ################################################################################################################################
 
-    def _discard_from_queue(self, conn_type:'str', conn_id:'int', sub_key:'str', msg_id_list:'strlist') -> 'None':
-        """ Takes each message named out of the queue - a discarded message must not hold the queue up.
+    def _discard_from_queue(self, conn_type:'str', conn_id:'int', sub_key:'str', msg_id_list:'strlist') -> 'int':
+        """ Takes each message named out of the queue and returns how many it took - a discarded message must not hold
+        the queue up, and one the queue no longer held is not counted.
         """
         config_manager = self.server.config_manager
         depth = config_manager.outgoing_queue_depth
+
+        out = 0
 
         # The queue is held still, or its delivery would go on with a message discarded here and lower the depth twice
         with config_manager.hold_outgoing_queue(conn_type, conn_id):
@@ -368,6 +375,9 @@ class MessageAction(_BrowseService):
                 # A message the round just delivered is acked and counted already
                 if was_acked:
                     depth.lower(sub_key, 1)
+                    out += 1
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

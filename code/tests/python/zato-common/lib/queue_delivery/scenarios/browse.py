@@ -375,6 +375,20 @@ class BrowseScenarios(ScenarioBase):
         assert queue['depth'] == 1
         assert msg_ids_of(queue['messages']) == [second['msg_id']]
 
+        # A discard that names a message the queue no longer holds counts nothing and touches nothing
+        response = invoke(client, Message_Action, {
+            'conn_type': self.t.conn_type,
+            'conn_id': queue['conn_id'],
+            'kind': Kind_Queue,
+            'action': Action_Discard,
+            'msg_id_list': dumps([first['msg_id']]),
+        })
+        assert response['count'] == 0
+
+        queue = get_queue(client, conn_name)
+        assert queue['depth'] == 1
+        assert msg_ids_of(queue['messages']) == [second['msg_id']]
+
         receiver.accept_all()
 
         accepted = receiver.wait_for_accepted(1)

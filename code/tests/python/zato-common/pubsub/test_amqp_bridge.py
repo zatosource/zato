@@ -12,7 +12,16 @@ from unittest.mock import MagicMock, patch
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.pubsub.outgoing import get_outgoing_sub_config, get_outgoing_sub_key, get_outgoing_topic_name
 from zato.server.base.config_manager import ConfigManager
+from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_conn_type = 'hl7-mllp'
+_conn_id = 7
+_conn_name = 'orders'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,6 +38,7 @@ class _ConfigManagerStub:
         self.server = MagicMock()
         self._push_subs = {}
         self._topic_backends = {}
+        self.outgoing_queue_depth = OutgoingQueueDepth()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,7 +170,6 @@ class TestBridgeDelivery(unittest.TestCase):
         topic_name = get_outgoing_topic_name(_conn_type, _conn_name)
 
         self.stub._push_subs = {sub_key: [get_outgoing_sub_config(sub_key, topic_name)]}
-        self.stub.outgoing_queue_depth = OutgoingQueueDepth()
         self.stub.outgoing_queue_depth.set_counts({sub_key: 2})
 
         self.stub.pubsub_deliver_amqp_message(topic_name, 'message body', 'test-cid-001')
