@@ -333,7 +333,7 @@ def build_dispatch(
     action_name = outcome.pop('action', None)
 
     if action_name not in _action_by_outcome:
-        logger.warning('Alert rule `%s` fired with no usable outcome.action (%r) - nothing to dispatch',
+        logger.debug('Alert rule `%s` fired with no usable outcome.action (%r) - nothing to dispatch',
             rule.name, action_name)
         return None
 

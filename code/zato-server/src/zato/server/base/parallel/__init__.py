@@ -1429,7 +1429,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         duration_ms = int((monotonic() - invocation_start) * 1000)
 
-        logger.debug('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
+        logger.info('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
             job_id, job_name, outcome, duration_ms, current_run, len(error_traceback))
 
         # .. the run's record closes with its outcome, duration and error ..
@@ -1439,7 +1439,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. report the completion to the Rust scheduler so its in-flight state clears ..
         try:
             self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run, error_traceback)
-            logger.debug('Fire event: mark_complete sent job_id=%s run=%s outcome=%s', job_id, current_run, outcome)
+            logger.info('Fire event: mark_complete sent job_id=%s run=%s outcome=%s', job_id, current_run, outcome)
         except Exception:
             logger.warning('Fire event: mark_complete failed job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())
 

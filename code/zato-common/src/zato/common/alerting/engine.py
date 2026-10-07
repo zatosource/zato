@@ -480,7 +480,7 @@ def dispatch_action(
 
     # .. anything else is an action no transport delivers.
     else:
-        logger.warning('Alert rule `%s` names action `%s` that nothing delivers - skipping `%s`',
+        logger.debug('Alert rule `%s` names action `%s` that nothing delivers - skipping `%s`',
             rule.name, rule.action, finding.object_name)
 
 # ################################################################################################################################

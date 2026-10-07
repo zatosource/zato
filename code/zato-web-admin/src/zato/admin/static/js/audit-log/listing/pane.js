@@ -547,6 +547,12 @@ listing.paneUpdate = function(rowModel, $pane) {
     $pane.find('.audit-log-pane-head').html(listing.paneHeadHTML(rowModel));
     $pane.find('.audit-log-pane-tabs').html(listing.paneTabsHTML(rowModel));
     $pane.find('.audit-log-pane-summary').html(listing.paneSummaryHTML(rowModel));
+
+    // The flow link stands outside the tab strip, so it is brought to the new event here.
+    var $openFlow = $pane.find('.audit-log-open-flow');
+
+    $openFlow.attr('data-event-id', rowModel.id);
+    $openFlow.attr('href', $.fn.zato.audit_log.flowPageURL(rowModel.id));
 };
 
 // /////////////////////////////////////////////////////////////////////////////
