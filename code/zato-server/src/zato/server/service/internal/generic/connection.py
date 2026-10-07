@@ -133,11 +133,12 @@ def on_mllp_outgoing_create_edit(service:'Service', data:'Bunch', model:'any_', 
 # The generic connection types that carry the queue switch and the DLQ settings
 _delivery_settings_types = (
     COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA,
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA,
 )
 
-def prepare_kafka_delivery_settings(service:'Service', data:'Bunch') -> 'None':
-    """ Fills in and validates the delivery settings of a Kafka connection being written.
+def prepare_delivery_settings(service:'Service', data:'Bunch') -> 'None':
+    """ Fills in and validates the delivery settings of a connection being written.
     """
     apply_delivery_defaults(data)
 
@@ -447,7 +448,7 @@ class _CreateEdit(_BaseService):
         ensure_ints(data)
 
         if data.get('type_') in _delivery_settings_types:
-            prepare_kafka_delivery_settings(self, data)
+            prepare_delivery_settings(self, data)
 
         # The cluster ID may be missing on input, e.g. in API calls that give only the object's ID,
         # or it may have been turned into a bool by the simple-type parser above (1 becomes True),

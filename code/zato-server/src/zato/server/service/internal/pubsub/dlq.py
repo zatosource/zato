@@ -243,20 +243,26 @@ class RetryAllMessages(_RetryMixin):
 
 class _ForwardMixin(_DLQService):
 
-    def _forward(self, sub_key:'str', msg_id:'str', document:'stranydict', topic_name:'str', keep_header:'bool') -> 'None':
-        """ Publishes one DLQ message to a topic and takes it out of the DLQ.
+    def _forward(self, sub_key:'str', msg_id:'str', document:'stranydict', topic_name:'str', keep_header:'bool') -> 'bool':
+        """ Takes one DLQ message out of the DLQ and publishes it to a topic, returning False if another forward
+        had already taken it out.
         """
         if keep_header:
             to_publish = document
         else:
             to_publish = strip_dlq_header(document)
 
+        # The message leaves the DLQ before it is published, so that one which is no longer there is published once only.
+        if not self._claim(sub_key, msg_id):
+            logger.info('DLQ message `%s` of `%s` not forwarded, it was already taken out of the DLQ', msg_id, sub_key)
+            return False
+
         pubsub = PubSubFacade(self.server, PubSub.Outgoing.Delivery_Service)
         _ = pubsub.publish(topic_name, dumps(to_publish), cid=document[Key_CID])
 
-        self._ack(sub_key, msg_id)
-
         logger.info('Forwarded DLQ message `%s` of `%s` to `%s`, header kept:%s', msg_id, sub_key, topic_name, keep_header)
+
+        return True
 
 # ################################################################################################################################
 
@@ -276,7 +282,10 @@ class ForwardMessage(_ForwardMixin):
         _, _, dlq_topic_name = self._get_dlq_names(sub_key)
         document = self._load_message(dlq_topic_name, msg_id)
 
-        self._forward(sub_key, msg_id, document, topic_name, keep_header)
+        is_forwarded = self._forward(sub_key, msg_id, document, topic_name, keep_header)
+
+        if not is_forwarded:
+            raise Exception(f'DLQ message `{msg_id}` of `{sub_key}` was already taken out of the DLQ')
 
         self.response.payload = {'msg_id': msg_id, 'topic_name': topic_name}
 
@@ -428,7 +437,11 @@ class DLQRun(_RetryMixin, _ForwardMixin, _DiscardMixin):
                     continue
 
             elif action == _dlq.Action.Forward:
-                self._forward(sub_key, msg_id, document, forward_to, keep_header)
+                is_forwarded = self._forward(sub_key, msg_id, document, forward_to, keep_header)
+
+                # A message that an operator forwarded after this run read the DLQ was published by that forward.
+                if not is_forwarded:
+                    continue
 
             else:
                 self._discard(sub_key, msg_id, document)

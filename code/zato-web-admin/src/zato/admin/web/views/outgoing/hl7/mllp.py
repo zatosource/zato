@@ -17,7 +17,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import alerts_tab, delivery_tab
-from zato.admin.web.forms import populate_form_initial
+from zato.admin.web.forms import add_select_from_service, populate_form_initial
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.alerting.object_config import alert_type_mllp_outgoing, Field_Prefix
@@ -105,10 +105,17 @@ class Index(_Index):
 # ################################################################################################################################
 
     def handle(self):
+        create_form = CreateForm(self.req)
+        edit_form = EditForm(self.req, prefix='edit')
+
+        # The Delivery tab's DLQ forwards messages to pub/sub topics, selected by name from the topics that currently exist
+        add_select_from_service(create_form, self.req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
+        add_select_from_service(edit_form, self.req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
+
         return {
             'show_search_form': True,
-            'create_form': CreateForm(self.req),
-            'edit_form': EditForm(self.req, prefix='edit'),
+            'create_form': create_form,
+            'edit_form': edit_form,
             'delivery_tab_config': delivery_tab.get_delivery_tab_config(),
         }
 
