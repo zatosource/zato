@@ -261,6 +261,22 @@ Channel_Destinations_Key = 'destinations'
 # The field holding the id of the REST channel that backs a channel with the REST bridge on, zero without one
 Channel_Rest_Channel_Id_Key = 'rest_channel_id'
 
+# The fields a channel's page accepts free text under. Each one stays the text it was posted as, however it is
+# spelled - a sending application named 007 is the text 007, a start sequence of 0b is the text 0b.
+Channel_Text_Names = (
+    'start_seq',
+    'end_seq',
+    'allowed_networks',
+    'msh3_sending_app',
+    'msh4_sending_facility',
+    'msh5_receiving_app',
+    'msh6_receiving_facility',
+    'msh9_message_type',
+    'msh9_trigger_event',
+    'msh11_processing_id',
+    'msh12_version_id',
+)
+
 # ################################################################################################################################
 
 def get_enmasse_channel_names() -> 'strtuple':

@@ -60,7 +60,9 @@ def _new_checkbox_field(is_checked:'bool'=False) -> 'any_':
 
     widget = forms.CheckboxInput(attrs=attrs)
 
-    out = forms.BooleanField(required=False, widget=widget)
+    # The default is the field's initial too, so that an edit form, which carries no checked attribute,
+    # opens a switch the stored object has no value under the way a new object would be created
+    out = forms.BooleanField(required=False, initial=is_checked, widget=widget)
     return out
 
 # ################################################################################################################################

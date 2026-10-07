@@ -7,15 +7,26 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from unittest import TestCase
+from unittest.mock import patch
 
 # Zato
 from zato.common.hl7.mllp.settings import (
     Default_Idle_Timeout,
     Default_Max_Message_Size,
     describe_bounds_violations,
+    listener_config_from_bounds,
     ListenerConfig,
 )
+from zato.server.generic.api.channel_hl7_mllp import get_listener_bounds
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The bounds of a server whose environment narrows the listener below the defaults
+_server_max_message_size = 1024 * 1024
+_server_idle_timeout = 60.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,6 +108,44 @@ class TestBoundsAreRefusedWhereTheyAreEntered(TestCase):
         )
 
         self.assertEqual(len(violations), 2)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestTheBoundsAreTheServers(TestCase):
+    """ The listener is built from the server's environment, so the bounds a channel is judged against
+    are the ones the server reports, whatever the environment of the process that saves the channel.
+    """
+
+    def test_the_server_reports_the_bounds_of_its_own_environment(self) -> 'None':
+        """ What the server reports is what from_env reads in its process - a lower size and a shorter
+        idle timeout than the defaults when the environment says so.
+        """
+        environ = {'Zato_HL7_MLLP_Max_Msg_Size': str(_server_max_message_size), 'Zato_HL7_MLLP_Idle_Timeout': str(_server_idle_timeout)}
+
+        with patch.dict(os.environ, environ, clear=False):
+            bounds = get_listener_bounds()
+
+        self.assertEqual(bounds['max_message_size'], _server_max_message_size)
+        self.assertEqual(bounds['idle_timeout'], _server_idle_timeout)
+
+# ################################################################################################################################
+
+    def test_a_channel_the_server_would_cap_is_refused_where_it_is_saved(self) -> 'None':
+        """ A channel within the defaults of the saving process, yet above what the server reports,
+        is refused with the server's bounds named, and never silently narrowed at runtime instead.
+        """
+        listener_config = listener_config_from_bounds({
+            'max_message_size': _server_max_message_size,
+            'idle_timeout': _server_idle_timeout,
+        })
+
+        violations = describe_bounds_violations(_server_max_message_size * 2, _server_idle_timeout * 2, listener_config)
+
+        self.assertEqual(violations, [
+            f'Maximum message size {_server_max_message_size * 2} is above the {_server_max_message_size} bytes the listener allows',
+            f'Idle timeout {_server_idle_timeout * 2} is above the {_server_idle_timeout} seconds the listener allows',
+        ])
 
 # ################################################################################################################################
 # ################################################################################################################################

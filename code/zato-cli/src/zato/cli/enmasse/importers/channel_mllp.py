@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import logging
+
 # Zato
 from zato.common.alerting.object_config import conn_type_to_alert_type
 from zato.common.api import GENERIC, HL7
@@ -13,16 +16,33 @@ from zato.common.destination.constants import Default_Delivery_Mode, Respond_Fro
 from zato.common.destination.model import count_entries, dump_entries, parse_config
 from zato.common.hl7.mllp.fields import Channel_Column_Defaults, Channel_Opaque_Defaults, Channel_Security_Id_Key, \
     Channel_Security_Name_Key, resolve_max_message_size
-from zato.common.hl7.mllp.settings import describe_bounds_violations
+from zato.common.hl7.mllp.settings import describe_bounds_violations, listener_config_from_bounds
+from zato.common.odb.model import GenericConn
+from zato.common.util.api import asbool
+from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
+from zato.cli.enmasse.client import get_mllp_listener_bounds
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
+from zato.cli.enmasse.util.secrets import get_server_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.hl7.mllp.settings import ListenerConfig
+    from zato.common.typing_ import any_, anydict, anylist, listtuple
 
+    any_ = any_
     anydict = anydict
+    anylist = anylist
+    listtuple = listtuple
+    ListenerConfig = ListenerConfig
+    SASession = SASession
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,6 +70,46 @@ class ChannelMLLPImporter(GenericConnectionImporter):
     # The alerts mapping of a channel follows the MLLP channel type - the channel settings minus everything HTTP,
     # plus the negative acknowledgment codes
     alert_type = conn_type_to_alert_type[GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP]
+
+    def __init__(self, importer:'any_') -> 'None':
+        super().__init__(importer)
+
+        # The bounds of the listener the channels will run on, asked of the running server once per import
+        self.listener_config:'ListenerConfig | None' = None
+
+# ################################################################################################################################
+
+    def sync_definitions(self, conn_list:'anylist', session:'SASession') -> 'listtuple':
+        """ Reads the listener's bounds from the server the session was opened for before any definition is
+        judged against them. A server that cannot be reached fails the import - the bounds are the server's own
+        and an import must not guess them from its own environment.
+        """
+        server_dir = get_server_dir(session)
+        self.listener_config = listener_config_from_bounds(get_mllp_listener_bounds(server_dir))
+
+        self._ensure_one_default(conn_list)
+
+        out = super().sync_definitions(conn_list, session)
+        return out
+
+# ################################################################################################################################
+
+    def _ensure_one_default(self, conn_list:'anylist') -> 'None':
+        """ Only one channel is the default at a time, so a file that makes two of them the default is refused
+        before anything is written - imported, it would leave the flag with the last of them alone and an export
+        would no longer reproduce the file.
+        """
+        names = []
+
+        for connection_def in conn_list:
+            if 'is_default' not in connection_def:
+                continue
+            if asbool(connection_def['is_default']):
+                names.append(connection_def['name'])
+
+        if len(names) > 1:
+            raise Exception('Only one HL7 MLLP channel can be the default, the file names {}: {}'.format(
+                len(names), ', '.join(names)))
 
 # ################################################################################################################################
 
@@ -125,14 +185,63 @@ class ChannelMLLPImporter(GenericConnectionImporter):
         max_msg_size_unit = connection_def.get('max_msg_size_unit', HL7.Default.max_msg_size_unit)
         idle_timeout = connection_def.get('idle_timeout', HL7.Default.idle_timeout)
 
+        if self.listener_config is None:
+            raise Exception('The HL7 MLLP listener bounds have not been read from the server')
+
         violations = describe_bounds_violations(
             resolve_max_message_size(max_msg_size, max_msg_size_unit),
             idle_timeout,
+            self.listener_config,
         )
 
         if violations:
             name = connection_def['name']
             raise Exception(f'HL7 MLLP channel `{name}` - ' + ', '.join(violations))
+
+# ################################################################################################################################
+
+    def create_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
+        out = super().create_definition(connection_def, session)
+        self._clear_other_defaults(connection_def, out, session)
+        return out
+
+# ################################################################################################################################
+
+    def update_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
+        out = super().update_definition(connection_def, session)
+        self._clear_other_defaults(connection_def, out, session)
+        return out
+
+# ################################################################################################################################
+
+    def _clear_other_defaults(self, connection_def:'anydict', connection:'any_', session:'SASession') -> 'None':
+        """ Only one channel is the default at a time, so a definition that makes its channel the default
+        takes the flag away from every other channel that stores it.
+        """
+        if 'is_default' not in connection_def:
+            return
+
+        if not asbool(connection_def['is_default']):
+            return
+
+        others = session.query(GenericConn).\
+            filter(GenericConn.cluster_id == self.importer.cluster_id).\
+            filter(GenericConn.type_ == self.connection_type).\
+            filter(GenericConn.id != connection.id).\
+            all()
+
+        for other in others:
+            opaque = parse_instance_opaque_attr(other)
+
+            if 'is_default' not in opaque:
+                continue
+
+            if not asbool(opaque['is_default']):
+                continue
+
+            set_instance_opaque_attrs(other, {'is_default': False})
+            session.add(other)
+            logger.info('Cleared the default flag from HL7 MLLP channel `%s`', other.name)
 
 # ################################################################################################################################
 # ################################################################################################################################

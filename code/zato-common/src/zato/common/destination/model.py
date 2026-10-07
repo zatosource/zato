@@ -376,6 +376,22 @@ def count_entries(destinations:'any_') -> 'int':
 
 # ################################################################################################################################
 
+def count_active_entries(destinations:'any_') -> 'int':
+    """ Returns how many of the destinations a channel declares a message can reach, which leaves out
+    the paused ones - a list that cannot be read counts as declaring none.
+    """
+    try:
+        entries = parse_entries(destinations)
+    except DestinationException:
+        out = 0
+    else:
+        active = [entry for entry in entries if entry.is_active]
+        out = len(active)
+
+    return out
+
+# ################################################################################################################################
+
 def select_entries(config:'ChannelDestinationConfig', names:'strlist') -> 'ChannelDestinationConfig':
     """ Returns the same configuration narrowed to the destinations named, which is what
     delivering one message to some of a channel's destinations rather than to all of them

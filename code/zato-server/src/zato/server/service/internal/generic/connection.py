@@ -24,18 +24,20 @@ from zato.common.const import SECRETS
 from zato.common.exception import BadRequest
 from zato.common.hl7.fhir.fields import Outgoing_Int_Names as FHIR_Outgoing_Int_Names
 from zato.common.hl7.mllp.fields import Channel_Int_Names as MLLP_Channel_Int_Names, \
-    Channel_Rest_Channel_Id_Key as MLLP_Rest_Channel_Id_Key, Outgoing_Int_Names as MLLP_Outgoing_Int_Names
+    Channel_Rest_Channel_Id_Key as MLLP_Rest_Channel_Id_Key, Channel_Text_Names as MLLP_Channel_Text_Names, \
+    Outgoing_Int_Names as MLLP_Outgoing_Int_Names
 from zato.common.ext_db.api import is_ext_object_id, needs_ext_db, to_local_id, to_public_id
 from zato.common.json_internal import loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.typing_ import cast_
-from zato.common.util.api import parse_simple_type
+from zato.common.util.api import asbool, parse_simple_type
 from zato.common.util.delivery_config import apply_delivery_defaults, Delivery_Int_Fields, validate_delivery_fields
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.rule_engine_api import on_rule_engine_api_create_edit, on_rule_engine_api_delete
 from zato.server.config_audit import get_model_snapshot, record_service_config_change
-from zato.server.generic.api.channel_hl7_mllp import delete_rest_channel as delete_mllp_rest_channel
+from zato.server.generic.api.channel_hl7_mllp import clear_other_default_channels as clear_other_mllp_default_channels, \
+    delete_rest_channel as delete_mllp_rest_channel
 from zato.server.generic.api.outconn_sdk import get_secret_field_names
 from zato.server.generic.connection import GenericConnection
 from zato.server.service.internal import AdminService, ChangePasswordBase
@@ -289,6 +291,9 @@ skip_simple_type = {
     KAFKA.Consumer.Field_Dedup_Header,
     HTTP_SOAP.DLQ.Field_Forward_To,
 }
+
+# The text fields of an HL7 MLLP channel stay text whatever they are spelled like
+skip_simple_type.update(MLLP_Channel_Text_Names)
 
 # The alert settings that are text - a status codes list of `500` alone, an outcome codes list or an ack codes
 # list of `AE` must stay what was typed rather than turn into a number or a boolean on the way, and the
@@ -693,6 +698,12 @@ class _CreateEdit(_BaseService):
             data['action'], data['id'], data.get('type_'))
 
         self.config_dispatcher.publish(data)
+
+        # Only one HL7 MLLP channel is the default, so the one saved with the flag takes it from any other
+        if data.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP:
+            if 'is_default' in data:
+                if asbool(data['is_default']):
+                    clear_other_mllp_default_channels(self, data['name'])
 
         # The change lands in the audit trail - who changed what, with a before/after
         # summary of only the fields that differ and secrets masked.

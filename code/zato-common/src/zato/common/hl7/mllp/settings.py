@@ -17,8 +17,9 @@ from zato.common.hl7.mllp.dedup import Default_Max_Entries, MessageDeduplicator
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import stranydict, strlist
     from zato.hl7v2_rs import ToleranceConfig
+    stranydict = stranydict
     strlist = strlist
     ToleranceConfig = ToleranceConfig
 
@@ -226,18 +227,28 @@ class RouteSettings:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def listener_config_from_bounds(bounds:'stranydict') -> 'ListenerConfig':
+    """ Builds the configuration a channel is judged against from the bounds a running server reports
+    for its listener, which is the only process whose environment the listener is built from.
+    """
+    out = ListenerConfig(
+        max_message_size=bounds['max_message_size'],
+        idle_timeout=bounds['idle_timeout'],
+    )
+    return out
+
+# ################################################################################################################################
+
 def describe_bounds_violations(
     max_message_size:'int',
     idle_timeout:'float',
-    listener_config:'ListenerConfig | None'=None,
+    listener_config:'ListenerConfig',
     ) -> 'strlist':
     """ Returns what a channel is asking for that the listener will not give it. A channel's
     values tune what the listener already allows, so saying where one exceeds a bound is better
-    than storing a value that is silently capped later.
+    than storing a value that is silently capped later. The listener configuration is the one of
+    the server the channel will run on, never one built from the caller's own environment.
     """
-
-    if listener_config is None:
-        listener_config = ListenerConfig.from_env(Default_Bind_Address)
 
     out:'strlist' = []
 

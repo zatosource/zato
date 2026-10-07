@@ -2324,6 +2324,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def get_hl7_mllp_listener_bounds(self):
+        """ Returns the bounds the shared HL7 MLLP listener of this process enforces on every channel -
+        the largest message in bytes and the idle timeout in seconds. Invoked by the Dashboard and by
+        enmasse, which judge a channel being saved against them.
+        """
+        from zato.server.generic.api.channel_hl7_mllp import get_listener_bounds
+
+        result = get_listener_bounds()
+        return result
+
+# ################################################################################################################################
+
     def import_demo_ibm_mq(self):
 
         import zato.server.service.internal.ibm_mq

@@ -19,7 +19,7 @@ from zato.common.hl7.mllp.haproxy import resolve_internal_port
 from zato.common.hl7.mllp.preprocess import build_channel_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
-from zato.common.hl7.mllp.settings import extract_common_name, ListenerConfig, RouteSettings
+from zato.common.hl7.mllp.settings import Default_Bind_Address, extract_common_name, ListenerConfig, RouteSettings
 from zato.common.hl7.mllp.state import ChannelState
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, hex_sequence_to_bytes, spawn_greenlet
@@ -60,6 +60,10 @@ channel_int_config_keys = Channel_Int_Names
 # No certificate carries this, so the channel refuses everything rather than everything through.
 _Unresolvable_Common_Name = '\x00unresolvable'
 
+# The keys of a channel's runtime configuration that are not fields of the channel and so do not go back
+# through an edit of it
+_runtime_only_keys = ('conn', 'parent', 'secret', 'queue_build_cap', 'auth_url')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -75,9 +79,10 @@ class _SharedMLLPState:
         self.internal_port = 0
         self.listener_config = ListenerConfig()
 
-        # How many channels actually use the listener, which is what decides when it can stop.
-        # A channel that only has a REST bridge never starts one and so never counts.
-        self.listener_channel_count = 0
+        # The names of the channels that use the listener, which is what decides when it can stop.
+        # A channel that only has a REST bridge never starts one and so is never among them, and
+        # a channel built again, which is what a configuration reload does, is among them once.
+        self.listener_channels:'set[str]' = set()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,6 +139,23 @@ def get_internal_port() -> 'int':
     with _shared_state.lock:
         out = _shared_state.internal_port
 
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_listener_bounds() -> 'stranydict':
+    """ Returns the two bounds a channel may not exceed, as the listener of this process has them -
+    the largest message in bytes and the idle timeout in seconds. They are read from this process's
+    environment, which is the one the listener itself is built from, so a channel saved from the
+    Dashboard or imported through enmasse is judged against what the listener will enforce.
+    """
+    listener_config = ListenerConfig.from_env(Default_Bind_Address)
+
+    out = {
+        'max_message_size': listener_config.max_message_size,
+        'idle_timeout': listener_config.idle_timeout,
+    }
     return out
 
 # ################################################################################################################################
@@ -429,19 +451,14 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
                 # .. a channel edited from the listener to REST only was the delete half's reason
                 # to leave the listener running, and if it was the last user the listener stops now ..
-                if _shared_state.listener_channel_count <= 0:
+                if not _shared_state.listener_channels:
                     self._stop_shared_server()
-                    _shared_state.listener_channel_count = 0
 
                 self.is_connected = True
                 return
 
             # .. the listener has to exist before a route can be built against its bounds ..
             internal_port = self._ensure_shared_server_built()
-
-            # .. a channel built again, which is what a configuration reload does, is already counted
-            # among the listener's users - its rule below replaces the one it had ..
-            is_rebuilt = _shared_state.router.has_route(self.config.name)
 
             # .. register this channel's routing rule only if the channel is active ..
             if self.config.is_active:
@@ -468,8 +485,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             if internal_port:
                 self._start_shared_listener(internal_port)
 
-            if not is_rebuilt:
-                _shared_state.listener_channel_count += 1
+            _shared_state.listener_channels.add(self.config.name)
 
             self.is_connected = True
 
@@ -490,7 +506,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             if not rest_only:
 
                 _shared_state.router.remove_route(self.config.name)
-                _shared_state.listener_channel_count -= 1
+                _shared_state.listener_channels.discard(self.config.name)
 
                 # .. the create half of an edit builds this channel again at once, so the listener stays
                 # .. up with every connection senders have open on it ..
@@ -498,9 +514,8 @@ class ChannelHL7MLLPWrapper(Wrapper):
                     return
 
                 # .. stop the shared server if no channels are left using it ..
-                if _shared_state.listener_channel_count <= 0:
+                if not _shared_state.listener_channels:
                     self._stop_shared_server()
-                    _shared_state.listener_channel_count = 0
 
 # ################################################################################################################################
 
@@ -527,6 +542,43 @@ def delete_rest_channel(service:'Service', rest_channel_id:'int | None') -> 'Non
 
     _ = service.invoke('zato.http-soap.delete', request)
     logger.info('Deleted backing REST channel id=%s', rest_channel_id)
+
+# ################################################################################################################################
+
+def clear_other_default_channels(service:'Service', channel_name:'str') -> 'None':
+    """ Takes the default flag off every HL7 MLLP channel other than the one named, which has just been saved
+    with it. Only one channel receives the messages no other channel claimed - the router clears the flag from
+    its other routes when a default route is added, and what is stored follows here, otherwise the list page
+    shows two defaults and a restart builds whichever channel comes last as the one the router uses. This runs
+    in the service that saves the channel, once, whichever of the Dashboard, enmasse or the API saved it.
+    """
+
+    # A snapshot, because the edit of each channel replaces its entry in the configuration
+    channel_configs = list(service.server.config_manager.channel_hl7_mllp.values())
+
+    for config in channel_configs:
+
+        if config['name'] == channel_name:
+            continue
+
+        # A channel that was never saved with the flag has no such key
+        if 'is_default' not in config:
+            continue
+
+        if not asbool(config['is_default']):
+            continue
+
+        request = {}
+
+        for key, value in config.items():
+            if key in _runtime_only_keys:
+                continue
+            request[key] = value
+
+        request['is_default'] = False
+
+        _ = service.invoke('zato.generic.connection.edit', request)
+        logger.info('Cleared the default flag from HL7 MLLP channel `%s`', config['name'])
 
 # ################################################################################################################################
 # ################################################################################################################################

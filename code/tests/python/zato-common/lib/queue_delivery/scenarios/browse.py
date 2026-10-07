@@ -21,11 +21,11 @@ from zato.common.pubsub.dlq import Header_Moved_Time, Key_DLQ
 from zato.common.pubsub.outgoing import Attempts_Direct, Key_Data, Key_Request
 
 # Test support
-from queue_delivery.client import get_client, get_queue, is_broker_backend, msg_ids_of, send, wait_for_queue_depth, \
-    wait_for_queue_empty
+from queue_delivery.client import edit_connection, get_client, get_queue, is_broker_backend, msg_ids_of, send, \
+    wait_for_queue_depth, wait_for_queue_empty
 from queue_delivery.dlq import get_dlq, invoke, send_to_dlq, wait_for_dlq_count
 from queue_delivery.scenarios.base import ScenarioBase
-from queue_delivery.type_under_test import Conn_DLQ_Keep, Conn_Orders
+from queue_delivery.type_under_test import Conn_DLQ_Keep, Conn_Orders, DLQ_Conn_Max_Retries, DLQ_Conn_Sleep_Time
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +39,21 @@ if 0:
 # ################################################################################################################################
 
 _dlq = HTTP_SOAP.DLQ
+_retry = HTTP_SOAP.Retry
+
+# The retry fields that keep a refused message in the queue for as long as a listing takes, with an attempt every second
+_long_round_fields = {
+    _retry.Field_Max_Retries: 30,
+    _retry.Field_Sleep_Time: DLQ_Conn_Sleep_Time,
+    _retry.Field_Backoff_Multiplier: 1,
+}
+
+# The retry fields of the DLQ connection as its template declares them
+_dlq_conn_round_fields = {
+    _retry.Field_Max_Retries: DLQ_Conn_Max_Retries,
+    _retry.Field_Sleep_Time: DLQ_Conn_Sleep_Time,
+    _retry.Field_Backoff_Multiplier: _retry.Default_Backoff_Multiplier,
+}
 
 Get_Message_List = 'zato.pubsub.outgoing.get-message-list'
 Get_Message = 'zato.pubsub.outgoing.get-message'
@@ -120,12 +135,15 @@ class BrowseScenarios(ScenarioBase):
 
         in_dlq = fill_dlq_with(client, conn_name, receiver, [{'seq': 1}, {'seq': 2}])
 
+        # The waiting message's round is long enough for both listings to see it in the queue
+        _ = edit_connection(client, conn_name, _long_round_fields)
+
         receiver.refuse_all()
 
-        waiting = send(client, conn_name, {'seq': 3})
-        assert waiting['is_in_queue'] is True
-
         try:
+            waiting = send(client, conn_name, {'seq': 3})
+            assert waiting['is_in_queue'] is True
+
             queue_page = self._list(client, Conn_DLQ_Keep, Kind_Queue)
 
             assert queue_page['conn_name'] == conn_name
@@ -171,11 +189,14 @@ class BrowseScenarios(ScenarioBase):
 
                 self.t.check_destination(Conn_DLQ_Keep, row['destination'])
 
-        finally:
             receiver.accept_all()
 
-        _ = receiver.wait_for_accepted(1)
-        _ = wait_for_queue_empty(client, conn_name)
+            _ = receiver.wait_for_accepted(1)
+            _ = wait_for_queue_empty(client, conn_name)
+
+        finally:
+            receiver.accept_all()
+            _ = edit_connection(client, conn_name, _dlq_conn_round_fields)
 
 # ################################################################################################################################
 

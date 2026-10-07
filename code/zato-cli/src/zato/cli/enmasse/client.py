@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
 from zato.cli.enmasse.util import get_value_from_environment
+from zato.common.typing_ import cast_
 from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager, Session_Key_Server_Dir
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.defaults import default_server_base_dir
@@ -45,7 +46,7 @@ Default_Initial_Wait_Time = 10
 
 if 0:
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, strnone, strtuple
+    from zato.common.typing_ import any_, anydict, stranydict, strnone, strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,6 +116,21 @@ def get_sdk_secret_field_names(server_dir:'str', type_:'str') -> 'strtuple':
         raise Exception(f'Could not look up secret fields of `{type_}` from {client.address} -> {response.details}')
 
     out = tuple(response.data['names'])
+    return out
+
+# ################################################################################################################################
+
+def get_mllp_listener_bounds(server_dir:'str') -> 'stranydict':
+    """ Returns the bounds the running server's HL7 MLLP listener enforces on every channel - the largest
+    message in bytes and the idle timeout in seconds.
+    """
+    client = get_server_client(server_dir)
+    response = client.invoke('zato.server.invoker', {'func_name':'get_hl7_mllp_listener_bounds'})
+
+    if not response.ok:
+        raise Exception(f'Could not look up the HL7 MLLP listener bounds from {client.address} -> {response.details}')
+
+    out = cast_('stranydict', response.data)
     return out
 
 # ################################################################################################################################

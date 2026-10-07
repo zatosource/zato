@@ -354,7 +354,8 @@ class HL7MLLPServer:
                     message_bytes = reader.read_rest_of_frame(
                         end_sequences, settings.max_message_size, settings.recv_timeout)
 
-                except HL7Exception as exception:
+                # .. the reader raises socket.timeout when nothing arrives before the receive deadline ..
+                except (HL7Exception, socket.timeout) as exception:
 
                     # An oversized or unterminated frame leaves the stream with no known boundary,
                     # so the sender is answered and the connection ends rather than resynchronising

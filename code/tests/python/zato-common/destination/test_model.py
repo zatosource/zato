@@ -14,8 +14,8 @@ import pytest
 
 # Zato
 from zato.common.destination.constants import DeliveryMode, DestinationType, Respond_From_Service
-from zato.common.destination.model import count_entries, describe_entries, dump_entries, get_entry, get_option, \
-    has_active_entries, parse_config, parse_entries, select_entries, DestinationException
+from zato.common.destination.model import count_active_entries, count_entries, describe_entries, dump_entries, get_entry, \
+    get_option, has_active_entries, parse_config, parse_entries, select_entries, DestinationException
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -297,6 +297,28 @@ class TestLookups:
 
     def test_a_list_that_cannot_be_read_counts_as_no_destinations(self) -> 'None':
         assert count_entries('this is not a destination list') == 0
+        assert count_active_entries('this is not a destination list') == 0
+
+# ################################################################################################################################
+
+    def test_a_paused_destination_is_not_somewhere_a_message_can_reach(self) -> 'None':
+
+        # Two destinations, one of them paused - a channel declares two and a message reaches one ..
+        entries = [
+            {'name': _mllp_connection, 'type': DestinationType.MLLP, 'connection': _mllp_connection, 'is_active': True,
+                'options': {}},
+            {'name': _rest_connection, 'type': DestinationType.REST, 'connection': _rest_connection, 'is_active': False,
+                'options': {}},
+        ]
+        assert count_entries(dumps(entries)) == 2
+        assert count_active_entries(dumps(entries)) == 1
+
+        # .. and a channel whose every destination is paused has nowhere to send, which is what get_config
+        # delivers for it, so the count the save is judged by has to be zero as well.
+        entries[0]['is_active'] = False
+        assert count_entries(dumps(entries)) == 2
+        assert count_active_entries(dumps(entries)) == 0
+        assert count_active_entries('') == 0
 
 # ################################################################################################################################
 # ################################################################################################################################

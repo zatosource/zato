@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from http.client import UNPROCESSABLE_ENTITY
+from http.client import SERVICE_UNAVAILABLE
 from json import dumps, loads
 
 # Zato
@@ -93,7 +93,7 @@ class FHIRType(TypeUnderTest):
     receiver_class = FHIRRecordingReceiver
 
     # A refused write comes back as its status and the diagnostics of the OperationOutcome it was answered with
-    refused_error_prefix = f'HTTP {UNPROCESSABLE_ENTITY} {Outcome_Diagnostics}'
+    refused_error_prefix = f'HTTP {SERVICE_UNAVAILABLE} {Outcome_Diagnostics}'
     down_error_text = 'Connection refused'
 
 # ################################################################################################################################

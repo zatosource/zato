@@ -140,7 +140,7 @@ def _reset_shared_state() -> 'None':
     """
     _shared_state.server = None
     _shared_state.router._routes = []
-    _shared_state.listener_channel_count = 0
+    _shared_state.listener_channels = set()
     _shared_state.internal_port = 0
 
 # ################################################################################################################################
@@ -461,7 +461,7 @@ class TestListenerWiring(_WiringTestCase):
 
         listener.stop.assert_not_called()
         self.assertIs(_shared_state.server, listener, 'The edit replaced the listener')
-        self.assertEqual(_shared_state.listener_channel_count, 1)
+        self.assertEqual(_shared_state.listener_channels, {'only'})
 
 # ################################################################################################################################
 
@@ -482,7 +482,41 @@ class TestListenerWiring(_WiringTestCase):
 
         listener.stop.assert_called_once()
         self.assertIsNone(_shared_state.server, 'The listener outlived its last channel')
-        self.assertEqual(_shared_state.listener_channel_count, 0)
+        self.assertEqual(_shared_state.listener_channels, set())
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAChannelBuiltAgainIsCountedOnce(_WiringTestCase):
+    """ A configuration reload builds a new wrapper for every channel without deleting the one it had,
+    so a channel is among the listener's users once however many times it is built.
+    """
+
+# ################################################################################################################################
+
+    def test_an_inactive_channel_built_again_is_one_user(self) -> 'None':
+
+        first_build = self.make_wrapper(name='inactive', is_active=False)
+        first_build._init_impl()
+
+        reload_build = self.make_wrapper(name='inactive', is_active=False)
+        reload_build._init_impl()
+
+        self.assertEqual(_shared_state.listener_channels, {'inactive'})
+
+# ################################################################################################################################
+
+    def test_the_listener_stops_with_a_channel_that_was_built_again(self) -> 'None':
+
+        first_build = self.make_wrapper(name='inactive', is_active=False)
+        first_build._init_impl()
+
+        reload_build = self.make_wrapper(name='inactive', is_active=False)
+        reload_build._init_impl()
+
+        reload_build._delete()
+
+        self.assertIsNone(_shared_state.server, 'The listener outlived its last channel')
 
 # ################################################################################################################################
 # ################################################################################################################################
