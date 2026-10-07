@@ -531,7 +531,7 @@ Examples:
             process = subprocess.Popen([scheduler_binary], env=env)
             open_w(pidfile).write(str(process.pid))
             try:
-                process.wait()
+                _ = process.wait()
             except KeyboardInterrupt:
                 process.kill()
             finally:
@@ -556,6 +556,8 @@ Examples:
 
     def _find_scheduler_binary(self) -> 'str':
         """ Locates the Rust scheduler binary relative to sys.executable (the "py" script).
+        The Makefile installs the binary into code/bin, which is the only copy a Docker image retains,
+        and a source checkout also has it under the cargo target directory.
         """
         import sys
 
@@ -563,6 +565,7 @@ Examples:
         zato_code_dir = os.path.dirname(bin_dir)
 
         candidates = [
+            os.path.join(bin_dir, '_zato_scheduler'),
             os.path.join(zato_code_dir, 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler'),
             os.path.join(zato_code_dir, 'zato-rust', 'zato_scheduler_core', 'target', 'debug', '_zato_scheduler'),
         ]
@@ -571,10 +574,8 @@ Examples:
             if os.path.isfile(path) and os.access(path, os.X_OK):
                 return path
 
-        raise FileNotFoundError(
-            'Could not find the Rust scheduler binary (_zato_scheduler). '
-            'Looked in: {}'.format(', '.join(candidates))
-        )
+        looked_in = ', '.join(candidates)
+        raise Exception(f'Could not find the Rust scheduler binary (_zato_scheduler). Looked in: {looked_in}')
 
 # ################################################################################################################################
 # ################################################################################################################################
