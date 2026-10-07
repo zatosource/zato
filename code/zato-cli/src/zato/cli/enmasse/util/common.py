@@ -52,6 +52,10 @@ SQL_TYPE_MAP = {
 # How many connections an SQL pool holds unless its definition says otherwise.
 SQL_Default_Pool_Size = 5
 
+# The key under which an item names its security definition, and the alternative spelling that is accepted on input.
+Security_Key       = 'security'
+Security_Alias_Key = 'security_name'
+
 # The same mappings the other way around, for exports to turn engine names back into user-friendly types.
 _engine_to_type_map = {}
 
@@ -217,6 +221,11 @@ def get_value_from_environment(value:'any_') -> 'str':
 
 def preprocess_item(item:'strdict') -> 'any_':
 
+    # An item that names its security definition under the alternative key is read as if it used the canonical one ..
+    if Security_Alias_Key in item and Security_Key not in item:
+        item[Security_Key] = item.pop(Security_Alias_Key)
+
+    # .. and every value is resolved against the environment.
     for key, value in item.items():
         value = get_value_from_environment(value)
         item[key] = value
@@ -228,9 +237,9 @@ def preprocess_item(item:'strdict') -> 'any_':
 
 def assign_security(item:'HTTPSOAP', item_def:'anydict', importer:'EnmasseYAMLImporter', session:'SASession') -> 'None':
 
-    if 'security' in item_def or 'security_name' in item_def:
+    if Security_Key in item_def:
         name = item_def['name']
-        security_name = item_def.get('security') or item_def.get('security_name')
+        security_name = item_def[Security_Key]
 
         if security_name not in importer.sec_defs:
             error_msg = f'Security definition "{security_name}" not found for "{name}"'
