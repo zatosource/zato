@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # How a queued message is handed over to an outgoing HL7 MLLP connection, and what the delivery page shows of it.
 
 # Zato
+from zato.common.pubsub.delivery import DeliveryInterrupted
 from zato.common.pubsub.outgoing import Body_Mode_HL7, OutgoingPage
 
 # ################################################################################################################################
@@ -23,6 +24,10 @@ if 0:
 
 # What the Destination column opens with - the protocol, the address of the receiving system following
 _destination_prefix = 'MLLP'
+
+# Why a round of an inactive connection does not run
+_inactive_reason = 'Connection is inactive'
+_no_attempts = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,8 +46,12 @@ def locate_mllp(server:'ParallelServer', conn_id:'int') -> 'anytuple':
 
 def deliver_to_mllp(server:'ParallelServer', cid:'str', wrapper:'any_', request:'stranydict') -> 'None':
     """ Makes one attempt to hand a message over to an outgoing HL7 MLLP connection - an acknowledgment that is not
-    an AA or a CA raises, as a send that no acknowledgment came back from does.
+    an AA or a CA raises, as a send that no acknowledgment came back from does. An inactive connection has no
+    clients to send with, so its round stops before its first attempt and the message waits for the connection.
     """
+    if not wrapper.config.is_active:
+        raise DeliveryInterrupted(_inactive_reason, _no_attempts)
+
     _ = wrapper.send_from_queue(cid, request)
 
 # ################################################################################################################################
