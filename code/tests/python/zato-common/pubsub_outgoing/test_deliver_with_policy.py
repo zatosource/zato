@@ -37,6 +37,9 @@ _policy = RetryPolicy(
     jitter_percent=0,
 )
 
+# The ceiling on a single wait of a policy built with the defaults of outgoing connections
+_max_sleep_time = 8
+
 # What the endpoint answers with
 _refused_error = 'HTTP 400 Bad Request'
 _rejected_error = 'HTTP 503 Service Unavailable'
@@ -137,6 +140,46 @@ class DeliverWithPolicyTestCase(unittest.TestCase):
 
         # The one wait made was the one before the attempt, as every attempt after the first has
         self.assertEqual(len(self.sleeps), 1)
+
+# ################################################################################################################################
+
+    def test_the_first_wait_of_a_round_is_held_under_the_ceiling_on_a_single_wait(self) -> 'None':
+
+        policy = RetryPolicy(
+            max_retries=0,
+            sleep_time=13,
+            backoff_threshold=12,
+            backoff_multiplier=0,
+            max_sleep_time=_max_sleep_time,
+            jitter_percent=0,
+        )
+
+        attempt = _Attempt(Exception(_timeout_error))
+
+        with self.assertRaises(DeliveryExhausted):
+            deliver_with_policy(policy, 1, _cid, _conn_name, attempt)
+
+        self.assertEqual(self.sleeps, [_max_sleep_time])
+
+# ################################################################################################################################
+
+    def test_the_first_wait_of_a_round_is_held_under_the_threshold(self) -> 'None':
+
+        policy = RetryPolicy(
+            max_retries=6,
+            sleep_time=12,
+            backoff_threshold=1,
+            backoff_multiplier=4,
+            max_sleep_time=_max_sleep_time,
+            jitter_percent=0,
+        )
+
+        attempt = _Attempt(SendRejected(_rejected_error, is_permanent=False))
+
+        with self.assertRaises(DeliveryExhausted):
+            deliver_with_policy(policy, 1, _cid, _conn_name, attempt)
+
+        self.assertEqual(self.sleeps, [1])
 
 # ################################################################################################################################
 # ################################################################################################################################
