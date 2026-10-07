@@ -18,8 +18,8 @@ from gevent import sleep
 from common import delete_all_rows, get_delivery_rows, get_message_rows, get_sub_rows, move_message_rows
 from zato.common.api import PubSub
 from zato.common.pubsub.delivery import wait_between_rounds
-from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, Key_Conn_ID, \
-    Key_Conn_Type, Key_Data, OutgoingPublisher, register_outgoing_conn_type
+from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, Key_Data, \
+    OutgoingPublisher, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.typing_ import cast_
 from zato.server.base.config_manager import ConfigManager
@@ -201,9 +201,6 @@ class _StubServer:
         except Exception:
             wait_between_rounds()
             raise
-
-        sub_key = get_outgoing_sub_key(envelope[Key_Conn_Type], envelope[Key_Conn_ID])
-        self.config_manager.outgoing_queue_depth.lower(sub_key, 1)
 
 # ################################################################################################################################
 # ################################################################################################################################

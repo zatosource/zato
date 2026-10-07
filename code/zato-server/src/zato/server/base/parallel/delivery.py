@@ -186,9 +186,9 @@ class PushDelivery:
 # ################################################################################################################################
 
     def _deliver_batch(self, messages:'list', sub_key:'str') -> 'None':
-        """ Deliver a batch of raw messages, retrying each one individually, then
-        acknowledge the whole batch in one transaction. An acknowledgement removes
-        this subscriber's delivery rows only - a message expired or undeliverable
+        """ Deliver a batch of raw messages, retrying each one individually. An outgoing connection's queue acknowledges
+        each message as it is concluded, any other subscriber's batch is acknowledged in one transaction.
+        An acknowledgement removes this subscriber's delivery rows only - a message expired or undeliverable
         for this subscriber stays behind for every other subscriber that needs it.
         """
         config_list = self.server.config_manager._push_subs[sub_key]
@@ -199,6 +199,8 @@ class PushDelivery:
 
         msg_ids:'strlist' = []
         sequence_ids:'intlist' = []
+
+        is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
 
         for message in messages:
 
@@ -216,8 +218,19 @@ class PushDelivery:
             if not is_concluded:
                 break
 
-            msg_ids.append(message['msg_id'])
-            sequence_ids.append(message['sequence_id'])
+            msg_id = message['msg_id']
+            sequence_id = message['sequence_id']
+
+            # An outgoing connection's queue acks each message as soon as it is concluded and counts out only
+            # what the ack removed, so a delivery stopped in the middle of a batch leaves no concluded message behind ..
+            if is_outgoing:
+                fully_delivered_count = self.backend.ack_messages(sub_key, [msg_id], [sequence_id])
+                self.server.config_manager.outgoing_queue_depth.lower(sub_key, fully_delivered_count)
+
+            # .. whereas the messages of any other subscriber are acked together once the batch is over.
+            else:
+                msg_ids.append(msg_id)
+                sequence_ids.append(sequence_id)
 
         # Delivered, expired and given-up messages all leave the queue - retrying
         # ran its course above, so nothing here is awaiting another attempt.
@@ -244,7 +257,7 @@ class PushDelivery:
 
         # An expired message is not attempted at all ..
         if utcnow() > expiration_time:
-            self._conclude_expired(message, sub_config, sub_key, is_outgoing)
+            self._conclude_expired(message, sub_config, sub_key)
             return True
 
         def should_continue() -> 'str':
@@ -269,7 +282,7 @@ class PushDelivery:
                 logger.info('Pausing sub_key `%s` between delivery attempts, msg_id `%s`', sub_key, msg_id)
                 return False
 
-            self._conclude_expired(message, sub_config, sub_key, is_outgoing)
+            self._conclude_expired(message, sub_config, sub_key)
             return True
 
         except DeliveryExhausted as e:
@@ -308,21 +321,20 @@ class PushDelivery:
         unless it expired while the round was failing - then it is concluded as expired.
         """
         msg_id = message['msg_id']
-        is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
 
         msg = f'PubSub outgoing delivery round failed for sub_key `{sub_key}`'
         msg += f', msg_id `{msg_id}`: {reason}'
         logger.debug(msg)
 
         if utcnow() > expiration_time:
-            self._conclude_expired(message, sub_config, sub_key, is_outgoing)
+            self._conclude_expired(message, sub_config, sub_key)
             return True
 
         return False
 
 # ################################################################################################################################
 
-    def _conclude_expired(self, message:'anydict', sub_config:'anydict', sub_key:'str', is_outgoing:'bool') -> 'None':
+    def _conclude_expired(self, message:'anydict', sub_config:'anydict', sub_key:'str') -> 'None':
         """ Records that a message left the queue because it expired before it could be delivered.
         """
         msg_id = message['msg_id']
@@ -333,10 +345,6 @@ class PushDelivery:
         logger.info(msg)
 
         self._insert_audit_event(message, sub_config, sub_key, False, True)
-
-        # An outgoing connection's queue counts its messages
-        if is_outgoing:
-            self.server.config_manager.outgoing_queue_depth.lower(sub_key, 1)
 
 # ################################################################################################################################
 

@@ -16,7 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub, URL_TYPE
 from zato.common.facade import PubSubFacade
-from zato.common.pubsub.delivery import deliver_with_policy, SendRejected
+from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, SendRejected
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
 from zato.common.util.retry import RetryPolicy
@@ -41,6 +41,9 @@ _topic_prefix   = PubSub.Outgoing.Topic_Prefix
 _sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
 _retry = HTTP_SOAP.Retry
+
+# The queue delivers by priority first, so every message it stores has the same one
+_queue_priority = PubSub.Message.Priority_Default
 
 Direction_In  = PubSub.Direction.In
 Direction_Out = PubSub.Direction.Out
@@ -481,7 +484,10 @@ class SendResult:
     # The message is in the queue
     is_in_queue: 'bool' = False
 
-    # The message's id in the queue
+    # The message is in the connection's DLQ
+    is_in_dlq: 'bool' = False
+
+    # The message's id in the queue or in the DLQ
     msg_id: 'str' = ''
 
     # The endpoint's response, if there was one
@@ -585,6 +591,7 @@ class OutgoingPublisher:
             msg_id = envelope[Key_Msg_ID]
             kwargs['msg_id'] = msg_id
             kwargs['pub_time'] = envelope[Key_Pub_Time]
+            kwargs['priority'] = _queue_priority
 
             envelope = dumps(envelope)
 
@@ -611,7 +618,22 @@ class OutgoingPublisher:
 # ################################################################################################################################
 
     def send_or_queue(self, cid:'str', request:'stranydict', attempt:'callable_') -> 'SendResult':
-        """ Makes the direct attempt if the queue is empty, otherwise or on a rejection queues the message. Never raises.
+        """ Makes the direct attempt if the queue is empty, otherwise or on a rejection queues the message, unless
+        the connection has no retries. Never raises.
+        """
+        config_manager = self.server.config_manager
+
+        # Under the connection's publish lock, one direct attempt at a time reads the depth and either completes
+        # or queues its message before the next send reads it
+        with config_manager.get_outgoing_publish_lock(self.conn_type, self.conn_id):
+            out = self._send_or_queue(cid, request, attempt)
+
+        return out
+
+# ################################################################################################################################
+
+    def _send_or_queue(self, cid:'str', request:'stranydict', attempt:'callable_') -> 'SendResult':
+        """ The body of send_or_queue, run under the connection's publish lock.
         """
         out = SendResult()
 
@@ -626,6 +648,7 @@ class OutgoingPublisher:
             except SendRejected as e:
                 out.error = e.error
                 out.response = e.response
+                error_class = e.__class__.__name__
 
                 # The endpoint said the message itself is wrong, so the queue would only hand it the same answer again
                 if e.is_permanent:
@@ -634,11 +657,21 @@ class OutgoingPublisher:
 
             except Exception as e:
                 out.error = str(e)
+                error_class = e.__class__.__name__
 
             else:
                 out.is_ok = True
                 out.response = response
 
+                return out
+
+            conn_name, wrapper = locate_outgoing_conn(self.server, self.conn_type, self.conn_id)
+            policy = get_retry_policy(self.conn_type, wrapper)
+
+            # .. with no retries the direct attempt was the only one, so the message is not queued,
+            # it moves to the DLQ if the connection's DLQ switch is on and is returned to the caller otherwise ..
+            if policy.max_retries == 0:
+                self._move_to_dlq(cid, conn_name, request, out, error_class)
                 return out
 
             attempts = Attempts_Direct
@@ -660,6 +693,18 @@ class OutgoingPublisher:
         out.msg_id = result.msg_id
 
         return out
+
+# ################################################################################################################################
+
+    def _move_to_dlq(self, cid:'str', conn_name:'str', request:'stranydict', result:'SendResult', error_class:'str') -> 'None':
+        """ Moves a message whose one attempt failed to the connection's DLQ if the connection's DLQ switch is on.
+        """
+        envelope = build_envelope(self.conn_type, self.conn_id, conn_name, cid, Attempts_Direct, request)
+        exhausted = DeliveryExhausted(result.error, Attempts_Direct, error_class)
+
+        if msg_id := self.server.config_manager.move_to_outgoing_dlq(cid, envelope, exhausted):
+            result.is_in_dlq = True
+            result.msg_id = msg_id
 
 # ################################################################################################################################
 # ################################################################################################################################

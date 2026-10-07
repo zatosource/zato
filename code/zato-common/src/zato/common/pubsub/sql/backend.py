@@ -89,6 +89,15 @@ _fetch_query = _fetch_query.where(and_(
 _fetch_query = _fetch_query.order_by(delivery_table.c.priority.desc(), delivery_table.c.message_id.asc())
 _fetch_query = _fetch_query.limit(bindparam('fetch_max_messages'))
 
+# The queue of an outgoing connection is fetched with its expired messages, which the delivery concludes in their turn
+_outgoing_fetch_query = select(*_fetch_columns)
+_outgoing_fetch_query = _outgoing_fetch_query.select_from(_fetch_join)
+_outgoing_fetch_query = _outgoing_fetch_query.where(delivery_table.c.sub_key == bindparam('fetch_sub_key'))
+_outgoing_fetch_query = _outgoing_fetch_query.order_by(delivery_table.c.priority.desc(), delivery_table.c.message_id.asc())
+_outgoing_fetch_query = _outgoing_fetch_query.limit(bindparam('fetch_max_messages'))
+
+_outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -388,16 +397,19 @@ class SQLPubSubBackend(SQLAdminAPI):
         """ Reads the subscriber's deliverable messages in (priority highest-first,
         publication order) sequence - one index-ordered query no matter the backlog depth.
         """
-        now_ms = self._utc_now_ms()
-
         parameters = {
             'fetch_sub_key': sub_key,
-            'fetch_now_ms': now_ms,
             'fetch_max_messages': max_messages,
         }
 
+        if sub_key.startswith(_outgoing_sub_key_prefix):
+            query = _outgoing_fetch_query
+        else:
+            query = _fetch_query
+            parameters['fetch_now_ms'] = self._utc_now_ms()
+
         with self.engine.connect() as connection:
-            out = connection.execute(_fetch_query, parameters).fetchall()
+            out = connection.execute(query, parameters).fetchall()
 
         return out
 

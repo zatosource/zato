@@ -14,7 +14,8 @@ from threading import RLock
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.dlq import DLQ_Sub_Key_Prefixes, get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key, parse_dlq_sub_key
+from zato.common.pubsub.dlq import DLQ_Sub_Key_Prefixes, get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key, move_to_dlq, \
+    parse_dlq_sub_key
 from zato.common.pubsub.outgoing import find_outgoing_conn, get_direction, get_outgoing_sub_key, has_queue, \
     locate_outgoing_conn, parse_outgoing_sub_key
 from zato.server.base.config_manager.common import ConfigManagerImpl
@@ -23,7 +24,8 @@ from zato.server.base.config_manager.common import ConfigManagerImpl
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anytuple, callable_
+    from zato.common.pubsub.delivery import DeliveryExhausted
+    from zato.common.typing_ import anydict, anytuple, callable_, stranydict
     from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
 
 # ################################################################################################################################
@@ -76,6 +78,15 @@ class OutgoingDLQs(ConfigManagerImpl):
                 logger.info('Created outgoing connection DLQ `%s` for topic `%s`', sub_key, topic_name)
 
         return topic_name, conn_name
+
+# ################################################################################################################################
+
+    def move_to_outgoing_dlq(self, cid:'str', envelope:'stranydict', exhausted:'DeliveryExhausted') -> 'str':
+        """ Moves one message to its connection's DLQ if the connection's DLQ switch is on, returning the message's id
+        in the DLQ, or an empty string when it did not move.
+        """
+        out = move_to_dlq(self.server, cid, envelope, exhausted)
+        return out
 
 # ################################################################################################################################
 

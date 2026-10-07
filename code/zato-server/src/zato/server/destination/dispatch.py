@@ -135,7 +135,7 @@ def unwrap_send_result(result:'any_') -> 'any_':
     elif result.is_in_queue:
         out = result
 
-    # .. nothing took the message, so nothing can be said to have happened to it.
+    # .. the message was neither delivered nor queued, which includes one moved to the connection's DLQ.
     else:
         raise DestinationException(result.error)
 

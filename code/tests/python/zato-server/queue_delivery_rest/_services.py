@@ -60,6 +60,7 @@ def _result_to_dict(result:'any_') -> 'stranydict':
             'is_send_result': True,
             'is_ok': result.is_ok,
             'is_in_queue': result.is_in_queue,
+            'is_in_dlq': result.is_in_dlq,
             'is_rejected': result.is_rejected,
             'msg_id': result.msg_id,
             'error': result.error,

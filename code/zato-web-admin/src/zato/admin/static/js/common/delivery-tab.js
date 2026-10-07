@@ -83,11 +83,12 @@ $.fn.zato.delivery_tab.config = {
         'how much longer each next wait is and how long all the waits may add up to. With no retries a message ' +
         'is sent once.',
     helpMaxRetries: 'How many times a failed invocation is retried. 0 means no retries at all.',
-    helpSleepTime: 'How long to wait before the first retry. Each next wait is longer by the multiplier.',
-    helpBackoffThreshold: 'A cap on the total time spent waiting between retries. Once reached, no more retries take place.',
-    helpBackoffMultiplier: 'Each retry waits this many times longer than the previous one, up to 8 seconds per a single wait.',
+    helpSleepTime: 'How long to wait before the first retry, 8 seconds at most.',
+    helpBackoffThreshold: 'How long all the waits may take together. Once that is reached, no more retries take place.',
+    helpBackoffMultiplier: 'How much longer each next wait is.',
     helpUseQueue: 'When on, a message is sent right away and, if the endpoint does not accept it, it is placed in ' +
         'the connection\'s own queue and delivered from there one at a time, in order, retried as the retry settings say. ' +
+        'With no retries, such a message is not queued. ' +
         'While the queue holds messages, new ones join it behind them. When off, each message is sent and retried on its own.',
     helpUseDLQ: 'When on, a message that still fails after its last retry moves to the connection\'s DLQ and the ' +
         'queue delivers the next one. When off, the message stays at the head of the queue and is retried in rounds, ' +
