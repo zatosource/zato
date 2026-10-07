@@ -151,6 +151,31 @@ class TestBridgeDelivery(unittest.TestCase):
                 self.stub.pubsub_deliver_amqp_message('topic.amqp', 'message body', 'test-cid-001')
 
 # ################################################################################################################################
+
+    def test_a_concluded_outgoing_message_leaves_the_depth(self) -> 'None':
+        """ A message of an outgoing connection's queue that its delivery service concluded has left the broker,
+        so the depth gating the connection's direct attempts is lowered by one, while one the service raised on stays.
+        """
+        sub_key = get_outgoing_sub_key(_conn_type, _conn_id)
+        topic_name = get_outgoing_topic_name(_conn_type, _conn_name)
+
+        self.stub._push_subs = {sub_key: [get_outgoing_sub_config(sub_key, topic_name)]}
+        self.stub.outgoing_queue_depth = OutgoingQueueDepth()
+        self.stub.outgoing_queue_depth.set_counts({sub_key: 2})
+
+        self.stub.pubsub_deliver_amqp_message(topic_name, 'message body', 'test-cid-001')
+
+        self.stub.server.invoke.assert_called_once_with(PubSub.Outgoing.Delivery_Service, 'message body')
+        self.assertEqual(self.stub.outgoing_queue_depth.get(sub_key), 1)
+
+        self.stub.server.invoke.side_effect = Exception('The endpoint is down')
+
+        with self.assertRaises(Exception):
+            self.stub.pubsub_deliver_amqp_message(topic_name, 'message body', 'test-cid-002')
+
+        self.assertEqual(self.stub.outgoing_queue_depth.get(sub_key), 1)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestBridgeService(unittest.TestCase):

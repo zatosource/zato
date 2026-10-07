@@ -127,6 +127,8 @@ _pubsub_amqp_bridge_service = _pubsub_amqp_bridge_service
 # Connection config keys that are not sent to the queue bridge.
 _queue_bridge_skipped_keys = ('conn', 'parent')
 
+_outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1738,6 +1740,11 @@ class ConfigManager(_ConfigManagerBase):
                         outcome=AuditOutcome.OK,
                         data=audit_data,
                     )
+
+                    # A message of an outgoing connection's queue that its delivery service concluded has left the
+                    # broker, so it leaves the depth that gates the connection's direct attempts as well
+                    if sub_config['sub_key'].startswith(_outgoing_sub_key_prefix):
+                        self.outgoing_queue_depth.lower(sub_config['sub_key'], 1)
 
 # ################################################################################################################################
 

@@ -12,7 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from contextlib import contextmanager
 from threading import RLock
-from traceback import format_exc
 
 # Zato
 from zato.common.api import PubSub
@@ -328,7 +327,9 @@ class OutgoingQueues(ConfigManagerImpl):
 
     def _get_broker_pending_counts(self, restored_topics:'anydict') -> 'anydict':
         """ How many messages wait in each queue whose topic lives in a broker, by sub key - the broker is asked through
-        the channel the topic reads its messages back with, before that channel's consumers start.
+        the channel the topic reads its messages back with, before that channel's consumers start. A broker that cannot
+        be reached stops the server from starting, as a queue whose depth is not known would let a direct send overtake
+        the messages the broker holds.
         """
         out = {}
 
@@ -341,14 +342,7 @@ class OutgoingQueues(ConfigManagerImpl):
                 continue
 
             channel_name = backend_config['amqp_channel_name']
-
-            try:
-                out[sub_key] = self.amqp_get_channel_queue_depth(channel_name)
-
-            # A broker that cannot be reached now leaves the depth as the database has it, and the server still starts
-            except Exception:
-                logger.warning('Could not read the depth of queue `%s` from its broker through channel `%s`, e:`%s`',
-                    sub_key, channel_name, format_exc())
+            out[sub_key] = self.amqp_get_channel_queue_depth(channel_name)
 
         return out
 

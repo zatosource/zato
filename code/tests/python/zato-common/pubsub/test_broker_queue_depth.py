@@ -132,8 +132,9 @@ class TestBrokerPendingCounts(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_a_broker_that_cannot_be_reached_leaves_the_depth_to_the_database(self) -> 'None':
-        """ One broker's failure neither stops the startup nor hides the depths read from other brokers.
+    def test_a_broker_that_cannot_be_reached_stops_the_startup(self) -> 'None':
+        """ A broker that does not answer leaves the depth of its queue unknown, and a queue whose depth is not known
+        would let a direct send overtake the messages the broker holds, so the failure propagates out of the restore.
         """
         restored_topics = {
             _sub_key_unreachable: _topic_unreachable,
@@ -146,9 +147,8 @@ class TestBrokerPendingCounts(unittest.TestCase):
             return 2
 
         with _patch_queue_depth(side_effect=read_depth):
-            out = self.config_manager._get_broker_pending_counts(restored_topics)
-
-        self.assertEqual(out, {_sub_key_broker: 2})
+            with self.assertRaises(ConnectionRefusedError):
+                _ = self.config_manager._get_broker_pending_counts(restored_topics)
 
 # ################################################################################################################################
 
