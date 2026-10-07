@@ -92,7 +92,7 @@ $.fn.zato.delivery_tab.config = {
         'While the queue holds messages, new ones join it behind them. When off, each message is sent and retried on its own.',
     helpUseDLQ: 'When on, a message that still fails after its last retry moves to the connection\'s DLQ and the ' +
         'queue delivers the next one. When off, the message stays at the head of the queue and is retried in rounds, ' +
-        'nothing behind it moves until it goes through or an operator discards it.',
+        'nothing behind it moves until it goes through, expires or an operator discards it.',
     helpAction: 'What a rule running every minute does with each message in the DLQ - keeps it for an operator, ' +
         'puts it back into the queue a number of times, forwards it to a pub/sub topic or discards it.',
     helpDlqRetries: 'How many times the rule puts a message back into the queue before leaving it in the DLQ.',
