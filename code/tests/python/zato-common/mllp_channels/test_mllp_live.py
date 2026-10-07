@@ -966,7 +966,7 @@ class TestTlsAndMtls:
         config.tls_cert_path = tls_certs['client_cert']
         config.tls_key_path = tls_certs['client_key']
 
-        connection = _HL7MLLPConnection(config)
+        connection = _HL7MLLPConnection(config, None, CircuitBreaker())
         result = connection.invoke(sample_adt_a01('OUTTLS01'))
 
         assert isinstance(result, AckResult)
@@ -996,7 +996,7 @@ class TestTlsAndMtls:
         config.tls_cert_path = ''
         config.tls_key_path = ''
 
-        connection = _HL7MLLPConnection(config)
+        connection = _HL7MLLPConnection(config, None, CircuitBreaker())
         result = connection.invoke(sample_adt_a01('OUTPLAIN1'))
 
         assert isinstance(result, AckResult)

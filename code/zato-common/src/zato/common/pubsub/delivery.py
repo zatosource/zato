@@ -138,6 +138,11 @@ def deliver_with_policy(
             attempt()
             return
 
+        # An attempt that found its connection not taking anything at all stops the round rather than failing it,
+        # the message stays for a round that runs once the connection does
+        except DeliveryInterrupted:
+            raise
+
         except Exception as e:
             attempts_made += 1
 

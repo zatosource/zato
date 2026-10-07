@@ -608,6 +608,8 @@ urlpatterns += [
         login_required(out_hl7_mllp.Edit()), name=out_hl7_mllp.Edit.url_name),
     url(r'^zato/outgoing/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_hl7_mllp.Delete()), name=out_hl7_mllp.Delete.url_name),
+    url(r'^zato/outgoing/hl7/mllp/pending/(?P<id>.*)/$',
+        login_required(out_hl7_mllp.pending), name='outgoing-hl7-mllp-pending'),
     url(r'^zato/outgoing/hl7/mllp/wizard/$',
         login_required(out_hl7_mllp.wizard_create), name='outgoing-hl7-mllp-wizard-create'),
     url(r'^zato/outgoing/hl7/mllp/wizard/test/$',

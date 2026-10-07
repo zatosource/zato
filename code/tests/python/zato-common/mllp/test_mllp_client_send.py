@@ -17,6 +17,7 @@ import pytest
 # Zato
 from zato.common.ext.bunch import Bunch
 from zato.common.hl7.exception import HL7Exception
+from zato.common.hl7.mllp.circuit_breaker import CircuitBreaker
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.util.tcp import get_free_port
 from zato.server.generic.api.outconn_hl7_mllp import _HL7MLLPConnection
@@ -185,7 +186,7 @@ def _build_connection(port:'int') -> '_HL7MLLPConnection':
     config.tls_cert_path = ''
     config.tls_key_path = ''
 
-    out = _HL7MLLPConnection(config)
+    out = _HL7MLLPConnection(config, None, CircuitBreaker())
     return out
 
 # ################################################################################################################################

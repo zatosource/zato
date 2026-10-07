@@ -25,6 +25,7 @@ from zato.common.api import GENERIC, generic_attrs
 from zato.common.ext.bunch import Bunch
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.tls import build_client_ssl_context
+from zato.common.pubsub.outgoing import OutgoingType
 from zato.common.util.api import hex_sequence_to_bytes
 from zato.common.util.tcp import parse_address
 
@@ -59,6 +60,12 @@ _alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 
 # .. the retry fields, the queue switch and the DLQ config, stored in the connection's opaque attributes ..
 _delivery_field_names = tuple(delivery_tab.retry_field_defaults) + tuple(delivery_tab.field_defaults)
+
+# .. the service that reports how many messages the queue and the DLQ of a connection hold, which the delete
+# .. confirmation shows before the connection is deleted along with both ..
+_Service_Pending = 'zato.pubsub.outgoing.get-message-list'
+_Pending_Kind = 'queue'
+_Pending_Page_Size = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,6 +205,32 @@ class Delete(_Delete):
     url_name = 'outgoing-hl7-mllp-delete'
     error_message = 'Could not delete HL7 MLLP outgoing connection'
     service_name = 'zato.generic.connection.delete'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def pending(req:'any_', id:'str') -> 'JsonResponse':
+    """ How many messages the queue and the DLQ of a connection hold, which a delete of the connection drops with it.
+    """
+    try:
+        response = req.zato.client.invoke(_Service_Pending, {
+            'conn_type': OutgoingType.MLLP,
+            'conn_id': int(id),
+            'kind': _Pending_Kind,
+            'page_size': _Pending_Page_Size,
+        })
+
+        if not response.ok:
+            raise Exception(response.details)
+
+        return JsonResponse({
+            'queue_depth': response.data['queue_depth'],
+            'dlq_depth': response.data['dlq_depth'],
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################
 # ################################################################################################################################

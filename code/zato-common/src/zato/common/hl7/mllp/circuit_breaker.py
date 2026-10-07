@@ -29,6 +29,13 @@ _Default_Reset_Seconds             = 60.0
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SendingStopped(Exception):
+    """ Raised by a send that the circuit breaker of its connection did not let through.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CircuitBreaker:
     """ A circuit breaker that tracks success/failure outcomes over a sliding time window.
     Transitions between closed, open, and half-open states based on the failure rate.
@@ -96,8 +103,8 @@ class CircuitBreaker:
     def can_execute(self) -> 'bool':
         """ Returns True if an operation should be attempted.
         In closed state, always True.
-        In open state, checks if the reset time has elapsed to transition to half-open.
-        In half-open state, allows exactly one probe.
+        In open state, checks if the reset time has elapsed to transition to half-open, which lets the one probe through.
+        In half-open state, the probe is on the wire and nothing else is attempted until its outcome is recorded.
         """
 
         now = time.monotonic()
@@ -117,9 +124,9 @@ class CircuitBreaker:
 
             return False
 
-        # Half-open: allow one probe
+        # Half-open: the one probe is on the wire, and its outcome decides what comes next
         if self.state == CircuitState.Half_Open:
-            return True
+            return False
 
         return False
 

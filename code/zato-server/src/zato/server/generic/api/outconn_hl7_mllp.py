@@ -16,6 +16,7 @@ from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditLog
 from zato.common.hl7.audit import audit_ack_received, audit_message_sent, get_wire_attrs, ACKStatus
 from zato.common.hl7.mllp.ack import AckResult, get_ack_rejection
+from zato.common.hl7.mllp.circuit_breaker import CircuitBreaker, SendingStopped
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.fields import Outgoing_Bool_Names, Outgoing_Defaults, Outgoing_Int_Names
@@ -92,13 +93,16 @@ def to_message_text(data:'bytes | str | any_') -> 'str':
 class _HL7MLLPConnection:
     """ Wraps an HL7MLLPClient instance for use with the connection pool.
     """
-    def __init__(self, config:'Bunch', audit_log:'AuditLog | None' = None) -> 'None':
+    def __init__(self, config:'Bunch', audit_log:'AuditLog | None', breaker:'CircuitBreaker') -> 'None':
 
         # What the audit events are filed under and where they say the message went -
         # the name is only read when auditing is on, because offline tests build
         # minimal configs without one.
         self.audit_log = audit_log
         self.address = config.address
+
+        # The send limit of the connection, shared by every pooled connection to the same receiving system
+        self.breaker = breaker
 
         if audit_log:
             self.name = config.name
@@ -187,6 +191,11 @@ class _HL7MLLPConnection:
                 cid=cid, msg_id=control_id, attrs=get_wire_attrs(msh_line), endpoint=self.address,
                 is_export_payload_active=self.is_export_payload_active)
 
+        # A connection whose share of failed sends reached its limit sends nothing until its reset time passes,
+        # and then one trial message decides whether it resumes
+        if not self.breaker.can_execute():
+            raise SendingStopped(f'Sending to `{self.address}` is stopped, the share of failed sends reached its limit')
+
         send_start = monotonic()
 
         def send() -> 'AckResult':
@@ -198,6 +207,7 @@ class _HL7MLLPConnection:
         try:
             out = self._send_with_policy(cid, send, needs_retry)
         except Exception:
+            self.breaker.record_failure()
             if self.audit_log and needs_audit:
                 duration_ms = int((monotonic() - send_start) * _ms_per_second)
                 _ = audit_ack_received(
@@ -206,7 +216,14 @@ class _HL7MLLPConnection:
                     is_export_payload_active=self.is_export_payload_active)
             raise
 
-        # The acknowledgment arrived - its code decides the outcome on its own row
+        # The acknowledgment arrived - a rejection counts toward the send limit as a send that no acknowledgment
+        # came back from does, which is the test the queue applies to a failed send
+        if get_ack_rejection(out):
+            self.breaker.record_failure()
+        else:
+            self.breaker.record_success()
+
+        # The acknowledgment's code decides the outcome on its own row
         if self.audit_log and needs_audit:
             duration_ms = int((monotonic() - send_start) * _ms_per_second)
             _ = audit_ack_received(
@@ -284,6 +301,13 @@ class OutconnHL7MLLPWrapper(Wrapper):
         # Whether a send that did not go through waits in the connection's queue
         self.use_queue = self.config[_use_queue_field]
 
+        # The send limit of the connection, one for every pooled connection to the receiving system
+        self.breaker = CircuitBreaker(
+            self.config.circuit_breaker_threshold_percent,
+            self.config.circuit_breaker_window_seconds,
+            self.config.circuit_breaker_reset_seconds,
+        )
+
         # What a guaranteed delivery to this connection goes through. It is built from the connection's
         # id rather than its name because that is what a rename leaves alone.
         self.publisher = OutgoingPublisher(server, OutgoingType.MLLP, self.config.id)
@@ -292,7 +316,7 @@ class OutconnHL7MLLPWrapper(Wrapper):
 
     def add_client(self) -> 'None':
         try:
-            connection = _HL7MLLPConnection(self.config, self.audit_log)
+            connection = _HL7MLLPConnection(self.config, self.audit_log, self.breaker)
             _ = self.client.put_client(connection)
         except Exception:
             logger.warning('Error adding HL7 MLLP client (%s); e:`%s`', self.config.name, format_exc())

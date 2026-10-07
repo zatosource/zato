@@ -26,11 +26,45 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.hl7.mllp.config = {
+    pendingUrl: '/zato/outgoing/hl7/mllp/pending/{0}/',
+    deleteSuccess: 'HL7 MLLP outgoing connection `{0}` deleted',
+    deleteConfirm: 'Are you sure you want to delete HL7 MLLP outgoing connection `{0}`?',
+    deleteConfirmPending: ' Its queue holds {0} and its DLQ {1}, all of which are deleted with it.',
+    messageOne: '1 message',
+    messageMany: '{0} messages'
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.hl7.mllp.formatMessageCount = function(count) {
+    var config = $.fn.zato.outgoing.hl7.mllp.config;
+
+    if(count == 1) {
+        return config.messageOne;
+    }
+    return String.format(config.messageMany, count);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// A delete takes the queue and the DLQ of the connection with it, so the confirmation says what both hold
 $.fn.zato.outgoing.hl7.mllp.delete_ = function(id) {
-    $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'HL7 MLLP outgoing connection `{0}` deleted',
-        'Are you sure you want to delete HL7 MLLP outgoing connection `{0}`?',
-        true);
+    var config = $.fn.zato.outgoing.hl7.mllp.config;
+    var url = String.format(config.pendingUrl, id);
+
+    $.getJSON(url, function(pending) {
+        var pendingCount = pending.queue_depth + pending.dlq_depth;
+        var confirmPattern = config.deleteConfirm;
+
+        if(pendingCount > 0) {
+            var queueText = $.fn.zato.outgoing.hl7.mllp.formatMessageCount(pending.queue_depth);
+            var dlqText = $.fn.zato.outgoing.hl7.mllp.formatMessageCount(pending.dlq_depth);
+            confirmPattern = confirmPattern + String.format(config.deleteConfirmPending, queueText, dlqText);
+        }
+
+        $.fn.zato.data_table.delete_(id, 'td.item_id_', config.deleteSuccess, confirmPattern, true);
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

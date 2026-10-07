@@ -24,7 +24,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import utcnow
 from zato.server.base.parallel.delivery import PushDelivery
-from zato.server.service.internal.pubsub.dlq import DLQRun, RetryMessage
+from zato.server.service.internal.pubsub.dlq import DLQRun, ForwardMessage, RetryMessage
 from zato.server.service.internal.pubsub.outgoing import Deliver
 
 # ################################################################################################################################
@@ -44,6 +44,10 @@ _conn_id = 37
 
 # How long the DLQ is watched for a message the rule should not have put back, in seconds
 _quiet_period_seconds = 2
+
+# The topic the forward flow forwards to and the subscription that collects what arrives there
+_forward_topic = 'PubSub.Backend.Test.DLQ.Forwarded'
+_forward_sub_key = 'zpsk.dlq.rule.test.forwarded'
 
 # The DLQ settings of the connection, which each flow sets to what it needs
 _settings:'stranydict' = {
@@ -98,6 +102,18 @@ class _RetryInput:
     def __init__(self, sub_key:'str', msg_id:'str') -> 'None':
         self.sub_key = sub_key
         self.msg_id = msg_id
+
+# ################################################################################################################################
+
+class _ForwardInput:
+    """ The input of an operator's forward of one DLQ message.
+    """
+
+    def __init__(self, sub_key:'str', msg_id:'str', topic_name:'str') -> 'None':
+        self.sub_key = sub_key
+        self.msg_id = msg_id
+        self.topic_name = topic_name
+        self.keep_header = True
 
 # ################################################################################################################################
 
@@ -164,6 +180,30 @@ def _retry_by_operator(server:'_DeliveringServer', msg_id:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _forward_by_operator(server:'_DeliveringServer', msg_id:'str') -> 'None':
+    """ An operator's forward of one DLQ message to the forward topic.
+    """
+    service = object.__new__(ForwardMessage)
+    service.server = _as_server(server)
+    dlq_sub_key = _get_dlq_sub_key()
+    forward_input = _ForwardInput(dlq_sub_key, msg_id, _forward_topic)
+
+    service.request = cast_('any_', _Request(None, forward_input))
+    service.response = cast_('any_', _Response())
+
+    service.handle()
+
+# ################################################################################################################################
+
+def _get_forwarded_count(server:'_DeliveringServer') -> 'int':
+    """ How many messages the forward topic received.
+    """
+    messages, _ = server.pubsub_backend.browse_messages(_forward_topic, _forward_sub_key, 'pending', needs_data=False)
+    out = len(messages)
+    return out
+
+# ################################################################################################################################
+
 def _get_dlq_messages(server:'_DeliveringServer') -> 'anylist':
     """ Every message the DLQ of the connection holds, each as its id and its document.
     """
@@ -225,6 +265,24 @@ class _RuleReadBeforeOperator(DLQRun):
 
         # .. and each of them fails again and is back in the DLQ before the rule acts on what it read.
         _ = _wait_for_one_dlq_message(server, 1)
+
+        return out
+
+# ################################################################################################################################
+
+class _ForwardRuleReadBeforeOperator(DLQRun):
+    """ The DLQ rule, with an operator forwarding every message of the DLQ right after the rule read them.
+    """
+
+    def _get_all_documents(self, topic_name:'str', sub_key:'str') -> 'anylist':
+
+        # The rule reads the DLQ ..
+        out = super()._get_all_documents(topic_name, sub_key)
+        server = cast_('_DeliveringServer', self.server)
+
+        # .. and an operator forwards each message it read before the rule acts on what it read.
+        for msg_id, _ in out:
+            _forward_by_operator(server, msg_id)
 
         return out
 
@@ -303,6 +361,47 @@ def _run_operator_retry_during_rule_flow() -> 'None':
     server.pubsub_push_delivery.stop()
 
 # ################################################################################################################################
+
+def _run_operator_forward_during_rule_flow() -> 'None':
+    """ A message an operator forwarded after the DLQ rule read it is not forwarded by the rule a second time.
+    """
+    delete_all_rows()
+
+    server = _new_server()
+    server.pubsub_backend.subscribe(_forward_sub_key, _forward_topic)
+
+    connection = _new_connection(_conn_id, _name_orders)
+    connection.refuses_everything = True
+
+    publisher = OutgoingPublisher(_as_server(server), _conn_type, _conn_id)
+    _ = publisher.publish('Order 1003')
+
+    # The message fails its round and moves to the DLQ ..
+    _ = _wait_for_one_dlq_message(server, 0)
+
+    dlq_sub_key = _get_dlq_sub_key()
+
+    settings = dict(_settings)
+    settings[_dlq.Field_Action] = _dlq.Action.Forward
+    settings[_dlq.Field_Forward_To] = _forward_topic
+
+    rule = object.__new__(_ForwardRuleReadBeforeOperator)
+    rule.server = _as_server(server)
+
+    # .. the rule reads it, an operator forwards it in the meantime, and the rule acts on nothing ..
+    count = rule._run_for_connection(dlq_sub_key, _conn_type, _name_orders, settings, utcnow())
+    assert count == 0, count
+
+    # .. so the topic received the message once and the DLQ is empty.
+    forwarded_count = _get_forwarded_count(server)
+    assert forwarded_count == 1, forwarded_count
+
+    messages = _get_dlq_messages(server)
+    assert not messages, messages
+
+    server.pubsub_push_delivery.stop()
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def run_dlq_rule_scenario() -> 'None':
@@ -314,6 +413,7 @@ def run_dlq_rule_scenario() -> 'None':
     try:
         _run_operator_retry_then_rule_flow()
         _run_operator_retry_during_rule_flow()
+        _run_operator_forward_during_rule_flow()
 
     finally:
         _stop_all_deliveries()
