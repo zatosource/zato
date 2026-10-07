@@ -122,7 +122,7 @@ class B2BAlerting(AdminService):
 
         # A clean sweep raises nothing at all.
         if not findings:
-            self.logger.info('B2B alerting sweep found nothing to report')
+            self.logger.debug('B2B alerting sweep found nothing to report')
             return
 
         # Every finding becomes an alert-raised event first, so the alerting history
@@ -137,18 +137,18 @@ class B2BAlerting(AdminService):
         else:
             suffix = 'findings'
 
-        self.logger.info('B2B alerting sweep raised %d %s', finding_count, suffix)
+        self.logger.debug('B2B alerting sweep raised %d %s', finding_count, suffix)
 
         # The digest goes out only when the job's extra data names an SMTP connection.
         smtp_conn = self._get_extra(AS2.Alerting.Extra_SMTP_Conn, context)
 
         if not smtp_conn:
-            self.logger.info('No SMTP connection is configured for B2B alerting, skipping the digest')
+            self.logger.debug('No SMTP connection is configured for B2B alerting, skipping the digest')
             return
 
         # The email component may be disabled in server.conf.
         if not self.email:
-            self.logger.warning(
+            self.logger.debug(
                 'Could not send the B2B alerting digest; is component_enabled.email set to True in server.conf?')
             return
 
@@ -167,7 +167,7 @@ class B2BAlerting(AdminService):
         smtp_item = self.email.smtp.get(smtp_conn, True)
         smtp_item.conn.send(message)
 
-        self.logger.info('B2B alerting digest sent through `%s` to `%s`', smtp_conn, to)
+        self.logger.debug('B2B alerting digest sent through `%s` to `%s`', smtp_conn, to)
 
 # ################################################################################################################################
 # ################################################################################################################################

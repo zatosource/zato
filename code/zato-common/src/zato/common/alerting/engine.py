@@ -299,7 +299,7 @@ def _dispatch_email(
 
     # With no addresses configured anywhere there is nowhere to send the email.
     if not addresses:
-        logger.info(
+        logger.debug(
             'Alert rule `%s` has no addresses and no default email is configured - skipping an email about `%s`',
             rule.name, finding.object_name)
         return
@@ -367,7 +367,7 @@ def _dispatch_slack(
 
     # Without a channel in the rule's action config there is nowhere to post.
     if not (channel := rule.action_config.get(Alerting.Config_Slack_Channel)):
-        logger.info('Alert rule `%s` has no Slack channel - skipping `%s`', rule.name, finding.object_name)
+        logger.debug('Alert rule `%s` has no Slack channel - skipping `%s`', rule.name, finding.object_name)
         return
 
     text = render_alert_template(Template_Slack, context, template_dir)
@@ -392,7 +392,7 @@ def _dispatch_teams(
 
     # Without a target in the rule's action config there is nowhere to post.
     if not (to := rule.action_config.get(Alerting.Config_Teams_To)):
-        logger.info('Alert rule `%s` has no Teams target - skipping `%s`', rule.name, finding.object_name)
+        logger.debug('Alert rule `%s` has no Teams target - skipping `%s`', rule.name, finding.object_name)
         return
 
     # Teams messages are HTML.
@@ -420,7 +420,7 @@ def _dispatch_webhook(
     webhook_url = _get_webhook_target(rule, defaults.webhook_url)
 
     if not webhook_url:
-        logger.info('Alert rule `%s` has no webhook URL and no default one is configured - skipping `%s`',
+        logger.debug('Alert rule `%s` has no webhook URL and no default one is configured - skipping `%s`',
             rule.name, finding.object_name)
         return
 
@@ -572,7 +572,7 @@ def process_findings(
 
         # No rule matched - the finding goes to the default sink instead of being dropped.
         if not matched_rules:
-            logger.warning('No alert rule matched finding `%s` on `%s` - %s',
+            logger.debug('No alert rule matched finding `%s` on `%s` - %s',
                 finding.kind, finding.object_name, finding.message)
             out.unmatched.append(finding)
             continue

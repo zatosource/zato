@@ -145,7 +145,7 @@ def run_certificate_probe(
         except Exception as e:
 
             # One target failing never stops the others from being measured.
-            logger.warning('Certificate check of `%s` (%s) failed -> %s', object_name, endpoint, format_exc())
+            logger.debug('Certificate check of `%s` (%s) failed -> %s', object_name, endpoint, format_exc())
 
             error = str(e)
 
@@ -213,7 +213,7 @@ def run_health_probe(
         states = fetch()
     except Exception as e:
 
-        logger.warning('Health probe through `%s` failed -> %s', object_name, format_exc())
+        logger.debug('Health probe through `%s` failed -> %s', object_name, format_exc())
 
         error = str(e)
 
@@ -267,7 +267,7 @@ def run_test_transfer_probe(
         transfer()
     except Exception as e:
 
-        logger.warning('Test transfer of `%s` failed -> %s', object_name, format_exc())
+        logger.debug('Test transfer of `%s` failed -> %s', object_name, format_exc())
 
         error = str(e)
 

@@ -51,7 +51,7 @@ def get_explanation(service:'AdminService', payload:'stranydict') -> 'stranydict
     skill = _get_skill(service, source)
 
     if not skill:
-        service.logger.info('No explanation skill exists for source `%s`, delivering `%s` unexplained', source, object_name)
+        service.logger.debug('No explanation skill exists for source `%s`, delivering `%s` unexplained', source, object_name)
         return Empty_Explanation
 
     # .. and one alert produces one explanation, not one per sweep - an error alert
@@ -60,7 +60,7 @@ def get_explanation(service:'AdminService', payload:'stranydict') -> 'stranydict
     name = _explanation_name_prefix + str(payload['alert_id'])
 
     if stored := store.get(name):
-        service.logger.info('An explanation already exists for `%s`, delivering `%s` with it', name, object_name)
+        service.logger.debug('An explanation already exists for `%s`, delivering `%s` with it', name, object_name)
         return stored
 
     # Collect the evidence - the rows the measures were counted from, grouped and fitted
@@ -119,7 +119,7 @@ def get_explanation(service:'AdminService', payload:'stranydict') -> 'stranydict
     _ = audit_log.insert(source, AuditEvent.Alert_Explained, object_name,
         cid=service.cid, outcome=AuditOutcome.OK, data=payload['message'])
 
-    service.logger.info('Alert `%s` explained for `%s` (%s)', name, object_name, payload['rule'])
+    service.logger.debug('Alert `%s` explained for `%s` (%s)', name, object_name, payload['rule'])
 
     return out
 
@@ -163,13 +163,13 @@ def _get_llm_connection(service:'AdminService', payload:'stranydict') -> 'str':
         return ''
 
     if name not in service.llm.conn_dict:
-        service.logger.info('LLM connection `%s` does not exist, storing the alert without an explanation', name)
+        service.logger.debug('LLM connection `%s` does not exist, storing the alert without an explanation', name)
         return ''
 
     item = service.llm.conn_dict[name]
 
     if not item['is_active']:
-        service.logger.info('LLM connection `%s` is inactive, storing the alert without an explanation', name)
+        service.logger.debug('LLM connection `%s` is inactive, storing the alert without an explanation', name)
         return ''
 
     return name
@@ -184,7 +184,7 @@ def _explain(service:'AdminService', payload:'stranydict', skill:'Skill', docume
 
     if not llm_connection:
 
-        service.logger.info('No LLM connection is available, storing the alert without an explanation')
+        service.logger.debug('No LLM connection is available, storing the alert without an explanation')
 
         out:'stranydict' = {
             'explanation': '',

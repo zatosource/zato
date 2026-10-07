@@ -354,7 +354,7 @@ def _create_definition(
         comment=_seed_comment,
     )
 
-    logger.info('Created the default alerting %s `%s` (id=%s)', object_type, name, out.id)
+    logger.debug('Created the default alerting %s `%s` (id=%s)', object_type, name, out.id)
     return out
 
 # ################################################################################################################################
@@ -532,7 +532,7 @@ def _upgrade_vocabulary(backend:'RuleSQLBackend') -> 'bool':
 
     _store_upgrade(backend, definition, document)
 
-    logger.info('Upgraded the alerting vocabulary `%s` with new terms', Alerting.Vocabulary_Name)
+    logger.debug('Upgraded the alerting vocabulary `%s` with new terms', Alerting.Vocabulary_Name)
     return True
 
 # ################################################################################################################################
@@ -637,7 +637,7 @@ def _upgrade_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_conten
 
     _store_upgrade(backend, definition, document)
 
-    logger.info('Upgraded the default alerting ruleset `%s` with the rules of this release', ruleset_name)
+    logger.debug('Upgraded the default alerting ruleset `%s` with the rules of this release', ruleset_name)
     return True
 
 # ################################################################################################################################
@@ -667,7 +667,7 @@ def ensure_alerting_definitions(backend:'RuleSQLBackend') -> 'None':
             _ = _upgrade_ruleset(backend, ruleset_name, zrules_contents)
 
     if created_any:
-        logger.info('Default alerting definitions seeded')
+        logger.debug('Default alerting definitions seeded')
 
 # ################################################################################################################################
 # ################################################################################################################################
