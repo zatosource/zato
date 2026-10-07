@@ -16,7 +16,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.dlq import is_dlq_sub_key
+from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, parse_outgoing_sub_key
 from zato.server.base.config_manager.common import ConfigManagerImpl
@@ -284,11 +284,19 @@ class OutgoingQueues(ConfigManagerImpl):
             conn_name, _ = found
             topic_name = get_outgoing_topic_name(conn_type, conn_name)
 
-            # A rename a crash interrupted is finished here
+            # A rename a crash interrupted is finished here, the DLQ's as well, which is renamed after the queue
             for subscribed_topic in self.server.pubsub_backend.get_subscribed_topics(sub_key):
                 if subscribed_topic != topic_name:
                     logger.info('Finishing the move of outgoing topic `%s` to `%s`', subscribed_topic, topic_name)
                     self.server.pubsub_backend.rename_topic(subscribed_topic, topic_name)
+
+            dlq_sub_key = get_dlq_sub_key(conn_type, conn_id)
+            dlq_topic_name = get_dlq_topic_name(conn_type, conn_name)
+
+            for subscribed_topic in self.server.pubsub_backend.get_subscribed_topics(dlq_sub_key):
+                if subscribed_topic != dlq_topic_name:
+                    logger.info('Finishing the move of outgoing DLQ topic `%s` to `%s`', subscribed_topic, dlq_topic_name)
+                    self.server.pubsub_backend.rename_topic(subscribed_topic, dlq_topic_name)
 
             self._set_outgoing_topic_audit_flag(conn_type, topic_name)
 

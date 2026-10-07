@@ -89,7 +89,10 @@ $.fn.zato.delivery_tab.config = {
     helpUseQueue: 'When on, a message is sent right away and, if the endpoint does not accept it, it is placed in ' +
         'the connection\'s own queue and delivered from there one at a time, in order, retried as the retry settings say. ' +
         'With no retries, such a message is not queued. ' +
-        'While the queue holds messages, new ones join it behind them. When off, each message is sent and retried on its own.',
+        'While the queue holds messages, new ones join it behind them. ' +
+        'A message leaves the queue once the endpoint has accepted it, so a server stopped between the acceptance ' +
+        'and that moment sends the message once more when it starts again. ' +
+        'When off, each message is sent and retried on its own.',
     helpUseDLQ: 'When on, a message that still fails after its last retry moves to the connection\'s DLQ and the ' +
         'queue delivers the next one. When off, the message stays at the head of the queue and is retried in rounds, ' +
         'nothing behind it moves until it goes through, expires or an operator discards it.',

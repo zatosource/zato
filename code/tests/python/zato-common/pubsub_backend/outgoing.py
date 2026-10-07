@@ -18,6 +18,7 @@ from gevent import sleep
 from common import delete_all_rows, get_delivery_rows, get_message_rows, get_sub_rows, move_message_rows
 from zato.common.api import PubSub
 from zato.common.pubsub.delivery import wait_between_rounds
+from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name
 from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, Key_Data, \
     OutgoingPublisher, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -897,6 +898,49 @@ def _run_rename_crash_flow() -> 'None':
 
 # ################################################################################################################################
 
+def _run_dlq_rename_crash_flow() -> 'None':
+    """ A rename that a crash interrupted after the queue's topic moved and before the DLQ's did is finished for
+    both of them when the server starts again.
+    """
+    delete_all_rows()
+
+    _, first_server, _ = _new_server()
+
+    connection = _new_connection(_conn_id_orders, _name_orders)
+
+    # The queue and the DLQ exist and the DLQ holds one message ..
+    first_server.config_manager.ensure_outgoing_subscription(_conn_type, _conn_id_orders)
+    dlq_topic, _ = first_server.config_manager.ensure_outgoing_dlq(_conn_type, _conn_id_orders)
+    _ = first_server.pubsub_backend.publish(dlq_topic, '{"request": "Order 1"}')
+
+    dlq_sub_key = get_dlq_sub_key(_conn_type, _conn_id_orders)
+
+    # .. the process ends after the queue's topic moved to the connection's new name and before the DLQ's did ..
+    old_topic = get_outgoing_topic_name(_conn_type, _name_orders)
+    new_topic = get_outgoing_topic_name(_conn_type, _name_orders_renamed)
+
+    connection.name = _name_orders_renamed
+    first_server.pubsub_backend.rename_topic(old_topic, new_topic)
+
+    dlq_rows = get_sub_rows(dlq_sub_key)
+    assert dlq_rows[0].topic_name == dlq_topic, dlq_rows[0].topic_name
+
+    # .. a server starting up finds the queue and finishes what the rename did not ..
+    _, second_server, _ = _new_server()
+    second_server.config_manager.restore_outgoing_subscriptions()
+
+    # .. so the DLQ is under the topic of the name the connection goes by now, with its message in it.
+    new_dlq_topic = get_dlq_topic_name(_conn_type, _name_orders_renamed)
+    dlq_rows = get_sub_rows(dlq_sub_key)
+
+    assert len(dlq_rows) == 1, dlq_rows
+    assert dlq_rows[0].topic_name == new_dlq_topic, dlq_rows[0].topic_name
+
+    dlq_count = second_server.pubsub_backend.get_total_count(dlq_sub_key, new_dlq_topic, 'pending')
+    assert dlq_count == 1, dlq_count
+
+# ################################################################################################################################
+
 def _run_delete_flow() -> 'None':
     """ A deleted connection takes its queue with it, along with what that queue still held.
     """
@@ -1041,6 +1085,7 @@ def run_outgoing_scenario() -> 'None':
         _run_rename_one_queue_flow()
         _run_rename_keeps_order_flow()
         _run_rename_crash_flow()
+        _run_dlq_rename_crash_flow()
         _run_delete_flow()
         _run_type_isolation_flow()
 
