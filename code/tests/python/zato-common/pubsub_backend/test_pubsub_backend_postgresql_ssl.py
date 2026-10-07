@@ -15,6 +15,7 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from cleanup import run_cleanup_scenario
 from common import assert_postgresql_connection_encrypted, pubsub_backend_env
+from dlq_rule import run_dlq_rule_scenario
 from encryption import run_encryption_scenario
 from lifecycle import run_lifecycle_scenario
 from outgoing import run_outgoing_scenario
@@ -51,6 +52,7 @@ def test_pubsub_backend_postgresql_ssl(postgresql_ssl_server:'DatabaseServer') -
         run_retry_settings_scenario()
         run_outgoing_scenario()
         run_queue_order_scenario()
+        run_dlq_rule_scenario()
         assert_postgresql_connection_encrypted()
 
 # ################################################################################################################################

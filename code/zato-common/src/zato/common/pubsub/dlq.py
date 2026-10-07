@@ -17,8 +17,8 @@ from traceback import format_exc
 from zato.common.api import PubSub
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
 from zato.common.pubsub.outgoing import Direction_In, Direction_Out, get_direction, get_outgoing_topic_name, has_queue, \
-    is_dlq_active, Key_CID, Key_Conn_ID, Key_Conn_Name, Key_Conn_Type, Key_DLQ_Rounds, Key_Msg_ID, Key_Pub_Time, \
-    locate_outgoing_conn
+    is_dlq_active, Key_CID, Key_Conn_ID, Key_Conn_Name, Key_Conn_Type, Key_DLQ_Rounds, Key_DLQ_Rule_Rounds, Key_Msg_ID, \
+    Key_Pub_Time, locate_outgoing_conn
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
 from zato.common.util.time_ import utcnow
@@ -63,6 +63,7 @@ Header_Source_Topic  = 'source_topic'
 Header_Source_Msg_ID = 'source_msg_id'
 Header_Pub_Time      = 'pub_time_iso'
 Header_Rounds        = 'rounds'
+Header_Rule_Rounds   = 'rule_rounds'
 Header_CID           = 'cid'
 
 # Where a channel's message came from
@@ -140,6 +141,7 @@ def build_dlq_header(
         Header_Source_Msg_ID: envelope[Key_Msg_ID],
         Header_Pub_Time: envelope[Key_Pub_Time],
         Header_Rounds: envelope[Key_DLQ_Rounds],
+        Header_Rule_Rounds: envelope[Key_DLQ_Rule_Rounds],
         Header_CID: envelope[Key_CID],
     }
 

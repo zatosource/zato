@@ -18,10 +18,10 @@ from logging import getLogger
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.facade import PubSubFacade
 from zato.common.pubsub.delivery import DeliveryExhausted
-from zato.common.pubsub.dlq import get_dlq_topic_name, Header_Moved_Time, Header_Rounds, Header_Source, Header_Source_Topic, \
-    Key_DLQ, move_to_dlq, parse_dlq_sub_key, strip_dlq_header
+from zato.common.pubsub.dlq import get_dlq_topic_name, Header_Moved_Time, Header_Rounds, Header_Rule_Rounds, Header_Source, \
+    Header_Source_Topic, Key_DLQ, move_to_dlq, parse_dlq_sub_key, strip_dlq_header
 from zato.common.pubsub.outgoing import Attempts_None, deliver_envelope, find_outgoing_conn, get_dlq_settings, has_queue, \
-    Key_Attempts, Key_CID, Key_DLQ_Rounds, Key_Request, locate_outgoing_conn, OutgoingPublisher
+    Key_Attempts, Key_CID, Key_DLQ_Rounds, Key_DLQ_Rule_Rounds, Key_Request, locate_outgoing_conn, OutgoingPublisher
 from zato.common.util.time_ import utcnow
 from zato.server.service import Bool
 from zato.server.service.internal import AdminService
@@ -30,7 +30,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, callable_, stranydict
+    from zato.common.typing_ import anydict, anylist, callable_, stranydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,6 +95,14 @@ class _DLQService(AdminService):
 
 # ################################################################################################################################
 
+    def _claim(self, sub_key:'str', msg_id:'str') -> 'bool':
+        """ Takes one message out of the DLQ, telling whether it was still there to be taken out.
+        """
+        out = self.server.pubsub_backend.claim_message(sub_key, msg_id)
+        return out
+
+# ################################################################################################################################
+
     def _act_on_all(self, sub_key:'str', act:'callable_') -> 'anydict':
         """ Runs one action on every message a DLQ holds, returning how many.
         """
@@ -119,24 +127,34 @@ class _DLQService(AdminService):
 
 class _RetryMixin(_DLQService):
 
-    def _retry(self, sub_key:'str', msg_id:'str', document:'stranydict') -> 'str':
-        """ Tries one DLQ message again, returning its new id in the queue or the DLQ, or an empty string if it was delivered.
+    def _retry(self, sub_key:'str', msg_id:'str', document:'stranydict', *, is_rule_retry:'bool'=False) -> 'strnone':
+        """ Tries one DLQ message again, returning its new id in the queue or the DLQ, an empty string if it was delivered,
+        or None if another retry had already taken it out of the DLQ.
         """
         conn_type, conn_id, _ = self._get_dlq_names(sub_key)
 
         header = document[Key_DLQ]
         rounds = header[Header_Rounds] + 1
+        rule_rounds = header[Header_Rule_Rounds]
         envelope = strip_dlq_header(document)
+
+        # The DLQ rule's limit counts the retries of the rule only, not those of an operator.
+        if is_rule_retry:
+            rule_rounds += 1
 
         # A connection type without a queue has its service invoked right here.
         if not has_queue(conn_type):
-            out = self._retry_inbound(sub_key, msg_id, envelope, header, rounds)
+            out = self._retry_inbound(sub_key, msg_id, envelope, header, rounds, rule_rounds)
             return out
 
-        publisher = OutgoingPublisher(self.server, conn_type, conn_id)
-        result = publisher.publish_request(envelope[Key_CID], Attempts_None, envelope[Key_Request], dlq_rounds=rounds)
+        # The message leaves the DLQ before it is put back into the queue, and one that is no longer there was retried already.
+        if not self._claim(sub_key, msg_id):
+            logger.info('DLQ message `%s` of `%s` not retried, it was already taken out of the DLQ', msg_id, sub_key)
+            return None
 
-        self._ack(sub_key, msg_id)
+        publisher = OutgoingPublisher(self.server, conn_type, conn_id)
+        result = publisher.publish_request(envelope[Key_CID], Attempts_None, envelope[Key_Request],
+            dlq_rounds=rounds, dlq_rule_rounds=rule_rounds)
 
         logger.info('Retried DLQ message `%s` of `%s` as `%s`, round %d', msg_id, sub_key, result.msg_id, rounds)
 
@@ -145,11 +163,20 @@ class _RetryMixin(_DLQService):
 
 # ################################################################################################################################
 
-    def _retry_inbound(self, sub_key:'str', msg_id:'str', envelope:'stranydict', header:'stranydict', rounds:'int') -> 'str':
+    def _retry_inbound(
+        self,
+        sub_key:'str',
+        msg_id:'str',
+        envelope:'stranydict',
+        header:'stranydict',
+        rounds:'int',
+        rule_rounds:'int',
+        ) -> 'str':
         """ Invokes a channel's service again under the channel's retry policy.
         """
         envelope[Key_Attempts] = Attempts_None
         envelope[Key_DLQ_Rounds] = rounds
+        envelope[Key_DLQ_Rule_Rounds] = rule_rounds
 
         cid = envelope[Key_CID]
 
@@ -194,6 +221,9 @@ class RetryMessage(_RetryMixin):
         document = self._load_message(topic_name, msg_id)
 
         new_msg_id = self._retry(sub_key, msg_id, document)
+
+        if new_msg_id is None:
+            raise Exception(f'DLQ message `{msg_id}` of `{sub_key}` was already taken out of the DLQ')
 
         self.response.payload = {'msg_id': msg_id, 'new_msg_id': new_msg_id}
 
@@ -388,10 +418,14 @@ class DLQRun(_RetryMixin, _ForwardMixin, _DiscardMixin):
 
             if action == _dlq.Action.Retry:
 
-                if header[Header_Rounds] >= max_rounds:
+                if header[Header_Rule_Rounds] >= max_rounds:
                     continue
 
-                _ = self._retry(sub_key, msg_id, document)
+                new_msg_id = self._retry(sub_key, msg_id, document, is_rule_retry=True)
+
+                # A message that an operator retried after this run read the DLQ is left to that retry.
+                if new_msg_id is None:
+                    continue
 
             elif action == _dlq.Action.Forward:
                 self._forward(sub_key, msg_id, document, forward_to, keep_header)

@@ -43,9 +43,9 @@ _accept_timeout_seconds = 0.2
 _connection_timeout_seconds = 5.0
 _shutdown_timeout_seconds = 5
 
-# What a message is acknowledged with when it is accepted and when it is refused
+# What a message is acknowledged with when it is accepted and when it is refused - an AR asks the sender to try again
 Accept_Code = 'AA'
-Refuse_Code = 'AE'
+Refuse_Code = 'AR'
 
 # The error text a refused message's acknowledgment carries in its ERR segment
 Refuse_Error_Text = 'The message was not accepted'

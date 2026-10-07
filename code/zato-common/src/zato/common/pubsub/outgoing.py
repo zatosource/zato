@@ -49,15 +49,16 @@ Direction_In  = PubSub.Direction.In
 Direction_Out = PubSub.Direction.Out
 
 # The keys of the envelope a queue stores
-Key_Conn_Type  = 'conn_type'
-Key_Conn_ID    = 'conn_id'
-Key_Conn_Name  = 'conn_name'
-Key_CID        = 'cid'
-Key_Msg_ID     = 'msg_id'
-Key_Pub_Time   = 'pub_time_iso'
-Key_Attempts   = 'attempts'
-Key_DLQ_Rounds = 'dlq_rounds'
-Key_Request    = 'request'
+Key_Conn_Type       = 'conn_type'
+Key_Conn_ID         = 'conn_id'
+Key_Conn_Name       = 'conn_name'
+Key_CID             = 'cid'
+Key_Msg_ID          = 'msg_id'
+Key_Pub_Time        = 'pub_time_iso'
+Key_Attempts        = 'attempts'
+Key_DLQ_Rounds      = 'dlq_rounds'
+Key_DLQ_Rule_Rounds = 'dlq_rule_rounds'
+Key_Request         = 'request'
 
 # The keys of the request part - an HTTP type stores a method, a SOAP type an operation, a FHIR type a method and a path,
 # a Kafka type a key and a partition, a Kafka channel a service, an HTTP channel a service with the request it received
@@ -511,6 +512,7 @@ def build_envelope(
     request:'stranydict',
     *,
     dlq_rounds:'int'=DLQ_Rounds_None,
+    dlq_rule_rounds:'int'=DLQ_Rounds_None,
 ) -> 'stranydict':
     """ The envelope the queue stores for one message.
     """
@@ -523,6 +525,7 @@ def build_envelope(
         Key_Pub_Time: utcnow().isoformat(),
         Key_Attempts: attempts,
         Key_DLQ_Rounds: dlq_rounds,
+        Key_DLQ_Rule_Rounds: dlq_rule_rounds,
         Key_Request: request,
     }
 
@@ -575,6 +578,7 @@ class OutgoingPublisher:
         request:'stranydict',
         *,
         dlq_rounds:'int'=DLQ_Rounds_None,
+        dlq_rule_rounds:'int'=DLQ_Rounds_None,
         **kwargs:'any_',
         ) -> 'PublishResult':
         """ Queues one request for delivery to the connection.
@@ -585,7 +589,8 @@ class OutgoingPublisher:
         with config_manager.get_outgoing_publish_lock(self.conn_type, self.conn_id):
 
             topic_name, conn_name = config_manager.ensure_outgoing_subscription(self.conn_type, self.conn_id)
-            envelope = build_envelope(self.conn_type, self.conn_id, conn_name, cid, attempts, request, dlq_rounds=dlq_rounds)
+            envelope = build_envelope(self.conn_type, self.conn_id, conn_name, cid, attempts, request,
+                dlq_rounds=dlq_rounds, dlq_rule_rounds=dlq_rule_rounds)
 
             # The queue stores the message under the id and the time the envelope carries
             msg_id = envelope[Key_Msg_ID]

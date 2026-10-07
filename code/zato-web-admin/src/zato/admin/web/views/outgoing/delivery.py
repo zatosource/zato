@@ -29,7 +29,7 @@ from zato.admin.web.views import method_allowed
 from zato.common.api import HTTP_SOAP
 from zato.common.content_type import format_content
 from zato.common.defaults import default_cluster_id
-from zato.common.pubsub.dlq import Header_Moved_Time, Header_Rounds, Key_DLQ
+from zato.common.pubsub.dlq import Header_Moved_Time, Header_Rule_Rounds, Key_DLQ
 from zato.common.pubsub.outgoing import Body_Mode_HL7, Body_Mode_JSON, Body_Mode_Text, Body_Mode_XML, Key_Data, Key_Request
 from zato.common.util.time_ import utcnow
 
@@ -342,7 +342,8 @@ def message(req:'any_') -> 'JsonResponse':
     # What the DLQ rule will do with this message is told here rather than in the listing
     if has_dlq_header:
         dlq_header = document[Key_DLQ]
-        rule = _rule_text(dlq_header[Header_Moved_Time], dlq_header[Header_Rounds], message_data['dlq_settings'], utcnow())
+        now = utcnow()
+        rule = _rule_text(dlq_header[Header_Moved_Time], dlq_header[Header_Rule_Rounds], message_data['dlq_settings'], now)
 
     out = JsonResponse({
         'document': document,

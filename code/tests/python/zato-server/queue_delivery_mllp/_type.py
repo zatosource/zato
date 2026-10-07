@@ -65,7 +65,7 @@ class MLLPType(TypeUnderTest):
     receiver_class = MLLPRecordingReceiver
 
     # A refused message comes back as the code of its acknowledgment and what the connection makes of the code
-    refused_error_prefix = f'{Refuse_Code} Application error ({Refuse_Code})'
+    refused_error_prefix = f'{Refuse_Code} Application reject ({Refuse_Code})'
     down_error_text = 'Connection refused'
 
     # A ping is a connection opened and closed again - nothing the endpoint can turn down

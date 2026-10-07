@@ -166,7 +166,8 @@ class RetryPolicyScenarios(ScenarioBase):
 # ################################################################################################################################
 
     def test_an_edit_of_the_retries_applies_to_the_next_message(self) -> 'None':
-        """ Turning the retries off through the server's own edit service changes how the very next message is retried.
+        """ Turning the retries off through the server's own edit service applies to the very next message - a refused
+        one is not queued, the failure is returned to the caller.
         """
         client = get_client()
         receiver = self.receiver(Conn_Orders)
@@ -178,20 +179,17 @@ class RetryPolicyScenarios(ScenarioBase):
             after = get_connection(client, conn_name)
             assert after[_retry.Field_Max_Retries] == 0
 
-            receiver.refuse_then_accept(2)
+            receiver.answer_next([receiver.Refuse_Outcome])
 
             result = send(client, conn_name, {'order_id': 'edited'})
-            assert result['is_in_queue'] is True
+            assert result['is_ok'] is False
+            assert result['is_in_queue'] is False
+            assert result['is_in_dlq'] is False
+            assert result['error'] != ''
 
-            accepted = receiver.wait_for_accepted(1)
-            assert len(accepted) == 1
+            assert receiver.acceptance() == [False]
 
-            assert receiver.acceptance() == [False, False, True]
-
-            gaps = get_gaps(receiver)
-            assert gaps[1] >= _round_wait + Orders_Sleep_Time - _slack, gaps
-
-            queue = wait_for_queue_empty(client, conn_name)
+            queue = get_queue(client, conn_name)
             assert queue['depth'] == 0
 
         finally:

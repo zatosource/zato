@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
 from time import monotonic
+from typing import NamedTuple
 
 # gevent
 from gevent import sleep
@@ -101,6 +102,16 @@ def _is_deadlock_error(error:'DBAPIError') -> 'bool':
     out = 'deadlock' in error_text
 
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AckResult(NamedTuple):
+    """ What one acknowledgement transaction removed - the subscriber's delivery rows
+    and the payloads that no subscriber needed anymore.
+    """
+    removed_count: int
+    fully_delivered_count: int
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -382,6 +393,32 @@ class SQLBackendCore:
         if not msg_ids:
             return 0
 
+        result = self._ack_with_deadlock_retries(sub_key, msg_ids, sequence_ids)
+        out = result.fully_delivered_count
+
+        logger.info('ack_messages -> sub_key:%s, acked:%d, fully_delivered:%d', sub_key, len(msg_ids), out)
+
+        return out
+
+# ################################################################################################################################
+
+    def claim_message(self, sub_key:'str', msg_id:'str') -> 'bool':
+        """ Acknowledges a single message on behalf of one of several callers that may act on it.
+        Returns True only to the caller whose acknowledgement removed the subscriber's delivery row.
+        """
+        result = self._ack_with_deadlock_retries(sub_key, [msg_id], None)
+        out = result.removed_count > 0
+
+        logger.info('claim_message -> sub_key:%s, msg_id:%s, claimed:%s', sub_key, msg_id, out)
+
+        return out
+
+# ################################################################################################################################
+
+    def _ack_with_deadlock_retries(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'AckResult':
+        """ Runs one acknowledgement transaction, again if the database picks it as a deadlock victim.
+        """
+
         # The database may roll the transaction back as a deadlock victim -
         # it is idempotent and is simply run again.
         for attempt in range(_deadlock_attempt_count):
@@ -401,16 +438,18 @@ class SQLBackendCore:
         # Let the other greenlets run now that the transaction is committed.
         self._yield_after_write()
 
-        logger.info('ack_messages -> sub_key:%s, acked:%d, fully_delivered:%d', sub_key, len(msg_ids), out)
-
         return out
 
 # ################################################################################################################################
 
-    def _ack_messages_once(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'int':
+    def _ack_messages_once(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'AckResult':
         """ One acknowledgement transaction - what ack_messages runs and,
         if the database picks it as a deadlock victim, runs again.
         """
+
+        # Our response to produce
+        out = AckResult(removed_count=0, fully_delivered_count=0)
+
         with self.engine.begin() as connection:
 
             # Map public identifiers to primary keys first - as a separate read,
@@ -421,18 +460,19 @@ class SQLBackendCore:
                 message_ids = sequence_ids
 
             if not message_ids:
-                return 0
+                return out
 
             # .. remove this subscriber's delivery rows ..
             parameters = {
                 'ack_sub_key': sub_key,
                 'ack_message_ids': message_ids,
             }
-            _ = connection.execute(_ack_delete_statement, parameters)
+            deleted = connection.execute(_ack_delete_statement, parameters)
 
             # .. and drop the payloads of messages that no subscriber needs anymore.
-            out = self._drop_fully_delivered_payloads(connection, message_ids)
+            fully_delivered_count = self._drop_fully_delivered_payloads(connection, message_ids)
 
+        out = AckResult(removed_count=deleted.rowcount, fully_delivered_count=fully_delivered_count)
         return out
 
 # ################################################################################################################################
