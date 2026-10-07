@@ -22,7 +22,7 @@ from zato.common.hl7.mllp.fields import Outgoing_Bool_Names, Outgoing_Defaults, 
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.pubsub.outgoing import Attempts_None, Key_Data, OutgoingPublisher, OutgoingType, SendRejected
 from zato.common.util.api import asbool, hex_sequence_to_bytes, new_cid_server
-from zato.common.util.retry import get_next_sleep_time, RetryPolicy
+from zato.common.util.retry import get_first_sleep_time, get_next_sleep_time, RetryPolicy
 from zato.common.util.tcp import parse_address
 from zato.server.connection.queue import Wrapper
 
@@ -48,6 +48,10 @@ _ms_per_second = 1000
 _use_queue_field = HTTP_SOAP.Queue.Field_Use_Queue
 
 _retry = HTTP_SOAP.Retry
+
+# How many seconds a send or a ping waits for a pooled client when every one of them is in use
+# or the pool is still being built
+pool_block_timeout = 30
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -235,7 +239,7 @@ class _HL7MLLPConnection:
 
         attempt = 0
         total_sleep_time = 0
-        current_sleep_time = policy.sleep_time
+        current_sleep_time = get_first_sleep_time(policy)
 
         while True:
 
@@ -317,7 +321,7 @@ class OutconnHL7MLLPWrapper(Wrapper):
         """ Makes one attempt to deliver a message the queue holds, raising when the receiving system turned it down -
         the same test the direct attempt applies, so both agree on what a failure is.
         """
-        with self.client() as connection:
+        with self.client(should_block=True, block_timeout=pool_block_timeout) as connection:
             ack = connection.invoke(request[Key_Data], cid=cid, needs_retry=False)
 
         # An AE is the receiving application saying the message itself is wrong, an AR that it could not take it now

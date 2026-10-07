@@ -257,7 +257,7 @@ def is_channel_visible(channel_item:'anydict', security_id:'int') -> 'bool':
 # ################################################################################################################################
 
 def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'stranydict') -> 'dictlist':
-    """ Builds generator service entries for one channel, one entry per HTTP method the service handles.
+    """ Builds generator service entries for one channel, one entry per HTTP method the channel accepts.
     """
     service_name = channel_item['service_name']
     service_store = server.service_store
@@ -273,8 +273,11 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
     input_definition = _io_definition(getattr(class_, 'input', None), models)
     output_definition = _io_definition(getattr(class_, 'output', None), models)
 
-    # .. find out which HTTP methods the service responds to ..
-    if method_handlers := class_.http_method_handlers:
+    # .. a channel with a method of its own accepts that one method only, a channel accepting any method
+    # documents the ones its service has handlers for, and a service with no such handlers is a POST one ..
+    if channel_method := channel_item['method']:
+        http_methods = [channel_method]
+    elif method_handlers := class_.http_method_handlers:
         http_methods = sorted(method_handlers)
     else:
         http_methods = [_default_http_method]

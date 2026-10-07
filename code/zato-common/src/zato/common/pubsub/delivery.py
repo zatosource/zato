@@ -18,7 +18,7 @@ from gevent import sleep
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.util.retry import get_next_sleep_time
+from zato.common.util.retry import get_first_sleep_time, get_next_sleep_time
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,7 +108,7 @@ def deliver_with_policy(
     attempts_allowed = 1 + policy.max_retries
 
     total_sleep_time = 0
-    current_sleep_time = policy.sleep_time
+    current_sleep_time = get_first_sleep_time(policy)
 
     def check_should_continue() -> 'None':
         if should_continue:

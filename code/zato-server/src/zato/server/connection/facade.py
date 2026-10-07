@@ -37,7 +37,8 @@ from zato.common.typing_ import cast_
 from zato.server.connection.ftp import FTPConnection
 from zato.server.connection.sftp import SFTPConnection
 from zato.server.connection.smb import SMBConnection
-from zato.server.generic.api.outconn_hl7_mllp import get_ack_rejection, to_message_text
+from zato.server.generic.api.outconn_hl7_mllp import get_ack_rejection, pool_block_timeout as mllp_pool_block_timeout, \
+    to_message_text
 
 ################################################################################################################################
 ################################################################################################################################
@@ -900,15 +901,16 @@ class HL7MLLPInvoker:
         """
         wrapper = self._outconn_hl7_mllp[self._conn_name].conn
 
-        with wrapper.client() as connection:
+        with wrapper.client(should_block=True, block_timeout=mllp_pool_block_timeout) as connection:
             connection.ping()
 
 # ################################################################################################################################
 
     def _send_direct(self, wrapper:'any_', data:'str | bytes', needs_audit:'bool', *, needs_retry:'bool') -> 'AckResult':
-        """ One send through a pooled connection, which goes back to the pool afterwards.
+        """ One send through a pooled connection, which goes back to the pool afterwards. A send that finds every
+        pooled connection in use waits for one.
         """
-        with wrapper.client() as connection:
+        with wrapper.client(should_block=True, block_timeout=mllp_pool_block_timeout) as connection:
             out = connection.invoke(data, cid=self._cid, needs_audit=needs_audit, needs_retry=needs_retry)
 
         return out
@@ -952,8 +954,15 @@ class MLLPFacade:
 # ################################################################################################################################
 
     def __getitem__(self, name:'str') -> 'HL7MLLPInvoker':
-        self._outconn_hl7_mllp[name]
-        return HL7MLLPInvoker(name, self.cid, self._outconn_hl7_mllp)
+
+        # A name that is not a connection raises here, and an inactive connection is not looked up either
+        item = self._outconn_hl7_mllp[name]
+
+        if not item['is_active']:
+            raise Exception(f'HL7 MLLP outgoing connection `{name}` is inactive')
+
+        out = HL7MLLPInvoker(name, self.cid, self._outconn_hl7_mllp)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

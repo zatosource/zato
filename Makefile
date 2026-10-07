@@ -864,6 +864,14 @@ test-audit-export: ## Audit log export to OpenTelemetry - the offline mapping an
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
+test-openapi-console-live: ## OpenAPI console tests against a live server - the document after a start, after a restart and per channel method.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/openapi_console_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_openapi_console_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
 test-graphql: ## GraphQL live tests.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/graphql_live/ \
@@ -1351,7 +1359,8 @@ Zato_Test_Toolchain := \
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
-	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export
+	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
+	test-openapi-console-live
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui

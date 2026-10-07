@@ -38,8 +38,8 @@ logger = logging.getLogger(__name__)
 
 class SpecCache:
     """ Keeps the full OpenAPI document in memory so that per-request work is filtering only.
-    The document is rebuilt once per change - on hot-deployment and on channel configuration events -
-    and each rebuild reports breaking changes against the previous document.
+    The document is rebuilt once per change - on hot-deployment, on channel configuration events and on
+    configuration reloads - and each rebuild reports breaking changes against the previous document.
     """
     def __init__(self) -> 'None':
         self.lock = RLock()

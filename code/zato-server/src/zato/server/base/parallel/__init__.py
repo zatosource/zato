@@ -1190,8 +1190,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """
         try:
             from zato.server.auto_channel import create_auto_channels
+            from zato.server.openapi_console.cache import rebuild_spec_cache
+
             service_names = list(self.service_store.name_to_impl_name)
             create_auto_channels(self, service_names)
+
+            # The per-channel rebuilds are suppressed inside the batch, so the document is rebuilt once here
+            rebuild_spec_cache(self)
         except Exception:
             logger.warning('Auto-created REST channels could not be built -> %s', format_exc())
 
@@ -2121,6 +2126,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # a config reload runs, all services are already deployed, so their wrappers
         # and tool registries can be rebuilt here ..
         self._create_mcp_gateways()
+
+        # .. the reloaded configuration may hold channels the cached OpenAPI document predates,
+        # e.g. ones an enmasse import wrote straight to the ODB, so the document is rebuilt from it now ..
+        from zato.server.openapi_console.cache import rebuild_spec_cache
+        rebuild_spec_cache(self)
 
         # .. reload pub/sub permissions from database ..
         self._load_pubsub_permissions()
