@@ -76,6 +76,7 @@ def _make_mllp_config(**kwargs:'any_') -> 'Bunch':
     out.destinations = _destinations
     out.respond_from = Respond_From_Service
     out.delivery_mode = Default_Delivery_Mode
+    out.is_audit_export_payload_active = False
 
     for key, value in kwargs.items():
         out[key] = value
