@@ -236,7 +236,7 @@ def _run_discard_after_stopped_delivery_flow() -> 'None':
 
     try:
         browse_service = cast_('MessageAction', _BrowseService(server))
-        MessageAction._discard_from_queue(browse_service, _conn_type, _conn_id, _sub_key, [first.msg_id])
+        _ = MessageAction._discard_from_queue(browse_service, _conn_type, _conn_id, _sub_key, [first.msg_id])
     finally:
         delivery_module._pause_join_timeout = original_timeout
 

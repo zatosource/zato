@@ -148,7 +148,7 @@ def test_a_channel_with_neither_target_is_refused() -> 'None':
     response = Create()(request)
 
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    assert b'needs a service or at least one destination' in response.content
+    assert b'needs a service or at least one active destination' in response.content
 
     assert request.zato.client.invocations == []
 
@@ -197,7 +197,7 @@ def test_a_destination_list_that_is_not_json_is_refused() -> 'None':
     response = Create()(request)
 
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    assert b'needs a service or at least one destination' in response.content
+    assert b'needs a service or at least one active destination' in response.content
 
 # ################################################################################################################################
 # ################################################################################################################################

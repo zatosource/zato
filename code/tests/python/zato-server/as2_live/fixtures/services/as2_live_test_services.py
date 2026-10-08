@@ -172,8 +172,11 @@ class AS2LiveInvoker(Service):
 
         # Building the message needs the partnership and keystore of one pooled connection.
         with wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as connection:
-            body, headers, message_id, _ = build_message(cast_('any_', connection).partnership, cast_('any_', connection).keystore, payload.encode('utf8'))
-            endpoint_url = cast_('any_', connection).partnership.endpoint_url
+            partnership = connection.partnership
+            keystore = connection.keystore
+            payload_bytes = payload.encode('utf8')
+            body, headers, message_id, _ = build_message(partnership, keystore, payload_bytes)
+            endpoint_url = partnership.endpoint_url
 
         # The signature stays as it is while the signed content changes underneath it.
         tampered = body.replace(token.encode('utf8'), replacement.encode('utf8'))
