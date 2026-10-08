@@ -610,10 +610,11 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
         if isinstance(request, basestring) and data_format == _data_format_json:
             try:
                 request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
+                # Text that is not JSON is the payload as received, a str stays a str and bytes stay bytes
                 try:
                     payload = json_parser.parse(request_bytes)
                 except ValueError:
-                    payload = request_bytes
+                    payload = request
                 if hasattr(payload, 'as_dict'):
                     payload = payload.as_dict()
             except ValueError:

@@ -31,10 +31,14 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport,
 
 # Zato
 from zato.common.api import AMQP, CHANNEL, PubSub, SECRET_SHADOW
+from zato.common.json_ import dumps
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, new_cid_queue_consumer, utcnow, wait_for_predicate
 from zato.common.version import get_version
 from zato.server.connection.connector import Connector, Inactive
+
+# Zato
+from zato.input_output import ServiceInput
 
 # ################################################################################################################################
 
@@ -81,6 +85,14 @@ def get_connection_class(object_name:'str', suffix:'str', is_tls:'bool') -> 'typ
 # ################################################################################################################################
 
 _default_out_keys=('app_id', 'content_encoding', 'content_type', 'delivery_mode', 'expiration', 'priority', 'user_id')
+
+# ################################################################################################################################
+
+# The delivery states of a message taken off a queue, the same names as kombu's
+_Message_State_Received = 'RECEIVED'
+_Message_State_Ack      = 'ACK'
+_Message_State_Rejected = 'REJECTED'
+_Message_State_Requeued = 'REQUEUED'
 
 # ################################################################################################################################
 
@@ -295,16 +307,32 @@ class AzureServiceBusProducer:
 # ################################################################################################################################
 
 class _AzureMessageWrapper:
+    """ An Azure Service Bus message under the same ack, reject and requeue interface, and with the same
+    delivery state names, as a kombu message, so that a channel's acknowledgment mode applies to both alike.
+    """
 
-    def __init__(self, msg, receiver):
+    def __init__(self, msg:'any_', receiver:'any_') -> 'None':
         self._msg = msg
         self._receiver = receiver
+        self._state = _Message_State_Received
 
-    def ack(self):
+# ################################################################################################################################
+
+    def ack(self) -> 'None':
         self._receiver.complete_message(self._msg)
+        self._state = _Message_State_Ack
 
-    def reject(self):
+# ################################################################################################################################
+
+    def reject(self) -> 'None':
         self._receiver.abandon_message(self._msg)
+        self._state = _Message_State_Rejected
+
+# ################################################################################################################################
+
+    def requeue(self) -> 'None':
+        self._receiver.abandon_message(self._msg)
+        self._state = _Message_State_Requeued
 
 # ################################################################################################################################
 
@@ -742,7 +770,7 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def on_amqp_message(self, body, msg, channel_name, channel_config, _AMQPMessage=_AMQPMessage, _CHANNEL_AMQP=CHANNEL.AMQP,
-        _RECEIVED='RECEIVED', _ZATO_ACK_MODE_ACK=AMQP.ACK_MODE.ACK.id):
+        _RECEIVED=_Message_State_Received, _ZATO_ACK_MODE_ACK=AMQP.ACK_MODE.ACK.id):
         """ Invoked each time a message is taken off an AMQP queue.
         """
         try:
@@ -962,7 +990,7 @@ class ConnectorAMQP(Connector):
 
     def invoke(
         self,
-        msg:'str',
+        msg:'any_',
         exchange:'str'='/',
         routing_key:'str | None'=None,
         properties:'strdictnone'=None,
@@ -970,7 +998,8 @@ class ConnectorAMQP(Connector):
         _default_out_keys:'strtuple'=_default_out_keys,
         **kwargs:'any_',
     ):
-        """ Synchronously publishes a message to an AMQP broker.
+        """ Synchronously publishes a message to an AMQP broker. The message is text, bytes, a dict, a list
+        or a service's input, the last three of which are serialized to JSON by kombu or, for Azure Service Bus, here.
         """
         out_name = self.config['name']
         with self.lock:
@@ -982,8 +1011,14 @@ class ConnectorAMQP(Connector):
 
         producer = self._producers[out_name]
 
-        # Azure Service Bus uses a simpler interface
+        # A service's input is published as the dict of the fields it holds
+        if isinstance(msg, ServiceInput):
+            msg = msg.to_dict()
+
+        # Azure Service Bus uses a simpler interface and its messages are text
         if outconn_config.is_azure:
+            if isinstance(msg, (dict, list)):
+                msg = dumps(msg)
             return producer.publish(msg)
 
         acquire_block = kwargs.pop('acquire_block', True)

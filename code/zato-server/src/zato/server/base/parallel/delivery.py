@@ -17,7 +17,7 @@ from gevent.event import Event
 from gevent.lock import RLock
 
 # Zato
-from zato.common.api import PubSub
+from zato.common.api import DATA_FORMAT, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Expired, \
     Interrupt_Paused
@@ -483,12 +483,12 @@ class PushDelivery:
             module = import_module(module_path)
             model_class = getattr(module, class_name)
             payload = model_class.from_dict(data)
+            self.server.invoke(service_name, payload)
 
-        # .. otherwise, pass the raw data through so the service can parse it itself ..
+        # .. otherwise, the stored text is handed over under the JSON data format, so a dict that was
+        # published is parsed back into the subscriber's input and text that is not JSON stays text.
         else:
-            payload = data_raw
-
-        self.server.invoke(service_name, payload)
+            self.server.invoke(service_name, data_raw, data_format=DATA_FORMAT.JSON)
 
 # ################################################################################################################################
 

@@ -11,10 +11,17 @@ categories = ["development-tools"]
 
 [lib]
 name = "zato_input_output"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+extension-module = ["pyo3/extension-module"]
 
 [dependencies]
-pyo3 = { version = "0.29.2", features = ["extension-module"] }
+indexmap = "2.14.0"
+pyo3 = "0.29.2"
+
+[dev-dependencies]
+pyo3 = { version = "0.29.2", features = ["auto-initialize"] }
 
 [lints.rust]
 unsafe_code = "forbid"

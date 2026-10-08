@@ -1,6 +1,6 @@
+use indexmap::IndexMap;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use std::collections::HashMap;
 
 /// Shorthand alias for a heap-allocated Python object reference.
 type PyObject = Py<PyAny>;
@@ -40,16 +40,17 @@ impl ServiceInputKeyIter {
 ///
 /// Implements Python's mapping protocol (`__getitem__`, `__setitem__`, etc.)
 /// so that service code can access request data by key or attribute name.
+/// Keys keep the order in which the request listed them.
 #[pyclass(mapping)]
 pub struct ServiceInput {
-    /// Key-value store holding the request parameters received from the caller.
-    data: HashMap<String, PyObject>,
+    /// Key-value store holding the request parameters received from the caller, in request order.
+    data: IndexMap<String, PyObject>,
 }
 
 impl ServiceInput {
     /// Creates a new `ServiceInput`, optionally pre-populated from a Python dict.
     pub fn create(data: Option<&Bound<'_, PyDict>>) -> PyResult<Self> {
-        let mut map = HashMap::new();
+        let mut map = IndexMap::new();
         if let Some(dict_ref) = data {
             for (key, value) in dict_ref.iter() {
                 let key_name: String = key.extract()?;
@@ -104,7 +105,8 @@ impl ServiceInput {
     /// Removes the given key from the container. Silently ignores missing keys.
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 __delitem__ protocol requires PyResult return")]
     fn __delitem__(&mut self, key: &str) -> PyResult<()> {
-        self.data.remove(key);
+        // The remaining keys keep their relative order, which is what the service's caller sent.
+        self.data.shift_remove(key);
         Ok(())
     }
 
@@ -182,10 +184,22 @@ impl ServiceInput {
             .collect()
     }
 
+    /// Returns the request parameters as a Python dict, in request order.
+    ///
+    /// The dict is what a service hands to another service, writes to a file
+    /// or publishes to a queue when it forwards the request it received.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let out = PyDict::new(py);
+        for (key_name, val) in &self.data {
+            out.set_item(key_name, val.bind(py))?;
+        }
+        Ok(out)
+    }
+
     /// Produces a deep copy of this container using Python's `copy.deepcopy`.
     fn deepcopy(&self, py: Python<'_>) -> PyResult<Self> {
         let copy_mod = py.import("copy")?;
-        let mut new_data = HashMap::new();
+        let mut new_data = IndexMap::new();
         for (key_name, val) in &self.data {
             let copied = copy_mod.call_method1("deepcopy", (val.bind(py),))?;
             new_data.insert(key_name.clone(), copied.unbind());
@@ -226,5 +240,63 @@ impl ServiceInput {
             "At least one of `{}` is required",
             names.join(", ")
         )))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ServiceInput;
+    use pyo3::exceptions::PyKeyError;
+    use pyo3::prelude::*;
+    use pyo3::types::PyDict;
+
+    /// Builds a `ServiceInput` from the given pairs, in the order they are listed.
+    fn build_input(py: Python<'_>, pairs: &[(&str, i64)]) -> PyResult<ServiceInput> {
+        let dict = PyDict::new(py);
+        for (key_name, value) in pairs {
+            dict.set_item(*key_name, *value)?;
+        }
+        ServiceInput::create(Some(&dict))
+    }
+
+    /// Keys come back in the order the request listed them, with later additions at the end.
+    #[test]
+    fn keys_follow_request_order() -> PyResult<()> {
+        Python::attach(|py| {
+            let mut input = build_input(py, &[("customer_id", 1001), ("quantity", 3), ("region", 7)])?;
+            let priority = 2_i64.into_pyobject(py)?.into_any().unbind();
+            input.__setitem__("priority".to_owned(), priority);
+
+            assert_eq!(input.keys(), vec!["customer_id", "quantity", "region", "priority"]);
+            Ok(())
+        })
+    }
+
+    /// Removing a key keeps the relative order of the keys that remain.
+    #[test]
+    fn delete_keeps_remaining_order() -> PyResult<()> {
+        Python::attach(|py| {
+            let mut input = build_input(py, &[("customer_id", 1001), ("quantity", 3), ("region", 7)])?;
+            input.__delitem__("quantity")?;
+
+            assert_eq!(input.keys(), vec!["customer_id", "region"]);
+            Ok(())
+        })
+    }
+
+    /// The dict returned by `to_dict` has the same keys, values and order as the input.
+    #[test]
+    fn to_dict_keeps_order_and_values() -> PyResult<()> {
+        Python::attach(|py| {
+            let input = build_input(py, &[("customer_id", 1001), ("quantity", 3)])?;
+            let dict = input.to_dict(py)?;
+
+            let keys: Vec<String> = dict.keys().extract()?;
+            assert_eq!(keys, vec!["customer_id", "quantity"]);
+
+            let quantity = dict.get_item("quantity")?.ok_or_else(|| PyKeyError::new_err("quantity"))?;
+            assert_eq!(quantity.extract::<i64>()?, 3);
+            Ok(())
+        })
     }
 }

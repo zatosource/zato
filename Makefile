@@ -506,6 +506,7 @@ COSMIC_RAY_SESSION := $(CURDIR)/code/tests/.cr-session.sqlite
 COSMIC_RAY_EXEC := $(CURDIR)/code/tests/rust/cosmic-ray/exec_with_progress.py
 
 test-server: ## Server unit and integration tests.
+	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/marshall_/ \
 		$(CURDIR)/code/tests/python/zato-server/marshall/ \
@@ -516,12 +517,12 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/zato-server/test/zato/connection/ \
 		$(CURDIR)/code/zato-server/test/zato/pattern/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 # The CLI is driven through sh, which forks, so these tests need a process that gevent has not patched
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-server/test/zato/commands_/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_commands -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-server-fuzz: ## Server property, fuzz and mutation tests.
 	$(Zato_Log_Reset)

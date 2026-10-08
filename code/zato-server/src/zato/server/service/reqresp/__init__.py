@@ -27,6 +27,7 @@ from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 from zato.edifact import parse_edifact, wire_text_from
 from zato.fhir.r4_0_1.resources import Bundle
+from zato.hl7v2.base import HL7Message
 from zato.server.generic.api.outconn_sdk import ConnectorContainer, type_prefix as sdk_type_prefix
 
 # Zato
@@ -238,10 +239,16 @@ class Request:
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
+        # A service that forwards its own input to another one hands over a ServiceInput,
+        # which is read as the dict of the fields it holds.
+        if isinstance(self.payload, ServiceInput):
+            self.payload = self.payload.to_dict()
+
         # A bulk export file is the input as it is, whatever the service declares - the service reads it lazily,
-        # and so are the bundle a C-CDA channel made of the document it received and the messages, attachments
-        # and files that the IMAP and file transfer schedulers hand over
-        if isinstance(self.payload, (BulkExportFile, Bundle, FileTransferItem, IMAPAttachment, IMAPMessage)):
+        # and so are the bundle a C-CDA channel made of the document it received, the messages, attachments
+        # and files that the IMAP and file transfer schedulers hand over, a model instance a publisher sent to a topic
+        # and an HL7 v2 message an MLLP channel parsed on input
+        if isinstance(self.payload, (BulkExportFile, Bundle, FileTransferItem, HL7Message, IMAPAttachment, IMAPMessage, Model)):
             self.input = self.payload
 
         elif is_io:

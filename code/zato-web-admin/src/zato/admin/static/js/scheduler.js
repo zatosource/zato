@@ -356,8 +356,8 @@ $.fn.zato.scheduler.field_descriptions = {
         'start_date': 'The exact date and time the job runs. ' +
             'A one-time job fires once at this moment and never again.',
         'service': 'The service invoked when the job fires. ' +
-            'Data from the extra field is available to it as self.request.raw_request.',
-        'extra': 'Optional data passed to the service on each run, available as self.request.raw_request. ' +
+            'Data from the extra field is available to it as self.request.input.',
+        'extra': 'Optional data passed to the service on each run, available as self.request.input. ' +
             'Use it to parameterize the service.',
         'on_success_service': 'A service invoked each time this job completes successfully, ' +
             'e.g. for follow-up processing or notifications.',
@@ -389,8 +389,8 @@ $.fn.zato.scheduler.field_descriptions = {
         'start_date': 'When the first execution takes place. ' +
             'Later runs follow at each interval, counted from this moment.',
         'service': 'The service invoked each time the job fires. ' +
-            'Data from the extra field is available to it as self.request.raw_request.',
-        'extra': 'Optional data passed to the service on each run, available as self.request.raw_request. ' +
+            'Data from the extra field is available to it as self.request.input.',
+        'extra': 'Optional data passed to the service on each run, available as self.request.input. ' +
             'Use it to parameterize the service.',
         'timezone': 'The timezone the start time and intervals are computed in. ' +
             'Leave empty to use the scheduler server\'s own timezone.',

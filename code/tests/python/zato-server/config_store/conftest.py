@@ -85,7 +85,7 @@ _ = atexit.register(_cleanup)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_server(host:'any_', port:'any_', timeout:'any_' = 60):
+def _wait_for_server(host:'any_', port:'any_', server_proc:'any_', timeout:'any_' = 60):
     from urllib.request import Request, urlopen
 
     url = f'http://{host}:{port}/zato/ping'
@@ -94,6 +94,13 @@ def _wait_for_server(host:'any_', port:'any_', timeout:'any_' = 60):
     attempt = 0
 
     while time.monotonic() < deadline:
+
+        # A server process that has exited does not answer, so the wait ends immediately ..
+        exit_code = server_proc.poll()
+        if exit_code is not None:
+            raise Exception(f'Server process exited with code {exit_code} before responding at {host}:{port}')
+
+        # .. otherwise the ping is attempted again.
         attempt += 1
         elapsed = time.monotonic() - t0
         try:
@@ -255,7 +262,7 @@ def zato_server(request:'any_'):
     # 6) Wait for the server to come up
     host = '127.0.0.1'
     try:
-        _wait_for_server(host, port)
+        _wait_for_server(host, port, _server_proc)
         t4 = time.monotonic()
         print(f'[TIMING] server ready: {t4 - t3:.1f}s')
         print(f'[TIMING] total setup: {t4 - t0:.1f}s')

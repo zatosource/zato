@@ -119,7 +119,7 @@ class DemoHL7Ack(Service):
 
     def handle(self):
 
-        message = self.request.raw_request
+        message = self.request.input
         control_id = message.get('msh.message_control_id')
 
         self.logger.info('Received message `%s`', control_id)
@@ -133,7 +133,7 @@ class DemoHL7Archive(Service):
 
     def handle(self):
 
-        message = self.request.raw_request
+        message = self.request.input
         self.logger.info('Archived message `%s`', message)
 
 # ################################################################################################################################
