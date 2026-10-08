@@ -16,7 +16,10 @@ from zato.common.api import MISC
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anylist, intnone, strnone
+
+    SASession = SASession
     any_ = any_
     anylist = anylist
     intnone = intnone
@@ -107,7 +110,7 @@ def ensure_openapi_channel_exists(session, cluster_id):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_sms_webhook_channel_exists(session, cluster_id):
+def ensure_sms_webhook_channel_exists(session:'SASession', cluster_id:'int') -> 'bool':
     """ Creates the one REST channel that receives the callbacks of every SMS channel, if it does not exist.
     The channel has no data format of its own because providers post form-encoded and JSON bodies alike.
     Returns True if created, False if it already existed.
