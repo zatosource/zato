@@ -79,9 +79,6 @@ class VonageSimulator(SMSSimulator):
         super().__init__(username, password)
         self.signature_secret = signature_secret
 
-        # Numbers a send to which is rejected, with the Vonage reason given
-        self.rejected_numbers:'dict[str, str]' = {}
-
 # ################################################################################################################################
 
     def check_auth(self, request:'SimRequest') -> 'bool':

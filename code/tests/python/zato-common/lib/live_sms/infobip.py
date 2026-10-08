@@ -67,9 +67,6 @@ class InfobipSimulator(SMSSimulator):
     def __init__(self, username:'str', password:'str') -> 'None':
         super().__init__(username, password)
 
-        # Numbers a send to which is rejected, with the Infobip reason given
-        self.rejected_numbers:'dict[str, str]' = {}
-
         # The sequence numbers of the events each pull endpoint has already returned, hence the once-only guarantee
         self.pulled_inbox:'set[int]' = set()
         self.pulled_reports:'set[int]' = set()

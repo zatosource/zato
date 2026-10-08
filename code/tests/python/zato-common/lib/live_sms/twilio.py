@@ -244,7 +244,7 @@ class TwilioSimulator(SMSSimulator):
 
         page, next_offset = paginate(items, page_size, offset * page_size)
 
-        payload = {
+        payload:'anydict' = {
             'messages': page,
             'page': offset,
             'page_size': page_size,

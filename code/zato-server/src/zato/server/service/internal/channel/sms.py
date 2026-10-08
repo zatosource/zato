@@ -204,8 +204,9 @@ class Receive(Service):
 # ################################################################################################################################
 
 class Poll(Service):
-    """ Runs one poll of one SMS channel on behalf of the scheduler - every page the provider returns is read,
-    each new event is passed on and only then is the poll state the next run starts from written back to the channel.
+    """ Runs one poll of one SMS channel on behalf of the scheduler - each page the provider returns is read, its new events
+    are passed on and the poll state the next request starts from is written back before the next page is read,
+    so that a poll that fails midway neither loses what it has read nor hands anything over twice.
     """
     name = SMS.Scheduler.Dispatch_Service
 
@@ -228,18 +229,15 @@ class Poll(Service):
         provider = outconn.provider
 
         state = self._load_state(channel)
-        events = []
+        events:'SMSEventList' = []
+        new_count = 0
 
         try:
-            state = self._poll(outconn, provider, state, events)
-            new_count = handle_events(self.server, self.cid, channel, provider.name, events)
+            state, new_count = self._poll(outconn, provider, channel, state, events)
         except Exception as e:
-            _audit_batch(self, AuditEvent.Received, channel, provider, events, 0, start, AuditOutcome.Error, str(e),
+            _audit_batch(self, AuditEvent.Received, channel, provider, events, new_count, start, AuditOutcome.Error, str(e),
                 dumps(state))
             raise
-
-        # Everything is stored or handed over by now, so the state the next poll starts from can be saved
-        self._save_state(channel, state)
 
         _audit_batch(self, AuditEvent.Received, channel, provider, events, new_count, start, AuditOutcome.OK, '', dumps(state))
 
@@ -247,9 +245,13 @@ class Poll(Service):
 
 # ################################################################################################################################
 
-    def _poll(self, outconn:'OutconnSMSWrapper', provider:'Provider', state:'stranydict', events:'SMSEventList') -> 'stranydict':
+    def _poll(self, outconn:'OutconnSMSWrapper', provider:'Provider', channel:'Bunch', state:'stranydict',
+        events:'SMSEventList') -> 'tuple[stranydict, int]':
         """ Goes through every request of a poll, and through further rounds while the provider reports more pages.
+        Each page's events are handed over and the state is saved before the next page is requested.
         """
+        new_count = 0
+
         for _ in range(_max_poll_rounds):
 
             requests = provider.build_poll_requests(state)
@@ -259,10 +261,16 @@ class Poll(Service):
                 page_events, state = provider.read_poll_response(request, response, state)
                 events.extend(page_events)
 
+                new_count += handle_events(self.server, self.cid, channel, provider.name, page_events)
+
+                # Everything of this page is stored or handed over, so the state the next page starts from can be saved
+                self._save_state(channel, state)
+
             if not provider.has_more_pages(state):
                 break
 
-        return state
+        out = (state, new_count)
+        return out
 
 # ################################################################################################################################
 

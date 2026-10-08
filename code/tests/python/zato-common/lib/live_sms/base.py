@@ -12,7 +12,7 @@ import time
 from base64 import b64encode
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from http.client import BAD_REQUEST, NOT_FOUND, OK
+from http.client import BAD_REQUEST, NOT_FOUND, OK, SERVICE_UNAVAILABLE
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from json import dumps, loads
 from typing import NamedTuple
@@ -220,6 +220,10 @@ class SMSSimulator:
         # Every callback pushed and what came back
         self.callbacks:'list[CallbackAttempt]' = []
 
+        # Numbers a send to which is rejected, each with the reason the provider gives - Twilio's test credentials
+        # have their documented magic numbers instead and its simulator leaves this empty
+        self.rejected_numbers:'dict[str, str]' = {}
+
         # Where callbacks go when a send did not name a URL of its own, and the URL they are signed over
         self.callback_url = ''
         self.callback_sign_url = ''
@@ -229,6 +233,11 @@ class SMSSimulator:
 
         # How many entries one page of a listing has at most, which a test lowers to exercise paging
         self.page_size = 1000
+
+        # How many requests are answered before the simulator fails, and how many it then fails in a row -
+        # a test of a poll that fails midway sets both
+        self.successes_before_failure = 0
+        self.failures_left = 0
 
         self._seq = 0
         self._lock = threading.Lock()
@@ -271,6 +280,8 @@ class SMSSimulator:
             self.callbacks.clear()
             self.delay = 0.0
             self.page_size = 1000
+            self.successes_before_failure = 0
+            self.failures_left = 0
 
 # ################################################################################################################################
 
@@ -292,6 +303,14 @@ class SMSSimulator:
         """
         if self.delay:
             time.sleep(self.delay)
+
+        if self.failures_left:
+            if self.successes_before_failure > 0:
+                self.successes_before_failure -= 1
+            else:
+                self.failures_left -= 1
+                out = SimResponse(SERVICE_UNAVAILABLE, Content_Type_Text, 'Service unavailable')
+                return out
 
         if not self.check_auth(request):
             self.rejections.append(request)

@@ -54,9 +54,6 @@ class AfricasTalkingSimulator(SMSSimulator):
     def __init__(self, username:'str', password:'str') -> 'None':
         super().__init__(username, password)
 
-        # Numbers a send to which is rejected, with the status name given
-        self.rejected_numbers:'dict[str, str]' = {}
-
         # Incoming texts have integer IDs, which the fetch endpoint pages by
         self._next_incoming_id = 1000
 

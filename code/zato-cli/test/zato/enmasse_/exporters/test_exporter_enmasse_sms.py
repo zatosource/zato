@@ -172,6 +172,11 @@ class TestEnmasseSMSExport(TestCase):
 
         sms_list_from_yaml = self.yaml_config['channel_sms']
 
+        # The importer replaces the file's `outconn` with the channel's own field name, so the names are kept beforehand
+        outconn_by_name = {}
+        for yaml_def in sms_list_from_yaml:
+            outconn_by_name[yaml_def['name']] = yaml_def[Channel_Outconn_Key]
+
         created, _ = self.channel_importer.sync_definitions(sms_list_from_yaml, self.session)
         self.assertEqual(len(created), 2)
 
@@ -187,7 +192,7 @@ class TestEnmasseSMSExport(TestCase):
             name = yaml_def['name']
             self.assertIn(name, exported_by_name)
             exported_def = exported_by_name[name]
-            self.assertEqual(exported_def[Channel_Outconn_Key], yaml_def[Channel_Outconn_Key])
+            self.assertEqual(exported_def[Channel_Outconn_Key], outconn_by_name[name])
             self.assertEqual(exported_def[SMS.Field_Service], yaml_def[SMS.Field_Service])
 
         # The polling channel exports its schedule and never its job ID ..

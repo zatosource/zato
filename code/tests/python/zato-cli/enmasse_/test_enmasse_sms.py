@@ -129,6 +129,7 @@ channel_sms:
     retry_sleep_time: 5
     retry_backoff_threshold: 120
     retry_backoff_multiplier: 3
+    use_queue: true
     use_dlq: false
     dlq_action: forward
     dlq_retries: 5
@@ -310,11 +311,10 @@ class TestOutgoingSMSImport:
 
         assert opaque[SMS.Field_Provider] == SMS.Provider.Twilio
         assert opaque[SMS.Field_Host] == 'https://api.twilio.example.com'
-        assert opaque[SMS.Field_Username] == 'ACenmasse'
         assert opaque[SMS.Field_Sender] == '+12025550100'
         assert opaque[SMS.Field_Channel_Name] == 'enmasse-twilio'
-        assert opaque[SMS.Field_Pool_Size] == 5
-        assert opaque[SMS.Field_Timeout] == 15
+        assert connection.pool_size == 5
+        assert connection.timeout == 15
 
         assert opaque[_queue.Field_Use_Queue] is True
         assert opaque[_dlq.Field_Retry_Interval] == 300
@@ -358,8 +358,8 @@ class TestOutgoingSMSImport:
         assert opaque[SMS.Field_Provider] == SMS.Provider.Africas_Talking
         assert opaque[SMS.Field_Host] == SMS.Default_Host[SMS.Provider.Africas_Talking]
         assert opaque[SMS.Field_Channel_Name] == ''
-        assert opaque[SMS.Field_Pool_Size] == SMS.Default_Pool_Size
-        assert opaque[SMS.Field_Timeout] == SMS.Default_Timeout
+        assert africas_talking.pool_size == SMS.Default_Pool_Size
+        assert africas_talking.timeout == SMS.Default_Timeout
 
         # A provider without a signature secret keeps the empty default, so the wrapper finds the key it expects
         assert opaque[SMS.Field_Signature_Secret] == ''
@@ -515,8 +515,8 @@ class TestChannelSMSImport:
         assert opaque[_scheduler.Field_Run_Every] == 5
         assert opaque[_scheduler.Field_Run_Unit] == 'seconds'
 
-        # A channel has no queue, and an interval of zero is allowed
-        assert opaque[_queue.Field_Use_Queue] is False
+        # The queue switch is the file's, and an interval of zero is allowed
+        assert opaque[_queue.Field_Use_Queue] is True
         assert opaque[_dlq.Field_Retry_Interval] == 0
         _assert_delivery_fields_moved(opaque)
 
@@ -563,7 +563,7 @@ class TestChannelSMSImport:
         assert opaque[_scheduler.Field_Run_Unit] == _scheduler.Default_Run_Unit
         assert opaque[_scheduler.Field_Job_ID] == 0
 
-        assert opaque[_queue.Field_Use_Queue] is False
+        assert opaque[_queue.Field_Use_Queue] is _queue.Default_Use_Queue
         _assert_delivery_defaults(opaque)
 
         assert session.query(Job).filter_by(name=_scheduler.Job_Prefix + _channel_webhook).first() is None
@@ -747,8 +747,8 @@ class TestSMSExport:
         assert item[_dlq.Field_Retry_Interval] == 0
         assert item[_dlq.Field_Forward_To] == _forward_to
 
-        # A channel never has a queue, so the switch is never written
-        assert _queue.Field_Use_Queue not in item
+        # The queue switch moved away from its default, so it is written
+        assert item[_queue.Field_Use_Queue] is True
 
         # The webhook channel exports only what it must, and no schedule
         item = exported[_channel_webhook]

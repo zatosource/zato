@@ -47,6 +47,19 @@ Host_Variables = {
     SMS.Provider.Africas_Talking: 'Zato_Test_SMS_Africas_Talking_Host',
 }
 
+# The environment variables an enmasse template reads each account's credentials from
+Credential_Variables = {
+    'Zato_Test_SMS_Twilio_Username': Twilio_Account_SID,
+    'Zato_Test_SMS_Twilio_Password': Twilio_Auth_Token,
+    'Zato_Test_SMS_Vonage_Username': Vonage_API_Key,
+    'Zato_Test_SMS_Vonage_Password': Vonage_API_Secret,
+    'Zato_Test_SMS_Vonage_Signature_Secret': Vonage_Signature_Secret,
+    'Zato_Test_SMS_Infobip_Username': Infobip_Username,
+    'Zato_Test_SMS_Infobip_Password': Infobip_API_Key,
+    'Zato_Test_SMS_Africas_Talking_Username': Africas_Talking_Username,
+    'Zato_Test_SMS_Africas_Talking_Password': Africas_Talking_API_Key,
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -95,10 +108,10 @@ class SimulatorSuite:
 
 # ################################################################################################################################
 
-    def host_environment(self) -> 'strstrdict':
-        """ The variables that point each connection of an enmasse template at its simulator.
+    def environment(self) -> 'strstrdict':
+        """ The variables that point each connection of an enmasse template at its simulator, with its account's credentials.
         """
-        out:'strstrdict' = {}
+        out:'strstrdict' = dict(Credential_Variables)
 
         for item in self.all:
             out[Host_Variables[item.provider]] = item.url

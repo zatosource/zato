@@ -147,7 +147,7 @@ class TestEnmasseOutgoingSMSFromYAML(_SMSTestCase):
         self.assertEqual(opaque[SMS.Field_Provider], SMS.Provider.Twilio)
         self.assertEqual(opaque[SMS.Field_Host], SMS.Default_Host[SMS.Provider.Twilio])
         self.assertEqual(opaque[SMS.Field_Sender], '+12025550100')
-        self.assertEqual(opaque[SMS.Field_Pool_Size], 5)
+        self.assertEqual(conn.pool_size, 5)
         self.assertNotIn(SMS.Field_Password, opaque)
 
 # ################################################################################################################################

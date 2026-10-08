@@ -90,9 +90,12 @@ _claim_payload_hash = 'payload_hash'
 _jwt_algorithm = 'HS256'
 _bearer_prefix = 'Bearer '
 
-# Poll state keys
+# Poll state keys - where the next window opens, where the current one ends, the next page of each direction
+# and the directions already read in full over the current window
 _state_date_start = 'date_start'
+_state_window_end = 'window_end'
 _state_next = 'next'
+_state_done = 'done'
 
 # The timestamp format the Reports API filters by
 _timestamp_format = '%Y-%m-%dT%H:%M:%SZ'
@@ -263,15 +266,24 @@ class VonageProvider(Provider):
                 out.append(PollRequest(Method_GET, href, headers, {}, direction))
             return out
 
-        # .. otherwise each direction is listed over the window since the previous poll.
+        # .. otherwise each direction not yet read is listed over the current window, which is the one
+        # a previous poll left unfinished, or a new one that reaches from the previous poll to now.
         date_start = state.get(_state_date_start)
         if not date_start:
             date_start = _now_text()
 
-        date_end = _now_text()
+        date_end = state.get(_state_window_end)
+        if not date_end:
+            date_end = _now_text()
+
+        done = state.get(_state_done, {})
         url = self.host + _reports_path
 
         for direction in _directions:
+
+            if direction in done:
+                continue
+
             params = {
                 _param_account_id: self.username,
                 _param_product: _product_sms,
@@ -308,9 +320,21 @@ class VonageProvider(Provider):
 
         new_state[_state_next] = next_links
 
-        # The end of this window is where the next one opens
+        # The first page of a direction names the window it reads
         if _param_date_end in request.params:
-            new_state[_state_date_start] = request.params[_param_date_end]
+            new_state[_state_window_end] = request.params[_param_date_end]
+
+        # A direction without further pages is read in full over the window
+        done = dict(new_state.get(_state_done, {}))
+        if request.tag not in next_links:
+            done[request.tag] = True
+        new_state[_state_done] = done
+
+        # Once every direction is read, the end of this window is where the next one opens
+        if len(done) == len(_directions):
+            new_state[_state_date_start] = new_state[_state_window_end]
+            del new_state[_state_window_end]
+            new_state[_state_done] = {}
 
         out = (events, new_state)
         return out

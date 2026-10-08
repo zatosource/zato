@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import GENERIC, HTTP_SOAP, SchedulerLink, SMS
+from zato.common.api import GENERIC, SchedulerLink, SMS
 from zato.common.odb.query.generic import connection_list
 from zato.common.sms.config import apply_outgoing_host_default, validate_channel_definition, validate_outgoing_definition
 from zato.common.util.delivery_config import Delivery_Field_Defaults
@@ -83,6 +83,7 @@ class OutgoingSMSImporter(GenericConnectionImporter):
         'is_channel': False,
         'is_outconn': True,
         'pool_size': SMS.Default_Pool_Size,
+        'timeout': SMS.Default_Timeout,
     }
 
     connection_extra_field_defaults = Outgoing_Extra_Field_Defaults
@@ -185,9 +186,6 @@ class ChannelSMSImporter(GenericConnectionImporter):
             raise Exception(f'{self.label} `{name}` names an outgoing SMS connection that does not exist -> `{outconn_name}`')
 
         validate_int_fields(connection_def, Channel_Int_Fields, self.label)
-
-        # A channel has no delivery queue.
-        connection_def[HTTP_SOAP.Queue.Field_Use_Queue] = False
 
         prepare_delivery_fields(connection_def, self.label)
 
