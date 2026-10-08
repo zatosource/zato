@@ -52,6 +52,7 @@ from zato.cli.enmasse.exporters.grpc import OutgoingGRPCExporter
 from zato.cli.enmasse.exporters.amqp import ChannelAMQPExporter, OutgoingAMQPExporter
 from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMMQExporter
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
+from zato.cli.enmasse.exporters.sms import ChannelSMSExporter, OutgoingSMSExporter
 from zato.cli.enmasse.exporters.mcp import GatewayMCPExporter
 from zato.cli.enmasse.exporters.rule_engine_api import RuleEngineAPIExporter
 from zato.cli.enmasse.exporters.as2 import AS2Exporter
@@ -115,9 +116,11 @@ class EnmasseYAMLExporter:
         self.channel_azure_service_bus_exporter = ChannelAMQPExporter(self, 'azure-service-bus')
         self.outgoing_azure_service_bus_exporter = OutgoingAMQPExporter(self, 'azure-service-bus')
         self.channel_kafka_exporter = ChannelKafkaExporter(self)
+        self.channel_sms_exporter = ChannelSMSExporter(self)
         self.gateway_mcp_exporter = GatewayMCPExporter(self)
         self.rule_engine_api_exporter = RuleEngineAPIExporter(self)
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
+        self.outgoing_sms_exporter = OutgoingSMSExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.salesforce_exporter = SalesforceExporter(self)
         self.ldap_exporter = LDAPExporter(self)
@@ -400,6 +403,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_channel_sms(self, session:'SASession') -> 'list':
+        """ Exports SMS channel definitions.
+        """
+        _ = self.get_cluster(session)
+        channel_sms_list = self.channel_sms_exporter.export(session, self.cluster_id)
+        return channel_sms_list
+
+# ################################################################################################################################
+
     def export_gateway_mcp(self, session:'SASession') -> 'list':
         """ Exports MCP gateway definitions.
         """
@@ -424,6 +436,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session)
         outgoing_kafka_list = self.outgoing_kafka_exporter.export(session, self.cluster_id)
         return outgoing_kafka_list
+
+# ################################################################################################################################
+
+    def export_outgoing_sms(self, session:'SASession') -> 'list':
+        """ Exports SMS outgoing definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_sms_list = self.outgoing_sms_exporter.export(session, self.cluster_id)
+        return outgoing_sms_list
 
 # ################################################################################################################################
 
@@ -809,6 +830,11 @@ class EnmasseYAMLExporter:
         if channel_kafka_defs:
             output_dict['channel_kafka'] = channel_kafka_defs
 
+        # Export SMS channel definitions
+        channel_sms_defs = self.export_channel_sms(session)
+        if channel_sms_defs:
+            output_dict['channel_sms'] = channel_sms_defs
+
         # Export MCP gateway definitions
         gateway_mcp_defs = self.export_gateway_mcp(session)
         if gateway_mcp_defs:
@@ -833,6 +859,11 @@ class EnmasseYAMLExporter:
         outgoing_kafka_defs = self.export_outgoing_kafka(session)
         if outgoing_kafka_defs:
             output_dict['outgoing_kafka'] = outgoing_kafka_defs
+
+        # Export SMS outgoing definitions
+        outgoing_sms_defs = self.export_outgoing_sms(session)
+        if outgoing_sms_defs:
+            output_dict['outgoing_sms'] = outgoing_sms_defs
 
         # Export outgoing REST connection definitions
         outgoing_rest_defs = self.export_outgoing_rest(session)

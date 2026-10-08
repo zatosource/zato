@@ -49,6 +49,7 @@ _model_by_link_conn_type = {
     SchedulerLink.ConnType.REST_Outgoing: HTTPSOAP,
     SchedulerLink.ConnType.SOAP_Outgoing: HTTPSOAP,
     SchedulerLink.ConnType.FHIR_Outgoing: GenericConn,
+    SchedulerLink.ConnType.SMS_Channel: GenericConn,
 }
 
 # ################################################################################################################################

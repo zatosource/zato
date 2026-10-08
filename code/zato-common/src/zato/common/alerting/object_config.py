@@ -83,6 +83,9 @@ alert_type_mllp_outgoing = 'mllp_outgoing'
 # An outgoing Kafka connection alerts on its queue and DLQ alone - the depths are read off the connection, not off the audit log
 alert_type_kafka_outgoing = 'kafka_outgoing'
 
+# An outgoing SMS connection alerts on its queue and DLQ the same way
+alert_type_sms_outgoing = 'sms_outgoing'
+
 # An outgoing LLM connection's settings follow the cluster-level llm type, so the connection and the alerts_llm ruleset are one type
 alert_type_llm = 'llm'
 
@@ -97,6 +100,7 @@ conn_type_to_alert_type:'strstrdict' = {
     GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: alert_type_mllp_channel,
     GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: alert_type_mllp_outgoing,
     GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA:    alert_type_kafka_outgoing,
+    GENERIC.CONNECTION.TYPE.OUTCONN_SMS:      alert_type_sms_outgoing,
     GENERIC.CONNECTION.TYPE.OUTCONN_LLM:      alert_type_llm,
     GENERIC.CONNECTION.TYPE.GATEWAY_MCP:      alert_type_mcp,
 }

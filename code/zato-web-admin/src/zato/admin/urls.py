@@ -40,6 +40,7 @@ from zato.admin.web.views.outgoing.hl7 import fhir_bulk_export as out_hl7_fhir_b
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
+from zato.admin.web.views.channel import sms as channel_sms
 from zato.admin.web.views.gateway import mcp as gateway_mcp
 from zato.admin.web.views.gateway import mcp_connection_lists as gateway_mcp_connection_lists
 from zato.admin.web.views.gateway import rule_engine as gateway_rule_engine
@@ -60,6 +61,7 @@ from zato.admin.web.views.outgoing import odata as out_odata
 from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import smb as out_smb
+from zato.admin.web.views.outgoing import sms as out_sms
 from zato.admin.web.views.outgoing import soap as out_soap
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.ai import skills as ai_skills
@@ -652,6 +654,17 @@ urlpatterns += [
     url(r'^zato/channel/kafka/import-demo-config$',
         login_required(channel_kafka.import_demo_config), name='channel-kafka-import-demo-config'),
 
+    # .. SMS channels
+
+    url(r'^zato/channel/sms/$',
+        login_required(channel_sms.Index()), name=channel_sms.Index.url_name),
+    url(r'^zato/channel/sms/create/$',
+        login_required(channel_sms.Create()), name=channel_sms.Create.url_name),
+    url(r'^zato/channel/sms/edit/$',
+        login_required(channel_sms.Edit()), name=channel_sms.Edit.url_name),
+    url(r'^zato/channel/sms/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_sms.Delete()), name=channel_sms.Delete.url_name),
+
     # .. MCP
 
     url(r'^zato/gateway/mcp/$',
@@ -956,6 +969,17 @@ urlpatterns += [
         login_required(out_kafka.Delete()), name=out_kafka.Delete.url_name),
     url(r'^zato/outgoing/kafka/import-demo-config$',
         login_required(out_kafka.import_demo_config), name='out-kafka-import-demo-config'),
+
+    # .. SMS outgoing
+
+    url(r'^zato/outgoing/sms/$',
+        login_required(out_sms.Index()), name=out_sms.Index.url_name),
+    url(r'^zato/outgoing/sms/create/$',
+        login_required(out_sms.Create()), name=out_sms.Create.url_name),
+    url(r'^zato/outgoing/sms/edit/$',
+        login_required(out_sms.Edit()), name=out_sms.Edit.url_name),
+    url(r'^zato/outgoing/sms/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sms.Delete()), name=out_sms.Delete.url_name),
     ]
 
 # ################################################################################################################################
@@ -1228,6 +1252,8 @@ urlpatterns += [
         login_required(http_soap.invoke_channel), name='http-soap-invoke-channel'),
     url(r'^zato/http-soap/invoke-outconn/(?P<id>.*)/$',
         login_required(http_soap.invoke_outconn), name='http-soap-invoke-outconn'),
+    url(r'^zato/outgoing/sms/invoke/(?P<id>.*)/$',
+        login_required(out_sms.invoke_outconn), name='out-sms-invoke'),
     url(r'^zato/highlight/$',
         login_required(highlight_view.highlight), name='highlight'),
 

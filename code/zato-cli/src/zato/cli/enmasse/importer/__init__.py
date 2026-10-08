@@ -40,6 +40,7 @@ from zato.cli.enmasse.importers.grpc import OutgoingGRPCImporter
 from zato.cli.enmasse.importers.amqp import ChannelAMQPImporter, OutgoingAMQPImporter
 from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMMQImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
+from zato.cli.enmasse.importers.sms import ChannelSMSImporter, OutgoingSMSImporter
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.importers.rule_engine_api import RuleEngineAPIImporter
 from zato.cli.enmasse.importers.as2 import AS2Importer
@@ -102,6 +103,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.amqp',
                         'zato.cli.enmasse.importers.ibm_mq',
                         'zato.cli.enmasse.importers.kafka',
+                        'zato.cli.enmasse.importers.sms',
                         'zato.cli.enmasse.importers.as2',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.llm',
                         'zato.cli.enmasse.importers.microsoft_cloud',
@@ -154,12 +156,14 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         self.outgoing_fhir_defs = {}
         self.channel_ibm_mq_defs = {}
         self.channel_kafka_defs = {}
+        self.channel_sms_defs = {}
         self.gateway_mcp_defs = {}
         self.rule_engine_api_defs = {}
         self.outgoing_graphql_defs = {}
         self.outgoing_grpc_defs = {}
         self.outgoing_ibm_mq_defs = {}
         self.outgoing_kafka_defs = {}
+        self.outgoing_sms_defs = {}
         self.ldap_defs = {}
         self.llm_defs = {}
         self.mongodb_defs = {}
@@ -217,12 +221,14 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         self.channel_azure_service_bus_importer = ChannelAMQPImporter(self, 'azure-service-bus')
         self.outgoing_azure_service_bus_importer = OutgoingAMQPImporter(self, 'azure-service-bus')
         self.channel_kafka_importer = ChannelKafkaImporter(self)
+        self.channel_sms_importer = ChannelSMSImporter(self)
         self.gateway_mcp_importer = GatewayMCPImporter(self)
         self.rule_engine_api_importer = RuleEngineAPIImporter(self)
         self.outgoing_graphql_importer = OutgoingGraphQLImporter(self)
         self.outgoing_grpc_importer = OutgoingGRPCImporter(self)
         self.outgoing_ibm_mq_importer = OutgoingIBMMQImporter(self)
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
+        self.outgoing_sms_importer = OutgoingSMSImporter(self)
         self.ldap_importer = LDAPImporter(self)
         self.llm_importer = LLMImporter(self)
         self.mongodb_importer = MongoDBImporter(self)
@@ -594,6 +600,25 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         created, updated = self.channel_kafka_importer.sync_definitions(channel_kafka_list, session)
         self.channel_kafka_defs = self.channel_kafka_importer.connection_defs
         logger.info('Processed Kafka channel definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
+    def sync_channel_sms(self, channel_sms_list:'list', session:'SASession') -> 'tuple':
+        if not channel_sms_list:
+            return [], []
+
+        count = len(channel_sms_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} SMS channel {noun}')
+
+        for idx, item in enumerate(channel_sms_list):
+            logger.info('SMS channel item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
+
+        created, updated = self.channel_sms_importer.sync_definitions(channel_sms_list, session)
+        self.channel_sms_defs = self.channel_sms_importer.connection_defs
+        logger.info('Processed SMS channel definitions: created=%d updated=%d', len(created), len(updated))
 
         return created, updated
 

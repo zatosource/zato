@@ -80,6 +80,8 @@ class AuditSource:
     MLLP_Outgoing = 'mllp-outgoing'
     Kafka_Channel  = 'kafka-channel'
     Kafka_Outgoing = 'kafka-outgoing'
+    SMS_Channel    = 'sms-channel'
+    SMS_Outgoing   = 'sms-outgoing'
     FHIR          = 'fhir'
     FHIR_Bulk_Export = 'fhir-bulk-export'
     CCDA          = 'ccda'
@@ -147,6 +149,8 @@ _source_label = {
     AuditSource.MLLP_Outgoing: 'MLLP outgoing',
     AuditSource.Kafka_Channel: 'Kafka channel',
     AuditSource.Kafka_Outgoing: 'Kafka outgoing',
+    AuditSource.SMS_Channel: 'SMS channel',
+    AuditSource.SMS_Outgoing: 'SMS outgoing',
     AuditSource.FHIR: 'FHIR outgoing',
     AuditSource.FHIR_Bulk_Export: 'FHIR bulk export',
     AuditSource.CCDA: 'C-CDA',

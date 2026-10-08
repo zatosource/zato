@@ -1,0 +1,16 @@
+/* ------------------------------------------------------------ */
+/* SMS channels - the list page                                  */
+/* ------------------------------------------------------------ */
+
+.channel-sms-webhook-url-cell,
+.kafka-channel-dlq-cell {
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ */
+/* SMS channels - the create and edit dialogs                    */
+/* ------------------------------------------------------------ */
+
+.data-popup input[readonly] {
+    color: var(--text-muted);
+}

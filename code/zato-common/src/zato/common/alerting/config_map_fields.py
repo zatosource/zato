@@ -396,6 +396,7 @@ type_fields:'dict[str, list[stranydict]]' = {
             'default': Window_Seconds_Default, 'is_percent': False, 'measures': [Measure_Error_Rate]},
     ] + _ack_fields + _connection_failure_fields + _latency_fields + _queue_fields + _use_llm_fields,
     'kafka_outgoing': _queue_fields + _use_llm_fields,
+    'sms_outgoing': _queue_fields + _use_llm_fields,
     'common': [
         {'name': 'certificate_warning', 'kind': Kind_Number, 'rules': ['Certificate_Expiring'],
             'default': 'cert_warning_days', 'is_percent': False},

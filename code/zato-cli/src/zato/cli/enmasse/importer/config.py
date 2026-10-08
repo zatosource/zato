@@ -524,6 +524,22 @@ class ConfigSync:
         if outgoing_kafka_updated:
             self.updated_objects['outgoing_kafka'] = outgoing_kafka_updated
 
+        # Process SMS outgoing definitions - before the channels, which refer to them by name
+        outgoing_sms_list = yaml_config.get('outgoing_sms', [])
+        outgoing_sms_created, outgoing_sms_updated = self.sync_outgoing_sms(outgoing_sms_list, session)
+        if outgoing_sms_created:
+            self.created_objects['outgoing_sms'] = outgoing_sms_created
+        if outgoing_sms_updated:
+            self.updated_objects['outgoing_sms'] = outgoing_sms_updated
+
+        # Process SMS channel definitions
+        channel_sms_list = yaml_config.get('channel_sms', [])
+        channel_sms_created, channel_sms_updated = self.sync_channel_sms(channel_sms_list, session)
+        if channel_sms_created:
+            self.created_objects['channel_sms'] = channel_sms_created
+        if channel_sms_updated:
+            self.updated_objects['channel_sms'] = channel_sms_updated
+
         # Process GraphQL outgoing definitions
         outgoing_graphql_list = yaml_config.get('outgoing_graphql', [])
         outgoing_graphql_created, outgoing_graphql_updated = self.sync_outgoing_graphql(outgoing_graphql_list, session)

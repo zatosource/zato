@@ -104,6 +104,7 @@ type_to_ruleset = {
     'mllp_channel':  'alerts_mllp_channel',
     'mllp_outgoing': 'alerts_mllp_outgoing',
     'kafka_outgoing': 'alerts_kafka_outgoing',
+    'sms_outgoing':  'alerts_sms_outgoing',
     'common':        'alerts_common',
 }
 
@@ -128,6 +129,7 @@ type_sources:'dict[str, strlist]' = {
     'mllp_channel':  [AuditSource.MLLP_Channel],
     'mllp_outgoing': [AuditSource.MLLP_Outgoing],
     'kafka_outgoing': [AuditSource.Kafka_Outgoing],
+    'sms_outgoing':  [AuditSource.SMS_Outgoing],
 }
 
 # ################################################################################################################################

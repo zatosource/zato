@@ -41,6 +41,7 @@ _source_by_type = {
     DestinationType.FHIR: AuditSource.FHIR,
     DestinationType.SMTP: AuditSource.Email_SMTP,
     DestinationType.KAFKA: AuditSource.Kafka_Outgoing,
+    DestinationType.SMS: AuditSource.SMS_Outgoing,
     DestinationType.SFTP: AuditSource.File_Outgoing,
     DestinationType.SERVICE: AuditSource.Service,
 }
@@ -70,6 +71,11 @@ _stored_options = {
 
     DestinationType.SFTP: {
         DestinationOption.Remote_Path: Default_Remote_Path,
+    },
+
+    # An SMS delivery is the payload as the text of a message to the recipient the destination names
+    DestinationType.SMS: {
+        DestinationOption.To: Default_To,
     },
 
     # An MLLP delivery, a Kafka message and a service invocation are the payload itself and nothing else

@@ -411,6 +411,13 @@
                                         </ul>
                                     </li>
                                     <li class="child menu-wide">
+                                        <a class="menu-link" href="#">SMS &rarr;</a>
+                                        <ul>
+                                            <li class="child"><a class="menu-link" href="{% url "channel-sms" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-sms">Channels</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-sms" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sms">Outgoing</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="child menu-wide">
                                         <a class="menu-link" href="#">Search &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "out-es" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-es">ElasticSearch</a></li>

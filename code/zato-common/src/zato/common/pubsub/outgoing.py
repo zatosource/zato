@@ -132,6 +132,7 @@ class OutgoingType:
     SMB = 'smb'
     FTP = 'ftp'
     KAFKA = 'kafka'
+    SMS = 'sms'
 
 # ################################################################################################################################
 
@@ -140,6 +141,7 @@ class InboundType:
     """
     KAFKA = 'kafka-channel'
     REST  = 'rest-channel'
+    SMS   = 'sms-channel'
     SOAP  = 'soap-channel'
 
 # Which kind of outgoing connection an HTTP/SOAP connection is, by its transport

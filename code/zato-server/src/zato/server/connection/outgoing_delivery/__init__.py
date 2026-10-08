@@ -23,6 +23,8 @@ from zato.server.connection.outgoing_delivery.http import deliver_to_fhir, deliv
     rest_page, soap_channel_page, soap_page
 from zato.server.connection.outgoing_delivery.kafka import deliver_to_kafka, deliver_to_kafka_channel, kafka_channel_page, \
     kafka_page, locate_kafka, locate_kafka_channel
+from zato.server.connection.outgoing_delivery.sms import deliver_to_sms, deliver_to_sms_channel, locate_sms, locate_sms_channel, \
+    sms_channel_page, sms_page
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,11 +42,13 @@ publishable_generic_types = {
     GENERIC.CONNECTION.TYPE.OUTCONN_SMB: OutgoingType.SMB,
     GENERIC.CONNECTION.TYPE.OUTCONN_FTP: OutgoingType.FTP,
     GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: OutgoingType.KAFKA,
+    GENERIC.CONNECTION.TYPE.OUTCONN_SMS: OutgoingType.SMS,
 }
 
 # The kind of channel each generic connection type is
 inbound_generic_types = {
     GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: InboundType.KAFKA,
+    GENERIC.CONNECTION.TYPE.CHANNEL_SMS: InboundType.SMS,
 }
 
 # ################################################################################################################################
@@ -79,6 +83,14 @@ def register_delivery_handlers() -> 'None':
     register_outgoing_conn_type(InboundType.KAFKA, locate_kafka_channel, deliver_to_kafka_channel,
         retry_policy=get_http_retry_policy, dlq_settings=get_http_dlq_settings, page=kafka_channel_page,
         direction=Direction_In, has_queue=False)
+
+    # An SMS connection has the same retry and DLQ fields, and an SMS channel has a queue of its own
+    # when its queue switch is on, the message in it is the event and the delivery is the service's run.
+    register_outgoing_conn_type(OutgoingType.SMS, locate_sms, deliver_to_sms,
+        retry_policy=get_http_retry_policy, dlq_settings=get_http_dlq_settings, page=sms_page)
+    register_outgoing_conn_type(InboundType.SMS, locate_sms_channel, deliver_to_sms_channel,
+        retry_policy=get_http_retry_policy, dlq_settings=get_http_dlq_settings, page=sms_channel_page,
+        direction=Direction_In)
 
     # File deliveries are recorded as file-outgoing audit events already
     register_outgoing_conn_type(OutgoingType.SFTP, locate_sftp, deliver_to_sftp, is_audit_log_active=False)

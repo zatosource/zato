@@ -38,6 +38,7 @@ $.fn.zato.destinations.config = {
         {id: 'hl7-fhir', label: 'FHIR'},
         {id: 'smtp',     label: 'Email'},
         {id: 'kafka',    label: 'Kafka'},
+        {id: 'sms',      label: 'SMS'},
         {id: 'sftp',     label: 'SFTP'},
         {id: 'service',  label: 'Service'}
     ],
@@ -56,6 +57,9 @@ $.fn.zato.destinations.config = {
             {id: 'subject', label: 'Subject', kind: 'text', placeholder: 'Subject line'}
         ],
         'kafka': [],
+        'sms': [
+            {id: 'to', label: 'To', kind: 'text', placeholder: '+12025550123'}
+        ],
         'sftp': [
             {id: 'remote_path', label: 'Remote path', kind: 'text', placeholder: '/{job_id}/{file_name}'}
         ],

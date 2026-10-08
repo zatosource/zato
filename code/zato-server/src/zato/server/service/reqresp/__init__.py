@@ -60,7 +60,7 @@ if 0:
     from zato.server.connection.cloud.microsoft_power_automate import MicrosoftPowerAutomateClient
     from zato.server.connection.cloud.microsoft_teams import MicrosoftTeamsClient
     from zato.server.connection.email import EMailAPI
-    from zato.server.connection.facade import GraphQLFacade, KafkaFacade
+    from zato.server.connection.facade import GraphQLFacade, KafkaFacade, SMSFacade
     from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
     from zato.server.service import AMQPFacade, Service
 
@@ -84,6 +84,7 @@ if 0:
     EMailAPI = EMailAPI
     GraphQLFacade = GraphQLFacade
     KafkaFacade = KafkaFacade
+    SMSFacade = SMSFacade
     KombuAMQPMessage = KombuAMQPMessage
     Logger = Logger
     OutconnLLMWrapper = OutconnLLMWrapper
@@ -357,7 +358,7 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's config manager.
     """
-    __slots__ = ('amqp', 'as2', 'as4', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap',
+    __slots__ = ('amqp', 'as2', 'as4', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'sms', 'soap', 'sql', 'ldap',
         '_config_manager')
 
     def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
@@ -374,6 +375,9 @@ class Outgoing:
         self.kafka = cast_('KafkaFacade', kafka)
 
         self.odoo = cast_('ConfigDict', odoo)
+
+        # Set by the service once its own SMS facade exists
+        self.sms = cast_('SMSFacade', None)
 
         self.rest = cast_('ConfigDict', plain_http)
         self.plain_http = self.rest

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import AS2, AS4, EnvVariable, OAuth
+from zato.common.api import AS2, AS4, EnvVariable, OAuth, SMS
 from zato.common.const import SECRETS
 from zato.common.json_internal import dumps, loads
 
@@ -40,6 +40,7 @@ Common_Secret_Keys = ('password', 'secret')
 # Every name any enmasse object type keeps a secret under - for log lines that do not know the type of what they log.
 Known_Secret_Keys = Common_Secret_Keys + (
     'api_token', 'token', 'api_key', 'client_secret', 'secret_value', 'consumer_key', 'consumer_secret', 'static_token',
+    SMS.Field_Signature_Secret,
 ) + AS2.Secret_Fields + AS4.Secret_Fields + OAuth.Secret_Fields
 
 # The keys the session carries the importer's crypto context under.
