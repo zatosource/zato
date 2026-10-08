@@ -57,7 +57,7 @@ class GetUserResponse(Model):
 # ################################################################################################################################
 
 class TypedGetUser(Service):
-    """ A service with typed input and output - its auto channel must be documented as POST
+    """ A service with typed input and output - its channel must be documented as POST
     with the real model schemas and its response is deterministic for try-it assertions.
     """
     name   = 'api.test.openapi.typed.get-user'
@@ -83,7 +83,7 @@ class TypedGetUser(Service):
 # ################################################################################################################################
 
 class UntypedEcho(Service):
-    """ A service with no typed input or output - its auto channel must be documented
+    """ A service with no typed input or output - its channel must be documented
     with the default any-JSON-object schema.
     """
     name = 'api.test.openapi.untyped.echo'
@@ -96,7 +96,7 @@ class UntypedEcho(Service):
 # ################################################################################################################################
 
 class MethodsMulti(Service):
-    """ A service with handle_GET and handle_POST - its auto channel must be documented
+    """ A service with handle_GET and handle_POST - its channel must be documented
     with both operations.
     """
     name = 'api.test.openapi.methods.multi'
@@ -113,38 +113,12 @@ class MethodsMulti(Service):
 # ################################################################################################################################
 
 class PrestartedPing(Service):
-    """ The only service matching the active patterns - its auto channel must boot active,
-    while every other auto channel boots inactive.
+    """ The only service whose channel is active from the start, while every other channel starts inactive.
     """
     name = 'api.test.openapi.prestarted.ping'
 
     def handle(self) -> 'None':
         self.response.payload = dumps({'ping': 'pong'})
-        self.response.content_type = 'application/json'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ExcludedHidden(Service):
-    """ A service matching both an include and an exclude pattern - the exclude wins
-    and no auto channel may ever exist for it.
-    """
-    name = 'api.test.openapi.excluded.hidden'
-
-    def handle(self) -> 'None':
-        self.response.payload = dumps({'excluded': True})
-        self.response.content_type = 'application/json'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class NoMatch(Service):
-    """ A service matching no include pattern at all - no auto channel may ever exist for it.
-    """
-    name = 'api.other.no-match'
-
-    def handle(self) -> 'None':
-        self.response.payload = dumps({'matched': False})
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################

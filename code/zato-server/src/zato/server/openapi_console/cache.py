@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from contextlib import contextmanager
 from traceback import format_exc
 
 # gevent
@@ -24,9 +23,9 @@ from zato.server.openapi_console.spec import build_full_spec, filter_spec, resol
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anydictnone, tuple_
+    from zato.common.typing_ import anydict, anydictnone, tuple_
     from zato.server.base.parallel import ParallelServer
-    any_ = any_
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,10 +44,6 @@ class SpecCache:
         self.lock = RLock()
         self.spec:'anydictnone' = None
         self.channel_map:'anydict' = {}
-
-        # When True, rebuild_spec_cache is a no-op - a batch of configuration events
-        # sets it so the document is rebuilt once at the end of the batch, never once per event.
-        self.is_rebuild_suppressed = False
 
 # ################################################################################################################################
 
@@ -121,27 +116,10 @@ def get_spec(server:'ParallelServer', fields:'anydict') -> 'anydictnone':
 
 # ################################################################################################################################
 
-@contextmanager
-def suppressed_rebuilds() -> 'any_':
-    """ Turns off per-event rebuilds for the duration of a batch of configuration events -
-    the caller rebuilds the document once after the batch instead.
-    """
-    spec_cache.is_rebuild_suppressed = True
-    try:
-        yield
-    finally:
-        spec_cache.is_rebuild_suppressed = False
-
-# ################################################################################################################################
-
 def rebuild_spec_cache(server:'ParallelServer') -> 'None':
     """ Rebuilds the cached document after a configuration or deployment change.
     A failure to rebuild never breaks the deployment or the configuration event that triggered it.
     """
-    # A batch of events is in progress - it rebuilds the document once at its end
-    if spec_cache.is_rebuild_suppressed:
-        return
-
     # During server startup channels are not loaded yet - the cache is built lazily
     # on the first console request instead. The attribute itself appears only once
     # the server has begun reading its configuration in.

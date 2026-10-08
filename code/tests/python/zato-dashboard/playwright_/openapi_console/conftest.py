@@ -53,35 +53,26 @@ _Password = 'test.dashboard.openapi.' + CryptoManager.generate_hex_string()
 
 _Server_Wait_Timeout = 120
 _Quickstart_Timeout  = 180
+_Enmasse_Timeout     = 120
 _Ping_Poll_Interval  = 0.5
 _Kill_Timeout        = 5
 
-# The auto-channel environment the server under test boots with - the include family is split
-# across two variables on purpose, so the tests prove that all the family members are collected.
-_Auto_Channel_Env = {
-    'Zato_Auto_REST_Channel_Enabled': 'True',
-    'Zato_Auto_REST_Channel_Include': \
-        'api.test.openapi.typed.{operation}, api.test.openapi.untyped.{operation}; api.test.openapi.methods.{operation}',
-    'Zato_Auto_REST_Channel_Include_01': \
-        'api.test.openapi.prestarted.{operation}, api.test.openapi.excluded.{operation}, ' + \
-        'api.test.openapi.diffing.{operation}',
-    'Zato_Auto_REST_Channel_Exclude': 'api.test.openapi.excluded.{operation}',
-    'Zato_Auto_REST_Channel_Active': 'api.test.openapi.prestarted.{operation}',
-    'Zato_Auto_REST_Channel_Prefix': '/api/',
-}
+# How long enmasse waits for the fixture services to finish deploying, in seconds
+_Missing_Wait_Time = '15'
 
-# The tests build on one another's environment state - the auto-created channels are asserted
-# in their boot state first, then activated and secured one by one, and finally mutated
-# by hot-deployments, which is why the modules must run in this exact order, never the alphabetical one.
+# The channels the suite's tests operate on, inactive except for the prestarted one
+_Channels_File = os.path.join(os.path.dirname(__file__), 'fixtures', 'channels.yaml')
+
+# The tests build on one another's environment state - the channels are activated and secured one by one,
+# and finally mutated by hot-deployments, which is why the modules must run in this exact order,
+# never the alphabetical one.
 _Module_Order = [
-    'test_openapi_console_auto_create',
     'test_openapi_console_activation_access',
     'test_openapi_console_admin_view',
     'test_openapi_console_untyped_schema',
     'test_openapi_console_methods',
     'test_openapi_console_typed_schema',
     'test_openapi_console_signin_types',
-    'test_openapi_console_recreate_after_delete',
     'test_openapi_console_contract_diffing',
     'test_openapi_console_security_no_session',
     'test_openapi_console_security_bad_credentials',
@@ -230,8 +221,7 @@ def _start_streaming(process:'any_', label:'str', time_reference:'float') -> 'No
 @pytest.fixture(scope='session')
 def zato_dashboard() -> 'any_':
     """ Session-scoped fixture with a self-contained quickstart environment - server, dashboard,
-    a dedicated Redis and the OpenAPI console process, with the server booted under
-    the Zato_Auto_REST_Channel_* variables that drive auto-created channels.
+    a dedicated Redis and the OpenAPI console process, with the suite's channels imported through enmasse.
     This overrides the fixture of the same name from the parent directory's conftest
     for the tests in this directory.
     """
@@ -320,7 +310,7 @@ def zato_dashboard() -> 'any_':
         _ = config_file.write(dumps(dashboard_config))
 
     # .. 4) copy this suite's fixture services into the pickup directory so they deploy during
-    # server boot and their auto channels are created by the startup pass, with no hot-deployment wait ..
+    # server boot, with no hot-deployment wait ..
 
     fixtures_services_dir = os.path.join(os.path.dirname(__file__), 'fixtures', 'services')
     pickup_services_dir = os.path.join(server_dir, 'pickup', 'incoming', 'services')
@@ -333,7 +323,7 @@ def zato_dashboard() -> 'any_':
             _ = shutil.copy(source_path, pickup_services_dir)
             logger.info('[FIXTURES] copied %s to %s', file_name, pickup_services_dir)
 
-    # .. 5) start the server with the auto-channel and console stream environment ..
+    # .. 5) start the server with the console stream environment ..
 
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(server_port)
@@ -344,7 +334,6 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_Queue_Bridge_Redis_Port'] = str(redis_port)
 
     server_env['Zato_OpenAPI_Stream_Prefix'] = stream_prefix
-    server_env.update(_Auto_Channel_Env)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     server_process = subprocess.Popen(
@@ -420,7 +409,31 @@ def zato_dashboard() -> 'any_':
         kill_process_tree(redis_process)
         raise
 
-    # .. 9) start the file pickup listener so hot-deployments through the pickup directory work ..
+    # .. 9) import the channels the tests operate on ..
+
+    enmasse_env = os.environ.copy()
+    _ = enmasse_env.pop('COVERAGE_PROCESS_START', None)
+
+    enmasse_command = [
+        _Zato_Bin, 'enmasse', server_dir,
+        '--verbose',
+        '--import',
+        '--input', _Channels_File,
+        '--missing-wait-time', _Missing_Wait_Time,
+    ]
+
+    result = subprocess.run(enmasse_command, capture_output=True, text=True, timeout=_Enmasse_Timeout, env=enmasse_env)
+
+    if result.returncode != 0:
+        kill_process_tree(server_process)
+        kill_process_tree(dashboard_process)
+        kill_process_tree(console_process)
+        kill_process_tree(redis_process)
+        raise Exception(f'enmasse import failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
+
+    logger.info(f'[TIMING] enmasse import: {time.monotonic() - time_after_server_start:.1f}s')
+
+    # .. 10) start the file pickup listener so hot-deployments through the pickup directory work ..
 
     listener_env = os.environ.copy()
     listener_env['Zato_Config_Bind_Port'] = str(server_port)

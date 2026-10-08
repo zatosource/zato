@@ -766,22 +766,13 @@ def is_cluster_empty(server:'ParallelServer') -> 'bool':
             filter(Job.cluster_id==default_cluster_id).\
             count()
 
-        # REST objects - a new environment only has internal ones, except the channels
-        # the auto-channel startup pass creates, which their opaque attributes identify
+        # REST objects - a new environment only has internal ones
         is_internal_column = cast_('any_', HTTPSOAP.is_internal)
 
-        rest_rows = session.query(HTTPSOAP.opaque1).\
+        rest_count = session.query(HTTPSOAP).\
             filter(is_internal_column.is_(False)).\
             filter(HTTPSOAP.cluster_id==default_cluster_id).\
-            all()
-
-        rest_count = 0
-
-        for (opaque,) in rest_rows:
-            if opaque:
-                if 'is_auto_created' in opaque:
-                    continue
-            rest_count += 1
+            count()
 
         # Security definitions beyond the ones every new cluster is created with
         security_count = session.query(SecurityBase).\

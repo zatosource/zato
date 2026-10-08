@@ -9,14 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The registry behind the Demo config screen - every set has to be importable,
 # checkable and removable, the details have to say which objects exist, a save
 # has to act only on the sliders that changed, and the emptiness check has to
-# see through what a new environment is created with, the auto-created REST
-# channels included.
+# see through what a new environment is created with.
 
 # stdlib
 import os
 
 # Zato
-from zato.common.json_internal import dumps
 from zato.server.demo_config import First_Start_Set_Names, get_demo_config_details, has_user_services, is_cluster_empty, \
     save_demo_config, Set_Names, _delete_generic_connections, _delete_http_soap, _delete_jobs, _existing_names_funcs, \
     _import_funcs, _manifests, _remove_funcs
@@ -394,26 +392,11 @@ class TestIsClusterEmpty:
         server = _FakeServer(rows_by_model)
         assert is_cluster_empty(server) is False # type: ignore[arg-type]
 
-    def test_an_auto_created_channel_does_not_count(self):
-
-        # The auto-channel startup pass creates non-internal channels whose opaque
-        # attributes carry the marker - they are part of a new environment
-        opaque = dumps({'is_auto_created': True})
+    def test_a_channel_makes_it_non_empty(self):
 
         rows_by_model = {
             'HTTPSOAP': [
-                {'opaque1': opaque},
-            ],
-        }
-
-        server = _FakeServer(rows_by_model)
-        assert is_cluster_empty(server) is True # type: ignore[arg-type]
-
-    def test_a_hand_made_channel_counts(self):
-
-        rows_by_model = {
-            'HTTPSOAP': [
-                {'opaque1': None},
+                {'id': 111, 'name': 'my.channel'},
             ],
         }
 

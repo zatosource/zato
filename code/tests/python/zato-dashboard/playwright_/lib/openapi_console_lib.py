@@ -19,8 +19,7 @@ import yaml
 # Zato
 from zato.common.crypto.api import CryptoManager
 
-from rest_channel import deploy_service_file, edit_channel, get_channel_id, find_channel_row, open_channel_page, \
-    wait_for_channel_row
+from rest_channel import deploy_service_file, edit_channel, get_channel_id, open_channel_page, wait_for_channel_row
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,7 +54,7 @@ Admin_Username = 'admin'
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# The suite's fixture services and their auto-created channels
+# The suite's fixture services and their channels
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,11 +65,11 @@ Service_Methods    = 'api.test.openapi.methods.multi'
 Service_Prestarted = 'api.test.openapi.prestarted.ping'
 Service_Diffing    = 'api.test.openapi.diffing.contract'
 
-Path_Typed      = '/api/api/test/openapi/typed/get-user'
-Path_Untyped    = '/api/api/test/openapi/untyped/echo'
-Path_Methods    = '/api/api/test/openapi/methods/multi'
-Path_Prestarted = '/api/api/test/openapi/prestarted/ping'
-Path_Diffing    = '/api/api/test/openapi/diffing/contract'
+Path_Typed      = '/api/test/openapi/typed/get-user'
+Path_Untyped    = '/api/test/openapi/untyped/echo'
+Path_Methods    = '/api/test/openapi/methods/multi'
+Path_Prestarted = '/api/test/openapi/prestarted/ping'
+Path_Diffing    = '/api/test/openapi/diffing/contract'
 
 # The file that carries all the fixture services, both at boot and during redeployments
 Fixture_Services_File_Name = 'openapi_console_test_services.py'
@@ -111,12 +110,6 @@ _Spec_Timeout = 30
 
 # How long to wait between document fetches
 _Spec_Poll_Interval = 0.5
-
-# How long to wait for a hot-deployed channel change to show up in the channel list
-_Deploy_Timeout = 90
-
-# How long to wait between channel list reloads
-_Deploy_Poll_Interval = 1.0
 
 # The pickup listener deploys a given file at most once per its 2-second debounce window,
 # so consecutive writes keep a slightly longer distance from each other.
@@ -289,29 +282,6 @@ def edit_channel_by_name(page:'Page', dashboard_url:'str', name:'str', options:'
     out = channel_id
 
     return out
-
-# ################################################################################################################################
-
-def wait_for_channel_row_reloading(page:'Page', dashboard_url:'str', name:'str', timeout:'int'=_Deploy_Timeout) -> 'any_':
-    """ Reloads the channel list until a row with the given name appears and returns that row -
-    used after hot-deployments, whose completion is not observable from the UI alone.
-    """
-    deadline = time.monotonic() + timeout
-
-    while True:
-
-        # Reload the filtered channel list ..
-        open_channel_page(page, dashboard_url, query=name)
-
-        # .. and stop as soon as the row is there.
-        if row := find_channel_row(page, name):
-            out = row
-            return out
-
-        if time.monotonic() >= deadline:
-            raise Exception(f'Channel `{name}` did not appear within {timeout}s')
-
-        time.sleep(_Deploy_Poll_Interval)
 
 # ################################################################################################################################
 # ################################################################################################################################

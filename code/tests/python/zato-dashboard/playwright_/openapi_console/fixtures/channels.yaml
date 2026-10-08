@@ -1,0 +1,35 @@
+channel_rest:
+
+  - name: api.test.openapi.typed.get-user
+    service: api.test.openapi.typed.get-user
+    url_path: /api/test/openapi/typed/get-user
+    data_format: json
+    is_active: false
+    should_include_in_openapi: true
+
+  - name: api.test.openapi.untyped.echo
+    service: api.test.openapi.untyped.echo
+    url_path: /api/test/openapi/untyped/echo
+    data_format: json
+    is_active: false
+    should_include_in_openapi: true
+
+  - name: api.test.openapi.methods.multi
+    service: api.test.openapi.methods.multi
+    url_path: /api/test/openapi/methods/multi
+    data_format: json
+    is_active: false
+    should_include_in_openapi: true
+
+  - name: api.test.openapi.prestarted.ping
+    service: api.test.openapi.prestarted.ping
+    url_path: /api/test/openapi/prestarted/ping
+    data_format: json
+    should_include_in_openapi: true
+
+  - name: api.test.openapi.diffing.contract
+    service: api.test.openapi.diffing.contract
+    url_path: /api/test/openapi/diffing/contract
+    data_format: json
+    is_active: false
+    should_include_in_openapi: true
