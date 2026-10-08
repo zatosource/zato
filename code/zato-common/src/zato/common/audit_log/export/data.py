@@ -68,6 +68,8 @@ _sources_without_data = {
     AuditSource.MLLP_Outgoing,
     AuditSource.Kafka_Channel,
     AuditSource.Kafka_Outgoing,
+    AuditSource.SMS_Channel,
+    AuditSource.SMS_Outgoing,
     AuditSource.Scheduler,
     AuditSource.LLM,
     AuditSource.Odoo,
