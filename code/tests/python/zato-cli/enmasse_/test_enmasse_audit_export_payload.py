@@ -8,17 +8,28 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
 from logging import basicConfig, getLogger, WARN
-from tempfile import gettempdir
+from tempfile import gettempdir, mkdtemp
 from unittest import main
 
+_this_directory = os.path.dirname(__file__)
+
+sys.path.insert(0, os.path.join(_this_directory, '..', '..', 'zato-common', 'lib'))
+
 # PyYAML
-import yaml
+import yaml  # noqa: E402
+
+# sh
+from sh import ErrorReturnCode  # noqa: E402
 
 # Zato
-from zato.common.test import rand_string, rand_unicode
-from zato.common.test.enmasse_.base import BaseEnmasseTestCase
-from zato.common.util.open_ import open_w
+from zato.common.test import rand_string, rand_unicode  # noqa: E402
+from zato.common.test.enmasse_.base import BaseEnmasseTestCase  # noqa: E402
+from zato.common.util.open_ import open_w  # noqa: E402
+
+# Live environment
+from live_environment.quickstart import ZatoEnvironment  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -242,10 +253,22 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
     exported only when it is on, and absent from the export of an object that never set it.
     """
 
-    def _cleanup(self) -> 'None':
-        from zato.cli.enmasse.client import cleanup_enmasse
-        from zato.common.defaults import default_server_base_dir
-        cleanup_enmasse(default_server_base_dir)
+    zato:'ZatoEnvironment'
+
+    @classmethod
+    def setUpClass(cls) -> 'None':
+        """ A server of the test's own - the MLLP channel importer reads the listener bounds from a running server.
+        """
+        directory = mkdtemp(prefix='zato_enmasse_audit_export_payload_')
+        cls.zato = ZatoEnvironment(directory, password_prefix='test.enmasse.audit.export.payload')
+        cls.zato.create()
+        cls.zato.start({})
+
+# ################################################################################################################################
+
+    @classmethod
+    def tearDownClass(cls) -> 'None':
+        cls.zato.stop()
 
 # ################################################################################################################################
 
@@ -253,7 +276,8 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
         """ Exports every object type under test and answers with the objects this test created,
         keyed first by type and then by name.
         """
-        _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type=','.join(Object_Types))
+        _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type=','.join(Object_Types),
+            server_dir=self.zato.server_directory)
 
         with open(export_path, 'r') as f:
             export_data = f.read()
@@ -307,10 +331,6 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
         """ Full cycle: import one object of each type with the flag on and one without, export them,
         check that the flag leaves only with the one that has it, then reimport the export and check nothing drifted.
         """
-
-        # sh
-        from sh import ErrorReturnCode
-
         os.environ['Zato_Needs_Config_Reload'] = 'False'
 
         tmp_dir = gettempdir()
@@ -329,7 +349,7 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
         try:
 
             # .. import one object of each type with the flag on and one without ..
-            _ = self.invoke_enmasse(import_path)
+            _ = self.invoke_enmasse(import_path, server_dir=self.zato.server_directory)
 
             # .. the export carries the flag only where it is on ..
             exported = self._export(export_path, suffix)
@@ -344,7 +364,7 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
             with open_w(reimport_path) as f:
                 yaml.safe_dump(reimport_data, f)
 
-            _ = self.invoke_enmasse(reimport_path)
+            _ = self.invoke_enmasse(reimport_path, server_dir=self.zato.server_directory)
 
             # .. and a second export shows the same picture.
             reimported = self._export(reimport_export_path, suffix)
@@ -361,8 +381,6 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
             for path in [import_path, export_path, reimport_path, reimport_export_path]:
                 if os.path.exists(path):
                     os.remove(path)
-
-            self._cleanup()
 
 # ################################################################################################################################
 # ################################################################################################################################
