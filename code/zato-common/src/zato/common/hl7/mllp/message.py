@@ -122,7 +122,6 @@ def handle_message(
     """
 
     connection_context.total_messages_received += 1
-    server.state.on_message_received()
 
     # Trace point 1: the message arrived and processing begins
     message_start = monotonic()
@@ -152,6 +151,10 @@ def handle_message(
 
     # .. process each message (usually just one, unless concatenated) ..
     for message_text in preprocessed:
+
+        # .. the listener counts every message the frame held, the same way each channel counts
+        # .. its own and the acknowledgments are counted, so a frame of two messages is two ..
+        server.state.on_message_received()
 
         # .. extract the MSH line for ACK building ..
         first_cr = message_text.find('\r')

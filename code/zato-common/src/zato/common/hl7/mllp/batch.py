@@ -108,6 +108,9 @@ def handle_batch_payload(
     if settings.should_log_messages:
         logger.info('Processing batch payload (%d bytes) from %s', raw_length, connection_context.endpoint)
 
+    # .. a batch is one unit on the listener's state, as it is answered by one acknowledgment ..
+    server.state.on_message_received()
+
     # .. a matched batch counts on its channel's own state too ..
     if matched_route:
         channel_state = server.get_channel_state(matched_route.channel_name)

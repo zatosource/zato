@@ -178,11 +178,13 @@ def _get_sources(engine:'Engine') -> 'strlist':
 # ################################################################################################################################
 
 def _get_expired_ids(engine:'Engine', source:'str', cutoff_iso:'str') -> 'intlist':
-    """ Returns up to one chunk of ids of one source's events older than the cutoff.
+    """ Returns up to one chunk of ids of one source's events older than the cutoff, oldest first,
+    so an event that closes an exchange never leaves a chunk ahead of the event that opened it.
     """
     query = select(event_table.c.id)
     query = query.where(event_table.c.source == source)
     query = query.where(event_table.c.event_time_iso < cutoff_iso)
+    query = query.order_by(event_table.c.id)
     query = query.limit(_chunk_size)
 
     out:'intlist' = []

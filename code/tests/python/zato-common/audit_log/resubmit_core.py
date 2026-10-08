@@ -587,6 +587,44 @@ def _run_bulk_resubmit_checks(audit_log:'AuditLog') -> 'None':
     # .. and nothing is left in doubt - every claimed key recorded its outcome.
     assert get_in_doubt(engine) == []
 
+    # A row that carries nothing to send is an error row of its own - the rows after it are reached, the
+    # operation is recorded, and the row has no key to leave behind ..
+    no_payload_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _bulk_connection_name,
+        cid='cid-core-bulk-no-payload', outcome=AuditOutcome.Error, status='Connection timeout',
+        data=dumps({'note': 'recorded without its request'}))
+
+    last_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _bulk_connection_name,
+        cid='cid-core-bulk-last', outcome=AuditOutcome.Error, status='Connection timeout',
+        data=dumps({'payload': 'bulk-last'}))
+
+    fourth_result = bulk_resubmit(resubmit_filter, fixed_resubmit_one, audit_log, 'cid-core-bulk-fourth',
+        transform=str.upper)
+
+    assert fourth_result.total == 5
+    assert fourth_result.resubmitted_count == 1
+    assert fourth_result.duplicate_count == 3
+    assert fourth_result.error_count == 1
+    assert resubmitted == ['BULK-ONE', 'BULK-THREE', 'BULK-TWO-BAD', 'BULK-LAST']
+
+    results_by_id = {row['event_id']: row['result'] for row in fourth_result.rows}
+
+    assert results_by_id[no_payload_id] == Row_Error
+    assert results_by_id[last_id] == Row_Resubmitted
+
+    bulk_row = _get_event_row(fourth_result.bulk_event_id)
+    assert bulk_row['outcome'] == AuditOutcome.Error
+
+    # .. and a dry run reports the same row as the error it would be.
+    dry_result = bulk_resubmit(resubmit_filter, fixed_resubmit_one, audit_log, 'cid-core-bulk-dry-no-payload',
+        transform=str.upper, dry_run=True)
+
+    results_by_id = {row['event_id']: row['result'] for row in dry_result.rows}
+
+    assert results_by_id[no_payload_id] == Row_Error
+    assert results_by_id[last_id] == Row_Would_Resubmit
+    assert dry_result.error_count == 1
+    assert get_in_doubt(engine) == []
+
 # ################################################################################################################################
 # ################################################################################################################################
 

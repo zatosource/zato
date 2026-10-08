@@ -118,11 +118,13 @@ listing.lineageFacts = function(rowModel) {
     var out = [];
 
     for (var parentIndex = 0; parentIndex < rowModel.parents.length; parentIndex++) {
-        out.push(listing.lineageFact(config.lineageParentLabel, rowModel.parents[parentIndex].id));
+        var parent = rowModel.parents[parentIndex];
+        out.push(listing.lineageFact(config.lineageParentLabels[parent.link_type], parent.id));
     }
 
     for (var childIndex = 0; childIndex < rowModel.children.length; childIndex++) {
-        out.push(listing.lineageFact(config.lineageChildLabel, rowModel.children[childIndex].id));
+        var child = rowModel.children[childIndex];
+        out.push(listing.lineageFact(config.lineageChildLabels[child.link_type], child.id));
     }
 
     return out;

@@ -156,4 +156,64 @@ class TestChannelCounters(TestCase):
         self.assertIn(b'MSA|AE', sent_bytes)
 
 # ################################################################################################################################
+
+    def test_a_frame_of_two_messages_counts_two_on_the_listener_and_the_channel(self) -> 'None':
+        """ A frame holding two concatenated messages is two messages received on the listener's state as it
+        is on the channel's, and two acknowledgments on both, so the listener's acks and nacks never exceed
+        what it received.
+        """
+        settings = RouteSettings(should_parse_on_input=False, should_split_concatenated_messages=True)
+        server, router, callback = self._make_server(settings)
+
+        first = sample_adt_a01('CTRL_CAT_001')
+        second = sample_adt_a01('CTRL_CAT_002')
+        frame = first + b'\r' + second
+
+        msh_line = first.decode('utf-8').split('\r')[0]
+        matched_route = router.match(msh_line)
+        assert matched_route is not None
+
+        connection_context = ConnectionContext(_sender_ip, _sender_port, '')
+        server._handle_message(MagicMock(), frame, connection_context, matched_route, matched_route.settings)
+
+        channel_state = server.get_channel_state(_channel_name)
+
+        self.assertEqual(len(callback.messages), 2)
+
+        self.assertEqual(channel_state.received, 2)
+        self.assertEqual(channel_state.acked, 2)
+
+        self.assertEqual(server.state.received, 2)
+        self.assertEqual(server.state.acked, 2)
+        self.assertEqual(server.state.acked + server.state.nacked, server.state.received)
+
+# ################################################################################################################################
+
+    def test_a_batch_counts_once_on_the_listener_and_the_channel(self) -> 'None':
+        """ A batch is one unit answered by one acknowledgment, and it is one message received on the
+        listener's state as on the channel's.
+        """
+        settings = RouteSettings(should_parse_on_input=False)
+        server, router, callback = self._make_server(settings)
+
+        batch = b'BHS|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000\r' + sample_adt_a01('CTRL_BATCH_001') + b'\rBTS|1\r'
+
+        msh_line = batch.decode('utf-8').split('\r')[0]
+        matched_route = router.match(msh_line)
+        assert matched_route is not None
+
+        connection_context = ConnectionContext(_sender_ip, _sender_port, '')
+        server._handle_message(MagicMock(), batch, connection_context, matched_route, matched_route.settings)
+
+        channel_state = server.get_channel_state(_channel_name)
+
+        self.assertEqual(len(callback.messages), 1)
+
+        self.assertEqual(channel_state.received, 1)
+        self.assertEqual(channel_state.acked + channel_state.nacked, 1)
+
+        self.assertEqual(server.state.received, 1)
+        self.assertEqual(server.state.acked + server.state.nacked, 1)
+
+# ################################################################################################################################
 # ################################################################################################################################

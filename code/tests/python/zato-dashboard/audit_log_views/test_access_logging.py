@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Access to patient data is itself an audited operation - reading a message body writes
 # one content-viewed row saying who read what, downloading an attachment writes one too,
-# and both name the source and object the viewed event belongs to.
+# and both name the source and object the viewed event belongs to. A message waiting in a
+# delivery queue is read the same way, its row naming the message rather than an event.
 
 # stdlib
 import os
@@ -23,10 +24,13 @@ from sqlalchemy import select
 
 # Zato
 from zato.admin.web.views.audit_log import attachment_download, details
+from zato.admin.web.views.audit_log.sources import render_view_record
+from zato.admin.web.views.outgoing import delivery
 from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditLog, \
     AuditOutcome, AuditSource, ModuleCtx as AuditLogCtx
 from zato.common.audit_log.attachment import build_attachment, list_attachments
-from zato.common.ext.bunch import Bunch
+from zato.common.ext.bunch import Bunch, bunchify
+from zato.common.pubsub.outgoing import Body_Mode_HL7, Key_CID, Key_Conn_Name, Key_Data, Key_Msg_ID, Key_Request
 
 # Test support
 from live_sql.env import database_env
@@ -57,6 +61,13 @@ _pdf_content = b'%PDF-1.4 referral'
 
 # The prefix all the audit log database environment variables share
 _env_prefix = 'Zato_Audit_Log_DB_'
+
+# The queued message the delivery page shows, and the connection it waits in
+_queue_conn_type = 'hl7-mllp'
+_queue_conn_name = 'test.access.logging.orders'
+_queue_cid = 'cid-access-logging-queue'
+_queue_msg_id = 'zpsm-access-logging-1'
+_queue_message = 'MSH|^~\\&|HIS|HOSP|LAB|LAB|20260101||ADT^A01|MSG0001|P|2.5\rPID|1||12345||DOE^JANE\r'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,6 +165,57 @@ def _new_download_request(attachment_id:'int') -> 'Bunch':
     return out
 
 # ################################################################################################################################
+
+class _QueueClient:
+    """ Answers the delivery page's one service call with a queued message, the way a server would.
+    """
+    def invoke(self, service:'str', request:'anydict') -> 'any_':
+        out = bunchify({
+            'ok': True,
+            'details': '',
+            'data': {
+                'document': {
+                    Key_Request: {Key_Data: _queue_message},
+                    Key_CID: _queue_cid,
+                    Key_Msg_ID: _queue_msg_id,
+                    Key_Conn_Name: _queue_conn_name,
+                },
+                'body_mode': Body_Mode_HL7,
+                'destination': 'lab',
+                'facts': [],
+                'invoker': 'orders',
+                'dlq_settings': {},
+            },
+        })
+
+        return out
+
+# ################################################################################################################################
+
+def _new_queue_request(what:'str') -> 'Bunch':
+    """ Builds the request the delivery page's message and download views are called with.
+    """
+    query = QueryDict('', mutable=True)
+    query['conn_type'] = _queue_conn_type
+    query['conn_id'] = '7'
+    query['kind'] = 'queue'
+    query['msg_id'] = _queue_msg_id
+    query['what'] = what
+
+    out = Bunch()
+
+    out.method = 'GET'
+    out.GET = query
+
+    out.user = Bunch()
+    out.user.username = _username
+
+    out.zato = Bunch()
+    out.zato.client = _QueueClient()
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def test_a_body_read_writes_one_content_viewed_row_with_the_actor(tmp_path:'os.PathLike') -> 'None':
@@ -212,3 +274,47 @@ def test_a_missing_attachment_writes_nothing(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# ################################################################################################################################
+
+def test_a_queued_message_read_or_downloaded_writes_one_content_viewed_row_each(tmp_path:'os.PathLike') -> 'None':
+    """ A message waiting in a delivery queue is patient data too - its details window and each of its
+    downloads is recorded, the row naming the message and its connection rather than an audit event.
+    """
+    with _event_to_view(tmp_path):
+
+        response = delivery.message(_new_queue_request(''))
+        assert response.status_code == 200
+
+        response = delivery.download(_new_queue_request(delivery.Download_Body))
+        assert response.status_code == 200
+        assert response.content == _queue_message.encode('utf-8')
+
+        response = delivery.download(_new_queue_request('document'))
+        assert response.status_code == 200
+
+        view_events = _get_view_events()
+        assert len(view_events) == 3
+
+        for view_event in view_events:
+            assert view_event['attrs']['actor'] == _username
+            assert view_event['attrs']['viewed_source'] == _queue_conn_type
+            assert view_event['attrs']['viewed_object_name'] == _queue_conn_name
+            assert view_event['attrs']['viewed_msg_id'] == _queue_msg_id
+            assert 'viewed_event_id' not in view_event['attrs']
+
+        # The record reads by the message's coordinates, there being no event to resolve it against
+        engine = get_audit_engine()
+
+        data_query = select(event_table.c.data, event_table.c.event_time_iso)
+        data_query = data_query.where(event_table.c.id == view_events[0]['id'])
+
+        with engine.connect() as connection:
+            data, event_time_iso = connection.execute(data_query).fetchone()
+
+        rendered = render_view_record(engine, data, event_time_iso)
+
+        assert f'Viewed by:  {_username}' in rendered
+        assert f'Viewed:     {_queue_conn_name} ({_queue_conn_type})' in rendered
+        assert f'Message:    {_queue_msg_id}' in rendered
+        assert 'Screen:     Delivery queue' in rendered

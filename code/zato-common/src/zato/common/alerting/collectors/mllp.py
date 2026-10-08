@@ -20,7 +20,7 @@ from sqlalchemy import and_, func, select
 
 # Zato
 from zato.common.alerting.collectors.common import ack_sources, new_fact, response_event_type_by_source
-from zato.common.audit_log.api import event_table, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditClassification, AuditOutcome, AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,8 +127,10 @@ def collect_mllp_connection_failure_facts(
     """ Measures the messages every outgoing MLLP connection got no acknowledgment for within the window, into
     `connection_failure_count`, one fact per connection that had any. The wrapper writes an ack-received row
     for every exception on the wire - a timeout waiting for the ack, a refused or reset connection, a connection
-    closed early, a TLS handshake that failed - with a failed outcome and no application outcome, and that empty
-    outcome is what tells such a row from a negative acknowledgment, which carries its code there.
+    closed early, a TLS handshake that failed - with a failed outcome, no application outcome and the transient
+    classification, and that classification is what tells such a row from an acknowledgment that did arrive - a
+    negative one, which carries its code as the application outcome, or one that was not understood, which
+    carries neither the code nor the classification.
     """
 
     # Our response to produce
@@ -148,6 +150,7 @@ def collect_mllp_connection_failure_facts(
         event_table.c.event_type == response_event_type_by_source[Connection_Failure_Source],
         event_table.c.outcome == AuditOutcome.Error,
         event_table.c.application_outcome == '',
+        event_table.c.classification == AuditClassification.Transient,
     ]
 
     # The optional criterion narrows the measures only when set

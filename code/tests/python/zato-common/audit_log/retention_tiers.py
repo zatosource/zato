@@ -20,6 +20,8 @@ from common import delete_all_events
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     get_audit_engine, get_source_env_suffix, register_prunability, AuditEvent, AuditLink, AuditLog, AuditOutcome, \
     AuditSource, Env_Retention_Days_Prefix
+from zato.common.audit_log import retention
+from zato.common.audit_log.query import outstanding_conditions
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days
 from zato.common.util.api import utcnow
 
@@ -62,6 +64,13 @@ _x12_retention_days = 30
 
 # The environment variable holding the above
 _env_x12_retention_days = f'{Env_Retention_Days_Prefix}{get_source_env_suffix(AuditSource.X12)}'
+
+# The MLLP outgoing connection whose exchanges the chunk order scenario writes, and how many of them
+_mllp_connection = 'audit.test.retention.mllp'
+_mllp_pair_count = 6
+
+# How many rows one chunk of the row tier takes in that scenario - fewer than the pairs, so the run has several
+_chunk_size = 4
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,6 +142,28 @@ def _count_rows(table:'any_', event_id_column:'any_', event_id:'int') -> 'int':
     query = select(func.count())
     query = query.select_from(table)
     query = query.where(event_id_column == event_id)
+
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        out = result.scalar()
+
+    return out
+
+# ################################################################################################################################
+
+def _count_outstanding(source:'str') -> 'int':
+    """ Counts the open exchanges of one source the way the outstanding filter of the page does.
+    """
+    engine = get_audit_engine()
+
+    conditions = outstanding_conditions(source, AuditEvent.Message_Sent, AuditEvent.Ack_Received, True)
+
+    query = select(func.count())
+    query = query.select_from(event_table)
+    query = query.where(event_table.c.source == source)
+
+    for condition in conditions:
+        query = query.where(condition)
 
     with engine.connect() as connection:
         result = connection.execute(query)
@@ -255,6 +286,63 @@ def run_retention_tiers_scenario() -> 'None':
         _ = os.environ.pop(_env_x12_retention_days, None)
         _ = os.environ.pop(Env_Archive_Dir, None)
         rmtree(archive_dir, ignore_errors=True)
+
+    _run_chunk_order_checks(audit_log)
+
+# ################################################################################################################################
+
+def _run_chunk_order_checks(audit_log:'AuditLog') -> 'None':
+    """ Confirms the row tier deletes expired events oldest first, chunk by chunk, so between two chunks
+    no message reads as outstanding because the acknowledgment that closed it left ahead of it.
+    """
+    delete_all_events()
+
+    for index in range(_mllp_pair_count):
+        msg_id = f'MSG{index:05d}'
+        cid = f'cid-retention-mllp-{index}'
+
+        _ = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, _mllp_connection,
+            cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
+        _ = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Ack_Received, _mllp_connection,
+            cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
+
+    # Every exchange is older than the retention window
+    event_time = utcnow() - timedelta(days=_row_expired_age_days)
+    event_time_iso = event_time.isoformat()
+
+    engine = get_audit_engine()
+
+    backdate_events = event_table.update()
+    backdate_events = backdate_events.where(event_table.c.source == AuditSource.MLLP_Outgoing)
+    backdate_events = backdate_events.values(event_time_iso=event_time_iso)
+
+    with engine.begin() as connection:
+        _ = connection.execute(backdate_events)
+
+    assert _count_outstanding(AuditSource.MLLP_Outgoing) == 0
+
+    # Each chunk is observed as it goes - the deletion itself is the real one
+    outstanding_between_chunks = []
+    delete_events = retention._delete_events
+    chunk_size = retention._chunk_size
+
+    def observing_delete_events(engine:'any_', ids:'any_') -> 'None':
+        delete_events(engine, ids)
+        outstanding_between_chunks.append(_count_outstanding(AuditSource.MLLP_Outgoing))
+
+    retention._delete_events = observing_delete_events
+    retention._chunk_size = _chunk_size
+
+    try:
+        now = utcnow()
+        audit_log._run_retention(now)
+    finally:
+        retention._delete_events = delete_events
+        retention._chunk_size = chunk_size
+
+    # Several chunks ran, and after none of them did a message stand without its acknowledgment
+    assert len(outstanding_between_chunks) > 1, outstanding_between_chunks
+    assert outstanding_between_chunks == [0] * len(outstanding_between_chunks), outstanding_between_chunks
 
 # ################################################################################################################################
 # ################################################################################################################################

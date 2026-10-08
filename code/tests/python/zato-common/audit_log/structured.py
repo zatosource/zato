@@ -312,6 +312,25 @@ def _get_link_rows(child_event_id:'int') -> 'anylist':
 
 # ################################################################################################################################
 
+def _get_child_link_rows(parent_event_id:'int') -> 'anylist':
+    """ Returns the lineage links of one parent event as (child_event_id, link_type) tuples.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_link_table.c.child_event_id, event_link_table.c.link_type)
+    query = query.where(event_link_table.c.parent_event_id == parent_event_id)
+    query = query.order_by(event_link_table.c.id)
+
+    out:'anylist' = []
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            out.append(tuple(row))
+
+    return out
+
+# ################################################################################################################################
+
 def _run_lineage_checks(audit_log:'AuditLog') -> 'None':
     """ Confirms lineage links - multiple parents at insert time and links added
     after the fact, as when a resubmission points back to its original.
@@ -378,6 +397,21 @@ def _run_buffered_writer_checks() -> 'None':
         sleep(0.1)
 
     assert _count_source_events(AuditSource.AS2) == 5, 'The time-based flush never ran'
+
+    # A caller that links further events to one it writes receives the id from a buffered writer too,
+    # so the links of the events that follow are written as they are under a synchronous writer ..
+    parent_id = buffered.insert(AuditSource.MLLP_Channel, AuditEvent.Interchange_Received, 'audit.test.buffered',
+        cid='cid-buffered-batch', needs_id=True)
+    assert parent_id is not None
+
+    _ = buffered.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, 'audit.test.buffered',
+        cid='cid-buffered-batch', parents=[parent_id], parent_link_type=AuditLink.Batch_Item_Of)
+    buffered.flush()
+
+    # .. and the link row names the parent written at once.
+    child_rows = _get_child_link_rows(parent_id)
+    assert len(child_rows) == 1, child_rows
+    assert child_rows[0][1] == AuditLink.Batch_Item_Of, child_rows
 
 # ################################################################################################################################
 # ################################################################################################################################

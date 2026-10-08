@@ -384,10 +384,13 @@ class AuditLog:
         parents:'intlistnone' = None,
         parent_link_type:'str' = AuditLink.Resubmit_Of,
         is_export_payload_active:'bool' = False,
+        needs_id:'bool' = False,
         ) -> 'intnone':
         """ Writes one audit event, at the moment it happens, in the same process.
         Returns the event's id when the write is synchronous, None when it was buffered,
         and None without writing anything when the audit log is turned off.
+        A caller that links further events to this one sets needs_id, which writes the event
+        at once under a buffered writer too, so the id comes back.
         The payload leaves the process with the OTLP export only if is_export_payload_active is set.
         """
 
@@ -457,8 +460,8 @@ class AuditLog:
             'data': data,
         }
 
-        # .. write it now if batching is off ..
-        if self.flush_max_size <= 1:
+        # .. write it now if batching is off, or if the caller needs the id for the events it links to this one ..
+        if self.flush_max_size <= 1 or needs_id:
             out = self._write_batch([pending])
             return out
 

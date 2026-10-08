@@ -26,6 +26,7 @@ from zato.common.destination.audit import record_hop
 from zato.common.destination.constants import DestinationType
 from zato.common.destination.model import new_entry
 from zato.common.hl7.audit import audit_ack_received, audit_message_sent, ACKStatus
+from zato.common.hl7.mllp.ack import validate_ack
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -241,6 +242,30 @@ class TestConnectionFailures:
         _ = _seed_message(audit_log, 'ack-2', 'AE')
 
         assert collect_mllp_connection_failure_facts(engine, _window_seconds, now) == []
+
+    def test_an_acknowledgment_that_was_not_understood_is_not_a_connection_failure(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # An acknowledgment with no MSA segment and one with a code outside table 0008 - both arrived, so
+        # neither is a message that got no acknowledgment at all, and neither is a negative one
+        no_msa_text = 'MSH|^~\\&|LAB|LAB_SYSTEM|ZATO|ZATO|20260914||ACK|ACK-1|P|2.5\r'
+        no_msa_result = validate_ack(no_msa_text, 'nm-1')
+
+        _ = audit_message_sent(audit_log, _conn_name, _message_text, cid='nm-1', msg_id='nm-1', attrs={}, endpoint=_address)
+        _ = audit_ack_received(audit_log, _conn_name, no_msa_result.ack_code, cid='nm-1', msg_id='nm-1',
+            error_text=no_msa_result.error_text)
+
+        _ = audit_message_sent(audit_log, _conn_name, _message_text, cid='uk-1', msg_id='uk-1', attrs={}, endpoint=_address)
+        _ = audit_ack_received(audit_log, _conn_name, 'XX', cid='uk-1', msg_id='uk-1', error_text="Unknown ACK code: 'XX'")
+
+        _ = _seed_message(audit_log, 'to-1', ACKStatus.Timeout)
+
+        fact = _fact_of(collect_mllp_connection_failure_facts(engine, _window_seconds, now), _conn_name)
+
+        assert fact['connection_failure_count'] == 1
+        assert collect_ack_code_facts(engine, _window_seconds, now) == []
 
     def test_another_source_measures_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)

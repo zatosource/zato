@@ -211,6 +211,7 @@ def _render_hl7_parsed(data:'str') -> 'str':
 # know is named by its own code
 _screen_label = {
     'audit-log-browser': 'Audit log',
+    'delivery-queue': 'Delivery queue',
 }
 
 # ################################################################################################################################
@@ -246,14 +247,19 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
     if 'viewed_event_id' not in payload:
         return ''
 
-    # What the viewed event calls itself - its object, its source and its own message id
-    viewed_query = select(
-        event_table.c.object_name, event_table.c.source, event_table.c.msg_id).where(
-        event_table.c.id == payload['viewed_event_id'])
+    # What the viewed event calls itself - its object, its source and its own message id -
+    # when the body was read off an audit event at all, a queued message naming none
+    viewed_row = None
 
-    with engine.connect() as connection:
-        result = connection.execute(viewed_query)
-        viewed_row = result.fetchone()
+    if payload['viewed_event_id'] is not None:
+
+        viewed_query = select(
+            event_table.c.object_name, event_table.c.source, event_table.c.msg_id).where(
+            event_table.c.id == payload['viewed_event_id'])
+
+        with engine.connect() as connection:
+            result = connection.execute(viewed_query)
+            viewed_row = result.fetchone()
 
     lines = []
 
@@ -270,10 +276,15 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
         if viewed_row[2]:
             lines.append(f'Message:    {viewed_row[2]}')
 
-    # .. and one pruned since reads by the coordinates written down at view time
+    # .. and one pruned since, or a message that was never an event, reads by the coordinates
+    # written down at view time - a record older than the message id carries none
     elif payload['viewed_object_name']:
         viewed_source_label = _view_source_label(payload['viewed_source'])
         lines.append(f'Viewed:     {payload["viewed_object_name"]} ({viewed_source_label})')
+
+        if 'viewed_msg_id' in payload:
+            if payload['viewed_msg_id']:
+                lines.append(f'Message:    {payload["viewed_msg_id"]}')
 
     screen = payload['screen']
 

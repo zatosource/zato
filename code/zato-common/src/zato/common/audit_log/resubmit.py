@@ -586,12 +586,21 @@ def bulk_resubmit(
         row:'stranydict' = {'event_id': event_id, 'result': '', 'detail': ''}
         out.rows.append(row)
 
-        event = load_event(event_id)
-        payload = get_stored_payload(event)
+        # A row whose event cannot be loaded, or carries nothing to send, is an error row of its own and
+        # the rest of the operation goes on - there is no key to release, as none was claimed for it yet
+        try:
+            event = load_event(event_id)
+            payload = get_stored_payload(event)
 
-        # The optional transform happens before anything is sent or reported
-        if transform:
-            payload = transform(payload)
+            # The optional transform happens before anything is sent or reported
+            if transform:
+                payload = transform(payload)
+
+        except Exception:
+            row['result'] = Row_Error
+            row['detail'] = format_exc()
+            out.error_count += 1
+            continue
 
         # A dry run stops here - the row reports what would happen
         if dry_run:
