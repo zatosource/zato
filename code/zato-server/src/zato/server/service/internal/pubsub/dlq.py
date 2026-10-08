@@ -41,6 +41,10 @@ _dlq = HTTP_SOAP.DLQ
 
 _pending = 'pending'
 
+# The cursor a browse starts from, and how many messages each page of a browse holds
+_cursor_start = '-'
+_read_page_size = 500
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -77,12 +81,20 @@ class _DLQService(AdminService):
     def _get_all_documents(self, topic_name:'str', sub_key:'str') -> 'anylist':
         """ Every message a DLQ holds, oldest first, each as its id and its document.
         """
-        messages, _ = self.server.pubsub_backend.browse_messages(topic_name, sub_key, _pending, needs_data=True)
+        backend = self.server.pubsub_backend
 
         out:'anylist' = []
+        cursor = _cursor_start
 
-        for message in messages:
-            out.append((message['msg_id'], loads(message['data'])))
+        # The messages come in pages until there is no next one, so a DLQ deeper than one page is read whole
+        while True:
+            messages, cursor = backend.browse_messages(topic_name, sub_key, _pending, cursor, _read_page_size, needs_data=True)
+
+            for message in messages:
+                out.append((message['msg_id'], loads(message['data'])))
+
+            if not cursor:
+                break
 
         return out
 

@@ -66,6 +66,10 @@ Ack_Codes_Default = 'ack_codes'
 # The rule default a type's window field reads and writes - how far back the
 # error-rate and failure-count facts of the type's sources are measured over.
 Window_Seconds_Default = 'window_seconds'
+
+# The rule default a type's Failures in a row field reads and writes - how many of an object's newest calls
+# must have failed one after another, and so how many the streak collector has to read.
+Consecutive_Failures_Default = 'max_consecutive_failures'
 Window_Field_Name = 'window'
 
 # The silence a channel tolerates and the time slots with a silence of their own
@@ -97,7 +101,7 @@ _file_transfer_measures = [Measure_Error_Rate, Measure_Latency, Measure_File_Run
 # wherever they overlap.
 _http_failure_fields:'list[stranydict]' = [
     {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-        'default': 'max_consecutive_failures', 'is_percent': False},
+        'default': Consecutive_Failures_Default, 'is_percent': False},
     {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
         'default': 'error_rate_threshold', 'is_percent': True},
     {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
@@ -206,7 +210,7 @@ _ack_fields:'list[stranydict]' = [
 # with no window at all, how many tools the gateway exposes.
 _mcp_failure_fields:'list[stranydict]' = [
     {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Gateway_Failing'],
-        'default': 'max_consecutive_failures', 'is_percent': False},
+        'default': Consecutive_Failures_Default, 'is_percent': False},
     {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
         'default': 'error_rate_threshold', 'is_percent': True},
     {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
@@ -268,7 +272,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     'fhir': _http_failure_fields + _fhir_outcome_fields + _http_traffic_fields,
     'sql': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
+            'default': Consecutive_Failures_Default, 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
@@ -282,7 +286,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     'mcp': _mcp_failure_fields + _mcp_caller_fields + _mcp_traffic_fields + _mcp_configuration_fields + _use_llm_fields,
     'microsoft': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
+            'default': Consecutive_Failures_Default, 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
@@ -294,7 +298,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     ],
     'email': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
+            'default': Consecutive_Failures_Default, 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
@@ -305,7 +309,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     ],
     'odoo': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
+            'default': Consecutive_Failures_Default, 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
@@ -318,7 +322,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     ],
     'file_transfer': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
+            'default': Consecutive_Failures_Default, 'is_percent': False},
         {'name': 'warning_failures', 'kind': Kind_Number, 'rules': ['Transfer_Failures'],
             'default': 'warning_failure_count', 'is_percent': False},
         {'name': 'error_failures', 'kind': Kind_Number, 'rules': ['Transfer_Failures_Error', 'Transfer_Failures'],
@@ -343,7 +347,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     ],
     'channels': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Channel_Failing'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
+            'default': Consecutive_Failures_Default, 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Channel_Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Channel_Error_Rate'],
@@ -372,7 +376,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     ],
     'mllp_channel': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Channel_Failing'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
+            'default': Consecutive_Failures_Default, 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],
@@ -385,7 +389,7 @@ type_fields:'dict[str, list[stranydict]]' = {
     ] + _use_llm_fields,
     'mllp_outgoing': [
         {'name': 'consecutive_failures', 'kind': Kind_Number, 'rules': ['Connection_Down'],
-            'default': 'max_consecutive_failures', 'is_percent': False},
+            'default': Consecutive_Failures_Default, 'is_percent': False},
         {'name': 'error_rate', 'kind': Kind_Number, 'rules': ['Error_Rate'],
             'default': 'error_rate_threshold', 'is_percent': True},
         {'name': Window_Field_Name, 'kind': Kind_Duration, 'rules': ['Error_Rate'],

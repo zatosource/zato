@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from json import loads
+from json import dumps, loads
 
 # gevent
 from gevent import sleep
@@ -16,8 +16,9 @@ from gevent import sleep
 from common import delete_all_rows
 from outgoing import _as_server, _deliver_to_test_connection, _locate_test_connection, _name_orders, _new_connection, \
     _StubServer, _deliveries, _stop_all_deliveries, _wait_until
-from zato.common.api import HTTP_SOAP
-from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, Header_Rounds, Key_DLQ
+from zato.common.api import HTTP_SOAP, PubSub
+from zato.common.pubsub.dlq import DLQ_Sub_Key_Prefixes, get_dlq_sub_key, get_dlq_topic_name, Header_Moved_Time, Header_Rounds, \
+    Header_Rule_Rounds, Key_DLQ
 from zato.common.pubsub.outgoing import OutgoingPublisher, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.typing_ import cast_
@@ -402,6 +403,47 @@ def _run_operator_forward_during_rule_flow() -> 'None':
     server.pubsub_push_delivery.stop()
 
 # ################################################################################################################################
+
+def _run_dlq_deeper_than_a_page_flow() -> 'None':
+    """ One run of the DLQ rule acts on every due message of a DLQ deeper than one page of a browse.
+    """
+    delete_all_rows()
+
+    server = _new_server()
+    backend = server.pubsub_backend
+
+    dlq_sub_key = _get_dlq_sub_key()
+    dlq_topic_name = get_dlq_topic_name(_conn_type, _name_orders)
+    backend.subscribe(dlq_sub_key, dlq_topic_name)
+
+    # The DLQ holds more messages than one page of a browse returns, each due at once ..
+    message_count = PubSub.Message.Default_Max_Messages + 5
+    moved_time = utcnow().isoformat()
+
+    for index in range(message_count):
+        document = {Key_DLQ: {Header_Moved_Time: moved_time, Header_Rule_Rounds: 0}}
+        _ = backend.publish(dlq_topic_name, dumps(document), publisher='test', msg_id=f'zpsm.dlq.page.{index:03d}')
+
+    # .. the depth the alert line reads is every one of them ..
+    counts = backend.get_pending_counts_by_prefix(DLQ_Sub_Key_Prefixes[0])
+    assert counts[dlq_sub_key] == message_count, counts
+
+    settings = dict(_settings)
+    settings[_dlq.Field_Action] = _dlq.Action.Discard
+
+    rule = _new_rule(server)
+
+    # .. one run of the rule discards every one of them ..
+    count = rule._run_for_connection(dlq_sub_key, _conn_type, _name_orders, settings, utcnow())
+    assert count == message_count, count
+
+    # .. and the DLQ is empty.
+    messages = _get_dlq_messages(server)
+    assert not messages, messages
+
+    server.pubsub_push_delivery.stop()
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def run_dlq_rule_scenario() -> 'None':
@@ -414,6 +456,7 @@ def run_dlq_rule_scenario() -> 'None':
         _run_operator_retry_then_rule_flow()
         _run_operator_retry_during_rule_flow()
         _run_operator_forward_during_rule_flow()
+        _run_dlq_deeper_than_a_page_flow()
 
     finally:
         _stop_all_deliveries()

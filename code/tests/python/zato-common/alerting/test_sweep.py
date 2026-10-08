@@ -716,6 +716,33 @@ class TestObjectSettings:
 
 # ################################################################################################################################
 
+    def test_an_inactive_object_is_not_measured(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-unmeasured-1')
+        _seed_transfer_failure(audit_log, engine, now, _settings_other_name, cid='settings-unmeasured-2')
+
+        rules_text = _window_rules_text.format(window_seconds=86400)
+
+        # With the object on, the sweep measures both ..
+        object_settings = _new_object_settings(is_active=True)
+        result, _ = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-unmeasured-1', object_settings)
+
+        facts_with_object_on = result.fact_count
+
+        # .. with it off, its facts leave before any rule reads them and the other object is measured as before,
+        # its alert being the one the first sweep raised already.
+        object_settings = _new_object_settings(is_active=False)
+        result, _ = _run_settings_sweep(engine, audit_log, now, rules_text, 'cid-settings-unmeasured-2', object_settings)
+
+        assert result.fact_count == facts_with_object_on - 1
+        assert result.finding_count == 1
+        assert result.deduplicated_count == 1
+
+# ################################################################################################################################
+
     def test_a_toggle_that_is_off_mutes_its_rule_for_that_object(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()

@@ -129,9 +129,10 @@ def handle_message(
 
     trace('message #%d in (%d bytes)', connection_context.total_messages_received, byte_count)
 
+    # .. the switch logs the message in full, as the channel's description says it does ..
     if settings.should_log_messages:
-        logger.info('Received message #%d (%d bytes) from %s',
-            connection_context.total_messages_received, byte_count, connection_context.endpoint)
+        logger.info('Received message #%d (%d bytes) from %s -> %r',
+            connection_context.total_messages_received, byte_count, connection_context.endpoint, raw_message_bytes)
 
     # Run the pre-processing pipeline under the matched channel's own settings ..
     preprocessed = preprocess_message(

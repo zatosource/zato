@@ -20,7 +20,7 @@ from sqlalchemy import update
 # Zato
 from zato.common.alerting.collectors import collect_ack_code_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_facts, collect_latency_facts, collect_mllp_connection_failure_facts, \
-    Measure_Ack_Codes, Measure_Connection_Failures, Window_Seconds_By_Measure_Key
+    Default_Consecutive_Depth, Measure_Ack_Codes, Measure_Connection_Failures, Window_Seconds_By_Measure_Key
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
 from zato.common.destination.audit import record_hop
 from zato.common.destination.constants import DestinationType
@@ -54,6 +54,9 @@ _address = 'lab.example.com:2575'
 
 # The window the measures cover in these tests, in seconds
 _window_seconds = 3600
+
+# A Failures in a row threshold above the depth the collector reads by default
+_deep_threshold = 4
 
 # The message the sent rows carry as their body
 _message_text = 'MSH|^~\\&|ZATO|ZATO|LAB|LAB_SYSTEM|20260914||ORU^R01|MSG-1|P|2.5\rPID|||123'
@@ -346,6 +349,24 @@ class TestAcksAlone:
 
         assert fact['consecutive_failures'] == 3
 
+    def test_a_run_of_failures_longer_than_the_default_depth_is_counted_to_the_depth_asked_for(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_message(audit_log, 'deep-1', 'AE')
+        _ = _seed_message(audit_log, 'deep-2', 'AE')
+        _ = _seed_message(audit_log, 'deep-3', ACKStatus.Timeout)
+        _ = _seed_message(audit_log, 'deep-4', 'AE')
+
+        # Read to the default depth, the run reads as the depth ..
+        fact = _fact_of(collect_consecutive_failure_facts(engine, now), _conn_name)
+        assert fact['consecutive_failures'] == Default_Consecutive_Depth
+
+        # .. read as deep as a threshold of four asks for, the run reads whole.
+        fact = _fact_of(collect_consecutive_failure_facts(engine, now, depth=_deep_threshold), _conn_name)
+        assert fact['consecutive_failures'] == _deep_threshold
+
     def test_the_latency_is_the_acks_duration(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
@@ -356,6 +377,20 @@ class TestAcksAlone:
 
         fact = _fact_of(collect_latency_facts(engine, _window_seconds, now), _conn_name)
 
+        assert fact['avg_duration_ms'] == 200
+
+    def test_a_message_no_acknowledgment_came_back_for_is_not_averaged(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        _ = _seed_message(audit_log, 'unanswered-1', 'AA', duration_ms=100)
+        _ = _seed_message(audit_log, 'unanswered-2', ACKStatus.Timeout, duration_ms=5000)
+        _ = _seed_message(audit_log, 'unanswered-3', 'AE', duration_ms=300)
+
+        fact = _fact_of(collect_latency_facts(engine, _window_seconds, now), _conn_name)
+
+        # The acknowledgments that arrived, positive or negative, are averaged, the wait for one that never did is not
         assert fact['avg_duration_ms'] == 200
 
 # ################################################################################################################################

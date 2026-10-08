@@ -266,6 +266,75 @@ def get_names_with_toggle(settings_by_object:'anydict', toggle_name:'str') -> 's
 
 # ################################################################################################################################
 
+def _get_object_sources(alert_type:'str') -> 'strlist':
+    """ The audit sources whose facts are about the objects of an alert type.
+    """
+    if alert_type in _object_sources_by_type:
+        out = _object_sources_by_type[alert_type]
+    else:
+        out = config_map.type_sources[alert_type]
+
+    return out
+
+# ################################################################################################################################
+
+def get_consecutive_depth(object_settings:'anydict', default_depth:'int') -> 'int':
+    """ How many of each object's newest calls the streak collector has to read - the highest Failures in a row
+    threshold any active object sets, and never fewer than the default the rules' own thresholds fit in,
+    because a streak read over fewer rows than a threshold asks for can never reach it.
+    """
+
+    # Our response to produce
+    out = default_depth
+
+    for alert_type, by_object in object_settings.items():
+
+        for field in config_map.type_fields[alert_type]:
+
+            # Toggles and text fields carry no default a rule reads, and only the streak threshold is wanted here
+            if field.get('default') != config_map.Consecutive_Failures_Default:
+                continue
+
+            for values in by_object.values():
+
+                # An object switched off is not measured, so its threshold asks for nothing
+                if not is_object_active(values):
+                    continue
+
+                # A count stands in the rules as it is on the screen
+                threshold:'int' = values[field['name']]
+
+                if threshold > out:
+                    out = threshold
+
+    return out
+
+# ################################################################################################################################
+
+def get_inactive_keys(object_settings:'anydict') -> 'set[tuple[str, str]]':
+    """ The source and the name of every object whose Active switch is off - the facts about such an object
+    are not measured.
+    """
+
+    # Our response to produce
+    out:'set[tuple[str, str]]' = set()
+
+    for alert_type, by_object in object_settings.items():
+
+        object_sources = _get_object_sources(alert_type)
+
+        for object_name, values in by_object.items():
+
+            if is_object_active(values):
+                continue
+
+            for source in object_sources:
+                out.add((source, object_name))
+
+    return out
+
+# ################################################################################################################################
+
 def get_silence_expected_names(object_settings:'anydict', now:'datetime') -> 'strset':
     """ The active channels whose silence slot of the moment says traffic is expected -
     the ones the silence collector measures in this sweep.
@@ -312,10 +381,7 @@ def build_window_seconds_by_object(object_settings:'anydict', window_seconds_by_
         if not window_fields:
             continue
 
-        if alert_type in _object_sources_by_type:
-            object_sources = _object_sources_by_type[alert_type]
-        else:
-            object_sources = config_map.type_sources[alert_type]
+        object_sources = _get_object_sources(alert_type)
 
         for source in object_sources:
 
@@ -325,6 +391,10 @@ def build_window_seconds_by_object(object_settings:'anydict', window_seconds_by_
                 source_windows = {}
 
             for object_name, values in by_object.items():
+
+                # An object switched off is not measured, so it has no window of its own to be measured over
+                if not is_object_active(values):
+                    continue
 
                 for field in window_fields:
 

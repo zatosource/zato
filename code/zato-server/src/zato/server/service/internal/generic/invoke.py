@@ -153,9 +153,10 @@ class Invoke(AdminService):
                     # The response is JSON and the caller needs text
                     response = dumps(response, indent=2)
 
-                # .. other connections, e.g. MLLP, send the request as a message.
+                # .. other connections, e.g. MLLP, send the request as a message - a test message, which waits
+                # .. for its acknowledgment as long as the connection's max_wait_time says.
                 else:
-                    response = client.invoke(request_data)
+                    response = client.invoke(request_data, is_test_message=True)
 
                     # The result is an AckResult and the caller needs the acknowledgment itself, i.e. the raw ER7 text
                     response = response.ack_text

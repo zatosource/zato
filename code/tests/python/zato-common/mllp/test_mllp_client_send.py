@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import socket
 from threading import Thread
 from time import monotonic, sleep
@@ -26,7 +27,9 @@ from zato.server.generic.api.outconn_hl7_mllp import _HL7MLLPConnection
 # ################################################################################################################################
 
 if 0:
+    from pytest import LogCaptureFixture
     from zato.common.typing_ import callable_
+    LogCaptureFixture = LogCaptureFixture
 
     callable_ = callable_
 
@@ -34,6 +37,9 @@ if 0:
 # ################################################################################################################################
 
 _Host = '127.0.0.1'
+
+# The logger the client writes its message lines to
+_Client_Logger_Name = 'zato.common.hl7.mllp.client'
 
 _Start_Sequence = b'\x0b'
 _End_Sequence   = b'\x1c\x0d'
@@ -44,6 +50,10 @@ _Listener_Read_Timeout = 5.0
 # How long a send waits for its acknowledgment, in seconds and in the milliseconds a connection's config has
 _Receive_Timeout = 0.3
 _Receive_Timeout_Ms = 300
+
+# How long a test message from the Invoke screen waits, in seconds, and a pause that falls between the two waits
+_Max_Wait_Time = 2
+_Answer_Pause = 1.0
 
 # What share of the receive timeout passes between two pieces of an acknowledgment that arrives in pieces -
 # each gap is inside the timeout and the three of them together are outside it
@@ -164,6 +174,15 @@ def _answer_aa(conn:'socket.socket', frame:'bytes') -> 'None':
     conn.sendall(ack)
 
 # ################################################################################################################################
+
+def _answer_aa_after_a_pause(conn:'socket.socket', frame:'bytes') -> 'None':
+    """ Answers after recv_timeout has passed and before max_wait_time has.
+    """
+    sleep(_Answer_Pause)
+    ack = _build_ack(frame, 'AA')
+    conn.sendall(ack)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _build_client(port:'int') -> 'HL7MLLPClient':
@@ -179,6 +198,7 @@ def _build_connection(port:'int') -> '_HL7MLLPConnection':
     config.start_seq = '0b'
     config.end_seq = '1c 0d'
     config.recv_timeout = _Receive_Timeout_Ms
+    config.max_wait_time = _Max_Wait_Time
     config.max_msg_size = 2_000_000
     config.read_buffer_size = 4096
     config.should_log_messages = False
@@ -282,6 +302,74 @@ class TestClientSend:
 
         on_wire = receiving_system.frame[len(_Start_Sequence):-len(_End_Sequence)]
         assert on_wire == given
+
+# ################################################################################################################################
+
+    def test_with_the_switch_on_the_message_and_the_acknowledgment_are_logged_in_full(self, caplog:'LogCaptureFixture') -> 'None':
+        """ A connection whose should_log_messages switch is on logs the framed message it sends and the
+        acknowledgment it receives, both in full.
+        """
+        receiving_system = _ReceivingSystem(_answer_aa)
+
+        try:
+            client = HL7MLLPClient(_Host, receiving_system.port, _Start_Sequence, _End_Sequence,
+                receive_timeout=_Receive_Timeout, should_log_messages=True)
+            data = _Message_With_Control_Id.encode('utf-8')
+
+            with caplog.at_level(logging.INFO, logger=_Client_Logger_Name):
+                result = client.send(data, 'CTRL-0001')
+
+        finally:
+            receiving_system.close()
+
+        assert result.is_accepted
+
+        # The log carries the message as framed and the acknowledgment with its framing removed
+        ack = _build_ack(receiving_system.frame, 'AA')
+        ack_body = ack[len(_Start_Sequence):-len(_End_Sequence)]
+
+        logged = caplog.text
+        assert repr(receiving_system.frame) in logged
+        assert repr(ack_body) in logged
+
+# ################################################################################################################################
+
+    def test_a_test_message_waits_max_wait_time_for_its_acknowledgment(self) -> 'None':
+        """ A test message from the Invoke screen waits the connection's max_wait_time for its acknowledgment,
+        not its recv_timeout - an answer that comes after recv_timeout and within max_wait_time is accepted.
+        """
+        receiving_system = _ReceivingSystem(_answer_aa_after_a_pause)
+
+        try:
+            connection = _build_connection(receiving_system.port)
+            data = _Message_With_Control_Id.encode('utf-8')
+
+            result = connection.invoke(data, needs_audit=False, is_test_message=True)
+
+        finally:
+            receiving_system.close()
+
+        assert result.is_accepted
+
+# ################################################################################################################################
+
+    def test_a_services_send_waits_recv_timeout_for_its_acknowledgment(self) -> 'None':
+        """ A service's send through the same connection is held to recv_timeout - the same answer, after
+        recv_timeout and within max_wait_time, is a timed out send.
+        """
+        receiving_system = _ReceivingSystem(_answer_aa_after_a_pause)
+
+        try:
+            connection = _build_connection(receiving_system.port)
+            data = _Message_With_Control_Id.encode('utf-8')
+
+            with pytest.raises(HL7Exception) as raised:
+                _ = connection.invoke(data, needs_audit=False, needs_retry=False)
+
+        finally:
+            receiving_system.close()
+
+        assert 'Timed out waiting for ACK response' in str(raised.value)
 
 # ################################################################################################################################
 # ################################################################################################################################

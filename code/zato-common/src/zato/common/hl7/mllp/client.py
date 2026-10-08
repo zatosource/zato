@@ -91,10 +91,15 @@ class HL7MLLPClient:
 
 # ################################################################################################################################
 
-    def send(self, data:'bytes', control_id:'str' = '') -> 'AckResult':
+    def send(self, data:'bytes', control_id:'str' = '', receive_timeout:'float | None' = None) -> 'AckResult':
         """ Sends a framed HL7 message and returns a validated AckResult. The acknowledgment is held to the control
-        id given, so a message with no MSH-10 is answered correctly only by an acknowledgment with an empty MSA-2.
+        id given, so a message with no MSH-10 is answered correctly only by an acknowledgment with an empty MSA-2,
+        and it is waited for the connection's receive timeout unless the caller sets one of its own.
         """
+
+        # The deadline is the connection's unless the caller brought one, as a test message from the Invoke screen does
+        if receive_timeout is None:
+            receive_timeout = self.receive_timeout
 
         # A message over the size this connection was configured for is turned away here rather
         # than put on the wire. The receiving side holds its senders to a bound of its own and
@@ -107,8 +112,9 @@ class HL7MLLPClient:
         # Frame the outbound message ..
         framed_message = frame_encode(data, self.start_sequence, self.end_sequence)
 
+        # .. the switch logs the message in full, as the connection's description says it does ..
         if self.should_log_messages:
-            logger.info('Sending %d bytes to %s:%d', len(framed_message), self.host, self.port)
+            logger.info('Sending %d bytes to %s:%d -> %r', len(framed_message), self.host, self.port, framed_message)
 
         # .. open a TCP connection with a connect timeout ..
         raw_socket = socket.create_connection(
@@ -129,16 +135,16 @@ class HL7MLLPClient:
                 active_socket = raw_socket
 
             # .. set the receive timeout for reading the ACK ..
-            active_socket.settimeout(self.receive_timeout)
+            active_socket.settimeout(receive_timeout)
 
             # .. send the full framed message (sendall prevents silent truncation) ..
             active_socket.sendall(framed_message)
 
             # .. read the ACK response using FrameDecoder to handle TCP fragmentation ..
-            ack_bytes = self._receive_ack(active_socket)
+            ack_bytes = self._receive_ack(active_socket, receive_timeout)
 
             if self.should_log_messages:
-                logger.info('Received ACK: %d bytes', len(ack_bytes))
+                logger.info('Received ACK: %d bytes -> %r', len(ack_bytes), ack_bytes)
 
             # .. decode and validate the ACK.
             ack_string = ack_bytes.decode('utf-8', errors='replace')
@@ -151,13 +157,13 @@ class HL7MLLPClient:
 
 # ################################################################################################################################
 
-    def _receive_ack(self, active_socket:'socket.socket') -> 'bytes':
+    def _receive_ack(self, active_socket:'socket.socket', receive_timeout:'float') -> 'bytes':
         """ Reads from the socket until a complete MLLP-framed ACK is received. The receive timeout is one deadline
         for the whole acknowledgment, however many reads it arrives in.
         """
 
         decoder = FrameDecoder(self.start_sequence, self.end_sequence, self.max_message_size)
-        deadline = monotonic() + self.receive_timeout
+        deadline = monotonic() + receive_timeout
 
         while True:
 

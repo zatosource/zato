@@ -124,6 +124,9 @@ class _HL7MLLPConnection:
         # Config recv_timeout is in milliseconds, the client expects seconds
         receive_timeout = config.recv_timeout / _ms_per_second
 
+        # How long a test message from the Invoke screen waits for its acknowledgment, in seconds
+        self.max_wait_time = config.max_wait_time
+
         # TLS turns on when a CA bundle is configured - the client then always verifies
         # the server against it, and a cert/key pair, if also configured, enables mTLS.
         if config.tls_ca_path:
@@ -156,14 +159,22 @@ class _HL7MLLPConnection:
         cid:'str'='',
         needs_audit:'bool'=True,
         needs_retry:'bool'=True,
+        is_test_message:'bool'=False,
         ) -> 'AckResult':
         """ Sends data and returns an AckResult, of whatever code the receiving system answered with. The input may
         be ER7 text, raw bytes or a parsed message object, e.g. when a service forwards the parsed input its channel
         gave it. Bytes are sent as given, in whatever encoding they are in, and text is sent as UTF-8. A send that
         no acknowledgment came back from is tried again under the connection's retry policy,
         unless the caller retries on its own, as the queue does. The audit pair is written under the caller's
-        correlation id, and a resubmit turns the pair off because it records its own events.
+        correlation id, and a resubmit turns the pair off because it records its own events. A test message from
+        the Invoke screen waits max_wait_time seconds for its acknowledgment instead of the connection's recv_timeout.
         """
+
+        # A test message from the Invoke screen is given the wait the form promises it, any other send the connection's
+        if is_test_message:
+            receive_timeout = self.max_wait_time
+        else:
+            receive_timeout = self.impl.receive_timeout
 
         # Everything is normalized to text first - it is what the audit trail stores
         # and what the control id is extracted from ..
@@ -199,7 +210,7 @@ class _HL7MLLPConnection:
         send_start = monotonic()
 
         def send() -> 'AckResult':
-            out = self.impl.send(wire_data, control_id)
+            out = self.impl.send(wire_data, control_id, receive_timeout)
             return out
 
         # A send that raises means no acknowledgment ever arrived - a transient

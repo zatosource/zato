@@ -16,8 +16,8 @@ from __future__ import annotations
 # Zato
 from zato.common.alerting.collectors.backlogs import collect_feed_silent_facts, collect_outstanding_facts
 from zato.common.alerting.collectors.channels import collect_channel_silence_facts, collect_channel_status_facts
-from zato.common.alerting.collectors.common import new_fact, Default_Begin_Event_Type, Default_End_Event_Type, \
-    Default_Window_Seconds, Health_Window_Seconds, Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
+from zato.common.alerting.collectors.common import new_fact, Default_Begin_Event_Type, Default_Consecutive_Depth, \
+    Default_End_Event_Type, Default_Window_Seconds, Health_Window_Seconds, Measure_Ack_Codes, Measure_Auth_Failures, Measure_Client_Errors, \
     Measure_Connection_Failures, Measure_Error_Rate, Measure_File_Runs, Measure_Invalid_Calls, Measure_Latency, \
     Measure_MCP_Truncations, Measure_Operation_Outcomes, Measure_Refusals, Measure_Rejections, Measure_Repeat_Calls, \
     Measure_Server_Errors, Measure_SOAP_Faults, Measure_Status_Codes, Measure_Throttled, Measure_Tokens, Measure_Truncations, \
@@ -283,6 +283,7 @@ def collect_facts(
     silence_expected_names:'strset | None' = None,
     tool_counts:'strintdict | None' = None,
     queue_rows:'dictlist | None' = None,
+    consecutive_depth:'int' = Default_Consecutive_Depth,
     ) -> 'dictlist':
     """ Runs every fact producer and merges their measures into one fact
     per (source, object) pair - the input the alert rules match over. The per-source
@@ -350,7 +351,7 @@ def collect_facts(
         windowed_fact_lists.append(
             _collect_measure(engine, measure, now, window_seconds, window_seconds_by_source, window_seconds_by_object))
 
-    consecutive_facts = collect_consecutive_failure_facts(engine, now)
+    consecutive_facts = collect_consecutive_failure_facts(engine, now, depth=consecutive_depth)
     outstanding_facts = collect_outstanding_facts(engine, begin_event_type, end_event_type, now)
     silent_facts = collect_feed_silent_facts(metrics_by_name, source)
     channel_silent_facts = collect_channel_silence_facts(engine, now, silence_expected_names)

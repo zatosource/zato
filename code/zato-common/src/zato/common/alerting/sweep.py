@@ -27,14 +27,15 @@ from gevent import sleep
 
 # Zato
 from zato.common.alerting.ack_codes import apply_ack_codes
-from zato.common.alerting.collectors import collect_facts
+from zato.common.alerting.collectors import collect_facts, Default_Consecutive_Depth
 from zato.common.alerting.config_map import read_window_seconds_by_measure, type_sources, type_to_ruleset, \
     Explain_With_LLM_Key
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
 from zato.common.alerting.object_config import Email_Connection_Config_Key, LLM_Connection_Config_Key
-from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
-    get_llm_connection, get_muted_rule_names, get_silence_expected_names, is_object_active
+from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_consecutive_depth, \
+    get_email_connection, get_inactive_keys, get_llm_connection, get_muted_rule_names, get_silence_expected_names, \
+    is_object_active
 from zato.common.alerting.fact_message import build_fact_message as build_fact_message
 from zato.common.alerting.fault_codes import apply_fault_codes
 from zato.common.alerting.outcome_codes import apply_outcome_codes
@@ -445,10 +446,24 @@ def run_sweep(
     # The channels whose settings say traffic is expected at this time of day are the ones measured for silence
     silence_expected_names = get_silence_expected_names(object_settings, now)
 
+    # The streak collector reads as many of each object's newest calls as the highest threshold in force asks for
+    consecutive_depth = get_consecutive_depth(object_settings, Default_Consecutive_Depth)
+
     facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
         window_seconds_by_object=window_seconds_by_object, job_intervals=job_intervals, arrival_windows=arrival_windows,
         schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names, tool_counts=tool_counts,
-        queue_rows=queue_rows)
+        queue_rows=queue_rows, consecutive_depth=consecutive_depth)
+
+    # An object switched off is not measured - its facts leave before any rule reads them
+    inactive_keys = get_inactive_keys(object_settings)
+    measured_facts:'dictlist' = []
+
+    for fact in facts:
+        if (fact['source'], fact['object_name']) in inactive_keys:
+            continue
+        measured_facts.append(fact)
+
+    facts = measured_facts
     out.fact_count = len(facts)
 
     for rule in rules:

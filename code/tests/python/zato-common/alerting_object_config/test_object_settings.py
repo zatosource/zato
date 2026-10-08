@@ -22,8 +22,9 @@ from zato.common.alerting.object_config import alert_type_channels, alert_type_f
     alert_type_soap, \
     encode_email_connection, Email_Conn_Type_IMAP, get_defaults, to_storage
 from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
-    get_llm_connection, get_muted_rule_names, get_names_with_toggle, get_silence_expected_names, is_object_active, \
-    load_object_settings
+    get_consecutive_depth, get_inactive_keys, get_llm_connection, get_muted_rule_names, get_names_with_toggle, \
+    get_silence_expected_names, \
+    is_object_active, load_object_settings
 from zato.common.api import CONNECTION, FileTransfer, GENERIC, URL_TYPE
 from zato.common.audit_log.api import AuditSource
 from zato.common.json_internal import dumps
@@ -63,6 +64,12 @@ _fhir_name = 'ehr.fhir'
 _llm_name = 'support.assistant'
 _mllp_name = 'adt.mllp'
 _mllp_outgoing_name = 'lab.mllp'
+_other_mllp_outgoing_name = 'results.mllp'
+
+# How deep the streak collector reads by default, and two Failures in a row thresholds above it
+_default_depth = 3
+_deep_threshold = 4
+_deeper_threshold = 6
 
 # The schedules the SFTP connection carries
 _schedule_name = 'Daily results'
@@ -420,6 +427,54 @@ class TestOutgoingRestSettings:
 
         # The health check keeps the rules' own windows
         assert AuditSource.REST_Outgoing_Health not in out
+
+# ################################################################################################################################
+
+    def test_an_inactive_connection_has_no_window_of_its_own(self) -> 'None':
+        values = get_defaults(alert_type_rest)
+        values['is_active'] = False
+        values['status_codes_window'] = 3600
+
+        object_settings = {alert_type_rest: {_rest_outgoing_name: values}}
+
+        window_seconds_by_source = {
+            AuditSource.REST_Outgoing: {Measure_Status_Codes: 300},
+        }
+
+        out = build_window_seconds_by_object(object_settings, window_seconds_by_source)
+
+        assert out == {}
+
+        inactive_keys = get_inactive_keys(object_settings)
+        assert inactive_keys == {(AuditSource.REST_Outgoing, _rest_outgoing_name)}
+
+# ################################################################################################################################
+
+    def test_the_streak_depth_is_the_highest_threshold_of_an_active_object(self) -> 'None':
+
+        # An active connection asking for more failures in a row than the default depth reads ..
+        deep_values = get_defaults(alert_type_mllp_outgoing)
+        deep_values['consecutive_failures'] = _deep_threshold
+
+        # .. one switched off asking for more still ..
+        inactive_values = get_defaults(alert_type_mllp_outgoing)
+        inactive_values['is_active'] = False
+        inactive_values['consecutive_failures'] = _deeper_threshold
+
+        # .. and a channel at the default.
+        channel_values = get_defaults(alert_type_mllp_channel)
+
+        object_settings = {
+            alert_type_mllp_outgoing: {_mllp_outgoing_name: deep_values, _other_mllp_outgoing_name: inactive_values},
+            alert_type_mllp_channel: {_mllp_name: channel_values},
+        }
+
+        out = get_consecutive_depth(object_settings, _default_depth)
+        assert out == _deep_threshold
+
+        # With no object asking for more, the default stands
+        out = get_consecutive_depth({alert_type_mllp_channel: {_mllp_name: channel_values}}, _default_depth)
+        assert out == _default_depth
 
 # ################################################################################################################################
 # ################################################################################################################################
