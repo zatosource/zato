@@ -8,8 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import socket
-import subprocess
 import sys
 import tempfile
 import time
@@ -29,6 +27,7 @@ from live_environment.parts import Parts, tear_down
 from live_environment.quickstart import find_free_port, Host, ZatoEnvironment
 
 # Live SMS
+from live_sms.redis_server import start_redis
 from live_sms.suite import SimulatorSuite
 
 # ################################################################################################################################
@@ -37,7 +36,7 @@ from live_sms.suite import SimulatorSuite
 if 0:
     from live_sms.base import SMSSimulator
     from zato.common.test.client import AdminClient
-    from zato.common.typing_ import any_, anydict, anylist, iterator_
+    from zato.common.typing_ import anydict, anylist, iterator_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,35 +67,11 @@ class ModuleCtx:
     Wait_Timeout = 15.0
     Poll_Interval = 0.1
 
-    # How long the Redis the server uses is given to come up
-    Redis_Wait_Timeout = 30.0
-
     # A refusal count meaning that the target refuses everything until it is told otherwise
     Refuse_Everything = -1
 
     # The error the target raises while it refuses
     Refused_Error_Text = 'The target refuses this event'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _start_redis(port:'int') -> 'any_':
-    """ Starts a throwaway Redis with no persistence in its own session and waits for its port.
-    """
-    command = ['redis-server', '--port', str(port), '--save', '', '--appendonly', 'no']
-    out = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-
-    deadline = time.monotonic() + ModuleCtx.Redis_Wait_Timeout
-
-    while time.monotonic() < deadline:
-        with socket.socket() as probe:
-            probe.settimeout(1)
-            if probe.connect_ex((Host, port)) == 0:
-                return out
-        time.sleep(0.2)
-
-    out.kill()
-    raise Exception(f'Redis did not open port {port} within {ModuleCtx.Redis_Wait_Timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,7 +218,7 @@ def sms() -> 'iterator_':
 
         # The Redis the channels remember seen events in
         redis_port = find_free_port()
-        redis_process = _start_redis(redis_port)
+        redis_process = start_redis(redis_port)
         parts.add('redis-server', redis_process.kill)
 
         directory = tempfile.mkdtemp(prefix='zato_sms_')
