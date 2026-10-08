@@ -44,6 +44,7 @@ _slow_callback_delay_seconds     = 5
 _client_receive_timeout_seconds  = 1.0
 _circuit_breaker_reset_seconds   = 0.1
 _outconn_recv_timeout_ms         = 5000
+_outconn_max_wait_time           = 5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -959,6 +960,7 @@ class TestTlsAndMtls:
         config.start_seq = '0b'
         config.end_seq = '1c 0d'
         config.recv_timeout = _outconn_recv_timeout_ms
+        config.max_wait_time = _outconn_max_wait_time
         config.max_msg_size = _max_message_size
         config.read_buffer_size = _recv_buffer_size
         config.should_log_messages = False
@@ -989,6 +991,7 @@ class TestTlsAndMtls:
         config.start_seq = '0b'
         config.end_seq = '1c 0d'
         config.recv_timeout = _outconn_recv_timeout_ms
+        config.max_wait_time = _outconn_max_wait_time
         config.max_msg_size = _max_message_size
         config.read_buffer_size = _recv_buffer_size
         config.should_log_messages = False
