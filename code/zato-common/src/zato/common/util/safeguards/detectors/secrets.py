@@ -105,17 +105,20 @@ class ConnectionStringDetector(_SecretDetector):
 
 class APITokenDetector(_SecretDetector):
     """ A bare API token of a well-known prefixed shape - OpenAI and Stripe style sk- and rk-,
-    GitHub gh*_ tokens, Slack xox tokens and GitLab personal access tokens.
+    GitHub gh*_ tokens, Slack xox tokens, GitLab personal access tokens and Discord bot tokens.
     """
     name  = 'secret_api_token'
     token = 'SECRET_API_TOKEN'
 
-    # One alternative per token family - OpenAI and Stripe, GitHub, Slack, GitLab
+    # One alternative per token family - OpenAI and Stripe, GitHub, Slack, GitLab, Discord.
+    # A Discord bot token is three base64 segments joined with dots - the encoded user ID,
+    # the encoded timestamp and the HMAC.
     _shapes = [
         r'(?<![A-Za-z0-9])(?:sk|rk)-[A-Za-z0-9_-]{20,}',
         r'(?<![A-Za-z0-9])gh[pousr]_[A-Za-z0-9]{20,}',
         r'(?<![A-Za-z0-9])xox[abps]-[A-Za-z0-9-]{10,}',
         r'(?<![A-Za-z0-9])glpat-[A-Za-z0-9_-]{20,}',
+        r'(?<![A-Za-z0-9])[MN][A-Za-z0-9_-]{23,}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,}',
     ]
 
     pattern = re_compile('|'.join(_shapes), ASCII)

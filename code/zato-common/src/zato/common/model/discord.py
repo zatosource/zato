@@ -17,7 +17,6 @@ class DiscordConfigObject:
         self.is_active = True         # type: bool
         self.token = ''               # type: str
         self.address = ''             # type: str
-        self.ready_timeout = 0        # type: int
         self.timeout = 0              # type: int
         self.default_channel_id = ''  # type: str
 

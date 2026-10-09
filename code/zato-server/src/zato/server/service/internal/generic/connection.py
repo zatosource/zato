@@ -288,6 +288,9 @@ extra_secret_keys = (
     # SMS
     SMS.Field_Signature_Secret,
 
+    # Discord and Slack
+    'token',
+
 )
 
 # Keys that hold secrets - they are never returned in listings, no matter whether their values

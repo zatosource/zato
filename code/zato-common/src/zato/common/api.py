@@ -2229,8 +2229,20 @@ class Discord:
 
     class Default:
         Address = 'https://discord.com/api/v10'
-        Ready_Timeout = 60
         Timeout = 30
+        Gateway_Version = 10
+        Gateway_Encoding = 'json'
+        Handshake_Pause = 5
+        Max_Rate_Limit_Retries = 5
+        User_Agent = 'DiscordBot (https://zato.io, 4.1)'
+        Intents = 0
+
+    class Gateway:
+        Op_Dispatch = 0
+        Op_Identify = 2
+        Op_Hello = 10
+        Event_Ready = 'READY'
+        Close_Normal = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
