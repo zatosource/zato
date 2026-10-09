@@ -1473,6 +1473,8 @@ urlpatterns += [
         login_required(chat_discord.ping), name='chat-discord-ping'),
     url(r'^zato/chat/discord/change-password/$',
         login_required(chat_discord.change_password), name='chat-discord-change-password'),
+    url(r'^zato/chat/discord/send-message/$',
+        login_required(chat_discord.send_message), name='chat-discord-send-message'),
     ]
 
 urlpatterns += [

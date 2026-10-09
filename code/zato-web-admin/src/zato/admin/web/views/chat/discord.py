@@ -14,7 +14,7 @@ from json import loads
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.chat.discord import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    method_allowed, ping_connection
+    method_allowed, ping_connection, send_chat_message
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.model.discord import DiscordConfigObject
 
@@ -36,7 +36,7 @@ class Index(_Index):
     paginate = True
 
     input_required = 'cluster_id', 'type_'
-    output_required = 'id', 'name', 'is_active', 'address', 'ready_timeout', 'timeout'
+    output_required = 'id', 'name', 'is_active', 'address', 'timeout'
     output_optional = ('default_channel_id',) + generic_attrs
     output_repeated = True
 
@@ -56,7 +56,7 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_active', 'address', 'ready_timeout', 'timeout'
+    input_required = 'name', 'is_active', 'address', 'timeout'
     input_optional = 'default_channel_id',
     output_required = 'id', 'name'
 
@@ -129,6 +129,13 @@ def change_password(req:'any_') -> 'any_':
 @method_allowed('POST')
 def ping(req:'any_', id:'str', cluster_id:'str') -> 'any_':
     out = ping_connection(req, 'zato.generic.connection.ping', id, 'Discord connection')
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def send_message(req:'any_') -> 'any_':
+    out = send_chat_message(req, GENERIC.CONNECTION.TYPE.CHAT_DISCORD)
     return out
 
 # ################################################################################################################################

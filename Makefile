@@ -14,7 +14,7 @@
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
-	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce \
+	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
 	test-hl7 test-fhir-bulk-export test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
@@ -1059,6 +1059,30 @@ test-mssql-db: ## Outgoing MS SQL connection tests against a live MS SQL Develop
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mssql_db_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-discord: ## Discord connection tests - the client against a simulated Discord, a live Zato server, the enmasse importer and exporter, and the Dashboard lifecycle.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-server/test/zato/connection/chat/discord/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_discord_client -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/discord/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_discord_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_discord.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_discord.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_discord_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_chat_discord_lifecycle.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
 test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato server against a simulated Microsoft cloud.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/microsoft_cloud_live/ \
@@ -1367,7 +1391,7 @@ Zato_Test_Toolchain := \
 # test-as2
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
-	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
+	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-discord test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
 	test-openapi-console-live
 

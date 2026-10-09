@@ -635,6 +635,20 @@ class ConfigSync:
         if slack_updated:
             self.updated_objects['slack'] = slack_updated
 
+        # Process Discord connection definitions
+        discord_list = yaml_config.get('discord', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = get_generic_connection_type(item)
+                if item_type == 'chat-discord':
+                    discord_list.append(item)
+        discord_created, discord_updated = importer.sync_discord(discord_list, session)
+        if discord_created:
+            self.created_objects['discord'] = discord_created
+        if discord_updated:
+            self.updated_objects['discord'] = discord_updated
+
         # Process Microsoft Fabric connection definitions
         fabric_list = yaml_config.get('microsoft_fabric', [])
         generic_list = yaml_config.get('zato_generic_connection')

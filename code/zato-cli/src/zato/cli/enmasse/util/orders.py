@@ -52,6 +52,7 @@ _top_level_order = [
     'microsoft_power_automate',
     'microsoft_teams',
     'slack',
+    'discord',
     'confluence',
     'jira',
     'salesforce',
@@ -178,6 +179,7 @@ _object_order['microsoft_power_automate'] = 'name', 'is_active', 'address', 'cli
 _object_order['microsoft_teams'] = _object_order['microsoft_cloud']
 
 _object_order['slack']      = 'name', 'is_active',
+_object_order['discord']    = 'name', 'is_active', 'address', 'timeout', 'default_channel_id',
 _object_order['confluence'] = 'name', 'is_active', 'address', 'username',
 _object_order['jira']       = 'name', 'is_active', 'address', 'username',
 _object_order['salesforce'] = 'name', 'is_active', 'address', 'username', 'api_version',

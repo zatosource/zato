@@ -6,37 +6,51 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Django
-from django import forms
-
-# Zato
-from zato.common.api import Discord
+# Test support
+from conftest import ModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default = Discord.Default
+if 0:
+    from conftest import DiscordSuite
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CreateForm(forms.Form):
+class TestPing:
 
-    name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    def test_a_ping_reaches_the_bot_user_endpoint(self, discord:'DiscordSuite') -> 'None':
 
-    token = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
-    default_channel_id = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+        response = discord.ping()
 
-    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Address)
-    timeout = forms.IntegerField(widget=forms.TextInput(attrs={'style':'width:15%'}), initial=_default.Timeout)
+        assert response['is_ok'] is True, response
+        assert discord.simulator.rejections == []
 
 # ################################################################################################################################
+
+    def test_the_dashboard_ping_succeeds(self, discord:'DiscordSuite') -> 'None':
+        """ The Dashboard's ping goes through the internal ping service, which calls the wrapper's ping.
+        """
+        response = discord.dashboard_ping()
+
+        assert response['is_success'] is True, response
+        assert discord.simulator.rejections == []
+
 # ################################################################################################################################
 
-class EditForm(CreateForm):
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    token = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
+    def test_a_ping_with_a_refused_token_fails(self, discord:'DiscordSuite') -> 'None':
+        """ The simulator refuses the token for the duration of the test and the ping reports the 401.
+        """
+        discord.simulator.token = 'another-token'
+
+        try:
+            response = discord.ping()
+        finally:
+            discord.simulator.token = ModuleCtx.Token
+
+        assert response['is_ok'] is False, response
+        assert '401' in response['error'], response
 
 # ################################################################################################################################
 # ################################################################################################################################

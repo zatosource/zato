@@ -49,10 +49,11 @@ if 0:
 
     # Zato
     from zato.common.odb.api import PoolStore
-    from zato.common.typing_ import any_, anylistnone, callable_, stranydict, strnone
+    from zato.common.typing_ import any_, anydictnone, anylistnone, callable_, stranydict, strnone
     from zato.edifact import EDIInterchange
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict, ConfigStore
+    from zato.server.connection.chat.discord import DiscordClient
     from zato.server.connection.chat.slack import SlackClient
     from zato.server.connection.cloud.aws import AWSClient
     from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
@@ -75,6 +76,7 @@ if 0:
     Microsoft365Client = Microsoft365Client
     MicrosoftPowerAutomateClient = MicrosoftPowerAutomateClient
     MicrosoftTeamsClient = MicrosoftTeamsClient
+    DiscordClient = DiscordClient
     SlackClient = SlackClient
     ConfigDict = ConfigDict
     ConfigManager = ConfigManager
@@ -648,6 +650,59 @@ class SlackFacade:
         client = self[name]
 
         out = client.send(channel, text, blocks)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DiscordFacade:
+    """ The API through which Discord connections are accessed by their names,
+    e.g. self.discord.send('My Discord', 'Hello', channel_id='1234567890123456789').
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'DiscordClient':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back the client that its wrapper maintains.
+        out = item.conn.shared_client
+        return out
+
+    def send(
+        self,
+        name:'str',
+        content:'str',
+        channel_id:'str'='',
+        embeds:'anylistnone'=None,
+        files:'anylistnone'=None,
+        allowed_mentions:'anydictnone'=None,
+        ) -> 'stranydict':
+        """ Sends a message through the named connection to a channel, or to the connection's default channel
+        if none is given. Embeds, if given, are Discord embed objects and files are (file name, content) tuples.
+        Mentions in the content notify no one unless allowed_mentions says otherwise.
+        """
+        client = self[name]
+
+        out = client.send(content, channel_id, embeds, files, allowed_mentions)
+        return out
+
+    def send_direct(
+        self,
+        name:'str',
+        user_id:'str',
+        content:'str',
+        embeds:'anylistnone'=None,
+        files:'anylistnone'=None,
+        ) -> 'stranydict':
+        """ Sends a direct message through the named connection to a person identified by their user ID.
+        """
+        client = self[name]
+
+        out = client.send_direct(user_id, content, embeds, files)
         return out
 
 # ################################################################################################################################

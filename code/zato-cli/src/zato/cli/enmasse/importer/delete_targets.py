@@ -108,6 +108,7 @@ generic_type_to_section = {
     GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:            'microsoft_cloud',
     GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS:           'microsoft_teams',
     GENERIC.CONNECTION.TYPE.CHAT_SLACK:                     'slack',
+    GENERIC.CONNECTION.TYPE.CHAT_DISCORD:                   'discord',
     GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC:         'microsoft_fabric',
     GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: 'microsoft_power_automate',
 }
@@ -134,6 +135,7 @@ generic_sections = {
     'microsoft_power_automate': GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE,
     'microsoft_teams':          GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS,
     'slack':                    GENERIC.CONNECTION.TYPE.CHAT_SLACK,
+    'discord':                  GENERIC.CONNECTION.TYPE.CHAT_DISCORD,
     'confluence':               GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE,
     'jira':                     GENERIC.CONNECTION.TYPE.CLOUD_JIRA,
     'salesforce':               GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE,
@@ -214,6 +216,7 @@ delete_order = [
     'microsoft_power_automate',
     'microsoft_teams',
     'slack',
+    'discord',
     'confluence',
     'jira',
     'salesforce',

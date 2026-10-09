@@ -30,6 +30,7 @@ from zato.server.service.internal.generic import _BaseService
 
 # The connection types whose clients send messages to a target rather than invoking a request as-is
 _chat_conn_types = frozenset({
+    COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD,
     COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS,
     COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK,
 })
@@ -107,6 +108,7 @@ class Invoke(AdminService):
 
         # Maps all known connection types to their implementation ..
         conn_type_to_container = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD: self.server.config_manager.chat_discord,
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: self.server.config_manager.chat_microsoft_teams,
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK: self.server.config_manager.chat_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.server.config_manager.outconn_hl7_fhir,
@@ -122,15 +124,20 @@ class Invoke(AdminService):
         if conn_type in _chat_conn_types:
 
             target = self.request.input.target
-            if not target:
-                raise Exception('No target provided')
 
             if not request_data:
                 raise Exception('No message provided')
 
-            # All the chat clients take the target first and the message second.
             client = container[self.request.input.conn_name].conn.shared_client
-            response = client.send(target, request_data)
+
+            # A Discord client takes the message first and sends it to the connection's default channel
+            # when no target is given, whereas the other chat clients take the target first and require one.
+            if conn_type == COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD:
+                response = client.send(request_data, target)
+            else:
+                if not target:
+                    raise Exception('No target provided')
+                response = client.send(target, request_data)
 
             # The response is JSON and the caller needs text
             self.response.payload.response_data = dumps(response, indent=2)

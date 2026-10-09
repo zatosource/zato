@@ -30,6 +30,7 @@ from zato.common.const import SECRETS
 
 if 0:
     from gevent import Greenlet
+    from requests import Response
     from websocket import WebSocket
     from zato.common.typing_ import anydictnone, anylistnone, stranydict, strstrdict
 
@@ -77,6 +78,9 @@ class DiscordClient:
         self.session.headers['Authorization'] = f'Bot {self.token}'
         self.session.headers['User-Agent'] = _default.User_Agent
 
+        # How long the handshake loop pauses between attempts, in seconds.
+        self.handshake_pause:'float' = _default.Handshake_Pause
+
         # Set once the gateway has acknowledged the bot's IDENTIFY with READY, or once the client is stopped.
         self.ready = Event()
 
@@ -108,12 +112,12 @@ class DiscordClient:
         self.stop_reason = reason
 
         # Kill the loop first so that it does not open a new websocket after the current one is closed ..
-        if self.handshake_greenlet:
+        if self.handshake_greenlet is not None:
             self.handshake_greenlet.kill(block=False)
             self.handshake_greenlet = None
 
         # .. close the websocket of the attempt in progress ..
-        if self.gateway_socket:
+        if self.gateway_socket is not None:
             self.gateway_socket.close(status=_gateway.Close_Normal)
             self.gateway_socket = None
 
@@ -132,8 +136,8 @@ class DiscordClient:
             except Exception as e:
                 self.last_error = str(e)
                 logger.warning('Discord gateway handshake failed (%s) -> %s, retrying in %ss',
-                    self.name, self.last_error, _default.Handshake_Pause)
-                sleep(_default.Handshake_Pause)
+                    self.name, self.last_error, self.handshake_pause)
+                sleep(self.handshake_pause)
             else:
                 self.ready.set()
                 logger.info('Discord gateway handshake OK (%s)', self.name)
@@ -183,7 +187,7 @@ class DiscordClient:
                     },
                 },
             }
-            socket.send(dumps(identify))
+            _ = socket.send(dumps(identify))
 
             # .. and waits for READY, which may follow other events.
             while True:
@@ -229,6 +233,29 @@ class DiscordClient:
 
 # ################################################################################################################################
 
+    def _request(
+        self,
+        http_method:'str',
+        url:'str',
+        data:'anydictnone',
+        files:'anylistnone',
+        ) -> 'Response':
+        """ Issues one HTTP request. Files are sent as multipart form data with the JSON payload in its own part,
+        otherwise the payload is the body of the request.
+        """
+        if files:
+            form_files = {}
+            for index, item in enumerate(files):
+                form_files[f'files[{index}]'] = item
+            form_data = {'payload_json': dumps(data)}
+            out = self.session.request(http_method, url, timeout=self.timeout, data=form_data, files=form_files)
+        else:
+            out = self.session.request(http_method, url, timeout=self.timeout, json=data)
+
+        return out
+
+# ################################################################################################################################
+
     def _invoke_rest(
         self,
         http_method:'str',
@@ -240,19 +267,9 @@ class DiscordClient:
         """
         url = f'{self.address}/{path}'
 
-        # Files are sent as multipart form data with the JSON payload in its own part,
-        # otherwise the payload is the body of the request.
-        if files:
-            form_files = {}
-            for index, item in enumerate(files):
-                form_files[f'files[{index}]'] = item
-            request_kwargs = {'data': {'payload_json': dumps(data)}, 'files': form_files}
-        else:
-            request_kwargs = {'json': data}
-
         # Invoke the endpoint, waiting out rate limits as long as the retry limit allows ..
         for _ in range(_default.Max_Rate_Limit_Retries + 1):
-            response = self.session.request(http_method, url, timeout=self.timeout, **request_kwargs)
+            response = self._request(http_method, url, data, files)
 
             if response.status_code == TOO_MANY_REQUESTS:
                 body = response.json()
@@ -321,7 +338,7 @@ class DiscordClient:
         if allowed_mentions is None:
             allowed_mentions = {'parse': []}
 
-        data = {
+        data:'stranydict' = {
             'content': content,
             'allowed_mentions': allowed_mentions,
         }

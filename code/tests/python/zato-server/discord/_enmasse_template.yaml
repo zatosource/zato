@@ -1,0 +1,10 @@
+# The connection of the Discord suite - one outgoing connection pointed at the simulator. The address and
+# the token are read from the environment the session fixture sets before the import.
+
+discord:
+
+  - name: test.discord.main
+    token: ${Zato_Test_Discord_Token}
+    address: ${Zato_Test_Discord_Address}
+    default_channel_id: "200000000000000001"
+    timeout: 3

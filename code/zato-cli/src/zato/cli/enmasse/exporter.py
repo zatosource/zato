@@ -37,6 +37,7 @@ from zato.cli.enmasse.exporters.microsoft_fabric import MicrosoftFabricExporter
 from zato.cli.enmasse.exporters.microsoft_power_automate import MicrosoftPowerAutomateExporter
 from zato.cli.enmasse.exporters.microsoft_teams import MicrosoftTeamsExporter
 from zato.cli.enmasse.exporters.slack import SlackExporter
+from zato.cli.enmasse.exporters.discord import DiscordExporter
 from zato.cli.enmasse.exporters.mongodb import MongoDBExporter
 from zato.cli.enmasse.exporters.odata import ODataExporter
 from zato.cli.enmasse.exporters.sftp import SFTPExporter
@@ -136,6 +137,7 @@ class EnmasseYAMLExporter:
         self.microsoft_power_automate_exporter = MicrosoftPowerAutomateExporter(self)
         self.microsoft_teams_exporter = MicrosoftTeamsExporter(self)
         self.slack_exporter = SlackExporter(self)
+        self.discord_exporter = DiscordExporter(self)
         self.confluence_exporter = ConfluenceExporter(self)
         self.custom_exporter = CustomConnectorExporter(self)
         self.elastic_search_exporter = ElasticSearchExporter(self)
@@ -629,6 +631,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_discord(self, session:'SASession') -> 'list':
+        """ Exports Discord connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        discord_list = self.discord_exporter.export(session, self.cluster_id)
+        return discord_list
+
+# ################################################################################################################################
+
     def export_confluence(self, session:'SASession') -> 'list':
         """ Exports Confluence connection definitions.
         """
@@ -959,6 +970,11 @@ class EnmasseYAMLExporter:
         slack_defs = self.export_slack(session)
         if slack_defs:
             output_dict['slack'] = slack_defs
+
+        # Export Discord connection definitions
+        discord_defs = self.export_discord(session)
+        if discord_defs:
+            output_dict['discord'] = discord_defs
 
         # Export Confluence connection definitions
         confluence_defs = self.export_confluence(session)

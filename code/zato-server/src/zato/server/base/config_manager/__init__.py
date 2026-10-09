@@ -1065,6 +1065,7 @@ class ConfigManager(_ConfigManagerBase):
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
         channel_sms_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS, {})
+        chat_discord_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD, {})
         chat_microsoft_teams_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS, {})
         chat_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK, {})
@@ -1105,6 +1106,7 @@ class ConfigManager(_ConfigManagerBase):
             channel_kafka_map,
             channel_openapi_map,
             channel_sms_map,
+            chat_discord_map,
             chat_microsoft_teams_map,
             chat_slack_map,
             cloud_aws_map,
@@ -1136,6 +1138,7 @@ class ConfigManager(_ConfigManagerBase):
         ]
 
         password_maps = [
+            chat_discord_map,
             chat_microsoft_teams_map,
             chat_slack_map,
             cloud_aws_map,

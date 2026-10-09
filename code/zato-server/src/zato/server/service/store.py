@@ -591,6 +591,7 @@ class ServiceStore:
                 class_.microsoft.fabric.conn_dict = service_store.server.config_manager.cloud_microsoft_fabric
                 class_.microsoft.teams.conn_dict = service_store.server.config_manager.chat_microsoft_teams
                 class_.slack.conn_dict = service_store.server.config_manager.chat_slack
+                class_.discord.conn_dict = service_store.server.config_manager.chat_discord
                 class_.amqp.publish = service_store.server.config_manager.amqp_invoke
                 class_.commands.init(service_store.server)
 

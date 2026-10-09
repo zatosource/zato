@@ -74,6 +74,21 @@ class TestGenericConnectionType(TestCase):
         self.assertEqual(second, 'chat-slack')
 
 # ################################################################################################################################
+
+    def test_discord_type(self):
+
+        item_with_type = {'name': 'enmasse.discord.1', 'type': 'chat-discord'}
+        item_with_type_underscore = {'name': 'enmasse.discord.2', 'type_': 'chat-discord'}
+
+        discord_list = []
+        for item in [item_with_type, item_with_type_underscore]:
+            item_type = get_generic_connection_type(item)
+            if item_type == 'chat-discord':
+                discord_list.append(item)
+
+        self.assertEqual(len(discord_list), 2)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':

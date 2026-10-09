@@ -52,6 +52,7 @@ from zato.cli.enmasse.importers.microsoft_fabric import MicrosoftFabricImporter
 from zato.cli.enmasse.importers.microsoft_power_automate import MicrosoftPowerAutomateImporter
 from zato.cli.enmasse.importers.microsoft_teams import MicrosoftTeamsImporter
 from zato.cli.enmasse.importers.slack import SlackImporter
+from zato.cli.enmasse.importers.discord import DiscordImporter
 from zato.cli.enmasse.importers.mongodb import MongoDBImporter
 from zato.cli.enmasse.importers.odata import ODataImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
@@ -112,6 +113,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.microsoft_power_automate',
                         'zato.cli.enmasse.importers.microsoft_teams',
                         'zato.cli.enmasse.importers.slack',
+                        'zato.cli.enmasse.importers.discord',
                         'zato.cli.enmasse.importers.mongodb',
                         'zato.cli.enmasse.importers.odata',
                         'zato.cli.enmasse.importers.ftp',
@@ -181,6 +183,7 @@ class EnmasseYAMLImporter(ConfigSync, DeleteSync, OutgoingSync):
         self.microsoft_power_automate_defs = {}
         self.microsoft_teams_defs = {}
         self.slack_defs = {}
+        self.discord_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
         self.outgoing_as2_defs = {}
@@ -246,6 +249,7 @@ class EnmasseYAMLImporter(ConfigSync, DeleteSync, OutgoingSync):
         self.microsoft_power_automate_importer = MicrosoftPowerAutomateImporter(self)
         self.microsoft_teams_importer = MicrosoftTeamsImporter(self)
         self.slack_importer = SlackImporter(self)
+        self.discord_importer = DiscordImporter(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
         self.as2_importer = AS2Importer(self)

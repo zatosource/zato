@@ -828,6 +828,13 @@ slack:
     is_active: true
     token: Zato_Enmasse_Env.SlackToken
 
+discord:
+
+  - name: enmasse.chat.discord.1
+    is_active: true
+    token: Zato_Enmasse_Env.DiscordToken
+    default_channel_id: "123456789012345678"
+
 confluence:
 
   - name: enmasse.confluence.1

@@ -677,6 +677,31 @@ class OutgoingSync:
 
 # ################################################################################################################################
 
+    def sync_discord(self, discord_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Discord connection definitions from a YAML configuration with the database.
+        """
+        if not discord_list:
+            return [], []
+
+        count = len(discord_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Discord connection {noun}')
+
+        # Examine each Discord connection item
+        for idx, item in enumerate(discord_list):
+            logger.info('Discord connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
+
+        discord_created, discord_updated = self.discord_importer.sync_definitions(discord_list, session)
+
+        # Get Discord definitions from the Discord importer
+        self.discord_defs = self.discord_importer.connection_defs
+        logger.info('Processed Discord connection definitions: created=%d updated=%d',
+            len(discord_created), len(discord_updated))
+
+        return discord_created, discord_updated
+
+# ################################################################################################################################
+
     def sync_microsoft_fabric(self, microsoft_fabric_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Microsoft Fabric connection definitions from a YAML configuration with the database.
         """
