@@ -77,6 +77,8 @@ $.namespace('zato.channel.hl7.rest.data_table');
 $.namespace('zato.channel.openapi');
 $.namespace('zato.channel.openapi.data_table');
 $.namespace('zato.chat');
+$.namespace('zato.chat.discord');
+$.namespace('zato.chat.discord.data_table');
 $.namespace('zato.chat.microsoft_teams');
 $.namespace('zato.chat.microsoft_teams.data_table');
 $.namespace('zato.chat.slack');

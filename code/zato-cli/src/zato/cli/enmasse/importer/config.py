@@ -22,13 +22,16 @@ import yaml
 from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.client import wait_for_services, Default_Service_Wait_Timeout
 from zato.cli.enmasse.util import Renamed_Keys
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
+    from zato.cli.enmasse.importer import EnmasseYAMLImporter
     from zato.common.typing_ import stranydict
+    EnmasseYAMLImporter = EnmasseYAMLImporter
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,13 +222,16 @@ class ConfigSync:
         """
         logger.info('Starting synchronization of YAML configuration')
 
+        # The sync_* wrappers and the deletion pipeline are methods of the importer this class is a part of
+        importer = cast_('EnmasseYAMLImporter', self)
+
         # Reset tracking dictionaries
         self.created_objects = {}
         self.updated_objects = {}
 
         # Take the items marked for deletion out of the config before anything is checked against a server -
         # an item that is to be deleted may name a service that is no longer deployed
-        self.split_deletions(yaml_config)
+        importer.split_deletions(yaml_config)
 
         # Wait for all services referenced in the configuration to be available
         if server_dir:
@@ -247,10 +253,10 @@ class ConfigSync:
                 raise Exception(f'{count} {noun} not found after {timeout}s: {sorted(missing_services)}')
 
         # Delete what is marked for deletion before anything is created or updated, dependents first
-        self.run_deletions(session, server_dir)
+        importer.run_deletions(session, server_dir)
 
         # Process quota tiers first - security definitions and groups reference them by name
-        tiers_created, tiers_updated = self.sync_quota_tiers(yaml_config.get('quota_tier', []), session)
+        tiers_created, tiers_updated = importer.sync_quota_tiers(yaml_config.get('quota_tier', []), session)
         if tiers_created:
             self.created_objects['quota_tier'] = tiers_created
         if tiers_updated:
@@ -258,77 +264,77 @@ class ConfigSync:
 
         # Process on-prem gateways - outgoing connections may point at addresses that
         # only exist because a gateway makes them reachable
-        gateways_created, gateways_updated = self.sync_on_prem_gateways(yaml_config.get('on_prem_gateway', []), session)
+        gateways_created, gateways_updated = importer.sync_on_prem_gateways(yaml_config.get('on_prem_gateway', []), session)
         if gateways_created:
             self.created_objects['on_prem_gateway'] = gateways_created
         if gateways_updated:
             self.updated_objects['on_prem_gateway'] = gateways_updated
 
         # Process audit retention policies
-        retention_created, retention_updated = self.sync_audit_retention(yaml_config.get('audit_retention', []), session)
+        retention_created, retention_updated = importer.sync_audit_retention(yaml_config.get('audit_retention', []), session)
         if retention_created:
             self.created_objects['audit_retention'] = retention_created
         if retention_updated:
             self.updated_objects['audit_retention'] = retention_updated
 
         # Process attribute-extraction rule sets
-        extraction_created, extraction_updated = self.sync_audit_extraction(yaml_config.get('audit_extraction', []), session)
+        extraction_created, extraction_updated = importer.sync_audit_extraction(yaml_config.get('audit_extraction', []), session)
         if extraction_created:
             self.created_objects['audit_extraction'] = extraction_created
         if extraction_updated:
             self.updated_objects['audit_extraction'] = extraction_updated
 
         # Process security definitions next
-        sec_created, sec_updated = self.sync_security(yaml_config.get('security', []), session)
+        sec_created, sec_updated = importer.sync_security(yaml_config.get('security', []), session)
         if sec_created:
             self.created_objects['security'] = sec_created
         if sec_updated:
             self.updated_objects['security'] = sec_updated
 
         # Process security groups (depends on security definitions)
-        groups_created, groups_updated = self.sync_groups(yaml_config.get('groups', []), session)
+        groups_created, groups_updated = importer.sync_groups(yaml_config.get('groups', []), session)
         if groups_created:
             self.created_objects['groups'] = groups_created
         if groups_updated:
             self.updated_objects['groups'] = groups_updated
 
         # Process REST channels which may depend on security definitions
-        channels_created, channels_updated = self.sync_channel_rest(yaml_config.get('channel_rest', []), session)
+        channels_created, channels_updated = importer.sync_channel_rest(yaml_config.get('channel_rest', []), session)
         if channels_created:
             self.created_objects['channel_rest'] = channels_created
         if channels_updated:
             self.updated_objects['channel_rest'] = channels_updated
 
         # Process SOAP channels which may depend on security definitions
-        channels_soap_created, channels_soap_updated = self.sync_channel_soap(yaml_config.get('channel_soap', []), session)
+        channels_soap_created, channels_soap_updated = importer.sync_channel_soap(yaml_config.get('channel_soap', []), session)
         if channels_soap_created:
             self.created_objects['channel_soap'] = channels_soap_created
         if channels_soap_updated:
             self.updated_objects['channel_soap'] = channels_soap_updated
 
         # Process AS4 channels which may depend on security definitions
-        channels_as4_created, channels_as4_updated = self.sync_channel_as4(yaml_config.get('channel_as4', []), session)
+        channels_as4_created, channels_as4_updated = importer.sync_channel_as4(yaml_config.get('channel_as4', []), session)
         if channels_as4_created:
             self.created_objects['channel_as4'] = channels_as4_created
         if channels_as4_updated:
             self.updated_objects['channel_as4'] = channels_as4_updated
 
         # Process Odoo connection definitions
-        odoo_created, odoo_updated = self.sync_odoo(yaml_config.get('odoo', []), session)
+        odoo_created, odoo_updated = importer.sync_odoo(yaml_config.get('odoo', []), session)
         if odoo_created:
             self.created_objects['odoo'] = odoo_created
         if odoo_updated:
             self.updated_objects['odoo'] = odoo_updated
 
         # Process SMTP connection definitions
-        smtp_created, smtp_updated = self.sync_smtp(yaml_config.get('email_smtp', []), session)
+        smtp_created, smtp_updated = importer.sync_smtp(yaml_config.get('email_smtp', []), session)
         if smtp_created:
             self.created_objects['email_smtp'] = smtp_created
         if smtp_updated:
             self.updated_objects['email_smtp'] = smtp_updated
 
         # Process IMAP connection definitions
-        imap_created, imap_updated = self.sync_imap(yaml_config.get('email_imap', []), session)
+        imap_created, imap_updated = importer.sync_imap(yaml_config.get('email_imap', []), session)
         if imap_created:
             self.created_objects['email_imap'] = imap_created
         if imap_updated:
@@ -336,21 +342,21 @@ class ConfigSync:
 
         # Process SQL connection pool definitions
         sql_list = yaml_config.get('sql') or yaml_config.get('outconn_sql', [])
-        sql_created, sql_updated = self.sync_sql(sql_list, session)
+        sql_created, sql_updated = importer.sync_sql(sql_list, session)
         if sql_created:
             self.created_objects['sql'] = sql_created
         if sql_updated:
             self.updated_objects['sql'] = sql_updated
 
         # Process scheduler job definitions
-        job_created, job_updated = self.sync_scheduler(yaml_config.get('scheduler', []), session)
+        job_created, job_updated = importer.sync_scheduler(yaml_config.get('scheduler', []), session)
         if job_created:
             self.created_objects['scheduler'] = job_created
         if job_updated:
             self.updated_objects['scheduler'] = job_updated
 
         # Process Confluence connection definitions
-        confluence_created, confluence_updated = self.sync_confluence(yaml_config.get('confluence', []), session)
+        confluence_created, confluence_updated = importer.sync_confluence(yaml_config.get('confluence', []), session)
         if confluence_created:
             self.created_objects['confluence'] = confluence_created
         if confluence_updated:
@@ -364,7 +370,7 @@ class ConfigSync:
                 item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-jira':
                     jira_list.append(item)
-        jira_created, jira_updated = self.sync_jira(jira_list, session)
+        jira_created, jira_updated = importer.sync_jira(jira_list, session)
         if jira_created:
             self.created_objects['jira'] = jira_created
         if jira_updated:
@@ -377,7 +383,7 @@ class ConfigSync:
                 item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-salesforce':
                     salesforce_list.append(item)
-        salesforce_created, salesforce_updated = self.sync_salesforce(salesforce_list, session)
+        salesforce_created, salesforce_updated = importer.sync_salesforce(salesforce_list, session)
         if salesforce_created:
             self.created_objects['salesforce'] = salesforce_created
         if salesforce_updated:
@@ -385,7 +391,7 @@ class ConfigSync:
 
         # Process LDAP connection definitions
         ldap_list = yaml_config.get('ldap') or yaml_config.get('outgoing_ldap', [])
-        ldap_created, ldap_updated = self.sync_ldap(ldap_list, session)
+        ldap_created, ldap_updated = importer.sync_ldap(ldap_list, session)
         if ldap_created:
             self.created_objects['ldap'] = ldap_created
         if ldap_updated:
@@ -393,7 +399,7 @@ class ConfigSync:
 
         # Process LLM connection definitions
         llm_list = yaml_config.get('llm', [])
-        llm_created, llm_updated = self.sync_llm(llm_list, session)
+        llm_created, llm_updated = importer.sync_llm(llm_list, session)
         if llm_created:
             self.created_objects['llm'] = llm_created
         if llm_updated:
@@ -401,7 +407,7 @@ class ConfigSync:
 
         # Process OData connection definitions
         odata_list = yaml_config.get('odata') or yaml_config.get('outgoing_odata', [])
-        odata_created, odata_updated = self.sync_odata(odata_list, session)
+        odata_created, odata_updated = importer.sync_odata(odata_list, session)
         if odata_created:
             self.created_objects['odata'] = odata_created
         if odata_updated:
@@ -409,7 +415,7 @@ class ConfigSync:
 
         # Process SAP connection definitions
         sap_list = yaml_config.get('sap') or yaml_config.get('outgoing_sap', [])
-        sap_created, sap_updated = self.sync_sap(sap_list, session)
+        sap_created, sap_updated = importer.sync_sap(sap_list, session)
         if sap_created:
             self.created_objects['sap'] = sap_created
         if sap_updated:
@@ -417,7 +423,7 @@ class ConfigSync:
 
         # Process SFTP connection definitions
         sftp_list = yaml_config.get('sftp') or yaml_config.get('outgoing_sftp', [])
-        sftp_created, sftp_updated = self.sync_sftp(sftp_list, session)
+        sftp_created, sftp_updated = importer.sync_sftp(sftp_list, session)
         if sftp_created:
             self.created_objects['sftp'] = sftp_created
         if sftp_updated:
@@ -425,7 +431,7 @@ class ConfigSync:
 
         # Process SMB connection definitions
         smb_list = yaml_config.get('smb') or yaml_config.get('outgoing_smb', [])
-        smb_created, smb_updated = self.sync_smb(smb_list, session)
+        smb_created, smb_updated = importer.sync_smb(smb_list, session)
         if smb_created:
             self.created_objects['smb'] = smb_created
         if smb_updated:
@@ -437,7 +443,7 @@ class ConfigSync:
             ftp_list = yaml_config.get('outgoing_ftp')
         if not ftp_list:
             ftp_list = []
-        ftp_created, ftp_updated = self.sync_ftp(ftp_list, session)
+        ftp_created, ftp_updated = importer.sync_ftp(ftp_list, session)
         if ftp_created:
             self.created_objects['ftp'] = ftp_created
         if ftp_updated:
@@ -445,7 +451,7 @@ class ConfigSync:
 
         # Process MongoDB connection definitions
         mongodb_list = yaml_config.get('mongodb') or yaml_config.get('outgoing_mongodb', [])
-        mongodb_created, mongodb_updated = self.sync_mongodb(mongodb_list, session)
+        mongodb_created, mongodb_updated = importer.sync_mongodb(mongodb_list, session)
         if mongodb_created:
             self.created_objects['mongodb'] = mongodb_created
         if mongodb_updated:
@@ -453,7 +459,7 @@ class ConfigSync:
 
         # Process IBM MQ channel definitions
         channel_ibm_mq_list = yaml_config.get('channel_ibm_mq', [])
-        channel_ibm_mq_created, channel_ibm_mq_updated = self.sync_channel_ibm_mq(channel_ibm_mq_list, session)
+        channel_ibm_mq_created, channel_ibm_mq_updated = importer.sync_channel_ibm_mq(channel_ibm_mq_list, session)
         if channel_ibm_mq_created:
             self.created_objects['channel_ibm_mq'] = channel_ibm_mq_created
         if channel_ibm_mq_updated:
@@ -461,7 +467,7 @@ class ConfigSync:
 
         # Process IBM MQ outgoing definitions
         outgoing_ibm_mq_list = yaml_config.get('outgoing_ibm_mq', [])
-        outgoing_ibm_mq_created, outgoing_ibm_mq_updated = self.sync_outgoing_ibm_mq(outgoing_ibm_mq_list, session)
+        outgoing_ibm_mq_created, outgoing_ibm_mq_updated = importer.sync_outgoing_ibm_mq(outgoing_ibm_mq_list, session)
         if outgoing_ibm_mq_created:
             self.created_objects['outgoing_ibm_mq'] = outgoing_ibm_mq_created
         if outgoing_ibm_mq_updated:
@@ -469,7 +475,7 @@ class ConfigSync:
 
         # Process AMQP channel definitions
         channel_amqp_list = yaml_config.get('channel_amqp', [])
-        channel_amqp_created, channel_amqp_updated = self.sync_channel_amqp(channel_amqp_list, session)
+        channel_amqp_created, channel_amqp_updated = importer.sync_channel_amqp(channel_amqp_list, session)
         if channel_amqp_created:
             self.created_objects['channel_amqp'] = channel_amqp_created
         if channel_amqp_updated:
@@ -477,7 +483,7 @@ class ConfigSync:
 
         # Process AMQP outgoing definitions
         outgoing_amqp_list = yaml_config.get('outgoing_amqp', [])
-        outgoing_amqp_created, outgoing_amqp_updated = self.sync_outgoing_amqp(outgoing_amqp_list, session)
+        outgoing_amqp_created, outgoing_amqp_updated = importer.sync_outgoing_amqp(outgoing_amqp_list, session)
         if outgoing_amqp_created:
             self.created_objects['outgoing_amqp'] = outgoing_amqp_created
         if outgoing_amqp_updated:
@@ -485,7 +491,7 @@ class ConfigSync:
 
         # Process Azure Service Bus channel definitions
         channel_azure_list = yaml_config.get('channel_azure_service_bus', [])
-        channel_azure_created, channel_azure_updated = self.sync_channel_azure_service_bus(channel_azure_list, session)
+        channel_azure_created, channel_azure_updated = importer.sync_channel_azure_service_bus(channel_azure_list, session)
         if channel_azure_created:
             self.created_objects['channel_azure_service_bus'] = channel_azure_created
         if channel_azure_updated:
@@ -493,7 +499,7 @@ class ConfigSync:
 
         # Process Azure Service Bus outgoing definitions
         outgoing_azure_list = yaml_config.get('outgoing_azure_service_bus', [])
-        outgoing_azure_created, outgoing_azure_updated = self.sync_outgoing_azure_service_bus(outgoing_azure_list, session)
+        outgoing_azure_created, outgoing_azure_updated = importer.sync_outgoing_azure_service_bus(outgoing_azure_list, session)
         if outgoing_azure_created:
             self.created_objects['outgoing_azure_service_bus'] = outgoing_azure_created
         if outgoing_azure_updated:
@@ -501,7 +507,7 @@ class ConfigSync:
 
         # Process Kafka channel definitions
         channel_kafka_list = yaml_config.get('channel_kafka', [])
-        channel_kafka_created, channel_kafka_updated = self.sync_channel_kafka(channel_kafka_list, session)
+        channel_kafka_created, channel_kafka_updated = importer.sync_channel_kafka(channel_kafka_list, session)
         if channel_kafka_created:
             self.created_objects['channel_kafka'] = channel_kafka_created
         if channel_kafka_updated:
@@ -509,7 +515,7 @@ class ConfigSync:
 
         # Process MCP gateway definitions
         gateway_mcp_list = yaml_config.get('mcp_gateway', [])
-        gateway_mcp_created, gateway_mcp_updated = self.sync_gateway_mcp(gateway_mcp_list, session)
+        gateway_mcp_created, gateway_mcp_updated = importer.sync_gateway_mcp(gateway_mcp_list, session)
         if gateway_mcp_created:
             self.created_objects['mcp_gateway'] = gateway_mcp_created
         if gateway_mcp_updated:
@@ -517,7 +523,7 @@ class ConfigSync:
 
         # Process Rule engine API definitions
         rule_engine_api_list = yaml_config.get('rule_engine_api', [])
-        rule_engine_api_created, rule_engine_api_updated = self.sync_rule_engine_api(rule_engine_api_list, session)
+        rule_engine_api_created, rule_engine_api_updated = importer.sync_rule_engine_api(rule_engine_api_list, session)
         if rule_engine_api_created:
             self.created_objects['rule_engine_api'] = rule_engine_api_created
         if rule_engine_api_updated:
@@ -525,7 +531,7 @@ class ConfigSync:
 
         # Process Kafka outgoing definitions
         outgoing_kafka_list = yaml_config.get('outgoing_kafka', [])
-        outgoing_kafka_created, outgoing_kafka_updated = self.sync_outgoing_kafka(outgoing_kafka_list, session)
+        outgoing_kafka_created, outgoing_kafka_updated = importer.sync_outgoing_kafka(outgoing_kafka_list, session)
         if outgoing_kafka_created:
             self.created_objects['outgoing_kafka'] = outgoing_kafka_created
         if outgoing_kafka_updated:
@@ -533,7 +539,7 @@ class ConfigSync:
 
         # Process SMS outgoing definitions - before the channels, which refer to them by name
         outgoing_sms_list = yaml_config.get('outgoing_sms', [])
-        outgoing_sms_created, outgoing_sms_updated = self.sync_outgoing_sms(outgoing_sms_list, session)
+        outgoing_sms_created, outgoing_sms_updated = importer.sync_outgoing_sms(outgoing_sms_list, session)
         if outgoing_sms_created:
             self.created_objects['outgoing_sms'] = outgoing_sms_created
         if outgoing_sms_updated:
@@ -541,7 +547,7 @@ class ConfigSync:
 
         # Process SMS channel definitions
         channel_sms_list = yaml_config.get('channel_sms', [])
-        channel_sms_created, channel_sms_updated = self.sync_channel_sms(channel_sms_list, session)
+        channel_sms_created, channel_sms_updated = importer.sync_channel_sms(channel_sms_list, session)
         if channel_sms_created:
             self.created_objects['channel_sms'] = channel_sms_created
         if channel_sms_updated:
@@ -549,7 +555,7 @@ class ConfigSync:
 
         # Process GraphQL outgoing definitions
         outgoing_graphql_list = yaml_config.get('outgoing_graphql', [])
-        outgoing_graphql_created, outgoing_graphql_updated = self.sync_outgoing_graphql(outgoing_graphql_list, session)
+        outgoing_graphql_created, outgoing_graphql_updated = importer.sync_outgoing_graphql(outgoing_graphql_list, session)
         if outgoing_graphql_created:
             self.created_objects['outgoing_graphql'] = outgoing_graphql_created
         if outgoing_graphql_updated:
@@ -557,7 +563,7 @@ class ConfigSync:
 
         # Process gRPC outgoing definitions - the shorter 'grpc' key is accepted as an alias
         outgoing_grpc_list = yaml_config.get('outgoing_grpc', []) + yaml_config.get('grpc', [])
-        outgoing_grpc_created, outgoing_grpc_updated = self.sync_outgoing_grpc(outgoing_grpc_list, session)
+        outgoing_grpc_created, outgoing_grpc_updated = importer.sync_outgoing_grpc(outgoing_grpc_list, session)
         if outgoing_grpc_created:
             self.created_objects['outgoing_grpc'] = outgoing_grpc_created
         if outgoing_grpc_updated:
@@ -565,7 +571,7 @@ class ConfigSync:
 
         # Process HL7 MLLP channel definitions
         channel_mllp_list = yaml_config.get('channel_mllp', [])
-        channel_mllp_created, channel_mllp_updated = self.sync_channel_mllp(channel_mllp_list, session)
+        channel_mllp_created, channel_mllp_updated = importer.sync_channel_mllp(channel_mllp_list, session)
         if channel_mllp_created:
             self.created_objects['channel_mllp'] = channel_mllp_created
         if channel_mllp_updated:
@@ -573,7 +579,7 @@ class ConfigSync:
 
         # Process outgoing HL7 MLLP definitions
         outgoing_mllp_list = yaml_config.get('outgoing_mllp', [])
-        outgoing_mllp_created, outgoing_mllp_updated = self.sync_outgoing_mllp(outgoing_mllp_list, session)
+        outgoing_mllp_created, outgoing_mllp_updated = importer.sync_outgoing_mllp(outgoing_mllp_list, session)
         if outgoing_mllp_created:
             self.created_objects['outgoing_mllp'] = outgoing_mllp_created
         if outgoing_mllp_updated:
@@ -581,7 +587,7 @@ class ConfigSync:
 
         # Process outgoing HL7 FHIR definitions
         outgoing_fhir_list = yaml_config.get('outgoing_fhir', [])
-        outgoing_fhir_created, outgoing_fhir_updated = self.sync_outgoing_fhir(outgoing_fhir_list, session)
+        outgoing_fhir_created, outgoing_fhir_updated = importer.sync_outgoing_fhir(outgoing_fhir_list, session)
         if outgoing_fhir_created:
             self.created_objects['outgoing_fhir'] = outgoing_fhir_created
         if outgoing_fhir_updated:
@@ -595,7 +601,7 @@ class ConfigSync:
                 item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-microsoft-365':
                     microsoft_cloud_list.append(item)
-        microsoft_cloud_created, microsoft_cloud_updated = self.sync_microsoft_cloud(microsoft_cloud_list, session)
+        microsoft_cloud_created, microsoft_cloud_updated = importer.sync_microsoft_cloud(microsoft_cloud_list, session)
         if microsoft_cloud_created:
             self.created_objects['microsoft_cloud'] = microsoft_cloud_created
         if microsoft_cloud_updated:
@@ -609,7 +615,7 @@ class ConfigSync:
                 item_type = get_generic_connection_type(item)
                 if item_type == 'chat-microsoft-teams':
                     microsoft_teams_list.append(item)
-        microsoft_teams_created, microsoft_teams_updated = self.sync_microsoft_teams(microsoft_teams_list, session)
+        microsoft_teams_created, microsoft_teams_updated = importer.sync_microsoft_teams(microsoft_teams_list, session)
         if microsoft_teams_created:
             self.created_objects['microsoft_teams'] = microsoft_teams_created
         if microsoft_teams_updated:
@@ -623,7 +629,7 @@ class ConfigSync:
                 item_type = get_generic_connection_type(item)
                 if item_type == 'chat-slack':
                     slack_list.append(item)
-        slack_created, slack_updated = self.sync_slack(slack_list, session)
+        slack_created, slack_updated = importer.sync_slack(slack_list, session)
         if slack_created:
             self.created_objects['slack'] = slack_created
         if slack_updated:
@@ -637,7 +643,7 @@ class ConfigSync:
                 item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-microsoft-fabric':
                     fabric_list.append(item)
-        fabric_created, fabric_updated = self.sync_microsoft_fabric(fabric_list, session)
+        fabric_created, fabric_updated = importer.sync_microsoft_fabric(fabric_list, session)
         if fabric_created:
             self.created_objects['microsoft_fabric'] = fabric_created
         if fabric_updated:
@@ -651,21 +657,21 @@ class ConfigSync:
                 item_type = get_generic_connection_type(item)
                 if item_type == 'cloud-microsoft-power-automate':
                     power_automate_list.append(item)
-        power_automate_created, power_automate_updated = self.sync_microsoft_power_automate(power_automate_list, session)
+        power_automate_created, power_automate_updated = importer.sync_microsoft_power_automate(power_automate_list, session)
         if power_automate_created:
             self.created_objects['microsoft_power_automate'] = power_automate_created
         if power_automate_updated:
             self.updated_objects['microsoft_power_automate'] = power_automate_updated
 
         # Process ElasticSearch connection definitions
-        es_created, es_updated = self.sync_es(yaml_config.get('elastic_search', []), session)
+        es_created, es_updated = importer.sync_es(yaml_config.get('elastic_search', []), session)
         if es_created:
             self.created_objects['elastic_search'] = es_created
         if es_updated:
             self.updated_objects['elastic_search'] = es_updated
 
         # Process outgoing REST connection definitions
-        outgoing_rest_created, outgoing_rest_updated = self.sync_outgoing_rest(yaml_config.get('outgoing_rest', []), session)
+        outgoing_rest_created, outgoing_rest_updated = importer.sync_outgoing_rest(yaml_config.get('outgoing_rest', []), session)
         if outgoing_rest_created:
             self.created_objects['outgoing_rest'] = outgoing_rest_created
         if outgoing_rest_updated:
@@ -673,62 +679,62 @@ class ConfigSync:
 
         # Process outgoing SOAP connection definitions
         outgoing_soap_list = yaml_config.get('outgoing_soap') or yaml_config.get('outconn_soap', [])
-        outgoing_soap_created, outgoing_soap_updated = self.sync_outgoing_soap(outgoing_soap_list, session)
+        outgoing_soap_created, outgoing_soap_updated = importer.sync_outgoing_soap(outgoing_soap_list, session)
         if outgoing_soap_created:
             self.created_objects['outgoing_soap'] = outgoing_soap_created
         if outgoing_soap_updated:
             self.updated_objects['outgoing_soap'] = outgoing_soap_updated
 
         # Process outgoing AS2 connection definitions
-        outgoing_as2_created, outgoing_as2_updated = self.sync_outgoing_as2(yaml_config.get('outgoing_as2', []), session)
+        outgoing_as2_created, outgoing_as2_updated = importer.sync_outgoing_as2(yaml_config.get('outgoing_as2', []), session)
         if outgoing_as2_created:
             self.created_objects['outgoing_as2'] = outgoing_as2_created
         if outgoing_as2_updated:
             self.updated_objects['outgoing_as2'] = outgoing_as2_updated
 
         # Process outgoing AS4 connection definitions
-        outgoing_as4_created, outgoing_as4_updated = self.sync_outgoing_as4(yaml_config.get('outgoing_as4', []), session)
+        outgoing_as4_created, outgoing_as4_updated = importer.sync_outgoing_as4(yaml_config.get('outgoing_as4', []), session)
         if outgoing_as4_created:
             self.created_objects['outgoing_as4'] = outgoing_as4_created
         if outgoing_as4_updated:
             self.updated_objects['outgoing_as4'] = outgoing_as4_updated
 
         # Process pubsub topic definitions
-        pubsub_topic_created, pubsub_topic_updated = self.sync_pubsub_topic(yaml_config.get('pubsub_topic', []), session)
+        pubsub_topic_created, pubsub_topic_updated = importer.sync_pubsub_topic(yaml_config.get('pubsub_topic', []), session)
         if pubsub_topic_created:
             self.created_objects['pubsub_topic'] = pubsub_topic_created
         if pubsub_topic_updated:
             self.updated_objects['pubsub_topic'] = pubsub_topic_updated
 
         # Process pubsub permission definitions
-        pubsub_permission_created, pubsub_permission_updated = self.sync_pubsub_permission(yaml_config.get('pubsub_permission', []), session)
+        pubsub_permission_created, pubsub_permission_updated = importer.sync_pubsub_permission(yaml_config.get('pubsub_permission', []), session)
         if pubsub_permission_created:
             self.created_objects['pubsub_permission'] = pubsub_permission_created
         if pubsub_permission_updated:
             self.updated_objects['pubsub_permission'] = pubsub_permission_updated
 
         # Process pubsub subscription definitions
-        pubsub_subscription_created, pubsub_subscription_updated = self.sync_pubsub_subscription(yaml_config.get('pubsub_subscription', []), session)
+        pubsub_subscription_created, pubsub_subscription_updated = importer.sync_pubsub_subscription(yaml_config.get('pubsub_subscription', []), session)
         if pubsub_subscription_created:
             self.created_objects['pubsub_subscription'] = pubsub_subscription_created
         if pubsub_subscription_updated:
             self.updated_objects['pubsub_subscription'] = pubsub_subscription_updated
 
         # Process OpenAPI channel definitions (depends on REST channels)
-        channel_openapi_created, channel_openapi_updated = self.sync_channel_openapi(yaml_config.get('channel_openapi', []), session)
+        channel_openapi_created, channel_openapi_updated = importer.sync_channel_openapi(yaml_config.get('channel_openapi', []), session)
         if channel_openapi_created:
             self.created_objects['channel_openapi'] = channel_openapi_created
         if channel_openapi_updated:
             self.updated_objects['channel_openapi'] = channel_openapi_updated
 
         # Process alert rule configuration - the storage is the live rule documents
-        _, alert_rules_updated = self.sync_alert_rules(yaml_config.get('alert_rules', []), session)
+        _, alert_rules_updated = importer.sync_alert_rules(yaml_config.get('alert_rules', []), session)
         if alert_rules_updated:
             self.updated_objects['alert_rules'] = alert_rules_updated
 
         # Process alert notification targets - the storage is the sweep job's extra
         alert_notifications = yaml_config.get('alert_notifications', {})
-        alert_notifications_changed = self.sync_alert_notifications(alert_notifications, session)
+        alert_notifications_changed = importer.sync_alert_notifications(alert_notifications, session)
         if alert_notifications_changed:
             self.updated_objects['alert_notifications'] = [alert_notifications]
 
@@ -736,14 +742,14 @@ class ConfigSync:
         # holds the definitions of one connector type built with the Connector SDK.
         for yaml_key in sorted(yaml_config):
             if yaml_key.startswith(ModuleCtx.Custom_Key_Prefix):
-                custom_created, custom_updated = self.sync_custom_connectors(yaml_key, yaml_config[yaml_key], session)
+                custom_created, custom_updated = importer.sync_custom_connectors(yaml_key, yaml_config[yaml_key], session)
                 if custom_created:
                     self.created_objects[yaml_key] = custom_created
                 if custom_updated:
                     self.updated_objects[yaml_key] = custom_updated
 
         # Delete the objects that are refused while anything references them, now that the references are gone
-        self.run_deferred_deletions(session, server_dir)
+        importer.run_deferred_deletions(session, server_dir)
 
         logger.info('YAML synchronization completed')
 

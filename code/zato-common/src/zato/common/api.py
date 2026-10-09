@@ -1437,6 +1437,7 @@ class GENERIC:
             CHANNEL_IBM_MQ = 'channel-ibm-mq'
             CHANNEL_OPENAPI = 'channel-openapi'
             CHANNEL_KAFKA = 'channel-kafka'
+            CHAT_DISCORD = 'chat-discord'
             CHAT_MICROSOFT_TEAMS = 'chat-microsoft-teams'
             CHAT_SLACK = 'chat-slack'
             CLOUD_AWS = 'cloud-aws'
@@ -2220,6 +2221,16 @@ class Microsoft365:
             'https://graph.microsoft.com/.default'
         ]
         Verify_TLS = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Discord:
+
+    class Default:
+        Address = 'https://discord.com/api/v10'
+        Ready_Timeout = 60
+        Timeout = 30
 
 # ################################################################################################################################
 # ################################################################################################################################

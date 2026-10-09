@@ -25,6 +25,7 @@ from zato.admin.web.views.channel import openapi_ as channel_openapi
 from zato.admin.web.views.cloud import aws as cloud_aws
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import jira as cloud_jira
+from zato.admin.web.views.chat import discord as chat_discord
 from zato.admin.web.views.chat import slack as chat_slack
 from zato.admin.web.views.cloud import microsoft_365 as cloud_microsoft_365
 from zato.admin.web.views.cloud import microsoft_fabric as cloud_microsoft_fabric
@@ -1454,6 +1455,24 @@ urlpatterns += [
         login_required(chat_microsoft_teams.change_password), name='chat-microsoft-teams-change-password'),
     url(r'^zato/chat/microsoft-teams/send-message/$',
         login_required(chat_microsoft_teams.send_message), name='chat-microsoft-teams-send-message'),
+    ]
+
+urlpatterns += [
+
+    # .. Chat - Discord
+
+    url(r'^zato/chat/discord/$',
+        login_required(chat_discord.Index()), name=chat_discord.Index.url_name),
+    url(r'^zato/chat/discord/create/$',
+        login_required(chat_discord.Create()), name=chat_discord.Create.url_name),
+    url(r'^zato/chat/discord/edit/$',
+        login_required(chat_discord.Edit()), name=chat_discord.Edit.url_name),
+    url(r'^zato/chat/discord/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(chat_discord.Delete()), name=chat_discord.Delete.url_name),
+    url(r'^zato/chat/discord/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(chat_discord.ping), name='chat-discord-ping'),
+    url(r'^zato/chat/discord/change-password/$',
+        login_required(chat_discord.change_password), name='chat-discord-change-password'),
     ]
 
 urlpatterns += [

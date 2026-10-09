@@ -58,6 +58,16 @@ class DeleteSync:
 # ################################################################################################################################
 
     def init_deletions(self) -> 'None':
+        """ Initializes the deletion state of a new importer - the per-import tracking and the client that outlives it.
+        """
+        self.reset_deletion_tracking()
+
+        # The client the delete services are invoked through, built when the first deletion needs it
+        self.delete_client:'ZatoClient | None' = None
+
+# ################################################################################################################################
+
+    def reset_deletion_tracking(self) -> 'None':
         """ Resets everything one import's deletions are tracked with.
         """
 
@@ -69,9 +79,6 @@ class DeleteSync:
 
         # What was deleted, by section, each entry with the key and the id of the row
         self.deleted_objects:'dict[str, anylist]' = {}
-
-        # The client the delete services are invoked through, built when the first deletion needs it
-        self.delete_client:'ZatoClient | None' = None
 
 # ################################################################################################################################
 
@@ -144,7 +151,7 @@ class DeleteSync:
         """ Separates the items marked for deletion from every section of the config and checks that nothing left
         in the file conflicts with or refers to what is deleted. The config is modified in place.
         """
-        self.init_deletions()
+        self.reset_deletion_tracking()
 
         for key in list(yaml_config):
             items = yaml_config[key]

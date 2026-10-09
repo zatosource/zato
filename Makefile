@@ -729,6 +729,14 @@ test-enmasse: ## Enmasse tests - every importer, every exporter, the round trips
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
 		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v
 
+test-enmasse-delete-live: ## Enmasse should_delete against a live server - every object created and deleted through the pickup directory.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_delete_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_enmasse_delete_live -o log_cli_level=WARNING \
+		-W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
 test-cli: ## CLI tests.
 	$(Zato_Log_Reset)
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-cli/test_odb_sqlite_default.py \

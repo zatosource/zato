@@ -14,7 +14,7 @@ from zato.common.util.api import asbool
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dictlist, stranydict
+    from zato.common.typing_ import any_, dictlist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,10 +40,10 @@ class Enmasse(ZatoCommand):
         {'name':'--result-file', 'help':'Path to a JSON file to write counts of created and updated objects to after an import'},
     ]
 
-    def get_cluster_id(self, args):
+    def get_cluster_id(self, args:'any_') -> 'int':
         return 1 # Always this value because there is always going to be one cluster only
 
-    def execute(self, args) -> 'None':
+    def execute(self, args:'any_') -> 'None':
 
         # stdlib
         import os
@@ -76,7 +76,7 @@ class Enmasse(ZatoCommand):
             from zato.common.ext.configobj_ import ConfigObj
 
             # Load the environment variables
-            env_config = ConfigObj(args.env_file)
+            env_config:'any_' = ConfigObj(args.env_file)
 
             # Set environment variables
             for section in env_config:
@@ -199,7 +199,7 @@ class Enmasse(ZatoCommand):
 # ################################################################################################################################
 
     @staticmethod
-    def format_object_name(item):
+    def format_object_name(item:'any_') -> 'any_':
 
         # For groups objects, display name and members but never ID
         if isinstance(item, dict):

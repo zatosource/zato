@@ -237,22 +237,22 @@ def _add_security_keyed(section:'str', session:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def _create_object(section:'str', session:'any_') -> 'any_':
+def _create_object(section:'str', session:'any_', name:'str'=_object_name) -> 'any_':
     """ Creates the row an item of the section resolves to and returns its id.
     """
     cluster = session.query(Cluster).one()
 
     if section in targets.model_sections:
-        out = _insert_model(section, session, _object_name)
+        out = _insert_model(section, session, name)
         return out
 
     if section in targets.amqp_sections:
-        out = _insert_amqp(section, session, _object_name)
+        out = _insert_amqp(section, session, name)
         return out
 
     if section in targets.http_soap_sections:
         connection, transport = targets.http_soap_sections[section]
-        row = HTTPSOAP(name=_object_name, is_active=True, is_internal=False, connection=connection, transport=transport,
+        row = HTTPSOAP(name=name, is_active=True, is_internal=False, connection=connection, transport=transport,
             url_path='/enmasse/should-delete', soap_action='', cluster=cluster)
 
     elif section in targets.generic_sections or targets.is_custom_section(section):
@@ -260,15 +260,15 @@ def _create_object(section:'str', session:'any_') -> 'any_':
             type_ = custom_key_to_connection_type(section)
         else:
             type_ = targets.generic_sections[section]
-        row = GenericConn(name=_object_name, type_=type_, is_active=True, is_channel=False, is_outconn=True,
+        row = GenericConn(name=name, type_=type_, is_active=True, is_channel=False, is_outconn=True,
             cluster_id=_cluster_id)
 
     elif section in targets.generic_object_sections:
         type_, subtype, _ = targets.generic_object_sections[section]
-        row = GenericObject(name=_object_name, type_=type_, subtype=subtype, cluster_id=_cluster_id)
+        row = GenericObject(name=name, type_=type_, subtype=subtype, cluster_id=_cluster_id)
 
     elif section == 'security':
-        row = _add_security(session, _object_name)
+        row = _add_security(session, name)
 
     else:
         row = _add_security_keyed(section, session)
@@ -277,6 +277,14 @@ def _create_object(section:'str', session:'any_') -> 'any_':
     session.commit()
 
     out = row.id
+    return out
+
+# ################################################################################################################################
+
+def _section_object_name(section:'str') -> 'str':
+    """ The name of the section's object when every section has one object of its own.
+    """
+    out = f'{_object_name}.{section}'
     return out
 
 # ################################################################################################################################
@@ -312,7 +320,7 @@ def _expected_service(section:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _marked_item(section:'str') -> 'stranydict':
+def _marked_item(section:'str', name:'str'=_object_name) -> 'stranydict':
     """ The smallest item that marks the section's object for deletion.
     """
     key_field = targets.get_key_field(section)
@@ -320,7 +328,7 @@ def _marked_item(section:'str') -> 'stranydict':
     if key_field == targets.Key_Field_Security:
         key = _security_name
     else:
-        key = _object_name
+        key = name
 
     out = {key_field: key, targets.Should_Delete_Key: True}
     return out
@@ -594,16 +602,17 @@ class TestOrderAndReporting:
 
     def test_deletions_follow_the_dependency_order(self, session:'any_', importer:'any_') -> 'None':
 
-        # One object in every section, including the deferred one ..
+        # One object in every section, including the deferred one, each named after its section because
+        # the AMQP and Azure Service Bus sections of one direction share a table with a unique name ..
         for section in _sections:
             if section not in targets.security_keyed_sections:
-                _ = _create_object(section, session)
+                _ = _create_object(section, session, _section_object_name(section))
 
         config:'stranydict' = {}
 
         for section in _sections:
             if section not in targets.security_keyed_sections:
-                config[section] = [_marked_item(section)]
+                config[section] = [_marked_item(section, _section_object_name(section))]
 
         _ = importer.sync_from_yaml(config, session)
 

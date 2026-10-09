@@ -165,8 +165,12 @@ class Generic(ConfigManagerImpl):
     def _delete_generic_connection(self, msg:'stranydict', needs_queue_delete:'bool'=True, is_edit:'bool'=False) -> 'None':
 
         conn_dict, conn_value = self._find_conn_info(msg['id'], msg['name'])
+
+        # A connection this server never loaded, such as one inserted into the database without a config reload,
+        # has no wrapper or queue to remove - the database row is gone already, so there is nothing more to do.
         if not conn_dict:
-            raise Exception('Could not find configuration matching input message `{}`'.format(msg))
+            self.logger.info('Generic connection `%s` (%s) is not loaded, skipping its runtime deletion',
+                msg['name'], msg['type_'])
         else:
 
             # Delete the connection object ..

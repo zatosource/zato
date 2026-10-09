@@ -2531,7 +2531,14 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an HTTP/SOAP channel.
         """
-        item = self.get_channel_rest(msg.name) or {}
+        item = self._get_channel_rest(CONNECTION.CHANNEL, msg.name)
+
+        # A channel this server never loaded, such as one inserted into the database without a config reload,
+        # has no runtime entries to remove - the database row is gone already, so there is nothing more to do.
+        if item is None:
+            logger.info('Channel `%s` is not loaded, skipping its runtime deletion', msg.name)
+            return
+
         channel_id = item['id']
         with self.server.gateway_services_allowed_lock:
             _ = self.server.gateway_services_allowed.pop(channel_id, None)
