@@ -56,14 +56,14 @@ def _new_request_with_connections() -> 'any_':
 # ################################################################################################################################
 
 def test_every_destination_type_is_grouped_on_its_own() -> 'None':
-    """ The tab reads its rows from seven groups, keyed by the destination types it offers.
+    """ The tab reads its rows from eight groups, keyed by the destination types it offers.
     """
     request = _new_request_with_connections()
 
     response = get_connection_list(request)
     data = loads(response.content)
 
-    assert sorted(data) == ['hl7-fhir', 'hl7-mllp', 'kafka', 'rest', 'service', 'sftp', 'smtp']
+    assert sorted(data) == ['hl7-fhir', 'hl7-mllp', 'kafka', 'rest', 'service', 'sftp', 'sms', 'smtp']
 
     assert data['rest'] == [{'name': 'test.rest.billing'}]
     assert data['smtp'] == [{'name': 'test.smtp.alerts'}]
@@ -85,7 +85,7 @@ def test_the_rest_connections_are_the_outgoing_ones() -> 'None':
 # ################################################################################################################################
 
 def test_generic_destination_types_read_their_own_generic_types() -> 'None':
-    """ MLLP, FHIR, Kafka and SFTP destinations are generic connections, each read by its own type.
+    """ MLLP, FHIR, Kafka, SMS and SFTP destinations are generic connections, each read by its own type.
     """
     request = _new_request_with_connections()
 
@@ -101,6 +101,7 @@ def test_generic_destination_types_read_their_own_generic_types() -> 'None':
         GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
         GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR,
         GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA,
+        GENERIC.CONNECTION.TYPE.OUTCONN_SMS,
         GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
     ]
 
@@ -121,6 +122,7 @@ def test_a_type_with_no_connections_is_reported_as_empty() -> 'None':
     assert data['hl7-mllp'] == []
     assert data['hl7-fhir'] == []
     assert data['kafka'] == []
+    assert data['sms'] == []
     assert data['sftp'] == []
     assert data['service'] == []
 
