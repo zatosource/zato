@@ -106,12 +106,12 @@ class TestEnmasseDiscordFromYAML(TestCase):
 
         self.assertTrue(discord.is_active)
         self.assertEqual(discord.address, Discord.Default.Address)
+        self.assertEqual(discord.timeout, Discord.Default.Timeout)
         self.assertTrue(is_encrypted(discord.secret))
 
-        # The default channel and the timeout are opaque attributes
+        # The default channel is an opaque attribute
         opaque = parse_instance_opaque_attr(discord)
         self.assertEqual(opaque['default_channel_id'], '123456789012345678')
-        self.assertEqual(opaque['timeout'], Discord.Default.Timeout)
 
         # The token is in the secret column only
         self.assertNotIn('token', opaque)

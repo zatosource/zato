@@ -23,6 +23,15 @@ def login(page:'Page', base_url:'str', password:'str') -> 'None':
     login_url = f'{base_url}/accounts/login/?next=/zato/'
     _ = page.goto(login_url)
 
+    # .. a keepalive request from a tab closed earlier in the same browser context can complete after
+    # the cookies were cleared and restore that tab's session, which redirects the login page to the dashboard,
+    # and since the redirect means that response has already arrived, clearing the cookies again is final ..
+    is_on_login_page = page.url == login_url
+
+    if not is_on_login_page:
+        page.context.clear_cookies()
+        _ = page.goto(login_url)
+
     # .. fill in credentials ..
     page.fill('input[name="username"]', 'admin')
     page.fill('input[name="password"]', password)

@@ -190,7 +190,7 @@ class _StubServer:
 
 # ################################################################################################################################
 
-    def invoke(self, service_name:'str', payload:'str') -> 'None':
+    def invoke(self, service_name:'str', payload:'str', data_format:'str') -> 'None':
 
         self.invoked.append(service_name)
 
