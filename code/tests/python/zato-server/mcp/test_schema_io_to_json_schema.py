@@ -7,9 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from dataclasses import dataclass
 from unittest import TestCase
+from unittest.mock import MagicMock
 
 # Zato
+from zato.common.marshal_.api import Model
+from zato.common.marshal_.io import DataClassIO
 from zato.input_output import IOProcessor
 from zato.server.connection.mcp.schema import io_to_json_schema
 
@@ -74,6 +78,44 @@ class _ServiceIOProcessorMixed:
     input = 'name', 'age', '-email'
 
 IOProcessor.attach_io(None, _ServiceIOProcessorMixed)
+
+# ################################################################################################################################
+
+@dataclass(init=False)
+class _PingRequest(Model):
+    """ An input model with one required field.
+    """
+    host: str
+
+# ################################################################################################################################
+
+@dataclass(init=False)
+class _PingResponse(Model):
+    """ An output model with one field.
+    """
+    is_ok: bool
+
+# ################################################################################################################################
+
+class _ServiceDataClassOutputOnly:
+    """ A service class whose I/O declaration has a dataclass output and no input attribute,
+    which is what the service store builds for a service that declares only `output = Model`.
+    """
+    class IO:
+        output = _PingResponse
+
+_ = DataClassIO.attach_io(MagicMock(), _ServiceDataClassOutputOnly)
+
+# ################################################################################################################################
+
+class _ServiceDataClassInputOutput:
+    """ A service class whose I/O declaration has a dataclass input and a dataclass output.
+    """
+    class IO:
+        input = _PingRequest
+        output = _PingResponse
+
+_ = DataClassIO.attach_io(MagicMock(), _ServiceDataClassInputOutput)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -207,6 +249,29 @@ class TestIOProcessorSchema(TestCase):
         self.assertEqual(name_schema, {'type': 'string'})
         self.assertEqual(age_schema, {'type': 'string'})
         self.assertEqual(email_schema, {'type': 'string'})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDataClassIOToJSONSchema(TestCase):
+    """ Tests for io_to_json_schema with DataClassIO-based service classes.
+    """
+
+    def test_dataclass_output_without_input(self:'any_') -> 'None':
+        """ A service with a dataclass output and no input returns a plain object schema.
+        """
+
+        result = io_to_json_schema(_ServiceDataClassOutputOnly)
+        self.assertEqual(result, {'type': 'object'})
+
+# ################################################################################################################################
+
+    def test_dataclass_input_and_output(self:'any_') -> 'None':
+        """ A service with a dataclass input returns the schema of that input model.
+        """
+
+        result = io_to_json_schema(_ServiceDataClassInputOutput)
+        self.assertEqual(result, {'type': 'object', 'properties': {'host': {'type': 'string'}}, 'required': ['host']})
 
 # ################################################################################################################################
 # ################################################################################################################################

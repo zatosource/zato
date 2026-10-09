@@ -219,7 +219,7 @@ class JSONRPCEnvelopeFuzzing(TestCase):
         """ Any method name not in the known set must return -32601.
         """
 
-        known_methods = {'initialize', 'tools/list', 'tools/call', 'ping', 'server/discover'}
+        known_methods = {'initialize', 'tools/list', 'tools/call', 'prompts/list', 'prompts/get', 'ping', 'server/discover'}
         _ = assume(method not in known_methods)
 
         handler = _make_handler()

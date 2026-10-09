@@ -315,7 +315,13 @@ def io_to_json_schema(service_class:'any_') -> 'stranydict':
         return out
 
     if isinstance(io, DataClassIO):
-        out = dataclass_model_to_schema(io.user_declaration.input)
+
+        # The input model is genuinely optional - output-only services are commonplace
+        if io.has_input_declared:
+            out = dataclass_model_to_schema(io.input_model_class)
+            return out
+
+        out:'stranydict' = {'type': 'object'}
         return out
 
     if isinstance(io, IOProcessor):

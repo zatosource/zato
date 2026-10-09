@@ -33,6 +33,9 @@ if 0:
 
 logger = getLogger(__name__)
 
+# How long a connector waits between two attempts to connect to its remote end
+Reconnect_Pause_Seconds = 2
+
 # ################################################################################################################################
 
 class Connector_Type:
@@ -155,15 +158,15 @@ class Connector:
 
                         logger.warning('Caught %s exception `%s` (id:%s) (`%s` %s)',
                             self.type, format_exc(), self.id_self, self.name, self.get_log_details())
-                        sleep(2)
 
-                    # We go here if ._start did not set self.is_conneted to True.
-                    # The if below is needed because we could have connected in between the sleep call and now.
+                    # We go here if ._start did not set self.is_connected to True, whether it raised or returned
+                    # without connecting, and the pause before the next attempt applies to both cases alike.
                     if not self.is_connected:
                         attempts += 1
                         if attempts % log_each == 0:
                             logger.warning('Could not connect to %s (%s) after %s attempts, time spent so far: %s (id:%s)',
                                 self.get_log_details(), self.name, attempts, datetime.utcnow() - start, self.id_self)
+                        sleep(Reconnect_Pause_Seconds)
 
                 # Ok, break from the outermost loop
                 self.keep_connecting = False

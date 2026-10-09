@@ -24,6 +24,7 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 # gevent
 from gevent import sleep, spawn
+from gevent.lock import RLock
 
 # Kombu
 from kombu import Connection, Consumer as KombuConsumer, pools, Queue
@@ -299,19 +300,46 @@ class Producer:
 # ################################################################################################################################
 
 class AzureServiceBusProducer:
+    """ Publishes messages to Azure Service Bus queues through one outgoing connection. The queue a message goes to
+    is named by the routing key of each publication, and the client along with a sender per queue are built
+    on first use, the way AMQP producers connect when a message is published.
+    """
     def __init__(self, config:'Bunch') -> 'None':
         self.config = config
         self.name = config.name
-        self.client = ServiceBusClient.from_connection_string(config.azure_conn_str)
-        self.sender = self.client.get_queue_sender(config.queue)
+        self.client:'ServiceBusClient | None' = None
+        self.senders:'dict[str, any_]' = {}
+        self.lock = RLock()
 
-    def publish(self, msg:'str', **kwargs:'any_') -> 'None':
+    def _get_sender(self, queue:'str') -> 'any_':
+        """ Returns the sender for a queue, building the client and the sender when they are needed for the first time.
+        """
+        with self.lock:
+
+            if self.client is None:
+                self.client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
+
+            if queue not in self.senders:
+                self.senders[queue] = self.client.get_queue_sender(queue)
+
+            out = self.senders[queue]
+
+        return out
+
+    def publish(self, msg:'str', queue:'str') -> 'None':
+        sender = self._get_sender(queue)
         service_bus_msg = ServiceBusMessage(msg)
-        self.sender.send_messages(service_bus_msg)
+        sender.send_messages(service_bus_msg)
 
     def stop(self) -> 'None':
-        self.sender.close()
-        self.client.close()
+        with self.lock:
+            for sender in self.senders.values():
+                sender.close()
+            self.senders.clear()
+
+            if self.client is not None:
+                self.client.close()
+                self.client = None
 
 # ################################################################################################################################
 
@@ -729,13 +757,12 @@ class ConnectorAMQP(Connector):
             self._start_amqp()
 
     def _start_azure(self):
-        try:
-            client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
-            client.close()
-            self.is_connected = True
-        except Exception:
-            logger.warning(f'Azure Service Bus connection test failed: {format_exc()}')
-            self.is_connected = False
+
+        # The connection string is validated here - an invalid one raises and the connector's loop retries after a pause.
+        # Nothing is sent to the namespace yet, the producers and consumers connect on their own when they are used.
+        client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
+        client.close()
+        self.is_connected = True
 
     def _start_amqp(self):
 
@@ -1029,11 +1056,13 @@ class ConnectorAMQP(Connector):
         if isinstance(msg, ServiceInput):
             msg = msg.to_dict()
 
-        # Azure Service Bus uses a simpler interface and its messages are text
+        # Azure Service Bus uses a simpler interface, its messages are text and the routing key names the queue
         if outconn_config.is_azure:
+            if not routing_key:
+                raise Exception(f'Publishing to Azure Service Bus through `{out_name}` requires a routing key naming the queue')
             if isinstance(msg, (dict, list)):
                 msg = dumps(msg)
-            return producer.publish(msg)
+            return producer.publish(msg, routing_key)
 
         acquire_block = kwargs.pop('acquire_block', True)
         acquire_timeout = kwargs.pop('acquire_block', None)
