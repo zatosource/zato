@@ -132,9 +132,18 @@ def _is_azure_service_bus(address:'str') -> 'bool':
 
 # ################################################################################################################################
 
+# The scheme Azure Service Bus is reached over, used to complete an address given without one
+_azure_scheme = 'amqps'
+
 def _build_azure_conn_string(address:'str', username:'str', password:'str') -> 'str':
+
+    # An address is given as host:port, the way the Dashboard and enmasse document it, or as a full amqps:// URL -
+    # urlparse reads the host of a scheme-less address as its scheme, so such an address receives one first.
+    if '://' not in address:
+        address = f'{_azure_scheme}://{address}'
+
     parsed = urlparse(address)
-    host = parsed.hostname or ''
+    host = cast_('str', parsed.hostname)
     password_decoded = unquote(password)
     result = f'Endpoint=sb://{host}/;SharedAccessKeyName={username};SharedAccessKey={password_decoded}'
     return result
@@ -972,8 +981,13 @@ class ConnectorAMQP(Connector):
     def _delete_outconn(self, config:'Bunch') -> 'None':
         """ Deletes an outgoing connection. Must be called with self.lock held.
         """
-        self._producers[config.name].stop()
-        del self._producers[config.name]
+
+        # The producer is absent if it could not be created, in which case only the configuration is left to remove
+        producer = self._producers.pop(config.name, None)
+
+        if producer is not None:
+            producer.stop()
+
         del self.outconns[config.name]
 
 # ################################################################################################################################

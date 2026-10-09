@@ -14,9 +14,9 @@ from uuid import uuid4
 from zato.cli.enmasse.util import preprocess_item
 from zato.cli.enmasse.util.secrets import Auto_Password_Prefix, decrypt_secret, encrypt_kept_opaque_secrets, \
     encrypt_opaque_secrets, encrypt_secret, ensure_encrypted, is_encrypted, is_usable_secret, load_opaque, secret_needs_update
-from zato.common.api import OAuth as COMMON_OAUTH
+from zato.common.api import GENERIC, OAuth as COMMON_OAUTH
 from zato.common.crypto.api import CryptoManager
-from zato.common.json_internal import loads
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, MTLSSecurity, NTLM, OAuth, SPNEGOSecurity, to_json, \
     WSSecurity
 from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, spnego_list, \
@@ -93,6 +93,34 @@ def password_needs_update(session:'SASession', yaml_password:'any_', db_password
 
     out = stored != yaml_password
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _switches_rate_limiting_source(item:'anydict', db_def:'anydict') -> 'bool':
+    """ Returns True if the YAML item references a quota tier while the stored definition carries rules of its own,
+    or gives rules of its own while the stored definition references a quota tier.
+    """
+    yaml_has_tier = 'quota_tier' in item
+    yaml_has_rules = 'rate_limiting' in item
+
+    stored_has_tier = 'quota_tier' in db_def
+    stored_has_rules = 'rate_limiting' in db_def
+
+    out = (yaml_has_tier and stored_has_rules) or (yaml_has_rules and stored_has_tier)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _remove_opaque_attr(definition:'any_', key:'str') -> 'None':
+    """ Removes one attribute from the opaque data a definition stores.
+    """
+    opaque = load_opaque(getattr(definition, GENERIC.ATTR_NAME))
+
+    if key in opaque:
+        del opaque[key]
+        setattr(definition, GENERIC.ATTR_NAME, dumps(opaque))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -247,8 +275,14 @@ class SecurityImporter:
             else:
                 logger.info('Definition %s exists in DB with id=%s type=%s', name, db_def.get('id'), db_def.get('type'))
 
-                needs_update = False
+                # A definition either references a quota tier or carries its own rules, never both, so a YAML item
+                # that gives one of the two while the stored definition holds the other is an update even when
+                # nothing else differs - the stored counterpart has to be dropped.
+                needs_update = _switches_rate_limiting_source(item, db_def)
+
                 for key, value in item.items():
+                    if needs_update:
+                        break
                     if key in _comparison_skip_keys:
                         continue
                     if key == 'username' and sec_type == 'apikey':
@@ -478,7 +512,7 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def get_class_by_type(self, sec_type):
+    def get_class_by_type(self, sec_type:'str') -> 'any_':
         class_map = {
             'basic_auth': HTTPBasicAuth,
             'apikey': APIKeySecurity,
@@ -531,14 +565,24 @@ class SecurityImporter:
 
         # A definition either references a quota tier or carries its own rules, never both,
         # so the stale counterpart merged in from the previous opaque data is dropped.
+        stale_key = ''
+
         if has_yaml_quota_tier and 'rate_limiting' in sec_def:
-            del sec_def['rate_limiting']
+            stale_key = 'rate_limiting'
 
         if has_yaml_rate_limiting and 'quota_tier' in sec_def:
-            del sec_def['quota_tier']
+            stale_key = 'quota_tier'
+
+        if stale_key:
+            del sec_def[stale_key]
 
         definition = session.query(model).filter_by(id=def_id).one()
         self._update_definition(definition, sec_def, session)
+
+        # The opaque attributes are merged into the stored ones, which is what keeps the counterpart in place,
+        # so it is removed from the stored data itself.
+        if stale_key:
+            _remove_opaque_attr(definition, stale_key)
 
         session.add(definition)
         logger.debug('Finished updating security definition: %s', def_name)

@@ -141,7 +141,10 @@ class OutconnMongoDBWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self) -> 'None':
-        self._impl.close()
+
+        # An inactive connection never builds its client, so there is nothing to close
+        if self._impl:
+            self._impl.close()
 
 # ################################################################################################################################
 

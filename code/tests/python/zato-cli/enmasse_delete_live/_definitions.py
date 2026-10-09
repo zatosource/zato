@@ -161,6 +161,8 @@ def rate_limiting_rules() -> 'anylist':
         'cidr_list': ['0.0.0.0/0'],
         'time_range': [{
             'is_all_day': True,
+            'rate': 10,
+            'burst': 20,
             'limit': 1000,
             'limit_unit': 'day',
             'disabled': False,

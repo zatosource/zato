@@ -849,6 +849,8 @@ class ConfigManager(_ConfigManagerBase):
         for item in outconns:
             name = item['name']
             try:
+                # The same registration an outgoing connection created at runtime receives - a delete removes it
+                self.amqp_out_name_to_def[name] = name
                 self.amqp_connection_create(item)
                 self.amqp_api.create_outconn(name, item)
             except Exception:
