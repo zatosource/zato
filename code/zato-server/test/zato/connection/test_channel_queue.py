@@ -508,8 +508,12 @@ class EnvelopeRoundTripTestCase(TestCase):
 
         self.assertEqual(request_ctx['REQUEST_METHOD'], 'POST')
         self.assertEqual(request_ctx['PATH_INFO'], '/orders/1234')
-        self.assertEqual(request_ctx['zato.http.GET'], {'status': 'new', 'tag': ['a', 'b']})
         self.assertEqual(request_ctx['zato.http.path_params'], {'order_id': '1234'})
+
+        # With the merge switch off, a request that has just arrived reaches the service with neither key,
+        # and so does one from the queue
+        self.assertNotIn('zato.http.GET', request_ctx)
+        self.assertNotIn('zato.http.POST', request_ctx)
         self.assertIs(request_ctx['zato.channel_item'], self.channel_item)
 
         # The query string is the one the parameters came from, with the repeated parameter repeated

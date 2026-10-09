@@ -318,9 +318,11 @@ def build_delivery_request_ctx(channel_item:'anydict', request:'stranydict') -> 
 
     out['REQUEST_METHOD'] = request[Key_Method]
     out['PATH_INFO'] = request[Key_Path]
+
+    # The query string alone is placed here - what the service reads as self.request.http.GET and .POST is built
+    # out of it by create_channel_params under the channel's merge switch, the same as for a request that has
+    # just arrived, so a channel with the switch off reads neither from the queue either.
     out['QUERY_STRING'] = _build_query_string(query_params)
-    out['zato.http.GET'] = query_params
-    out['zato.http.POST'] = {}
     out['zato.http.path_params'] = request[Key_Path_Params]
     out['zato.request.headers'] = headers
     out['zato.channel_item'] = channel_item
