@@ -12,7 +12,7 @@ import sys
 import tempfile
 from unittest import TestCase
 
-# The directory with the throwaway test environment helpers
+# The directory of the test environment helpers
 _enmasse_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, _enmasse_tests_dir)
 
@@ -172,7 +172,7 @@ class TestEnmasseSMSExport(TestCase):
 
         sms_list_from_yaml = self.yaml_config['channel_sms']
 
-        # The importer replaces the file's `outconn` with the channel's own field name, so the names are kept beforehand
+        # The importer replaces the file's `outconn` with the channel's field name, so the names are read beforehand
         outconn_by_name = {}
         for yaml_def in sms_list_from_yaml:
             outconn_by_name[yaml_def['name']] = yaml_def[Channel_Outconn_Key]

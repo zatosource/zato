@@ -44,8 +44,8 @@ Content_Type_JSON = 'application/json'
 Content_Type_Form = 'application/x-www-form-urlencoded'
 Content_Type_Text = 'text/plain'
 
-# The compressed schedule a simulator resends a callback on when the receiver does not accept it, in seconds
-Callback_Retry_Delays = (0.1, 0.3, 0.6)
+# The resend intervals of a callback the receiver does not accept, in seconds
+Callback_Resend_Intervals = (0.1, 0.3, 0.6)
 
 # How long a callback push waits for the receiver
 _callback_timeout = 10.0
@@ -53,8 +53,8 @@ _callback_timeout = 10.0
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SimRequest(NamedTuple):
-    """ One HTTP request as a simulator saw it.
+class SimulatorRequest(NamedTuple):
+    """ One HTTP request received by a simulator.
     """
     method: 'str'
     path: 'str'
@@ -72,8 +72,8 @@ class SimRequest(NamedTuple):
 
 # ################################################################################################################################
 
-class SimResponse(NamedTuple):
-    """ What a simulator answers one request with.
+class SimulatorResponse(NamedTuple):
+    """ The response of a simulator to one request.
     """
     status: 'int'
     content_type: 'str'
@@ -106,7 +106,7 @@ class CallbackAttempt(NamedTuple):
 # ################################################################################################################################
 
 @dataclass
-class SimEvent:
+class SimulatorEvent:
     """ One entry of a simulator's event log - an incoming text or a change of an outgoing message's status.
     """
     seq: 'int'
@@ -123,19 +123,19 @@ class SimEvent:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def json_response(status:'int', payload:'any_') -> 'SimResponse':
-    out = SimResponse(status, Content_Type_JSON, dumps(payload))
+def json_response(status:'int', payload:'any_') -> 'SimulatorResponse':
+    out = SimulatorResponse(status, Content_Type_JSON, dumps(payload))
     return out
 
 # ################################################################################################################################
 
-def not_found(path:'str') -> 'SimResponse':
+def not_found(path:'str') -> 'SimulatorResponse':
     out = json_response(NOT_FOUND, {'error': f'No such path: {path}'})
     return out
 
 # ################################################################################################################################
 
-def bad_request(text:'str') -> 'SimResponse':
+def bad_request(text:'str') -> 'SimulatorResponse':
     out = json_response(BAD_REQUEST, {'error': text})
     return out
 
@@ -149,7 +149,7 @@ def utc_now() -> 'datetime':
 # ################################################################################################################################
 
 class _SimulatorHandler(BaseHTTPRequestHandler):
-    """ Reads each request into a SimRequest and answers with what the simulator returns for it.
+    """ Reads each request into a SimulatorRequest and writes the simulator's response.
     """
 
     def _handle(self) -> 'None':
@@ -171,7 +171,7 @@ class _SimulatorHandler(BaseHTTPRequestHandler):
         for name, value in self.headers.items():
             headers[name.lower()] = value
 
-        request = SimRequest(self.command, parts.path, query, headers, body)
+        request = SimulatorRequest(self.command, parts.path, query, headers, body)
         response = simulator.handle(request)
 
         response_body = response.body.encode('utf8')
@@ -195,8 +195,8 @@ class _SimulatorHandler(BaseHTTPRequestHandler):
 # ################################################################################################################################
 
 class SMSSimulator:
-    """ The common part of every provider simulator - the HTTP server, the record of accepted sends, the event log
-    that pull endpoints read from and the pushing of callbacks to a registered URL.
+    """ The base class of every provider simulator - the HTTP server, the record of accepted sends, the event log
+    read by pull endpoints and the pushing of callbacks to a registered URL.
     """
     provider = ''
 
@@ -211,31 +211,30 @@ class SMSSimulator:
         # Every send accepted, in order of arrival
         self.sends:'list[ReceivedSend]' = []
 
-        # Every request that did not match any endpoint or failed its checks
-        self.rejections:'list[SimRequest]' = []
+        # Every request that matched no endpoint or failed validation
+        self.rejections:'list[SimulatorRequest]' = []
 
         # The account's event log, incoming texts and status changes alike
-        self.events:'list[SimEvent]' = []
+        self.events:'list[SimulatorEvent]' = []
 
-        # Every callback pushed and what came back
+        # Every callback pushed and the receiver's response
         self.callbacks:'list[CallbackAttempt]' = []
 
-        # Numbers a send to which is rejected, each with the reason the provider gives - Twilio's test credentials
-        # have their documented magic numbers instead and its simulator leaves this empty
+        # Numbers rejected on send, each with the provider's reason. The Twilio simulator uses the documented
+        # test numbers and leaves this empty.
         self.rejected_numbers:'dict[str, str]' = {}
 
-        # Where callbacks go when a send did not name a URL of its own, and the URL they are signed over
+        # The callback URL of a send without a URL of its own, and the URL callbacks are signed over
         self.callback_url = ''
         self.callback_sign_url = ''
 
-        # How long each request takes before it is answered, for a test of a timing out send
+        # The delay before each response, in seconds
         self.delay = 0.0
 
-        # How many entries one page of a listing has at most, which a test lowers to exercise paging
+        # The maximum number of entries of one listing page
         self.page_size = 1000
 
-        # How many requests are answered before the simulator fails, and how many it then fails in a row -
-        # a test of a poll that fails midway sets both
+        # The number of requests answered before the simulator fails and the number of consecutive failures
         self.successes_before_failure = 0
         self.failures_left = 0
 
@@ -247,7 +246,7 @@ class SMSSimulator:
 # ################################################################################################################################
 
     def start(self) -> 'None':
-        """ Starts the simulator on its port, which stays the same across a stop and a start.
+        """ Starts the simulator on its port. The port is unchanged across a stop and a start.
         """
         server = cast_('any_', ThreadingHTTPServer((Host, self.port), _SimulatorHandler))
         server.simulator = self
@@ -259,7 +258,7 @@ class SMSSimulator:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops the simulator, leaving its port free for a later start.
+        """ Stops the simulator.
         """
         if self._server is None:
             return
@@ -271,7 +270,7 @@ class SMSSimulator:
 # ################################################################################################################################
 
     def reset(self) -> 'None':
-        """ Forgets everything received and pushed, keeping the account and the callback registration.
+        """ Clears every recorded request, send, event and callback. The account and the callback registration are kept.
         """
         with self._lock:
             self.sends.clear()
@@ -286,8 +285,8 @@ class SMSSimulator:
 # ################################################################################################################################
 
     def register_callback(self, url:'str', sign_url:'str'='') -> 'None':
-        """ Registers where callbacks go - the way a user enters a webhook URL in a provider's console. The signature,
-        where the provider has one, is computed over the sign URL when one is given, the push URL otherwise.
+        """ Registers the callback URL. The signature of a provider that signs callbacks is computed over the sign URL
+        when given, otherwise over the push URL.
         """
         self.callback_url = url
 
@@ -298,8 +297,8 @@ class SMSSimulator:
 
 # ################################################################################################################################
 
-    def handle(self, request:'SimRequest') -> 'SimResponse':
-        """ Answers one request - a slow simulator takes its time first, then the provider's own routing runs.
+    def handle(self, request:'SimulatorRequest') -> 'SimulatorResponse':
+        """ Responds to one request, after the configured delay.
         """
         if self.delay:
             time.sleep(self.delay)
@@ -309,7 +308,7 @@ class SMSSimulator:
                 self.successes_before_failure -= 1
             else:
                 self.failures_left -= 1
-                out = SimResponse(SERVICE_UNAVAILABLE, Content_Type_Text, 'Service unavailable')
+                out = SimulatorResponse(SERVICE_UNAVAILABLE, Content_Type_Text, 'Service unavailable')
                 return out
 
         if not self.check_auth(request):
@@ -335,13 +334,13 @@ class SMSSimulator:
 
 # ################################################################################################################################
 
-    def add_send(self, message_id:'str', to:'str', from_:'str', body:'str', callback_url:'str', raw:'stranydict') -> 'ReceivedSend':
-        """ Records one accepted send along with the status event every provider's log opens it with.
+    def record_send(self, message_id:'str', to:'str', from_:'str', body:'str', callback_url:'str', raw:'stranydict') -> 'ReceivedSend':
+        """ Records one accepted send and its initial status event.
         """
         out = ReceivedSend(message_id, to, from_, body, callback_url, time.monotonic(), raw)
         self.sends.append(out)
 
-        event = SimEvent(self.next_seq(), Kind_Status, message_id, from_, to, body, self.initial_status, '', utc_now())
+        event = SimulatorEvent(self.next_seq(), Kind_Status, message_id, from_, to, body, self.initial_status, '', utc_now())
         self.events.append(event)
 
         return out
@@ -360,13 +359,13 @@ class SMSSimulator:
 
 # ################################################################################################################################
 
-    def deliver(self, message_id:'str', status:'str', error_code:'str'='') -> 'list[CallbackAttempt]':
-        """ Moves one sent message to the given status, in the provider's own vocabulary, and pushes
-        the provider's delivery report when a callback URL is known.
+    def set_status(self, message_id:'str', status:'str', error_code:'str'='') -> 'list[CallbackAttempt]':
+        """ Sets the status of one sent message, in the provider's vocabulary, and pushes a delivery report
+        when a callback URL is registered.
         """
         send = self.find_send(message_id)
 
-        event = SimEvent(self.next_seq(), Kind_Status, message_id, send.from_, send.to, send.body, status, error_code, utc_now())
+        event = SimulatorEvent(self.next_seq(), Kind_Status, message_id, send.from_, send.to, send.body, status, error_code, utc_now())
         self.events.append(event)
 
         url = send.callback_url
@@ -378,11 +377,11 @@ class SMSSimulator:
 
 # ################################################################################################################################
 
-    def receive(self, from_:'str', to:'str', body:'str') -> 'SimEvent':
-        """ An incoming text arrives at the account - it enters the log and goes out through the callback URL.
+    def add_incoming_text(self, from_:'str', to:'str', body:'str') -> 'SimulatorEvent':
+        """ Records one incoming text in the event log and pushes it to the callback URL.
         """
         message_id = self.new_incoming_id()
-        out = SimEvent(self.next_seq(), Kind_Message, message_id, from_, to, body, '', '', utc_now())
+        out = SimulatorEvent(self.next_seq(), Kind_Message, message_id, from_, to, body, '', '', utc_now())
         self.events.append(out)
 
         _ = self.push_callback(self.callback_url, out)
@@ -390,9 +389,9 @@ class SMSSimulator:
 
 # ################################################################################################################################
 
-    def push_callback(self, url:'str', event:'SimEvent') -> 'list[CallbackAttempt]':
-        """ Pushes one event to the URL the way the provider does, resending on the compressed schedule
-        while the receiver does not accept it. Without a URL there is nothing to push.
+    def push_callback(self, url:'str', event:'SimulatorEvent') -> 'list[CallbackAttempt]':
+        """ Pushes one event to the callback URL in the provider's format, resending at the configured intervals
+        while the receiver does not accept it. Returns without a URL.
         """
         out:'list[CallbackAttempt]' = []
 
@@ -407,7 +406,7 @@ class SMSSimulator:
         headers = self.callback_headers(sign_url, body, event)
         headers['Content-Type'] = content_type
 
-        delays = (0.0,) + Callback_Retry_Delays
+        delays = (0.0,) + Callback_Resend_Intervals
 
         for delay in delays:
             if delay:
@@ -440,7 +439,7 @@ class SMSSimulator:
 # ################################################################################################################################
 
     def is_callback_accepted(self, attempt:'CallbackAttempt') -> 'bool':
-        """ Whether the receiver honored the provider's response contract - a 2xx status.
+        """ Whether the receiver responded with a 2xx status.
         """
         out = OK <= attempt.status < 300
         return out
@@ -456,7 +455,7 @@ class SMSSimulator:
 
 # ################################################################################################################################
 
-    def events_of_kind(self, kind:'str') -> 'list[SimEvent]':
+    def events_of_kind(self, kind:'str') -> 'list[SimulatorEvent]':
         out = []
         for item in self.events:
             if item.kind == kind:
@@ -466,7 +465,7 @@ class SMSSimulator:
 # ################################################################################################################################
 
     def wait_for_sends(self, count:'int', timeout:'float'=10.0) -> 'list[ReceivedSend]':
-        """ Waits until at least that many sends arrived, which a send through a queue needs.
+        """ Waits until at least that many sends were received.
         """
         deadline = time.monotonic() + timeout
 
@@ -480,27 +479,27 @@ class SMSSimulator:
 
 # ################################################################################################################################
 
-    # What each provider simulator implements
+    # The methods each provider simulator implements
 
-    # The status a provider's log opens every accepted send with, in the provider's own vocabulary
+    # The initial status of an accepted send, in the provider's vocabulary
     initial_status = ''
 
-    def check_auth(self, request:'SimRequest') -> 'bool':
+    def check_auth(self, request:'SimulatorRequest') -> 'bool':
         raise NotImplementedError()
 
-    def auth_failure(self) -> 'SimResponse':
+    def auth_failure(self) -> 'SimulatorResponse':
         raise NotImplementedError()
 
-    def route(self, request:'SimRequest') -> 'SimResponse':
+    def route(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         raise NotImplementedError()
 
     def new_incoming_id(self) -> 'str':
         raise NotImplementedError()
 
-    def callback_body(self, event:'SimEvent') -> 'tuple[str, bytes]':
+    def callback_body(self, event:'SimulatorEvent') -> 'tuple[str, bytes]':
         raise NotImplementedError()
 
-    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimEvent') -> 'strdict':
+    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimulatorEvent') -> 'strdict':
         raise NotImplementedError()
 
 # ################################################################################################################################
@@ -514,7 +513,7 @@ def form_encode(params:'strdict') -> 'bytes':
 
 # ################################################################################################################################
 
-def basic_auth_matches(request:'SimRequest', username:'str', password:'str') -> 'bool':
+def basic_auth_matches(request:'SimulatorRequest', username:'str', password:'str') -> 'bool':
     """ Whether the request's Basic credentials are the account's.
     """
     expected = 'Basic ' + b64encode(f'{username}:{password}'.encode('utf8')).decode('ascii')
@@ -526,7 +525,7 @@ def basic_auth_matches(request:'SimRequest', username:'str', password:'str') -> 
 # ################################################################################################################################
 
 def paginate(items:'list[anydict]', page_size:'int', offset:'int') -> 'tuple[list[anydict], int]':
-    """ One page of a listing and the offset of the next one, which is -1 when this was the last page.
+    """ One page of a listing and the offset of the next page, -1 after the last page.
     """
     page = items[offset:offset + page_size]
     next_offset = offset + page_size

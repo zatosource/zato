@@ -38,8 +38,8 @@ logger = logging.getLogger(__name__)
 
 _scheduler = SMS.Scheduler
 
-# Secrets never leave the database in clear text - an exported definition refers to each one through an environment
-# variable whose name is built out of the connection's name with this prefix and suffix
+# An exported definition refers to each secret through an environment variable named with this prefix,
+# the connection's name and this suffix
 Env_Reference_Prefix = 'Zato_Enmasse_Env.'
 Env_Name_Prefix = 'SMS_'
 Env_Password_Suffix = '_Password'
@@ -48,7 +48,7 @@ Env_Signature_Secret_Suffix = '_Signature_Secret'
 # The characters of a connection name that an environment variable name may not contain
 _env_name_unwanted = re.compile(r'[^A-Za-z0-9_]')
 
-# An outgoing connection's fields beyond its name, active flag and secrets, each with the default it is not exported at
+# An outgoing connection's fields other than name, is_active and the secrets, with the default at which each is omitted from the export
 Outgoing_Field_Defaults:'anydict' = {
     SMS.Field_Provider: '',
     SMS.Field_Host: '',
@@ -77,7 +77,7 @@ Channel_Schedule_Field_Defaults:'anydict' = {
 # ################################################################################################################################
 
 def get_env_reference(conn_name:'str', suffix:'str') -> 'str':
-    """ The environment variable reference an exported definition gives in place of one of its secrets.
+    """ The environment variable reference exported in place of a secret.
     """
     env_name = _env_name_unwanted.sub('_', conn_name)
     out = Env_Reference_Prefix + Env_Name_Prefix + env_name + suffix
@@ -187,7 +187,7 @@ class ChannelSMSExporter:
 
             export_fields(item, row, Channel_Field_Defaults)
 
-            # The schedule describes a polling channel only - a webhook channel has none
+            # The schedule is exported for a polling channel only
             if is_polling(row):
                 export_fields(item, row, Channel_Schedule_Field_Defaults)
 

@@ -17,7 +17,7 @@ from zato.common.api import SMS
 
 # Test support
 from _forms import create_outgoing, Senders
-from live_sms.twilio import Error_To_Invalid, Magic_To_Invalid
+from live_sms.twilio import Error_To_Invalid, Test_Number_To_Invalid
 from request_stub import new_request
 
 # ################################################################################################################################
@@ -30,7 +30,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What the dialog posts
+# The fields the dialog posts
 Post_Body = 'data-request'
 Post_From = 'from_'
 Post_To = 'to'
@@ -49,7 +49,7 @@ Message_SID_Prefix = 'SM'
 # ################################################################################################################################
 
 def _invoke(dashboard:'DashboardSuite', conn_id:'str', from_:'str', to:'str', body:'str') -> 'any_':
-    """ Calls the invoke view the way the dialog does.
+    """ Calls the invoke view with the dialog's fields.
     """
     post_data = {
         Post_From: from_,
@@ -59,7 +59,7 @@ def _invoke(dashboard:'DashboardSuite', conn_id:'str', from_:'str', to:'str', bo
 
     request = new_request(dashboard.client, post_data)
 
-    # The URL configuration passes the connection's id by keyword
+    # The URL configuration passes the connection's id as a keyword argument
     out = invoke_outconn(request, id=conn_id)
     return out
 
@@ -67,7 +67,7 @@ def _invoke(dashboard:'DashboardSuite', conn_id:'str', from_:'str', to:'str', bo
 # ################################################################################################################################
 
 def test_the_invoke_view_sends_a_message_and_returns_its_id(dashboard:'DashboardSuite') -> 'None':
-    """ The view answers with the message ID the provider assigned and the simulator has the message.
+    """ The view returns the message ID assigned by the provider and the simulator has the message.
     """
     twilio = dashboard.simulators.twilio
     sender = Senders[SMS.Provider.Twilio]
@@ -112,14 +112,14 @@ def test_the_sender_given_in_the_dialog_is_used_for_that_message(dashboard:'Dash
 # ################################################################################################################################
 
 def test_a_rejected_message_is_reported_as_an_error(dashboard:'DashboardSuite') -> 'None':
-    """ A number the provider rejects answers with a 500 that quotes the provider's error, and nothing was sent.
+    """ A number the provider rejects returns a 500 with the provider's error, and nothing is sent.
     """
     twilio = dashboard.simulators.twilio
     sender = Senders[SMS.Provider.Twilio]
 
     created = create_outgoing(dashboard.client, SMS.Provider.Twilio, twilio.url)
 
-    response = _invoke(dashboard, created['id'], sender, Magic_To_Invalid, Message_Text)
+    response = _invoke(dashboard, created['id'], sender, Test_Number_To_Invalid, Message_Text)
     assert response.status_code == 500, (response.status_code, response.content)
 
     data = loads(response.content)

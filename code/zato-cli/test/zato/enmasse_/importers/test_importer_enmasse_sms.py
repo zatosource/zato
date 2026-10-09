@@ -12,7 +12,7 @@ import sys
 import tempfile
 from unittest import TestCase, main
 
-# The directory with the throwaway test environment helpers
+# The directory of the test environment helpers
 _enmasse_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, _enmasse_tests_dir)
 

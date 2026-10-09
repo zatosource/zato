@@ -21,6 +21,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/sms-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/outgoing/sms.css">
 {% endblock %}
 
@@ -64,6 +65,7 @@
     {{ sms_config|json_script:"out-sms-config" }}
 
     {% comment %} SMS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/sms-tab.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/sms.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -93,6 +95,7 @@
             'host',
             'pool_size',
             'timeout',
+            'timeout_unit',
 
             {% comment %} 4 - the Delivery tab, then 5 - the Alerts tab {% endcomment %}
         ].concat($.fn.zato.delivery_tab.columns()).concat($.fn.zato.alerts_tab.columns());
@@ -147,6 +150,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 4 - the Delivery tab {% endcomment %}
                         {% include "zato/include/delivery-tab-headers.html" %}
@@ -192,6 +196,7 @@
                         <td class='ignore'>{{ item.host }}</td>
                         <td class='ignore'>{{ item.pool_size }}</td>
                         <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.timeout_unit }}</td>
 
                         {% comment %} 4 - the Delivery tab {% endcomment %}
                         {% include "zato/include/delivery-tab-cells.html" %}
@@ -225,66 +230,47 @@
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                     </div>
 
-                    <div class="dashboard-tab-panel" id="out-sms-create-tab-panel-config" role="tabpanel">
-                    <table class="form-data">
-                        <tr>
-                            <td class="form-data-label"><label for="id_name">Name</label></td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td>
-                                <label for="id_is_active">
-                                    Active
-                                    {{ create_form.is_active }}
-                                </label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_provider">Provider</label></td>
-                            <td>{{ create_form.provider }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_host" id="create-host-label">Host</label></td>
-                            <td>{{ create_form.host }}</td>
-                        </tr>
+                    <div class="dashboard-tab-panel alerts-tab-panel sms-tab-panel" id="out-sms-create-tab-panel-config" role="tabpanel">
+                    <div class="form-data alerts-tab-body">
 
-                        <tr>
-                            <td colspan="2" class="form-data-section">Credentials</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_username" id="create-username-label">Username</label></td>
-                            <td>{{ create_form.username }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_secret" id="create-password-label">Password</label></td>
-                            <td>{{ create_form.secret }}</td>
-                        </tr>
-                        <tr class="create-signature-secret-block">
-                            <td class="form-data-label"><label for="id_signature_secret">Signature secret</label></td>
-                            <td>{{ create_form.signature_secret }}</td>
-                        </tr>
+                        <div class="alerts-tab-sections">
 
-                        <tr>
-                            <td colspan="2" class="form-data-section">Messages</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_sender">Sender</label></td>
-                            <td>{{ create_form.sender }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_channel_name">Channel</label></td>
-                            <td>{{ create_form.channel_name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_pool_size">Pool size</label></td>
-                            <td>{{ create_form.pool_size }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_timeout">Timeout</label></td>
-                            <td>{{ create_form.timeout }}</td>
-                        </tr>
-                    </table>
+                            <div class="alerts-tab-section">
+                                <div class="alerts-tab-section-title">Connection</div>
+                                <div class="decision-lines">
+                                    <div class="decision-line alerts-tab-line alerts-tab-always-on-line" id="out-sms-create-tab-panel-config-line-name">
+                                        <label class="decision-line-label" for="id_name">Name</label>
+                                        <span class="decision-line-slot">{{ create_form.name }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle alerts-tab-always-on-line" id="out-sms-create-tab-panel-config-line-is_active">
+                                        <label class="decision-line-label" for="id_is_active">Active</label>
+                                        <span class="decision-line-slot">{{ create_form.is_active }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="out-sms-create-tab-panel-config-line-pool">
+                                        <label class="decision-line-label" for="out-sms-create-tab-panel-config-edit-pool">Pool and timeout</label>
+                                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="out-sms-create-tab-panel-config-edit-pool"><span class="zato-link-face summary-link-text" id="out-sms-create-tab-panel-config-summary-pool"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% include "zato/include/sms-tab-sections.html" with panel_id="out-sms-create-tab-panel-config" form=create_form is_outgoing=True %}
+
+                        </div>
+
+                        <div class="alerts-tab-hidden-fields" hidden>
+                            {{ create_form.provider }}
+                            {{ create_form.host }}
+                            {{ create_form.username }}
+                            {{ create_form.secret }}
+                            {{ create_form.signature_secret }}
+                            {{ create_form.sender }}
+                            {{ create_form.channel_name }}
+                            {{ create_form.pool_size }}
+                            {{ create_form.timeout }}
+                            {{ create_form.timeout_unit }}
+                        </div>
+
+                    </div>
                     </div>
 
                     {% include "zato/include/delivery-tab.html" with panel_id="out-sms-create-tab-panel-delivery" form=create_form %}
@@ -317,66 +303,47 @@
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
                     </div>
 
-                    <div class="dashboard-tab-panel" id="out-sms-edit-tab-panel-config" role="tabpanel">
-                    <table class="form-data">
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-name">Name</label></td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td>
-                                <label for="id_edit-is_active">
-                                    Active
-                                    {{ edit_form.is_active }}
-                                </label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-provider">Provider</label></td>
-                            <td>{{ edit_form.provider }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-host" id="edit-host-label">Host</label></td>
-                            <td>{{ edit_form.host }}</td>
-                        </tr>
+                    <div class="dashboard-tab-panel alerts-tab-panel sms-tab-panel" id="out-sms-edit-tab-panel-config" role="tabpanel">
+                    <div class="form-data alerts-tab-body">
 
-                        <tr>
-                            <td colspan="2" class="form-data-section">Credentials</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-username" id="edit-username-label">Username</label></td>
-                            <td>{{ edit_form.username }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-secret" id="edit-password-label">Password</label></td>
-                            <td>{{ edit_form.secret }}</td>
-                        </tr>
-                        <tr class="edit-signature-secret-block">
-                            <td class="form-data-label"><label for="id_edit-signature_secret">Signature secret</label></td>
-                            <td>{{ edit_form.signature_secret }}</td>
-                        </tr>
+                        <div class="alerts-tab-sections">
 
-                        <tr>
-                            <td colspan="2" class="form-data-section">Messages</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-sender">Sender</label></td>
-                            <td>{{ edit_form.sender }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-channel_name">Channel</label></td>
-                            <td>{{ edit_form.channel_name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-pool_size">Pool size</label></td>
-                            <td>{{ edit_form.pool_size }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-timeout">Timeout</label></td>
-                            <td>{{ edit_form.timeout }}</td>
-                        </tr>
-                    </table>
+                            <div class="alerts-tab-section">
+                                <div class="alerts-tab-section-title">Connection</div>
+                                <div class="decision-lines">
+                                    <div class="decision-line alerts-tab-line alerts-tab-always-on-line" id="out-sms-edit-tab-panel-config-line-name">
+                                        <label class="decision-line-label" for="id_edit-name">Name</label>
+                                        <span class="decision-line-slot">{{ edit_form.name }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle alerts-tab-always-on-line" id="out-sms-edit-tab-panel-config-line-is_active">
+                                        <label class="decision-line-label" for="id_edit-is_active">Active</label>
+                                        <span class="decision-line-slot">{{ edit_form.is_active }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="out-sms-edit-tab-panel-config-line-pool">
+                                        <label class="decision-line-label" for="out-sms-edit-tab-panel-config-edit-pool">Pool and timeout</label>
+                                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="out-sms-edit-tab-panel-config-edit-pool"><span class="zato-link-face summary-link-text" id="out-sms-edit-tab-panel-config-summary-pool"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% include "zato/include/sms-tab-sections.html" with panel_id="out-sms-edit-tab-panel-config" form=edit_form is_outgoing=True %}
+
+                        </div>
+
+                        <div class="alerts-tab-hidden-fields" hidden>
+                            {{ edit_form.provider }}
+                            {{ edit_form.host }}
+                            {{ edit_form.username }}
+                            {{ edit_form.secret }}
+                            {{ edit_form.signature_secret }}
+                            {{ edit_form.sender }}
+                            {{ edit_form.channel_name }}
+                            {{ edit_form.pool_size }}
+                            {{ edit_form.timeout }}
+                            {{ edit_form.timeout_unit }}
+                        </div>
+
+                    </div>
                     </div>
 
                     {% include "zato/include/delivery-tab.html" with panel_id="out-sms-edit-tab-panel-delivery" form=edit_form %}

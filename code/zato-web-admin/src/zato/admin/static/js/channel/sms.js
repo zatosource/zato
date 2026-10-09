@@ -16,11 +16,9 @@ $.fn.zato.channel.sms.config = {
     clusterId: '1',
     configId: 'channel-sms-config',
     noWebhookCell: '<span class="form_hint">---</span>',
-    outconnHref: '/zato/outgoing/sms/',
-    outconnType: 'outconn-sms',
     serviceHref: '/zato/service/ide/service/',
 
-    // The DLQ page link in a row names the channel type the page reads
+    // The channel type of a row's DLQ page link
     deliveryConnType: 'sms-channel',
 
     receiveModeHuman: {
@@ -31,7 +29,7 @@ $.fn.zato.channel.sms.config = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the view hands over about the channel - the receive modes and where the webhook URL opens
+// The channel data of the view - the provider data, the receive modes and the webhook path prefix
 $.fn.zato.channel.sms.serverConfig = function() {
     var config = $.fn.zato.channel.sms.config;
     var out = JSON.parse(document.getElementById(config.configId).textContent);
@@ -42,14 +40,15 @@ $.fn.zato.channel.sms.serverConfig = function() {
 
 $(document).ready(function() {
 
-    // The Delivery tab's popovers are set up once for both popups
+    // The Config and Delivery tabs' popovers are set up once for both popups
+    $.fn.zato.sms.init({config_id: $.fn.zato.channel.sms.config.configId});
     $.fn.zato.delivery_tab.init();
 
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SMSChannel;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.sms.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'outconn_name', 'service', 'receive_mode']);
+    $.fn.zato.data_table.setup_forms(['name', 'service']);
     $.fn.zato.live_form_updates.register('create', [
         {object_type: 'service', target_select: '#id_service'}
     ]);
@@ -72,14 +71,9 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.sms.field_descriptions = {
-    'id_name': 'A unique name for this channel. It is also the last part of the channel\'s webhook URL.',
+    'id_name': 'A unique name for this channel. It is also the last part of the channel\'s webhook path.',
     'id_is_active': 'Whether this channel receives anything. An inactive channel answers callbacks and polls with nothing.',
-    'id_outconn_name': 'The outgoing SMS connection whose provider and credentials the channel reads messages with.',
     'id_service': 'The service each incoming text and each delivery report is passed to.',
-    'id_receive_mode': 'Webhook has the provider push each event to the channel\'s URL, ' +
-        'polling has the channel ask the provider on a schedule.',
-    'id_scheduler_run_every': 'How often a polling channel asks the provider for new texts and reports.',
-    'id_webhook_url': 'The URL to configure in the provider\'s console for a channel in webhook mode.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -95,8 +89,13 @@ $.fn.zato.channel.sms.tab_labels = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The Delivery tab reads and writes the rendered Django form of one dialog at a time
+// The Config and Delivery tabs read and write the rendered Django form of one dialog at a time
 $.fn.zato.channel.sms._bind_tabs = function(action, fieldPrefix) {
+    $.fn.zato.sms.bind({
+        panel_id: 'channel-sms-' + action + '-tab-panel-config',
+        field_prefix: fieldPrefix,
+        is_outgoing: false
+    });
     $.fn.zato.delivery_tab.bind({
         panel_id: 'channel-sms-' + action + '-tab-panel-delivery',
         field_prefix: fieldPrefix,
@@ -104,43 +103,20 @@ $.fn.zato.channel.sms._bind_tabs = function(action, fieldPrefix) {
     });
 }
 
-// The Delivery tab's lines are not table rows, so the walk covers them as well
+// The walk includes the two tabs' lines
 $.fn.zato.channel.sms._init_how_it_works = function(action) {
     $.fn.zato.how_it_works.init({
         badgeId: action + '-how-it-works',
         divId: '#' + action + '-div',
-        fieldSelector: 'table.form-data tr, .decision-line',
+        fieldSelector: '.decision-line',
         descriptions: $.extend({},
             $.fn.zato.channel.sms.field_descriptions,
+            $.fn.zato.sms.descriptions(),
             $.fn.zato.delivery_tab.descriptions())
     });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-
-// The webhook URL follows the channel's name, the schedule row shows for a polling channel and the URL row for a webhook one
-$.fn.zato.channel.sms._apply_receive_mode = function(action, fieldPrefix) {
-    var serverConfig = $.fn.zato.channel.sms.serverConfig();
-
-    var receiveMode = $('#id_' + fieldPrefix + 'receive_mode').val();
-    var isPolling = receiveMode === serverConfig.receive_mode_polling;
-
-    $('.' + action + '-polling-block').toggleClass('hidden', !isPolling);
-    $('.' + action + '-webhook-block').toggleClass('hidden', isPolling);
-
-    var name = $('#id_' + fieldPrefix + 'name').val();
-    $('#id_' + fieldPrefix + 'webhook_url').val(serverConfig.webhook_url_prefix + name);
-}
-
-$.fn.zato.channel.sms._bind_receive_mode = function(action, fieldPrefix) {
-    $('#id_' + fieldPrefix + 'receive_mode').off('change.sms').on('change.sms', function() {
-        $.fn.zato.channel.sms._apply_receive_mode(action, fieldPrefix);
-    });
-    $('#id_' + fieldPrefix + 'name').off('input.sms').on('input.sms', function() {
-        $.fn.zato.channel.sms._apply_receive_mode(action, fieldPrefix);
-    });
-    $.fn.zato.channel.sms._apply_receive_mode(action, fieldPrefix);
-}
 
 $.fn.zato.channel.sms._reset_tabs = function(action) {
     $.fn.zato.form_tabs.reset({
@@ -157,7 +133,6 @@ $.fn.zato.channel.sms.create = function() {
     $.fn.zato.channel.sms._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new SMS channel', null);
     $.fn.zato.channel.sms._bind_tabs('create', '');
-    $.fn.zato.channel.sms._bind_receive_mode('create', '');
     $.fn.zato.channel.sms._init_how_it_works('create');
 }
 
@@ -167,7 +142,6 @@ $.fn.zato.channel.sms.edit = function(id) {
     $.fn.zato.channel.sms._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the SMS channel', id);
     $.fn.zato.channel.sms._bind_tabs('edit', 'edit-');
-    $.fn.zato.channel.sms._bind_receive_mode('edit', 'edit-');
     $.fn.zato.channel.sms._init_how_it_works('edit');
 }
 
@@ -181,7 +155,7 @@ $.fn.zato.channel.sms.webhookCell = function(item) {
         return config.noWebhookCell;
     }
 
-    var out = serverConfig.webhook_url_prefix + item.name;
+    var out = serverConfig.webhook_path_prefix + item.name;
     return out;
 }
 
@@ -195,11 +169,15 @@ $.fn.zato.channel.sms.data_table.new_row = function(item, data, include_tr) {
     }
 
     var config = $.fn.zato.channel.sms.config;
+    var serverConfig = $.fn.zato.channel.sms.serverConfig();
     var isActive = item.is_active == true;
-    var receiveModeHuman = config.receiveModeHuman[item.receive_mode];
 
-    var outconnQuery = encodeURIComponent(item.outconn_name);
-    var outconnHref = config.outconnHref + '?cluster=' + config.clusterId + '&type_=' + config.outconnType + '&query=' + outconnQuery;
+    // The outgoing connection is created or renamed along with the channel, so the response names it
+    item.outconn_id = data.outconn_id;
+    item.outconn_name = data.outconn_name;
+    var receiveModeHuman = config.receiveModeHuman[item.receive_mode];
+    var providerHuman = serverConfig.provider_human[item.provider];
+
     var serviceHref = config.serviceHref + item.service + '/?cluster=' + config.clusterId;
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -208,10 +186,10 @@ $.fn.zato.channel.sms.data_table.new_row = function(item, data, include_tr) {
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', isActive ? 'Yes' : 'No');
-    row += String.format('<td><a href="{0}">{1}</a></td>', outconnHref, item.outconn_name);
+    row += String.format('<td>{0}</td>', providerHuman);
     row += String.format('<td><a href="{0}">{1}</a></td>', serviceHref, item.service);
     row += String.format('<td>{0}</td>', receiveModeHuman);
-    row += String.format("<td class='channel-sms-webhook-url-cell'>{0}</td>", $.fn.zato.channel.sms.webhookCell(item));
+    row += String.format("<td class='channel-sms-webhook-path-cell'>{0}</td>", $.fn.zato.channel.sms.webhookCell(item));
 
     // 2
     row += $.fn.zato.delivery_tab.channel_link_cell(config.deliveryConnType, item, config.clusterId);
@@ -224,8 +202,14 @@ $.fn.zato.channel.sms.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.receive_mode);
     row += String.format("<td class='ignore'>{0}</td>", item.scheduler_run_every);
     row += String.format("<td class='ignore'>{0}</td>", item.scheduler_run_unit);
+    row += String.format("<td class='ignore'>{0}</td>", item.outconn_name);
+    row += String.format("<td class='ignore'>{0}</td>", item.outconn_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.provider);
+    row += String.format("<td class='ignore'>{0}</td>", item.host);
+    row += String.format("<td class='ignore'>{0}</td>", item.username);
+    row += String.format("<td class='ignore'>{0}</td>", item.sender);
 
-    // 4 - the Delivery tab's fields ride in the row for the edit form to read
+    // 4 - the Delivery tab's fields are stored in the row for the edit form
     row += $.fn.zato.delivery_tab.row_cells(item);
 
     if(include_tr) {

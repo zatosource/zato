@@ -90,8 +90,8 @@ _claim_payload_hash = 'payload_hash'
 _jwt_algorithm = 'HS256'
 _bearer_prefix = 'Bearer '
 
-# Poll state keys - where the next window opens, where the current one ends, the next page of each direction
-# and the directions already read in full over the current window
+# Poll state keys - the start of the next window, the end of the current window, the next page of each direction
+# and the directions read in full over the current window
 _state_date_start = 'date_start'
 _state_window_end = 'window_end'
 _state_next = 'next'
@@ -180,7 +180,7 @@ class VonageProvider(Provider):
 
     def build_ping_request(self) -> 'SendRequest':
 
-        # An authenticated read of the Reports API over an empty window - the same host and credentials a poll uses
+        # An authenticated Reports API request over an empty window
         now = _now_text()
         params = {
             _param_account_id: self.username,
@@ -258,7 +258,7 @@ class VonageProvider(Provider):
         out = []
         headers = self._headers()
 
-        # A listing left pages behind, so the next page of each direction is read ..
+        # The previous poll recorded next pages, which are read first ..
         next_links = state.get(_state_next, {})
 
         if next_links:
@@ -266,8 +266,8 @@ class VonageProvider(Provider):
                 out.append(PollRequest(Method_GET, href, headers, {}, direction))
             return out
 
-        # .. otherwise each direction not yet read is listed over the current window, which is the one
-        # a previous poll left unfinished, or a new one that reaches from the previous poll to now.
+        # .. otherwise each direction not yet read is listed over the current window - the window of an incomplete
+        # previous poll, or a new window from the previous poll's end to now.
         date_start = state.get(_state_date_start)
         if not date_start:
             date_start = _now_text()
@@ -320,7 +320,7 @@ class VonageProvider(Provider):
 
         new_state[_state_next] = next_links
 
-        # The first page of a direction names the window it reads
+        # The first page of a direction records the window it reads
         if _param_date_end in request.params:
             new_state[_state_window_end] = request.params[_param_date_end]
 
@@ -330,7 +330,7 @@ class VonageProvider(Provider):
             done[request.tag] = True
         new_state[_state_done] = done
 
-        # Once every direction is read, the end of this window is where the next one opens
+        # After every direction is read, the end of this window is the start of the next
         if len(done) == len(_directions):
             new_state[_state_date_start] = new_state[_state_window_end]
             del new_state[_state_window_end]

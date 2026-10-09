@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The contract every SMS provider class fulfils - how a send request is built and its response read, how a callback
-# is verified, read and answered, and how the provider's pull endpoints are polled. A provider class holds no state
-# beyond the connection configuration it is given.
+# The interface of an SMS provider class - building a send request and reading its response, verifying, reading
+# and answering a callback, and polling the provider's pull endpoints. A provider class holds the connection
+# configuration and no other state.
 
 # stdlib
 from typing import NamedTuple
@@ -44,10 +44,10 @@ Content_Type_XML = 'text/xml'
 Content_Type_Text = 'text/plain'
 Content_Type_JSON = 'application/json'
 
-# The HTTP header names callbacks are verified against - the server hands headers over lower-cased
+# The HTTP header names read during callback verification, in the lower case the server uses for request headers
 Header_Authorization = 'authorization'
 
-# A callback request's own headers and query string travel to the provider class under these keys, the headers lower-cased
+# The request context keys of a callback's headers, query string and content type
 Ctx_Headers = 'headers'
 Ctx_Query = 'query'
 Ctx_Content_Type = 'content_type'
@@ -56,7 +56,7 @@ Ctx_Content_Type = 'content_type'
 # ################################################################################################################################
 
 class ProviderError(Exception):
-    """ Raised when a provider's response cannot be read as what the provider documents.
+    """ Raised when a provider's response does not match the documented response format.
     """
 
 # ################################################################################################################################
@@ -69,14 +69,14 @@ class CallbackRejected(Exception):
 # ################################################################################################################################
 
 class PollRequest(NamedTuple):
-    """ One HTTP request a poll makes, with the URL complete and the headers ready to send.
+    """ One HTTP request of a poll - the full URL and the headers.
     """
     method: 'str'
     url: 'str'
     headers: 'strdict'
     params: 'strdict'
 
-    # What the provider class knows this request as when it reads the response, e.g. the direction it lists
+    # A tag the provider class reads the response by, e.g. the direction the request lists
     tag: 'str' = ''
 
 # ################################################################################################################################
@@ -127,8 +127,7 @@ def new_status_event(id:'str', from_:'str', to:'str', status:'str', error_code:'
 # ################################################################################################################################
 
 def map_status(mapping:'strdict', provider_status:'str') -> 'str':
-    """ Maps a provider's status word onto the common vocabulary - a word the provider has not documented
-    is in flight, which is what Status_Sent means.
+    """ Maps a provider's status word onto the common vocabulary. A word not in the mapping maps to Status_Sent.
     """
     key = provider_status.lower()
 
@@ -142,7 +141,7 @@ def map_status(mapping:'strdict', provider_status:'str') -> 'str':
 # ################################################################################################################################
 
 def text_or_empty(value:'any_') -> 'str':
-    """ A provider's field as a string, an absent one as an empty string.
+    """ Returns the value as a string, or an empty string when the value is None.
     """
     if value is None:
         out = ''
@@ -155,11 +154,11 @@ def text_or_empty(value:'any_') -> 'str':
 # ################################################################################################################################
 
 class Provider:
-    """ The base class of every SMS provider - subclasses fill in the request and response shapes of their provider.
+    """ The base class of every SMS provider. A subclass implements the request and response formats of one provider.
     """
     name = ''
 
-    # The provider's status words, lower-cased, mapped onto the common vocabulary
+    # The provider's status words, in lower case, mapped onto the common vocabulary
     status_mapping:'strdict' = {}
 
     def __init__(self, config:'Bunch') -> 'None':
@@ -184,22 +183,22 @@ class Provider:
 # ################################################################################################################################
 
     def read_send_response(self, response:'Response') -> 'SendResult':
-        """ What the provider answered a send with, raising ProviderError when the response is not a success.
+        """ Reads the response to a send request, raising ProviderError when the response is not a success.
         """
         raise NotImplementedError()
 
 # ################################################################################################################################
 
     def build_ping_request(self) -> 'SendRequest':
-        """ The cheapest authenticated read the provider offers, as the request that performs it.
+        """ The authenticated read request used to verify the connection's credentials.
         """
         raise NotImplementedError()
 
 # ################################################################################################################################
 
     def verify_callback(self, request_ctx:'stranydict', raw_body:'bytes', url:'str') -> 'None':
-        """ Checks a callback's signature, raising CallbackRejected when it does not verify.
-        A provider that signs nothing accepts every callback.
+        """ Verifies a callback's signature, raising CallbackRejected when it does not verify.
+        A provider without callback signatures accepts every callback.
         """
 
 # ################################################################################################################################
@@ -212,14 +211,14 @@ class Provider:
 # ################################################################################################################################
 
     def callback_response(self) -> 'CallbackResponse':
-        """ What the provider expects as the answer to an accepted callback - a status code, a content type and a body.
+        """ The response to an accepted callback - a status code, a content type and a body.
         """
         raise NotImplementedError()
 
 # ################################################################################################################################
 
     def build_poll_requests(self, state:'stranydict') -> 'PollRequestList':
-        """ The requests one poll makes, given the state the previous poll left behind.
+        """ The requests of one poll, built from the state the previous poll recorded.
         """
         raise NotImplementedError()
 
@@ -233,7 +232,7 @@ class Provider:
 # ################################################################################################################################
 
     def has_more_pages(self, state:'stranydict') -> 'bool':
-        """ Whether the poll that produced this state left pages behind, which a further round reads at once.
+        """ Whether the state has pages not yet read, which a further round of the same poll reads.
         """
         return False
 
@@ -246,7 +245,7 @@ class Provider:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The provider classes by their constant - filled in by the registry module
+# Provider classes by provider constant, registered by the registry module
 provider_classes:'anydict' = {}
 
 def register_provider(provider_class:'any_') -> 'None':

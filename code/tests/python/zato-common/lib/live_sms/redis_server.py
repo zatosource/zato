@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The throwaway Redis an SMS suite's server remembers seen events in.
+# The Redis server of an SMS test suite, in which the channels record received events.
 
 # stdlib
 import socket
@@ -25,14 +25,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long the Redis is given to open its port
+# The timeout of the Redis port opening, in seconds
 Redis_Wait_Timeout = 30.0
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def start_redis(port:'int') -> 'any_':
-    """ Starts a Redis with no persistence in its own session and waits for its port.
+    """ Starts a Redis server without persistence in its own process session and waits for its port.
     """
     command = ['redis-server', '--port', str(port), '--save', '', '--appendonly', 'no']
     out = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)

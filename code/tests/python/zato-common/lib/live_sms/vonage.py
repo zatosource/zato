@@ -19,7 +19,7 @@ from jwt import encode as jwt_encode
 
 # Zato
 from live_sms.base import basic_auth_matches, Content_Type_JSON, json_response, Kind_Message, not_found, paginate, \
-    SimEvent, SimRequest, SimResponse, SMSSimulator
+    SimulatorEvent, SimulatorRequest, SimulatorResponse, SMSSimulator
 from zato.common.api import SMS
 
 # ################################################################################################################################
@@ -69,8 +69,8 @@ def sign_callback(signature_secret:'str', body:'bytes') -> 'str':
 # ################################################################################################################################
 
 class VonageSimulator(SMSSimulator):
-    """ Vonage's Messages API and Reports API - sends, the reports read a ping and a poll make, and status
-    and inbound-message callbacks signed with the account's signature secret.
+    """ Vonage's Messages API and Reports API - sends, the reports read of a ping and a poll, and status
+    and inbound-message callbacks signed with the signature secret.
     """
     provider = SMS.Provider.Vonage
     initial_status = _status_submitted
@@ -81,17 +81,17 @@ class VonageSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def check_auth(self, request:'SimRequest') -> 'bool':
+    def check_auth(self, request:'SimulatorRequest') -> 'bool':
         out = basic_auth_matches(request, self.username, self.password)
         return out
 
-    def auth_failure(self) -> 'SimResponse':
+    def auth_failure(self) -> 'SimulatorResponse':
         out = json_response(UNAUTHORIZED, _error_auth)
         return out
 
 # ################################################################################################################################
 
-    def route(self, request:'SimRequest') -> 'SimResponse':
+    def route(self, request:'SimulatorRequest') -> 'SimulatorResponse':
 
         if request.path == _messages_path and request.method == 'POST':
             out = self._send(request)
@@ -106,7 +106,7 @@ class VonageSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _error(self, status:'int', title:'str', detail:'str') -> 'SimResponse':
+    def _error(self, status:'int', title:'str', detail:'str') -> 'SimulatorResponse':
         out = json_response(status, {
             'type': 'https://developer.vonage.com/api-errors',
             'title': title,
@@ -117,7 +117,7 @@ class VonageSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _send(self, request:'SimRequest') -> 'SimResponse':
+    def _send(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         payload = request.json()
 
         for name in ('message_type', 'channel', 'to', 'from', 'text'):
@@ -136,14 +136,14 @@ class VonageSimulator(SMSSimulator):
             return out
 
         message_uuid = str(uuid4())
-        _ = self.add_send(message_uuid, to, payload['from'], payload['text'], '', payload)
+        _ = self.record_send(message_uuid, to, payload['from'], payload['text'], '', payload)
 
         out = json_response(ACCEPTED, {'message_uuid': message_uuid})
         return out
 
 # ################################################################################################################################
 
-    def _record(self, event:'SimEvent') -> 'anydict':
+    def _record(self, event:'SimulatorEvent') -> 'anydict':
 
         out = {
             'account_id': self.username,
@@ -170,7 +170,7 @@ class VonageSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _reports(self, request:'SimRequest') -> 'SimResponse':
+    def _reports(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         """ The records of one direction over a dated window, in pages linked through _links.next.
         """
         for name in ('account_id', 'product', 'direction', 'date_start', 'date_end'):
@@ -224,7 +224,7 @@ class VonageSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def callback_body(self, event:'SimEvent') -> 'tuple[str, bytes]':
+    def callback_body(self, event:'SimulatorEvent') -> 'tuple[str, bytes]':
 
         payload:'anydict' = {
             'message_uuid': event.message_id,
@@ -251,7 +251,7 @@ class VonageSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimEvent') -> 'strdict':
+    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimulatorEvent') -> 'strdict':
         token = sign_callback(self.signature_secret, body)
         out = {'Authorization': 'Bearer ' + token}
         return out

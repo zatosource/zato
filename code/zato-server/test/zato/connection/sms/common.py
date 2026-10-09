@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# What every SMS provider test builds on - the connection the providers are built from, the message the send tests send,
-# a stand-in for the HTTP response a provider answered with and the request context a callback arrives in.
+# The shared fixtures of the SMS provider tests - the connection configuration, the test message, the response
+# test double and the callback request context.
 
 # stdlib
 from base64 import b64encode
@@ -46,7 +46,7 @@ Webhook_URL = 'https://zato.example.test/zato/sms/orders'
 # ################################################################################################################################
 
 class Response:
-    """ Stands in for the HTTP response a provider answered with.
+    """ A test double of a provider's HTTP response.
     """
     def __init__(self, status_code:'int', payload:'any_') -> 'None':
         self.status_code = status_code
@@ -60,7 +60,7 @@ class Response:
 # ################################################################################################################################
 
 def new_provider(provider_class:'any_', **extra:'any_') -> 'any_':
-    """ One provider over the connection every test uses.
+    """ A provider instance over the shared connection configuration.
     """
     config = Bunch()
     config.name = 'test.sms.' + provider_class.name
@@ -85,7 +85,7 @@ def basic_auth(username:'str', password:'str') -> 'str':
 # ################################################################################################################################
 
 def ctx(headers:'stranydict') -> 'stranydict':
-    """ The request context a callback reaches a provider class in - its headers lower-cased.
+    """ The request context of a callback, with lower-case header names.
     """
     lowered = {}
 

@@ -1,0 +1,45 @@
+/* ------------------------------------------------------------ */
+/* SMS Config tab - the panel of the create and edit dialogs    */
+/* of the outgoing connections and the channels. Loads after   */
+/* alerts-tab.css, whose layout the panel shares.              */
+/* ------------------------------------------------------------ */
+
+.data-popup .sms-tab-panel {
+    --sms-tab-name-width: 24em;
+    --sms-tab-input-font-size: 12px;
+}
+
+/* The name is the one text input on the panel, as wide as a select of the panel */
+.data-popup .sms-tab-panel input.sms-tab-name {
+    width: var(--sms-tab-name-width);
+    font-size: var(--sms-tab-input-font-size);
+    box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------ */
+/* The popovers                                                  */
+/* ------------------------------------------------------------ */
+
+.sms-tab-popover {
+    --sms-tab-unit-select-min-width: 7.5em;
+    --sms-tab-column-gap: 10px;
+}
+
+.sms-tab-popover .micro-form-unit {
+    min-width: var(--sms-tab-unit-select-min-width);
+}
+
+/* A field a provider or a receiving mode does not need is hidden */
+.sms-tab-popover .micro-form-field[hidden] {
+    display: none;
+}
+
+/* In a popover sized to its content the fields sharing a row sit next to each other at the width each has */
+.sms-tab-popover.micro-form-fit .micro-form-row .micro-form-field {
+    flex: 0 0 auto;
+}
+
+/* The popover is outside the dialog's .ui-widget, so the buttons' font is set here */
+.sms-tab-popover .micro-form-buttons button {
+    font-family: Verdana, Arial, sans-serif;
+}

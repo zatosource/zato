@@ -6,9 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# An SMS channel - the configuration alone, because its traffic arrives either through the internal webhook
-# channel or through the scheduler job that polls its provider. The provider and the credentials come from the
-# outgoing connection the channel names and are never stored twice.
+# The configuration of an SMS channel. Traffic arrives through the internal webhook channel or through
+# the channel's scheduler job. The provider and the credentials are those of the channel's outgoing connection.
 
 # stdlib
 from logging import getLogger
@@ -37,7 +36,7 @@ _scheduler = SMS.Scheduler
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Defaults for fields the create path did not supply
+# Defaults of fields absent from a create request
 channel_config_defaults:'anydict' = {
     SMS.Field_Outconn_Name: '',
     SMS.Field_Service: '',
@@ -53,7 +52,7 @@ channel_config_defaults:'anydict' = {
 }
 channel_config_defaults.update(Delivery_Field_Defaults)
 
-# Config keys that must be integers but may arrive as strings from opaque storage
+# Integer config keys, stored as strings in the opaque attributes
 channel_int_config_keys = (
     _scheduler.Field_Run_Every,
     _scheduler.Field_Job_ID,
@@ -65,7 +64,7 @@ channel_int_config_keys = (
     _dlq.Field_Retry_Interval,
 )
 
-# Config keys that must be booleans but may arrive as strings from opaque storage
+# Boolean config keys, stored as strings in the opaque attributes
 channel_bool_config_keys = (
     HTTP_SOAP.Queue.Field_Use_Queue,
     _dlq.Field_Use_DLQ,

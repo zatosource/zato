@@ -49,7 +49,7 @@ Invoke_Field_To = 'to'
 # ################################################################################################################################
 
 def locate_sms(server:'ParallelServer', conn_id:'int') -> 'anytuple':
-    """ An outgoing SMS connection by its id, as its name and its wrapper.
+    """ The name and the wrapper of an outgoing SMS connection with that ID.
     """
     for item in server.config_manager.outconn_sms.values():
         if item['id'] == conn_id:
@@ -61,14 +61,14 @@ def locate_sms(server:'ParallelServer', conn_id:'int') -> 'anytuple':
 # ################################################################################################################################
 
 def deliver_to_sms(server:'ParallelServer', cid:'str', wrapper:'any_', request:'stranydict') -> 'None':
-    """ Makes one attempt to hand a message over to an outgoing SMS connection.
+    """ Makes one attempt to send a queued message through an outgoing SMS connection.
     """
     _ = wrapper.send_from_queue(cid, request)
 
 # ################################################################################################################################
 
 def get_sms_destination(wrapper:'any_', request:'stranydict') -> 'str':
-    """ Where a queued message goes - the recipient's number.
+    """ The destination of a queued message - the recipient's number.
     """
     out = f'{_destination_prefix} {request[Key_To]}'
     return out
@@ -98,14 +98,14 @@ def get_sms_details_facts(request:'stranydict') -> 'dictlist':
 # ################################################################################################################################
 
 def get_sms_body_mode(request:'stranydict') -> 'str':
-    """ The mode a queued SMS message's body is shown in - the text of the message.
+    """ The display mode of a queued SMS message's body - plain text.
     """
     return Body_Mode_Text
 
 # ################################################################################################################################
 
 def get_sms_invoker_options(request:'stranydict') -> 'stranydict':
-    """ The invoke dialog's fields that are a queued message's own - its sender and its recipient.
+    """ The invoke dialog's fields of a queued message - the sender and the recipient.
     """
     out = {
         'fields': [
@@ -136,7 +136,7 @@ sms_page.invoker = sms_invoker
 # ################################################################################################################################
 
 def locate_sms_channel(server:'ParallelServer', conn_id:'int') -> 'anytuple':
-    """ An SMS channel by its id, as its name and its wrapper.
+    """ The name and the wrapper of an SMS channel with that ID.
     """
     for item in server.config_manager.channel_sms.values():
         if item['id'] == conn_id:
@@ -148,14 +148,14 @@ def locate_sms_channel(server:'ParallelServer', conn_id:'int') -> 'anytuple':
 # ################################################################################################################################
 
 def deliver_to_sms_channel(server:'ParallelServer', cid:'str', wrapper:'any_', request:'stranydict') -> 'None':
-    """ Makes one attempt to invoke the service a channel's event goes to.
+    """ Makes one attempt to invoke a channel's service with a queued event.
     """
     _ = invoke_sms_service(server, cid, request)
 
 # ################################################################################################################################
 
 def get_sms_channel_destination(wrapper:'any_', request:'stranydict') -> 'str':
-    """ Where a channel's event goes - its service.
+    """ The destination of a channel's event - the channel's service.
     """
     out = request[Key_Service]
     return out
@@ -180,7 +180,7 @@ def get_sms_channel_details_facts(request:'stranydict') -> 'dictlist':
 # ################################################################################################################################
 
 def get_sms_channel_body_mode(request:'stranydict') -> 'str':
-    """ The mode a channel's event is shown in - the event is always JSON.
+    """ The display mode of a channel's event - JSON.
     """
     return Body_Mode_JSON
 

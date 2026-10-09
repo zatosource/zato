@@ -96,8 +96,8 @@ class OutgoingSMSImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def validate_definition(self, connection_def:'anydict') -> 'None':
-        """ The provider has to be a known one, its signature secret and host have to match what the provider takes,
-        and the whole-number and delivery fields have to be what each field takes.
+        """ Validates the provider, the signature secret and the host against the provider's requirements,
+        and the integer and delivery fields against their types.
         """
         name = connection_def['name']
 
@@ -129,19 +129,18 @@ class ChannelSMSImporter(GenericConnectionImporter):
 
     connection_extra_field_defaults = Channel_Extra_Field_Defaults
 
-    # A channel has no secret of its own - it reads its provider through the outgoing connection it names
+    # A channel has no secret
     connection_secret_keys = []
     connection_required_attrs = ['name']
     opaque_secret_keys = ()
 
-    # The polling job links back to the channel the same way a health check job links to its connection
+    # The polling job is linked to the channel as a health check job is linked to its connection
     health_check_conn_type = SchedulerLink.ConnType.SMS_Channel
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
         super().__init__(importer)
 
-        # The names of the outgoing SMS connections a channel may refer to, read from the database
-        # at the start of each synchronization, after the outgoing connections of the same file were stored
+        # The names of the outgoing SMS connections in the database, read at the start of each synchronization
         self.outconn_names:'set[str]' = set()
 
 # ################################################################################################################################
@@ -158,7 +157,7 @@ class ChannelSMSImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def resolve_references(self, connection_def:'anydict') -> 'None':
-        """ The outgoing connection a file names under `outconn` is stored under the channel's own field name.
+        """ Stores the value of the file's `outconn` key under the channel's outconn_name field.
         """
         if Channel_Outconn_Key in connection_def:
             connection_def[SMS.Field_Outconn_Name] = connection_def.pop(Channel_Outconn_Key)
@@ -166,12 +165,11 @@ class ChannelSMSImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def validate_definition(self, connection_def:'anydict') -> 'None':
-        """ A channel needs a receive mode, a service and an outgoing SMS connection that the same import knows of,
-        and the whole-number and delivery fields have to be what each field takes.
+        """ Validates the receive mode, the service, the outgoing connection's existence and the integer and delivery fields.
         """
         name = connection_def['name']
 
-        # A definition without a receive mode receives its default before the mode is checked
+        # The default receive mode is applied before validation
         if not connection_def.get(SMS.Field_Receive_Mode):
             connection_def[SMS.Field_Receive_Mode] = SMS.Receive_Mode.Webhook
 

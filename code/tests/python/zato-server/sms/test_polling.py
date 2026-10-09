@@ -31,7 +31,7 @@ From_Number = '+12025550102'
 
 Providers = SMS.ProviderList
 
-# The providers whose poll pages through a listing, as opposed to a single fetch
+# The providers whose poll reads a paged listing
 Paging_Providers = (SMS.Provider.Twilio, SMS.Provider.Vonage, SMS.Provider.Infobip)
 
 # The delivered status in each provider's own vocabulary
@@ -45,7 +45,7 @@ Delivered_Status = {
 # The providers whose poll reads delivery reports as well as incoming texts
 Providers_Polling_Reports = (SMS.Provider.Twilio, SMS.Provider.Vonage, SMS.Provider.Infobip)
 
-# The Reports API filters by the second, so a window needs a moment between its edges
+# The Reports API filters by the second, so one second separates a window's edges
 Window_Gap = 1.1
 
 Header_Channel = 'zato-sms-channel'
@@ -62,9 +62,9 @@ def _message_ids(received:'anylist') -> 'strlist':
 
 # ################################################################################################################################
 
-def _polled(sms:'SMSSuite', provider:'str') -> 'anylist':
-    """ The records the polling channel of a provider handed over - a send names the webhook channel as its
-    delivery callback, so that channel's records are left out.
+def _polled_records(sms:'SMSSuite', provider:'str') -> 'anylist':
+    """ The records delivered by a provider's polling channel. The webhook channel's records are excluded,
+    as a send names the webhook channel as its delivery callback.
     """
     out = []
     channel_name = sms.polling_channel(provider)
@@ -81,7 +81,7 @@ def _wait_for_polled(sms:'SMSSuite', provider:'str', count:'int', timeout:'float
     deadline = monotonic() + timeout
 
     while True:
-        out = _polled(sms, provider)
+        out = _polled_records(sms, provider)
 
         if len(out) >= count:
             return out
@@ -93,8 +93,8 @@ def _wait_for_polled(sms:'SMSSuite', provider:'str', count:'int', timeout:'float
 
 # ################################################################################################################################
 
-def _open_window(sms:'SMSSuite', provider:'str') -> 'None':
-    """ A first poll settles where the channel's window opens, after which what arrives is inside it.
+def _record_poll_window(sms:'SMSSuite', provider:'str') -> 'None':
+    """ Runs a first poll, which records the start of the channel's window.
     """
     sleep(Window_Gap)
     sms.poll(provider)
@@ -107,8 +107,8 @@ def _open_window(sms:'SMSSuite', provider:'str') -> 'None':
 class TestPolling:
 
     @pytest.fixture(autouse=True)
-    def no_callbacks(self, sms:'SMSSuite') -> 'None':
-        """ The polling channels are what these tests exercise, so nothing is pushed to the webhook ones.
+    def callbacks_unregistered(self, sms:'SMSSuite') -> 'None':
+        """ Unregisters the simulators' callback URLs, as these tests exercise the polling channels.
         """
         for item in sms.simulators.all:
             item.register_callback('')
@@ -119,10 +119,10 @@ class TestPolling:
     def test_a_poll_reads_incoming_texts_once(self, sms:'SMSSuite', provider:'str') -> 'None':
 
         simulator = sms.simulator(provider)
-        _open_window(sms, provider)
+        _record_poll_window(sms, provider)
 
-        first = simulator.receive(From_Number, To_Number, 'first')
-        second = simulator.receive(From_Number, To_Number, 'second')
+        first = simulator.add_incoming_text(From_Number, To_Number, 'first')
+        second = simulator.add_incoming_text(From_Number, To_Number, 'second')
 
         sleep(Window_Gap)
         sms.poll(provider)
@@ -135,7 +135,7 @@ class TestPolling:
             assert record['headers'][Header_Channel] == sms.polling_channel(provider), record
             assert record['event']['from_'] == From_Number, record
 
-        # A second poll hands nothing over again
+        # A second poll delivers no event
         sleep(Window_Gap)
         sms.poll(provider)
         sleep(Window_Gap)
@@ -148,12 +148,12 @@ class TestPolling:
     def test_a_poll_reads_the_delivery_report_of_a_sent_message(self, sms:'SMSSuite', provider:'str') -> 'None':
 
         simulator = sms.simulator(provider)
-        _open_window(sms, provider)
+        _record_poll_window(sms, provider)
 
         response = sms.send(provider, To_Number, 'report by poll')
         message_id = response['result']['id']
 
-        _ = simulator.deliver(message_id, Delivered_Status[provider])
+        _ = simulator.set_status(message_id, Delivered_Status[provider])
 
         sleep(Window_Gap)
         sms.poll(provider)
@@ -171,16 +171,16 @@ class TestPolling:
 # ################################################################################################################################
 
     @pytest.mark.parametrize('provider', Paging_Providers)
-    def test_a_poll_that_fails_midway_loses_nothing_and_repeats_nothing(self, sms:'SMSSuite', provider:'str') -> 'None':
-        """ Pages of one entry, the second request of the poll failing - the first page is handed over before
-        the failure, the next poll continues where the failed one stopped and every text arrives exactly once.
+    def test_a_poll_that_fails_before_completion_loses_nothing_and_repeats_nothing(self, sms:'SMSSuite', provider:'str') -> 'None':
+        """ Pages of one entry and a failure on the second request - the first page is delivered before the failure,
+        the next poll continues from the recorded state and every text is delivered exactly once.
         """
         simulator = sms.simulator(provider)
-        _open_window(sms, provider)
+        _record_poll_window(sms, provider)
 
         expected = []
         for seq in range(3):
-            incoming = simulator.receive(From_Number, To_Number, f'text {seq}')
+            incoming = simulator.add_incoming_text(From_Number, To_Number, f'text {seq}')
             expected.append(incoming.message_id)
 
         simulator.page_size = 1
@@ -208,17 +208,17 @@ class TestPolling:
 
     @pytest.mark.parametrize('provider', Providers)
     def test_an_event_the_service_rejects_is_handed_over_again_by_a_later_poll(self, sms:'SMSSuite', provider:'str') -> 'None':
-        """ With the queue off, the service's exception fails the poll, the event is not remembered as seen
-        and the next poll hands it over again where the provider lets it be read again.
+        """ With use_queue disabled, the service's exception fails the poll, the event is not recorded as received
+        and the next poll delivers it again.
         """
         if provider == SMS.Provider.Infobip:
             pytest.skip('An Infobip pull consumes what it returns, so a rejected event is not readable again')
 
         simulator = sms.simulator(provider)
-        _open_window(sms, provider)
+        _record_poll_window(sms, provider)
 
-        incoming = simulator.receive(From_Number, To_Number, 'rejected once')
-        sms.set_behaviour(1)
+        incoming = simulator.add_incoming_text(From_Number, To_Number, 'rejected once')
+        sms.set_refusal_count(1)
 
         sleep(Window_Gap)
 
@@ -240,7 +240,7 @@ class TestPolling:
     def test_a_poll_of_a_webhook_channel_does_nothing(self, sms:'SMSSuite') -> 'None':
 
         simulator = sms.simulators.twilio
-        _ = simulator.receive(From_Number, To_Number, 'not for polling')
+        _ = simulator.add_incoming_text(From_Number, To_Number, 'not for polling')
 
         request = {SMS.Scheduler.Extra_Conn_Name: sms.webhook_channel(SMS.Provider.Twilio)}
         _ = sms.client.invoke(SMS.Scheduler.Dispatch_Service, request)

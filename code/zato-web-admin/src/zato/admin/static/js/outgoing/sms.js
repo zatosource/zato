@@ -20,7 +20,7 @@ $.fn.zato.outgoing.sms.config = {
     channelHref: '/zato/channel/sms/',
     channelType: 'channel-sms',
 
-    // The delivery page link in a row names the connection type the page reads
+    // The connection type of a row's delivery page link
     deliveryConnType: 'sms',
 
     // The Invoke dialog
@@ -34,21 +34,11 @@ $.fn.zato.outgoing.sms.config = {
     invokeRequestKey: 'data-request',
     invokeFromKey: 'from_',
     invokeToKey: 'to',
-
-    // What each provider calls its credentials and what its host defaults to
-    providerLabels: {
-        'twilio': {username: 'Account SID', password: 'Auth token'},
-        'vonage': {username: 'API key', password: 'API secret'},
-        'infobip': {username: 'Username', password: 'API key'},
-        'africas-talking': {username: 'Username', password: 'API key'},
-    },
-    hostLabel: 'Host',
-    hostLabelRequired: 'Host (required)',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the view hands over about the providers - their names, default hosts and which of them have a signature secret
+// The provider data of the view - names, default hosts and the providers with a signature secret
 $.fn.zato.outgoing.sms.serverConfig = function() {
     var config = $.fn.zato.outgoing.sms.config;
     var out = JSON.parse(document.getElementById(config.configId).textContent);
@@ -59,7 +49,8 @@ $.fn.zato.outgoing.sms.serverConfig = function() {
 
 $(document).ready(function() {
 
-    // The Delivery and Alerts tabs' popovers are set up once for both popups
+    // The Config, Delivery and Alerts tabs' popovers are set up once for both popups
+    $.fn.zato.sms.init({config_id: $.fn.zato.outgoing.sms.config.configId});
     $.fn.zato.delivery_tab.init();
     $.fn.zato.alerts_tab.init({config_id: $.fn.zato.outgoing.sms.config.alertsConfigId});
 
@@ -67,7 +58,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SMSOutgoing;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sms.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'provider', 'username', 'sender']);
+    $.fn.zato.data_table.setup_forms(['name']);
     $.fn.zato.live_form_updates.register('create', $.fn.zato.alerts_tab.live_configs(''));
     $.fn.zato.live_form_updates.register('edit', $.fn.zato.alerts_tab.live_configs('edit-'));
 
@@ -89,18 +80,6 @@ $.fn.zato.outgoing.sms.field_descriptions = {
     'id_name': 'A unique name for this connection. ' +
         'Services send messages through it, referring to it by this exact name.',
     'id_is_active': 'Whether this connection can be used. Inactive connections do not send messages.',
-    'id_provider': 'The SMS provider the connection sends through. The labels of the credentials follow it.',
-    'id_host': 'The provider\'s API address. Each provider has a default except Infobip, whose address is specific to the account.',
-    'id_username': 'The account identifier the provider authenticates the connection with.',
-    'id_secret': 'The secret the provider authenticates the connection with. ' +
-        'Stored encrypted and never shown again, leave it empty to keep the current one.',
-    'id_signature_secret': 'The Vonage signature secret that incoming callbacks are verified with. ' +
-        'Stored encrypted and never shown again, leave it empty to keep the current one.',
-    'id_sender': 'The number or alphanumeric sender ID messages are sent from, unless a service names another one.',
-    'id_channel_name': 'The SMS channel whose webhook URL each message names as its status callback, ' +
-        'so that delivery reports reach that channel.',
-    'id_pool_size': 'How many HTTP connections to the provider are kept open at most.',
-    'id_timeout': 'How many seconds a request to the provider may take before it is given up.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -117,8 +96,13 @@ $.fn.zato.outgoing.sms.tab_labels = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The Delivery and Alerts tabs read and write the rendered Django form of one dialog at a time
+// The Config, Delivery and Alerts tabs read and write the rendered Django form of one dialog at a time
 $.fn.zato.outgoing.sms._bind_tabs = function(action, fieldPrefix) {
+    $.fn.zato.sms.bind({
+        panel_id: 'out-sms-' + action + '-tab-panel-config',
+        field_prefix: fieldPrefix,
+        is_outgoing: true
+    });
     $.fn.zato.delivery_tab.bind({
         panel_id: 'out-sms-' + action + '-tab-panel-delivery',
         field_prefix: fieldPrefix,
@@ -130,54 +114,21 @@ $.fn.zato.outgoing.sms._bind_tabs = function(action, fieldPrefix) {
     });
 }
 
-// The Delivery and Alerts tabs' lines are not table rows, so the walk covers them as well
+// The walk includes the three tabs' lines
 $.fn.zato.outgoing.sms._init_how_it_works = function(action) {
     $.fn.zato.how_it_works.init({
         badgeId: action + '-how-it-works',
         divId: '#' + action + '-div',
-        fieldSelector: 'table.form-data tr, .decision-line',
+        fieldSelector: '.decision-line',
         descriptions: $.extend({},
             $.fn.zato.outgoing.sms.field_descriptions,
+            $.fn.zato.sms.descriptions(),
             $.fn.zato.delivery_tab.descriptions(),
             $.fn.zato.alerts_tab.descriptions())
     });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-
-// The credential labels, the host and the signature secret row follow the provider selected
-$.fn.zato.outgoing.sms._apply_provider = function(action, fieldPrefix, shouldFillHost) {
-    var config = $.fn.zato.outgoing.sms.config;
-    var serverConfig = $.fn.zato.outgoing.sms.serverConfig();
-
-    var provider = $('#id_' + fieldPrefix + 'provider').val();
-    var labels = config.providerLabels[provider];
-
-    $('#' + action + '-username-label').text(labels.username);
-    $('#' + action + '-password-label').text(labels.password);
-
-    var hasSignatureSecret = serverConfig.providers_with_signature_secret.indexOf(provider) !== -1;
-    $('.' + action + '-signature-secret-block').toggleClass('hidden', !hasSignatureSecret);
-
-    var isHostRequired = serverConfig.providers_requiring_host.indexOf(provider) !== -1;
-    var hostLabel = config.hostLabel;
-    if(isHostRequired) {
-        hostLabel = config.hostLabelRequired;
-    }
-    $('#' + action + '-host-label').text(hostLabel);
-
-    if(shouldFillHost) {
-        $('#id_' + fieldPrefix + 'host').val(serverConfig.default_host[provider]);
-    }
-}
-
-// A change of provider fills in that provider's default host, opening a dialog keeps the host it has
-$.fn.zato.outgoing.sms._bind_provider = function(action, fieldPrefix) {
-    $('#id_' + fieldPrefix + 'provider').off('change.sms').on('change.sms', function() {
-        $.fn.zato.outgoing.sms._apply_provider(action, fieldPrefix, true);
-    });
-    $.fn.zato.outgoing.sms._apply_provider(action, fieldPrefix, false);
-}
 
 $.fn.zato.outgoing.sms._reset_tabs = function(action) {
     $.fn.zato.form_tabs.reset({
@@ -194,7 +145,6 @@ $.fn.zato.outgoing.sms.create = function() {
     $.fn.zato.outgoing.sms._reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SMS connection', null);
     $.fn.zato.outgoing.sms._bind_tabs('create', '');
-    $.fn.zato.outgoing.sms._bind_provider('create', '');
     $.fn.zato.outgoing.sms._init_how_it_works('create');
 }
 
@@ -204,7 +154,6 @@ $.fn.zato.outgoing.sms.edit = function(id) {
     $.fn.zato.outgoing.sms._reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SMS connection', id);
     $.fn.zato.outgoing.sms._bind_tabs('edit', 'edit-');
-    $.fn.zato.outgoing.sms._bind_provider('edit', 'edit-');
     $.fn.zato.outgoing.sms._init_how_it_works('edit');
 }
 
@@ -262,8 +211,9 @@ $.fn.zato.outgoing.sms.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.host);
     row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.timeout_unit);
 
-    // 4 - the Delivery tab's fields ride in the row for the edit form to read ..
+    // 4 - the Delivery tab's fields are stored in the row for the edit form ..
     row += $.fn.zato.delivery_tab.row_cells(item);
 
     // 5 - .. and so do the Alerts tab's.
@@ -295,7 +245,7 @@ $.fn.zato.outgoing.sms.getInvokeUrl = function(id) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the Invoke dialog posts - the message from the request pane, the sender and the recipient from the fields above it
+// The fields the Invoke dialog posts - the message from the request pane, the sender and the recipient
 $.fn.zato.outgoing.sms.collectInvokeFormData = function() {
     var config = $.fn.zato.outgoing.sms.config;
 
@@ -343,7 +293,7 @@ $.fn.zato.outgoing.sms.invoke = function(id) {
         collect_form_data_func: $.fn.zato.outgoing.sms.collectInvokeFormData
     });
 
-    // The sender always opens as the connection's own, whatever the last send changed it to
+    // The sender field is reset to the connection's sender each time the dialog opens
     $('#' + config.invokeFromId).val(item.sender);
 }
 

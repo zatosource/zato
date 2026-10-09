@@ -40,7 +40,7 @@ if 0:
 # The API version every path opens with
 _api_version = '2010-04-01'
 
-# The prefix of a Messaging Service SID, which goes out as MessagingServiceSid rather than From
+# The prefix of a Messaging Service SID, sent as MessagingServiceSid instead of From
 _messaging_service_prefix = 'MG'
 
 # Request parameters
@@ -52,7 +52,7 @@ _param_status_callback = 'StatusCallback'
 _param_date_sent_after = 'DateSent>'
 _param_page_size = 'PageSize'
 
-# How many messages one page of a poll lists
+# The page size of a poll's message listing
 _page_size = 1000
 
 # Callback parameters
@@ -88,18 +88,18 @@ _header_signature = 'x-twilio-signature'
 _state_date_sent = 'date_sent'
 _state_next_page_uri = 'next_page_uri'
 
-# The answer to an accepted callback
+# The response to an accepted callback
 _callback_body_xml = '<?xml version="1.0" encoding="UTF-8"?><Response/>'
 
-# The date format of the DateSent filter and how long a date in it is
+# The date format of the DateSent filter and the length of a date in that format
 _date_filter_format = '%Y-%m-%d'
 _date_length = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _to_iso(value:'str') -> 'str':
-    """ Twilio's RFC 2822 timestamps as ISO-8601, an empty value stays empty.
+def _to_iso_8601(value:'str') -> 'str':
+    """ Converts an RFC 2822 timestamp to ISO-8601. An empty value is returned unchanged.
     """
     if not value:
         return ''
@@ -253,12 +253,12 @@ class TwilioProvider(Provider):
 
     def build_poll_requests(self, state:'stranydict') -> 'PollRequestList':
 
-        # A listing left pages behind, so the next page is read ..
+        # The previous poll recorded a next page, which is read first ..
         if state.get(_state_next_page_uri):
             url = self.host + state[_state_next_page_uri]
             request = PollRequest(Method_GET, url, self._headers(), {})
 
-        # .. otherwise a new listing opens at the day the previous poll reached, or today for the first one.
+        # .. otherwise a new listing starts at the date the previous poll recorded, or today for the first poll.
         else:
             date_sent = state.get(_state_date_sent)
             if not date_sent:
@@ -290,7 +290,7 @@ class TwilioProvider(Provider):
             event = self._event_from_listing(item)
             events.append(event)
 
-            # The day of the newest message is where the next listing opens
+            # The date of the newest message is the start of the next listing
             if event.received_at:
                 item_date = event.received_at[:_date_length]
                 if item_date > latest_date:
@@ -313,7 +313,7 @@ class TwilioProvider(Provider):
         date_sent = text_or_empty(item.get(_field_date_sent))
         if not date_sent:
             date_sent = text_or_empty(item.get(_field_date_created))
-        received_at = _to_iso(date_sent)
+        received_at = _to_iso_8601(date_sent)
 
         if item.get(_field_direction) == _direction_inbound:
             body = text_or_empty(item.get(_field_body))

@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The one account each simulator serves
+# The account of each simulator
 Twilio_Account_SID = 'AC' + '0' * 30 + 'a1'
 Twilio_Auth_Token = 'twilio-auth-token-for-tests'
 
@@ -36,10 +36,10 @@ Infobip_API_Key = 'infobip-api-key-for-tests'
 Africas_Talking_Username = 'sandbox'
 Africas_Talking_API_Key = 'africas-talking-api-key-for-tests'
 
-# Infobip authenticates with its API key alone, the username is for the connection's record only
+# Infobip authenticates with the API key, the username is stored on the connection only
 Infobip_Username = 'infobip-account'
 
-# The environment variables an enmasse template reads each simulator's address from
+# The environment variables of each simulator's address
 Host_Variables = {
     SMS.Provider.Twilio: 'Zato_Test_SMS_Twilio_Host',
     SMS.Provider.Vonage: 'Zato_Test_SMS_Vonage_Host',
@@ -109,7 +109,7 @@ class SimulatorSuite:
 # ################################################################################################################################
 
     def environment(self) -> 'strstrdict':
-        """ The variables that point each connection of an enmasse template at its simulator, with its account's credentials.
+        """ The environment variables of each simulator's address and credentials, read by an enmasse template.
         """
         out:'strstrdict' = dict(Credential_Variables)
 

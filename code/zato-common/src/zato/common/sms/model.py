@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The common model of SMS traffic - one event shape for every provider's callbacks and poll results,
-# and one result shape for every provider's send response.
+# The common model of SMS traffic - one event type for every provider's callbacks and poll results
+# and one result type for every provider's send response.
 
 # stdlib
 from dataclasses import asdict, dataclass
@@ -21,7 +21,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What kind of event a channel's service receives
+# The kinds of event a channel's service receives
 Kind_Message = 'message'
 Kind_Status = 'status'
 
@@ -38,7 +38,7 @@ Status_List = (Status_Sent, Status_Delivered, Status_Failed)
 
 @dataclass(init=False)
 class SMSEvent:
-    """ One event an SMS channel passes to its service - an incoming text or a delivery report.
+    """ One event an SMS channel delivers to its service - an incoming text or a delivery report.
     """
 
     # Kind_Message for an incoming text, Kind_Status for a delivery report
@@ -93,7 +93,7 @@ class SMSEvent:
 
 @dataclass(init=False)
 class SendResult:
-    """ What a provider answers a send with.
+    """ The result of a send request.
     """
 
     # The provider's ID of the message

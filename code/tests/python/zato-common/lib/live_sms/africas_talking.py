@@ -12,7 +12,7 @@ from uuid import uuid4
 
 # Zato
 from live_sms.base import Content_Type_Form, Content_Type_Text, form_encode, json_response, Kind_Message, not_found, \
-    SimEvent, SimRequest, SimResponse, SMSSimulator
+    SimulatorEvent, SimulatorRequest, SimulatorResponse, SMSSimulator
 from zato.common.api import SMS
 
 # ################################################################################################################################
@@ -45,8 +45,8 @@ _timestamp_format = '%Y-%m-%d %H:%M:%S'
 # ################################################################################################################################
 
 class AfricasTalkingSimulator(SMSSimulator):
-    """ Africa's Talking's messaging API - sends, the user read a ping makes, the lastReceivedId fetch a poll makes
-    and the form-encoded callbacks for delivery reports and incoming texts.
+    """ Africa's Talking's messaging API - sends, the user read of a ping, the lastReceivedId fetch of a poll
+    and form-encoded callbacks for delivery reports and incoming texts.
     """
     provider = SMS.Provider.Africas_Talking
     initial_status = _status_sent
@@ -54,23 +54,23 @@ class AfricasTalkingSimulator(SMSSimulator):
     def __init__(self, username:'str', password:'str') -> 'None':
         super().__init__(username, password)
 
-        # Incoming texts have integer IDs, which the fetch endpoint pages by
+        # Incoming texts have integer IDs, the paging key of the fetch endpoint
         self._next_incoming_id = 1000
 
 # ################################################################################################################################
 
-    def check_auth(self, request:'SimRequest') -> 'bool':
+    def check_auth(self, request:'SimulatorRequest') -> 'bool':
         given = request.headers.get(_header_api_key, '')
         out = given == self.password
         return out
 
-    def auth_failure(self) -> 'SimResponse':
-        out = SimResponse(UNAUTHORIZED, Content_Type_Text, 'The supplied authentication is invalid')
+    def auth_failure(self) -> 'SimulatorResponse':
+        out = SimulatorResponse(UNAUTHORIZED, Content_Type_Text, 'The supplied authentication is invalid')
         return out
 
 # ################################################################################################################################
 
-    def route(self, request:'SimRequest') -> 'SimResponse':
+    def route(self, request:'SimulatorRequest') -> 'SimulatorResponse':
 
         if request.path == _messaging_path:
             if request.method == 'POST':
@@ -88,10 +88,10 @@ class AfricasTalkingSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _user(self, request:'SimRequest') -> 'SimResponse':
+    def _user(self, request:'SimulatorRequest') -> 'SimulatorResponse':
 
         if request.query.get('username') != self.username:
-            out = SimResponse(UNAUTHORIZED, Content_Type_Text, 'The supplied authentication is invalid')
+            out = SimulatorResponse(UNAUTHORIZED, Content_Type_Text, 'The supplied authentication is invalid')
         else:
             out = json_response(OK, {'UserData': {'balance': 'KES 1000.0000'}})
 
@@ -99,16 +99,16 @@ class AfricasTalkingSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _send(self, request:'SimRequest') -> 'SimResponse':
+    def _send(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         form = request.form()
 
         for name in ('username', 'to', 'message'):
             if name not in form:
-                out = SimResponse(BAD_REQUEST, Content_Type_Text, f'Missing parameter: {name}')
+                out = SimulatorResponse(BAD_REQUEST, Content_Type_Text, f'Missing parameter: {name}')
                 return out
 
         if form['username'] != self.username:
-            out = SimResponse(UNAUTHORIZED, Content_Type_Text, 'The supplied authentication is invalid')
+            out = SimulatorResponse(UNAUTHORIZED, Content_Type_Text, 'The supplied authentication is invalid')
             return out
 
         to = form['to']
@@ -129,7 +129,7 @@ class AfricasTalkingSimulator(SMSSimulator):
             return out
 
         message_id = 'ATXid_' + uuid4().hex
-        _ = self.add_send(message_id, to, from_, message, '', form)
+        _ = self.record_send(message_id, to, from_, message, '', form)
 
         recipient = {
             'statusCode': _status_code_sent,
@@ -145,7 +145,7 @@ class AfricasTalkingSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _message(self, event:'SimEvent') -> 'anydict':
+    def _message(self, event:'SimulatorEvent') -> 'anydict':
         out = {
             'linkId': uuid4().hex,
             'text': event.body,
@@ -158,11 +158,11 @@ class AfricasTalkingSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _fetch(self, request:'SimRequest') -> 'SimResponse':
+    def _fetch(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         """ Every incoming text with an ID above lastReceivedId, oldest first.
         """
         if request.query.get('username') != self.username:
-            out = SimResponse(UNAUTHORIZED, Content_Type_Text, 'The supplied authentication is invalid')
+            out = SimulatorResponse(UNAUTHORIZED, Content_Type_Text, 'The supplied authentication is invalid')
             return out
 
         last_received_id = int(request.query.get('lastReceivedId', '0'))
@@ -186,7 +186,7 @@ class AfricasTalkingSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def callback_params(self, event:'SimEvent') -> 'strdict':
+    def callback_params(self, event:'SimulatorEvent') -> 'strdict':
 
         if event.kind == Kind_Message:
             out = {
@@ -213,13 +213,13 @@ class AfricasTalkingSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def callback_body(self, event:'SimEvent') -> 'tuple[str, bytes]':
+    def callback_body(self, event:'SimulatorEvent') -> 'tuple[str, bytes]':
         out = (Content_Type_Form, form_encode(self.callback_params(event)))
         return out
 
 # ################################################################################################################################
 
-    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimEvent') -> 'strdict':
+    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimulatorEvent') -> 'strdict':
         out:'strdict' = {}
         return out
 

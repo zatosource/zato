@@ -65,7 +65,7 @@ channel_sms:
     outconn: test.sms.out.africas-talking
     service: test.sms.target
 
-  # The polling channels - the tests run their poll service directly rather than waiting for the scheduler
+  # The polling channels - the tests invoke the poll service directly
 
   - name: test.sms.poll.twilio
     outconn: test.sms.out.twilio

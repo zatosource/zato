@@ -16,7 +16,7 @@ from uuid import uuid4
 
 # Zato
 from live_sms.base import basic_auth_matches, Content_Type_Form, form_encode, json_response, Kind_Message, not_found, \
-    paginate, SimEvent, SimRequest, SimResponse, SMSSimulator
+    paginate, SimulatorEvent, SimulatorRequest, SimulatorResponse, SMSSimulator
 from zato.common.api import SMS
 
 # ################################################################################################################################
@@ -28,20 +28,20 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Twilio's test credentials behave by the number dialed - these are the documented magic numbers
-Magic_From_Valid = '+15005550006'
-Magic_To_Not_Mobile = '+15005550009'
-Magic_To_Invalid = '+15005550001'
-Magic_From_Invalid = '+15005550007'
+# The test numbers documented for Twilio's test credentials
+Test_Number_From_Valid = '+15005550006'
+Test_Number_To_Not_Mobile = '+15005550009'
+Test_Number_To_Invalid = '+15005550001'
+Test_Number_From_Invalid = '+15005550007'
 
-# The error each magic number produces
+# The error of each test number
 Error_To_Not_Mobile = 21614
 Error_To_Invalid = 21211
 Error_From_Invalid = 21606
 
-_magic_to_errors = {
-    Magic_To_Not_Mobile: (Error_To_Not_Mobile, 'To number: {to}, is not a mobile number'),
-    Magic_To_Invalid: (Error_To_Invalid, "The 'To' number {to} is not a valid phone number."),
+_test_number_errors = {
+    Test_Number_To_Not_Mobile: (Error_To_Not_Mobile, 'To number: {to}, is not a mobile number'),
+    Test_Number_To_Invalid: (Error_To_Invalid, "The 'To' number {to} is not a valid phone number."),
 }
 
 _error_from_invalid_text = "The From phone number {from_} is not a valid, SMS-capable inbound phone number or short code for your account."
@@ -87,7 +87,7 @@ def new_message_sid() -> 'str':
 # ################################################################################################################################
 
 class TwilioSimulator(SMSSimulator):
-    """ Twilio's Messages resource - sends, the account read a ping makes, the message listing a poll reads
+    """ Twilio's Messages resource - sends, the account read of a ping, the message listing of a poll
     and status and incoming-text callbacks signed with the auth token.
     """
     provider = SMS.Provider.Twilio
@@ -99,17 +99,17 @@ class TwilioSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def check_auth(self, request:'SimRequest') -> 'bool':
+    def check_auth(self, request:'SimulatorRequest') -> 'bool':
         out = basic_auth_matches(request, self.username, self.password)
         return out
 
-    def auth_failure(self) -> 'SimResponse':
+    def auth_failure(self) -> 'SimulatorResponse':
         out = json_response(UNAUTHORIZED, _error_auth)
         return out
 
 # ################################################################################################################################
 
-    def route(self, request:'SimRequest') -> 'SimResponse':
+    def route(self, request:'SimulatorRequest') -> 'SimulatorResponse':
 
         if request.path == self._account_path('/Messages.json'):
             if request.method == 'POST':
@@ -127,14 +127,14 @@ class TwilioSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _error(self, status:'int', code:'int', message:'str') -> 'SimResponse':
+    def _error(self, status:'int', code:'int', message:'str') -> 'SimulatorResponse':
         out = json_response(status, {'code': code, 'message': message, 'more_info': f'https://www.twilio.com/docs/errors/{code}',
             'status': status})
         return out
 
 # ################################################################################################################################
 
-    def _send(self, request:'SimRequest') -> 'SimResponse':
+    def _send(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         form = request.form()
 
         if 'To' not in form:
@@ -156,19 +156,19 @@ class TwilioSimulator(SMSSimulator):
             out = self._error(BAD_REQUEST, 21603, "A 'From' phone number is required.")
             return out
 
-        if from_ == Magic_From_Invalid:
+        if from_ == Test_Number_From_Invalid:
             out = self._error(BAD_REQUEST, Error_From_Invalid, _error_from_invalid_text.format(from_=from_))
             return out
 
-        if to in _magic_to_errors:
-            code, text = _magic_to_errors[to]
+        if to in _test_number_errors:
+            code, text = _test_number_errors[to]
             out = self._error(BAD_REQUEST, code, text.format(to=to))
             return out
 
         callback_url = form.get('StatusCallback', '')
         message_sid = new_message_sid()
 
-        _ = self.add_send(message_sid, to, from_, body, callback_url, form)
+        _ = self.record_send(message_sid, to, from_, body, callback_url, form)
 
         payload = self._message_payload(message_sid, to, from_, body, _status_queued, '', _direction_outbound)
         out = json_response(CREATED, payload)
@@ -201,7 +201,7 @@ class TwilioSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _listing_item(self, event:'SimEvent') -> 'anydict':
+    def _listing_item(self, event:'SimulatorEvent') -> 'anydict':
 
         if event.kind == Kind_Message:
             direction = _direction_inbound
@@ -219,9 +219,9 @@ class TwilioSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _list(self, request:'SimRequest') -> 'SimResponse':
-        """ The message listing - every message whose date is on or after the DateSent> filter, newest first
-        as Twilio lists them, in pages of PageSize with a next_page_uri while pages remain.
+    def _list(self, request:'SimulatorRequest') -> 'SimulatorResponse':
+        """ The message listing - every message dated on or after the DateSent> filter, newest first,
+        in pages of PageSize with a next_page_uri while pages remain.
         """
         date_after = request.query.get('DateSent>', '')
         offset = int(request.query.get('Page', '0'))
@@ -230,8 +230,8 @@ class TwilioSimulator(SMSSimulator):
         if page_size > self.page_size:
             page_size = self.page_size
 
-        # The latest state of each message is what the listing shows
-        latest:'dict[str, SimEvent]' = {}
+        # The listing shows the latest status of each message
+        latest:'dict[str, SimulatorEvent]' = {}
         for event in self.events:
             latest[event.message_id] = event
 
@@ -266,8 +266,8 @@ class TwilioSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def callback_params(self, event:'SimEvent') -> 'strdict':
-        """ The form of a status callback or of an incoming text, as Twilio posts them.
+    def callback_params(self, event:'SimulatorEvent') -> 'strdict':
+        """ The form fields of a status callback or an incoming text.
         """
         out = {
             'MessageSid': event.message_id,
@@ -291,13 +291,13 @@ class TwilioSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def callback_body(self, event:'SimEvent') -> 'tuple[str, bytes]':
+    def callback_body(self, event:'SimulatorEvent') -> 'tuple[str, bytes]':
         out = (Content_Type_Form, form_encode(self.callback_params(event)))
         return out
 
 # ################################################################################################################################
 
-    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimEvent') -> 'strdict':
+    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimulatorEvent') -> 'strdict':
         signature = compute_signature(self.password, sign_url, self.callback_params(event))
         out = {_header_signature: signature}
         return out

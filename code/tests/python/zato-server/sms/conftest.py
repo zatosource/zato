@@ -47,11 +47,11 @@ class ModuleCtx:
     Services_File = Directory / '_services.py'
     Template_File = Directory / '_enmasse_template.yaml'
 
-    # The service every channel points to and the services the tests drive the suite through
+    # The target service of every channel and the services the tests invoke
     Target_Service = 'test.sms.target'
     Send_Service = 'test.sms.send'
     Ping_Service = 'test.sms.ping'
-    Set_Behaviour_Service = 'test.sms.set-behaviour'
+    Set_Refusal_Count_Service = 'test.sms.set-refusal-count'
     Get_Received_Service = 'test.sms.get-received'
     Clear_Service = 'test.sms.clear'
 
@@ -67,17 +67,17 @@ class ModuleCtx:
     Wait_Timeout = 15.0
     Poll_Interval = 0.1
 
-    # A refusal count meaning that the target refuses everything until it is told otherwise
+    # The refusal count at which the target refuses every event
     Refuse_Everything = -1
 
-    # The error the target raises while it refuses
+    # The error the target raises for a refused event
     Refused_Error_Text = 'The target refuses this event'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class SMSSuite:
-    """ The four simulators and the one server of the session, with what a test reaches for.
+    """ The four simulators and the server of the session, with the clients the tests use.
     """
 
     def __init__(self, simulators:'SimulatorSuite', zato:'ZatoEnvironment') -> 'None':
@@ -103,7 +103,7 @@ class SMSSuite:
 # ################################################################################################################################
 
     def webhook_url(self, channel_name:'str') -> 'str':
-        """ The address a provider's console is given for a channel, the same one the server signs callbacks over.
+        """ The webhook URL of a channel.
         """
         out = self.server_address + SMS.Webhook_Path_Prefix + channel_name
         return out
@@ -140,15 +140,15 @@ class SMSSuite:
 # ################################################################################################################################
 
     def poll(self, provider:'str') -> 'None':
-        """ Runs one poll of the provider's polling channel, the way the scheduler job does.
+        """ Runs one poll of the provider's polling channel by invoking the poll service directly.
         """
         request = {SMS.Scheduler.Extra_Conn_Name: self.polling_channel(provider)}
         _ = self.client.invoke(ModuleCtx.Poll_Service, request)
 
 # ################################################################################################################################
 
-    def set_behaviour(self, refuse_count:'int') -> 'None':
-        _ = self.client.invoke(ModuleCtx.Set_Behaviour_Service, {'refuse_count': refuse_count})
+    def set_refusal_count(self, refuse_count:'int') -> 'None':
+        _ = self.client.invoke(ModuleCtx.Set_Refusal_Count_Service, {'refuse_count': refuse_count})
 
 # ################################################################################################################################
 
@@ -183,7 +183,7 @@ class SMSSuite:
 # ################################################################################################################################
 
     def register_callbacks(self) -> 'None':
-        """ Points each simulator at its webhook channel, the way a user enters the URL in a provider's console.
+        """ Registers each simulator's callback URL as its webhook channel's URL.
         """
         for item in self.simulators.all:
             url = self.webhook_url(self.webhook_channel(item.provider))
@@ -216,7 +216,7 @@ def sms() -> 'iterator_':
         simulators.start()
         parts.add('SMS simulators', simulators.stop)
 
-        # The Redis the channels remember seen events in
+        # The Redis in which the channels record received events
         redis_port = find_free_port()
         redis_process = start_redis(redis_port)
         parts.add('redis-server', redis_process.kill)
@@ -226,7 +226,7 @@ def sms() -> 'iterator_':
         parts.add('Zato', zato.stop)
         zato.create(redis_port=redis_port)
 
-        # The server builds each channel's webhook URL from this address, which is what the simulators sign over
+        # The server's address, from which each channel's webhook URL is built and over which the simulators sign
         server_environment = {
             Server_Address_Env_Key: f'http://{Host}:{zato.server_port}',
         }
@@ -241,7 +241,7 @@ def sms() -> 'iterator_':
         suite = SMSSuite(simulators, zato)
         suite.register_callbacks()
 
-    # A setup cut short tears down what it started
+    # An incomplete setup stops what it started
     except BaseException:
         tear_down(parts)
         raise
@@ -254,8 +254,8 @@ def sms() -> 'iterator_':
 
 @pytest.fixture(autouse=True)
 def clean_state(sms:'SMSSuite') -> 'iterator_':
-    """ Every test starts with simulators that recorded nothing and push to the webhook channels,
-    and with a target that accepts everything.
+    """ Each test starts with cleared simulators registered to the webhook channels and with a target
+    that accepts every event.
     """
     sms.simulators.reset()
     sms.register_callbacks()

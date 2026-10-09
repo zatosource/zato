@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# What a Dashboard view is called with when it is called directly against a live server - a request with the form
-# the browser posts and the client the Dashboard's middleware builds, pointed at the server of the session.
+# The request a Dashboard view is called with directly - the form data the browser posts and the client
+# the Dashboard's middleware builds.
 
 # Django
 from django.http import QueryDict
@@ -26,17 +26,17 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The one cluster everything in the Dashboard belongs to
+# The cluster ID
 Cluster_Id = 1
 
-# The user the server's admin.invoke channel authenticates
+# The user of the server's admin.invoke channel
 Admin_Invoke_Username = 'admin.invoke'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def new_client(server_address:'str', password:'str') -> 'ZatoClient':
-    """ The client a view invokes services through, as the middleware builds it.
+    """ The client a view invokes services through.
     """
     auth = (Admin_Invoke_Username, password)
     out = ZatoClient(server_address, ServiceConst.API_Invoke_Url_Path, auth, to_bunch=True)
@@ -51,8 +51,7 @@ def new_request(
     method:'str'='POST',
     id:'str'='',
     ) -> 'any_':
-    """ Builds the request a view is called with - its form filled in with what the browser would have posted,
-    its query string with what the page's URL has and its client reaching the server of the session.
+    """ Builds the request of a view - the posted form data, the query string and the client of the session's server.
     """
     post = QueryDict('', mutable=True)
 

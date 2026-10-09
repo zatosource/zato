@@ -19,6 +19,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/alerts-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/delivery-tab.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/sms-tab.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tokens.css">
     <link rel="stylesheet" type="text/css" href="/static/css/channel/sms.css">
 {% endblock %}
@@ -54,6 +55,7 @@
     {{ sms_config|json_script:"channel-sms-config" }}
 
     {% comment %} SMS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/sms-tab.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/sms.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -65,10 +67,10 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'outconn_name',
+            '_provider',
             'service',
             '_receive_mode',
-            '_webhook_url',
+            '_webhook_path',
 
             {% comment %} 2 {% endcomment %}
             '_delivery',
@@ -81,6 +83,12 @@
             'receive_mode',
             'scheduler_run_every',
             'scheduler_run_unit',
+            'outconn_name',
+            'outconn_id',
+            'provider',
+            'host',
+            'username',
+            'sender',
 
             {% comment %} 4 - the Delivery tab {% endcomment %}
         ].concat($.fn.zato.delivery_tab.columns());
@@ -117,10 +125,10 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Outgoing connection</a></th>
+                        <th><a href="#">Provider</a></th>
                         <th><a href="#">Service</a></th>
                         <th><a href="#">Receive mode</a></th>
-                        <th><a href="#">Webhook URL</a></th>
+                        <th><a href="#">Webhook path</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th>&nbsp;</th> {% comment %} _delivery {% endcomment %}
@@ -128,6 +136,12 @@
                         <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -149,10 +163,10 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td><a href="{% url "out-sms" %}?cluster={{ cluster_id }}&amp;type_=outconn-sms&amp;query={{ item.outconn_name }}">{{ item.outconn_name }}</a></td>
+                        <td>{{ item.provider_human }}</td>
                         <td><a href="{% url "service-ide" "service" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
                         <td>{{ item.receive_mode_human }}</td>
-                        <td class="channel-sms-webhook-url-cell">{% if item.receive_mode == 'webhook' %}{{ item.webhook_url }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+                        <td class="channel-sms-webhook-path-cell">{% if item.receive_mode == 'webhook' %}{{ item.webhook_path }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
 
                         {% comment %} 2 {% endcomment %}
                         {% include "zato/include/channel-dlq-link.html" with conn_type="sms-channel" %}
@@ -165,6 +179,12 @@
                         <td class='ignore'>{{ item.receive_mode }}</td>
                         <td class='ignore'>{{ item.scheduler_run_every }}</td>
                         <td class='ignore'>{{ item.scheduler_run_unit }}</td>
+                        <td class='ignore'>{{ item.outconn_name }}</td>
+                        <td class='ignore'>{{ item.outconn_id }}</td>
+                        <td class='ignore'>{{ item.provider }}</td>
+                        <td class='ignore'>{{ item.host }}</td>
+                        <td class='ignore'>{{ item.username }}</td>
+                        <td class='ignore'>{{ item.sender }}</td>
 
                         {% comment %} 4 - the Delivery tab {% endcomment %}
                         {% include "zato/include/delivery-tab-cells.html" %}
@@ -192,46 +212,52 @@
                         {% include "zato/include/delivery-tab-button.html" %}
                     </div>
 
-                    <div class="dashboard-tab-panel" id="channel-sms-create-tab-panel-config" role="tabpanel">
-                    <table class="form-data">
-                        <tr>
-                            <td class="form-data-label"><label for="id_name">Name</label></td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td>
-                                <label for="id_is_active">
-                                    Active
-                                    {{ create_form.is_active }}
-                                </label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_outconn_name">Outgoing connection</label></td>
-                            <td>{{ create_form.outconn_name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_service">Service</label></td>
-                            <td>{{ create_form.service }}</td>
-                        </tr>
+                    <div class="dashboard-tab-panel alerts-tab-panel sms-tab-panel" id="channel-sms-create-tab-panel-config" role="tabpanel">
+                    <div class="form-data alerts-tab-body">
 
-                        <tr>
-                            <td colspan="2" class="form-data-section">Receiving</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_receive_mode">Receive mode</label></td>
-                            <td>{{ create_form.receive_mode }}</td>
-                        </tr>
-                        <tr class="create-polling-block">
-                            <td class="form-data-label"><label for="id_scheduler_run_every">Run every</label></td>
-                            <td>{{ create_form.scheduler_run_every }} {{ create_form.scheduler_run_unit }}</td>
-                        </tr>
-                        <tr class="create-webhook-block">
-                            <td class="form-data-label"><label for="id_webhook_url">Webhook URL</label></td>
-                            <td>{{ create_form.webhook_url }}</td>
-                        </tr>
-                    </table>
+                        <div class="alerts-tab-sections">
+
+                            <div class="alerts-tab-section">
+                                <div class="alerts-tab-section-title">Channel</div>
+                                <div class="decision-lines">
+                                    <div class="decision-line alerts-tab-line alerts-tab-always-on-line" id="channel-sms-create-tab-panel-config-line-name">
+                                        <label class="decision-line-label" for="id_name">Name</label>
+                                        <span class="decision-line-slot">{{ create_form.name }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle alerts-tab-always-on-line" id="channel-sms-create-tab-panel-config-line-is_active">
+                                        <label class="decision-line-label" for="id_is_active">Active</label>
+                                        <span class="decision-line-slot">{{ create_form.is_active }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-always-on-line" id="channel-sms-create-tab-panel-config-line-service">
+                                        <label class="decision-line-label" for="id_service">Service</label>
+                                        <span class="decision-line-slot">{{ create_form.service }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="channel-sms-create-tab-panel-config-line-receive">
+                                        <label class="decision-line-label" for="channel-sms-create-tab-panel-config-edit-receive">Receiving</label>
+                                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="channel-sms-create-tab-panel-config-edit-receive"><span class="zato-link-face summary-link-text" id="channel-sms-create-tab-panel-config-summary-receive"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% include "zato/include/sms-tab-sections.html" with panel_id="channel-sms-create-tab-panel-config" form=create_form is_outgoing=False %}
+
+                        </div>
+
+                        <div class="alerts-tab-hidden-fields" hidden>
+                            {{ create_form.provider }}
+                            {{ create_form.host }}
+                            {{ create_form.username }}
+                            {{ create_form.secret }}
+                            {{ create_form.signature_secret }}
+                            {{ create_form.sender }}
+                            {{ create_form.receive_mode }}
+                            {{ create_form.scheduler_run_every }}
+                            {{ create_form.scheduler_run_unit }}
+                            {{ create_form.outconn_name }}
+                            {{ create_form.outconn_id }}
+                        </div>
+
+                    </div>
                     </div>
 
                     {% include "zato/include/delivery-tab.html" with panel_id="channel-sms-create-tab-panel-delivery" form=create_form %}
@@ -261,46 +287,52 @@
                         {% include "zato/include/delivery-tab-button.html" %}
                     </div>
 
-                    <div class="dashboard-tab-panel" id="channel-sms-edit-tab-panel-config" role="tabpanel">
-                    <table class="form-data">
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-name">Name</label></td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td>
-                                <label for="id_edit-is_active">
-                                    Active
-                                    {{ edit_form.is_active }}
-                                </label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-outconn_name">Outgoing connection</label></td>
-                            <td>{{ edit_form.outconn_name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-service">Service</label></td>
-                            <td>{{ edit_form.service }}</td>
-                        </tr>
+                    <div class="dashboard-tab-panel alerts-tab-panel sms-tab-panel" id="channel-sms-edit-tab-panel-config" role="tabpanel">
+                    <div class="form-data alerts-tab-body">
 
-                        <tr>
-                            <td colspan="2" class="form-data-section">Receiving</td>
-                        </tr>
-                        <tr>
-                            <td class="form-data-label"><label for="id_edit-receive_mode">Receive mode</label></td>
-                            <td>{{ edit_form.receive_mode }}</td>
-                        </tr>
-                        <tr class="edit-polling-block">
-                            <td class="form-data-label"><label for="id_edit-scheduler_run_every">Run every</label></td>
-                            <td>{{ edit_form.scheduler_run_every }} {{ edit_form.scheduler_run_unit }}</td>
-                        </tr>
-                        <tr class="edit-webhook-block">
-                            <td class="form-data-label"><label for="id_edit-webhook_url">Webhook URL</label></td>
-                            <td>{{ edit_form.webhook_url }}</td>
-                        </tr>
-                    </table>
+                        <div class="alerts-tab-sections">
+
+                            <div class="alerts-tab-section">
+                                <div class="alerts-tab-section-title">Channel</div>
+                                <div class="decision-lines">
+                                    <div class="decision-line alerts-tab-line alerts-tab-always-on-line" id="channel-sms-edit-tab-panel-config-line-name">
+                                        <label class="decision-line-label" for="id_edit-name">Name</label>
+                                        <span class="decision-line-slot">{{ edit_form.name }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-line-toggle alerts-tab-always-on-line" id="channel-sms-edit-tab-panel-config-line-is_active">
+                                        <label class="decision-line-label" for="id_edit-is_active">Active</label>
+                                        <span class="decision-line-slot">{{ edit_form.is_active }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-always-on-line" id="channel-sms-edit-tab-panel-config-line-service">
+                                        <label class="decision-line-label" for="id_edit-service">Service</label>
+                                        <span class="decision-line-slot">{{ edit_form.service }}</span>
+                                    </div>
+                                    <div class="decision-line alerts-tab-line alerts-tab-line-popover alerts-tab-always-on-line" id="channel-sms-edit-tab-panel-config-line-receive">
+                                        <label class="decision-line-label" for="channel-sms-edit-tab-panel-config-edit-receive">Receiving</label>
+                                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="channel-sms-edit-tab-panel-config-edit-receive"><span class="zato-link-face summary-link-text" id="channel-sms-edit-tab-panel-config-summary-receive"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% include "zato/include/sms-tab-sections.html" with panel_id="channel-sms-edit-tab-panel-config" form=edit_form is_outgoing=False %}
+
+                        </div>
+
+                        <div class="alerts-tab-hidden-fields" hidden>
+                            {{ edit_form.provider }}
+                            {{ edit_form.host }}
+                            {{ edit_form.username }}
+                            {{ edit_form.secret }}
+                            {{ edit_form.signature_secret }}
+                            {{ edit_form.sender }}
+                            {{ edit_form.receive_mode }}
+                            {{ edit_form.scheduler_run_every }}
+                            {{ edit_form.scheduler_run_unit }}
+                            {{ edit_form.outconn_name }}
+                            {{ edit_form.outconn_id }}
+                        </div>
+
+                    </div>
                     </div>
 
                     {% include "zato/include/delivery-tab.html" with panel_id="channel-sms-edit-tab-panel-delivery" form=edit_form %}

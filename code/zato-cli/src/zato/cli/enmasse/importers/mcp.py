@@ -14,8 +14,8 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.alerting.object_config import conn_type_to_alert_type
-from zato.common.api import CONNECTION, GENERIC, Groups, MCP
-from zato.common.odb.model import GenericConn, GenericObject, HTTPSOAP
+from zato.common.api import GENERIC, Groups, MCP
+from zato.common.odb.model import GenericObject
 from zato.common.util.gateway import ensure_mcp_rest_channel, validate_oauth_security
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
@@ -26,7 +26,7 @@ from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anydict, anylist, listtuple, strlist
+    from zato.common.typing_ import any_, anydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -232,57 +232,6 @@ class GatewayMCPImporter(GenericConnectionImporter):
         instance = super().update_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
         return instance
-
-# ################################################################################################################################
-
-    def _delete_gateway(self, gateway_name:'str', session:'SASession') -> 'None':
-        """ Deletes one MCP gateway - both its generic connection and the REST channel that
-        made it reachable. The config reload that follows an import drops the wrapper
-        and the URL routing of the deleted rows.
-        """
-
-        connection = session.query(GenericConn).filter(
-            GenericConn.name == gateway_name,
-            GenericConn.type_ == self.connection_type,
-            GenericConn.cluster_id == self.importer.cluster_id,
-        ).first()
-
-        if connection is not None:
-            session.delete(connection)
-            logger.info('Deleted MCP gateway connection: %s', gateway_name)
-
-        channel = session.query(HTTPSOAP).filter(
-            HTTPSOAP.name == gateway_name,
-            HTTPSOAP.connection == CONNECTION.CHANNEL,
-            HTTPSOAP.cluster_id == self.importer.cluster_id,
-        ).first()
-
-        if channel is not None:
-            session.delete(channel)
-            logger.info('Deleted MCP gateway REST channel: %s', gateway_name)
-
-# ################################################################################################################################
-
-    def sync_definitions(self, conn_list:'anylist', session:'SASession') -> 'listtuple':
-        """ An mcp_gateway entry marked should_delete is removed instead of created or updated -
-        everything else syncs the way any generic connection does.
-        """
-
-        remaining:'anylist' = []
-
-        for item in conn_list:
-
-            if item.get('should_delete'):
-                self._delete_gateway(item['name'], session)
-            else:
-                remaining.append(item)
-
-        # The deletions land on their own, so a failure in the create-update pass
-        # can never roll a requested deletion back.
-        session.commit()
-
-        out = super().sync_definitions(remaining, session)
-        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

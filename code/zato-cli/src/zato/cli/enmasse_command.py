@@ -157,9 +157,9 @@ class Enmasse(ZatoCommand):
                     wait_for_services_timeout=args.missing_wait_time
                 )
 
-                # .. let the caller know how many objects of each type were created and updated ..
+                # .. let the caller know how many objects of each type were created, updated and deleted ..
                 if args.result_file:
-                    self._write_result_file(args.result_file, created, updated)
+                    self._write_result_file(args.result_file, created, updated, importer.deleted_objects)
 
                 # .. reload the configuration if needed ..
                 if asbool(os.environ.get('Zato_Needs_Config_Reload', True)):
@@ -193,27 +193,8 @@ class Enmasse(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _write_result_file(self, path:'str', created:'stranydict', updated:'stranydict') -> 'None':
-
-        # stdlib
-        from json import dumps
-
-        counts_created = {}
-        counts_updated = {}
-
-        for key, items in created.items():
-            counts_created[key] = len(items)
-
-        for key, items in updated.items():
-            counts_updated[key] = len(items)
-
-        data = {
-            'created': counts_created,
-            'updated': counts_updated,
-        }
-
-        with open(path, 'w') as f:
-            _ = f.write(dumps(data))
+    def _write_result_file(self, path:'str', created:'stranydict', updated:'stranydict', deleted:'stranydict') -> 'None':
+        write_result_file(path, created, updated, deleted)
 
 # ################################################################################################################################
 
@@ -230,6 +211,38 @@ class Enmasse(ZatoCommand):
 
         # For regular objects, just return the name
         return getattr(item, 'name', str(item))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def write_result_file(path:'str', created:'stranydict', updated:'stranydict', deleted:'stranydict') -> 'None':
+    """ Writes how many objects of each type an import created, updated and deleted, for the caller of the command.
+    """
+
+    # stdlib
+    from json import dumps
+
+    counts_created = {}
+    counts_updated = {}
+    counts_deleted = {}
+
+    for key, items in created.items():
+        counts_created[key] = len(items)
+
+    for key, items in updated.items():
+        counts_updated[key] = len(items)
+
+    for key, items in deleted.items():
+        counts_deleted[key] = len(items)
+
+    data = {
+        'created': counts_created,
+        'updated': counts_updated,
+        'deleted': counts_deleted,
+    }
+
+    with open(path, 'w') as f:
+        _ = f.write(dumps(data))
 
 # ################################################################################################################################
 # ################################################################################################################################

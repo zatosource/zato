@@ -202,7 +202,7 @@ class InfobipTestCase(TestCase):
 
     def test_poll(self) -> 'None':
 
-        # A poll pulls the inbox and the reports ..
+        # A poll reads the inbox and the reports ..
         requests = self.provider.build_poll_requests({})
         self.assertEqual(len(requests), 2)
 
@@ -250,7 +250,7 @@ class InfobipTestCase(TestCase):
         self.assertEqual(events[0].kind, Kind_Status)
         self.assertEqual(events[0].status, Status_Delivered)
 
-        # .. so the next round pulls the inbox alone, until nothing is pending.
+        # .. so the next round reads the inbox alone, until none are pending.
         requests = self.provider.build_poll_requests(state)
         self.assertEqual(len(requests), 1)
         self.assertEqual(requests[0].tag, 'inbox')

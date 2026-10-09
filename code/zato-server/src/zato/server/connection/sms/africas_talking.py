@@ -65,14 +65,14 @@ _field_date = 'date'
 _field_phone_number = 'phoneNumber'
 _field_failure_reason = 'failureReason'
 
-# The status codes below which a recipient was accepted
+# The highest status code of an accepted recipient
 _status_code_accepted_max = 102
 
 # Poll state keys
 _state_last_received_id = 'last_received_id'
 _first_received_id = 0
 
-# The answer to an accepted callback
+# The response to an accepted callback
 _callback_body_ok = 'OK'
 
 # ################################################################################################################################
@@ -228,7 +228,7 @@ class AfricasTalkingProvider(Provider):
         for item in payload[_field_sms_message_data][_field_messages]:
             events.append(self._message_event(item))
 
-            # The highest ID seen is where the next fetch starts
+            # The next fetch starts after the highest ID read
             item_id = int(item[_field_id])
             if item_id > last_received_id:
                 last_received_id = item_id

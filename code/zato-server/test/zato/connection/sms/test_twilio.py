@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The Twilio provider class against the requests, responses and callbacks Twilio documents, with the signature
-# algorithm checked against the vector of the provider's security documentation.
+# The Twilio provider class against Twilio's documented requests, responses and callbacks, with the signature
+# algorithm checked against the documented test vector.
 
 # stdlib
 from unittest import main, TestCase
@@ -28,8 +28,7 @@ from test.zato.connection.sms.common import basic_auth, Body, Callback_URL, ctx,
 
 class TwilioTestCase(TestCase):
 
-    # The documented example of the signature algorithm - the URL, the parameters, the auth token and the signature
-    # Twilio's security documentation gives for them
+    # The documented signature test vector - URL, parameters, auth token and signature
     Documented_URL = 'https://mycompany.com/myapp.php?foo=1&bar=2'
     Documented_Auth_Token = '12345'
     Documented_Params = {
@@ -136,7 +135,7 @@ class TwilioTestCase(TestCase):
         with self.assertRaises(CallbackRejected):
             provider.verify_callback(ctx({'X-Twilio-Signature': self.Documented_Signature}), raw_body, Webhook_URL)
 
-        # .. a tampered body does not ..
+        # .. a modified body does not ..
         tampered = urlencode(dict(self.Documented_Params, Digits='9999')).encode('utf8')
 
         with self.assertRaises(CallbackRejected):
@@ -209,7 +208,7 @@ class TwilioTestCase(TestCase):
 
     def test_poll(self) -> 'None':
 
-        # The first poll opens a listing ..
+        # The first poll starts a listing ..
         requests = self.provider.build_poll_requests({})
         self.assertEqual(len(requests), 1)
 
@@ -219,7 +218,7 @@ class TwilioTestCase(TestCase):
         self.assertEqual(request.params['PageSize'], '1000')
         self.assertIn('DateSent>', request.params)
 
-        # .. whose first page holds an outbound report and an inbound text and names the next page ..
+        # .. whose first page has an outbound report and an inbound text and a next page ..
         page_one = {
             'messages': [
                 {
@@ -263,7 +262,7 @@ class TwilioTestCase(TestCase):
         self.assertEqual(requests[0].url, Host + page_one['next_page_uri'])
         self.assertEqual(requests[0].params, {})
 
-        # .. and a last page without a next link closes the listing at the day reached.
+        # .. and a last page without a next link records the date reached.
         page_two = {'messages': [], 'next_page_uri': None}
         events, state = self.provider.read_poll_response(requests[0], Response(200, page_two), state)
 

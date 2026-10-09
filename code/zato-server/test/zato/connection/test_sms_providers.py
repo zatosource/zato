@@ -6,8 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Every SMS provider class offline - the registry every provider is in and what all of them share, the status
-# vocabulary and the parsing of a callback body. Each provider's own shapes are under the sms package next to this module.
+# The provider registry, the status vocabulary and the parsing of a callback body, for every provider class.
 
 # stdlib
 from unittest import main, TestCase
@@ -51,7 +50,7 @@ class StatusMappingTestCase(TestCase):
             provider = new_provider(provider_class)
             self.assertEqual(provider.map_status('something-new'), Status_Sent)
 
-        # Each provider's own words for a delivery and for a failure, in whichever case they arrive
+        # Each provider's status words for a delivery and a failure, in either letter case
         self.assertEqual(new_provider(TwilioProvider).map_status('Delivered'), Status_Delivered)
         self.assertEqual(new_provider(TwilioProvider).map_status('Undelivered'), Status_Failed)
         self.assertEqual(new_provider(VonageProvider).map_status('DELIVERED'), Status_Delivered)
@@ -65,7 +64,7 @@ class StatusMappingTestCase(TestCase):
 
     def test_a_form_body_round_trips_through_the_callback_parser(self) -> 'None':
 
-        # A text with characters the form encoding escapes reaches the event as it was typed
+        # A text with form-encoded characters is decoded in the event
         text = 'Order 1234 shipped & arrives tomorrow at 10:00, see https://example.test/?id=1'
         params = {'MessageSid': 'SM1', 'From': To, 'To': Sender, 'Body': text}
         raw_body = urlencode(params).encode('utf8')

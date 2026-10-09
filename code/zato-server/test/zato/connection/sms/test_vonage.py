@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The Vonage provider class against the requests, responses and callbacks Vonage documents, with the signed webhook
+# The Vonage provider class against Vonage's documented requests, responses and callbacks, with the signed webhook
 # verification checked against a fixed token over a fixed body.
 
 # stdlib
@@ -35,8 +35,8 @@ if 0:
 
 class VonageTestCase(TestCase):
 
-    # A fixed callback body, the SHA-256 of it and the HS256 token Vonage's signed webhooks carry over it,
-    # signed with the connection's signature secret
+    # A fixed callback body, its SHA-256 and the HS256 token of a signed webhook over it, signed with the connection's
+    # signature secret
     Vector_Body = (
         b'{"message_uuid":"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee","to":"447700900000","from":"Vonage",'
         b'"timestamp":"2020-01-01T14:00:00.000Z","status":"delivered","channel":"sms"}'
@@ -239,7 +239,7 @@ class VonageTestCase(TestCase):
 
         window_end = inbound.params['date_end']
 
-        # .. the inbound listing has one text and a further page ..
+        # .. the inbound listing has one text and a next page ..
         inbound_page:'anydict' = {
             'records': [
                 {
@@ -262,7 +262,7 @@ class VonageTestCase(TestCase):
         self.assertEqual(state['window_end'], window_end)
         self.assertTrue(self.provider.has_more_pages(state))
 
-        # .. the outbound listing has one report and no further page ..
+        # .. the outbound listing has one report and no next page ..
         outbound_page = {
             'records': [
                 {
@@ -290,7 +290,7 @@ class VonageTestCase(TestCase):
         self.assertEqual(requests[0].tag, 'inbound')
         self.assertEqual(requests[0].url, inbound_page['_links']['next']['href'])
 
-        # .. and once it is read in full, the window closes where it ended.
+        # .. and after the last page the window's end is recorded.
         events, state = self.provider.read_poll_response(requests[0], Response(200, {'records': [], '_links': {}}), state)
 
         self.assertEqual(events, [])

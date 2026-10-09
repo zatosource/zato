@@ -6,9 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The default alert rules of outgoing SMS connections - the queue delivery pair alone, built from rules_queue.py over
-# the sms-outgoing source. Whether a send went through is what the provider's own response says, so the two depths
-# are read off the connection itself.
+# The default alert rules of outgoing SMS connections - the two queue delivery rules of rules_queue.py over
+# the sms-outgoing source.
 
 # Zato
 from zato.common.alerting.seed.rules_queue import build_queue_rules

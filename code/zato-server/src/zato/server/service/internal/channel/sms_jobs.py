@@ -6,9 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The scheduler job of a polling SMS channel - created, updated and deleted alongside the channel itself
-# through the same linked-job mechanism that health checks use, so the scheduler's own screens know
-# which channel each job belongs to.
+# The scheduler job of a polling SMS channel, created, updated and deleted with the channel through
+# the linked-job mechanism of health checks.
 
 # Zato
 from zato.common.api import SchedulerLink, SMS
@@ -33,8 +32,7 @@ _scheduler = SMS.Scheduler
 # ################################################################################################################################
 
 def validate_poll_schedule(service:'AdminService', data:'Bunch') -> 'None':
-    """ Makes sure a polling channel's run-every value and unit describe a job that can be created,
-    filling in the defaults for whatever the input left empty.
+    """ Validates a polling channel's run-every value and unit, applying the defaults to empty fields.
     """
     if not is_polling(data):
         return
@@ -55,18 +53,18 @@ def validate_poll_schedule(service:'AdminService', data:'Bunch') -> 'None':
 # ################################################################################################################################
 
 def sync_poll_job(service:'AdminService', data:'Bunch', channel_id:'int') -> 'None':
-    """ Keeps the polling job of an SMS channel in step with the input just committed - a channel in webhook mode
-    has no job, so one that exists is deleted.
+    """ Creates, updates or deletes the polling job of an SMS channel to match the committed input.
+    A channel in webhook mode has no job.
     """
     extra = dumps({
         _scheduler.Extra_Conn_ID: channel_id,
         _scheduler.Extra_Conn_Name: data.name,
     })
 
-    # The job starts right away, there is no user-facing start date
+    # The job starts immediately, there is no start date field
     start_date = utcnow().isoformat()
 
-    # A channel in webhook mode has no schedule, in which case the job is deleted and the unit is not read
+    # A channel in webhook mode has no schedule and its job is deleted
     run_unit = data.get(_scheduler.Field_Run_Unit)
     if run_unit is None:
         run_unit = _scheduler.Default_Run_Unit
@@ -90,7 +88,7 @@ def sync_poll_job(service:'AdminService', data:'Bunch', channel_id:'int') -> 'No
 # ################################################################################################################################
 
 def delete_poll_job(service:'AdminService', opaque:'Bunch') -> 'None':
-    """ Deletes the polling job of an SMS channel that is itself being deleted.
+    """ Deletes the polling job of a deleted SMS channel.
     """
     delete_health_check_job(service, opaque.get(_scheduler.Field_Job_ID))
 

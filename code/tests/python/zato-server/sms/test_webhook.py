@@ -20,7 +20,7 @@ from zato.common.api import SMS
 from zato.common.sms.model import Kind_Message, Kind_Status, Status_Delivered, Status_Failed
 
 # Live SMS
-from live_sms.base import Callback_Retry_Delays
+from live_sms.base import Callback_Resend_Intervals
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,7 +59,7 @@ Error_Code = {
     SMS.Provider.Africas_Talking: 'UnsupportedNumberType',
 }
 
-# What each provider expects back from an accepted callback
+# Each provider's expected response to an accepted callback
 Callback_Response_Body = {
     SMS.Provider.Twilio: '<Response/>',
     SMS.Provider.Vonage: '',
@@ -70,15 +70,15 @@ Callback_Response_Body = {
 # The providers whose callbacks are signed
 Signed_Providers = (SMS.Provider.Twilio, SMS.Provider.Vonage)
 
-# The headers the channel sets on each event it hands over
+# The headers the channel sets on each delivered event
 Header_Channel = 'zato-sms-channel'
 Header_Provider = 'zato-sms-provider'
 Header_Kind = 'zato-sms-kind'
 Header_ID = 'zato-sms-id'
 Header_Status = 'zato-sms-status'
 
-# How many pushes a callback the receiver keeps turning down amounts to
-Attempts_Until_Given_Up = 1 + len(Callback_Retry_Delays)
+# The number of pushes of a callback the receiver rejects
+Attempts_Until_Given_Up = 1 + len(Callback_Resend_Intervals)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,7 +94,7 @@ class TestWebhook:
         response = sms.send(provider, To_Number, 'report on me')
         message_id = response['result']['id']
 
-        attempts = simulator.deliver(message_id, Delivered_Status[provider])
+        attempts = simulator.set_status(message_id, Delivered_Status[provider])
 
         assert len(attempts) == 1, attempts
         attempt = attempts[0]
@@ -136,7 +136,7 @@ class TestWebhook:
         response = sms.send(provider, To_Number, 'fail on me')
         message_id = response['result']['id']
 
-        attempts = simulator.deliver(message_id, Failed_Status[provider], Error_Code[provider])
+        attempts = simulator.set_status(message_id, Failed_Status[provider], Error_Code[provider])
         assert attempts[0].status == OK, attempts
 
         received = sms.wait_for_received(1)
@@ -154,7 +154,7 @@ class TestWebhook:
 
         simulator = sms.simulator(provider)
 
-        incoming = simulator.receive(From_Number, To_Number, 'a reply')
+        incoming = simulator.add_incoming_text(From_Number, To_Number, 'a reply')
 
         accepted = simulator.accepted_callbacks()
         assert len(accepted) == 1, simulator.callbacks
@@ -176,10 +176,10 @@ class TestWebhook:
 # ################################################################################################################################
 
     @pytest.mark.parametrize('provider', Signed_Providers)
-    def test_a_callback_with_a_bad_signature_is_refused_and_nothing_reaches_the_service(self, sms:'SMSSuite',
+    def test_a_callback_with_an_invalid_signature_is_refused_and_nothing_reaches_the_service(self, sms:'SMSSuite',
         provider:'str') -> 'None':
-        """ The simulator signs with a secret the connection does not have, so every push is refused with 403
-        and the simulator gives up after its schedule of resends.
+        """ The simulator signs with a secret the connection does not have, every push is refused with 403
+        and the simulator stops after its resend intervals.
         """
         # Twilio signs with the auth token, Vonage with its separate signature secret
         if provider == SMS.Provider.Twilio:
@@ -192,7 +192,7 @@ class TestWebhook:
             simulator.signature_secret = secret + '-changed'
 
         try:
-            _ = simulator.receive(From_Number, To_Number, 'signed wrongly')
+            _ = simulator.add_incoming_text(From_Number, To_Number, 'signed wrongly')
         finally:
             if provider == SMS.Provider.Twilio:
                 sms.simulators.twilio.password = secret
@@ -213,7 +213,7 @@ class TestWebhook:
 
         simulator = sms.simulator(provider)
 
-        incoming = simulator.receive(From_Number, To_Number, 'once only')
+        incoming = simulator.add_incoming_text(From_Number, To_Number, 'once only')
         _ = sms.wait_for_received(1)
 
         # The provider sends the same callback again
@@ -229,13 +229,13 @@ class TestWebhook:
 
     @pytest.mark.parametrize('provider', Providers)
     def test_a_callback_the_service_rejects_fails_and_the_resend_goes_through(self, sms:'SMSSuite', provider:'str') -> 'None':
-        """ With the queue off, the service's exception fails the callback, the provider resends it and the second
-        attempt hands the same event over again.
+        """ With use_queue disabled, the service's exception fails the callback, the provider resends it and the second
+        attempt delivers the same event.
         """
         simulator = sms.simulator(provider)
-        sms.set_behaviour(1)
+        sms.set_refusal_count(1)
 
-        incoming = simulator.receive(From_Number, To_Number, 'refused once')
+        incoming = simulator.add_incoming_text(From_Number, To_Number, 'refused once')
 
         assert len(simulator.callbacks) == 2, simulator.callbacks
         assert simulator.callbacks[0].status == INTERNAL_SERVER_ERROR, simulator.callbacks

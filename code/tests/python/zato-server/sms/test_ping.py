@@ -26,7 +26,7 @@ Providers = SMS.ProviderList
 # The service the Dashboard's Ping button invokes
 Generic_Ping_Service = 'zato.generic.connection.ping'
 
-# The read each provider's ping makes
+# The request path of each provider's ping
 Ping_Path = {
     SMS.Provider.Twilio: '/2010-04-01/Accounts/',
     SMS.Provider.Vonage: '/v2/reports/records',

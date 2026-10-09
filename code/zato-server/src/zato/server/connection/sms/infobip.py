@@ -71,7 +71,7 @@ _field_request_error = 'requestError'
 _field_service_exception = 'serviceException'
 _field_exception_text = 'text'
 
-# The error group that means no error
+# The error group of a message without an error
 _error_group_ok = 'OK'
 
 # The pull endpoints' page size
@@ -91,7 +91,7 @@ _state_pending_inbox = 'pending_inbox'
 class InfobipProvider(Provider):
     name = SMS.Provider.Infobip
 
-    # Infobip groups its statuses, the group name is what is mapped
+    # Infobip reports a status group, whose name is mapped
     status_mapping = {
         'pending': Status_Sent,
         'delivered': Status_Delivered,
@@ -210,7 +210,7 @@ class InfobipProvider(Provider):
 
         inbox = PollRequest(Method_GET, self.host + _inbox_path, headers, params, _tag_inbox)
 
-        # The inbox left messages pending, so it alone is read again ..
+        # Messages remain in the inbox, which is read again alone ..
         if state.get(_state_pending_inbox):
             out = [inbox]
             return out

@@ -6,8 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The configuration vocabulary of SMS connections and channels - the field lists both the server and enmasse read,
-# and the validation both apply to a definition before it is stored.
+# The field lists and the validation of SMS connection and channel definitions, used by the server and by enmasse.
 
 # Zato
 from zato.common.api import SMS
@@ -62,7 +61,7 @@ Channel_Int_Field_Names = (
 # ################################################################################################################################
 
 def get_webhook_path(channel_name:'str') -> 'str':
-    """ The URL path the provider's console is pointed at for one SMS channel.
+    """ The webhook URL path of one SMS channel.
     """
     out = SMS.Webhook_Path_Prefix + channel_name
     return out
@@ -108,7 +107,7 @@ def validate_channel_definition(data:'stranydict') -> 'None':
 # ################################################################################################################################
 
 def apply_outgoing_host_default(data:'stranydict') -> 'None':
-    """ Fills in the provider's public address when a definition names no host of its own.
+    """ Sets the provider's default host on a definition without a host.
     """
     if not data.get(SMS.Field_Host):
         provider = data[SMS.Field_Provider]
@@ -117,7 +116,7 @@ def apply_outgoing_host_default(data:'stranydict') -> 'None':
 # ################################################################################################################################
 
 def is_polling(data:'any_') -> 'bool':
-    """ Whether a channel's configuration says it polls its provider.
+    """ Whether a channel is in polling mode.
     """
     out = data.get(SMS.Field_Receive_Mode) == SMS.Receive_Mode.Polling
     return out

@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The test services of the SMS channel suite - the target the channels point to and what the tests read
-# the recordings back through. An SMS channel hands its service one event, whose body is the document a test
-# sent as the text of a simulated incoming message.
+# The test services of the SMS channel suite - the target service of the channels and the services that return
+# the recorded invocations. An SMS channel delivers one event per callback, whose body is the document a test sent
+# as the text of a simulated incoming message.
 
 # stdlib
 from json import loads
@@ -27,10 +27,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# A refusal count meaning that the target refuses everything until it is told otherwise
+# The refusal count at which the target refuses every invocation
 _refuse_everything = -1
 
-# The error the target raises while it refuses
+# The error the target raises for a refused invocation
 _refused_error_text = 'The target refuses this invocation'
 
 # Every invocation of the target, in the order they were made
@@ -39,20 +39,20 @@ _invocations:'anylist' = []
 # Every instantiation of the hooked service since the last clear
 _hooked_instances:'anylist' = []
 
-# How many more invocations the target refuses before it accepts again
+# The number of invocations the target refuses before accepting
 _behaviour:'anydict' = {
     'refuse_left': 0,
 }
 
-# The header an SMS channel names itself in
+# The header with the SMS channel's name
 _header_channel = 'zato-sms-channel'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Target(Service):
-    """ What the channels point to - it records every event, with the document the event's body holds as the payload,
-    and refuses as many invocations as it was told to.
+    """ The target service of the channels. Records each event with the document of the event's body as the payload
+    and refuses the configured number of invocations.
     """
 
     name = 'test.queue-delivery.channel.target'
@@ -133,7 +133,7 @@ class SlowHook(Target):
 # ################################################################################################################################
 
 class GetConnection(Service):
-    """ Answers with the id and the queue type of an SMS channel, which is what the shared services look up.
+    """ Returns the ID and the queue type of an SMS channel.
     """
 
     name = 'test.queue-delivery.get-connection'
@@ -157,7 +157,7 @@ class GetConnection(Service):
 # ################################################################################################################################
 
 class SetBehaviour(Service):
-    """ Tells the target how many of the coming invocations to refuse - what it recorded so far stays.
+    """ Sets the number of invocations the target refuses. Recorded invocations are kept.
     """
 
     name = 'test.queue-delivery.channel.set-behaviour'
@@ -172,7 +172,7 @@ class SetBehaviour(Service):
 # ################################################################################################################################
 
 class GetReceived(Service):
-    """ Every invocation the target has seen since it was last cleared, oldest first.
+    """ Every invocation the target received since the last clear, oldest first.
     """
 
     name = 'test.queue-delivery.channel.get-received'
@@ -184,7 +184,7 @@ class GetReceived(Service):
 # ################################################################################################################################
 
 class Clear(Service):
-    """ Forgets every invocation and every instantiation recorded so far and leaves the target accepting.
+    """ Clears the recorded invocations and instantiations and sets the refusal count to zero.
     """
 
     name = 'test.queue-delivery.channel.clear'

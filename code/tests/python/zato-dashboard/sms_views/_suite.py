@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The server of the session as the tests see it - the clients the views and the tests reach it through.
+# The server of the session and the clients the views and the tests use.
 
 # Live environment
 from live_environment.quickstart import Host
@@ -28,7 +28,7 @@ if 0:
 # ################################################################################################################################
 
 class DashboardSuite:
-    """ The simulators and the one server of the session, with the clients the views and the tests reach it through.
+    """ The simulators and the server of the session, with the clients the views and the tests use.
     """
 
     def __init__(self, simulators:'SimulatorSuite', zato:'ZatoEnvironment') -> 'None':
@@ -36,7 +36,7 @@ class DashboardSuite:
         self.zato = zato
         self.server_address = f'http://{Host}:{zato.server_port}'
 
-        # What a view invokes services through and what a test reads the server back through
+        # The client of the views and the client of the tests
         self.client:'ZatoClient' = new_client(self.server_address, zato.password)
         self.admin:'AdminClient' = zato.client()
 

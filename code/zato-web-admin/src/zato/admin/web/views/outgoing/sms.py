@@ -16,7 +16,7 @@ from traceback import format_exc
 from django.http import JsonResponse
 
 # Zato
-from zato.admin.web import alerts_tab, delivery_tab
+from zato.admin.web import alerts_tab, delivery_tab, sms_tab
 from zato.admin.web.forms import add_select_from_service
 from zato.admin.web.forms.outgoing.sms import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, SKIP_VALUE
@@ -28,7 +28,7 @@ from zato.common.ext.bunch import Bunch
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,16 +42,16 @@ _alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 # The retry fields, stored in the connection's opaque attributes
 _retry_field_names = tuple(delivery_tab.retry_field_defaults)
 
-# The queue switch and the DLQ config of the Delivery tab, stored in the connection's opaque attributes
+# The use_queue field and the DLQ config of the Delivery tab, stored in the connection's opaque attributes
 _delivery_field_names = tuple(delivery_tab.field_defaults)
 
 # The connection's own fields beyond its name and its secrets - the ones a form must fill in and the ones it may leave empty
-_sms_required_field_names = (SMS.Field_Provider, SMS.Field_Username, SMS.Field_Sender)
-_sms_optional_field_names = (SMS.Field_Host, SMS.Field_Channel_Name, SMS.Field_Pool_Size, SMS.Field_Timeout)
-_sms_field_names = _sms_required_field_names + _sms_optional_field_names
+_sms_required_field_names = sms_tab.Outgoing_Required_Field_Names
+_sms_optional_field_names = sms_tab.Outgoing_Optional_Field_Names
+_sms_field_names = sms_tab.Outgoing_Field_Names
 
 # The fields that are stored encrypted and never shown again
-_secret_field_names = (SMS.Field_Secret, SMS.Field_Signature_Secret)
+_secret_field_names = sms_tab.Secret_Field_Names
 
 # What the Invoke dialog posts
 _post_body = 'data-request'
@@ -69,7 +69,7 @@ _response_time_format = '{:.3f}s'
 # ################################################################################################################################
 
 def _add_channel_select(form:'any_', req:'any_') -> 'None':
-    """ Fills the channel select with the SMS channels that exist - the one whose webhook URL sends report their status.
+    """ Fills the channel select with the existing SMS channels.
     """
     service_extra = {'type_': GENERIC.CONNECTION.TYPE.CHANNEL_SMS, 'paginate': False}
     add_select_from_service(form, req, 'zato.generic.connection.get-list', SMS.Field_Channel_Name, by_id=False,
@@ -107,6 +107,9 @@ class Index(_Index):
         # The Alerts tab shows a duration as a count with a unit, not as the seconds it is stored as
         alerts_tab.split_unit_fields(_alert_type, item)
 
+        # The timeout is shown as a count with a unit
+        sms_tab.split_timeout(item)
+
         return item
 
 # ################################################################################################################################
@@ -131,26 +134,10 @@ class Index(_Index):
             'create_alerts_tab': alerts_tab.get_alerts_tab_context(create_form, _alert_type),
             'edit_alerts_tab': alerts_tab.get_alerts_tab_context(edit_form, _alert_type),
             'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
-            'sms_config': _get_sms_config(),
+            'sms_config': sms_tab.get_provider_config(),
         }
 
         return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_sms_config() -> 'stranydict':
-    """ What the page's JavaScript knows about each provider - its name, the default host and the credential labels.
-    """
-    out = {
-        'providers': SMS.ProviderList,
-        'provider_human': SMS.ProviderHuman,
-        'default_host': SMS.Default_Host,
-        'providers_with_signature_secret': SMS.Providers_With_Signature_Secret,
-        'providers_requiring_host': SMS.Providers_Requiring_Host,
-    }
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -200,8 +187,11 @@ class _CreateEdit(CreateEdit):
         input_dict.update(delivery_tab.get_message_fields(self.req.POST, self.form_prefix))
         delivery_tab.join_unit_fields(self.req.POST, self.form_prefix, input_dict)
 
-        # A duration of the Alerts tab is stored as seconds, which is what its count and unit join into
+        # A duration of the Alerts tab is stored as seconds, joined from its count and unit
         alerts_tab.join_unit_fields(_alert_type, input_dict)
+
+        # The timeout is stored as seconds, joined from its count and unit
+        sms_tab.join_timeout(self.req.POST, self.form_prefix, input_dict)
 
 # ################################################################################################################################
 
@@ -236,7 +226,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 def _build_invoke_error(error_message:'str') -> 'JsonResponse':
-    """ Reports a message that could not be sent, in the shape the invoker overlay expects.
+    """ The error response of a failed send, in the format of the invoker overlay.
     """
     out = JsonResponse({
         'data': error_message,
@@ -250,7 +240,7 @@ def _build_invoke_error(error_message:'str') -> 'JsonResponse':
 
 @method_allowed('POST')
 def invoke_outconn(req:'any_', id:'str') -> 'JsonResponse':
-    """ Sends one message through an outgoing SMS connection, answering in the shape the invoker overlay expects.
+    """ Sends one message through an outgoing SMS connection and responds in the format of the invoker overlay.
     """
     try:
         request = {

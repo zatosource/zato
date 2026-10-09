@@ -10,8 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web import alerts_tab, delivery_tab
-from zato.admin.web.forms import add_select
+from zato.admin.web import alerts_tab, delivery_tab, sms_tab
 from zato.common.alerting.object_config import alert_type_sms_outgoing
 from zato.common.api import HTTP_SOAP, SMS
 
@@ -26,32 +25,16 @@ if 0:
 
 _retry = HTTP_SOAP.Retry
 
-# The provider select lists every provider under its human-readable name
-_provider_choices = []
-
-for _provider_name in SMS.ProviderList:
-    _provider_choices.append({'id': _provider_name, 'name': SMS.ProviderHuman[_provider_name]})
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
     is_edit_form = False
 
-    name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'sms-tab-name'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    provider = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
-    host = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}),
-        initial=SMS.Default_Host[SMS.Provider.Twilio])
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    secret = forms.CharField(
-        required=False, strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%', 'autocomplete':'new-password'}))
-    sender = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    signature_secret = forms.CharField(
-        required=False, strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%', 'autocomplete':'new-password'}))
-    channel_name = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
-    pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=SMS.Default_Pool_Size)
-    timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=SMS.Default_Timeout)
+    channel_name = forms.ChoiceField(required=False, widget=forms.Select())
+    pool_size = forms.CharField(widget=forms.TextInput(), initial=SMS.Default_Pool_Size)
 
     # Retry config - the Delivery tab's micro-form edits these, the queue and DLQ fields join them in __init__
     max_retries = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Max_Retries)
@@ -62,7 +45,9 @@ class CreateForm(forms.Form):
     def __init__(self, req:'any_', prefix:'strnone'=None) -> 'None':
         super().__init__(prefix=prefix)
 
-        add_select(self, 'provider', _provider_choices, needs_initial_select=False)
+        # The Config tab's fields, edited in its popovers
+        sms_tab.add_provider_fields(self)
+        sms_tab.add_timeout_fields(self)
 
         # The channel select is filled in by the view, which knows the SMS channels that exist
         self.fields['channel_name'].choices = []

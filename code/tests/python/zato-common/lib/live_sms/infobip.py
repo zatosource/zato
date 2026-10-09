@@ -12,8 +12,8 @@ from json import dumps
 from uuid import uuid4
 
 # Zato
-from live_sms.base import Content_Type_JSON, json_response, Kind_Message, Kind_Status, not_found, SimEvent, SimRequest, \
-    SimResponse, SMSSimulator
+from live_sms.base import Content_Type_JSON, json_response, Kind_Message, Kind_Status, not_found, SimulatorEvent, SimulatorRequest, \
+    SimulatorResponse, SMSSimulator
 from zato.common.api import SMS
 
 # ################################################################################################################################
@@ -58,8 +58,8 @@ _timestamp_format = '%Y-%m-%dT%H:%M:%S.000+0000'
 # ################################################################################################################################
 
 class InfobipSimulator(SMSSimulator):
-    """ Infobip's SMS API - sends, the balance read a ping makes, the once-only inbox and delivery report pulls
-    and the unsigned callbacks Infobip pushes to a delivery URL or a configured inbound URL.
+    """ Infobip's SMS API - sends, the balance read of a ping, the inbox and delivery report pulls that return
+    each item once, and unsigned callbacks to a delivery URL or an inbound URL.
     """
     provider = SMS.Provider.Infobip
     initial_status = _group_pending
@@ -67,7 +67,7 @@ class InfobipSimulator(SMSSimulator):
     def __init__(self, username:'str', password:'str') -> 'None':
         super().__init__(username, password)
 
-        # The sequence numbers of the events each pull endpoint has already returned, hence the once-only guarantee
+        # The sequence numbers of the events each pull endpoint has returned
         self.pulled_inbox:'set[int]' = set()
         self.pulled_reports:'set[int]' = set()
 
@@ -80,18 +80,18 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def check_auth(self, request:'SimRequest') -> 'bool':
+    def check_auth(self, request:'SimulatorRequest') -> 'bool':
         given = request.headers.get('authorization', '')
         out = given == _auth_prefix + self.password
         return out
 
-    def auth_failure(self) -> 'SimResponse':
+    def auth_failure(self) -> 'SimulatorResponse':
         out = json_response(UNAUTHORIZED, _error_auth)
         return out
 
 # ################################################################################################################################
 
-    def route(self, request:'SimRequest') -> 'SimResponse':
+    def route(self, request:'SimulatorRequest') -> 'SimulatorResponse':
 
         if request.path == _send_path and request.method == 'POST':
             out = self._send(request)
@@ -112,7 +112,7 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _error(self, status:'int', message_id:'str', text:'str') -> 'SimResponse':
+    def _error(self, status:'int', message_id:'str', text:'str') -> 'SimulatorResponse':
         out = json_response(status, {'requestError': {'serviceException': {'messageId': message_id, 'text': text}}})
         return out
 
@@ -131,7 +131,7 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _send(self, request:'SimRequest') -> 'SimResponse':
+    def _send(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         payload = request.json()
 
         if 'messages' not in payload or not payload['messages']:
@@ -158,7 +158,7 @@ class InfobipSimulator(SMSSimulator):
             callback_url = message['webhooks']['delivery']['url']
 
         message_id = uuid4().hex
-        _ = self.add_send(message_id, to, sender, text, callback_url, payload)
+        _ = self.record_send(message_id, to, sender, text, callback_url, payload)
 
         response = {
             'bulkId': uuid4().hex,
@@ -174,7 +174,7 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _result(self, event:'SimEvent') -> 'anydict':
+    def _result(self, event:'SimulatorEvent') -> 'anydict':
 
         if event.kind == Kind_Message:
             out = {
@@ -204,7 +204,7 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _error_of(self, event:'SimEvent') -> 'anydict':
+    def _error_of(self, event:'SimulatorEvent') -> 'anydict':
 
         if event.error_code:
             out = {'groupId': 2, 'groupName': 'HANDSET_ERRORS', 'id': 1, 'name': event.error_code,
@@ -217,8 +217,8 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _pull(self, waiting:'list[SimEvent]', pulled:'set[int]', limit:'int') -> 'tuple[list[anydict], int]':
-        """ The waiting events up to the limit, marked as returned, and how many remain after them.
+    def _pull(self, waiting:'list[SimulatorEvent]', pulled:'set[int]', limit:'int') -> 'tuple[list[anydict], int]':
+        """ The events not yet returned, up to the limit, marked as returned, and the number remaining.
         """
         page = waiting[:limit]
         remaining = len(waiting) - len(page)
@@ -233,7 +233,7 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _inbox(self, request:'SimRequest') -> 'SimResponse':
+    def _inbox(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         limit = int(request.query.get('limit', str(self.page_size)))
         if limit > self.page_size:
             limit = self.page_size
@@ -254,7 +254,7 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def _reports(self, request:'SimRequest') -> 'SimResponse':
+    def _reports(self, request:'SimulatorRequest') -> 'SimulatorResponse':
         limit = int(request.query.get('limit', str(self.page_size)))
         if limit > self.page_size:
             limit = self.page_size
@@ -278,7 +278,7 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def callback_body(self, event:'SimEvent') -> 'tuple[str, bytes]':
+    def callback_body(self, event:'SimulatorEvent') -> 'tuple[str, bytes]':
         payload = {
             'results': [self._result(event)],
             'messageCount': 1,
@@ -289,7 +289,7 @@ class InfobipSimulator(SMSSimulator):
 
 # ################################################################################################################################
 
-    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimEvent') -> 'strdict':
+    def callback_headers(self, sign_url:'str', body:'bytes', event:'SimulatorEvent') -> 'strdict':
         out:'strdict' = {}
         return out
 

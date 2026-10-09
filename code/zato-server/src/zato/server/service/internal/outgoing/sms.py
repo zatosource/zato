@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The service behind the Invoke dialog of an outgoing SMS connection in the Dashboard - one message
-# of the user's choosing goes to one number through the connection the dialog was opened from.
+# The service of the Dashboard's Invoke dialog for an outgoing SMS connection - sends one message to one number
+# through the connection.
 
 # stdlib
 from time import monotonic
@@ -55,7 +55,7 @@ class Invoke(AdminService):
         result = wrapper.send(input.to, input.body, from_=from_, cid=self.cid)
         response_time_ms = round((monotonic() - start) * 1000, _response_time_precision)
 
-        # A send through the connection's queue answers with the queue's own result rather than the provider's
+        # A send through the connection's queue returns the queue's result, not the provider's
         if hasattr(result, 'to_dict'):
             payload = result.to_dict()
         else:

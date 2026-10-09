@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Every field of an outgoing SMS connection and of an SMS channel through enmasse - the import for each of the four
-# providers, each rejection the importers apply, an update that makes the YAML the source of truth, the polling job
-# a channel creates and deletes, and the export that round trips through the writer with secrets as references.
+# Every field of an outgoing SMS connection and an SMS channel through enmasse - the import of each provider,
+# each importer rejection, an update from the YAML file, the polling job of a channel and the export with secrets
+# as references.
 
 # stdlib
 from copy import deepcopy
@@ -53,14 +53,14 @@ _dlq = HTTP_SOAP.DLQ
 
 _cluster_id = 1
 
-# One outgoing connection per provider - the Twilio one moves every field away from its default, the others
-# have what each provider needs and nothing else
+# One outgoing connection per provider - the Twilio connection sets every field to a non-default value, the others
+# set the fields their provider requires
 _outgoing_twilio = 'enmasse.sms.outgoing.twilio'
 _outgoing_vonage = 'enmasse.sms.outgoing.vonage'
 _outgoing_infobip = 'enmasse.sms.outgoing.infobip'
 _outgoing_africas_talking = 'enmasse.sms.outgoing.africas-talking'
 
-# One channel polls, the other receives webhooks and has only what it must
+# One polling channel and one webhook channel with the required fields only
 _channel_polling = 'enmasse.sms.channel.polling'
 _channel_webhook = 'enmasse.sms.channel.webhook'
 
@@ -154,8 +154,8 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster and the service a polling job invokes,
-    with the crypto manager the generic importer encrypts secrets with.
+    """ An ODB session over an in-memory SQLite database with one cluster and the poll service, and the crypto manager
+    of the generic importer.
     """
     engine = create_engine('sqlite://')
 
@@ -258,7 +258,7 @@ def _import_outgoing(yaml_config:'stranydict', session:'any_', outgoing_importer
 # ################################################################################################################################
 
 def _assert_delivery_fields_moved(opaque:'anydict') -> 'None':
-    """ The retry and DLQ fields the first connection of each kind moves away from the defaults.
+    """ Asserts the non-default retry and DLQ fields of the first connection of each kind.
     """
     assert opaque[_retry.Field_Max_Retries] == 4
     assert opaque[_retry.Field_Sleep_Time] == 5
@@ -361,7 +361,7 @@ class TestOutgoingSMSImport:
         assert africas_talking.pool_size == SMS.Default_Pool_Size
         assert africas_talking.timeout == SMS.Default_Timeout
 
-        # A provider without a signature secret keeps the empty default, so the wrapper finds the key it expects
+        # A provider without a signature secret keeps the empty default, which the wrapper reads
         assert opaque[SMS.Field_Signature_Secret] == ''
         assert decrypt_secret(session, africas_talking.secret) == _africas_talking_password
 
@@ -379,8 +379,8 @@ class TestOutgoingSMSImport:
         created = _import_outgoing(yaml_config, session, outgoing_importer)
         assert len(created) == 4
 
-        # A definition that drops its DLQ settings, its channel name and its password puts the connection
-        # back on the defaults while the stored password stays ..
+        # A definition without the DLQ settings, the channel name and the password resets the connection
+        # to the defaults, the stored password is kept ..
         definitions = _definitions('outgoing_sms')
         definitions[0][SMS.Field_Sender] = '+12025550199'
 
@@ -515,12 +515,12 @@ class TestChannelSMSImport:
         assert opaque[_scheduler.Field_Run_Every] == 5
         assert opaque[_scheduler.Field_Run_Unit] == 'seconds'
 
-        # The queue switch is the file's, and an interval of zero is allowed
+        # use_queue is the file's value and an interval of zero is accepted
         assert opaque[_queue.Field_Use_Queue] is True
         assert opaque[_dlq.Field_Retry_Interval] == 0
         _assert_delivery_fields_moved(opaque)
 
-        # The job exists, named after the channel, invoking the poll service on the schedule asked for ..
+        # The job exists, named after the channel, and invokes the poll service on the configured schedule ..
         job = session.query(Job).filter_by(name=_scheduler.Job_Prefix + _channel_polling).one()
         assert job.service.name == _scheduler.Dispatch_Service
         assert job.is_active is True
@@ -535,10 +535,10 @@ class TestChannelSMSImport:
         assert extra[_scheduler.Extra_Conn_ID] == connection.id
         assert extra[_scheduler.Extra_Conn_Name] == _channel_polling
 
-        # .. and the channel remembers the job.
+        # .. and the channel's row has the job ID.
         assert opaque[_scheduler.Field_Job_ID] == job.id
 
-        # The same file again finds the job by its name rather than creating another
+        # A second import of the same file finds the job by name and creates no second job
         _, _ = channel_importer.sync_definitions(_definitions('channel_sms'), session)
         assert session.query(Job).filter_by(name=_scheduler.Job_Prefix + _channel_polling).count() == 1
 
@@ -580,11 +580,11 @@ class TestChannelSMSImport:
         _ = _import_outgoing(yaml_config, session, outgoing_importer)
         _, _ = channel_importer.sync_definitions(yaml_config['channel_sms'], session)
 
-        # The polling channel turns to webhooks and loses its job ..
+        # The polling channel switches to webhook mode and its job is deleted ..
         definitions = _definitions('channel_sms')
         definitions[0][SMS.Field_Receive_Mode] = SMS.Receive_Mode.Webhook
 
-        # .. while the webhook one starts polling on the default schedule and gains one.
+        # .. and the webhook channel switches to polling on the default schedule and a job is created.
         definitions[1][SMS.Field_Receive_Mode] = SMS.Receive_Mode.Polling
 
         _, updated = channel_importer.sync_definitions(definitions, session)
@@ -694,7 +694,7 @@ class TestSMSExport:
         assert item[_dlq.Field_Forward_To] == _forward_to
         assert item[_dlq.Field_Keep_Header] is False
 
-        # A secret never leaves in clear text - the file refers to it through an environment variable
+        # A secret is exported as an environment variable reference
         assert item[SMS.Field_Password] == Env_Reference_Prefix + 'SMS_enmasse_sms_outgoing_twilio_Password'
         assert SMS.Field_Signature_Secret not in item
 
@@ -703,7 +703,7 @@ class TestSMSExport:
         assert item[SMS.Field_Password] == Env_Reference_Prefix + 'SMS_enmasse_sms_outgoing_vonage_Password'
         assert item[SMS.Field_Signature_Secret] == Env_Reference_Prefix + 'SMS_enmasse_sms_outgoing_vonage_Signature_Secret'
 
-        # The connection on defaults exports only what it must
+        # The connection on defaults exports the required fields only
         item = exported[_outgoing_africas_talking]
         assert item == {
             'name': _outgoing_africas_talking,
@@ -747,7 +747,7 @@ class TestSMSExport:
         assert item[_dlq.Field_Retry_Interval] == 0
         assert item[_dlq.Field_Forward_To] == _forward_to
 
-        # The queue switch moved away from its default, so it is written
+        # use_queue has a non-default value and is exported
         assert item[_queue.Field_Use_Queue] is True
 
         # The webhook channel exports only what it must, and no schedule

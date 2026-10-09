@@ -200,7 +200,7 @@ class AfricasTalkingTestCase(TestCase):
 
     def test_poll(self) -> 'None':
 
-        # The first fetch starts at the beginning ..
+        # The first fetch starts at ID zero ..
         requests = self.provider.build_poll_requests({})
         self.assertEqual(len(requests), 1)
 
@@ -228,7 +228,7 @@ class AfricasTalkingTestCase(TestCase):
         self.assertEqual(state['last_received_id'], 1002)
         self.assertFalse(self.provider.has_more_pages(state))
 
-        # .. and the next fetch starts after the highest ID seen.
+        # .. and the next fetch starts after the highest ID read.
         request = self.provider.build_poll_requests(state)[0]
         self.assertEqual(request.params['lastReceivedId'], '1002')
 

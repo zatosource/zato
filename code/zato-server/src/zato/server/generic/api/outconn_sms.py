@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# An outgoing SMS connection - one HTTP session to one provider, with the provider's own request and response
-# shapes confined to its provider class, and the connection's retry policy, queue and DLQ around every send.
+# An outgoing SMS connection - one HTTP session to one provider. The provider class implements the provider's
+# request and response formats, the wrapper applies the connection's retry policy, queue and DLQ to every send.
 
 # stdlib
 from logging import getLogger
@@ -52,7 +52,7 @@ logger = getLogger(__name__)
 _retry = HTTP_SOAP.Retry
 _use_queue_field = HTTP_SOAP.Queue.Field_Use_Queue
 
-# Whether a connection writes a sent and a received audit event per attempt, unless its configuration says otherwise
+# The default of the audit log setting
 _audit_log_field = 'is_audit_log_active'
 _audit_log_default = True
 
@@ -67,7 +67,7 @@ _url_scheme_prefixes = ('http://', 'https://')
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Defaults for fields the create path did not supply
+# Defaults of fields absent from a create request
 outconn_config_defaults:'anydict' = {
     SMS.Field_Provider: SMS.Provider.Twilio,
     SMS.Field_Host: '',
@@ -84,7 +84,7 @@ outconn_config_defaults:'anydict' = {
 }
 outconn_config_defaults.update(Delivery_Field_Defaults)
 
-# Config keys that must be integers but may arrive as strings from opaque storage
+# Integer config keys, stored as strings in the opaque attributes
 outconn_int_config_keys = (
     SMS.Field_Pool_Size,
     SMS.Field_Timeout,
@@ -96,7 +96,7 @@ outconn_int_config_keys = (
     HTTP_SOAP.DLQ.Field_Retry_Interval,
 )
 
-# Config keys that must be booleans but may arrive as strings from opaque storage
+# Boolean config keys, stored as strings in the opaque attributes
 outconn_bool_config_keys = (
     _use_queue_field,
     HTTP_SOAP.DLQ.Field_Use_DLQ,
@@ -107,7 +107,7 @@ outconn_bool_config_keys = (
 # ################################################################################################################################
 
 def build_send_request(to:'str', body:'str', sender:'str') -> 'stranydict':
-    """ The request part of a queued SMS message's envelope - the body under the common data key for the delivery page.
+    """ The request part of a queued SMS message's envelope - the message under the common data key.
     """
     out = {
         Key_To: to,
@@ -121,7 +121,7 @@ def build_send_request(to:'str', body:'str', sender:'str') -> 'stranydict':
 # ################################################################################################################################
 
 def is_permanent_rejection(response:'Response') -> 'bool':
-    """ Whether the status a provider turned a send down with says the message itself is wrong.
+    """ Whether the HTTP status of a rejected send indicates an invalid message, as opposed to a transient failure.
     """
     classification = derive_http_classification(response.status_code)
     out = classification == AuditClassification.Permanent
@@ -137,25 +137,25 @@ class OutconnSMSWrapper:
         self.config = config
         self.server = server
 
-        # Whether a send that did not go through waits in the connection's queue
+        # Whether a failed send is stored in the connection's queue
         self.use_queue = self.config[_use_queue_field]
 
-        # How a direct send that could not be delivered is tried again
+        # The retry policy of a direct send
         self.retry_policy = RetryPolicy.from_config(config, _retry)
 
         # How long one request to the provider may take, in seconds
         self.timeout = config[SMS.Field_Timeout]
 
-        # A connection whose audit log is on writes a sent and a received event per attempt
+        # With the audit log enabled, each attempt writes a sent event and a received event
         if asbool(config.get(_audit_log_field, _audit_log_default)):
             self.audit_log:'AuditLog | None' = AuditLog(server.name)
         else:
             self.audit_log = None
 
-        # The payloads leave with the audit export only if the connection says so
+        # Payloads are included in the audit export only when the setting is enabled
         self.is_export_payload_active = asbool(config.get(Export_Payload_Flag, False))
 
-        # The publisher is keyed by the connection's id, a rename leaves it alone.
+        # The publisher is keyed by the connection's ID and is unaffected by a rename.
         self.publisher = OutgoingPublisher(server, OutgoingType.SMS, self.config.id)
 
         self.provider:'Provider' = get_provider(config)
@@ -192,7 +192,7 @@ class OutconnSMSWrapper:
 # ################################################################################################################################
 
     def get_callback_url(self) -> 'strnone':
-        """ The webhook URL of the SMS channel the connection names, if it names one that receives by webhook.
+        """ The webhook URL of the connection's SMS channel, or None when the connection has no channel or the channel polls.
         """
         channel_name = self.config.get(SMS.Field_Channel_Name)
 
@@ -227,7 +227,7 @@ class OutconnSMSWrapper:
 # ################################################################################################################################
 
     def ping(self) -> 'None':
-        """ Performs the cheapest authenticated read the provider offers, raising unless it succeeds.
+        """ Performs the provider's credential verification request, raising when it fails.
         """
         method, url, headers, data = self.provider.build_ping_request()
         response = self.request(method, url, headers, data)
@@ -264,9 +264,8 @@ class OutconnSMSWrapper:
 # ################################################################################################################################
 
     def send_once(self, request:'stranydict', cid:'str'='') -> 'SendResult':
-        """ Makes one attempt to send one message, raising SendRejected when the provider turned it down.
-        Each attempt writes a sent event and a received one, the latter with what the provider answered
-        or how the attempt failed.
+        """ Makes one attempt to send one message, raising SendRejected when the provider rejects it.
+        Each attempt writes a sent audit event and a received audit event with the provider's response or the failure.
         """
         to = request[Key_To]
         body = request[Key_Body]
@@ -281,14 +280,14 @@ class OutconnSMSWrapper:
         started = monotonic()
         self._audit(cid, AuditEvent.Request_Sent, AuditOutcome.OK, body, to)
 
-        # The request itself may fail before the provider answers, e.g. on a timeout ..
+        # The request fails before a response arrives, e.g. on a timeout ..
         try:
             response = self.request(method, url, headers, data)
         except Exception as e:
             self._audit(cid, AuditEvent.Response_Received, AuditOutcome.Error, str(e), to, started)
             raise
 
-        # .. and the provider may turn the message down, which the queue tells apart from a failed request.
+        # .. or the provider rejects the message, which the queue distinguishes from a failed request.
         try:
             out = self.provider.read_send_response(response)
         except ProviderError as e:
@@ -302,7 +301,7 @@ class OutconnSMSWrapper:
 # ################################################################################################################################
 
     def send_from_queue(self, cid:'str', request:'stranydict') -> 'SendResult':
-        """ Makes one attempt to deliver a message the queue holds.
+        """ Makes one attempt to send a queued message.
         """
         out = self.send_once(request, cid)
         return out
@@ -310,8 +309,8 @@ class OutconnSMSWrapper:
 # ################################################################################################################################
 
     def send(self, to:'str', body:'str', *, from_:'str'='', cid:'str'='') -> 'any_':
-        """ Sends one message - directly under the connection's retry policy, or through the connection's queue when
-        the queue switch is on, returning the queue's own result then.
+        """ Sends one message directly under the connection's retry policy, or through the connection's queue when
+        use_queue is enabled, in which case the queue's result is returned.
         """
         if not from_:
             from_ = self.config[SMS.Field_Sender]
@@ -330,7 +329,7 @@ class OutconnSMSWrapper:
             out = self.publisher.send_or_queue(cid, request, attempt)
             return out
 
-        # The outcome of the attempt that went through.
+        # The result of the successful attempt.
         outcome:'anylist' = []
 
         def attempt_with_outcome() -> 'None':

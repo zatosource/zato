@@ -29,11 +29,11 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What the edit view changes the sender and the timeout to
+# The sender and the timeout set by the edit view
 Edited_Sender = '+12025550199'
 Edited_Timeout = 7
 
-# What the server answers a signature secret on a provider that does not use one with
+# The server's error for a signature secret on a provider without one
 Signature_Secret_Error_Text = 'does not use a signature secret'
 
 # ################################################################################################################################
@@ -41,8 +41,8 @@ Signature_Secret_Error_Text = 'does not use a signature secret'
 
 @pytest.mark.parametrize('provider', SMS.ProviderList)
 def test_the_create_view_creates_a_connection_with_the_providers_fields(dashboard:'DashboardSuite', provider:'str') -> 'None':
-    """ The connection the view creates has the provider, host, username, sender and the pool and timeout settings
-    the form posted, with the credentials stored and never listed again.
+    """ The connection has the provider, host, username, sender, pool size and timeout of the form, with the credentials
+    stored and not listed.
     """
     host = dashboard.simulators.by_provider(provider).url
     username, _ = Credentials[provider]
@@ -72,7 +72,7 @@ def test_the_create_view_creates_a_connection_with_the_providers_fields(dashboar
 # ################################################################################################################################
 
 def test_the_host_defaults_to_the_providers_public_address(dashboard:'DashboardSuite') -> 'None':
-    """ A Twilio connection created with the host left empty is stored with the provider's own address.
+    """ A Twilio connection created without a host is stored with the provider's default host.
     """
     _ = create_outgoing(dashboard.client, SMS.Provider.Twilio, '')
 
@@ -100,7 +100,7 @@ def test_a_signature_secret_on_a_provider_without_one_is_rejected(dashboard:'Das
 # ################################################################################################################################
 
 def test_a_missing_host_on_infobip_is_rejected(dashboard:'DashboardSuite') -> 'None':
-    """ Infobip accounts each have their own base URL, so a connection without one is refused.
+    """ A connection without a host is rejected, as each Infobip account has its own base URL.
     """
     post_data = new_outgoing_post_data(SMS.Provider.Infobip, '')
     request = new_request(dashboard.client, post_data)
@@ -115,7 +115,7 @@ def test_a_missing_host_on_infobip_is_rejected(dashboard:'DashboardSuite') -> 'N
 # ################################################################################################################################
 
 def test_the_list_view_shows_every_connection_with_its_provider(dashboard:'DashboardSuite') -> 'None':
-    """ The list page's rows have the human-readable provider name and the Delivery tab's defaults filled in.
+    """ The rows have the provider's display name and the Delivery tab's defaults.
     """
     for provider in SMS.ProviderList:
         host = dashboard.simulators.by_provider(provider).url
@@ -136,7 +136,7 @@ def test_the_list_view_shows_every_connection_with_its_provider(dashboard:'Dashb
 # ################################################################################################################################
 
 def test_the_edit_view_changes_the_fields_and_keeps_the_secret(dashboard:'DashboardSuite') -> 'None':
-    """ An edit with the secret fields left empty keeps the stored credentials, which the simulator still accepts.
+    """ An edit with empty secret fields keeps the stored credentials.
     """
     host = dashboard.simulators.twilio.url
     created = create_outgoing(dashboard.client, SMS.Provider.Twilio, host)
@@ -163,7 +163,7 @@ def test_the_edit_view_changes_the_fields_and_keeps_the_secret(dashboard:'Dashbo
     assert item[SMS.Field_Sender] == Edited_Sender
     assert item[SMS.Field_Timeout] == Edited_Timeout
 
-    # The stored secret still authenticates against the simulator
+    # The stored secret authenticates against the simulator
     ping = dashboard.admin.invoke('zato.generic.connection.ping', {'id': item['id']})
     assert ping['is_success'] is True, ping
 

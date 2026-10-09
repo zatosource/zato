@@ -39,7 +39,7 @@ if 0:
 
 @pytest.fixture(scope='session')
 def certificate_paths() -> 'certificatesgen':
-    """ Generates the throwaway CA along with server and client certificates once per session.
+    """ Generates the test CA and the server and client certificates once per session.
     """
     directory = make_certificate_directory()
 
@@ -53,8 +53,8 @@ def certificate_paths() -> 'certificatesgen':
 
 @pytest.fixture(scope='session', params=get_backend_names(), autouse=True)
 def zato_server(request:'any_', certificate_paths:'CertificatePaths') -> 'any_':
-    """ One quickstart server per pub/sub backend, with the SMS channels of the template on it, all of them
-    over one outgoing connection to the Twilio simulator that starts first.
+    """ One quickstart server per pub/sub backend with the SMS channels of the template, every channel over one
+    outgoing connection to the Twilio simulator.
     """
     simulators = sms_channel_type.simulators
     simulators.start()
@@ -75,7 +75,7 @@ def zato_server(request:'any_', certificate_paths:'CertificatePaths') -> 'any_':
 
 @pytest.fixture(autouse=True)
 def clear_target() -> 'any_':
-    """ Every test starts with a target that has recorded nothing and accepts everything.
+    """ Each test starts with a target that has no recorded invocations and accepts every invocation.
     """
     reset_before_test()
 

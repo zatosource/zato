@@ -64,6 +64,7 @@ from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporte
 from zato.cli.enmasse.importers.pubsub_subscription import PubSubSubscriptionImporter
 from zato.cli.enmasse.importers.channel_openapi import ChannelOpenAPIImporter
 from zato.cli.enmasse.importer.config import ConfigSync
+from zato.cli.enmasse.importer.delete import DeleteSync
 from zato.cli.enmasse.importer.outgoing import OutgoingSync
 from zato.cli.enmasse.util.secrets import Known_Secret_Keys, redact_secrets
 from zato.common.odb.model import Cluster
@@ -125,13 +126,16 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
 # ################################################################################################################################
 # ################################################################################################################################
 
-class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
+class EnmasseYAMLImporter(ConfigSync, DeleteSync, OutgoingSync):
     """ Imports enmasse YAML configuration files and builds an in-memory representation.
     """
     def __init__(self) -> 'None':
 
         # This is always the same
         self.cluster_id = ModuleCtx.Cluster_ID
+
+        # Nothing is marked for deletion until a config is read
+        self.init_deletions()
 
         self.object_type = ModuleCtx.ObjectType
         self.object_alias = ModuleCtx.ObjectAlias

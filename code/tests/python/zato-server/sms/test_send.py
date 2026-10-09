@@ -14,7 +14,7 @@ from zato.common.api import SMS
 from zato.common.sms.model import Status_Sent
 
 # Live SMS
-from live_sms.twilio import Error_From_Invalid, Error_To_Invalid, Magic_From_Invalid, Magic_To_Invalid
+from live_sms.twilio import Error_From_Invalid, Error_To_Invalid, Test_Number_From_Invalid, Test_Number_To_Invalid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,10 +29,10 @@ if 0:
 To_Number = '+12025550101'
 Rejected_Number = '+12025550199'
 
-# The reason the three simulators that take one are told to reject the number with
+# The rejection reason configured on the simulators that accept one
 Rejection_Reason = 'InvalidPhoneNumber'
 
-# What a slow simulator takes over a request, beyond the connections' timeout of two seconds
+# The response delay of a slow simulator, longer than the connections' two-second timeout
 Delay_Beyond_Timeout = 5.0
 
 Providers = SMS.ProviderList
@@ -40,7 +40,7 @@ Providers = SMS.ProviderList
 # The providers whose send request names the delivery callback URL
 Providers_With_Callback_In_Send = (SMS.Provider.Twilio, SMS.Provider.Infobip)
 
-# What each provider's authentication failure is reported with - Twilio names its error code, the others their HTTP status
+# The text of each provider's authentication error - Twilio's error code, the HTTP status of the others
 Auth_Error_Text = {
     SMS.Provider.Twilio: '20003',
     SMS.Provider.Vonage: '401',
@@ -95,7 +95,7 @@ class TestSend:
 
     def test_twilio_rejects_an_invalid_recipient_with_its_own_error_code(self, sms:'SMSSuite') -> 'None':
 
-        response = sms.send(SMS.Provider.Twilio, Magic_To_Invalid, 'to nowhere')
+        response = sms.send(SMS.Provider.Twilio, Test_Number_To_Invalid, 'Your verification code is 482913')
 
         assert response['is_ok'] is False, response
         assert str(Error_To_Invalid) in response['error'], response
@@ -106,7 +106,7 @@ class TestSend:
 
     def test_twilio_rejects_an_invalid_sender_with_its_own_error_code(self, sms:'SMSSuite') -> 'None':
 
-        response = sms.send(SMS.Provider.Twilio, To_Number, 'from nowhere', from_=Magic_From_Invalid)
+        response = sms.send(SMS.Provider.Twilio, To_Number, 'Your verification code is 482913', from_=Test_Number_From_Invalid)
 
         assert response['is_ok'] is False, response
         assert str(Error_From_Invalid) in response['error'], response
@@ -146,7 +146,7 @@ class TestSend:
 
     @pytest.mark.parametrize('provider', Providers)
     def test_a_wrong_credential_is_reported_as_the_provider_reports_it(self, sms:'SMSSuite', provider:'str') -> 'None':
-        """ The simulator is told a different password, so the connection's credential is wrong from then on.
+        """ The simulator's password is changed, after which the connection's credential is invalid.
         """
         simulator = sms.simulator(provider)
         password = simulator.password

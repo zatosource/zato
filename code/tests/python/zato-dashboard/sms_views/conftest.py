@@ -11,7 +11,6 @@ import os
 import sys
 import tempfile
 
-# The test doubles live next to the tests and are imported flat, the live helpers under zato-common.
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
 
@@ -19,10 +18,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 import django
 from django.conf import settings
 
-# The views build responses and read the request the way Django hands it over, so Django is configured
-# before anything imports them - with nothing behind it, no database and no templates, because a view
-# is called here directly rather than through a URL and a list page's response is read without rendering it.
-# The list pages build their forms, which is what the application registry is set up for, without translations.
+# Django is configured before the views are imported - without a database and without templates, as each view
+# is called directly and a list page's response is read without rendering. The application registry is set up
+# for the list pages' forms.
 if not settings.configured:
     settings.configure(
         DEBUG=False,
@@ -72,7 +70,7 @@ def dashboard() -> 'iterator_':
         simulators.start()
         parts.add('SMS simulators', simulators.stop)
 
-        # The Redis the channels remember seen events in
+        # The Redis in which the channels record received events
         redis_port = find_free_port()
         redis_process = start_redis(redis_port)
         parts.add('redis-server', redis_process.kill)
@@ -82,7 +80,7 @@ def dashboard() -> 'iterator_':
         parts.add('Zato', zato.stop)
         zato.create(redis_port=redis_port)
 
-        # The server and the Dashboard's list page build each channel's webhook URL from this address
+        # The server's address, from which the server and the Dashboard build each channel's webhook URL
         server_address = f'http://{Host}:{zato.server_port}'
         os.environ[Server_Address_Env_Key] = server_address
 
@@ -90,7 +88,7 @@ def dashboard() -> 'iterator_':
 
         suite = DashboardSuite(simulators, zato)
 
-    # A setup cut short tears down what it started
+    # An incomplete setup stops what it started
     except BaseException:
         tear_down(parts)
         raise
@@ -103,7 +101,7 @@ def dashboard() -> 'iterator_':
 
 @pytest.fixture(autouse=True)
 def clean_connections(dashboard:'DashboardSuite') -> 'iterator_':
-    """ Every test starts with simulators that recorded nothing and leaves no SMS connections of the tests on the server.
+    """ Each test starts with cleared simulators and ends with its SMS connections removed from the server.
     """
     dashboard.simulators.reset()
 

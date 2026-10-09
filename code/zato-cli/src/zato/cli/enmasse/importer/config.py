@@ -223,6 +223,10 @@ class ConfigSync:
         self.created_objects = {}
         self.updated_objects = {}
 
+        # Take the items marked for deletion out of the config before anything is checked against a server -
+        # an item that is to be deleted may name a service that is no longer deployed
+        self.split_deletions(yaml_config)
+
         # Wait for all services referenced in the configuration to be available
         if server_dir:
             timeout = wait_for_services_timeout or Default_Service_Wait_Timeout
@@ -241,6 +245,9 @@ class ConfigSync:
                 count = len(missing_services)
                 noun = 'service' if count == 1 else 'services'
                 raise Exception(f'{count} {noun} not found after {timeout}s: {sorted(missing_services)}')
+
+        # Delete what is marked for deletion before anything is created or updated, dependents first
+        self.run_deletions(session, server_dir)
 
         # Process quota tiers first - security definitions and groups reference them by name
         tiers_created, tiers_updated = self.sync_quota_tiers(yaml_config.get('quota_tier', []), session)
@@ -734,6 +741,9 @@ class ConfigSync:
                     self.created_objects[yaml_key] = custom_created
                 if custom_updated:
                     self.updated_objects[yaml_key] = custom_updated
+
+        # Delete the objects that are refused while anything references them, now that the references are gone
+        self.run_deferred_deletions(session, server_dir)
 
         logger.info('YAML synchronization completed')
 

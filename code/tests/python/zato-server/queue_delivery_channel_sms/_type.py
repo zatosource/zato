@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# What SMS channels tell the shared scenarios about themselves - each call is a simulated Twilio callback
-# of an incoming text whose body is the document the scenario sends.
+# The SMS channel type of the shared scenarios - each call is a simulated Twilio callback of an incoming text
+# whose body is the scenario's document.
 
 # stdlib
 import os
@@ -22,7 +22,7 @@ from zato.common.util.mcp_oauth import Server_Address_Env_Key
 # Test support
 from live_sms.base import form_encode
 from live_sms.suite import SimulatorSuite
-from live_sms.twilio import compute_signature, Magic_From_Valid, new_message_sid
+from live_sms.twilio import compute_signature, Test_Number_From_Valid, new_message_sid
 from queue_delivery.channel.client import channel_url, post
 from queue_delivery.channel.type_under_test import ChannelTypeUnderTest
 
@@ -57,12 +57,12 @@ Channels = {
     'counting':      'test.queue-delivery.sms.counting',
 }
 
-# The webhook path of each channel - the one path the internal REST channel serves, with the channel's name after it
+# The webhook path of each channel
 URL_Paths = {}
 for _key, _name in Channels.items():
     URL_Paths[_key] = SMS.Webhook_Path_Prefix + _name
 
-# The service each channel's queued requests go to, as the delivery page shows it
+# The service of each channel's queued requests
 _target_service = 'test.queue-delivery.channel.target'
 _hooked_service = 'test.queue-delivery.channel.hooked'
 
@@ -86,16 +86,15 @@ Services = {
 
 Request_Method = 'POST'
 
-# The server builds each channel's webhook URL from this address and Twilio signs its callbacks over that URL -
-# the server's port is settled only once it starts, so the address is a fixed one and the simulator signs over it
-# while posting to the port the server listens on
+# The server's address, from which each channel's webhook URL is built and over which Twilio signs its callbacks.
+# The simulator signs over this address and posts to the server's port.
 Signing_Address = 'http://sms-channel-suite.zato.test'
 
 # The numbers of a simulated incoming text
 From_Number = '+12025550102'
-To_Number = Magic_From_Valid
+To_Number = Test_Number_From_Valid
 
-# What Twilio answers an accepted callback with
+# Twilio's response to an accepted callback
 _content_type_xml = 'text/xml'
 
 # ################################################################################################################################
@@ -128,7 +127,7 @@ class SMSChannelType(ChannelTypeUnderTest):
 
     def __init__(self) -> 'None':
 
-        # The Twilio simulator every channel's connection points to - the session fixture starts it before the server
+        # The Twilio simulator of every channel's connection, started by the session fixture before the server
         self.simulators = SimulatorSuite()
         self.twilio = self.simulators.twilio
 
@@ -141,7 +140,7 @@ class SMSChannelType(ChannelTypeUnderTest):
 # ################################################################################################################################
 
     def signing_url(self, key:'str') -> 'str':
-        """ The URL the server believes a channel's webhook has, which is what a callback's signature is computed over.
+        """ The webhook URL of a channel as the server builds it, over which a callback's signature is computed.
         """
         out = Signing_Address + self.url_paths[key]
         return out
@@ -149,7 +148,7 @@ class SMSChannelType(ChannelTypeUnderTest):
 # ################################################################################################################################
 
     def call(self, key:'str', document:'anydict', headers:'strdict | None'=None, params:'strdict | None'=None) -> 'ChannelResponse':
-        """ Posts one simulated Twilio callback of an incoming text whose body is the document, signed the way Twilio signs.
+        """ Posts one simulated Twilio callback of an incoming text whose body is the document, with a Twilio signature.
         """
         callback = {
             'MessageSid': new_message_sid(),
@@ -176,7 +175,7 @@ class SMSChannelType(ChannelTypeUnderTest):
 # ################################################################################################################################
 
     def read_ack(self, response:'ChannelResponse') -> 'anydict':
-        """ The acknowledgement of a callback is Twilio's empty TwiML, the correlation ID is in a response header.
+        """ Reads the correlation ID from the X-Zato-CID header. The body is Twilio's empty TwiML.
         """
         cid = ''
         wanted = SMS.Header_Callback_CID.lower()
@@ -208,7 +207,7 @@ class SMSChannelType(ChannelTypeUnderTest):
 # ################################################################################################################################
 
     def body_of_envelope_data(self, data:'any_') -> 'anydict':
-        """ The envelope holds the event as JSON, the event's body is the document a call sent.
+        """ Reads the document from the body field of the JSON event in the envelope.
         """
         event = loads(data)
         out = loads(event['body'])

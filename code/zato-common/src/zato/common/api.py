@@ -1552,9 +1552,9 @@ class SMS:
     Default_Pool_Size = 10
     Default_Timeout = 30
 
-    # How many event IDs a channel remembers to drop a resent callback, and for how long
-    Seen_Events_Max = 10_000
-    Seen_Events_Expiry_Seconds = 48 * 3600
+    # The number of received events a channel records to drop a resent callback, and their expiry
+    Received_Events_Max = 10_000
+    Received_Events_Expiry_Seconds = 48 * 3600
 
     class Scheduler:
 

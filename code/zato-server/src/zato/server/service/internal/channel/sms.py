@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The two services behind an SMS channel - the one a provider's callback reaches through the internal webhook
-# channel, and the one the scheduler runs for a channel in polling mode. Both read the channel's provider class
-# through its outgoing connection, so the credentials are stored once, on the outgoing side.
+# The two services of an SMS channel - the one invoked by a provider's callback through the internal webhook channel
+# and the one invoked by the scheduler for a channel in polling mode. Both read the provider class through
+# the channel's outgoing connection.
 
 # stdlib
 from contextlib import closing
@@ -44,10 +44,10 @@ if 0:
 
 logger = getLogger(__name__)
 
-# The path parameter the internal webhook channel captures
+# The path parameter of the internal webhook channel
 _path_param_channel_name = 'channel_name'
 
-# The WSGI key the content type arrives under
+# The WSGI key of the request content type
 _wsgi_content_type = 'CONTENT_TYPE'
 
 # The keys a config edit message has beyond the config itself
@@ -57,14 +57,14 @@ _msg_old_name = 'old_name'
 # The config keys that are never part of a config edit message
 _msg_skip_keys = ('conn',)
 
-# How many rounds one poll goes through at most when a provider keeps reporting further pages
+# The maximum number of rounds of one poll while the provider reports further pages
 _max_poll_rounds = 100
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _get_channel(service:'Service', channel_name:'str') -> 'Bunch':
-    """ The SMS channel of that name as this server knows it.
+    """ The SMS channel of that name in this server's configuration.
     """
     channels = service.server.config_manager.channel_sms
 
@@ -77,7 +77,7 @@ def _get_channel(service:'Service', channel_name:'str') -> 'Bunch':
 # ################################################################################################################################
 
 def _get_outconn(service:'Service', channel:'Bunch') -> 'OutconnSMSWrapper':
-    """ The wrapper of the outgoing connection an SMS channel reads its provider through.
+    """ The wrapper of an SMS channel's outgoing connection.
     """
     outconn_name = channel[SMS.Field_Outconn_Name]
     outconns = service.server.config_manager.outconn_sms
@@ -136,8 +136,8 @@ def _audit_batch(
 # ################################################################################################################################
 
 class Receive(Service):
-    """ Receives one provider callback for one SMS channel - verifies it, reads its events, passes each new one
-    to the channel's service or its queue and answers in the form the provider expects.
+    """ Receives one provider callback for one SMS channel - verifies it, reads its events, delivers each new event
+    to the channel's service or queue and responds in the provider's format.
     """
     name = SMS.Webhook_Service
 
@@ -147,7 +147,7 @@ class Receive(Service):
         channel_name = self.request.http.params[_path_param_channel_name]
         channel = _get_channel(self, channel_name)
 
-        # A channel that polls has no webhook, so the path does not exist for it
+        # A polling channel has no webhook path
         if is_polling(channel):
             raise NotFound(self.cid, f'SMS channel `{channel_name}` is in polling mode')
 
@@ -170,7 +170,7 @@ class Receive(Service):
             Ctx_Content_Type: content_type,
         }
 
-        # The provider signed the URL its console was given, which is the channel's own webhook URL
+        # The provider signs over the channel's webhook URL
         url = get_webhook_url(channel_name)
 
         try:
@@ -183,7 +183,7 @@ class Receive(Service):
         events = provider.read_callback(request_ctx, raw_body)
         body_text = raw_body.decode('utf8', 'replace')
 
-        # With the queue off, an exception from the channel's service fails the callback, which the provider retries
+        # With use_queue disabled, an exception from the channel's service fails the callback and the provider resends it
         try:
             new_count = handle_events(self.server, self.cid, channel, provider.name, events)
         except Exception as e:
@@ -204,9 +204,9 @@ class Receive(Service):
 # ################################################################################################################################
 
 class Poll(Service):
-    """ Runs one poll of one SMS channel on behalf of the scheduler - each page the provider returns is read, its new events
-    are passed on and the poll state the next request starts from is written back before the next page is read,
-    so that a poll that fails midway neither loses what it has read nor hands anything over twice.
+    """ Runs one poll of one SMS channel on behalf of the scheduler. Each page the provider returns is read, its new events
+    are delivered and the poll state is saved before the next page is read, so that a poll that fails before completion
+    neither loses events nor delivers an event twice.
     """
     name = SMS.Scheduler.Dispatch_Service
 
@@ -214,13 +214,13 @@ class Poll(Service):
 
         start = monotonic()
 
-        # The scheduler job has the channel's identity in its extra data
+        # The scheduler job's extra data has the channel's name
         context = self.request.payload
         channel_name = context[SMS.Scheduler.Extra_Conn_Name]
 
         channel = _get_channel(self, channel_name)
 
-        # A channel switched to webhook mode since the job ran last has nothing to poll
+        # A channel in webhook mode is not polled
         if not is_polling(channel):
             logger.info('SMS channel `%s` is in webhook mode, skipping poll', channel_name)
             return
@@ -247,8 +247,8 @@ class Poll(Service):
 
     def _poll(self, outconn:'OutconnSMSWrapper', provider:'Provider', channel:'Bunch', state:'stranydict',
         events:'SMSEventList') -> 'tuple[stranydict, int]':
-        """ Goes through every request of a poll, and through further rounds while the provider reports more pages.
-        Each page's events are handed over and the state is saved before the next page is requested.
+        """ Runs every request of a poll and further rounds while the provider reports more pages.
+        The events of each page are delivered and the state is saved before the next page is requested.
         """
         new_count = 0
 
@@ -263,7 +263,7 @@ class Poll(Service):
 
                 new_count += handle_events(self.server, self.cid, channel, provider.name, page_events)
 
-                # Everything of this page is stored or handed over, so the state the next page starts from can be saved
+                # Every event of this page is stored or delivered, and the state of the next page is saved
                 self._save_state(channel, state)
 
             if not provider.has_more_pages(state):
@@ -275,7 +275,7 @@ class Poll(Service):
 # ################################################################################################################################
 
     def _load_state(self, channel:'Bunch') -> 'stranydict':
-        """ The state the previous poll left behind, an empty dict for a channel that has never polled.
+        """ The state recorded by the previous poll, an empty dict for a channel that has not polled.
         """
         poll_state = channel[SMS.Field_Poll_State]
 
@@ -288,8 +288,7 @@ class Poll(Service):
 # ################################################################################################################################
 
     def _save_state(self, channel:'Bunch', state:'stranydict') -> 'None':
-        """ Writes the poll state to the channel's row and tells every server about it through a config edit message,
-        so that the next poll starts from this state wherever the scheduler sends it.
+        """ Writes the poll state to the channel's row and publishes it to every server through a config edit message.
         """
         poll_state = dumps(state)
         channel_id = channel['id']
@@ -310,7 +309,7 @@ class Poll(Service):
 # ################################################################################################################################
 
     def _build_edit_message(self, channel:'Bunch', poll_state:'str') -> 'anydict':
-        """ A config edit message describing the channel as it is, with the new poll state.
+        """ A config edit message with the channel's configuration and the new poll state.
         """
         out = {}
 
