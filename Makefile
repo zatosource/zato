@@ -14,7 +14,7 @@
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
-	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
+	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord test-sms \
 	test-hl7 test-fhir-bulk-export test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
@@ -505,6 +505,11 @@ COSMIC_RAY_SESSION := $(CURDIR)/code/tests/.cr-session.sqlite
 # run through a wrapper that reports how far it has got while it works
 COSMIC_RAY_EXEC := $(CURDIR)/code/tests/rust/cosmic-ray/exec_with_progress.py
 
+# sms_disabled - the SMS connection tests run in test-sms only
+Zato_Test_Server_SMS_Ignore := \
+	--ignore=$(CURDIR)/code/zato-server/test/zato/connection/sms/ \
+	--ignore=$(CURDIR)/code/zato-server/test/zato/connection/test_sms_providers.py
+
 test-server: ## Server unit and integration tests.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -516,6 +521,7 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/tests/python/zato-server/django_plugin/ \
 		$(CURDIR)/code/zato-server/test/zato/connection/ \
 		$(CURDIR)/code/zato-server/test/zato/pattern/ \
+		$(Zato_Test_Server_SMS_Ignore) \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 # The CLI is driven through sh, which forks, so these tests need a process that gevent has not patched
@@ -720,11 +726,17 @@ test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level lo
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
+# discord_disabled, sms_disabled - these enmasse suites run in test-discord and test-sms only
+Zato_Test_Enmasse_Disabled := \
+	test_importer_enmasse_discord.py test_exporter_enmasse_discord.py \
+	test_importer_enmasse_sms.py test_exporter_enmasse_sms.py
+
 # Every enmasse suite lives here - the importers, the exporters and the round trips for
 # every connection type. Targets for a given connection type do not carry enmasse tests
 # of their own, discovery below already covers them and running them twice proves nothing.
 test-enmasse: ## Enmasse tests - every importer, every exporter, the round trips and secret rotation against live services.
-	$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_*.py' -v
+	cd $(CURDIR)/code/zato-cli/test/zato/enmasse_ && $(ZATO_PY) -m unittest -v \
+		$$(find . -name 'test_*.py' $(foreach name,$(Zato_Test_Enmasse_Disabled),! -name $(name)) | sort)
 # Secret rotation needs the live services switched on, which the discovery above leaves off
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
 		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v
@@ -1083,6 +1095,21 @@ test-discord: ## Discord connection tests - the client against a simulated Disco
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
+test-sms: ## SMS connection tests - the Twilio, Vonage, Infobip and Africa's Talking clients, and the enmasse importer and exporter.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-server/test/zato/connection/sms/ \
+		$(CURDIR)/code/zato-server/test/zato/connection/test_sms_providers.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sms -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_sms.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_sms.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sms_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
 test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato server against a simulated Microsoft cloud.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/microsoft_cloud_live/ \
@@ -1389,9 +1416,10 @@ Zato_Test_Toolchain := \
 
 # Suites needing a live server or an external service
 # test-as2
+# discord_disabled - test-discord
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
-	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-discord test-bearer \
+	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-fhir-bulk-export test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
 	test-openapi-console-live
 

@@ -406,11 +406,12 @@
                                     <li class="child menu-wide">
                                         <a class="menu-link" href="#">Chat &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "chat-discord" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-discord">Discord</a></li>
+                                            {% comment "discord_disabled" %}<li class="child"><a class="menu-link" href="{% url "chat-discord" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-discord">Discord</a></li>{% endcomment %}
                                             <li class="child"><a class="menu-link" href="{% url "chat-slack" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-slack">Slack</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Teams</a></li>
                                         </ul>
                                     </li>
+                                    {% comment "sms_disabled" %}
                                     <li class="child menu-wide">
                                         <a class="menu-link" href="#">SMS &rarr;</a>
                                         <ul>
@@ -418,6 +419,7 @@
                                             <li class="child"><a class="menu-link" href="{% url "out-sms" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sms">Outgoing</a></li>
                                         </ul>
                                     </li>
+                                    {% endcomment %}
                                     <li class="child menu-wide">
                                         <a class="menu-link" href="#">Search &rarr;</a>
                                         <ul>

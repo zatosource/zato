@@ -38,7 +38,8 @@ $.fn.zato.destinations.config = {
         {id: 'hl7-fhir', label: 'FHIR'},
         {id: 'smtp',     label: 'Email'},
         {id: 'kafka',    label: 'Kafka'},
-        {id: 'sms',      label: 'SMS'},
+        // sms_disabled
+        // {id: 'sms',      label: 'SMS'},
         {id: 'sftp',     label: 'SFTP'},
         {id: 'service',  label: 'Service'}
     ],

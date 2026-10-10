@@ -16,6 +16,9 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
 
+# The test modules import ModuleCtx from this file
+sys.path.insert(0, os.path.dirname(__file__))
+
 # pytest
 import pytest
 
