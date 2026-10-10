@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from concurrent.futures import ThreadPoolExecutor
-from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
+from http.client import ACCEPTED, BAD_REQUEST, METHOD_NOT_ALLOWED, NOT_FOUND, OK
 from json import dumps
 
 # requests
@@ -300,7 +300,7 @@ class TestMalformedRequests:
         notification = {'jsonrpc': '2.0', 'method': _notification_method, 'params': {}}
         response = client.jsonrpc_raw(dumps(notification).encode('utf8'), session_id=session_id)
 
-        assert response.status_code == NO_CONTENT, response.text
+        assert response.status_code == ACCEPTED, response.text
         assert response.text == '', response.text
 
         # .. the session stays valid ..
@@ -312,6 +312,23 @@ class TestMalformedRequests:
             audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=_notification_method, min_id=min_id)
 
         assert events[-1]['outcome'] == AuditOutcome.OK, events
+
+# ################################################################################################################################
+
+    def test_a_stream_request_is_not_allowed(self, zato_server:'anydict') -> 'None':
+
+        client = _helpers.make_client(zato_server, _constants.Path_Main)
+        session_id = _helpers.open_session(client)
+
+        # The gateway offers no server-sent events stream, so a GET is refused with 405 ..
+        response = client.get_stream(session_id)
+
+        assert response.status_code == METHOD_NOT_ALLOWED, response.text
+        assert response.headers['Allow'] == 'DELETE, POST', response.headers
+
+        # .. and the session stays valid.
+        tools = _helpers.list_tools(client, session_id)
+        assert tools, tools
 
 # ################################################################################################################################
 
@@ -509,7 +526,7 @@ class TestRequestValueRendering:
         notification = {'jsonrpc': '2.0', 'method': method, 'params': {}}
         response = client.jsonrpc_raw(dumps(notification).encode('utf8'), session_id=session_id)
 
-        assert response.status_code == NO_CONTENT, response.text
+        assert response.status_code == ACCEPTED, response.text
 
         # .. the audit event keeps the method exactly as it was sent ..
         events = _audit.wait_for_events(

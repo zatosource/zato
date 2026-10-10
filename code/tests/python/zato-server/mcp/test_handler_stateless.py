@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT, OK
+from http.client import ACCEPTED, OK
 from unittest import TestCase
 
 # Zato
@@ -413,7 +413,7 @@ class StatelessNotifications(TestCase):
     """ Tests that notifications produce no response body.
     """
 
-    def test_notification_returns_204(self) -> 'None':
+    def test_notification_returns_202(self) -> 'None':
 
         handler = _make_handler()
 
@@ -426,7 +426,7 @@ class StatelessNotifications(TestCase):
             mcp_method_header='notifications/progress',
         )
 
-        self.assertEqual(mcp_response.status_code, NO_CONTENT)
+        self.assertEqual(mcp_response.status_code, ACCEPTED)
         self.assertIsNone(mcp_response.body)
 
 # ################################################################################################################################

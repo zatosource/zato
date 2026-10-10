@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import NO_CONTENT, OK
+from http.client import ACCEPTED, OK
 from logging import getLogger
 
 # Zato
@@ -210,12 +210,12 @@ def dispatch(
         out.status_code = OK
         return out
 
-    # .. a message without an ID is a notification and produces no response ..
+    # .. a message without an ID is a notification, accepted with 202 and no body ..
     if 'id' not in message:
 
         logger.info('MCP: Received notification `%s`', printable(method))
         out.body = None
-        out.status_code = NO_CONTENT
+        out.status_code = ACCEPTED
         return out
 
     # .. tools/call additionally needs its Mcp-Name header to agree with the tool name ..

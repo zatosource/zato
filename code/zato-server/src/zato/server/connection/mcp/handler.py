@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import BAD_REQUEST, NO_CONTENT, NOT_FOUND, OK
+from http.client import ACCEPTED, BAD_REQUEST, NOT_FOUND, OK
 from logging import getLogger
 from traceback import format_exc
 from typing import NamedTuple
@@ -290,15 +290,15 @@ class MCPHandler:
                     out.session_id = None
                     return out
 
-            # .. a well-formed message without an id is a notification - it is acknowledged
-            # with no body at all, the same contract the stateless revision follows ..
+            # .. a well-formed message without an id is a notification - it is accepted with 202
+            # and no body at all, the same contract the stateless revision follows ..
             if 'id' not in parsed:
                 if parsed.get('jsonrpc') == _jsonrpc_version:
                     if method:
 
                         logger.info('MCP: Received notification `%s`', printable(method))
                         out.body = None
-                        out.status_code = NO_CONTENT
+                        out.status_code = ACCEPTED
                         return out
 
             # .. dispatch the request, receiving both the body and the ID of any session
