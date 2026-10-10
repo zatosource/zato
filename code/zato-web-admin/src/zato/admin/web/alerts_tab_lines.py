@@ -13,8 +13,8 @@ from zato.admin.web.alerts_tab_picks import Email_Empty_Text, email_kinds, Live_
     Live_Type_LLM_Connection, llm_kinds, LLM_Empty_Text
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, \
-    alert_type_kafka_outgoing, alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_sms_outgoing, \
-    alert_type_soap, Email_Connection_Field, \
+    alert_type_kafka_outgoing, alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap, \
+    Email_Connection_Field, \
     field_display as shared_field_display, field_help, get_defaults, Is_Active_Field, LLM_Connection_Field, Unit_Field_Suffix
 from zato.common.api import HTTP_SOAP
 
@@ -691,14 +691,6 @@ type_lines:'anydict' = {
 
     # An outgoing Kafka connection alerts on its queue and DLQ alone, the lines of which add_queue_lines appends
     alert_type_kafka_outgoing: [
-        active_line(),
-        use_llm_line(),
-        llm_line(),
-        email_line(),
-    ],
-
-    # An outgoing SMS connection alerts on its queue and DLQ the same way
-    alert_type_sms_outgoing: [
         active_line(),
         use_llm_line(),
         llm_line(),

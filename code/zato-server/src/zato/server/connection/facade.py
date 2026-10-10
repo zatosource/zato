@@ -62,7 +62,6 @@ if 0:
     from zato.server.generic.api.outconn_as2 import as2_payload, OutconnAS2Wrapper
     from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
     from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
-    from zato.server.generic.api.outconn_sms import OutconnSMSWrapper
     from zato.server.queue_bridge.client import QueueBridgeClient
     from zato.server.service import Service
     _HL7FHIRConnection = _HL7FHIRConnection
@@ -798,75 +797,6 @@ class KafkaFacade:
         item = self._outconn_kafka[name]
 
         out = KafkaInvoker(name, item.conn, self._cid)
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMSInvoker:
-    """ What a service sends text messages through one outgoing SMS connection with.
-    """
-    _conn_name: 'str'
-    _wrapper: 'OutconnSMSWrapper'
-    _cid: 'str'
-
-    def __init__(self, conn_name:'str', wrapper:'OutconnSMSWrapper', cid:'str') -> 'None':
-        self._conn_name = conn_name
-        self._wrapper = wrapper
-        self._cid = cid
-
-    def __repr__(self) -> 'str':
-        return f'SMSInvoker({self._conn_name} at {hex(id(self))})'
-
-    def to_dict(self) -> 'anydict':
-        return {'conn_name': self._conn_name}
-
-# ################################################################################################################################
-
-    def send(self, to:'str', body:'str', *, from_:'str'='') -> 'any_':
-        """ Sends one message to one number, from the connection's sender unless from_ says otherwise. Returns the provider's
-        SendResult or, with the connection's queue switch on, the queue's own result.
-        """
-        out = self._wrapper.send(to, body, from_=from_, cid=self._cid)
-        return out
-
-# ################################################################################################################################
-
-    def publish(self, to:'str', body:'str', *, from_:'str'='', **kwargs:'any_') -> 'any_':
-        """ Queues one message for delivery through the connection, returning as soon as it is stored.
-        """
-        out = self._wrapper.publish(to, body, from_=from_, **kwargs)
-        return out
-
-# ################################################################################################################################
-
-    def ping(self) -> 'None':
-        """ Performs the cheapest authenticated read the connection's provider offers.
-        """
-        self._wrapper.ping()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMSFacade:
-    """ Provides dict-like access to outgoing SMS connections from services via self.sms and self.out.sms.
-    """
-    _outconn_sms: 'anydict'
-    _cid: 'str'
-
-    def init(self, config_manager:'ConfigManager', cid:'str'='') -> 'None':
-        self._outconn_sms = config_manager.outconn_sms
-        self._cid = cid
-
-# ################################################################################################################################
-
-    def __getitem__(self, name:'str') -> 'SMSInvoker':
-        item = self._outconn_sms[name]
-
-        if not item['is_active']:
-            raise Exception(f'Outgoing SMS connection `{name}` is inactive')
-
-        out = SMSInvoker(name, item.conn, self._cid)
         return out
 
 # ################################################################################################################################

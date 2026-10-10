@@ -41,7 +41,6 @@ _generic_type = {
     DestinationType.MLLP: GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
     DestinationType.FHIR: GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR,
     DestinationType.KAFKA: GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA,
-    DestinationType.SMS: GENERIC.CONNECTION.TYPE.OUTCONN_SMS,
     DestinationType.SFTP: GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
 }
 
@@ -163,7 +162,6 @@ def get_connection_list(req:'any_') -> 'HttpResponse':
         DestinationType.FHIR: _as_rows(_get_generic_names(req, DestinationType.FHIR)),
         DestinationType.SMTP: _as_rows(_get_smtp_names(req)),
         DestinationType.KAFKA: _as_rows(_get_generic_names(req, DestinationType.KAFKA)),
-        DestinationType.SMS: _as_rows(_get_generic_names(req, DestinationType.SMS)),
         DestinationType.SFTP: _as_rows(_get_generic_names(req, DestinationType.SFTP)),
         DestinationType.SERVICE: _as_rows(_get_service_names(req)),
     }

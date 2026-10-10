@@ -191,9 +191,6 @@ class ReferenceChecker:
         if section in quota_tier_referencing_sections:
             self._check_value(section, item, 'quota_tier', 'quota_tier')
 
-        if section == 'channel_sms':
-            self._check_value(section, item, 'outconn', 'outgoing_sms')
-
         if section == 'pubsub_subscription':
             self._check_list(section, item, 'topic_list', 'pubsub_topic')
             self._check_value(section, item, 'push_rest_endpoint', 'outgoing_rest')

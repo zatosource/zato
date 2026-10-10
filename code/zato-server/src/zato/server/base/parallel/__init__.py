@@ -58,8 +58,7 @@ from zato.common.user_config import UserConfig, UserConfigFile
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
     parse_job_extra, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
-from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, ensure_openapi_channel_exists, \
-    ensure_sms_webhook_channel_exists
+from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, ensure_openapi_channel_exists
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
@@ -1914,7 +1913,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_gateway_exists(session, self.cluster_id)
             mcp_oauth_metadata_created = ensure_mcp_oauth_metadata_channel_exists(session, self.cluster_id)
-            sms_webhook_created = ensure_sms_webhook_channel_exists(session, self.cluster_id)
 
             # .. the AS2 jobs, which always live in the main ODB ..
             as2_rotation_job_created = ensure_as2_rotation_job_exists(session, self.cluster_id)
@@ -1940,7 +1938,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 openapi_created,
                 mcp_created,
                 mcp_oauth_metadata_created,
-                sms_webhook_created,
                 as2_rotation_job_created,
                 as2_async_mdn_job_created,
                 as2_resend_job_created,
@@ -1966,9 +1963,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if mcp_oauth_metadata_created:
                 logger.info('Created MCP OAuth protected resource metadata channel')
-
-            if sms_webhook_created:
-                logger.info('Created SMS webhook channel')
 
             if as2_rotation_job_created:
                 logger.info('Created AS2 rotation completion job')

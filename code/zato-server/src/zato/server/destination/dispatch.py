@@ -24,7 +24,6 @@ from urllib.parse import parse_qsl
 from zato.common.api import SMTPMessage
 from zato.common.audit_log.common import Ack_Rejected_Marker, AuditClassification, AuditSource, derive_http_classification
 from zato.common.audit_log.request_context import Key_Address, Key_Headers, Key_Method, Key_Params
-from zato.common.destination.audit import get_payload_text
 from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Remote_Path, \
     Default_Subject, Default_To, DestinationOption, DestinationType, Hop_Destination_Name, Known_Methods
 from zato.common.destination.model import get_option, new_send_result, DestinationException
@@ -407,25 +406,6 @@ def _send_kafka(connections:'DestinationConnections', entry:'DestinationEntry', 
 
 # ################################################################################################################################
 
-def _send_sms(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_',
-    cid:'str'='') -> 'HopSendResult':
-    """ Delivers to an outgoing SMS connection, as the text of a message to the recipient the destination names.
-    """
-    to = get_option(entry, DestinationOption.To, Default_To)
-
-    if not to:
-        raise DestinationException(f'Destination `{entry.name}` has no recipient to deliver to')
-
-    body = get_payload_text(payload)
-    invoker = connections.out.sms[entry.connection]
-
-    result = invoker.send(to=to, body=body, cid=cid)
-
-    out = new_send_result(result)
-    return out
-
-# ################################################################################################################################
-
 def _send_sftp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_',
     cid:'str'='') -> 'HopSendResult':
     """ Delivers to an outgoing SFTP connection - a file of a bulk export is uploaded as it is on disk,
@@ -487,7 +467,6 @@ _adapters:'strcalldict' = {
     DestinationType.FHIR: _send_fhir,
     DestinationType.SMTP: _send_smtp,
     DestinationType.KAFKA: _send_kafka,
-    DestinationType.SMS: _send_sms,
     DestinationType.SFTP: _send_sftp,
     DestinationType.SERVICE: _send_service,
 }

@@ -262,11 +262,6 @@ microForms.installFields = function(host, forms) {
                     input.min = forms.config.fractionalMin;
                 }
             }
-            // A secret is typed unseen and the browser offers no stored value for it
-            else if(fieldSpec.kind === 'password') {
-                input.type = 'password';
-                input.autocomplete = forms.config.passwordAutocomplete;
-            }
             else {
                 input.type = 'text';
             }

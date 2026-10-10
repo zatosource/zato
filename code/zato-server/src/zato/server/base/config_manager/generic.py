@@ -23,8 +23,6 @@ from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, channel_int_config_keys
 from zato.server.generic.api.channel_kafka import channel_bool_config_keys as channel_kafka_bool_config_keys, \
     channel_config_defaults as channel_kafka_config_defaults, channel_int_config_keys as channel_kafka_int_config_keys
-from zato.server.generic.api.channel_sms import channel_bool_config_keys as channel_sms_bool_config_keys, \
-    channel_config_defaults as channel_sms_config_defaults, channel_int_config_keys as channel_sms_int_config_keys
 from zato.server.generic.api.chat_discord import discord_config_defaults, discord_int_config_keys
 from zato.server.generic.api.cloud_aws import cloud_aws_config_defaults, cloud_aws_int_config_keys
 from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
@@ -43,8 +41,6 @@ from zato.server.generic.api.outconn_kafka import outconn_bool_config_keys as ou
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
-from zato.server.generic.api.outconn_sms import outconn_bool_config_keys as outconn_sms_bool_config_keys, \
-    outconn_config_defaults as outconn_sms_config_defaults, outconn_int_config_keys as outconn_sms_int_config_keys
 from zato.server.generic.api.outconn_ftp import Outconn_FTP_Bool_Config_Keys, Outconn_FTP_Config_Defaults, \
     Outconn_FTP_Int_Config_Keys, Outconn_FTP_String_Config_Keys
 from zato.server.generic.api.outconn_sdk import normalize_connector_config
@@ -522,18 +518,6 @@ class Generic(ConfigManagerImpl):
     def _generic_normalize_config_outconn_kafka(self, config:'stranydict') -> 'None':
         self._normalize_kafka_config(
             config, outconn_kafka_config_defaults, outconn_kafka_int_config_keys, outconn_kafka_bool_config_keys)
-
-# ################################################################################################################################
-
-    def _generic_normalize_config_channel_sms(self, config:'stranydict') -> 'None':
-        self._normalize_kafka_config(
-            config, channel_sms_config_defaults, channel_sms_int_config_keys, channel_sms_bool_config_keys)
-
-# ################################################################################################################################
-
-    def _generic_normalize_config_outconn_sms(self, config:'stranydict') -> 'None':
-        self._normalize_kafka_config(
-            config, outconn_sms_config_defaults, outconn_sms_int_config_keys, outconn_sms_bool_config_keys)
 
 # ################################################################################################################################
 

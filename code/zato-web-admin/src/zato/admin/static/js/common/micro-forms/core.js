@@ -19,7 +19,7 @@
 // same single list of options.
 //
 // A spec's keys: field (the Django form field name), label, kind - one of
-// text, password, number, select, checkbox or a kind the host registered - plus the
+// text, number, select, checkbox or a kind the host registered - plus the
 // optional unitField, width, placeholder, hint and labelAbove, and for a
 // number that takes a fraction, fractional with the step it goes by.
 //
@@ -124,9 +124,6 @@ microForms.defaults = {
 
     // The attribute an option of a unit select keeps its plural label in
     unitPluralAttr: 'data-plural',
-
-    // The autocomplete value of a password field
-    passwordAutocomplete: 'new-password',
 
     // Fired on the document as a popover is dragged
     movedEvent: 'zato:popup-moved',

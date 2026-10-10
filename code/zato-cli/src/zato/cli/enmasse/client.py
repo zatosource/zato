@@ -358,9 +358,9 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
 def cleanup_enmasse(server_dir:'str') -> 'None':
     """ Cleans up all database objects with the 'enmasse' prefix in the given server's database.
     """
-    # The 'imap.enmasse', 'rest.enmasse', 'soap.enmasse', 'health.enmasse' and 'sms.enmasse' prefixes cover
+    # The 'imap.enmasse', 'rest.enmasse', 'soap.enmasse' and 'health.enmasse' prefixes cover
     # scheduler jobs auto-created for enmasse connections
-    prefixes = ['enmasse', 'test_sync_group', 'imap.enmasse', 'rest.enmasse', 'soap.enmasse', 'health.enmasse', 'sms.enmasse']
+    prefixes = ['enmasse', 'test_sync_group', 'imap.enmasse', 'rest.enmasse', 'soap.enmasse', 'health.enmasse']
     cleanup(prefixes, server_dir)
     logger.info('Enmasse cleanup completed for prefixes: %s', ', '.join(prefixes))
 

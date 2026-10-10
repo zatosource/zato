@@ -1,8 +1,0 @@
-/* ------------------------------------------------------------ */
-/* SMS channels - the list page                                  */
-/* ------------------------------------------------------------ */
-
-.channel-sms-webhook-path-cell,
-.kafka-channel-dlq-cell {
-    white-space: nowrap;
-}

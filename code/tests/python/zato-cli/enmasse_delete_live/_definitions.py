@@ -245,9 +245,6 @@ def _round_trip_item(section:'str') -> 'anydict':
         'pubsub_subscription': subscription(security, [topic_of(section)]),
 
         'channel_openapi': {'name': name, 'is_active': False, 'url_path': url_path_of(section)},
-        'channel_sms': {'name': name, 'outconn': name + '.outconn', 'service': Ping_Service, 'is_active': False},
-        'outgoing_sms': {'name': name, 'provider': 'twilio', 'username': 'AC0123456789',
-            'password': 'Zato_Enmasse_Delete_Live_Password_8', 'sender': '+12025550100', 'is_active': False},
         'mcp_gateway': {'name': name, 'is_active': True, 'url_path': url_path_of(section), 'services': [Ping_Service]},
         'rule_engine_api': {'name': name, 'is_active': False, 'url_path': url_path_of(section), 'rulesets': ['pricing']},
         'ldap': {'name': name, 'username': 'CN=enmasse,DC=example', 'auth_type': 'NTLM',
@@ -315,7 +312,6 @@ def _round_trip_item(section:'str') -> 'anydict':
 def _dependencies(section:'str') -> 'anydict':
     """ What the object of a section needs to exist before it does, by section.
     """
-    name = name_of(section)
     security = security_of(section)
 
     out:'anydict' = {}
@@ -328,16 +324,6 @@ def _dependencies(section:'str') -> 'anydict':
 
     if section == 'pubsub_subscription':
         out['pubsub_permission'] = [permission(security, [topic_of(section)])]
-
-    if section == 'channel_sms':
-        out['outgoing_sms'] = [{
-            'name': name + '.outconn',
-            'provider': 'twilio',
-            'username': 'AC0123456789',
-            'password': 'Zato_Enmasse_Delete_Live_Password_8',
-            'sender': '+12025550100',
-            'is_active': False,
-        }]
 
     return out
 

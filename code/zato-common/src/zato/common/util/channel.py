@@ -16,10 +16,7 @@ from zato.common.api import MISC
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anylist, intnone, strnone
-
-    SASession = SASession
     any_ = any_
     anylist = anylist
     intnone = intnone
@@ -102,48 +99,6 @@ def ensure_openapi_channel_exists(session, cluster_id):
     channel = HTTPSOAP(
         None, openapi_channel_name, True, True, CONNECTION.CHANNEL,
         URL_TYPE.PLAIN_HTTP, None, openapi_channel_url_path, None, '', None, DATA_FORMAT.JSON,
-        service=service, cluster=cluster)
-    session.add(channel)
-
-    return True
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_sms_webhook_channel_exists(session:'SASession', cluster_id:'int') -> 'bool':
-    """ Creates the one REST channel that receives the callbacks of every SMS channel, if it does not exist.
-    The channel has no data format of its own because providers post form-encoded and JSON bodies alike.
-    Returns True if created, False if it already existed.
-    """
-    from zato.common.api import CONNECTION, SMS, URL_TYPE
-    from zato.common.odb.model import Cluster, HTTPSOAP, Service
-
-    existing = session.query(HTTPSOAP).filter(
-        HTTPSOAP.name == SMS.Webhook_Channel_Name,
-        HTTPSOAP.cluster_id == cluster_id,
-        HTTPSOAP.connection == CONNECTION.CHANNEL,
-    ).first()
-
-    if existing:
-        return False
-
-    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
-
-    service = session.query(Service).filter(
-        Service.name == SMS.Webhook_Service,
-        Service.cluster_id == cluster_id,
-    ).first()
-
-    if not service:
-        service = Service(None, SMS.Webhook_Service, True, SMS.Webhook_Service, True, cluster)
-        session.add(service)
-        session.flush()
-
-    url_path = SMS.Webhook_Path_Prefix + '{channel_name}'
-
-    channel = HTTPSOAP(
-        None, SMS.Webhook_Channel_Name, True, True, CONNECTION.CHANNEL,
-        URL_TYPE.PLAIN_HTTP, None, url_path, None, '', None, None,
         service=service, cluster=cluster)
     session.add(channel)
 

@@ -13,7 +13,7 @@ from uuid import uuid4
 
 # Zato
 from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HL7, HTTP_SOAP, KAFKA, \
-    SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, SMS, ZATO_NONE
+    SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import conn_type_to_alert_type, get_field_kinds as get_alert_field_kinds, \
     storage_name as alert_storage_name
@@ -31,9 +31,6 @@ from zato.common.hl7.mllp.tls import validate_client_paths as validate_mllp_clie
 from zato.common.ext_db.api import is_ext_object_id, needs_ext_db, to_local_id, to_public_id
 from zato.common.json_internal import loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
-from zato.common.sms.config import apply_outgoing_host_default, Channel_Int_Field_Names as SMS_Channel_Int_Names, \
-    Outgoing_Int_Field_Names as SMS_Outgoing_Int_Names, validate_channel_definition as validate_sms_channel, \
-    validate_outgoing_definition as validate_sms_outgoing
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, parse_simple_type
 from zato.common.util.delivery_config import apply_delivery_defaults, Delivery_Int_Fields, validate_delivery_fields
@@ -46,8 +43,6 @@ from zato.server.generic.api.channel_hl7_mllp import clear_other_default_channel
 from zato.server.generic.api.outconn_sdk import get_secret_field_names
 from zato.server.generic.connection import GenericConnection
 from zato.server.service.internal import AdminService, ChangePasswordBase
-from zato.server.service.internal.channel.sms_jobs import delete_poll_job as delete_sms_poll_job, \
-    sync_poll_job as sync_sms_poll_job, validate_poll_schedule as validate_sms_poll_schedule
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.internal.generic.alert_settings import prepare_generic_alert_settings
 from zato.server.service.internal.health_check import delete_health_check_job, has_bulk_export_config, has_health_check_config, \
@@ -135,52 +130,11 @@ def on_mllp_outgoing_create_edit(service:'Service', data:'Bunch', model:'any_', 
 
 # ################################################################################################################################
 
-def prepare_sms_outgoing(service:'Service', data:'Bunch') -> 'None':
-    """ Checks the provider-dependent fields of an outgoing SMS connection and fills in the provider's host,
-    before the connection's opaque attributes are built out of the input.
-    """
-    try:
-        validate_sms_outgoing(data)
-    except ValueError as e:
-        raise BadRequest(service.cid, str(e))
-
-    apply_outgoing_host_default(data)
-
-# ################################################################################################################################
-
-def on_sms_channel_create_edit(service:'Service', data:'Bunch', model:'any_', old_name:'any_') -> 'None':
-    """ Checks that an SMS channel names an outgoing SMS connection that exists along with a service and a receive mode.
-    """
-    try:
-        validate_sms_channel(data)
-    except ValueError as e:
-        raise BadRequest(service.cid, str(e))
-
-    outconn_name = data[SMS.Field_Outconn_Name]
-
-    with closing(service.odb.session()) as session:
-        outconn = session.query(ModelGenericConn).\
-            filter(ModelGenericConn.type_==COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMS).\
-            filter(ModelGenericConn.name==outconn_name).\
-            first()
-
-    if not outconn:
-        raise BadRequest(service.cid, f'Outgoing SMS connection `{outconn_name}` does not exist')
-
-# ################################################################################################################################
-
 # The generic connection types that carry the queue switch and the DLQ settings
 _delivery_settings_types = (
     COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA,
-    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS,
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA,
-    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMS,
-)
-
-# The generic connection types that are channels without a queue in front of them - an SMS channel keeps its queue switch
-_channel_delivery_types = (
-    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA,
 )
 
 def prepare_delivery_settings(service:'Service', data:'Bunch') -> 'None':
@@ -189,7 +143,7 @@ def prepare_delivery_settings(service:'Service', data:'Bunch') -> 'None':
     apply_delivery_defaults(data)
 
     # A channel has no queue in front of it.
-    if data['type_'] in _channel_delivery_types:
+    if data['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
         data[HTTP_SOAP.Queue.Field_Use_Queue] = False
 
     try:
@@ -201,7 +155,6 @@ def prepare_delivery_settings(service:'Service', data:'Bunch') -> 'None':
 
 hook = {
     COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: on_kafka_create_edit,
-    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS: on_sms_channel_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: on_mcp_gateway_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: on_rule_engine_api_create_edit,
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: on_mllp_outgoing_create_edit,
@@ -241,11 +194,6 @@ def delete_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_')
         opaque = parse_instance_opaque_attr(instance)
         delete_health_check_job(service, opaque.get(_bulk.Field_Job_ID))
 
-    # .. and the polling job of an SMS channel ..
-    if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS:
-        opaque = parse_instance_opaque_attr(instance)
-        delete_sms_poll_job(service, opaque)
-
     # .. and the REST channel backing an HL7 MLLP one, which is deleted here, once, rather than by each worker's
     # teardown of the channel's wrapper - the same teardown an edit runs, which keeps that channel.
     if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP:
@@ -284,9 +232,6 @@ extra_secret_keys = (
 
     # Kafka
     KAFKA.Field_SSL_Key_Password,
-
-    # SMS
-    SMS.Field_Signature_Secret,
 
     # Discord and Slack
     'token',
@@ -394,9 +339,6 @@ int_attrs = int_attrs + list(MLLP_Channel_Int_Names) + list(MLLP_Outgoing_Int_Na
 
 # The Kafka integer fields
 int_attrs = int_attrs + list(KAFKA.Consumer.IntFieldList) + list(KAFKA.Producer.IntFieldList) + list(Delivery_Int_Fields)
-
-# The SMS integer fields
-int_attrs = int_attrs + list(SMS_Outgoing_Int_Names) + list(SMS_Channel_Int_Names)
 int_attrs = int_attrs + [
     HTTP_SOAP.Retry.Field_Max_Retries,
     HTTP_SOAP.Retry.Field_Sleep_Time,
@@ -511,9 +453,6 @@ class _CreateEdit(_BaseService):
         if data.get('type_') in _delivery_settings_types:
             prepare_delivery_settings(self, data)
 
-        if data.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMS:
-            prepare_sms_outgoing(self, data)
-
         # The cluster ID may be missing on input, e.g. in API calls that give only the object's ID,
         # or it may have been turned into a bool by the simple-type parser above (1 becomes True),
         # so it is always set to our own server's cluster here.
@@ -588,13 +527,6 @@ class _CreateEdit(_BaseService):
                 data[_bulk.Field_Run_Every] = run_every
                 conn.opaque[_bulk.Field_Run_Every] = run_every
 
-        # .. and for the polling schedule of an SMS channel.
-        if data.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS:
-            validate_sms_poll_schedule(self, data)
-            for name in SMS.Scheduler.FieldList:
-                if name in data:
-                    conn.opaque[name] = data[name]
-
         # AS2 outgoing connections are stored in the external database when one is configured,
         # under their local ids, without the offset they are known under everywhere else.
         is_ext = needs_ext_db(data.type_)
@@ -661,15 +593,6 @@ class _CreateEdit(_BaseService):
                         if previous_job_id := model_opaque.get(_bulk.Field_Job_ID):
                             data[_bulk.Field_Job_ID] = previous_job_id
                             conn.opaque[_bulk.Field_Job_ID] = previous_job_id
-
-                # An SMS channel's polling job and poll state are the server's own and an edit never includes them
-                if data.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS:
-                    model_opaque = parse_instance_opaque_attr(model)
-                    for name in (SMS.Scheduler.Field_Job_ID, SMS.Field_Poll_State):
-                        if not data.get(name):
-                            if stored_value := model_opaque.get(name):
-                                data[name] = stored_value
-                                conn.opaque[name] = stored_value
 
                 # The audit export's payload flag is set through enmasse only and has no field in the Dashboard,
                 # so an edit that does not carry it keeps what was stored.
@@ -783,10 +706,6 @@ class _CreateEdit(_BaseService):
         # .. and so can its bulk export job, which starts an export on the tab's schedule.
         if data.type_ in _bulk_export_link_types:
             sync_bulk_export_job(self, data, public_id, _bulk_export_link_types[data.type_])
-
-        # .. and so can the polling job of an SMS channel.
-        if data.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS:
-            sync_sms_poll_job(self, data, public_id)
 
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value

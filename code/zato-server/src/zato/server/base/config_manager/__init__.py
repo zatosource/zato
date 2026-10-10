@@ -73,7 +73,6 @@ from zato.server.generic.api.gateway_rule_engine import GatewayRuleEngineWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
-from zato.server.generic.api.channel_sms import ChannelSMSWrapper
 from zato.server.generic.api.outconn_as2 import OutconnAS2Wrapper
 from zato.server.generic.api.outconn_es import OutconnESWrapper
 from zato.server.generic.api.outconn_ftp import OutconnFTPWrapper
@@ -83,7 +82,6 @@ from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_ibm_mq import OutconnIBMMQWrapper
 from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
-from zato.server.generic.api.outconn_sms import OutconnSMSWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
@@ -273,12 +271,6 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - Kafka outconns
         self.outconn_kafka = {}
 
-        # Generic connections - SMS channels
-        self.channel_sms = {}
-
-        # Generic connections - SMS outconns
-        self.outconn_sms = {}
-
         # Generic connections - Elasticsearch outconns
         self.outconn_es = {}
 
@@ -372,8 +364,6 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ: self.outconn_ibm_mq,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: self.channel_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: self.outconn_kafka,
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS: self.channel_sms,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMS: self.outconn_sms,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LLM: self.outconn_llm,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
@@ -409,8 +399,6 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ: OutconnIBMMQWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: ChannelKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: OutconnKafkaWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS: ChannelSMSWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMS: OutconnSMSWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LLM: OutconnLLMWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
@@ -1064,7 +1052,6 @@ class ConfigManager(_ConfigManagerBase):
         channel_ibm_mq_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ, {})
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
-        channel_sms_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SMS, {})
         chat_discord_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD, {})
         chat_microsoft_teams_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS, {})
@@ -1097,7 +1084,6 @@ class ConfigManager(_ConfigManagerBase):
         outconn_ftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_FTP, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
         outconn_smb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB, {})
-        outconn_sms_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMS, {})
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
@@ -1105,7 +1091,6 @@ class ConfigManager(_ConfigManagerBase):
             channel_ibm_mq_map,
             channel_kafka_map,
             channel_openapi_map,
-            channel_sms_map,
             chat_discord_map,
             chat_microsoft_teams_map,
             chat_slack_map,
@@ -1134,7 +1119,6 @@ class ConfigManager(_ConfigManagerBase):
             outconn_sap_map,
             outconn_sftp_map,
             outconn_smb_map,
-            outconn_sms_map,
         ]
 
         password_maps = [
@@ -1156,7 +1140,6 @@ class ConfigManager(_ConfigManagerBase):
             outconn_sap_map,
             outconn_sftp_map,
             outconn_smb_map,
-            outconn_sms_map,
         ]
 
         for regular_item in regular_maps:

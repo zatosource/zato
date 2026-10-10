@@ -10,9 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps as json_dumps, loads as json_loads
 
 # Zato
-from zato.common.api import HL7, HTTP_SOAP, SCHEDULER, SchedulerLink, SMS, URL_TYPE
+from zato.common.api import HL7, HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
 from zato.common.odb.model import Job
-from zato.common.sms.config import is_polling
 from zato.common.util.api import as_bool, utcnow
 from zato.common.util.interval import interval_from_unit
 
@@ -36,7 +35,6 @@ _invocation = HTTP_SOAP.Invocation
 _health_check = HTTP_SOAP.HealthCheck
 _retry = HTTP_SOAP.Retry
 _bulk = HL7.BulkExport
-_sms_scheduler = SMS.Scheduler
 
 # The retry config fields shared by outgoing REST and SOAP connections,
 # each mapped to its shared default value.
@@ -403,65 +401,6 @@ def sync_bulk_export_job(
         extra=extra,
     )
     conn_def[_bulk.Field_Job_ID] = job.id
-
-# ################################################################################################################################
-
-def sync_sms_poll_job(
-    importer,  # type: EnmasseYAMLImporter
-    session,   # type: SASession
-    conn_def,  # type: anydict
-    conn,      # type: any_
-    ) -> 'None':
-    """ Creates or updates the polling job of an SMS channel being imported, storing the job ID back in the definition
-    so it lands in the channel's opaque attributes. A channel in webhook mode has no job, so one left over from
-    an earlier import in polling mode is deleted and the stored job ID is cleared.
-    """
-    job_name = _sms_scheduler.Job_Prefix + conn.name
-
-    if not is_polling(conn_def):
-
-        existing_job = session.query(Job).filter_by(name=job_name, cluster_id=importer.cluster_id).first()
-
-        if existing_job:
-            # Deleting the job cascades to its interval row through the ORM relationship
-            session.delete(existing_job)
-
-        conn_def[_sms_scheduler.Field_Job_ID] = 0
-        return
-
-    run_every = conn_def.get(_sms_scheduler.Field_Run_Every)
-    if not run_every:
-        run_every = _sms_scheduler.Default_Run_Every
-    conn_def[_sms_scheduler.Field_Run_Every] = run_every
-
-    run_unit = conn_def.get(_sms_scheduler.Field_Run_Unit)
-    if not run_unit:
-        run_unit = _sms_scheduler.Default_Run_Unit
-    conn_def[_sms_scheduler.Field_Run_Unit] = run_unit
-
-    extra = json_dumps({
-        _sms_scheduler.Extra_Conn_ID: conn.id,
-        _sms_scheduler.Extra_Conn_Name: conn.name,
-    })
-
-    # The job starts right away, there is no user-facing start date
-    start_date = utcnow().isoformat()
-
-    job = _sync_one_invocation_job(
-        importer,
-        session,
-        conn_def,
-        conn,
-        kind=SchedulerLink.KindType.Scheduler,
-        conn_type=SchedulerLink.ConnType.SMS_Channel,
-        job_name=job_name,
-        job_service=_sms_scheduler.Dispatch_Service,
-        run_every=run_every,
-        run_unit=run_unit,
-        start_date=start_date,
-        extra=extra,
-    )
-    conn_def[_sms_scheduler.Field_Job_ID] = job.id
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1173,9 +1173,8 @@ class SchedulerLink:
         REST_Outgoing = 'rest_outgoing'
         SOAP_Outgoing = 'soap_outgoing'
         FHIR_Outgoing = 'fhir_outgoing'
-        SMS_Channel = 'sms_channel'
 
-    ConnTypeList = (ConnType.REST_Outgoing, ConnType.SOAP_Outgoing, ConnType.FHIR_Outgoing, ConnType.SMS_Channel)
+    ConnTypeList = (ConnType.REST_Outgoing, ConnType.SOAP_Outgoing, ConnType.FHIR_Outgoing)
 
     class KindType:
         Scheduler = 'scheduler'
@@ -1466,118 +1465,6 @@ class GENERIC:
             OUTCONN_SAP = 'outconn-sap'
             OUTCONN_SFTP = 'outconn-sftp'
             OUTCONN_SMB = 'outconn-smb'
-            CHANNEL_SMS = 'channel-sms'
-            OUTCONN_SMS = 'outconn-sms'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SMS:
-    """ SMS-specific constants - the providers an outgoing connection can send through, the two ways a channel
-    receives, and the scheduler job a polling channel owns.
-    """
-    class Provider:
-        Twilio = 'twilio'
-        Vonage = 'vonage'
-        Infobip = 'infobip'
-        Africas_Talking = 'africas-talking'
-
-    ProviderList = (Provider.Twilio, Provider.Vonage, Provider.Infobip, Provider.Africas_Talking)
-
-    ProviderHuman = {
-        Provider.Twilio: 'Twilio',
-        Provider.Vonage: 'Vonage',
-        Provider.Infobip: 'Infobip',
-        Provider.Africas_Talking: "Africa's Talking",
-    }
-
-    # The public address of each provider's API - Infobip accounts each have their own base URL, so Infobip has none.
-    Default_Host = {
-        Provider.Twilio: 'https://api.twilio.com',
-        Provider.Vonage: 'https://api.nexmo.com',
-        Provider.Infobip: '',
-        Provider.Africas_Talking: 'https://api.africastalking.com',
-    }
-
-    # The provider whose callbacks are signed with a secret of their own
-    Providers_With_Signature_Secret = (Provider.Vonage,)
-
-    # The provider whose host has no default and is required on input
-    Providers_Requiring_Host = (Provider.Infobip,)
-
-    class Receive_Mode:
-        Webhook = 'webhook'
-        Polling = 'polling'
-
-    Receive_Mode_List = (Receive_Mode.Webhook, Receive_Mode.Polling)
-
-    Receive_Mode_Human = {
-        Receive_Mode.Webhook: 'Webhook',
-        Receive_Mode.Polling: 'Polling',
-    }
-
-    # The path prefix of the internal REST channel that receives every SMS channel's callbacks - the channel's name follows
-    Webhook_Path_Prefix = '/zato/sms/'
-
-    # The name of the internal REST channel and of the service behind it
-    Webhook_Channel_Name = 'zato.channel.sms.receive'
-    Webhook_Service = 'zato.channel.sms.receive'
-
-    # The service the Dashboard's Invoke dialog of an outgoing connection calls
-    Invoke_Service = 'zato.outgoing.sms.invoke'
-
-    # The response header through which the webhook returns the correlation ID of each callback it accepted
-    Header_Callback_CID = 'X-Zato-CID'
-
-    # The outgoing connection's own fields
-    Field_Provider = 'provider'
-    Field_Host = 'host'
-    Field_Username = 'username'
-    Field_Sender = 'sender'
-    Field_Signature_Secret = 'signature_secret'
-    Field_Channel_Name = 'channel_name'
-    Field_Pool_Size = 'pool_size'
-    Field_Timeout = 'timeout'
-
-    # The secret is stored in the connection's secret column and reaches the wrapper under this name,
-    # while an enmasse file gives it under the other one
-    Field_Secret = 'secret'
-    Field_Password = 'password'
-
-    # The channel's own fields
-    Field_Outconn_Name = 'outconn_name'
-    Field_Service = 'service'
-    Field_Receive_Mode = 'receive_mode'
-    Field_Poll_State = 'poll_state'
-
-    Default_Pool_Size = 10
-    Default_Timeout = 30
-
-    # The number of received events a channel records to drop a resent callback, and their expiry
-    Received_Events_Max = 10_000
-    Received_Events_Expiry_Seconds = 48 * 3600
-
-    class Scheduler:
-
-        # Prefix of the names of the jobs that are auto-created for polling SMS channels
-        Job_Prefix = 'sms.'
-
-        # Name of the internal service that the auto-created jobs invoke to poll a provider
-        Dispatch_Service = 'zato.channel.sms.poll'
-
-        # Names of the keys in the extra data of an auto-created job
-        Extra_Conn_ID = 'sms_channel_id'
-        Extra_Conn_Name = 'sms_channel_name'
-
-        # Names of the opaque attributes that describe an SMS channel's linked job
-        Field_Run_Every = 'scheduler_run_every'
-        Field_Run_Unit = 'scheduler_run_unit'
-        Field_Job_ID = 'scheduler_job_id'
-
-        Default_Run_Every = 1
-        Default_Run_Unit = 'minutes'
-
-        FieldList = (Field_Run_Every, Field_Run_Unit, Field_Job_ID)
 
 # ################################################################################################################################
 # ################################################################################################################################

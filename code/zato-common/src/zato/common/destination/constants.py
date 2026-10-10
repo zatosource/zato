@@ -22,7 +22,6 @@ class DestinationType:
     FHIR    = 'hl7-fhir'
     SMTP    = 'smtp'
     KAFKA   = 'kafka'
-    SMS     = 'sms'
     SFTP    = 'sftp'
     SERVICE = 'service'
 
@@ -59,7 +58,6 @@ Known_Destination_Types = (
     DestinationType.FHIR,
     DestinationType.SMTP,
     DestinationType.KAFKA,
-    DestinationType.SMS,
     DestinationType.SFTP,
     DestinationType.SERVICE,
 )

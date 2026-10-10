@@ -14,7 +14,7 @@
 	test-mcp test-bearer test-graphql test-grpc \
 	test-as2 test-as4 test-edifact test-x12 test-soap \
 	test-llm \
-	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord test-sms \
+	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
 	test-hl7 test-fhir-bulk-export test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
@@ -505,11 +505,6 @@ COSMIC_RAY_SESSION := $(CURDIR)/code/tests/.cr-session.sqlite
 # run through a wrapper that reports how far it has got while it works
 COSMIC_RAY_EXEC := $(CURDIR)/code/tests/rust/cosmic-ray/exec_with_progress.py
 
-# sms_disabled - the SMS connection tests run in test-sms only
-Zato_Test_Server_SMS_Ignore := \
-	--ignore=$(CURDIR)/code/zato-server/test/zato/connection/sms/ \
-	--ignore=$(CURDIR)/code/zato-server/test/zato/connection/test_sms_providers.py
-
 test-server: ## Server unit and integration tests.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -521,7 +516,6 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/tests/python/zato-server/django_plugin/ \
 		$(CURDIR)/code/zato-server/test/zato/connection/ \
 		$(CURDIR)/code/zato-server/test/zato/pattern/ \
-		$(Zato_Test_Server_SMS_Ignore) \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 # The CLI is driven through sh, which forks, so these tests need a process that gevent has not patched
@@ -726,10 +720,9 @@ test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level lo
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-# discord_disabled, sms_disabled - these enmasse suites run in test-discord and test-sms only
+# discord_disabled - these enmasse suites run in test-discord only
 Zato_Test_Enmasse_Disabled := \
-	test_importer_enmasse_discord.py test_exporter_enmasse_discord.py \
-	test_importer_enmasse_sms.py test_exporter_enmasse_sms.py
+	test_importer_enmasse_discord.py test_exporter_enmasse_discord.py
 
 # Every enmasse suite lives here - the importers, the exporters and the round trips for
 # every connection type. Targets for a given connection type do not carry enmasse tests
@@ -1092,21 +1085,6 @@ test-discord: ## Discord connection tests - the client against a simulated Disco
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_chat_discord_lifecycle.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		$(Zato_Log)
-
-test-sms: ## SMS connection tests - the Twilio, Vonage, Infobip and Africa's Talking clients, and the enmasse importer and exporter.
-	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/zato-server/test/zato/connection/sms/ \
-		$(CURDIR)/code/zato-server/test/zato/connection/test_sms_providers.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sms -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		$(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_sms.py \
-		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_sms.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sms_enmasse -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 

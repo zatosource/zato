@@ -63,13 +63,11 @@ _top_level_order = [
     'channel_azure_service_bus',
     'outgoing_azure_service_bus',
     'channel_kafka',
-    'channel_sms',
     'mcp_gateway',
     'rule_engine_api',
     'outgoing_graphql',
     'outgoing_grpc',
     'outgoing_kafka',
-    'outgoing_sms',
     'channel_mllp',
     'outgoing_mllp',
     'outgoing_fhir',
@@ -223,11 +221,6 @@ _object_order['outgoing_kafka']   = ('name', 'is_active', 'address', 'topic', 's
     'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', 'ssl_key_password', \
     'compression', 'acks', 'is_idempotent', 'max_message_size', 'linger_ms', 'send_timeout', \
     'is_audit_log_active', 'is_audit_export_payload_active') + Retry_Fields + Delivery_Fields
-
-_object_order['outgoing_sms'] = ('name', 'is_active', 'provider', 'host', 'username', 'password', 'sender', \
-    'signature_secret', 'channel_name', 'pool_size', 'timeout') + Retry_Fields + Delivery_Fields
-_object_order['channel_sms']  = ('name', 'is_active', 'outconn', 'service', 'receive_mode', 'scheduler_run_every', \
-    'scheduler_run_unit') + Retry_Fields + Delivery_Fields
 
 _object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names + ('alerts:dict',)
 _object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names + ('alerts:dict',)

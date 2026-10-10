@@ -550,8 +550,6 @@ class TestRefusals:
          'security': [{'name': 's', 'type': 'basic_auth', 'username': 'u', 'quota_tier': 't'}]},
         {'quota_tier': [{'name': 't', 'should_delete': True}],
          'groups': [{'name': 'g', 'quota_tier': 't'}]},
-        {'outgoing_sms': [{'name': 's', 'should_delete': True}],
-         'channel_sms': [{'name': 'c', 'service': _service_name, 'outconn': 's'}]},
         {'pubsub_topic': [{'name': 't', 'should_delete': True}],
          'pubsub_subscription': [{'security': 's', 'topic_list': ['t']}]},
         {'outgoing_rest': [{'name': 'o', 'should_delete': True}],

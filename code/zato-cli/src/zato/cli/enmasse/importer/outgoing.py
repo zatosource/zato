@@ -543,25 +543,6 @@ class OutgoingSync:
 
 # ################################################################################################################################
 
-    def sync_outgoing_sms(self, outgoing_sms_list:'list', session:'SASession') -> 'tuple':
-        if not outgoing_sms_list:
-            return [], []
-
-        count = len(outgoing_sms_list)
-        noun = 'definition' if count == 1 else 'definitions'
-        logger.info(f'Processing {count} SMS outgoing {noun}')
-
-        for idx, item in enumerate(outgoing_sms_list):
-            logger.info('SMS outgoing item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
-
-        created, updated = self.outgoing_sms_importer.sync_definitions(outgoing_sms_list, session)
-        self.outgoing_sms_defs = self.outgoing_sms_importer.connection_defs
-        logger.info('Processed SMS outgoing definitions: created=%d updated=%d', len(created), len(updated))
-
-        return created, updated
-
-# ################################################################################################################################
-
     def sync_outgoing_graphql(self, outgoing_graphql_list:'list', session:'SASession') -> 'tuple':
         if not outgoing_graphql_list:
             return [], []

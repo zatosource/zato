@@ -28,7 +28,6 @@ from zato.common.alerting.seed.rules_fhir import fhir_rules
 from zato.common.alerting.seed.rules_llm import llm_rules
 from zato.common.alerting.seed.rules_mcp import mcp_rules
 from zato.common.alerting.seed.rules_kafka import kafka_outgoing_rules
-from zato.common.alerting.seed.rules_sms import sms_outgoing_rules
 from zato.common.alerting.seed.rules_mllp import mllp_channel_rules, mllp_outgoing_rules
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditSource
@@ -168,7 +167,6 @@ default_rulesets = [
     ('alerts_mllp_channel',  mllp_channel_rules),
     ('alerts_mllp_outgoing', mllp_outgoing_rules),
     ('alerts_kafka_outgoing', kafka_outgoing_rules),
-    ('alerts_sms_outgoing',  sms_outgoing_rules),
     ('alerts_rest',          rest_rules),
     ('alerts_soap',          soap_rules),
     ('alerts_fhir',          fhir_rules),

@@ -38,8 +38,8 @@ class ModuleCtx:
     Scheduler_Start_Date = '2030-01-01T00:00:00'
 
     # How many jobs the owning objects of the dependent jobs test create - the IMAP job, three schedule jobs,
-    # the FHIR health check and bulk export jobs, the SMS polling job and the outgoing REST invocation job
-    Dependent_Job_Count = 8
+    # the FHIR health check and bulk export jobs and the outgoing REST invocation job
+    Dependent_Job_Count = 7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -299,9 +299,9 @@ def test_quota_tier(client:'AdminClient', pickup:'Pickup', runtime:'Runtime') ->
 
 def test_dependent_jobs(client:'AdminClient', pickup:'Pickup') -> 'None':
     """ The jobs that owning objects create are removed along with those objects - the IMAP job, the file transfer
-    schedule jobs, the FHIR health check and bulk export jobs, the SMS polling job and the outgoing REST invocation job.
+    schedule jobs, the FHIR health check and bulk export jobs and the outgoing REST invocation job.
     """
-    names = _names('dependent', 'imap', 'sftp', 'smb', 'ftp', 'fhir', 'sms_outconn', 'sms', 'outgoing')
+    names = _names('dependent', 'imap', 'sftp', 'smb', 'ftp', 'fhir', 'outgoing')
 
     schedule = {
         'name': 'enmasse.delete.live.schedule',
@@ -365,23 +365,6 @@ def test_dependent_jobs(client:'AdminClient', pickup:'Pickup') -> 'None':
                 'start_date': ModuleCtx.Scheduler_Start_Date,
             },
         }],
-        'outgoing_sms': [{
-            'name': names['sms_outconn'],
-            'provider': 'twilio',
-            'username': 'AC0123456789',
-            'password': 'Zato_Enmasse_Delete_Live_Password_32',
-            'sender': '+12025550100',
-            'is_active': False,
-        }],
-        'channel_sms': [{
-            'name': names['sms'],
-            'outconn': names['sms_outconn'],
-            'service': Ping_Service,
-            'is_active': False,
-            'receive_mode': 'polling',
-            'scheduler_run_every': 30,
-            'scheduler_run_unit': 'seconds',
-        }],
         'outgoing_rest': [outgoing_rest(names['outgoing'],
             scheduler_run_every=10, scheduler_run_unit='minutes', scheduler_start_date=ModuleCtx.Scheduler_Start_Date)],
     }
@@ -402,7 +385,6 @@ def test_dependent_jobs(client:'AdminClient', pickup:'Pickup') -> 'None':
         'smb':           [marked('smb', names['smb'])],
         'ftp':           [marked('ftp', names['ftp'])],
         'outgoing_fhir': [marked('outgoing_fhir', names['fhir'])],
-        'channel_sms':   [marked('channel_sms', names['sms'])],
         'outgoing_rest': [marked('outgoing_rest', names['outgoing'])],
     }
 
@@ -413,7 +395,7 @@ def test_dependent_jobs(client:'AdminClient', pickup:'Pickup') -> 'None':
     remaining = sorted(set(new_jobs) & set(job_names(client)))
     assert not remaining, remaining
 
-    for section, name in (('email_imap', names['imap']), ('outgoing_rest', names['outgoing']), ('channel_sms', names['sms'])):
+    for section, name in (('email_imap', names['imap']), ('outgoing_rest', names['outgoing'])):
         assert name not in listed_names(client, section), f'{section} `{name}` is still listed'
 
 # ################################################################################################################################

@@ -52,7 +52,7 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, FTPFacade, IBMMQFacade, KafkaFacade, \
     GraphQLFacade, KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SalesforceFacade, SchedulerFacade, \
-    SFTPFacade, SMBFacade, SMSFacade, SOAPFacade
+    SFTPFacade, SMBFacade, SOAPFacade
 from zato.server.connection.ccda import CCDAFacade
 from zato.server.connection.grpc_ import GRPCFacade
 from zato.server.destination.facade import DestinationFacade
@@ -539,10 +539,6 @@ class Service:
         # MLLP facade for outgoing connections
         self.mllp = MLLPFacade()
 
-        # SMS facade for outgoing connections, also reachable as self.out.sms
-        self.sms = SMSFacade()
-        self.out.sms = self.sms
-
         # OData facade for outgoing connections
         self.odata = ODataFacade()
 
@@ -717,9 +713,6 @@ class Service:
 
         # MLLP facade
         self.mllp.init(self.cid, self._config_manager)
-
-        # SMS facade
-        self.sms.init(self._config_manager, self.cid)
 
         # OData facade
         self.odata.init(self._config_manager.outconn_odata)
