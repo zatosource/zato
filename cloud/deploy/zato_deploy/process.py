@@ -60,8 +60,10 @@ def run_command(
     extra_env:'strstrdict | None'=None,
     cwd:'strnone'=None,
     timeout:'float | None'=None,
+    is_stdout_logged:'bool'=True,
     ) -> 'CommandResult':
-    """ Runs a command to completion and logs its command line, exit code, duration and all of its output.
+    """ Runs a command to completion and logs its command line, exit code, duration and its output,
+    the standard output only if is_stdout_logged is True.
     """
     env = _build_env(extra_env)
     command_line = shlex.join(command)
@@ -84,7 +86,10 @@ def run_command(
     out.stderr    = completed.stderr
 
     logger.info('Exit code %d after %.1fs: %s', out.exit_code, elapsed, command_line)
-    _log_output('stdout', out.stdout)
+
+    if is_stdout_logged:
+        _log_output('stdout', out.stdout)
+
     _log_output('stderr', out.stderr)
 
     return out
