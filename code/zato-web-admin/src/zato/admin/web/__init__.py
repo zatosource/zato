@@ -10,8 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from datetime import datetime
 
 # dateutil
+from dateutil.parser import parse as dt_parse
 from dateutil.relativedelta import relativedelta
 
 # Django
@@ -70,8 +72,16 @@ def from_utc_to_user(dt, user_profile, format='date_time'):
     return django_date_filter(
         _from_utc_to_local(dt, user_profile.timezone), getattr(user_profile, '{}_format_py'.format(format)))
 
-def from_user_to_utc(dt, user_profile, format='date_time'):
-    """ Converts a datetime object from a user-selected timezone to UTC.
+def from_naive_to_user(dt, user_profile, format='date_time'):
+    """ Formats a datetime object in a user-selected datetime format, without converting it to any other timezone.
+    """
+    if not isinstance(dt, datetime):
+        dt = dt_parse(dt)
+
+    return django_date_filter(dt, getattr(user_profile, '{}_format_py'.format(format)))
+
+def _prepare_user_dt(dt, user_profile, format):
+    """ Returns a datetime string in a user-selected format ready for parsing, and whether its day comes first.
     """
     # The underlying parser gets confused by stuff like '15.08.12 9:56.59 PM',
     # that is, where the seconds separator (.) is different from what separates hours from minutes,
@@ -84,4 +94,16 @@ def from_user_to_utc(dt, user_profile, format='date_time'):
         dt = '01-01-' + dt
 
     dt_format = getattr(user_profile, '{}_format_py'.format(format))
-    return _from_local_to_utc(dt, user_profile.timezone, dt_format.startswith('d')).replace(tzinfo=None)
+    return dt, dt_format.startswith('d')
+
+def from_user_to_utc(dt, user_profile, format='date_time'):
+    """ Converts a datetime object from a user-selected timezone to UTC.
+    """
+    dt, dayfirst = _prepare_user_dt(dt, user_profile, format)
+    return _from_local_to_utc(dt, user_profile.timezone, dayfirst).replace(tzinfo=None)
+
+def from_user_to_naive(dt, user_profile, format='date_time'):
+    """ Parses a datetime object given in a user-selected datetime format, without converting it to any other timezone.
+    """
+    dt, dayfirst = _prepare_user_dt(dt, user_profile, format)
+    return dt_parse(dt, dayfirst=dayfirst).replace(tzinfo=None)

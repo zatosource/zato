@@ -110,9 +110,15 @@ def _keep_unsent_job_fields(self:'any_', input:'any_') -> 'None':
         existing_is_active = job_row.is_active
         existing_opaque = parse_instance_opaque_attr(job_row)
 
+    # A timezone that the caller sent empty is being removed, which is different from not being sent at all
+    payload = self.request.payload
+    sent_params = payload if isinstance(payload, dict) else {}
+
     # The optional fields - run timeouts, jitter, timezone and the four hooks
     for param in _new_params:
         if input.get(param) in _not_sent:
+            if param == 'timezone' and param in sent_params:
+                continue
             existing_value = existing_opaque.get(param)
             if existing_value:
                 input[param] = existing_value
@@ -417,6 +423,8 @@ def _create_edit(self, action):
                 opaque = json_loads(job_row.opaque1)
                 for stale_key in _opaque_stale_keys:
                     opaque.pop(stale_key, None)
+                if not opaque.get('timezone'):
+                    opaque.pop('timezone', None)
                 job_row.opaque1 = json_dumps(opaque)
 
             session.add(job_row)

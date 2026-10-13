@@ -26,7 +26,7 @@ from django.template.response import TemplateResponse
 from pytz import UTC
 
 # Zato
-from zato.admin.web import from_user_to_utc, from_utc_to_user
+from zato.admin.web import from_naive_to_user, from_user_to_naive, from_user_to_utc, from_utc_to_user
 from zato.admin.web.views import get_js_dt_format, method_allowed, ping_json_response, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
@@ -154,9 +154,13 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions, regardless of the job's type.
     """
+    # The start date of a job with a timezone is given in that timezone and the scheduler converts it to UTC itself.
     start_date = params.get(form_prefix + 'start_date', '')
     if start_date:
-        start_date = from_user_to_utc(start_date, user_profile)
+        if params.get(form_prefix + 'timezone'):
+            start_date = from_user_to_naive(start_date, user_profile)
+        else:
+            start_date = from_user_to_utc(start_date, user_profile)
 
     message = {
         'name': params[form_prefix + 'name'],
@@ -206,10 +210,13 @@ def _get_create_edit_interval_based_message(user_profile, cluster, params, form_
     input_dict['minutes'] = params.get(form_prefix + 'minutes', '')
     input_dict['repeats'] = params.get(form_prefix + 'repeats', '')
 
-    for param in ('jitter_ms', 'timezone', 'max_execution_time_ms'):
+    for param in ('jitter_ms', 'max_execution_time_ms'):
         val = params.get(form_prefix + param, '')
         if val:
             input_dict[param] = val
+
+    # Sent even when empty, so that clearing the field on an edit removes the job's timezone
+    input_dict['timezone'] = params.get(form_prefix + 'timezone', '')
 
     return input_dict
 
@@ -327,13 +334,19 @@ def index(req):
                 service_name = job_elem.service_name
                 extra = job_elem.extra
                 job_type_friendly = job_type_friendly_names[job_type]
+                timezone = getattr(job_elem, 'timezone', default_timezone)
 
                 job = Bunch()
                 job.id = id
                 job.name = name
                 job.is_active = is_active
                 job.job_type = job_type
-                job.start_date = from_utc_to_user(start_date+'+00:00', req.zato.user_profile) if start_date else ''
+                if not start_date:
+                    job.start_date = ''
+                elif timezone:
+                    job.start_date = from_naive_to_user(start_date, req.zato.user_profile)
+                else:
+                    job.start_date = from_utc_to_user(start_date+'+00:00', req.zato.user_profile)
                 job.extra = extra
                 job.service_name = service_name
                 job.job_type_friendly = job_type_friendly
@@ -362,7 +375,7 @@ def index(req):
                     job.interval_based = ib_job
 
                     job.jitter_ms = getattr(job_elem, 'jitter_ms', default_jitter_ms)
-                    job.timezone = getattr(job_elem, 'timezone', default_timezone)
+                    job.timezone = timezone
                     job.max_execution_time_ms = getattr(job_elem, 'max_execution_time_ms', default_max_execution_time_ms)
 
                 else:

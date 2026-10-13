@@ -392,8 +392,8 @@ $.fn.zato.scheduler.field_descriptions = {
             'Data from the extra field is available to it as self.request.input.',
         'extra': 'Optional data passed to the service on each run, available as self.request.input. ' +
             'Use it to parameterize the service.',
-        'timezone': 'The timezone the start time and intervals are computed in. ' +
-            'Leave empty to use the scheduler server\'s own timezone.',
+        'timezone': 'The timezone the start time is given in. Later runs follow at each interval. ' +
+            'Leave empty to give the start time in the timezone from My settings.',
         'on_success_service': 'A service invoked each time this job completes successfully, ' +
             'e.g. for follow-up processing or notifications.',
         'on_success_job': 'Another scheduler job to run after this one completes successfully. ' +

@@ -51,7 +51,7 @@ class _Base(forms.Form):
 class OneTimeSchedulerJobForm(_Base):
     pass
 
-_tz_choices = [('', '--- Same as server ---')] + [(tz, tz) for tz in tz_names]
+_tz_choices = [('', '--- Same as in My settings ---')] + [(tz, tz) for tz in tz_names]
 
 class IntervalBasedSchedulerJobForm(_Base):
     weeks = forms.CharField(widget=forms.NumberInput(attrs={'class':'validate-digits', 'style':'width:10.4%', 'min':'0'}))

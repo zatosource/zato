@@ -366,7 +366,16 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     var service_link = config_service ? $.fn.zato.data_table.service_text(config_service, cluster_id) : '-';
     html += card('Service', service_link, true);
 
-    var start_display = job.start_date ? kit.format_local_time(job.start_date) : '-';
+    // A job with a timezone keeps its start date in that timezone, any other job keeps it in UTC.
+    var start_display = '-';
+    if (job.start_date) {
+        var start_naive = job.start_date.replace(/(Z|[+-]\d\d:\d\d)$/, '');
+        if (job.timezone) {
+            start_display = kit.format_local_time(start_naive) + ' ' + job.timezone;
+        } else {
+            start_display = kit.format_local_time(start_naive + 'Z');
+        }
+    }
     html += card('Start time', start_display, false);
 
     var status_html = job.is_active
