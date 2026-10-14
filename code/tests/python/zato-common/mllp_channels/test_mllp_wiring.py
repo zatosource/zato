@@ -755,7 +755,7 @@ class TestRestOnlyMode(_WiringTestCase):
 # ################################################################################################################################
 
 class TestTheBackingRestChannelIsNotDeletedByTheWrapper(_WiringTestCase):
-    """ The wrapper's teardown runs on every worker and on every edit, an edit being a delete followed
+    """ The wrapper's teardown runs on every delete and on every edit, an edit being a delete followed
     by a create, so it does not delete the REST channel backing the MLLP one - that channel is deleted
     once, by the service that deletes the MLLP channel.
     """

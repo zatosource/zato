@@ -119,7 +119,7 @@ class InstanceHookDispatch(TestCase):
 
         # .. verify the call was made with the correct arguments.
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0], (None, 'fake-session', 'my-mcp', 1))
+        self.assertEqual(calls[0], (None, 'fake-session', 'my-mcp'))
 
 # ################################################################################################################################
 # ################################################################################################################################

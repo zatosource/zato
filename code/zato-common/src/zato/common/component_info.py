@@ -15,7 +15,7 @@ from operator import attrgetter
 from time import time
 
 # psutil
-from psutil import NoSuchProcess, Process
+from psutil import Process
 
 # PyYAML
 import yaml
@@ -72,17 +72,6 @@ def format_connections(conns, format):
             out_items.append(out_item)
 
     return out
-
-def get_server_pids(component_path):
-    """ Returns PIDs of a given server, which must be already started.
-    """
-    master_proc_pid = int(open_r(os.path.join(component_path, MISC.PIDFILE)).read())
-    try:
-        out = sorted(elem.pid for elem in Process(master_proc_pid).children())
-    except NoSuchProcess:
-        out = []
-    finally:
-        return out
 
 def get_info(component_path, format, _now=datetime.utcnow) -> 'stranydict':
 

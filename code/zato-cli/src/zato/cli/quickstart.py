@@ -295,7 +295,6 @@ class Create(ZatoCommand):
     """
     needs_empty_dir = True
     opts:'any_' = deepcopy(common_odb_opts)
-    opts.append({'name':'--threads-per-server', 'help':'How many main threads the server will use', 'default':1}) # type: ignore
     opts.append({'name':'--secret-key', 'help':'Main secret key the server will use'})
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
@@ -404,11 +403,6 @@ class Create(ZatoCommand):
         next_step = count(1)
         server_name = 'server1'
 
-        try:
-            threads_per_server = int(args.threads_per_server)
-        except Exception:
-            threads_per_server = 1
-
         # This could've been set to True by user in the command-line so we'd want
         # to unset it so that individual commands quickstart invokes don't attempt
         # to store their own configs.
@@ -497,7 +491,6 @@ class Create(ZatoCommand):
             create_server_args.server_name = server_name
             create_server_args.path = server_path
             create_server_args.secret_key = secret_key
-            create_server_args.threads = threads_per_server
             create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
             create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
             create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password

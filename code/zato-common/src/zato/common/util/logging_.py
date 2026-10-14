@@ -214,14 +214,7 @@ version: 1
 def get_logging_conf_contents() -> 'str':
     # type: (str) -> str
 
-    # We import it here to make CLI work faster
-    from zato.common.util.platform_ import is_linux
-
-    linux_log_handler_class     = 'logging.handlers.RotatingFileHandler' # Previously = ConcurrentRotatingFileHandler
-    non_linux_log_handler_class = 'logging.handlers.RotatingFileHandler'
-
-    # Under Windows, we cannot have multiple processes access the same log file
-    log_handler_class = linux_log_handler_class if is_linux else non_linux_log_handler_class
+    log_handler_class = 'logging.handlers.RotatingFileHandler'
 
     # This can be overridden by users
     if server_log_max_size := os.environ.get('Zato_Server_Log_Max_Size'):

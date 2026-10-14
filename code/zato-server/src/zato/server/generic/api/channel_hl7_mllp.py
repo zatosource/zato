@@ -304,7 +304,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
         if not security_id:
             return ''
 
-        url_data = self.parallel_server.worker_store.request_dispatcher.url_data
+        url_data = self.parallel_server.url_data
         security_definition = url_data.mtls_get_by_id(security_id)
 
         # A definition that has been deleted since the channel referenced it leaves the channel
@@ -385,8 +385,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
         if _shared_state.server:
             return 0
 
-        # The internal port follows from the server's own port, so every worker process of one
-        # server binds the same one and HAProxy has a line for it before any channel exists
+        # The internal port follows from the server's own port, so HAProxy has a line for it before any channel exists
         internal_port = resolve_internal_port(self.parallel_server.port)
 
         # What one socket can have one of comes from the server's environment rather than
@@ -526,8 +525,8 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 def delete_rest_channel(service:'Service', rest_channel_id:'int | None') -> 'None':
     """ Deletes the REST channel backing an MLLP channel that has one. This runs in the service that deletes
-    the MLLP channel, once, rather than in the teardown of the channel's wrapper - every worker runs that
-    teardown, and so does an edit, which keeps the REST channel.
+    the MLLP channel, once, rather than in the teardown of the channel's wrapper - an edit runs that
+    teardown too, and an edit keeps the REST channel.
     """
     if not rest_channel_id:
         return

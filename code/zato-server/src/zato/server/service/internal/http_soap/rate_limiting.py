@@ -78,7 +78,7 @@ class RateLimitingSave(AdminService):
             # .. persist the reference ..
             self._save_opaque(channel_id, 'quota_tier', tier_id, 'rate_limiting')
 
-            # .. and let all workers re-resolve tier assignments.
+            # .. and let the server re-resolve tier assignments.
             params = {
                 'action': SECURITY.QUOTA_TIER_EDIT.value,
                 'id': tier_id,

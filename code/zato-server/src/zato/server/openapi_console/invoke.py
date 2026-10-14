@@ -47,7 +47,7 @@ def _find_channel(server:'ParallelServer', http_method:'str', url_path:'str') ->
     """ Matches the method and path against REST channels, returning the path parameters and the channel,
     or a pair of Nones if there is no match or the matched channel is not one the console documents.
     """
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
     path_params, channel_item = url_data.match(url_path, http_method, _http_accept)
 
     # No channel responds at this path and method at all ..

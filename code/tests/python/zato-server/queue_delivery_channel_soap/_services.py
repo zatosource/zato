@@ -186,7 +186,7 @@ class GetConnection(Service):
     def handle(self) -> 'None':
 
         conn_name = self.request.raw_request['conn_name']
-        url_data = self.server.config_manager.request_dispatcher.url_data
+        url_data = self.server.url_data
 
         for item in url_data.channel_data:
             if item['name'] == conn_name:

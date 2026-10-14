@@ -1,7 +1,7 @@
 //! Main `handle_http_request` Python entrypoint.
 //!
-//! Timestamps the request, dispatches to the worker, logs access/REST summaries,
-//! collects Prometheus metrics, and returns `(status, headers, body)`.
+//! Timestamps the request, dispatches to the config manager's request dispatcher,
+//! logs access/REST summaries, collects Prometheus metrics, and returns `(status, headers, body)`.
 
 use std::sync::OnceLock;
 
@@ -375,7 +375,7 @@ fn write_rest_summary(server: &Bound<'_, PyAny>, summary: &RequestSummary<'_>, e
 
 /// Main request handler called from Python for every HTTP request.
 ///
-/// Timestamps the request, dispatches to the worker's request dispatcher,
+/// Timestamps the request, dispatches to the config manager's request dispatcher,
 /// logs access and REST summaries, collects Prometheus metrics if enabled,
 /// and returns `(status_str, headers_dict, body_bytes)`.
 #[pyfunction]

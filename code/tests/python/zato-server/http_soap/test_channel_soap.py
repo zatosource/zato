@@ -698,7 +698,7 @@ class BodySizeTestCase(unittest.TestCase):
     """ Tests for the cap on how large a SOAP request body may be.
 
     Parsing untrusted XML costs time and memory in proportion to the input, so the size is checked
-    before the parser sees the bytes - an unauthenticated caller must not be able to make a worker
+    before the parser sees the bytes - an unauthenticated caller must not be able to make the server
     allocate whatever it likes.
     """
 

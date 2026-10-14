@@ -367,7 +367,7 @@ def _locate_http_channel(server:'ParallelServer', transport:'str', conn_id:'int'
     """ A REST or SOAP channel by its id, as its name and its channel item - the item stands where an outgoing
     connection's wrapper does, the service reads it as self.channel.config.
     """
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
 
     for item in url_data.channel_data:
         if item['transport'] == transport:

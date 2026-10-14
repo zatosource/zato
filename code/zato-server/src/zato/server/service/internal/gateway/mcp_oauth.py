@@ -108,7 +108,7 @@ class ProtectedResourceMetadata(AdminService):
         """
         out:'strlist' = []
 
-        url_data = self.server.config_manager.request_dispatcher.url_data
+        url_data = self.server.url_data
         channel_item = url_data.get_channel_by_name(gateway_name)
 
         if not channel_item:

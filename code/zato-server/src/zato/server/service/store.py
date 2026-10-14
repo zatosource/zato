@@ -131,7 +131,7 @@ class _TestingConfigManager:
 
 # ################################################################################################################################
 
-class _TestingWorkerConfig:
+class _TestingConfigStore:
     out_odoo = None
     out_soap = None
 
@@ -286,7 +286,7 @@ class ServiceStore:
 
         if self.is_testing:
             self._testing_config_manager = cast_('ConfigManager', _TestingConfigManager())
-            self._testing_config_manager.config_store = cast_('ConfigStore', _TestingWorkerConfig())
+            self._testing_config_manager.config_store = cast_('ConfigStore', _TestingConfigStore())
 
 # ################################################################################################################################
 

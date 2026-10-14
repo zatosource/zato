@@ -107,9 +107,6 @@ class HL7MLLPServer:
 
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-        # Every worker process of one server binds the same port and the kernel spreads
-        # connections across them, which is what makes the port follow from the server's identity
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
         server_socket.bind((host, port))

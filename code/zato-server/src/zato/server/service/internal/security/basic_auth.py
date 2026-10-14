@@ -41,7 +41,7 @@ class GetList(AdminService):
 
     def get_data(self, session): # type: ignore
 
-        out = elems_with_opaque(self._search(basic_auth_list, session, None, False))
+        out = elems_with_opaque(self._search(basic_auth_list, session, False))
         return out
 
     def handle(self):

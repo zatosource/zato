@@ -97,7 +97,7 @@ def validate_credentials(server:'ParallelServer', username:'str', password:'str'
     with the definition's username and its secret.
     Returns the matching definition's ID or None if the credentials are not valid.
     """
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
 
     # The generated usernames of API key definitions mean nothing to callers, so it is the definition's
     # name that identifies one on the sign-in form, and that is what they are held under here ..
@@ -308,7 +308,7 @@ def build_full_spec(server:'ParallelServer') -> 'tuple_[anydict, anydict]':
     Returns the document and a channel map of path -> HTTP method -> channel ID, which is what
     per-caller filtering later uses to decide which operations a caller can see.
     """
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
 
     models:'stranydict' = {}
     services = []
@@ -387,7 +387,7 @@ def filter_spec(
     Tags and component schemas that no remaining operation uses are dropped too, so the filtered
     document reveals nothing about endpoints the caller cannot see.
     """
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
 
     # Visibility is checked against live channel data so that security changes take effect immediately
     channel_by_id = {item['id']: item for item in url_data.channel_data}

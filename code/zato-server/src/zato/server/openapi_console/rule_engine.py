@@ -149,7 +149,7 @@ def merge_rule_engine_spec(server:'ParallelServer', spec:'anydict', channel_map:
         return spec, channel_map
 
     # Filtering needs the channel id each documented path belongs to.
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
     channel_id_by_name = {item['name']: item['id'] for item in url_data.channel_data}
 
     backend = get_backend()

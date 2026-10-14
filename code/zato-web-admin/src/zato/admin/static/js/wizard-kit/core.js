@@ -118,7 +118,7 @@
 //      list_url       - where the link closing the form goes back to, and
 //                       where a save that went through redirects to, with
 //                       the saved row's id appended as the highlight
-//                       parameter - the URL always carries a query string
+//                       parameter, with or without a query string of its own
 //      is_edit        - whether the page was opened on an object that
 //                       already exists
 
@@ -812,7 +812,12 @@ kit.core.setup = function(wizard, config) {
     // pointed at the saved row so that page highlights it.
     wizard._redirectAfterSave = function(savedId) {
 
-        var url = wizard.state.listUrl + '&' + wizard.config.highlightParam + '=' + encodeURIComponent(savedId);
+        // A list URL that carries a query string of its own takes the highlight as one more parameter ..
+        var hasQueryString = wizard.state.listUrl.indexOf('?') !== -1;
+        var separator = hasQueryString ? '&' : '?';
+
+        // .. and one without a query string opens its query string with it.
+        var url = wizard.state.listUrl + separator + wizard.config.highlightParam + '=' + encodeURIComponent(savedId);
         window.location.href = url;
     };
 

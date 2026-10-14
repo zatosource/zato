@@ -38,9 +38,6 @@ server_conf_dict = deepcopy(CONTENT_TYPE)
 
 server_conf_template = """[main]
 bind=0.0.0.0:{{port}}
-num_threads={{num_threads}}
-timeout=1234567890
-graceful_timeout=1
 
 work_dir=../../work
 
@@ -291,8 +288,6 @@ class Create(ZatoCommand):
     opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
     opts.append({'name':'--scheduler-host', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
     opts.append({'name':'--scheduler-port', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
-    opts.append({'name':'--threads', 'help':'How many main threads the server should use', 'default':1}) # type: ignore
-
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
@@ -495,18 +490,12 @@ class Create(ZatoCommand):
             # There will be multiple keys in future releases to allow for key rotation
             secret_key = args.secret_key or Fernet.generate_key()
 
-            try:
-                threads = int(args.threads)
-            except Exception:
-                threads = 1
-
             # Build the scheduler's configuration
             scheduler_config = self._get_scheduler_config(args, secret_key)
 
             # Substitue the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
-                    num_threads=threads,
                     odb_path=args.odb_path,
                     odb_engine=args.odb_type,
                     redis_host=self.get_arg('redis_host'),

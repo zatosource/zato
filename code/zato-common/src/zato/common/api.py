@@ -1162,11 +1162,8 @@ class SERVER_STARTUP:
     class PHASE:
         FS_CONFIG_ONLY = 'fs-config-only'
         IMPL_BEFORE_RUN = 'impl-before-run'
-        ON_STARTING = 'on-starting'
-        BEFORE_POST_FORK = 'before-post-fork'
-        AFTER_POST_FORK = 'after-post-fork'
-        IN_PROCESS_FIRST = 'in-process-first'
-        IN_PROCESS_OTHER = 'in-process-other'
+        BEFORE_SERVER_START = 'before-server-start'
+        BEFORE_STARTUP_SERVICES = 'before-startup-services'
         AFTER_STARTED = 'after-started'
 
 # ################################################################################################################################
@@ -2774,7 +2771,6 @@ class PubSub:
     class REST_Server:
 
         Default_Host = '0.0.0.0'
-        Default_Threads = 1
 
         Public_Port = 44556
 

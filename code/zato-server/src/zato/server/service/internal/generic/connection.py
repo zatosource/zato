@@ -182,7 +182,7 @@ def delete_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_')
         opaque = parse_instance_opaque_attr(instance)
         delete_health_check_job(service, opaque.get(_health_check.Field_Job_ID))
 
-    # .. and the REST channel backing an HL7 MLLP one, which is deleted here, once, rather than by each worker's
+    # .. and the REST channel backing an HL7 MLLP one, which is deleted here, once, rather than by the
     # teardown of the channel's wrapper - the same teardown an edit runs, which keeps that channel.
     if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP:
         opaque = parse_instance_opaque_attr(instance)

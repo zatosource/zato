@@ -51,7 +51,16 @@ _source_page_url = {
 _object_page_url = {}
 
 for _source, _url in _source_page_url.items():
-    _object_page_url[_source] = f'{_url}&query={{name}}'
+
+    # A page with a query string of its own takes the object's name as one more parameter ..
+    if '?' in _url:
+        _separator = '&'
+
+    # .. and a page without one opens its query string with it.
+    else:
+        _separator = '?'
+
+    _object_page_url[_source] = f'{_url}{_separator}query={{name}}'
 
 # A scheduler job's own page is the scheduler listing filtered down to it.
 _object_page_url[AuditSource.Scheduler] = '/zato/scheduler/?query={name}'

@@ -89,7 +89,6 @@ from builtins import bytes
 from zato.common.ext.future.utils import iteritems, raise_
 from zato.common.py23_.past.builtins import basestring, cmp, reduce, unicode
 from six import PY3
-from six.moves.urllib.parse import urlparse
 from zato.common.py23_ import ifilter, izip
 
 if PY3:
@@ -119,7 +118,7 @@ from zato.common.util.time_ import utcnow
 if 0:
     from typing import Iterable as iterable
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strdict, strlist, strlistnone, strnone, \
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, listnone, strdict, strlist, strlistnone, strnone, \
         strset
     callable_ = callable_
     iterable = iterable
@@ -1499,50 +1498,6 @@ def spawn_greenlet(callable, *args, **kwargs):
 
 def get_logger_for_class(class_):
     return logging.getLogger('{}.{}'.format(inspect.getmodule(class_).__name__, class_.__name__))
-
-# ################################################################################################################################
-
-def get_server_pids_by_parent(parent_pid:'int') -> 'intlist':
-    """ Returns all children PIDs of the process whose PID is given on input.
-    """
-    # psutil
-    import psutil
-
-    return sorted(elem.pid for elem in psutil.Process(parent_pid).children())
-
-# ################################################################################################################################
-
-def get_server_pids():
-    """ Returns all sibling server PIDs of the server process we are being invoked on, including our own process too.
-    """
-    # psutil
-    import psutil
-
-    # This is our own process ..
-    current_process = psutil.Process()
-
-    # .. and this is its parent PID ..
-    parent_pid = current_process.ppid()
-
-    # .. now, we can return PIDs of all the server processes.
-    return get_server_pids_by_parent(parent_pid)
-
-# ################################################################################################################################
-
-def update_bind_port(data, idx):
-    address_info = urlparse(data.address)
-    base, port = address_info.netloc.split(':')
-    port = int(port) + idx
-
-    data.address = '{}://{}:{}{}'.format(address_info.scheme, base, port, address_info.path)
-    data.bind_port = port
-
-# ################################################################################################################################
-
-def start_connectors(config_manager, service_name, data):
-
-    for pid in get_server_pids():
-        config_manager.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
 # ################################################################################################################################
 

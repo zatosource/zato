@@ -104,7 +104,7 @@ class PubSubRESTService(Service):
             return None
 
         # .. and the name it answers with is what the definitions themselves are held under.
-        basic_auth_config = self.server.config_manager.request_dispatcher.url_data.basic_auth_config
+        basic_auth_config = self.server.url_data.basic_auth_config
         sec_def = basic_auth_config.get(sec_name)
 
         # A pub/sub client of another definition type has no Basic Auth credentials to be reached with

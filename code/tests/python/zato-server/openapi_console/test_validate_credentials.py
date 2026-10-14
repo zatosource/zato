@@ -113,7 +113,7 @@ def _make_server(
     out = MagicMock()
     out.odb.session.return_value = session
 
-    url_data = out.config_manager.request_dispatcher.url_data
+    url_data = out.url_data
     url_data.basic_auth_config = basic_auth_config
     url_data.apikey_config = apikey_config
     url_data.oauth_config = oauth_config
@@ -185,7 +185,7 @@ class ValidateCredentialsTestCase(TestCase):
         self.assertEqual(server.test_session.query_count, 1)
 
         # .. and only the definition it resolved to is looked at.
-        basic_auth_config = server.config_manager.request_dispatcher.url_data.basic_auth_config
+        basic_auth_config = server.url_data.basic_auth_config
         self.assertListEqual(basic_auth_config.keys_read, [_basic_auth_name])
 
     def test_a_wrong_password_is_refused(self):
@@ -211,7 +211,7 @@ class ValidateCredentialsTestCase(TestCase):
         self.assertIsNone(result)
 
         # Nothing resolved, so no definition was looked at
-        url_data = server.config_manager.request_dispatcher.url_data
+        url_data = server.url_data
         self.assertListEqual(url_data.basic_auth_config.keys_read, [])
         self.assertListEqual(url_data.oauth_config.keys_read, [])
 

@@ -33,14 +33,6 @@ patch_signal()
 patch_queue()
 patch_contextvars()
 
-# ConcurrentLogHandler - updates stdlib's logging config on import so this needs to stay after gevent patches
-try:
-    import cloghandler # type: ignore
-except ImportError:
-    pass
-else:
-    cloghandler = cloghandler # For pyflakes
-
 # stdlib
 import logging
 import locale
@@ -95,16 +87,13 @@ warnings.filterwarnings('ignore',  category=sa_exc.SAWarning, message='.*')
 
 class ModuleCtx:
 
-    num_threads     = 'num_threads'
-    bind_host       = 'bind_host'
-    bind_port       = 'bind_port'
+    bind_host     = 'bind_host'
+    bind_port     = 'bind_port'
 
-    Env_Num_Threads = 'Zato_Config_Num_Threads'
-    Env_Bind_Host   = 'Zato_Config_Bind_Host'
-    Env_Bind_Port   = 'Zato_Config_Bind_Port'
+    Env_Bind_Host = 'Zato_Config_Bind_Host'
+    Env_Bind_Port = 'Zato_Config_Bind_Port'
 
     Env_Map = {
-        num_threads: Env_Num_Threads,
         bind_host:   Env_Bind_Host,
         bind_port:   Env_Bind_Port,
     }
@@ -186,24 +175,20 @@ class ZatoApplication:
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_server, name, self.zato_config[name])
 
-        self.zato_server.has_gevent = True
-
 # ################################################################################################################################
 
     def run(self) -> 'None':
+
+        # stdlib
+        from datetime import datetime, timezone
 
         # tzlocal
         from tzlocal import get_localzone
 
         server = self.zato_server
 
-        # Generate the deployment key
-        from uuid import uuid4
-        from datetime import datetime, timezone
-        deployment_key = '{}.{}'.format(datetime.now(timezone.utc).isoformat(), uuid4().hex)
-
         # Initialize the server
-        ParallelServer.start_server_process(server, deployment_key)
+        ParallelServer.start_server_process(server)
 
         # Build the request handler for the Rust HTTP server
         local_tz = get_localzone()
@@ -359,7 +344,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
 
     with open_r(logging_conf_path) as f:
         _logging_config:'str' = f.read()
-        _logging_config = _logging_config.replace('ConcurrentRotatingFileHandler', 'RotatingFileHandler')
 
         logging_config = yaml.safe_load(_logging_config)
         logging_config = apply_logging_env_overrides(logging_config)

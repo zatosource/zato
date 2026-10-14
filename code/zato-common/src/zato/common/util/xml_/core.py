@@ -47,7 +47,7 @@ QName_Cache_Size = 4096
 # and libxml2's own depth, size and amplification limits stay in place. Callers must not build their
 # own parser.
 #
-# An lxml parser instance is not thread-safe. Zato runs one OS thread per worker and everything
+# An lxml parser instance is not thread-safe. The server runs one OS thread and everything
 # above it is greenlets, which are cooperatively scheduled and therefore never re-enter a parse,
 # so a single shared instance is safe here. It must never be handed to a real threadpool.
 xml_parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False)

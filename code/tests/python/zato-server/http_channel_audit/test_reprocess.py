@@ -83,9 +83,7 @@ class ServerStub:
             },
         ]
 
-        url_data = Bunch(channel_data=channel_data)
-        request_dispatcher = Bunch(url_data=url_data)
-        self.config_manager = Bunch(request_dispatcher=request_dispatcher)
+        self.url_data = Bunch(channel_data=channel_data)
 
     def invoke(self, service_name:'str', payload:'any_', **kwargs:'any_') -> 'None':
         self.invoked.append((service_name, payload, kwargs))

@@ -137,7 +137,7 @@ def get_keystore(config:'stranydict') -> 'Keystore':
 
     Building a keystore means blocking disk reads and an RSA private key parse. Doing that per
     message was the single most expensive thing on this path, and under gevent the disk read
-    blocks the whole worker rather than just the greenlet doing it.
+    blocks the whole server process rather than just the greenlet doing it.
     """
     key = _keystore_cache_key(config)
 

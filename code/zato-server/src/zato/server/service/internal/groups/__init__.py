@@ -316,7 +316,7 @@ class EditMemberList(Service):
         }
         self.config_dispatcher.publish(msg)
 
-        # Quota tier resolution depends on group membership, so workers re-resolve tier assignments too.
+        # Quota tier resolution depends on group membership, so the server re-resolves tier assignments too.
         msg = {
             'action': SECURITY.QUOTA_TIER_EDIT.value,
             'id': int(input.group_id),

@@ -16,7 +16,6 @@ from json import dumps as json_dumps, loads as json_loads
 from logging import INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
-from random import seed as random_seed
 from time import monotonic
 from traceback import format_exc
 from uuid import uuid4
@@ -101,6 +100,7 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset, strtuple
+    from zato.server.connection.http_soap.url_data import URLData
     from zato.server.service.store import ServiceStore
     from zato.input_output import IOProcessor  # type: ignore[attr-defined]
     from zato.server.startup_callable import StartupCallableTool
@@ -108,9 +108,9 @@ if 0:
     bunch_ = bunch_
     KombuMessage = KombuMessage
     ODBManager = ODBManager
-    random_seed = random_seed
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
+    URLData = URLData
     IOProcessor = IOProcessor # type: ignore
     StartupCallableTool = StartupCallableTool
 
@@ -229,8 +229,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     @property
-    def worker_store(self) -> 'ConfigManager':
-        return self.config_manager
+    def url_data(self) -> 'URLData':
+        return self.config_manager.request_dispatcher.url_data
 
 # ################################################################################################################################
 
@@ -273,7 +273,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.deployment_lock_expires = -1
         self.deployment_lock_timeout = -1
         self.deployment_key = ''
-        self.has_gevent = True
         self.static_config = Bunch()
         self.component_enabled = Bunch()
         self.client_address_headers = client_address_headers
@@ -305,7 +304,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._scheduler_started = False
         self.rate_limiting_manager = RateLimitingManager()
 
-        # Our arbiter may potentially call the cleanup procedure multiple times
+        # The cleanup procedure may be called more than once during a shutdown
         # and this will be set to True the first time around.
         self._is_process_closing = False
 
@@ -348,7 +347,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def maybe_on_first_server(self, server:'ParallelServer') -> 'anyset':
+    def redeploy_services_on_startup(self, server:'ParallelServer') -> 'anyset':
         """ Removes the deployed service rows of this server from the ODB and deploys
         the internal and user-defined services again.
         """
@@ -676,7 +675,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Read all the user config files that are already available on startup
         self.read_user_config()
 
-        locally_deployed = self.maybe_on_first_server(server)
+        locally_deployed = self.redeploy_services_on_startup(server)
 
         return locally_deployed
 
@@ -807,12 +806,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     @staticmethod
-    def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'='') -> 'None':
+    def start_server(parallel_server:'ParallelServer') -> 'None':
 
         # Easier to type
         self = parallel_server
 
-        # This cannot be done in __init__ because each sub-process obviously has its own PID
+        # The PID of the process that actually runs the server
         self.pid = os.getpid()
 
         # Used later on
@@ -829,13 +828,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             if not os.path.exists(full_path):
                 os.makedirs(full_path, mode=0o770, exist_ok=True)
 
-        # Will be None if we are not running in background.
-        if not zato_deployment_key:
-            zato_deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
-
         # Each time a server starts a new deployment key is generated to uniquely
         # identify this particular time the server is running.
-        self.deployment_key = zato_deployment_key
+        started_at = datetime.now(timezone.utc).isoformat()
+        self.deployment_key = '{}.{}'.format(started_at, uuid4().hex)
 
         # This is to handle SIGURG signals.
         if is_posix:
@@ -980,7 +976,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         self._after_init_accepted(locally_deployed)
 
-        self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
+        self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_STARTUP_SERVICES, kwargs={
             'server': self,
         })
 
@@ -2520,18 +2516,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     @staticmethod
-    def start_server_process(server:'ParallelServer', deployment_key:'str') -> 'None':
+    def start_server_process(server:'ParallelServer') -> 'None':
         """ Initializes the server process.
         """
-
-        # Each subprocess needs to have the random number generator re-seeded.
-        random_seed()
-
-        server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
+        server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_SERVER_START, kwargs={
             'server': server,
         })
 
-        ParallelServer.start_server(server, deployment_key)
+        ParallelServer.start_server(server)
 
 # ################################################################################################################################
 

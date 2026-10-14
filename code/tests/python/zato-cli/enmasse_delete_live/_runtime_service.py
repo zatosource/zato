@@ -83,7 +83,7 @@ class RuntimePresence(Service):
         elif section in http_soap_sections:
             connection, transport = http_soap_sections[section]
             if connection == CONNECTION.CHANNEL:
-                is_present = config_manager.request_dispatcher.url_data.get_channel_by_name(name) is not None
+                is_present = server.url_data.get_channel_by_name(name) is not None
             else:
                 is_present = name in getattr(config_store, _outgoing_stores[transport])
 

@@ -109,7 +109,7 @@ class _Updater(Service):
 # ################################################################################################################################
 
 class UpdateStatic(_Updater):
-    """ Picks up static files and distributes them to all server processes.
+    """ Picks up static files and distributes them to the server.
     """
     pickup_action = HOT_DEPLOY.CREATE_STATIC
 
@@ -117,7 +117,7 @@ class UpdateStatic(_Updater):
 # ################################################################################################################################
 
 class UpdateUserConf(_Updater):
-    """ Picks up user-defined config files and distributes them to all server processes.
+    """ Picks up user-defined config files and distributes them to the server.
     """
     pickup_action = HOT_DEPLOY.CREATE_USER_CONF
 

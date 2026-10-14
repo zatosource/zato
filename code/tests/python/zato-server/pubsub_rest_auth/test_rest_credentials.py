@@ -87,7 +87,7 @@ def _make_service(
 
     server = MagicMock()
     server.pubsub_subscriptions.get_sec_name_by_username.side_effect = registered.get
-    server.config_manager.request_dispatcher.url_data.basic_auth_config = sec_defs
+    server.url_data.basic_auth_config = sec_defs
 
     out.server = server # type: ignore[misc]
 
