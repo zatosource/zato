@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Config DB - what the SQL screen saves are the Zato_Audit_Log_DB_* and Zato_Analytics_DB_*
+# Config DB - what the SQL screen saves are the Zato_Audit_Log_DB_* and Zato_PubSub_DB_*
 # environment variables, along with Zato_Audit_Log_Enabled, applied to the running process
 # and persisted into an env.ini file so they survive restarts. Both the server-side services
 # and the dashboard process use these helpers so the two processes stay in step.
@@ -35,7 +35,6 @@ Env_File_Name = 'env.ini'
 # The environment prefixes of the SQL databases the SQL screen knows about
 sql_env_prefix_by_database = {
     'audit-log': 'Zato_Audit_Log_DB_',
-    'analytics': 'Zato_Analytics_DB_',
     'pubsub':    'Zato_PubSub_DB_',
 }
 
@@ -44,7 +43,7 @@ sql_env_prefix_by_database = {
 Env_Audit_Log_Enabled = 'Zato_Audit_Log_Enabled'
 
 # The variable turning a database off altogether, for the databases that can be turned off -
-# the audit log can, the analytics and pub/sub stores cannot
+# the audit log can, the pub/sub store cannot
 sql_enabled_env_by_database = {
     'audit-log': Env_Audit_Log_Enabled,
 }

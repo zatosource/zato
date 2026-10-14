@@ -120,8 +120,7 @@ def _run_rollup(temporary_dir:'str', audit_db_path:'str', analytics_db_path:'str
         '[env]',
         'Zato_Audit_Log_DB_Type=sqlite',
         f'Zato_Audit_Log_DB_Name={audit_db_path}',
-        'Zato_Analytics_DB_Type=sqlite',
-        f'Zato_Analytics_DB_Name={analytics_db_path}',
+        f'Zato_Analytics_DB_Path={analytics_db_path}',
         '',
     ])
 

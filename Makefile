@@ -1286,7 +1286,7 @@ test-rule-engine-perf: ## Rule engine SQL backend performance tests.
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-analytics: ## Analytics rollup, view and baseline tests against live SQLite, MySQL and PostgreSQL, plain and TLS.
+test-analytics: ## Analytics rollup, view and baseline tests on SQLite, with the rollup reading audit logs held in SQLite, MySQL and PostgreSQL.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/analytics/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_analytics \

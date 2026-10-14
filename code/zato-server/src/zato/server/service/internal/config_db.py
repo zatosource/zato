@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Config DB - services behind the dashboard screens that configure the databases the server
-# itself uses. The SQL screen drives the audit log and analytics databases through the
-# Zato_Audit_Log_DB_* and Zato_Analytics_DB_* environment variables, applied live and
+# itself uses. The SQL screen drives the audit log and pub/sub databases through the
+# Zato_Audit_Log_DB_* and Zato_PubSub_DB_* environment variables, applied live and
 # persisted into an env file. The Redis screen drives the [redis] section of server.conf,
 # persisted on disk and applied live to the cache's Redis client.
 
@@ -22,7 +22,6 @@ from sqlalchemy import create_engine
 from sqlalchemy import text as sa_text
 
 # Zato
-from zato.common.analytics.api import analytics_db_file_name, metadata as analytics_metadata
 from zato.common.audit_log.common import Audit_DB_File_Name, metadata as audit_metadata
 from zato.common.config_db import apply_env_variables, build_enabled_env_variables, build_env_variables, \
     get_default_env_file_path, get_enabled_from_env, persist_env_variables, sql_env_prefix_by_database, \
@@ -59,11 +58,6 @@ _sql_databases = {
         env_prefix=sql_env_prefix_by_database['audit-log'],
         sqlite_file_name=Audit_DB_File_Name,
         metadata=audit_metadata,
-    ),
-    'analytics': EnvDBConfig(
-        env_prefix=sql_env_prefix_by_database['analytics'],
-        sqlite_file_name=analytics_db_file_name,
-        metadata=analytics_metadata,
     ),
     'pubsub': EnvDBConfig(
         env_prefix=sql_env_prefix_by_database['pubsub'],
@@ -161,8 +155,7 @@ class SQLTest(AdminService):
 class SQLSave(AdminService):
     """ Applies the submitted SQL form values to this database's environment variables,
     live in this process and persisted into an env file so they survive restarts.
-    The audit log resolves its engine per write and the analytics rollup and queries
-    resolve theirs per call, so new operations use the new database immediately.
+    The audit log resolves its engine per write, so new operations use the new database immediately.
     The audit log's Enabled switch is read per write too, so turning it off stops
     the writing from the very next event on.
     """

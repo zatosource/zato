@@ -31,7 +31,7 @@ from zato.common.test.playwright_pubsub import create_basic_auth
 _analytics_state_dir = tempfile.mkdtemp(prefix='zato_analytics_test_')
 
 os.environ['Zato_Audit_Log_DB_Name'] = os.path.join(_analytics_state_dir, 'audit.db')
-os.environ['Zato_Analytics_DB_Name'] = os.path.join(_analytics_state_dir, 'analytics.db')
+os.environ['Zato_Analytics_DB_Path'] = os.path.join(_analytics_state_dir, 'analytics.db')
 
 # ################################################################################################################################
 # ################################################################################################################################

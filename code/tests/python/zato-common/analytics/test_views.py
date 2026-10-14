@@ -11,11 +11,11 @@ import os
 from datetime import datetime, timezone
 
 # Zato
-from live_sql.env import database_env
+from common import analytics_path_env
 from zato.common.analytics.api import get_analytics_engine, usage_table, Caller_Anonymous, Latency_Bucket_Count
 from zato.common.analytics.csv_export import channel_csv, consumer_csv, overview_csv
 from zato.common.analytics.query import get_channel, get_consumer, get_overview, period_to_ms, Range_Day
-from zato.common.audit_log.api import AuditSource, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditSource
 from zato.common.json_internal import dumps
 
 # ################################################################################################################################
@@ -138,12 +138,7 @@ def test_analytics_views(tmp_path:'os.PathLike') -> 'None':
     """
     db_path = os.path.join(str(tmp_path), 'analytics.db')
 
-    details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
-    }
-
-    with database_env('Zato_Analytics_DB_', details):
+    with analytics_path_env(db_path):
 
         _seed_store()
 
@@ -278,12 +273,7 @@ def test_analytics_views_empty_store(tmp_path:'os.PathLike') -> 'None':
     """
     db_path = os.path.join(str(tmp_path), 'analytics-empty.db')
 
-    details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
-    }
-
-    with database_env('Zato_Analytics_DB_', details):
+    with analytics_path_env(db_path):
 
         overview = get_overview(_now, Range_Day)
 

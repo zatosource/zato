@@ -12,19 +12,26 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # request counts, error counts by source, size and duration sums and latency
 # histogram bucket counts. Because the aggregates are extracted before the audit
 # rows expire, audit retention does not bound the trends - hourly rows are kept
-# indefinitely at negligible size.
+# indefinitely at negligible size. The store is always a local SQLite file.
+
+# stdlib
+import os
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, String, Table, Text
+from sqlalchemy import BigInteger, Column, create_engine, Index, Integer, MetaData, String, Table, Text
+from sqlalchemy import event as sa_event
 
 # Zato
-from zato.common.db_env import EnvDBConfig, get_env_engine
+from zato.common.db_env import ensure_columns, ensure_indexes
+from zato.common.db_env.connection import set_sqlite_pragmas
+from zato.common.defaults import default_env_base_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Engine
+    from zato.common.typing_ import anydict
 
     # Dummy assignments to satisfy type checkers
     Engine = Engine
@@ -40,20 +47,8 @@ analytics_db_file_name = 'analytics.db'
 
 class ModuleCtx:
 
-    # Environment variables selecting and configuring the analytics store database
-    Env_Type     = 'Zato_Analytics_DB_Type'
-    Env_Host     = 'Zato_Analytics_DB_Host'
-    Env_Port     = 'Zato_Analytics_DB_Port'
-    Env_Username = 'Zato_Analytics_DB_Username'
-    Env_Password = 'Zato_Analytics_DB_Password'
-    Env_Name     = 'Zato_Analytics_DB_Name'
-
-    # Environment variables configuring SSL/TLS for the analytics store database
-    Env_SSL           = 'Zato_Analytics_DB_SSL'
-    Env_SSL_CA_File   = 'Zato_Analytics_DB_SSL_CA_File'
-    Env_SSL_Cert_File = 'Zato_Analytics_DB_SSL_Cert_File'
-    Env_SSL_Key_File  = 'Zato_Analytics_DB_SSL_Key_File'
-    Env_SSL_Verify    = 'Zato_Analytics_DB_SSL_Verify'
+    # The environment variable with the full path to the analytics store's SQLite file
+    Env_Path = 'Zato_Analytics_DB_Path'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,10 +87,13 @@ Period_Len = 13
 # Maximum length of short string columns
 _short_column_len = 255
 
+# Engines are cached per SQLite file so all callers in a process share one engine
+_engine_cache:'anydict' = {}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The analytics store schema, portable across SQLite, MySQL, PostgreSQL and Oracle DB.
+# The SQLite schema of the analytics store
 metadata = MetaData()
 
 # One row per hour, channel, caller and status class
@@ -128,29 +126,50 @@ watermark_table = Table('watermark', metadata,
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How the analytics store database is selected and configured through the environment
-_env_config = EnvDBConfig(
-    env_prefix='Zato_Analytics_DB_',
-    sqlite_file_name=analytics_db_file_name,
-    metadata=metadata,
-)
-
-# ################################################################################################################################
-
 def get_analytics_db_path() -> 'str':
-    """ Returns the full path to the default SQLite analytics database file.
+    """ Returns the full path to the analytics store's SQLite file - the one the environment
+    variable points to or, without it, the default file under the environment directory.
     """
-    out = _env_config.get_sqlite_path()
+    if out := os.environ.get(ModuleCtx.Env_Path, ''):
+        pass
+    else:
+        out = os.path.join(default_env_base_dir, analytics_db_file_name)
+
     return out
 
 # ################################################################################################################################
 
 def get_analytics_engine() -> 'Engine':
-    """ Returns an SQLAlchemy engine for the analytics store, creating the schema if needed.
-    Which database is used comes from the Zato_Analytics_DB_* environment variables,
-    defaulting to a shared SQLite file.
+    """ Returns an SQLAlchemy engine for the analytics store's SQLite file, creating the schema if needed.
+    The path is resolved on each call, so a changed environment variable selects another file at once.
     """
-    out = get_env_engine(_env_config)
+
+    # Reuse a previously built engine for the same file ..
+    db_path = get_analytics_db_path()
+
+    if engine := _engine_cache.get(db_path):
+        out = engine
+        return out
+
+    # .. the file's directory may not exist yet, e.g. in freshly created environments ..
+    db_dir = os.path.dirname(db_path)
+    os.makedirs(db_dir, exist_ok=True)
+
+    # .. build the engine, with the pragmas applied to each new connection ..
+    out = create_engine(f'sqlite:///{db_path}')
+    sa_event.listen(out, 'connect', set_sqlite_pragmas)
+
+    # .. make sure the schema exists - this is idempotent ..
+    metadata.create_all(out)
+
+    # .. files created by older releases may be missing newly declared columns and indexes ..
+    for table in metadata.tables.values():
+        ensure_columns(out, table)
+        ensure_indexes(out, table)
+
+    # .. and cache the engine for all future callers.
+    _engine_cache[db_path] = out
+
     return out
 
 # ################################################################################################################################

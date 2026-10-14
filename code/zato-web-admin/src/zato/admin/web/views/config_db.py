@@ -41,7 +41,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 # The databases the SQL screen knows about, in their display order
-_sql_databases = ['audit-log', 'analytics', 'pubsub']
+_sql_databases = ['audit-log', 'pubsub']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,7 +66,7 @@ def _invoke(req:'any_', service_name:'str') -> 'HttpResponse':
             data = response.data
 
             # The SQL save returns the variables it applied on the server - the dashboard
-            # reads the audit and analytics databases directly with its own environment,
+            # reads the audit log database directly with its own environment,
             # so the same variables are applied to this process too and persisted for
             # this process's own restarts.
             if data['success'] and service_name == 'zato.config-db.sql.save':

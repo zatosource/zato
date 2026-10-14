@@ -175,7 +175,7 @@ class ZatoMiddleware:
     def process_request(self, req):
 
         # A Config DB save may have landed in another gunicorn worker - re-apply the env file
-        # this process reads its audit and analytics database configuration from when it changed.
+        # this process reads its audit log and pub/sub database configuration from when it changed.
         self._refresh_env_file()
 
         # Makes each Django view have an access to 'zato.odb' and 'zato.setttings_db' attributes

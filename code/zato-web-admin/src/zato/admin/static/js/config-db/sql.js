@@ -4,7 +4,7 @@
 // ////////////////////////////////////////////////////////////////////////////
 
 // One tab per database, each tab a card of its own. Every field id carries its
-// database as a prefix, e.g. id_audit-log_host, which is what lets three forms
+// database as a prefix, e.g. id_audit-log_host, which is what lets two forms
 // live on one page. Test and Save act on whichever tab is open. The look and
 // the machinery are the Redis screen's - the same card, rows, dimming,
 // action-runner test and status-message save.
@@ -16,14 +16,13 @@
     $.fn.zato.config_db.sql.config = {
 
         // One tab per database, each with a panel of its own
-        databases: ['audit-log', 'analytics', 'pubsub'],
+        databases: ['audit-log', 'pubsub'],
         default_database: 'audit-log',
         panel_prefix: 'config-db-sql-tab-panel-',
 
         // Which database can be turned off altogether - only the audit log can
         has_enabled: {
             'audit-log': true,
-            'analytics': false,
             'pubsub': false
         },
 
@@ -61,7 +60,7 @@
 
     // What each field of a panel is for. The map is written once, in field names,
     // and then handed to the help mode once per database, under that database's
-    // own ids - the three panels ask the same questions.
+    // own ids - the two panels ask the same questions.
     $.fn.zato.config_db.sql.field_descriptions = {
         'display_name':  'A short name for this connection. ' +
             'It is what the connection is called in the dashboard, nothing else reads it.',
