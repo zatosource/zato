@@ -15,7 +15,6 @@ from common import cleanup_sqlite_db, pubsub_backend_env, Mass_Drain_Backlog_Mas
     Operations_Topics_Mass
 from mass_drain import run_mass_drain_scenario
 from operations import run_operations_scenario
-from zato.common.pubsub.sql.config import ModuleCtx as PubSubDBCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,13 +26,8 @@ def test_pubsub_backend_perf_mass_sqlite(tmp_path:'os.PathLike') -> 'None':
     """
     db_path = os.path.join(str(tmp_path), 'pubsub.db')
 
-    details = {
-        'type': PubSubDBCtx.Type_SQLite,
-        'name': db_path,
-    }
-
     try:
-        with pubsub_backend_env(details):
+        with pubsub_backend_env(db_path):
             run_mass_drain_scenario(
                 backlog_per_subscriber=Mass_Drain_Backlog_Mass,
                 deadline_seconds=Mass_Drain_Deadline_Mass,
@@ -50,7 +44,7 @@ def test_pubsub_backend_perf_mass_sqlite(tmp_path:'os.PathLike') -> 'None':
                 drain_to_zero=False,
             )
     finally:
-        with pubsub_backend_env(details):
+        with pubsub_backend_env(db_path):
             cleanup_sqlite_db(db_path)
 
 # ################################################################################################################################

@@ -27,9 +27,8 @@ from zato.common.test.conftest_base_pubsub import find_free_port, render_templat
 
 # Test support
 from certificates import generate_certificates
-from live_sql.env import database_env
 from queue_delivery.amqp import add_amqp_config, declare_broker_queues
-from queue_delivery.backends import PubSub_Env_Prefix, start_backend
+from queue_delivery.backends import pubsub_path_env, start_backend
 from queue_delivery.client import get_client, wait_for_queue_empty
 from queue_delivery.dlq import discard_all_dlqs
 from queue_delivery.type_under_test import Connection_Keys, TestConfig
@@ -123,7 +122,7 @@ class Session:
 
         self.state.test_data_directory = mkdtemp(prefix=f'zato_queue_delivery_{self.suite_name}_{self.backend_name}_')
 
-        backend = start_backend(self.backend_name, self.state.test_data_directory, certificate_paths, self.suite_name)
+        backend = start_backend(self.backend_name, self.state.test_data_directory, certificate_paths)
         self.backend = backend
 
         logger.info('Backend %s ready: %.1fs', self.backend_name, time.monotonic() - start_time)
@@ -145,7 +144,7 @@ class Session:
         os.environ['Zato_Audit_Log_DB_Name'] = audit_db_path
 
         # Every process started from here on inherits the backend as its pub/sub database
-        self._exit_stack.enter_context(database_env(PubSub_Env_Prefix, backend.details))
+        self._exit_stack.enter_context(pubsub_path_env(backend.db_path))
 
         server_directory = run_quickstart_and_enmasse(
             state=self.state,

@@ -29,6 +29,7 @@ from zato.common.defaults import default_env_base_dir
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import MetaData
     from sqlalchemy.engine import Engine
     from zato.common.db_env.common import EnvDBConfig
     from zato.common.typing_ import anydict, stranydict, strtuple
@@ -36,6 +37,7 @@ if 0:
     # Dummy assignments to satisfy type checkers
     Engine = Engine
     EnvDBConfig = EnvDBConfig
+    MetaData = MetaData
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +54,53 @@ _network_max_overflow = 50
 # Engines are cached per configuration so all callers in a process share one pool
 _engine_cache:'anydict' = {}
 
+# SQLite file engines are cached per path and pool mode
+_sqlite_file_engine_cache:'anydict' = {}
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+def get_sqlite_file_engine(db_path:'str', metadata:'MetaData', *, needs_pool:'bool') -> 'Engine':
+    """ Returns an SQLAlchemy engine for a SQLite file and creates its schema if needed.
+    """
+
+    # Reuse the engine for this file and pool mode ..
+    cache_key = (db_path, needs_pool)
+
+    if engine := _sqlite_file_engine_cache.get(cache_key):
+        out = engine
+        return out
+
+    # .. create the file's directory ..
+    db_dir = os.path.dirname(db_path)
+    os.makedirs(db_dir, exist_ok=True)
+
+    # .. configure pooling for stores with many short transactions ..
+    connect_args:'stranydict' = {}
+    engine_kwargs:'stranydict' = {}
+
+    if needs_pool:
+        connect_args['check_same_thread'] = False
+        engine_kwargs['poolclass'] = QueuePool
+
+    # .. build the engine and apply the SQLite connection settings ..
+    engine_url = f'sqlite:///{db_path}'
+    out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
+    sa_event.listen(out, 'connect', set_sqlite_pragmas)
+
+    # .. create and update the schema ..
+    metadata.create_all(out)
+
+    for table in metadata.tables.values():
+        ensure_columns(out, table)
+        ensure_indexes(out, table)
+        ensure_column_types(out, table)
+
+    # .. and retain the engine for subsequent callers.
+    _sqlite_file_engine_cache[cache_key] = out
+
+    return out
+
 # ################################################################################################################################
 
 def _get_cache_key(config:'EnvDBConfig') -> 'strtuple':

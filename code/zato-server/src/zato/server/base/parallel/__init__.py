@@ -1790,9 +1790,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def _start_pubsub_backend(self):
 
-        # Messages, queues and delivery state live in the pub/sub database,
-        # selected through the Zato_PubSub_DB_* environment variables
-        # and defaulting to an SQLite file next to the audit log's one.
+        # Messages, queues and delivery state live in the SQLite file selected
+        # through Zato_PubSub_DB_Path.
         audit_log = AuditLog(self.name)
 
         self.pubsub_backend = SQLPubSubBackend(

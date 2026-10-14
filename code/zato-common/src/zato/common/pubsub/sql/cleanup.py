@@ -77,7 +77,7 @@ class PubSubCleanup:
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine behind the current Zato_PubSub_DB_* configuration.
+        """ The engine behind the current Zato_PubSub_DB_Path.
         """
         out = get_pubsub_engine()
         return out
@@ -375,8 +375,8 @@ def main() -> 'int':
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=log_level, format=log_format)
 
-    # .. load the Zato_PubSub_DB_* variables from the environment file if one was given -
-    # .. with no file and no variables already set, the default SQLite database is used ..
+    # .. load Zato_PubSub_DB_Path from the environment file if one was given -
+    # .. without it, the default SQLite file is used ..
     if args.env_file:
         from zato.common.util.env import populate_environment_from_file
         _ = populate_environment_from_file(args.env_file)

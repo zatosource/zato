@@ -49,6 +49,7 @@ from zato.common.odb.ssl_config import get_ssl_connect_args
 from zato.common.oracledb import RowsOut
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
+from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, current_host, get_component_name, get_engine_url, new_cid, new_cid_server, \
      parse_extra_into_dict, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
@@ -352,12 +353,24 @@ class SessionWrapper:
             result = self.pool.engine.execute(query, params)
             return result
 
-        # .. while an SQLAlchemy result has to be turned into them.
+        # .. while an SQLAlchemy result has to be turned into them. Each statement is a transaction of its own.
         with closing(self.session()) as session:
-            result = session.execute(query, params)
-            column_names = result.keys() # type: ignore
-            result = [dict(zip(column_names, row)) for row in result] # type: ignore
-            return result
+            result = session.execute(cast_('any_', query), params)
+            result = cast_('any_', result)
+
+            # A statement that produced rows returns them ..
+            if result.returns_rows:
+                column_names = result.keys()
+                out = [dict(zip(column_names, row)) for row in result]
+
+            # .. one that produced none, such as an UPDATE, returns an empty list ..
+            else:
+                out = []
+
+            # .. and what it wrote is committed, a write with a RETURNING clause included.
+            session.commit()
+
+        return out
 
     def ping(self, fs_sql_config:'any_') -> 'any_':
         """ Pings the database the pool's own way, putting the ping on record like

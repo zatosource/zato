@@ -615,6 +615,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend \
 		-W "ignore:This process:DeprecationWarning" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)

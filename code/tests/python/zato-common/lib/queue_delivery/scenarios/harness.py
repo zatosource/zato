@@ -30,6 +30,9 @@ _retry = HTTP_SOAP.Retry
 _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
 
+# The SQLAlchemy backend name of the pub/sub database
+_sqlite_backend_name = 'sqlite'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -43,12 +46,13 @@ class HarnessScenarios(ScenarioBase):
 
         server_side = get_pubsub_backend(client)
 
-        assert server_side['type'] == backend.details['type']
-        assert server_side['name'] == backend.details['name']
+        assert server_side['type'] == _sqlite_backend_name
+        assert server_side['path'] == backend.db_path
 
         engine = get_pubsub_db_engine()
 
-        assert engine.url.get_backend_name() == backend.details['type']
+        assert engine.url.get_backend_name() == _sqlite_backend_name
+        assert engine.url.database == backend.db_path
 
         with engine.connect() as connection:
             _ = connection.execute(select(func.count()).select_from(message_table)).scalar()

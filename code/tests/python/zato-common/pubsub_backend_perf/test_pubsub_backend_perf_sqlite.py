@@ -23,7 +23,6 @@ from push import run_push_delivery_scenario
 from retention import run_retention_scenario
 from subscriptions import run_subscriptions_scenario
 from throughput import run_delivery_throughput_scenario, run_publish_throughput_scenario
-from zato.common.pubsub.sql.config import ModuleCtx as PubSubDBCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,13 +32,8 @@ def test_pubsub_backend_perf_sqlite(tmp_path:'os.PathLike') -> 'None':
     """
     db_path = os.path.join(str(tmp_path), 'pubsub.db')
 
-    details = {
-        'type': PubSubDBCtx.Type_SQLite,
-        'name': db_path,
-    }
-
     try:
-        with pubsub_backend_env(details):
+        with pubsub_backend_env(db_path):
             run_publish_throughput_scenario()
             run_delivery_throughput_scenario()
             run_push_delivery_scenario()
@@ -66,7 +60,7 @@ def test_pubsub_backend_perf_sqlite(tmp_path:'os.PathLike') -> 'None':
             run_retention_scenario()
             run_backlog_scenario()
     finally:
-        with pubsub_backend_env(details):
+        with pubsub_backend_env(db_path):
             cleanup_sqlite_db(db_path)
 
 # ################################################################################################################################

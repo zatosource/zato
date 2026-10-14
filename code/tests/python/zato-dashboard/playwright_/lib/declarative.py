@@ -116,7 +116,7 @@ def wait_for_topic_message(
     whose data preview contains the marker and returns that message's row as a dict.
     """
     # The store the server publishes to - selected through the same
-    # Zato_PubSub_DB_* environment variables the server itself reads.
+    # Zato_PubSub_DB_Path the server itself reads.
     engine = get_pubsub_engine()
 
     # Topic names are lowercased on publish

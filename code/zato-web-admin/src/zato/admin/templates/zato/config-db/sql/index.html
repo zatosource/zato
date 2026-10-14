@@ -45,18 +45,11 @@ status-message save - with the tab strip on top. The view provides:
 
     <div class="dashboard-tabs" id="config-db-sql-tabs" role="tablist" aria-label="Databases">
         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="audit-log" role="tab" aria-selected="true">Audit log</button>
-        <button type="button" class="dashboard-tab" data-tab="pubsub" role="tab" aria-selected="false">Pub/sub</button>
     </div>
 
     <div class="dashboard-tab-panel" id="config-db-sql-tab-panel-audit-log" role="tabpanel">
         <div class="config-db-sql-card">
             {% include "zato/config-db/sql/_fields.html" with database="audit-log" has_enabled=True %}
-        </div>
-    </div>
-
-    <div class="dashboard-tab-panel" id="config-db-sql-tab-panel-pubsub" role="tabpanel" hidden>
-        <div class="config-db-sql-card">
-            {% include "zato/config-db/sql/_fields.html" with database="pubsub" has_enabled=False %}
         </div>
     </div>
 

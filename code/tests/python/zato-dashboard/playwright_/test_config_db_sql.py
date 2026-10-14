@@ -36,7 +36,7 @@ class TestConfigDBSQL:
 
     def test_01_page_loads(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Navigates to the SQL screen and verifies its structure:
-        - the tab strip offers the audit log and pub/sub databases
+        - the tab strip offers the audit log database only
         - the form shows SQLite as the default type
         - the Test connection link and the Save button are present
         """
@@ -48,7 +48,7 @@ class TestConfigDBSQL:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         _ = page.wait_for_selector('#config-db-sql-tabs', state='visible')
 
-        # .. verify the tab strip offers both databases ..
+        # .. verify the tab strip offers the audit log database only ..
         tab_buttons = page.query_selector_all('#config-db-sql-tabs .dashboard-tab')
 
         tab_names = [] # type: list
@@ -57,7 +57,7 @@ class TestConfigDBSQL:
             tab_name = tab_button.get_attribute('data-tab')
             tab_names.append(tab_name)
 
-        assert tab_names == ['audit-log', 'pubsub'], f'Unexpected databases: {tab_names}'
+        assert tab_names == ['audit-log'], f'Unexpected databases: {tab_names}'
 
         # .. by default the audit log database is shown, backed by SQLite ..
         active_tab = page.get_attribute('#config-db-sql-tabs .dashboard-tab-active', 'data-tab')
@@ -138,31 +138,6 @@ class TestConfigDBSQL:
 
         description_value = page.input_value('#id_audit-log_description')
         assert description_value == description, f'Expected "{description}", got: "{description_value}"'
-
-# ################################################################################################################################
-
-    def test_04_switch_database(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Opens the pub/sub tab and verifies its own panel shows -
-        the pub/sub database has its own SQLite file and no name of its own yet.
-        """
-
-        page = logged_in_page
-        base_url = zato_dashboard['dashboard_url']
-
-        # Navigate to the SQL screen ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        _ = page.wait_for_selector('#config-db-sql-tabs', state='visible')
-
-        # .. switch to the pub/sub database ..
-        page.click('#config-db-sql-tabs .dashboard-tab[data-tab="pubsub"]')
-
-        # .. its SQLite file path points at the pub/sub database file ..
-        name_value = page.input_value('#id_pubsub_name')
-        assert name_value.endswith('pubsub.db'), f'Expected a path ending in pubsub.db, got: {name_value}'
-
-        # .. and the display name saved for the audit log database does not appear in it.
-        display_name_value = page.input_value('#id_pubsub_display_name')
-        assert display_name_value == '', f'Expected an empty name, got: "{display_name_value}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

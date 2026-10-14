@@ -10,42 +10,32 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from contextlib import contextmanager
 
 # Zato
-from zato.common.db_env.common import Type_SQLite
-from zato.common.test.conftest_base_pubsub import find_free_port
+from zato.common.pubsub.sql.config import ModuleCtx as PubSubDBCtx
 from zato.common.test.rabbitmq_ import RabbitMQProcess
-
-# local
-from live_sql.containers import start_mysql, start_oracle, start_postgresql, stop_container
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from certificates import CertificatePaths
-    from zato.common.typing_ import stranydict, strlist, strnone
+    from zato.common.typing_ import strlist, strnone
+
+    envgen = Iterator[None]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-Backend_SQLite         = 'sqlite'
-Backend_PostgreSQL     = 'postgresql'
-Backend_PostgreSQL_SSL = 'postgresql_ssl'
-Backend_MySQL          = 'mysql'
-Backend_MySQL_SSL      = 'mysql_ssl'
-Backend_Oracle         = 'oracle'
-Backend_AMQP           = 'amqp'
-Backend_AMQP_SSL       = 'amqp_ssl'
+Backend_SQLite   = 'sqlite'
+Backend_AMQP     = 'amqp'
+Backend_AMQP_SSL = 'amqp_ssl'
 
 # Every backend, in the order they are run in
 All_Backends = (
     Backend_SQLite,
-    Backend_PostgreSQL,
-    Backend_PostgreSQL_SSL,
-    Backend_MySQL,
-    Backend_MySQL_SSL,
-    Backend_Oracle,
     Backend_AMQP,
     Backend_AMQP_SSL,
 )
@@ -62,27 +52,7 @@ SSL_CA_Env_Name = 'SSL_CERT_FILE'
 # A comma-separated list of backend names that narrows the run
 Backends_Env_Name = 'Zato_Test_PubSub_Backends'
 
-# The prefix of the environment variables the server reads its pub/sub database from
-PubSub_Env_Prefix = 'Zato_PubSub_DB_'
-
 SQLite_File_Name = 'pubsub.db'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ModuleCtx:
-
-    Container_Prefix = 'zato-queue-delivery-'
-
-    Username = 'zato_queue_delivery'
-    Password = 'test-queue-delivery-password'
-    DB_Name  = 'zato_queue_delivery'
-
-    Oracle_Password = 'test.queue.delivery.password'
-
-    # Oracle DB connections are enabled by the license key variable
-    License_Key_Name  = 'Zato_License_Key'
-    License_Key_Value = 'test.license.key'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,16 +79,32 @@ def get_backend_names() -> 'strlist':
     return out
 
 # ################################################################################################################################
+
+@contextmanager
+def pubsub_path_env(db_path:'str') -> 'envgen':
+    """ Points Zato_PubSub_DB_Path at one SQLite file for as long as the context is open.
+    """
+    old_path = os.environ.get(PubSubDBCtx.Env_Path)
+    os.environ[PubSubDBCtx.Env_Path] = db_path
+
+    try:
+        yield
+    finally:
+        if old_path is None:
+            _ = os.environ.pop(PubSubDBCtx.Env_Path, None)
+        else:
+            os.environ[PubSubDBCtx.Env_Path] = old_path
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Backend:
     """ One backend a server runs its queues against.
     """
 
-    def __init__(self, name:'str', details:'stranydict', container_name:'str') -> 'None':
+    def __init__(self, name:'str', db_path:'str') -> 'None':
         self.name = name
-        self.details = details
-        self.container_name = container_name
+        self.db_path = db_path
         self.broker:'RabbitMQProcess | None' = None
 
         # Put back when a TLS broker stops
@@ -136,11 +122,8 @@ class Backend:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Removes the container or stops the broker, whichever this backend has.
+        """ Stops the broker, if this backend has one.
         """
-        if self.container_name:
-            stop_container(self.container_name)
-
         if self.broker:
             self.broker.stop()
 
@@ -156,95 +139,9 @@ class Backend:
 def _start_sqlite(data_directory:'str') -> 'Backend':
     """ An SQLite file of this session's own.
     """
-    path = os.path.join(data_directory, SQLite_File_Name)
+    db_path = os.path.join(data_directory, SQLite_File_Name)
 
-    details = {
-        'type': Type_SQLite,
-        'name': path,
-    }
-
-    out = Backend(Backend_SQLite, details, '')
-    return out
-
-# ################################################################################################################################
-
-def _get_container_name(suite_name:'str', backend_name:'str') -> 'str':
-    """ The container of one backend of one suite.
-    """
-    out = ModuleCtx.Container_Prefix + suite_name + '-' + backend_name
-    return out
-
-# ################################################################################################################################
-
-def _start_postgresql(needs_ssl:'bool', certificates:'CertificatePaths', suite_name:'str') -> 'Backend':
-
-    if needs_ssl:
-        name = Backend_PostgreSQL_SSL
-    else:
-        name = Backend_PostgreSQL
-
-    # The OS hands out ports from 1024 up, so a fixed host port can be taken by any socket of the run
-    port = find_free_port()
-
-    container_name = _get_container_name(suite_name, name)
-
-    server = start_postgresql(
-        container_name=container_name,
-        port=port,
-        username=ModuleCtx.Username,
-        password=ModuleCtx.Password,
-        db_name=ModuleCtx.DB_Name,
-        needs_ssl=needs_ssl,
-        certificates=certificates,
-    )
-
-    out = Backend(name, server.details, container_name)
-    return out
-
-# ################################################################################################################################
-
-def _start_mysql(needs_ssl:'bool', certificates:'CertificatePaths', suite_name:'str') -> 'Backend':
-
-    if needs_ssl:
-        name = Backend_MySQL_SSL
-    else:
-        name = Backend_MySQL
-
-    port = find_free_port()
-
-    container_name = _get_container_name(suite_name, name)
-
-    server = start_mysql(
-        container_name=container_name,
-        port=port,
-        username=ModuleCtx.Username,
-        password=ModuleCtx.Password,
-        db_name=ModuleCtx.DB_Name,
-        needs_ssl=needs_ssl,
-        certificates=certificates,
-    )
-
-    out = Backend(name, server.details, container_name)
-    return out
-
-# ################################################################################################################################
-
-def _start_oracle(suite_name:'str') -> 'Backend':
-    """ Sets the Oracle license key variable.
-    """
-    if not os.environ.get(ModuleCtx.License_Key_Name):
-        os.environ[ModuleCtx.License_Key_Name] = ModuleCtx.License_Key_Value
-
-    container_name = _get_container_name(suite_name, Backend_Oracle)
-
-    server = start_oracle(
-        container_name=container_name,
-        port=find_free_port(),
-        username=ModuleCtx.Username,
-        password=ModuleCtx.Oracle_Password,
-    )
-
-    out = Backend(Backend_Oracle, server.details, container_name)
+    out = Backend(Backend_SQLite, db_path)
     return out
 
 # ################################################################################################################################
@@ -275,26 +172,11 @@ def _start_amqp(needs_ssl:'bool', data_directory:'str', certificates:'Certificat
 
 # ################################################################################################################################
 
-def start_backend(name:'str', data_directory:'str', certificates:'CertificatePaths', suite_name:'str') -> 'Backend':
-    """ Starts the backend of that name for one suite and returns it with the details the server's pub/sub is pointed at.
+def start_backend(name:'str', data_directory:'str', certificates:'CertificatePaths') -> 'Backend':
+    """ Starts the backend of that name for one suite and returns it with the SQLite file the server's pub/sub uses.
     """
     if name == Backend_SQLite:
         out = _start_sqlite(data_directory)
-
-    elif name == Backend_PostgreSQL:
-        out = _start_postgresql(False, certificates, suite_name)
-
-    elif name == Backend_PostgreSQL_SSL:
-        out = _start_postgresql(True, certificates, suite_name)
-
-    elif name == Backend_MySQL:
-        out = _start_mysql(False, certificates, suite_name)
-
-    elif name == Backend_MySQL_SSL:
-        out = _start_mysql(True, certificates, suite_name)
-
-    elif name == Backend_Oracle:
-        out = _start_oracle(suite_name)
 
     elif name == Backend_AMQP:
         out = _start_amqp(False, data_directory, certificates)
@@ -302,6 +184,7 @@ def start_backend(name:'str', data_directory:'str', certificates:'CertificatePat
     elif name == Backend_AMQP_SSL:
         out = _start_amqp(True, data_directory, certificates)
 
+    # .. anything else is not a recognized backend.
     else:
         raise ValueError(f'Unknown pub/sub backend `{name}`')
 

@@ -66,7 +66,7 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
 
     def _run_cleanup_once(self) -> 'None':
         """ Runs the cleanup subprocess in --once mode against the shared pub/sub database.
-        The Zato_PubSub_DB_* variables are inherited from this test process's environment.
+        Zato_PubSub_DB_Path is inherited from this test process's environment.
         """
         cleanup_command = [
             _python_bin, '-m', _cleanup_module,

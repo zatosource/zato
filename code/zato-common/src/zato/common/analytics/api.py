@@ -18,12 +18,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Column, create_engine, Index, Integer, MetaData, String, Table, Text
-from sqlalchemy import event as sa_event
+from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, String, Table, Text
 
 # Zato
-from zato.common.db_env import ensure_columns, ensure_indexes
-from zato.common.db_env.connection import set_sqlite_pragmas
+from zato.common.db_env import get_sqlite_file_engine
 from zato.common.defaults import default_env_base_dir
 
 # ################################################################################################################################
@@ -31,7 +29,6 @@ from zato.common.defaults import default_env_base_dir
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import anydict
 
     # Dummy assignments to satisfy type checkers
     Engine = Engine
@@ -87,12 +84,6 @@ Period_Len = 13
 # Maximum length of short string columns
 _short_column_len = 255
 
-# Engines are cached per SQLite file so all callers in a process share one engine
-_engine_cache:'anydict' = {}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 # The SQLite schema of the analytics store
 metadata = MetaData()
 
@@ -143,32 +134,8 @@ def get_analytics_engine() -> 'Engine':
     """ Returns an SQLAlchemy engine for the analytics store's SQLite file, creating the schema if needed.
     The path is resolved on each call, so a changed environment variable selects another file at once.
     """
-
-    # Reuse a previously built engine for the same file ..
     db_path = get_analytics_db_path()
-
-    if engine := _engine_cache.get(db_path):
-        out = engine
-        return out
-
-    # .. the file's directory may not exist yet, e.g. in freshly created environments ..
-    db_dir = os.path.dirname(db_path)
-    os.makedirs(db_dir, exist_ok=True)
-
-    # .. build the engine, with the pragmas applied to each new connection ..
-    out = create_engine(f'sqlite:///{db_path}')
-    sa_event.listen(out, 'connect', set_sqlite_pragmas)
-
-    # .. make sure the schema exists - this is idempotent ..
-    metadata.create_all(out)
-
-    # .. files created by older releases may be missing newly declared columns and indexes ..
-    for table in metadata.tables.values():
-        ensure_columns(out, table)
-        ensure_indexes(out, table)
-
-    # .. and cache the engine for all future callers.
-    _engine_cache[db_path] = out
+    out = get_sqlite_file_engine(db_path, metadata, needs_pool=False)
 
     return out
 

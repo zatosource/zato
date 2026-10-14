@@ -425,7 +425,7 @@ def create_zato_server_fixture(
         # .. any subprocesses and the test process itself all share one database
         # .. that starts empty and disappears together with the quickstart directory ..
         pubsub_db_path = os.path.join(server_directory, 'pubsub.db')
-        os.environ['Zato_PubSub_DB_Name'] = pubsub_db_path
+        os.environ['Zato_PubSub_DB_Path'] = pubsub_db_path
         logger.info('Pub/sub database: %s', pubsub_db_path)
 
         # .. the audit log gets its own file too - otherwise the test server would

@@ -63,15 +63,18 @@ Engine_PostgreSQL = 'postgresql+pg8000'
 _table_name = 'lab_results'
 
 _seed_rows = [
-    {'code': 'A1', 'label': 'First'},
-    {'code': 'A2', 'label': 'Second'},
+    {'code': 'LAB-001', 'label': 'First'},
+    {'code': 'LAB-002', 'label': 'Second'},
 ]
 
 # The statements the checks run
 _select_all     = f'select code, label from {_table_name} order by code'
 _select_by_code = f'select code, label from {_table_name} where code = :code'
+_update_by_code = f'update {_table_name} set label = :label where code = :code'
 
-_select_params = {'code': 'A2'}
+_select_params = {'code': 'LAB-002'}
+_update_params = {'code': 'LAB-002', 'label': 'Updated'}
+_updated_row   = {'code': 'LAB-002', 'label': 'Updated'}
 
 # A statement that no backend can run - the table it names does not exist
 _select_missing_table = f'select code from {_table_name}_missing'
@@ -82,7 +85,7 @@ _proc_by_code = 'get_lab_result_by_code'
 _proc_twice   = 'get_lab_results_twice'
 
 # What the procedure under test receives
-_proc_params = ['A2']
+_proc_params = ['LAB-002']
 
 # A procedure no backend has
 _proc_missing = 'get_lab_results_missing'
@@ -553,6 +556,24 @@ def _check_an_unknown_level_is_refused(details:'stranydict', engine_name:'str', 
             raise Exception('An unknown audit level was expected to be refused')
 
 # ################################################################################################################################
+
+def _check_execute_commits_a_statement_without_rows(
+    details:'stranydict',
+    engine_name:'str',
+    tmp_path:'any_',
+    ) -> 'None':
+    """ A statement without rows returns an empty list and commits before the connection is returned.
+    """
+    with _audit_db_env(tmp_path, 'statement-without-rows'):
+        with _new_connection(details, engine_name, '') as conn:
+
+            result = conn.execute(_update_by_code, _update_params)
+            assert result == []
+
+            rows = conn.execute(_select_by_code, _select_params)
+            assert rows == [_updated_row]
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _assert_paired_events(events:'anylist', outcome:'str') -> 'stranydict':
@@ -756,7 +777,7 @@ def _check_oracle_callproc_level_statement(details:'stranydict', tmp_path:'any_'
         with _new_connection(details, Engine_Oracle, 'statement') as conn:
 
             label_out = StringOut()
-            out_values = conn.callproc(_oracle_proc_label, [StringIn('A2'), label_out])
+            out_values = conn.callproc(_oracle_proc_label, [StringIn('LAB-002'), label_out])
 
             assert out_values == ['Second']
             assert label_out.get() == 'Second'
@@ -775,12 +796,12 @@ def _check_oracle_callproc_level_statement_params(details:'stranydict', tmp_path
     with _audit_db_env(tmp_path, 'oracle-callproc-level-statement-params'):
         with _new_connection(details, Engine_Oracle, 'statement-params') as conn:
 
-            _ = conn.callproc(_oracle_proc_label, [StringIn('A2'), StringOut()])
+            _ = conn.callproc(_oracle_proc_label, [StringIn('LAB-002'), StringOut()])
 
             summary = _assert_paired_events(_get_events(), AuditOutcome.OK)
 
             assert summary['statement'] == f'BEGIN {_oracle_proc_label}(); END;'
-            assert summary['params'] == ['A2', None]
+            assert summary['params'] == ['LAB-002', None]
             assert 'rows' not in summary
 
 # ################################################################################################################################
@@ -792,13 +813,13 @@ def _check_oracle_callproc_level_full(details:'stranydict', tmp_path:'any_') -> 
         with _new_connection(details, Engine_Oracle, 'full') as conn:
 
             # A single value through an OUT parameter ..
-            out_values = conn.callproc(_oracle_proc_label, [StringIn('A2'), StringOut()])
+            out_values = conn.callproc(_oracle_proc_label, [StringIn('LAB-002'), StringOut()])
             assert out_values == ['Second']
 
             summary = _assert_paired_events(_get_events(), AuditOutcome.OK)
 
             assert summary['statement'] == f'BEGIN {_oracle_proc_label}(); END;'
-            assert summary['params'] == ['A2', None]
+            assert summary['params'] == ['LAB-002', None]
             assert summary['rows'] == ['Second']
             assert summary['row_count'] == 1
 
@@ -927,6 +948,24 @@ def _check_sqlite_opt_in_pairs_statement_and_completion(tmp_path:'any_') -> 'Non
             assert summary['statement'] == _select_by_code
 
 # ################################################################################################################################
+
+def _check_sqlite_execute_commits_a_statement_without_rows(tmp_path:'any_') -> 'None':
+    """ An SQLite statement without rows returns an empty list and commits before the connection is returned.
+    """
+    with _audit_db_env(tmp_path, 'sqlite-statement-without-rows'):
+
+        db_path = os.path.join(str(tmp_path), 'sqlite-statement-without-rows.db')
+        _seed_sqlite_table(db_path)
+
+        with _new_sqlite_connection(db_path, '') as conn:
+
+            result = conn.execute(_update_by_code, _update_params)
+            assert result == []
+
+            rows = conn.execute(_select_by_code, _select_params)
+            assert rows == [_updated_row]
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def run_sqlite_completion_scenario(tmp_path:'any_') -> 'None':
@@ -936,6 +975,7 @@ def run_sqlite_completion_scenario(tmp_path:'any_') -> 'None':
     _check_sqlite_completion_of_an_ok_statement(tmp_path)
     _check_sqlite_completion_of_a_failed_statement(tmp_path)
     _check_sqlite_opt_in_pairs_statement_and_completion(tmp_path)
+    _check_sqlite_execute_commits_a_statement_without_rows(tmp_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -961,6 +1001,9 @@ def run_sql_audit_scenario(details:'stranydict', engine_name:'str', tmp_path:'an
 
     # A level nobody defined refuses to build a connection at all
     _check_an_unknown_level_is_refused(details, engine_name, tmp_path)
+
+    # A statement without rows commits before the connection is returned.
+    _check_execute_commits_a_statement_without_rows(details, engine_name, tmp_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -59,7 +59,7 @@ def _browse(service:'Service', topic_name:'str', sub_key:'str', document_key:'st
 # ################################################################################################################################
 
 class GetPubSubBackend(Service):
-    """ Answers with what database the server's own pub/sub backend runs on.
+    """ Answers with the SQLite file the server's own pub/sub backend runs on.
     """
 
     name = 'test.queue-delivery.get-pubsub-backend'
@@ -68,15 +68,9 @@ class GetPubSubBackend(Service):
 
         url = self.server.pubsub_backend.engine.url
 
-        # Oracle DB is addressed by a service name in the query string, not by a database in the path
-        name = url.database
-
-        if not name:
-            name = url.query['service_name']
-
         self.response.payload = {
             'type': url.get_backend_name(),
-            'name': name,
+            'path': url.database,
         }
 
 # ################################################################################################################################

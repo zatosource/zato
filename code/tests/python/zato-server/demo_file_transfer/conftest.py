@@ -265,7 +265,7 @@ def zato_server() -> 'any_':
     environment['Zato_Scheduler_HTTP_Port'] = str(_scheduler_http_port)
     environment['Zato_Audit_Log_DB_Type'] = AuditLogCtx.Type_SQLite
     environment['Zato_Audit_Log_DB_Name'] = audit_db_path
-    environment['Zato_PubSub_DB_Name'] = pubsub_db_path
+    environment['Zato_PubSub_DB_Path'] = pubsub_db_path
 
     server_process = _start_server(zato_bin, server_directory, server_port, environment)
     listener_process = None

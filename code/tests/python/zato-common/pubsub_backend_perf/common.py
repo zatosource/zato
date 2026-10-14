@@ -26,28 +26,21 @@ from humanize import intcomma
 from sqlalchemy import func, select
 
 # Zato
-from live_sql.env import database_env
 from perf import silence_logging_teardown, Max_Operation_Seconds, Min_Delivery_Rate_Per_Second, \
-    Min_Delivery_Rate_Per_Second_SSL, Min_Publish_Rate_Per_Second, Min_Publish_Rate_Per_Second_SSL, \
-    Progress_Interval_Seconds
-from zato.common.pubsub.sql.config import get_pubsub_engine
+    Min_Publish_Rate_Per_Second, Progress_Interval_Seconds
+from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx
 from zato.common.pubsub.sql.schema import topic_sub_table
-from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import stranydict
 
     envgen = Iterator[None]
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The prefix all the pub/sub database environment variables share.
-_env_prefix = 'Zato_PubSub_DB_'
 
 # How many rows per second the cleanup process must at least remove.
 Min_Cleanup_Rate_Per_Second = 5_000
@@ -88,12 +81,6 @@ Min_Free_Disk_GB = 20
 # How many bytes one gigabyte has.
 _bytes_per_gb = 1024 ** 3
 
-# The environment variable that says which database the run uses.
-_env_type_key = _env_prefix + 'Type'
-
-# The environment variable that says whether the database connection uses SSL.
-_env_ssl_key = _env_prefix + 'SSL'
-
 # What the currently running scenario looks like.
 progress_context = {
     'scenario': 'starting',
@@ -104,26 +91,10 @@ progress_context = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def is_ssl_enabled() -> 'bool':
-    """ Tells whether the currently configured database connection uses SSL.
-    """
-    if value := os.environ.get(_env_ssl_key, ''):
-        out = as_bool(value)
-    else:
-        out = False
-
-    return out
-
-# ################################################################################################################################
-
 def get_min_publish_rate() -> 'int':
     """ The publish floor of the current run.
     """
-    if is_ssl_enabled():
-        out = Min_Publish_Rate_Per_Second_SSL
-    else:
-        out = Min_Publish_Rate_Per_Second
-
+    out = Min_Publish_Rate_Per_Second
     return out
 
 # ################################################################################################################################
@@ -131,11 +102,7 @@ def get_min_publish_rate() -> 'int':
 def get_min_delivery_rate() -> 'int':
     """ The delivery floor of the current run.
     """
-    if is_ssl_enabled():
-        out = Min_Delivery_Rate_Per_Second_SSL
-    else:
-        out = Min_Delivery_Rate_Per_Second
-
+    out = Min_Delivery_Rate_Per_Second
     return out
 
 # ################################################################################################################################
@@ -207,7 +174,7 @@ def _get_subscription_count() -> 'int':
     """ How many topic subscriptions the database holds right now -
     zero when no database is configured, e.g. between tests.
     """
-    if _env_type_key not in os.environ:
+    if ModuleCtx.Env_Path not in os.environ:
         return 0
 
     engine = get_pubsub_engine()
@@ -268,11 +235,19 @@ def report_progress_forever(counters:'ProgressCounters') -> 'None':
 # ################################################################################################################################
 
 @contextmanager
-def pubsub_backend_env(details:'stranydict') -> 'envgen':
-    """ Points the Zato_PubSub_DB_* variables at one backend for the duration of a test.
+def pubsub_backend_env(db_path:'str') -> 'envgen':
+    """ Points Zato_PubSub_DB_Path at one SQLite file for the duration of a test.
     """
-    with database_env(_env_prefix, details):
+    old_path = os.environ.get(ModuleCtx.Env_Path)
+    os.environ[ModuleCtx.Env_Path] = db_path
+
+    try:
         yield
+    finally:
+        if old_path is None:
+            _ = os.environ.pop(ModuleCtx.Env_Path, None)
+        else:
+            os.environ[ModuleCtx.Env_Path] = old_path
 
 # ################################################################################################################################
 

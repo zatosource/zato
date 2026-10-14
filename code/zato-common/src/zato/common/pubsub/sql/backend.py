@@ -110,8 +110,7 @@ class PublishResult:
 
 class SQLPubSubBackend(SQLAdminAPI):
     """ SQL-based pub/sub backend - messages, queues and delivery state live
-    in their own relational database, SQLite by default and MySQL, PostgreSQL
-    or Oracle DB when configured through the Zato_PubSub_DB_* environment variables.
+    in the local SQLite file configured through Zato_PubSub_DB_Path.
     Payloads are stored in the database itself and dropped once every subscriber
     has acknowledged a message, leaving the row behind as the delivered-message trace.
     """

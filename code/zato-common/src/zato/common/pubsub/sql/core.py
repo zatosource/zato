@@ -18,11 +18,9 @@ from gevent.event import Event
 
 # SQLAlchemy
 from sqlalchemy import and_, bindparam, exists, select
-from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.api import HTTP_SOAP
-from zato.common.db_env import Type_SQLite
 from zato.common.pubsub.sql.config import get_pubsub_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
 from zato.common.typing_ import cast_
@@ -55,11 +53,6 @@ logger = getLogger(__name__)
 
 _retry = HTTP_SOAP.Retry
 
-# How many times a transaction rolled back as a deadlock victim is attempted in total,
-# and how long the pause between the attempts is, in seconds.
-_deadlock_attempt_count = 5
-_deadlock_retry_sleep = 0.05
-
 # How long back-to-back SQLite calls may hold the event loop before the backend
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
@@ -90,18 +83,6 @@ _drop_payloads_statement = _drop_payloads_statement.where(and_(
     ~_still_needed,
 ))
 _drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _is_deadlock_error(error:'DBAPIError') -> 'bool':
-    """ Tells whether the database rolled our transaction back as a deadlock victim -
-    MySQL says 'Deadlock found', PostgreSQL says 'deadlock detected'.
-    """
-    error_text = str(error.orig).lower()
-    out = 'deadlock' in error_text
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,16 +131,11 @@ class SQLBackendCore:
         # When _yield_after_write last let the event loop run.
         self._last_yield = monotonic()
 
-        # Which engine _needs_write_yield was computed for and what it said -
-        # the engine only changes when the environment repoints the backend.
-        self._yield_engine:'Engine | None' = None
-        self._needs_write_yield = False
-
 # ################################################################################################################################
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine behind the current Zato_PubSub_DB_* configuration, resolved on each access.
+        """ The engine behind the current Zato_PubSub_DB_Path, resolved on each access.
         """
         out = get_pubsub_engine()
         return out
@@ -233,24 +209,9 @@ class SQLBackendCore:
 # ################################################################################################################################
 
     def _yield_after_write(self) -> 'None':
-        """ Lets other greenlets run after a write transaction. Network databases
-        yield to the event loop through their socket I/O with every statement,
-        but SQLite runs its calls as blocking ones in the calling thread, so without
-        an explicit yield a greenlet writing in a tight loop would starve every
-        other greenlet in the process. The yield is time-based - one per interval,
-        not one per call - so the loop can never be held longer than the interval
-        while callers writing in bursts keep their throughput.
+        """ Lets other greenlets run after a write transaction. SQLite calls block
+        the calling thread, so the backend yields once per interval.
         """
-        engine = self.engine
-
-        # Only SQLite needs the yield - recheck only when the engine changed.
-        if engine is not self._yield_engine:
-            self._yield_engine = engine
-            self._needs_write_yield = engine.dialect.name == Type_SQLite
-
-        if not self._needs_write_yield:
-            return
-
         now = monotonic()
 
         if now - self._last_yield >= _yield_interval_seconds:
@@ -393,7 +354,9 @@ class SQLBackendCore:
         if not msg_ids:
             return 0
 
-        result = self._ack_with_deadlock_retries(sub_key, msg_ids, sequence_ids)
+        result = self._ack_messages_once(sub_key, msg_ids, sequence_ids)
+        self._yield_after_write()
+
         out = result.fully_delivered_count
 
         logger.info('ack_messages -> sub_key:%s, acked:%d, fully_delivered:%d', sub_key, len(msg_ids), out)
@@ -406,7 +369,9 @@ class SQLBackendCore:
         """ Acknowledges a single message on behalf of one of several callers that may act on it.
         Returns True only to the caller whose acknowledgement removed the subscriber's delivery row.
         """
-        result = self._ack_with_deadlock_retries(sub_key, [msg_id], None)
+        result = self._ack_messages_once(sub_key, [msg_id], None)
+        self._yield_after_write()
+
         out = result.removed_count > 0
 
         logger.info('claim_message -> sub_key:%s, msg_id:%s, claimed:%s', sub_key, msg_id, out)
@@ -415,36 +380,8 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    def _ack_with_deadlock_retries(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'AckResult':
-        """ Runs one acknowledgement transaction, again if the database picks it as a deadlock victim.
-        """
-
-        # The database may roll the transaction back as a deadlock victim -
-        # it is idempotent and is simply run again.
-        for attempt in range(_deadlock_attempt_count):
-            try:
-                out = self._ack_messages_once(sub_key, msg_ids, sequence_ids)
-                break
-            except DBAPIError as e:
-                # Anything other than a deadlock rollback is a real error.
-                if not _is_deadlock_error(e):
-                    raise
-
-                logger.info('ack_messages deadlock victim, attempt %d -> sub_key:%s', attempt + 1, sub_key)
-                sleep(_deadlock_retry_sleep)
-        else:
-            raise Exception(f'ack_messages still a deadlock victim after {_deadlock_attempt_count} attempts -> sub_key:{sub_key}')
-
-        # Let the other greenlets run now that the transaction is committed.
-        self._yield_after_write()
-
-        return out
-
-# ################################################################################################################################
-
     def _ack_messages_once(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'AckResult':
-        """ One acknowledgement transaction - what ack_messages runs and,
-        if the database picks it as a deadlock victim, runs again.
+        """ Runs one acknowledgement transaction.
         """
 
         # Our response to produce
@@ -452,8 +389,7 @@ class SQLBackendCore:
 
         with self.engine.begin() as connection:
 
-            # Map public identifiers to primary keys first - as a separate read,
-            # not a subquery in the delete, whose shared InnoDB locks deadlock ..
+            # Map public identifiers to primary keys first ..
             if sequence_ids is None:
                 message_ids = self._get_message_ids(connection, msg_ids)
             else:

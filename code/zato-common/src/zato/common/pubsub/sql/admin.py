@@ -268,8 +268,7 @@ class SQLAdminAPI(SQLBrowseAPI):
         for topic_name in topic_names:
             lowered_names.append(topic_name.lower())
 
-        # .. bucket by minute - the width is a literal, not a bind parameter, so the SELECT
-        # .. and GROUP BY expressions render identically, which PostgreSQL requires ..
+        # .. bucket by minute - the width is a literal rather than a bind parameter ..
         bucket_width = literal_column(str(_milliseconds_per_minute))
         bucket = message_table.c.pub_time_ms - message_table.c.pub_time_ms % bucket_width
         bucket = bucket.label('bucket')

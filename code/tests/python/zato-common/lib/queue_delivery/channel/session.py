@@ -26,9 +26,8 @@ from zato.common.test.conftest_base_pubsub import find_free_port, render_templat
     SessionState, start_server_process
 
 # Test support
-from live_sql.env import database_env
 from queue_delivery.amqp import build_amqp_yaml, declare_broker_queues
-from queue_delivery.backends import PubSub_Env_Prefix, start_backend
+from queue_delivery.backends import pubsub_path_env, start_backend
 from queue_delivery.channel.client import Counting_Pickup_Name
 from queue_delivery.type_under_test import TestConfig
 
@@ -145,7 +144,7 @@ class ChannelSession:
         test_data_directory = mkdtemp(prefix=f'zato_queue_delivery_{self.suite_name}_{self.backend_name}_')
         self.state.test_data_directory = test_data_directory
 
-        backend = start_backend(self.backend_name, test_data_directory, certificate_paths, self.suite_name)
+        backend = start_backend(self.backend_name, test_data_directory, certificate_paths)
         self.backend = backend
 
         logger.info('Backend %s ready: %.1fs', self.backend_name, time.monotonic() - start_time)
@@ -160,7 +159,7 @@ class ChannelSession:
         os.environ['Zato_Audit_Log_DB_Name'] = audit_db_path
 
         # Every process started from here on inherits the backend as its pub/sub database
-        self._exit_stack.enter_context(database_env(PubSub_Env_Prefix, backend.details))
+        self._exit_stack.enter_context(pubsub_path_env(backend.db_path))
 
         # On a broker backend every channel's topic is an AMQP-backed one, and the topics go in before the server
         # starts, which is when it reads which topics have a backend of their own. The channels themselves wait
