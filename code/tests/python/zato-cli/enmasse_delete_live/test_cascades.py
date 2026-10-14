@@ -38,8 +38,8 @@ class ModuleCtx:
     Scheduler_Start_Date = '2030-01-01T00:00:00'
 
     # How many jobs the owning objects of the dependent jobs test create - the IMAP job, three schedule jobs,
-    # the FHIR health check and bulk export jobs and the outgoing REST invocation job
-    Dependent_Job_Count = 7
+    # the FHIR health check job and the outgoing REST invocation job
+    Dependent_Job_Count = 6
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -299,7 +299,7 @@ def test_quota_tier(client:'AdminClient', pickup:'Pickup', runtime:'Runtime') ->
 
 def test_dependent_jobs(client:'AdminClient', pickup:'Pickup') -> 'None':
     """ The jobs that owning objects create are removed along with those objects - the IMAP job, the file transfer
-    schedule jobs, the FHIR health check and bulk export jobs and the outgoing REST invocation job.
+    schedule jobs, the FHIR health check job and the outgoing REST invocation job.
     """
     names = _names('dependent', 'imap', 'sftp', 'smb', 'ftp', 'fhir', 'outgoing')
 
@@ -357,13 +357,6 @@ def test_dependent_jobs(client:'AdminClient', pickup:'Pickup') -> 'None':
             'is_active': False,
             'health_check_run_every': 5,
             'health_check_run_unit': 'minutes',
-            'bulk_export': {
-                'is_active': False,
-                'level': 'system',
-                'run_every': 1,
-                'run_unit': 'days',
-                'start_date': ModuleCtx.Scheduler_Start_Date,
-            },
         }],
         'outgoing_rest': [outgoing_rest(names['outgoing'],
             scheduler_run_every=10, scheduler_run_unit='minutes', scheduler_start_date=ModuleCtx.Scheduler_Start_Date)],

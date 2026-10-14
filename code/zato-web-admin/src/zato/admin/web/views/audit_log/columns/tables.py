@@ -221,23 +221,6 @@ _fhir_columns = [
     {'key': 'action', 'label': 'Actions', 'type': 'action'},
 ]
 
-# All the events of one bulk export job share the job's id as their cid.
-_fhir_bulk_export_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
-    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
-    {'key': 'phase', 'label': 'Phase', 'type': 'text'},
-    {'key': 'endpoint', 'label': 'Request', 'type': 'text'},
-    {'key': 'resource_type', 'label': 'Resource', 'type': 'text'},
-    {'key': 'file_name', 'label': 'File', 'type': 'text'},
-    {'key': 'count', 'label': 'Count', 'type': 'text'},
-    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
-    {'key': 'status', 'label': 'Status', 'type': 'text'},
-    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
-    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
-]
-
 _kafka_channel_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -396,7 +379,6 @@ _source_columns = {
     'kafka-channel': _kafka_channel_columns,
     'kafka-outgoing': _kafka_outgoing_columns,
     'fhir': _fhir_columns,
-    'fhir-bulk-export': _fhir_bulk_export_columns,
     'scheduler': _scheduler_columns,
     'service': _service_columns,
     'llm': _llm_columns,

@@ -79,7 +79,6 @@ class AuditSource:
     Kafka_Channel  = 'kafka-channel'
     Kafka_Outgoing = 'kafka-outgoing'
     FHIR          = 'fhir'
-    FHIR_Bulk_Export = 'fhir-bulk-export'
     CCDA          = 'ccda'
     Config        = 'config'
     Scheduler     = 'scheduler'
@@ -144,7 +143,6 @@ _source_label = {
     AuditSource.Kafka_Channel: 'Kafka channel',
     AuditSource.Kafka_Outgoing: 'Kafka outgoing',
     AuditSource.FHIR: 'FHIR outgoing',
-    AuditSource.FHIR_Bulk_Export: 'FHIR bulk export',
     AuditSource.CCDA: 'C-CDA',
     AuditSource.Config: 'Log access',
     AuditSource.Scheduler: 'Scheduler',
@@ -215,7 +213,6 @@ source_attr_names = {
     AuditSource.MLLP_Channel: ('msg_type', 'mrn', 'facility', 'ack_status'),
     AuditSource.MLLP_Outgoing: ('msg_type', 'mrn', 'facility', 'ack_status'),
     AuditSource.FHIR: ('resource_type', 'method'),
-    AuditSource.FHIR_Bulk_Export: ('job_id', 'phase', 'resource_type', 'file_name', 'count'),
     AuditSource.CCDA: ('root_template', 'resource_count', 'document_size', 'reason'),
     AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
     AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name', 'service', 'checksum', 'current_run'),

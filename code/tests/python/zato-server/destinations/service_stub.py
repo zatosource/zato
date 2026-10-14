@@ -322,7 +322,7 @@ class EMailAPIRecorder:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What the connections a bulk export delivers to answer with
+# What the Kafka, SFTP and service destinations answer with
 Kafka_Response = {'topic': 'fhir.exports', 'offset': 7}
 SFTP_Response = {'is_ok': True}
 Service_Response = {'received': True}
@@ -364,16 +364,11 @@ class OutgoingStub:
 # ################################################################################################################################
 
 class SFTPConnectionRecorder:
-    """ Stands in for the connection self.sftp hands out - what was uploaded or written, and where to.
+    """ Stands in for the connection self.sftp hands out - what was written, and where to.
     """
-    def __init__(self, connection:'str', uploads:'anylist', writes:'anylist') -> 'None':
+    def __init__(self, connection:'str', writes:'anylist') -> 'None':
         self.connection = connection
-        self.uploads = uploads
         self.writes = writes
-
-    def upload(self, local_path:'str', remote_path:'str', *, recursive:'bool'=False, overwrite:'bool'=False) -> 'anydict':
-        self.uploads.append((self.connection, local_path, remote_path, recursive, overwrite))
-        return SFTP_Response
 
     def write(self, data:'any_', remote_path:'str', *, overwrite:'bool'=False) -> 'anydict':
         self.writes.append((self.connection, data, remote_path, overwrite))
@@ -385,11 +380,10 @@ class SFTPFacadeRecorder:
     """ Stands in for self.sftp.
     """
     def __init__(self) -> 'None':
-        self.uploads:'anylist' = []
         self.writes:'anylist' = []
 
     def __getitem__(self, connection:'str') -> 'SFTPConnectionRecorder':
-        out = SFTPConnectionRecorder(connection, self.uploads, self.writes)
+        out = SFTPConnectionRecorder(connection, self.writes)
         return out
 
 # ################################################################################################################################

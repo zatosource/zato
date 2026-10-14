@@ -18,7 +18,6 @@ from lxml.objectify import ObjectifiedElement
 
 # Zato
 from zato.common.api import IMAPAttachment, IMAPMessage, simple_types
-from zato.common.hl7.fhir.bulk_export.file import BulkExportFile
 from zato.common.marshal_.api import Model
 from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.json_internal import loads
@@ -246,11 +245,10 @@ class Request:
         if isinstance(self.payload, ServiceInput):
             self.payload = self.payload.to_dict()
 
-        # A bulk export file is the input as it is, whatever the service declares - the service reads it lazily,
-        # and so are the bundle a C-CDA channel made of the document it received, the messages, attachments
-        # and files that the IMAP and file transfer schedulers hand over, a model instance a publisher sent to a topic
-        # and an HL7 v2 message an MLLP channel parsed on input
-        if isinstance(self.payload, (BulkExportFile, Bundle, FileTransferItem, HL7Message, IMAPAttachment, IMAPMessage, Model)):
+        # The bundle a C-CDA channel made of the document it received, the messages, attachments and files
+        # that the IMAP and file transfer schedulers hand over, a model instance a publisher sent to a topic
+        # and an HL7 v2 message an MLLP channel parsed on input are each the input as it is, whatever the service declares
+        if isinstance(self.payload, (Bundle, FileTransferItem, HL7Message, IMAPAttachment, IMAPMessage, Model)):
             self.input = self.payload
 
         elif is_io:
