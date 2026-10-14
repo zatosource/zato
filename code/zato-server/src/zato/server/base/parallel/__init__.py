@@ -1082,6 +1082,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # runs in the background so startup never waits for it.
         _ = spawn_greenlet(self._import_demo_config_on_first_start)
 
+        # The file transfer demo, if it is on, needs its local servers back after a restart
+        _ = spawn_greenlet(self.resume_demo_file_transfer)
+
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
 # ################################################################################################################################
@@ -2245,6 +2248,26 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def import_demo_file_transfer(self):
+
+        from zato.server.demo_file_transfer import import_demo_file_transfer
+
+        result = import_demo_file_transfer(self)
+        return result
+
+# ################################################################################################################################
+
+    def resume_demo_file_transfer(self) -> 'None':
+
+        from zato.server.demo_file_transfer import resume_demo_file_transfer
+
+        try:
+            resume_demo_file_transfer(self)
+        except Exception:
+            logger.warning('Could not resume the file transfer demo -> %s', format_exc())
+
+# ################################################################################################################################
+
     def import_demo_pubsub(self):
 
         import zato.server.service.internal.pubsub
@@ -2605,6 +2628,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
+
+            # The local servers of the file transfer demo that this process started go away with it
+            from zato.server.demo_file_transfer import stop_demo_file_transfer
+            stop_demo_file_transfer()
 
             # Audit events still queued for the collector go out before the process ends
             from zato.common.audit_log.export.api import stop_audit_export

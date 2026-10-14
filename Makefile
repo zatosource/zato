@@ -18,7 +18,7 @@
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-rule-engine test-rule-engine-perf \
+	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-file-transfer test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
@@ -1200,6 +1200,18 @@ test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites agai
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-file-transfer: ## File transfer demo tests - the demo config set, the local SFTP, FTP, FTPS and SMB servers, a live server polling all of them, and the Dashboard card.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/demo_config/test_demo_config.py \
+		$(CURDIR)/code/tests/python/zato-common/file_transfer_local_servers/ \
+		$(CURDIR)/code/tests/python/zato-server/demo_file_transfer/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_demo_file_transfer -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_demo_config.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-destinations: ## Channel destination tests - the destination list, payload overrides, delivery order, retries, the dispatchers, the per-hop trail and the Dashboard views, fully offline.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/destination/ \
@@ -1350,7 +1362,7 @@ Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
-	test-openapi-console-live
+	test-openapi-console-live test-file-transfer
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui

@@ -32,6 +32,8 @@ from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.file_system import get_python_files
 from zato.server.demo import _archive_intake_channel, _archive_outconn
+from zato.server.demo_file_transfer.layout import Feeder_Name as _file_transfer_feeder_name, FTP_Connections, \
+    get_connection_names, get_schedule_job_names, SFTP_Connections, SMB_Connections
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,8 +64,9 @@ Set_HL7       = 'hl7'
 Set_IBM_MQ    = 'ibm_mq'
 Set_Kafka     = 'kafka'
 Set_PubSub    = 'pubsub'
+Set_File_Transfer = 'file_transfer'
 
-Set_Names = [Set_Scheduler, Set_Tutorial, Set_HL7, Set_IBM_MQ, Set_Kafka, Set_PubSub]
+Set_Names = [Set_Scheduler, Set_Tutorial, Set_HL7, Set_IBM_MQ, Set_Kafka, Set_PubSub, Set_File_Transfer]
 
 # The demo config sets a fresh environment receives on its first start
 First_Start_Set_Names = [Set_Tutorial, Set_HL7]
@@ -106,6 +109,9 @@ _tutorial_security_name = 'My API Key'
 _tutorial_job_name      = 'my.report.job'
 _tutorial_pickup_file   = 'api.py'
 
+# What the file transfer demo set consists of - the feeder job doubles as its presence check
+_file_transfer_job_names = [_file_transfer_feeder_name] + get_schedule_job_names()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -143,6 +149,12 @@ _manifests = {
         {'kind': 'security-basic-auth', 'names': _pubsub_security_names},
         {'kind': 'job', 'names': [_pubsub_job_name]},
     ],
+    Set_File_Transfer: [
+        {'kind': 'job', 'names': _file_transfer_job_names},
+        {'kind': 'outconn-sftp', 'names': get_connection_names(SFTP_Connections)},
+        {'kind': 'outconn-ftp', 'names': get_connection_names(FTP_Connections)},
+        {'kind': 'outconn-smb', 'names': get_connection_names(SMB_Connections)},
+    ],
 }
 
 # The generic-connection type each generic-connection kind stores its rows under
@@ -154,6 +166,9 @@ _generic_conn_types = {
     'channel-hl7-mllp': 'channel-hl7-mllp',
     'outconn-hl7-mllp': 'outconn-hl7-mllp',
     'outconn-hl7-fhir': 'outconn-hl7-fhir',
+    'outconn-sftp':     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
+    'outconn-ftp':      GENERIC.CONNECTION.TYPE.OUTCONN_FTP,
+    'outconn-smb':      GENERIC.CONNECTION.TYPE.OUTCONN_SMB,
 }
 
 # Which side of the http-soap table each REST kind lives on
@@ -335,6 +350,9 @@ _existing_names_funcs = {
     'channel-hl7-mllp': _existing_generic_conn_names,
     'outconn-hl7-mllp': _existing_generic_conn_names,
     'outconn-hl7-fhir': _existing_generic_conn_names,
+    'outconn-sftp':     _existing_generic_conn_names,
+    'outconn-ftp':      _existing_generic_conn_names,
+    'outconn-smb':      _existing_generic_conn_names,
 }
 
 # ################################################################################################################################
@@ -372,6 +390,12 @@ def _import_kafka(server:'ParallelServer') -> 'any_':
 
 def _import_pubsub(server:'ParallelServer') -> 'any_':
     out = server.import_demo_pubsub()
+    return out
+
+# ################################################################################################################################
+
+def _import_file_transfer(server:'ParallelServer') -> 'any_':
+    out = server.import_demo_file_transfer()
     return out
 
 # ################################################################################################################################
@@ -593,6 +617,15 @@ def _remove_tutorial(server:'ParallelServer') -> 'stranydict':
 
 # ################################################################################################################################
 
+def _remove_file_transfer(server:'ParallelServer') -> 'stranydict':
+
+    from zato.server.demo_file_transfer import remove_demo_file_transfer
+
+    out = remove_demo_file_transfer(server)
+    return out
+
+# ################################################################################################################################
+
 def _remove_hl7(server:'ParallelServer') -> 'stranydict':
 
     from zato.server.demo import remove_demo_data
@@ -610,6 +643,7 @@ _import_funcs = {
     Set_IBM_MQ:    _import_ibm_mq,
     Set_Kafka:     _import_kafka,
     Set_PubSub:    _import_pubsub,
+    Set_File_Transfer: _import_file_transfer,
 }
 
 _remove_funcs = {
@@ -619,6 +653,7 @@ _remove_funcs = {
     Set_IBM_MQ:    _remove_ibm_mq,
     Set_Kafka:     _remove_kafka,
     Set_PubSub:    _remove_pubsub,
+    Set_File_Transfer: _remove_file_transfer,
 }
 
 # ################################################################################################################################

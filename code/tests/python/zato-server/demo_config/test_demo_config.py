@@ -15,19 +15,25 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.server.demo_config import First_Start_Set_Names, get_demo_config_details, has_user_services, is_cluster_empty, \
-    save_demo_config, Set_Names, _delete_generic_connections, _delete_http_soap, _delete_jobs, _existing_names_funcs, \
-    _import_funcs, _manifests, _remove_funcs
+    save_demo_config, Set_File_Transfer, Set_Names, _delete_generic_connections, _delete_http_soap, _delete_jobs, \
+    _existing_names_funcs, _import_file_transfer, _import_funcs, _manifests, _remove_file_transfer, _remove_funcs
+from zato.server.demo_file_transfer.common import Root_Env_Name
+from zato.server.demo_file_transfer.layout import All_Connections, Feeder_Name, get_connection_names, \
+    get_schedule_job_names
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from pathlib import Path
+    from pytest import MonkeyPatch
     from zato.common.typing_ import any_, anylist, strdict, strlist
 
     any_ = any_
     anylist = anylist
+    MonkeyPatch = MonkeyPatch
     Path = Path
     strdict = strdict
     strlist = strlist
@@ -163,6 +169,10 @@ class _FakeServer:
 
     def import_demo_pubsub(self) -> 'bool':
         self.imported.append('pubsub')
+        return True
+
+    def import_demo_file_transfer(self) -> 'bool':
+        self.imported.append('file_transfer')
         return True
 
 # ################################################################################################################################
@@ -449,6 +459,138 @@ class TestHasUserServices:
         server.hot_deploy_config.pickup_dir = str(tmp_path)
 
         assert has_user_services(server) is True # type: ignore[arg-type]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestFileTransferSet:
+
+    def test_the_manifest_lists_jobs_then_each_protocol(self):
+
+        groups = _manifests[Set_File_Transfer]
+
+        kinds = []
+        for group in groups:
+            kinds.append(group['kind'])
+
+        assert kinds == ['job', 'outconn-sftp', 'outconn-ftp', 'outconn-smb']
+
+        # The feeder job comes first, followed by one job per schedule of each connection ..
+        job_names = groups[0]['names']
+        assert job_names[0] == Feeder_Name
+        assert job_names[1:] == get_schedule_job_names()
+        assert len(job_names) == 13
+
+        # .. and each protocol has its pair of connections.
+        assert groups[1]['names'] == ['demo.sftp.acme', 'demo.sftp.globex']
+        assert groups[2]['names'] == ['demo.ftp.initech', 'demo.ftps.umbrella']
+        assert groups[3]['names'] == ['demo.smb.hooli', 'demo.smb.wonka']
+
+    def test_the_set_is_registered_but_not_imported_on_first_start(self):
+
+        assert Set_File_Transfer in Set_Names
+        assert Set_File_Transfer not in First_Start_Set_Names
+
+        assert _import_funcs[Set_File_Transfer] is _import_file_transfer
+        assert _remove_funcs[Set_File_Transfer] is _remove_file_transfer
+
+    def test_the_feeder_job_is_the_presence_check(self):
+
+        # Only the feeder job exists ..
+        rows_by_model = {
+            'Job': [
+                {'id': 111, 'name': Feeder_Name},
+            ],
+        }
+
+        server = _FakeServer(rows_by_model)
+        server_any = cast_('any_', server)
+
+        out = get_demo_config_details(server_any)
+
+        # .. which is what makes the set present.
+        assert out['sets'][Set_File_Transfer]['is_present'] is True
+
+    def test_a_schedule_job_alone_is_not_presence(self):
+
+        # A job of one schedule exists but the feeder job does not ..
+        rows_by_model = {
+            'Job': [
+                {'id': 111, 'name': 'sftp.demo.sftp.acme.invoices'},
+            ],
+        }
+
+        server = _FakeServer(rows_by_model)
+        server_any = cast_('any_', server)
+
+        out = get_demo_config_details(server_any)
+
+        # .. so the set is not present.
+        assert out['sets'][Set_File_Transfer]['is_present'] is False
+
+    def test_a_slider_slid_on_imports_the_set(self):
+
+        server = _FakeServer()
+        server_any = cast_('any_', server)
+
+        states = _build_states(file_transfer=True)
+        out = save_demo_config(server_any, states)
+
+        assert out['success'] is True
+        assert out['message'] == 'Imported: file_transfer'
+        assert server.imported == ['file_transfer']
+
+    def test_removal_deletes_the_feeder_and_the_connections(self, tmp_path:'Path', monkeypatch:'MonkeyPatch'):
+
+        # The demo's root is a directory of this test's own ..
+        root = tmp_path / 'demo-root'
+        root.mkdir()
+
+        marker_file = root / 'marker.txt'
+        _ = marker_file.write_text('marker')
+
+        monkeypatch.setenv(Root_Env_Name, str(root))
+
+        # .. the feeder job and all the connections exist ..
+        connection_rows = []
+
+        connection_names = get_connection_names(All_Connections)
+
+        for index, name in enumerate(connection_names):
+            row = {'id': 1000 + index, 'name': name, 'type_': '', 'address': '', 'port': 0}
+            connection_rows.append(row)
+
+        rows_by_model = {
+            'Job': [
+                {'id': 111, 'name': Feeder_Name},
+            ],
+            'GenericConn': connection_rows,
+        }
+
+        server = _FakeServer(rows_by_model)
+        server_any = cast_('any_', server)
+
+        out = _remove_file_transfer(server_any)
+
+        # .. each of them is deleted through its own service ..
+        expected_deleted = {Feeder_Name}
+        expected_deleted.update(get_connection_names(All_Connections))
+
+        assert set(out['deleted']) == expected_deleted
+
+        invoked_services = set()
+        deleted_connection_ids = set()
+
+        for service, request in server.invoked:
+            invoked_services.add(service)
+            if service == 'zato.generic.connection.delete':
+                deleted_connection_ids.add(request['id'])
+
+        assert invoked_services == {'zato.scheduler.job.delete', 'zato.generic.connection.delete'}
+        assert len(deleted_connection_ids) == 6
+
+        # .. and the root is gone with everything in it.
+        assert not root.exists()
 
 # ################################################################################################################################
 # ################################################################################################################################

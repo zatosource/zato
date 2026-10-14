@@ -40,7 +40,7 @@ config.okRemovedLabel = 'OK, removed';
 config.okVisibleMs = 1000;
 
 // One card per demo config set, in the order they are rendered
-config.sets = ['tutorial', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq'];
+config.sets = ['tutorial', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq', 'file_transfer'];
 
 // What the page-wide help badge explains, anchored at the Everything slider
 config.howItWorksText = 'Slide "Everything" to import or remove all demo config, ' +
@@ -62,7 +62,10 @@ config.kinds = {
     'outconn-kafka':       {one: 'outgoing connection', many: 'outgoing connections', url: '/zato/outgoing/kafka/', params: '&type_=outconn-kafka'},
     'channel-hl7-mllp':    {one: 'MLLP channel', many: 'MLLP channels', url: '/zato/channel/hl7/mllp/', params: '&type_=channel-hl7-mllp'},
     'outconn-hl7-mllp':    {one: 'MLLP outgoing connection', many: 'MLLP outgoing connections', url: '/zato/outgoing/hl7/mllp/', params: '&type_=outconn-hl7-mllp'},
-    'outconn-hl7-fhir':    {one: 'FHIR connection', many: 'FHIR connections', url: '/zato/outgoing/hl7/fhir/', params: ''}
+    'outconn-hl7-fhir':    {one: 'FHIR connection', many: 'FHIR connections', url: '/zato/outgoing/hl7/fhir/', params: ''},
+    'outconn-sftp':        {one: 'SFTP connection', many: 'SFTP connections', url: '/zato/outgoing/sftp/', params: '&type_=outconn-sftp'},
+    'outconn-ftp':         {one: 'FTP or FTPS connection', many: 'FTP and FTPS connections', url: '/zato/outgoing/ftp/', params: '&type_=outconn-ftp'},
+    'outconn-smb':         {one: 'SMB connection', many: 'SMB connections', url: '/zato/outgoing/smb/', params: '&type_=outconn-smb'}
 };
 
 // ////////////////////////////////////////////////////////////////////////
