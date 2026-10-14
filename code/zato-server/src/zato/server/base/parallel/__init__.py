@@ -257,7 +257,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.fs_server_config = None # type: any_
         self.fs_sql_config = Bunch()
         self.pickup_config = Bunch()
-        self.logging_config = Bunch()
         self.logging_conf_path = 'server-'
         self.io_config = cast_('any_', None)
         self.connector_server_grace_time = None

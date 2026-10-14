@@ -3,7 +3,7 @@
 	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean \
 	server-install scheduler-install io-install common-core-install queue-bridge-install \
 	health-install health-build health-clean \
-	ruff pyright test-lint test-static test-static-python test-static-rust test-static-js \
+	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
@@ -383,9 +383,27 @@ pyright:
 		zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
 		tests/python/
 
+# Every first-party Python tree
+Zato_Pyright_All_Paths := \
+	zato-cli/src \
+	zato-client/src \
+	zato-common/src \
+	zato-distlock/src \
+	zato-openapi/src \
+	zato-rule-engine-dashboard/src \
+	zato-server/src \
+	zato-testing/src \
+	zato-web-admin/src \
+	util/ \
+	tests/python/
+
+pyright-all:
+	@echo "Running Python type checks on every first-party tree from $(CURDIR)/code"
+	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) $(Zato_Pyright_All_Paths)
+
 test-lint: ruff pyright format clippy ## Static analysis only - no test is executed. The first stage of test-all.
 
-test-static-python: ruff pyright ## Every Python static check - ruff and pyright.
+test-static-python: ruff pyright-all ## Every Python static check - ruff, and pyright over every first-party tree.
 
 test-static-rust: rust-lint ## Every Rust static check - format, clippy, dylint, deny, vet and geiger.
 

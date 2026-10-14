@@ -436,10 +436,8 @@ class Create(ZatoCommand):
         #
         # 1) ODB
         #
-        if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
-            self.logger.info('[{}/{}] ODB schema already exists'.format(next(next_step), total_steps))
-        else:
-            self.logger.info('[{}/{}] ODB schema created'.format(next(next_step), total_steps))
+        create_odb.Create(args).execute(args, False)
+        self.logger.info('[{}/{}] ODB schema created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -469,7 +467,7 @@ class Create(ZatoCommand):
         while True:
             cursor, keys = redis_conn.scan(cursor, match='zato:*', count=1000)
             if keys:
-                redis_conn.delete(*keys)
+                _ = redis_conn.delete(*keys)
             if cursor == 0:
                 break
 

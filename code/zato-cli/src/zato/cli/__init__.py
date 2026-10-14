@@ -718,15 +718,6 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
-    def get_crypto_manager_from_server_config(self, config, repo_dir):
-
-        # Zato
-        from zato.common.util.api import get_crypto_manager_from_server_config
-
-        return get_crypto_manager_from_server_config(config, repo_dir)
-
-# ################################################################################################################################
-
     def get_odb_session_from_server_config(self, config, cm):
 
         # Zato

@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from http.client import OK
+from http import HTTPStatus
 from json import dumps as json_dumps, loads as json_loads
 from urllib.parse import parse_qsl
 
@@ -175,7 +175,7 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
 
     # The reply goes onto a Redis stream, whose client library accepts plain ints only,
     # so the enum member cannot be sent as it is.
-    out['http_status'] = OK.value
+    out['http_status'] = HTTPStatus.OK.value
 
     out['content_type'] = _content_type
     out['data'] = data

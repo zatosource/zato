@@ -76,7 +76,7 @@ def count_text(count:'int', singular:'str', plural:'str') -> 'str':
 # ################################################################################################################################
 
 class ServiceContextFilter(logging.Filter):
-    def filter(self, record):
+    def filter(self, record:'logging.LogRecord') -> 'bool':
         _cid = current_cid.get()
         _service_name = current_service_name.get()
         if _cid:
@@ -555,7 +555,7 @@ def attach_service_context_filter() -> 'None':
     # .. and the handlers of every named logger too. The manager's dict may hold
     # .. placeholder objects which have no handlers of their own, hence the check.
     for logger_obj in logging.Logger.manager.loggerDict.values():
-        if hasattr(logger_obj, 'handlers'):
+        if isinstance(logger_obj, logging.Logger):
             for handler in logger_obj.handlers:
                 handler.addFilter(context_filter)
 

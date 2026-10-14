@@ -15,7 +15,7 @@ import os
 
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
-from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
+from gevent.monkey import patch_builtins, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
      patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
 
 # Note that the order of patching matters, just like in patch_all
@@ -31,7 +31,6 @@ patch_subprocess()
 patch_builtins()
 patch_signal()
 patch_queue()
-patch_contextvars()
 
 # stdlib
 import logging
@@ -53,6 +52,7 @@ from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
+from zato.common.typing_ import cast_
 from zato.common.ext.bunch import Bunch
 from zato.common.defaults import default_env_base_dir, secret_fields_exact, secret_fields_prefix, secret_fields_suffix
 from zato.common.util.api import asbool, get_config, is_encrypted, new_cid_server, parse_cmd_line_options, \
@@ -65,15 +65,17 @@ from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
 
 # Rust core
-from zato_server_core import HTTPServer, handle_http_request, init_rest_log, init_access_log
+from zato_server_core.zato_server_core import HTTPServer, handle_http_request, init_rest_log, init_access_log
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from datetime import timedelta
     from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
     callable_ = callable_
+    timedelta = timedelta
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,7 +128,6 @@ class ZatoApplication:
         self.zato_host = ''
         self.zato_port = -1
         self.zato_config = {}
-        self._http_server:'HTTPServer | None' = None
         self._init_config()
 
 # ################################################################################################################################
@@ -165,8 +166,8 @@ class ZatoApplication:
                 self.zato_config[k] = v
 
         # .. what interface to bind to ..
-        if bind_host := self._get_config_value('bind_host'): # type: ignore
-            self.zato_host = bind_host
+        if bind_host := self._get_config_value('bind_host'):
+            self.zato_host = str(bind_host)
 
         # .. what is our main TCP port ..
         if bind_port := self._get_config_value('bind_port'): # type: ignore
@@ -193,6 +194,7 @@ class ZatoApplication:
         # Build the request handler for the Rust HTTP server
         local_tz = get_localzone()
         utc_offset = local_tz.utcoffset(datetime.now(timezone.utc))
+        utc_offset = cast_('timedelta', utc_offset)
         local_tz_offset_secs = int(utc_offset.total_seconds())
 
         def request_handler(request_ctx:'dict') -> 'tuple':
@@ -213,10 +215,10 @@ class ZatoApplication:
         # .. which we convert to bytes for the HTTP server.
         max_msg_size = max_msg_size * _megabyte
 
-        self._http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
+        http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
 
         try:
-            self._http_server.serve_forever()
+            http_server.serve_forever()
         except KeyboardInterrupt:
             pass
         finally:
@@ -435,12 +437,10 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
     server.fs_server_config = server_config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
-    server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
     server.io_config = io_config
     server.user_config.update(server_config.user_config_items)
     server.sync_internal = options['sync_internal']
-    server.with_test_data = asbool(options.get('with_test_data'))
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore

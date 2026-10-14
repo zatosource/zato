@@ -97,7 +97,7 @@ class RateLimitingSave(AdminService):
 
         # .. validate each rule by running it through from_dict ..
         for item in rule_dicts:
-            SlottedCIDRRule.from_dict(item)
+            _ = SlottedCIDRRule.from_dict(item)
 
         # .. persist to the ODB ..
         self._save_opaque(channel_id, 'rate_limiting', rule_dicts, 'quota_tier')
