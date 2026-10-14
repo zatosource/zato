@@ -13,7 +13,7 @@ from contextlib import closing
 from inspect import isclass
 
 # Zato
-from zato.common.api import OpenAPI_Console_Auth, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import SEC_DEF_TYPE, URL_TYPE
 from zato.common.crypto.api import is_string_equal
 from zato.common.odb.model import SecurityBase
 from zato.common.typing_ import cast_
@@ -138,10 +138,6 @@ def resolve_caller(server:'ParallelServer', fields:'anydict') -> 'tuple_[intnone
     A caller with no ID and no admin flag could not be identified and gets nothing.
     """
     username = fields['username']
-
-    # Entra ID has already authenticated this caller
-    if fields['auth_type'] == OpenAPI_Console_Auth.Type_Entra:
-        return None, True
 
     # Dashboard users are the console's admins, so their credentials are checked first,
     # against the auth_user table in the same database the server's ODB uses ..

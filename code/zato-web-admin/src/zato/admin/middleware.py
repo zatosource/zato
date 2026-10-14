@@ -152,7 +152,7 @@ class Client(ZatoClient):
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Auth_Paths = {'/accounts/login/', '/accounts/login/callback/', '/logout/', '/zato/session-keepalive/'}
+_Auth_Paths = {'/accounts/login/', '/logout/', '/zato/session-keepalive/'}
 
 class ZatoMiddleware:
 

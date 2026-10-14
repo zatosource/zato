@@ -19,14 +19,10 @@ from django.views.decorators.csrf import csrf_exempt
 import yaml
 
 # Zato
-from zato.common.api import OpenAPI_Console_Auth
 from zato.common.typing_ import cast_
-from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, Session_Entra_Key, decrypt_credentials, \
-    decrypt_entra_identity, encrypt_credentials, encrypt_entra_identity
+from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, decrypt_credentials, encrypt_credentials
 from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path
 from zato.openapi.console.client import OpenAPIConsoleClient
-from zato.openapi.console.entra_auth import AuthType, complete_auth_code_flow, EntraAuthError, get_authorize_url, \
-    is_entra_enabled
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,38 +76,22 @@ def _get_client() -> 'OpenAPIConsoleClient':
 # ################################################################################################################################
 
 def _is_signed_in(req):
-    """ Whether the session already carries an identity, of either kind.
+    """ Whether the session already has the caller's credentials.
     """
-    if Session_Credentials_Key in req.session:
-        out = True
-    else:
-        out = Session_Entra_Key in req.session
-
+    out = Session_Credentials_Key in req.session
     return out
 
 # ################################################################################################################################
 
 def login_view(req):
     """ Renders the sign-in page and handles sign-in attempts. Credentials are validated by a Zato server
-    and, once accepted, stored encrypted in the session cookie. With Entra ID enabled, a GET may go
-    straight to Microsoft instead, the same way the Dashboard's login view does it.
+    and, once accepted, stored encrypted in the session cookie.
     """
-    # Someone whose session already carries an identity has nothing to do on the sign-in page
+    # Someone whose session already has credentials has nothing to do on the sign-in page
     if _is_signed_in(req):
         return redirect('console')
 
     context = get_branding_context()
-    context['entra_enabled'] = is_entra_enabled()
-
-    if req.method == 'GET':
-
-        # With Entra ID enabled, a GET goes to Microsoft when the person clicked the Microsoft button.
-        # The auth=built-in query parameter always keeps the plain form reachable so that sign-ins
-        # against security definitions keep working too - the two mechanisms coexist.
-        if is_entra_enabled():
-            if req.GET.get('auth') == AuthType.Entra:
-                authorize_url = get_authorize_url(req, '/openapi/console')
-                return redirect(authorize_url)
 
     if req.method == 'POST':
         username = req.POST['username']
@@ -120,7 +100,6 @@ def login_view(req):
         # Ask a server to validate the credentials by building the caller's document ..
         client = _get_client()
         spec = client.get_spec({
-            'auth_type': OpenAPI_Console_Auth.Type_Credentials,
             'username': username,
             'password': password,
         })
@@ -134,32 +113,6 @@ def login_view(req):
         context['error'] = _invalid_credentials_message
 
     return render(req, 'login.html', context)
-
-# ################################################################################################################################
-
-def login_callback_view(req):
-    """ Completes an Entra ID sign-in - the identity confirmed by Microsoft is stored encrypted
-    in the session cookie.
-    """
-    # A callback that arrives for a session which already carries an identity changes nothing
-    if _is_signed_in(req):
-        return redirect('console')
-
-    context = get_branding_context()
-    context['entra_enabled'] = is_entra_enabled()
-
-    try:
-        username, _display_name, _next_path = complete_auth_code_flow(req)
-    except EntraAuthError as e:
-        logger.warning('Entra ID sign-in error -> `%s`', e.args[0])
-        context['error'] = e.args[0]
-        return render(req, 'login.html', context)
-
-    req.session[Session_Entra_Key] = encrypt_entra_identity(username)
-
-    logger.info('User `%s` signed in to the console through Entra ID', username)
-
-    return redirect('console')
 
 # ################################################################################################################################
 
@@ -190,44 +143,26 @@ def console_view(req):
 
 def _get_auth_or_error(req):
     """ Returns the signed-in caller's auth details and no error, or no details and an error response
-    when there is no valid session. The details carry either the credentials the person signed in with
-    or the identity that Entra ID confirmed.
+    when there is no valid session. The details are the credentials the person signed in with.
     """
-    # A credentials session takes what the person typed at the sign-in form ..
-    if token := req.session.get(Session_Credentials_Key):
+    # No session at all is unauthorized ..
+    if not (token := req.session.get(Session_Credentials_Key)):
+        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
 
-        # The token becomes invalid when the console is restarted, in which case the user signs in again
-        credentials = decrypt_credentials(token)
-        if not credentials:
-            req.session.flush()
-            return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+    # .. the token becomes invalid when the console is restarted, in which case the user signs in again ..
+    credentials = decrypt_credentials(token)
+    if not credentials:
+        req.session.flush()
+        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
 
-        username, password = credentials
+    username, password = credentials
 
-        auth = {
-            'auth_type': OpenAPI_Console_Auth.Type_Credentials,
-            'username': username,
-            'password': password,
-        }
-        return auth, None
-
-    # .. an Entra ID session carries the identity Microsoft confirmed instead ..
-    if token := req.session.get(Session_Entra_Key):
-
-        username = decrypt_entra_identity(token)
-        if not username:
-            req.session.flush()
-            return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
-
-        auth = {
-            'auth_type': OpenAPI_Console_Auth.Type_Entra,
-            'username': username,
-            'password': '',
-        }
-        return auth, None
-
-    # .. and no session at all is unauthorized.
-    return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+    # .. and the session has what the person typed at the sign-in form.
+    auth = {
+        'username': username,
+        'password': password,
+    }
+    return auth, None
 
 # ################################################################################################################################
 

@@ -98,7 +98,6 @@ urlpatterns = [
 # ################################################################################################################################
 
     url(r'^accounts/login/$', main.login, name='login'),
-    url(r'^accounts/login/callback/$', main.login_callback, name='login-callback'),
     url(r'^$', main.index_redirect),
     url(r'^zato/$', login_required(main.index), name='main-page'),
     url(r'^zato/session-keepalive/$', login_required(main.session_keepalive), name='session-keepalive'),

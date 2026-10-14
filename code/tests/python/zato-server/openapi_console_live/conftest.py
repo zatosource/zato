@@ -24,7 +24,6 @@ import pytest  # noqa: E402
 from redis import Redis  # noqa: E402
 
 # Zato
-from zato.common.api import OpenAPI_Console_Auth  # noqa: E402
 from zato.openapi.console.client import OpenAPIConsoleClient  # noqa: E402
 
 # Live environment
@@ -76,7 +75,6 @@ class ConsoleSuite:
         self.server_log_path = os.path.join(zato.server_directory, 'logs', 'server.log')
 
         self.auth = {
-            'auth_type': OpenAPI_Console_Auth.Type_Credentials,
             'username': ModuleCtx.Admin_Username,
             'password': zato.password,
         }

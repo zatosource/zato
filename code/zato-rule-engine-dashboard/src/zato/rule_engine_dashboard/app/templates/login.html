@@ -13,12 +13,6 @@
 
     <div class="auth-logo" role="img" aria-label="Zato"></div>
 
-    {% if entra_error %}
-    <ul class="messages">
-      <li class="error">{{ entra_error }}</li>
-    </ul>
-    {% endif %}
-
     {% if messages %}
     <ul class="messages">
       {% for message in messages %}
@@ -39,12 +33,6 @@
         <input id="id_password" type="password" name="password">
       </div>
       <button class="button-primary auth-submit" type="submit">Sign in</button>
-
-      {% if entra_enabled %}
-      <div class="auth-alternative">
-        <a class="button-ghost auth-submit" href="{% url 'login' %}?auth=entra&amp;next={{ next|urlencode }}">Sign in with Microsoft</a>
-      </div>
-      {% endif %}
     </form>
 
   </div>

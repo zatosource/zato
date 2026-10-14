@@ -125,7 +125,6 @@ class OpenAPIConsoleClient:
         _ = self.redis.xadd(ModuleCtx.Request_Stream, {
             'command': 'get_spec',
             'correlation_id': correlation_id,
-            'auth_type': auth['auth_type'],
             'username': auth['username'],
             'password': auth['password'],
         }, maxlen=ModuleCtx.Max_Stream_Len)
@@ -161,7 +160,6 @@ class OpenAPIConsoleClient:
         _ = self.redis.xadd(ModuleCtx.Request_Stream, {
             'command': 'invoke',
             'correlation_id': correlation_id,
-            'auth_type': auth['auth_type'],
             'username': auth['username'],
             'password': auth['password'],
             'http_method': http_method,
