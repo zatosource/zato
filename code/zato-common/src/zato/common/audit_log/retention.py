@@ -51,7 +51,7 @@ logger = getLogger(__name__)
 Env_Content_Retention_Days = 'Zato_Audit_Log_Content_Retention_Days'
 
 # What one source's own content retention variable is prefixed with, completed the same way
-# the row retention one is, e.g. Zato_Audit_Log_Content_Retention_Days_X12.
+# the row retention one is, e.g. Zato_Audit_Log_Content_Retention_Days_MLLP_CHANNEL.
 Env_Content_Retention_Days_Prefix = 'Zato_Audit_Log_Content_Retention_Days_'
 
 # The environment variable pointing at a directory to archive rows into before they are deleted
@@ -456,8 +456,7 @@ def _run_source_retention(engine:'Engine', archiver:'_Archiver', source:'str', n
 
 def run_retention(engine:'Engine', now:'datetime') -> 'None':
     """ Enforces retention source by source, because each source is kept for its own number of days -
-    the B2B evidence of what a partner sent and acknowledged is not deleted on the schedule
-    that suits diagnostic events.
+    a health check's pings age out well before the traffic events do.
     """
     archiver = _Archiver(now)
     sources = _get_sources(engine)

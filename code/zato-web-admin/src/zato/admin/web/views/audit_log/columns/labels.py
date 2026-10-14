@@ -46,7 +46,6 @@ _source_label = {
     AuditSource.SOAP_Outgoing_Health: 'SOAP checks',
     AuditSource.SQL_Outgoing: 'SQL',
     AuditSource.Test_Transfer: 'Test transfers',
-    AuditSource.X12: 'X12',
 }
 
 # How each source's name reads in the middle of a sentence - the "All except .." badge
@@ -90,7 +89,6 @@ _source_event_label = {
     AuditSource.SOAP_Outgoing_Health: 'SOAP check',
     AuditSource.SQL_Outgoing: 'SQL',
     AuditSource.Test_Transfer: 'Test transfer',
-    AuditSource.X12: 'X12',
 }
 
 # What the object of each source is called in the detail pane.
@@ -122,7 +120,6 @@ _source_object_label = {
     AuditSource.SOAP_Outgoing_Health: 'Connection',
     AuditSource.SQL_Outgoing: 'Connection',
     AuditSource.Test_Transfer: 'Connection',
-    AuditSource.X12: 'Partner',
 }
 
 # What each source writes into an event's endpoint, called by what it is.
@@ -217,7 +214,6 @@ _source_title = {
     'email-smtp': 'SMTP audit log',
     'file-outgoing': 'File transfer audit log',
     'sql-outgoing': 'SQL audit log',
-    'x12': 'X12 audit log',
     'mcp': 'MCP audit log',
     'mllp-channel': 'MLLP channel audit log',
     'mllp-outgoing': 'Outgoing MLLP audit log',

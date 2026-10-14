@@ -38,7 +38,7 @@ class TestRuleMatching:
 
         ours = new_finding(FindingKind.Feed_Silent, _source, _channel_name, 'The feed went quiet')
         other_object = new_finding(FindingKind.Feed_Silent, _source, 'hl7.other.channel', 'The feed went quiet')
-        other_source = new_finding(FindingKind.Feed_Silent, 'x12', _channel_name, 'The feed went quiet')
+        other_source = new_finding(FindingKind.Feed_Silent, 'kafka-channel', _channel_name, 'The feed went quiet')
 
         assert rule_matches(broad, ours) is True
         assert rule_matches(broad, other_object) is True

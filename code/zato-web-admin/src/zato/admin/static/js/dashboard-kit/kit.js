@@ -1110,14 +1110,14 @@
         return parts.join('');
     };
 
-    /* A message written as delimited segments - HL7 v2 and X12 are both read this way,
+    /* A message written as delimited segments - HL7 v2 is read this way,
        one segment to a line with its name in front of its fields. The name is what the eye
        looks for going down a message, so that is what is coloured, and the separators are
        given the quietest colour the theme has because they are read past rather than read. */
-    kit._segment_line_pattern = /^[A-Z][A-Z0-9]{2}[|*]/;
+    kit._segment_line_pattern = /^[A-Z][A-Z0-9]{2}\|/;
     // The subcomponent separator is an ampersand, which by the time this runs is already
     // written as the entity that stands for one, so that is what is looked for here
-    kit._segment_separators_pattern = /(\||\^|~|\*|&amp;)/g;
+    kit._segment_separators_pattern = /(\||\^|~|&amp;)/g;
 
     // A message of this kind ends its segments with a carriage return of its own rather
     // than with a newline, so a line of it is whichever of the three a sender chose

@@ -335,13 +335,13 @@ def _run_lineage_checks(audit_log:'AuditLog') -> 'None':
     """ Confirms lineage links - multiple parents at insert time and links added
     after the fact, as when a resubmission points back to its original.
     """
-    first_parent_id = audit_log.insert(AuditSource.X12, AuditEvent.Message_Received, 'audit.test.lineage',
+    first_parent_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, 'audit.test.lineage',
         cid='cid-lineage-parent-1')
-    second_parent_id = audit_log.insert(AuditSource.X12, AuditEvent.Message_Received, 'audit.test.lineage',
+    second_parent_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, 'audit.test.lineage',
         cid='cid-lineage-parent-2')
 
     # One message aggregated out of two parents ..
-    child_id = audit_log.insert(AuditSource.X12, AuditEvent.Message_Sent, 'audit.test.lineage',
+    child_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Sent, 'audit.test.lineage',
         cid='cid-lineage-child', parents=[first_parent_id, second_parent_id],
         parent_link_type=AuditLink.Aggregated_From)
 
@@ -352,7 +352,7 @@ def _run_lineage_checks(audit_log:'AuditLog') -> 'None':
     ], links
 
     # .. and a resubmission linked to its original after both were written.
-    resubmit_id = audit_log.insert(AuditSource.X12, AuditEvent.Message_Sent, 'audit.test.lineage',
+    resubmit_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Sent, 'audit.test.lineage',
         cid='cid-lineage-resubmit')
     audit_log.add_links(resubmit_id, [child_id], AuditLink.Resubmit_Of)
 

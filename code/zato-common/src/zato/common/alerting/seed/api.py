@@ -83,7 +83,6 @@ _alert_sources = [
     AuditSource.Email_SMTP_Health,
     AuditSource.File_Outgoing,
     AuditSource.SQL_Outgoing,
-    AuditSource.X12,
     AuditSource.MCP,
     AuditSource.MLLP_Channel,
     AuditSource.MLLP_Outgoing,

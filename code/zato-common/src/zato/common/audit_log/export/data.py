@@ -60,7 +60,6 @@ _sources_without_data = {
     AuditSource.REST_Outgoing,
     AuditSource.SOAP_Outgoing,
     AuditSource.Email_SMTP,
-    AuditSource.X12,
     AuditSource.MLLP_Channel,
     AuditSource.MLLP_Outgoing,
     AuditSource.Kafka_Channel,

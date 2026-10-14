@@ -350,8 +350,7 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
 
 # ################################################################################################################################
 
-# Per-source parsed renderers - the default is the EDI renderer, which returns
-# an empty string for payloads that do not embed an EDI document. The config source
+# Per-source parsed renderers - a source not listed here has no parsed view. The config source
 # is not here - its view records resolve against the database and the details view
 # calls render_view_record for them itself.
 _source_parse = {

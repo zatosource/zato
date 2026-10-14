@@ -1,7 +1,7 @@
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.config = {
+$.fn.zato.reports.config = {
     sortTypeText: 'text',
     sortTypeNumber: 'number',
 
@@ -27,7 +27,7 @@ $.fn.zato.b2b.reports.config = {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.getCellValue = function(row, columnIndex) {
+$.fn.zato.reports.getCellValue = function(row, columnIndex) {
     var cell = $(row).children('td').eq(columnIndex);
     var out = cell.text().trim();
     return out;
@@ -35,8 +35,8 @@ $.fn.zato.b2b.reports.getCellValue = function(row, columnIndex) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.compareValues = function(first, second, sortType) {
-    var config = $.fn.zato.b2b.reports.config;
+$.fn.zato.reports.compareValues = function(first, second, sortType) {
+    var config = $.fn.zato.reports.config;
 
     // Count columns compare numerically ..
     if(sortType === config.sortTypeNumber) {
@@ -66,15 +66,15 @@ $.fn.zato.b2b.reports.compareValues = function(first, second, sortType) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.sortTable = function(table, columnIndex, sortType, isAscending) {
+$.fn.zato.reports.sortTable = function(table, columnIndex, sortType, isAscending) {
     var body = table.find('tbody');
     var rows = body.children('tr').get();
 
     rows.sort(function(firstRow, secondRow) {
-        var firstValue = $.fn.zato.b2b.reports.getCellValue(firstRow, columnIndex);
-        var secondValue = $.fn.zato.b2b.reports.getCellValue(secondRow, columnIndex);
+        var firstValue = $.fn.zato.reports.getCellValue(firstRow, columnIndex);
+        var secondValue = $.fn.zato.reports.getCellValue(secondRow, columnIndex);
 
-        var out = $.fn.zato.b2b.reports.compareValues(firstValue, secondValue, sortType);
+        var out = $.fn.zato.reports.compareValues(firstValue, secondValue, sortType);
 
         if(!isAscending) {
             out = -out;
@@ -101,7 +101,7 @@ $.fn.zato.b2b.reports.sortTable = function(table, columnIndex, sortType, isAscen
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.onHeaderClick = function(header) {
+$.fn.zato.reports.onHeaderClick = function(header) {
     var table = header.closest('table');
     var columnIndex = header.index();
     var sortType = header.attr('data-sort-type');
@@ -112,21 +112,21 @@ $.fn.zato.b2b.reports.onHeaderClick = function(header) {
     table.find('th').removeAttr('data-sort-ascending');
     header.attr('data-sort-ascending', isAscending ? '1' : '0');
 
-    $.fn.zato.b2b.reports.sortTable(table, columnIndex, sortType, isAscending);
+    $.fn.zato.reports.sortTable(table, columnIndex, sortType, isAscending);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.init = function() {
-    $('table.b2b-report-table').on('click', 'th.b2b-report-sortable', function() {
-        $.fn.zato.b2b.reports.onHeaderClick($(this));
+$.fn.zato.reports.init = function() {
+    $('table.report-table').on('click', 'th.report-sortable', function() {
+        $.fn.zato.reports.onHeaderClick($(this));
     });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.init_filter_selects = function(formId, filterOptions, pickedSources, pickedObjects) {
-    var config = $.fn.zato.b2b.reports.config;
+$.fn.zato.reports.init_filter_selects = function(formId, filterOptions, pickedSources, pickedObjects) {
+    var config = $.fn.zato.reports.config;
     var kit = $.fn.zato.dashboard_kit;
     var form = $('#' + formId);
 
@@ -260,7 +260,7 @@ $.fn.zato.b2b.reports.init_filter_selects = function(formId, filterOptions, pick
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.init_filter_tabs = function(formId, rangeInputId) {
+$.fn.zato.reports.init_filter_tabs = function(formId, rangeInputId) {
     var form = $('#' + formId);
     var rangeInput = $('#' + rangeInputId);
 

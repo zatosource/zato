@@ -146,17 +146,6 @@ _sql_outgoing_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
-_x12_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
-    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
-    {'key': 'msg_id', 'label': 'Control number', 'type': 'text'},
-    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
-    {'key': 'size', 'label': 'Size', 'type': 'size'},
-    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
-]
-
 _mcp_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -372,7 +361,6 @@ _source_columns = {
     'email-smtp': _email_smtp_columns,
     'file-outgoing': _file_outgoing_columns,
     'sql-outgoing': _sql_outgoing_columns,
-    'x12': _x12_columns,
     'mcp': _mcp_columns,
     'mllp-channel': _mllp_columns,
     'mllp-outgoing': _mllp_columns,

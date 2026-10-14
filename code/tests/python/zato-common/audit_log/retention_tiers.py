@@ -58,12 +58,12 @@ _content_expired_age_days = 12
 # Old enough for row deletion
 _row_expired_age_days = 45
 
-# How many days of rows the scenario keeps for the source it deletes rows of. The B2B sources keep
-# their evidence for years by default, so a scenario about deletion has to say what it means here.
-_x12_retention_days = 30
+# How many days of rows the scenario keeps for the source it deletes rows of - said explicitly,
+# so that the scenario does not depend on what the defaults happen to be.
+_source_retention_days = 30
 
 # The environment variable holding the above
-_env_x12_retention_days = f'{Env_Retention_Days_Prefix}{get_source_env_suffix(AuditSource.X12)}'
+_env_source_retention_days = f'{Env_Retention_Days_Prefix}{get_source_env_suffix(AuditSource.MLLP_Channel)}'
 
 # The MLLP outgoing connection whose exchanges the chunk order scenario writes, and how many of them
 _mllp_connection = 'audit.test.retention.mllp'
@@ -79,7 +79,7 @@ def _insert_event_at(
     audit_log:'AuditLog',
     age_days:'int',
     *,
-    source:'str' = AuditSource.X12,
+    source:'str' = AuditSource.MLLP_Channel,
     outcome:'str' = AuditOutcome.OK,
     data:'str' = '',
     attrs:'strdictnone' = None,
@@ -88,7 +88,7 @@ def _insert_event_at(
     """ Writes one event through the audit log and then backdates it by the given number of days -
     retention only ever looks at the event time.
     """
-    event_id = audit_log.insert(source, AuditEvent.Interchange_Sent, _channel_name,
+    event_id = audit_log.insert(source, AuditEvent.Interchange_Received, _channel_name,
         cid=f'cid-retention-{age_days}-{outcome}', outcome=outcome, data=data, attrs=attrs, bodies=bodies)
 
     event_time = utcnow() - timedelta(days=age_days)
@@ -194,7 +194,7 @@ def run_retention_tiers_scenario() -> 'None':
     archive_dir = mkdtemp(prefix='zato-audit-log-archive-')
 
     os.environ[Env_Content_Retention_Days] = f'{_content_retention_days}'
-    os.environ[_env_x12_retention_days] = f'{_x12_retention_days}'
+    os.environ[_env_source_retention_days] = f'{_source_retention_days}'
     os.environ[Env_Archive_Dir] = archive_dir
 
     try:
@@ -202,7 +202,7 @@ def run_retention_tiers_scenario() -> 'None':
         # A successful event past the content cutoff - its payload goes, its row stays ..
         prunable_id = _insert_event_at(audit_log, _content_expired_age_days,
             data='the payload retention prunes',
-            attrs={'control_number': '000000101'},
+            attrs={'msg_type': 'ADT^A01'},
             bodies={'request': 'the body retention prunes'})
 
         # .. a failure of the same age - the default predicate protects it ..
@@ -218,7 +218,7 @@ def run_retention_tiers_scenario() -> 'None':
         # .. an event past the row cutoff, with companions that must disappear with it ..
         expired_id = _insert_event_at(audit_log, _row_expired_age_days,
             data='the payload of a row past the retention window',
-            attrs={'control_number': '000000102'},
+            attrs={'msg_type': 'ADT^A08'},
             bodies={'request': 'the body of a row past the retention window'})
 
         # .. a recent event linked to the expired one - the link goes when its parent does ..
@@ -275,7 +275,7 @@ def run_retention_tiers_scenario() -> 'None':
 
     finally:
         _ = os.environ.pop(Env_Content_Retention_Days, None)
-        _ = os.environ.pop(_env_x12_retention_days, None)
+        _ = os.environ.pop(_env_source_retention_days, None)
         _ = os.environ.pop(Env_Archive_Dir, None)
         rmtree(archive_dir, ignore_errors=True)
 

@@ -79,7 +79,6 @@ from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
 from zato.admin.web.views import audit_log
 from zato.admin.web.views.analytics import screens as analytics_screens
-from zato.admin.web.views import b2b
 from zato.admin.web.views import channel_usage
 from zato.admin.web.views import detail_poll
 from zato.admin.web.views import alerting
@@ -483,20 +482,6 @@ urlpatterns += [
 
     url(r'^zato/destinations/get-connection-list/$',
         login_required(destinations.get_connection_list), name='destinations-get-connection-list'),
-
-    # X12 control numbers
-
-    url(r'^zato/b2b-control-numbers/$',
-        login_required(b2b.control_numbers), name='b2b-control-numbers'),
-    url(r'^zato/b2b-control-numbers/set-next/$',
-        login_required(b2b.set_next), name='b2b-control-numbers-set-next'),
-
-    # B2B reports
-
-    url(r'^zato/b2b-reports/$',
-        login_required(b2b.reports), name='b2b-reports'),
-    url(r'^zato/b2b-reports/csv/$',
-        login_required(b2b.reports_csv), name='b2b-reports-csv'),
 
     # Channel usage
 

@@ -12,7 +12,7 @@
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
-	test-edifact test-x12 test-soap \
+	test-edifact test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
@@ -884,12 +884,6 @@ test-edifact: ## EDIFACT tests - fully offline, no external services needed.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_edifact -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-x12: ## X12 tests - fully offline, no external services needed.
-	$(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/x12/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_x12 -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
-
 test-soap: ## SOAP messaging and channel tests - fully offline, no external services needed.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/soap/ \
@@ -1342,7 +1336,7 @@ Zato_Test_Static := test-lint
 # Offline unit suites, no server, no container, no browser
 Zato_Test_Offline := \
 	test-message-filters test-demo-seed test-truncate test-safeguards \
-	test-edifact test-alerting test-x12 test-request-response test-destinations \
+	test-edifact test-alerting test-request-response test-destinations \
 	test-soap
 
 # Rust toolchain suites and the database matrices

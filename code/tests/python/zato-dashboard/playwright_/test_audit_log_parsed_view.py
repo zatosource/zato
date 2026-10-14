@@ -22,9 +22,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Audit_Source = 'x12'
+_Audit_Source = 'mllp-channel'
 
-# The tab labels of the message overlay when the payload carries an EDI document
+# The tab labels of the message overlay when the payload carries an HL7 message
 _Raw_Tab_Label    = 'Raw'
 _Parsed_Tab_Label = 'Parsed'
 
@@ -34,21 +34,10 @@ _Tab_Bar_Selector    = _Overlay_Selector + ' .zato-highlight-pane-overlay-tabs'
 _Tab_Selector        = _Overlay_Selector + ' .zato-highlight-pane-overlay-tab'
 _Active_Tab_Selector = _Overlay_Selector + ' .zato-highlight-pane-overlay-tab-active'
 
-# What the parsed view of the seeded purchase order must contain
-_PO_Number = 'PO-4529'
-
-# The raw X12 purchase order the seeded event carries as its payload.
-_purchase_order_850 = 'ISA*00*          *00*          *ZZ*SENDERID       *ZZ*RECEIVERID     ' + \
-    '*260709*1200*U*00401*000000905*0*P*>~' + \
-    'GS*PO*SENDERGS*RECEIVERGS*20260709*1200*905*X*004010~' + \
-    'ST*850*0001~' + \
-    'BEG*00*SA*PO-4529**20260709~' + \
-    'PO1*1*10*EA*9.75*TE*UP*012345678905~' + \
-    'PID*F****Blue ceramic mug 350 ml~' + \
-    'CTT*1~' + \
-    'SE*6*0001~' + \
-    'GE*1*905~' + \
-    'IEA*1*000000905~'
+# The raw HL7 v2 admission the seeded event carries as its payload.
+_admission_a01 = 'MSH|^~\\&|SENDAPP|SENDFAC|RECVAPP|RECVFAC|20260709120000||ADT^A01|MSG00001|P|2.5\r' + \
+    'EVN|A01|20260709120000\r' + \
+    'PID|1||MRN12345^^^HOSP^MR||Doe^Jane||19800101|F\r'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,29 +76,29 @@ def _get_editor_text(page:'Page') -> 'str':
 # ################################################################################################################################
 
 class TestAuditLogParsedView:
-    """ The message overlay of the audit log - a payload that carries an EDI document
+    """ The message overlay of the audit log - a payload that carries an HL7 message
     shows the raw wire format and its parsed rendering side by side, as two tabs,
     while any other payload keeps the raw view only.
     """
 
 # ################################################################################################################################
 
-    def test_edi_payload_shows_raw_and_parsed_tabs(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_hl7_payload_shows_raw_and_parsed_tabs(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        # The identities are unique per run so only this test's events show up.
+        # The channel name is unique per run so only this test's events show up.
         suffix = CryptoManager.generate_hex_string().upper()
-        pair = f'ZATORETAIL{suffix}:PARTNERCORP{suffix}'
+        channel_name = f'test.mllp.parsed.{suffix}'
 
-        # Seed one event whose payload is a complete X12 purchase order ..
+        # Seed one event whose payload is a complete HL7 message ..
         audit_log = AuditLog('audit-log-test')
-        audit_log.insert(AuditSource.X12, AuditEvent.Interchange_Sent, pair, cid='cid-edi-' + suffix, msg_id='905',
-            size=len(_purchase_order_850), data=_purchase_order_850)
+        audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, channel_name, cid='cid-hl7-' + suffix,
+            msg_id='MSG00001', size=len(_admission_a01), data=_admission_a01)
 
-        # .. open the page pre-filtered to that pair and open the message overlay.
-        goto_audit_log(page, base_url, _Audit_Source, pair)
+        # .. open the page pre-filtered to that channel and open the message overlay.
+        goto_audit_log(page, base_url, _Audit_Source, channel_name)
         _open_message_overlay(page)
 
         # The overlay shows the raw and parsed tabs ..
@@ -124,14 +113,14 @@ class TestAuditLogParsedView:
         assert raw_label == _Raw_Tab_Label, f'Expected the first tab to be "{_Raw_Tab_Label}", got: "{raw_label}"'
         assert parsed_label == _Parsed_Tab_Label, f'Expected the second tab to be "{_Parsed_Tab_Label}", got: "{parsed_label}"'
 
-        # .. the raw one is active first, with the complete wire payload ..
+        # .. the raw one is active first, with the complete wire payload, one segment to a line ..
         active_label = page.inner_text(_Active_Tab_Selector).strip()
         assert active_label == _Raw_Tab_Label, f'Expected the "{_Raw_Tab_Label}" tab to be active, got: "{active_label}"'
 
         editor_text = _get_editor_text(page)
-        assert editor_text == _purchase_order_850, f'Expected the raw wire payload, got: "{editor_text}"'
+        assert editor_text.splitlines() == _admission_a01.splitlines(), f'Expected the raw wire payload, got: "{editor_text}"'
 
-        # .. and clicking the parsed one swaps in the human-readable document view.
+        # .. and clicking the parsed one swaps in the human-readable message view.
         page.click(f'{_Tab_Selector}:has-text("{_Parsed_Tab_Label}")')
 
         active_label = page.inner_text(_Active_Tab_Selector).strip()
@@ -140,39 +129,38 @@ class TestAuditLogParsedView:
 
         editor_text = _get_editor_text(page)
 
-        # The elements show with their dictionary names next to the wire values ..
-        assert f'po_number: {_PO_Number}' in editor_text, f'Expected a named po_number element, got: "{editor_text}"'
-        assert 'sender_id: SENDERID' in editor_text, f'Expected a named sender_id element, got: "{editor_text}"'
+        # The fields show with their names next to the wire values ..
+        assert 'MSH-9  Message Type: ADT^A01' in editor_text, f'Expected a named message type, got: "{editor_text}"'
+        assert 'PID-5  Patient Name: Doe^Jane' in editor_text, f'Expected a named patient name, got: "{editor_text}"'
 
-        # .. and the purchase order line loop is indented.
-        assert '\n    PO1 - ' in editor_text, f'Expected an indented PO1 loop, got: "{editor_text}"'
-        assert '\n        quantity: 10' in editor_text, f'Expected an indented quantity element, got: "{editor_text}"'
+        # .. and the components are indented under their fields.
+        assert '\n      PID-5.1  Family Name: Doe' in editor_text, f'Expected an indented component, got: "{editor_text}"'
 
 # ################################################################################################################################
 
-    def test_non_edi_payload_keeps_the_raw_view_only(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_non_hl7_payload_keeps_the_raw_view_only(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        # The identities are unique per run so only this test's events show up.
+        # The channel name is unique per run so only this test's events show up.
         suffix = CryptoManager.generate_hex_string().upper()
-        pair = f'ZATORETAIL{suffix}:PARTNERCORP{suffix}'
+        channel_name = f'test.mllp.parsed.{suffix}'
 
-        # Seed one event whose payload is JSON, not an EDI document.
-        json_data = dumps({'control_number': '905', 'status': 'accepted'})
+        # Seed one event whose payload is JSON, not an HL7 message.
+        json_data = dumps({'status': 'accepted'})
 
         audit_log = AuditLog('audit-log-test')
-        audit_log.insert(AuditSource.X12, AuditEvent.Ack_Received, pair, cid='cid-ack-' + suffix, msg_id='905',
+        audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, channel_name, cid='cid-json-' + suffix,
             size=len(json_data), data=json_data)
 
-        # Open the page pre-filtered to that pair and open the overlay of the newest event.
-        goto_audit_log(page, base_url, _Audit_Source, pair)
+        # Open the page pre-filtered to that channel and open the overlay of the newest event.
+        goto_audit_log(page, base_url, _Audit_Source, channel_name)
         _open_message_overlay(page)
 
-        # A payload without an EDI document has no tab bar at all ..
+        # A payload without an HL7 message has no tab bar at all ..
         tab_bar = page.query_selector(_Tab_Bar_Selector)
-        assert tab_bar is None, 'Expected no overlay tabs for a non-EDI payload'
+        assert tab_bar is None, 'Expected no overlay tabs for a non-HL7 payload'
 
         # .. and the editor holds the raw payload itself.
         editor_text = _get_editor_text(page)

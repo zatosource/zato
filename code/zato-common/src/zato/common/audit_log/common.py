@@ -31,16 +31,11 @@ Audit_DB_File_Name = 'audit.db'
 Env_Retention_Days = 'Zato_Audit_Log_Retention_Days'
 
 # What one source's own retention variable is prefixed with - the source name in upper case
-# with dashes turned into underscores completes it, e.g. Zato_Audit_Log_Retention_Days_X12.
+# with dashes turned into underscores completes it, e.g. Zato_Audit_Log_Retention_Days_MLLP_CHANNEL.
 Env_Retention_Days_Prefix = 'Zato_Audit_Log_Retention_Days_'
 
 # How many days of events are kept when the environment does not say otherwise
 _default_retention_days = 30
-
-# How many days the B2B sources are kept for. What a partner sent and what it acknowledged is the
-# evidence a trade dispute is settled with, and disputes surface years after the exchange,
-# so the sources that carry such evidence outlive the debug events by default.
-_default_evidence_retention_days = 7 * 365
 
 # How many days a health check's own events are kept for. A check running every ten seconds writes
 # more rows in a day than most connections carry in a month, and a ping that answered a week ago
@@ -72,7 +67,6 @@ class AuditSource:
     Email_SMTP    = 'email-smtp'
     File_Outgoing = 'file-outgoing'
     SQL_Outgoing  = 'sql-outgoing'
-    X12           = 'x12'
     MCP           = 'mcp'
     MLLP_Channel  = 'mllp-channel'
     MLLP_Outgoing = 'mllp-outgoing'
@@ -136,7 +130,6 @@ _source_label = {
     AuditSource.Email_SMTP_Health: 'SMTP check',
     AuditSource.File_Outgoing: 'File transfer',
     AuditSource.SQL_Outgoing: 'SQL',
-    AuditSource.X12: 'X12',
     AuditSource.MCP: 'MCP',
     AuditSource.MLLP_Channel: 'MLLP channel',
     AuditSource.MLLP_Outgoing: 'MLLP outgoing',
@@ -239,7 +232,6 @@ source_attr_names = {
 
 # The sources kept for something other than the usual span, with how long each is kept for.
 _source_retention_days = {
-    AuditSource.X12: _default_evidence_retention_days,
     AuditSource.REST_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.SOAP_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.FHIR_Health: _default_health_check_retention_days,
@@ -262,9 +254,9 @@ def get_retention_days(source:'str' = '') -> 'int':
     process-wide - the latter is also the widest window the reports run over.
 
     A source's own environment variable comes first, then the source's own default, and only then
-    the process-wide setting. The order is deliberate: an operator shortening retention across the
-    board is asking for less diagnostic history, not for the evidence of what a partner acknowledged
-    to be deleted, and that decision has to be made for the source it concerns by name.
+    the process-wide setting. The order is deliberate: an operator lengthening retention across the
+    board is asking for more traffic history, not for months of health check pings to be kept,
+    and that decision has to be made for the source it concerns by name.
     """
     if source:
 
@@ -512,7 +504,7 @@ _event_columns = [
     # question of the four with no index of its own behind it.
     Index('idx_event_correl_id', 'correl_id', 'id'),
 
-    # The reconciliation queries ask for the open events of one source before a moment in time -
+    # The outstanding queries ask for the open events of one source before a moment in time -
     # every message whose receipt has not arrived - and the msg_id index above covers only the
     # lookup of the closing event, leaving the outer half of that question a full scan.
     Index('idx_event_source_type_time', 'source', 'event_type', 'event_time_iso'),
