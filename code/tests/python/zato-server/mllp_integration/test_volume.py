@@ -37,7 +37,7 @@ if 0:
 # ################################################################################################################################
 
 # The volume proof is opt-in - it runs for minutes under sustained load,
-# so it only starts when the environment asks for it, like test-as2-live does.
+# so it only starts when the environment asks for it.
 _is_volume_enabled = bool(os.environ.get('Zato_Test_HL7_Volume'))
 
 # Per-message trace diagnostics - opt-in through the environment

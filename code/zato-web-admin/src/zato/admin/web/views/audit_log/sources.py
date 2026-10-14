@@ -17,7 +17,6 @@ from sqlalchemy import select
 
 # Zato
 from zato.admin.web.views.audit_log.columns import _source_event_label
-from zato.common.as2.mdn import describe_disposition
 from zato.common.audit_log.api import event_table
 from zato.common.audit_log.common import event_attr_table, event_body_table, AuditBody
 from zato.common.audit_log.query import source_outstanding
@@ -50,56 +49,6 @@ _source_outstanding = source_outstanding
 _source_resubmit = source_resubmit_actions
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _enrich_as2_row(row:'anydict') -> 'None':
-    """ Extracts the disposition and MIC of an AS2 event out of its JSON data,
-    so they render as columns of their own.
-    """
-    row['disposition'] = ''
-    row['mic'] = ''
-
-    data = row['data']
-    if not data:
-        return
-
-    # A payload that is not JSON, e.g. a raw MIME body, has nothing to extract.
-    try:
-        details = json.loads(data)
-    except ValueError:
-        return
-
-    # A message-sent event carries the MIC computed at send time,
-    # an mdn-received event carries what the receipt itself reported.
-    if mic := details.get('mic'):
-        row['mic'] = mic
-
-    if disposition := details.get('disposition'):
-        row['disposition'] = describe_disposition(disposition, details['modifier_kind'], details['modifier'])
-
-# ################################################################################################################################
-
-def _enrich_as4_row(row:'anydict') -> 'None':
-    """ Extracts the conversation id of an AS4 event out of its JSON data, so it renders as a column
-    of its own - one conversation groups the messages of a business exchange that spans several.
-    """
-    row['conversation_id'] = ''
-
-    data = row['data']
-    if not data:
-        return
-
-    # A payload that is not JSON has nothing to extract.
-    try:
-        details = json.loads(data)
-    except ValueError:
-        return
-
-    # Only the user message events carry a conversation - a receipt refers to one through
-    # the message id it echoes.
-    if conversation_id := details.get('conversation_id'):
-        row['conversation_id'] = conversation_id
-
 # ################################################################################################################################
 
 # The data keys a file transfer row lifts into columns of its own.
@@ -156,8 +105,6 @@ def _enrich_file_outgoing_row(row:'anydict') -> 'None':
 
 # Per-source row enrichment - a source with columns extracted out of the event data registers itself here
 _source_row_enrich = {
-    'as2': _enrich_as2_row,
-    'as4': _enrich_as4_row,
     'file-outgoing': _enrich_file_outgoing_row,
 }
 

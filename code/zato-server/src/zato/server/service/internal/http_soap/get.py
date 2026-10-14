@@ -12,17 +12,13 @@ from contextlib import closing
 
 # Zato
 from zato.common.api import Groups, query_parameters
-from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, \
-     is_ext_object_id, merge_ext_channel_items, needs_ext_db, to_local_id, to_public_id
 from zato.common.odb.model import HTTPSOAP
 from zato.common.odb.query import http_soap, http_soap_list
-from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque
 from zato.server.service import AsIs, Boolean
 from zato.server.service.internal.http_soap.alert_settings import alert_input, apply_list_defaults
-from zato.server.service.internal.http_soap.common import _as2_input, _as4_input, _BaseGet, _invocation_input, \
-    _pem_secret_fields, _retry_input
+from zato.server.service.internal.http_soap.common import _BaseGet, _invocation_input, _retry_input
 from zato.server.service.internal.http_soap.delivery_settings import apply_delivery_list_defaults, delivery_input
 
 # ################################################################################################################################
@@ -45,31 +41,9 @@ class Get(_BaseGet):
         self.request.input.require_any('id', 'name')
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
-        # Ids arrive as strings and the external database check needs an integer
-        if input_id := self.request.input.id:
-            input_id = int(input_id)
-        else:
-            input_id = 0
-
-        # Objects from the external AS2/AS4 database are looked up under their local ids there
-        is_ext = is_ext_object_id(input_id)
-
-        if is_ext:
-            local_id = to_local_id(input_id)
-        else:
-            local_id = input_id
-
-        with closing(self.server.get_config_session(object_id=input_id)) as session:
-            item = http_soap(session, cluster_id, local_id, self.request.input.name)
-            out = cast_('anydict', get_dict_with_opaque(item))
-
-        # Secrets never leave the server, not even encrypted.
-        for name in _pem_secret_fields:
-            _ = out.pop(name, None)
-
-        # The object is known everywhere else under its offset id
-        if is_ext:
-            out['id'] = to_public_id(out['id'])
+        with closing(self.odb.session()) as session:
+            item = http_soap(session, cluster_id, self.request.input.id, self.request.input.name)
+            out = get_dict_with_opaque(item)
 
         self.response.payload = out
 
@@ -97,8 +71,6 @@ class GetList(_BaseGet):
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
         *_retry_input, \
-        *_as4_input, \
-        *_as2_input, \
         *alert_input, \
         *delivery_input
 
@@ -154,10 +126,6 @@ class GetList(_BaseGet):
             if should_ignore_wrapper and item.get('is_wrapper'):
                 continue
 
-            # .. secrets never leave the server, not even encrypted ..
-            for name in _pem_secret_fields:
-                _ = item.pop(name, None)
-
             # .. a channel or an outgoing REST connection created before a setting existed reads the same
             # .. as one created after it ..
             apply_list_defaults(item)
@@ -172,33 +140,9 @@ class GetList(_BaseGet):
         return out
 
     def handle(self):
-        transport = self.request.input.transport
-
-        # AS2/AS4 objects come from the external database when one is configured ..
-        if needs_ext_db(transport):
-            with closing(get_ext_db_session()) as session:
-                data = self.get_data(session)
-
-            for item in data:
-                item['id'] = to_public_id(item['id'])
-
-        else:
-            with closing(self.odb.session()) as session:
-                data = self.get_data(session)
-
-            # .. lists without a transport filter combine both databases,
-            # .. with the external one winning on name conflicts.
-            if is_ext_db_configured():
-                if not transport:
-                    with closing(get_ext_db_session()) as session:
-                        ext_data = self.get_data(session)
-
-                    for item in ext_data:
-                        item['id'] = to_public_id(item['id'])
-
-                    merge_ext_channel_items(data, ext_data)
-
-        self.response.payload[:] = data
+        with closing(self.odb.session()) as session:
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################

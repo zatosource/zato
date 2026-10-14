@@ -29,7 +29,7 @@ if 0:
 
 # The sections whose items name a security definition under the security key
 security_referencing_sections = (
-    'channel_rest', 'channel_soap', 'channel_as4', 'outgoing_rest', 'outgoing_soap', 'channel_kafka', 'outgoing_kafka',
+    'channel_rest', 'channel_soap', 'outgoing_rest', 'outgoing_soap', 'channel_kafka', 'outgoing_kafka',
     'outgoing_graphql', 'outgoing_grpc', 'channel_mllp', 'pubsub_permission', 'pubsub_subscription',
 )
 
@@ -43,12 +43,6 @@ group_referencing_fields = {
 
 # The sections whose items may name a quota tier
 quota_tier_referencing_sections = ('security', 'groups', 'channel_rest')
-
-# The sections whose items name a pub/sub topic in a single field, with the field
-topic_referencing_fields = {
-    'outgoing_as2': 'inbound_topic',
-    'channel_as4':  'as4_inbound_topic',
-}
 
 # The section each connection allow list of an MCP gateway refers to
 mcp_connection_list_sections = {
@@ -197,9 +191,6 @@ class ReferenceChecker:
 
         if section == 'channel_openapi':
             self._check_list(section, item, 'rest_channel_list', 'channel_rest')
-
-        if section in topic_referencing_fields:
-            self._check_value(section, item, topic_referencing_fields[section], 'pubsub_topic')
 
         if section == 'mcp_gateway':
             for list_key in MCP.Connection_List_Keys:

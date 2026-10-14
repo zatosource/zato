@@ -51,9 +51,6 @@ Object_Types = (
     'email_imap',
     'email_smtp',
     'pubsub_topic',
-    'outgoing_as2',
-    'channel_as4',
-    'outgoing_as4',
     'sql',
     'channel_kafka',
     'outgoing_kafka',
@@ -143,39 +140,6 @@ pubsub_topic:
     is_audit_export_payload_active: true
 
   - name: enmasse.payload.topic.off.{suffix}
-
-outgoing_as2:
-
-  - name: enmasse.payload.as2.on.{suffix}
-    as2_from: ENMASSE-ON
-    as2_to: PARTNER-ON
-    endpoint_url: https://as2.example.com/on
-    is_audit_export_payload_active: true
-
-  - name: enmasse.payload.as2.off.{suffix}
-    as2_from: ENMASSE-OFF
-    as2_to: PARTNER-OFF
-    endpoint_url: https://as2.example.com/off
-
-channel_as4:
-
-  - name: enmasse.payload.channel.as4.on.{suffix}
-    url_path: /enmasse/payload/as4/on/{suffix}
-    is_audit_export_payload_active: true
-
-  - name: enmasse.payload.channel.as4.off.{suffix}
-    url_path: /enmasse/payload/as4/off/{suffix}
-
-outgoing_as4:
-
-  - name: enmasse.payload.outgoing.as4.on.{suffix}
-    host: https://as4.example.com
-    url_path: /msh/on
-    is_audit_export_payload_active: true
-
-  - name: enmasse.payload.outgoing.as4.off.{suffix}
-    host: https://as4.example.com
-    url_path: /msh/off
 
 sql:
 

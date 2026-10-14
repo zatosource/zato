@@ -66,7 +66,7 @@ class TestErrorSummary:
 
 class TestResubmitMessage:
 
-    def test_an_as2_reprocess_names_its_routing_target(self):
+    def test_a_reprocess_names_its_routing_target(self):
         report = {
             'is_ok': True,
             'target_kind': 'service',

@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 
 # Maps connection detail keys to the suffix of the corresponding environment variable -
-# a prefix such as Zato_Ext_DB_ turns the suffix Type into Zato_Ext_DB_Type.
+# a prefix such as Zato_Audit_Log_DB_ turns the suffix Type into Zato_Audit_Log_DB_Type.
 _detail_suffixes = {
     'type':          'Type',
     'host':          'Host',

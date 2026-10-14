@@ -31,15 +31,15 @@ Audit_DB_File_Name = 'audit.db'
 Env_Retention_Days = 'Zato_Audit_Log_Retention_Days'
 
 # What one source's own retention variable is prefixed with - the source name in upper case
-# with dashes turned into underscores completes it, e.g. Zato_Audit_Log_Retention_Days_AS2.
+# with dashes turned into underscores completes it, e.g. Zato_Audit_Log_Retention_Days_X12.
 Env_Retention_Days_Prefix = 'Zato_Audit_Log_Retention_Days_'
 
 # How many days of events are kept when the environment does not say otherwise
 _default_retention_days = 30
 
-# How many days the B2B sources are kept for. What a partner sent and what it signed for is the
+# How many days the B2B sources are kept for. What a partner sent and what it acknowledged is the
 # evidence a trade dispute is settled with, and disputes surface years after the exchange,
-# so the sources that carry non-repudiation evidence outlive the debug events by default.
+# so the sources that carry such evidence outlive the debug events by default.
 _default_evidence_retention_days = 7 * 365
 
 # How many days a health check's own events are kept for. A check running every ten seconds writes
@@ -72,8 +72,6 @@ class AuditSource:
     Email_SMTP    = 'email-smtp'
     File_Outgoing = 'file-outgoing'
     SQL_Outgoing  = 'sql-outgoing'
-    AS2           = 'as2'
-    AS4           = 'as4'
     X12           = 'x12'
     MCP           = 'mcp'
     MLLP_Channel  = 'mllp-channel'
@@ -139,8 +137,6 @@ _source_label = {
     AuditSource.Email_SMTP_Health: 'SMTP check',
     AuditSource.File_Outgoing: 'File transfer',
     AuditSource.SQL_Outgoing: 'SQL',
-    AuditSource.AS2: 'AS2',
-    AuditSource.AS4: 'AS4',
     AuditSource.X12: 'X12',
     AuditSource.MCP: 'MCP',
     AuditSource.MLLP_Channel: 'MLLP channel',
@@ -246,8 +242,6 @@ source_attr_names = {
 
 # The sources kept for something other than the usual span, with how long each is kept for.
 _source_retention_days = {
-    AuditSource.AS2: _default_evidence_retention_days,
-    AuditSource.AS4: _default_evidence_retention_days,
     AuditSource.X12: _default_evidence_retention_days,
     AuditSource.REST_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.SOAP_Outgoing_Health: _default_health_check_retention_days,
@@ -272,7 +266,7 @@ def get_retention_days(source:'str' = '') -> 'int':
 
     A source's own environment variable comes first, then the source's own default, and only then
     the process-wide setting. The order is deliberate: an operator shortening retention across the
-    board is asking for less diagnostic history, not for the evidence of what a partner signed for
+    board is asking for less diagnostic history, not for the evidence of what a partner acknowledged
     to be deleted, and that decision has to be made for the source it concerns by name.
     """
     if source:
@@ -315,10 +309,6 @@ class AuditEvent:
     Ack_Sent             = 'ack-sent'
     Ack_Received         = 'ack-received'
     Message_Sent         = 'message-sent'
-    MDN_Sent             = 'mdn-sent'
-    MDN_Received         = 'mdn-received'
-    Receipt_Sent         = 'receipt-sent'
-    Receipt_Received     = 'receipt-received'
     Alert_Raised         = 'alert-raised'
     Alert_Explained      = 'alert-explained'
     DLQ                  = 'dlq'
@@ -630,33 +620,6 @@ _alert_columns = [
 ]
 
 alert_table = Table('alert', metadata, *_alert_columns)
-
-# ################################################################################################################################
-
-# The AS4 message partition channels - the messages a partner is to pull rather than be sent,
-# each waiting on the channel it was queued on until a pull request asks for it. A row claimed by
-# a pull stays in flight until the receipt for it arrives, and one whose receipt never arrives goes
-# back to waiting, so a pull that was answered but never acknowledged is not a message lost.
-_as4_pull_queue_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('mpc', _endpoint_column),
-    Column('from_party', _short_column),
-    Column('to_party', _short_column),
-    Column('message_id', _short_column),
-    Column('conversation_id', _short_column),
-    Column('service', _short_column),
-    Column('action', _short_column),
-    Column('state', _short_column),
-    Column('pull_count', Integer),
-    Column('queued_iso', _short_column),
-    Column('claimed_iso', _short_column),
-    Column('data', Text),
-    Index('idx_as4_pull_queue_mpc_state', 'mpc', 'state', 'id'),
-    Index('idx_as4_pull_queue_message_id', 'message_id', unique=True),
-    Index('idx_as4_pull_queue_state_claimed', 'state', 'claimed_iso'),
-]
-
-as4_pull_queue_table = Table('as4_pull_queue', metadata, *_as4_pull_queue_columns)
 
 # ################################################################################################################################
 # ################################################################################################################################

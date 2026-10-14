@@ -31,15 +31,14 @@ from redis.exceptions import RedisError
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch, bunchify
-from zato.common.api import API_Key, AS4, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, KAFKA, \
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, KAFKA, \
     OAuth, On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG
 from zato.common.const import SECRETS
-from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db
-from zato.common.facade import SecurityFacade, _service_sub_key_prefix
+from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
 from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
@@ -58,7 +57,7 @@ from zato.common.user_config import UserConfig, UserConfigFile
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
     parse_job_extra, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
-from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, ensure_openapi_channel_exists
+from zato.common.util.channel import ensure_openapi_channel_exists
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
@@ -69,10 +68,8 @@ from zato.common.util.log_destinations import delete_log_destination, get_log_de
     set_log_destination
 from zato.common.util.logging_ import get_logging_levels, set_logging_levels, test_logging_levels
 from zato.common.util.platform_ import is_posix
-from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_as2_async_mdn_job_exists, \
-    ensure_as2_resend_job_exists, ensure_as2_rotation_job_exists, ensure_as4_resend_job_exists, \
-    ensure_b2b_alerting_job_exists, ensure_cert_check_job_exists, ensure_dlq_rule_job_exists, ensure_ms_health_job_exists, \
-    ensure_test_transfer_job_exists
+from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_cert_check_job_exists, ensure_dlq_rule_job_exists, \
+    ensure_ms_health_job_exists, ensure_test_transfer_job_exists
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.url_dispatcher import build_methods_allowed_re
 from zato.hl7.common import add_config_location as hl7_add_config_location
@@ -785,26 +782,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token.decode('utf8')
         self.odb.decrypt_func = self.decrypt
-
-# ################################################################################################################################
-
-    def get_config_session(self, *, object_type:'str'='', object_id:'int'=0) -> 'any_':
-        """ Returns an SQL session for configuration objects - a session to the external AS2/AS4 database
-        if one is configured and the object belongs to it, a session to the main ODB otherwise.
-        """
-
-        # AS2/AS4 objects are recognized either by their type ..
-        if needs_ext_db(object_type):
-            out = get_ext_db_session()
-            return out
-
-        # .. or by their id, which is always offset for objects from the external database.
-        if is_ext_object_id(object_id):
-            out = get_ext_db_session()
-            return out
-
-        out = self.odb.session()
-        return out
 
 # ################################################################################################################################
 
@@ -1845,10 +1822,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # wake their blocking fetches up, so no dedicated connections are needed.
         self.pubsub_push_delivery = PushDelivery(self, self.pubsub_backend)
 
-        # The built-in subscriber that delivers messages published to the outbound AS4 topic -
-        # it has to exist before any user service publishes its first AS4 message.
-        self._setup_as4_delivery_subscription()
-
         # Publishing to an outgoing connection is only possible once its type knows how to be delivered to ..
         register_delivery_handlers()
 
@@ -1862,26 +1835,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.config_manager.init_pubsub_amqp_channels()
 
         logger.info('PubSub SQL backend started')
-
-# ################################################################################################################################
-
-    def _setup_as4_delivery_subscription(self) -> 'None':
-        """ Registers the built-in push subscription that consumes the outbound AS4 topic
-        and hands each message over to         the AS4 delivery service.
-        """
-        sub_key = _service_sub_key_prefix + AS4.Delivery_Service
-
-        # Record the subscription in the pub/sub database ..
-        self.pubsub_backend.subscribe(sub_key, AS4.Default.Outbound_Topic)
-
-        # .. and register the push config so a delivery greenlet picks it up.
-        self.config_manager._push_subs[sub_key] = [{
-            'sub_key': sub_key,
-            'topic_name': AS4.Default.Outbound_Topic,
-            'push_type': PubSub.Push_Type.Service,
-            'push_service_name': AS4.Delivery_Service,
-            'rest_push_endpoint_id': None,
-        }]
 
 # ################################################################################################################################
 
@@ -1914,16 +1867,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             mcp_created = ensure_mcp_gateway_exists(session, self.cluster_id)
             mcp_oauth_metadata_created = ensure_mcp_oauth_metadata_channel_exists(session, self.cluster_id)
 
-            # .. the AS2 jobs, which always live in the main ODB ..
-            as2_rotation_job_created = ensure_as2_rotation_job_exists(session, self.cluster_id)
-            as2_async_mdn_job_created = ensure_as2_async_mdn_job_exists(session, self.cluster_id)
-            as2_resend_job_created = ensure_as2_resend_job_exists(session, self.cluster_id)
-
-            # .. the AS4 resend job ..
-            as4_resend_job_created = ensure_as4_resend_job_exists(session, self.cluster_id)
-
-            # .. the alerting sweeps ..
-            b2b_alerting_job_created = ensure_b2b_alerting_job_exists(session, self.cluster_id)
+            # .. the alerting sweep ..
             alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
 
             # .. and the alerting probes, of which the test transfer one is created inactive.
@@ -1938,11 +1882,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 openapi_created,
                 mcp_created,
                 mcp_oauth_metadata_created,
-                as2_rotation_job_created,
-                as2_async_mdn_job_created,
-                as2_resend_job_created,
-                as4_resend_job_created,
-                b2b_alerting_job_created,
                 alerting_job_created,
                 cert_check_job_created,
                 ms_health_job_created,
@@ -1964,21 +1903,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             if mcp_oauth_metadata_created:
                 logger.info('Created MCP OAuth protected resource metadata channel')
 
-            if as2_rotation_job_created:
-                logger.info('Created AS2 rotation completion job')
-
-            if as2_async_mdn_job_created:
-                logger.info('Created AS2 asynchronous MDN delivery job')
-
-            if as2_resend_job_created:
-                logger.info('Created AS2 resend job')
-
-            if as4_resend_job_created:
-                logger.info('Created AS4 resend job')
-
-            if b2b_alerting_job_created:
-                logger.info('Created B2B alerting job')
-
             if alerting_job_created:
                 logger.info('Created alerting sweep job')
 
@@ -1993,25 +1917,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if dlq_rule_job_created:
                 logger.info('Created DLQ rule job')
-
-        # AS2 channels are auto-created in the external AS2/AS4 database when one is configured
-        if is_ext_db_configured():
-            as2_session = get_ext_db_session()
-        else:
-            as2_session = self.odb.session()
-
-        with closing(as2_session) as session:
-            as2_created = ensure_as2_channel_exists(session, self.cluster_id)
-            as2_mdn_created = ensure_as2_mdn_channel_exists(session, self.cluster_id)
-
-            if as2_created or as2_mdn_created:
-                session.commit()
-
-            if as2_created:
-                logger.info('Created AS2 inbound channel')
-
-            if as2_mdn_created:
-                logger.info('Created AS2 async MDN channel')
 
 # ################################################################################################################################
 
@@ -2777,10 +2682,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'generic_connection': 'generic_conn',
             'outgoing_rest': 'http_soap',
             'outgoing_soap': 'http_soap',
-            'outgoing_as4': 'http_soap',
             'channel_rest': 'http_soap',
             'channel_soap': 'http_soap',
-            'channel_as4': 'http_soap',
             'channel_openapi': 'generic_conn',
             'outgoing_amqp': 'out_amqp',
             'outgoing_odoo': 'out_odoo',
@@ -2803,10 +2706,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         _entity_type_to_extra_where = {
             'outgoing_rest': "connection = 'outgoing' AND transport = 'plain_http'",
             'outgoing_soap': "connection = 'outgoing' AND transport = 'soap'",
-            'outgoing_as4':  "connection = 'outgoing' AND transport = 'as4'",
             'channel_rest':  "connection = 'channel' AND transport = 'plain_http'",
             'channel_soap':  "connection = 'channel' AND transport = 'soap'",
-            'channel_as4':   "connection = 'channel' AND transport = 'as4'",
             'channel_openapi': "type_ = '{}'".format(GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI),
             'groups': "type_ = '{}'".format(Groups.Type.Group_Parent),
             'on_prem_gateway': "type_ = '{}'".format(On_Prem_Gateway.Type.On_Prem_Gateway),

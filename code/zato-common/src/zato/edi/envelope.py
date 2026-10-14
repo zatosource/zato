@@ -8,9 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Envelope reading - extracting the routing identifiers of an EDI payload without a full parse.
 # For X12 that is the ISA sender and receiver, the GS application ids and the ST01 document type,
-# for EDIFACT the UNB sender and recipient and the UNH message type. This is what lets an AS2
-# channel route on the partner plus the document type, and what the reports and reconciliation
-# key on, since AS2 itself is payload-agnostic.
+# for EDIFACT the UNB sender and recipient and the UNH message type. This is what lets a channel
+# route on the partner plus the document type, and what the reports and reconciliation key on,
+# since the transport an interchange arrives over is payload-agnostic.
 
 from __future__ import annotations
 

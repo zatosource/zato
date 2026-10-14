@@ -82,18 +82,7 @@ def _get_resubmit_message(report:'anydict') -> 'str':
 
     if action == _action_reprocess:
 
-        # An AS2 or AS4 reprocess names the routing target the documents landed on ..
-        if 'target_name' in report and report['target_name']:
-            out = f'{_resubmit_ok_label} to {report["target_kind"]} {report["target_name"]}'
-
-            # .. a multi-attachment delivery routes one message per document,
-            # so the operator sees how many actually went out
-            if report['message_count'] > 1:
-                out = f'{out} ({report["message_count"]} documents)'
-
-            return out
-
-        # .. an HL7 reprocess names the channel's service when it has one ..
+        # An HL7 reprocess names the channel's service when it has one ..
         if 'service_name' in report and report['service_name']:
             return f'{_resubmit_ok_label} to service {report["service_name"]}'
 

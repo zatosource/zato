@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# B2B reporting - aggregate tables built over the audit events the AS2 and X12 exchanges
+# B2B reporting - aggregate tables built over the audit events the X12 exchanges
 # already record, spread over one module per table.
 #
 # - common  - the ranges, rows, aggregation state and the reading of the events

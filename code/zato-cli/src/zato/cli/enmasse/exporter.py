@@ -23,7 +23,6 @@ from zato.cli.enmasse.exporters.audit_extraction import AuditExtractionExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
-from zato.cli.enmasse.exporters.channel_as4 import ChannelAS4Exporter
 from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
 from zato.cli.enmasse.exporters.channel_soap import ChannelSOAPExporter
 from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
@@ -55,8 +54,6 @@ from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMM
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
 from zato.cli.enmasse.exporters.mcp import GatewayMCPExporter
 from zato.cli.enmasse.exporters.rule_engine_api import RuleEngineAPIExporter
-from zato.cli.enmasse.exporters.as2 import AS2Exporter
-from zato.cli.enmasse.exporters.outgoing_as4 import OutgoingAS4Exporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.cli.enmasse.exporters.pubsub_topic import PubSubTopicExporter
@@ -103,7 +100,6 @@ class EnmasseYAMLExporter:
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
         self.channel_soap_exporter = ChannelSOAPExporter(self)
-        self.channel_as4_exporter = ChannelAS4Exporter(self)
         self.channel_mllp_exporter = ChannelMLLPExporter(self)
         self.outgoing_mllp_exporter = OutgoingMLLPExporter(self)
         self.outgoing_fhir_exporter = OutgoingFHIRExporter(self)
@@ -140,8 +136,6 @@ class EnmasseYAMLExporter:
         self.elastic_search_exporter = ElasticSearchExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
-        self.as2_exporter = AS2Exporter(self)
-        self.outgoing_as4_exporter = OutgoingAS4Exporter(self)
         self.pubsub_topic_exporter = PubSubTopicExporter(self)
         self.pubsub_permission_exporter = PubSubPermissionExporter(self)
         self.pubsub_subscription_exporter = PubSubSubscriptionExporter(self)
@@ -447,33 +441,6 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
-    def export_outgoing_as2(self, session:'SASession') -> 'list':
-        """ Exports outgoing AS2 connection definitions.
-        """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        outgoing_as2_list = self.as2_exporter.export(session, self.cluster_id)
-        return outgoing_as2_list
-
-# ################################################################################################################################
-
-    def export_outgoing_as4(self, session:'SASession') -> 'list':
-        """ Exports outgoing AS4 connection definitions.
-        """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        outgoing_as4_list = self.outgoing_as4_exporter.export(session, self.cluster_id)
-        return outgoing_as4_list
-
-# ################################################################################################################################
-
-    def export_channel_as4(self, session:'SASession') -> 'list':
-        """ Exports AS4 channel definitions.
-        """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        channel_as4_list = self.channel_as4_exporter.export(session, self.cluster_id)
-        return channel_as4_list
-
-# ################################################################################################################################
-
     def export_jira(self, session:'SASession') -> 'list':
         """ Exports JIRA connection definitions.
         """
@@ -765,11 +732,6 @@ class EnmasseYAMLExporter:
         if channel_soap_defs:
             output_dict['channel_soap'] = channel_soap_defs
 
-        # Export AS4 channel definitions
-        channel_as4_defs = self.export_channel_as4(session)
-        if channel_as4_defs:
-            output_dict['channel_as4'] = channel_as4_defs
-
         # Export HL7 MLLP channel definitions
         channel_mllp_defs = self.export_channel_mllp(session)
         if channel_mllp_defs:
@@ -854,16 +816,6 @@ class EnmasseYAMLExporter:
         outgoing_soap_defs = self.export_outgoing_soap(session)
         if outgoing_soap_defs:
             output_dict['outgoing_soap'] = outgoing_soap_defs
-
-        # Export outgoing AS2 connection definitions
-        outgoing_as2_defs = self.export_outgoing_as2(session)
-        if outgoing_as2_defs:
-            output_dict['outgoing_as2'] = outgoing_as2_defs
-
-        # Export outgoing AS4 connection definitions
-        outgoing_as4_defs = self.export_outgoing_as4(session)
-        if outgoing_as4_defs:
-            output_dict['outgoing_as4'] = outgoing_as4_defs
 
         # Export JIRA connection definitions
         jira_defs = self.export_jira(session)

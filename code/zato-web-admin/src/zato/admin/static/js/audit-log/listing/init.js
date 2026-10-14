@@ -85,7 +85,7 @@ listing.initPanes = function(source) {
     listing.panes = kit.list_detail.create({
         host: config.host,
 
-        // An HL7 log remembers its own proportions apart from a pub/sub or an AS2 one
+        // An HL7 log remembers its own proportions apart from a pub/sub or an X12 one
         storage_key: config.storagePrefix + source,
         default_list_width: config.defaultListWidth,
 

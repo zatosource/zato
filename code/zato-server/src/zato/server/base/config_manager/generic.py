@@ -26,8 +26,6 @@ from zato.server.generic.api.channel_kafka import channel_bool_config_keys as ch
 from zato.server.generic.api.chat_discord import discord_config_defaults, discord_int_config_keys
 from zato.server.generic.api.cloud_aws import cloud_aws_config_defaults, cloud_aws_int_config_keys
 from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
-from zato.server.generic.api.outconn_as2 import outconn_as2_bool_config_keys, outconn_as2_config_defaults, \
-    outconn_as2_int_config_keys
 from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outconn_es_config_defaults, \
     outconn_es_int_config_keys
 from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, outconn_grpc_config_defaults, \
@@ -96,7 +94,6 @@ class Generic(ConfigManagerImpl):
     logger: 'Logger'
     generic_conn_api: 'stranydict'
     sdk_connector_types: 'stranydict'
-    as2_config_generation: 'int'
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
     get_outgoing_publish_lock: 'callable_'
@@ -105,15 +102,6 @@ class Generic(ConfigManagerImpl):
     delete_outgoing_subscription: 'callable_'
     rename_outgoing_dlq: 'callable_'
     delete_outgoing_dlq: 'callable_'
-
-# ################################################################################################################################
-
-    def _note_as2_config_change(self, type_:'str') -> 'None':
-        """ Records that the AS2 outgoing connections changed, which is what tells an AS2 channel
-        its partnerships have to be built again rather than reused.
-        """
-        if type_ == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2:
-            self.as2_config_generation += 1
 
 # ################################################################################################################################
 
@@ -190,7 +178,7 @@ class Generic(ConfigManagerImpl):
             _ = conn_value.pop(conn_name, None)
 
             # .. a connection that can be published to takes its queue with it and a channel takes its DLQ,
-            # .. unless this delete is only the first half of an edit ..
+            # .. unless this delete is only the first half of an edit.
             if needs_queue_delete:
                 conn_type = publishable_generic_types.get(conn_dict['type_'])
                 inbound_type = inbound_generic_types.get(conn_dict['type_'])
@@ -199,9 +187,6 @@ class Generic(ConfigManagerImpl):
                     self.delete_outgoing_subscription(conn_type, conn_dict['id'], conn_name)
                 elif inbound_type:
                     self.delete_outgoing_dlq(inbound_type, conn_dict['id'], conn_name)
-
-            # .. and note the change for whoever caches anything built out of these configs.
-            self._note_as2_config_change(conn_dict['type_'])
 
 # ################################################################################################################################
 
@@ -260,10 +245,6 @@ class Generic(ConfigManagerImpl):
         conn_wrapper = wrapper(item_dict, self.server)
         config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
-
-        # An AS2 channel builds its partnerships out of these configs, so it needs to know
-        # that the ones it built earlier no longer describe the connections.
-        self._note_as2_config_change(item.type_)
 
 # ################################################################################################################################
 
@@ -549,33 +530,6 @@ class Generic(ConfigManagerImpl):
         for key, default in cloud_salesforce_config_defaults.items():
             if config.get(key) is None:
                 config[key] = default
-
-# ################################################################################################################################
-
-    def _generic_normalize_config_outconn_as2(self, config:'stranydict') -> 'None':
-        """ Fills in defaults for fields that the create path did not supply and coerces
-        numeric and boolean fields that may arrive as strings from opaque storage.
-        """
-
-        # Apply a default for every field that is missing or None - column-backed fields
-        # the message did not carry arrive as no-value markers and count as missing too ..
-        for key, default in outconn_as2_config_defaults.items():
-            value = config.get(key)
-            is_marker = isinstance(value, str) and value.startswith(_no_value_marker)
-            if value is None or is_marker:
-                config[key] = default
-
-        # .. make sure numeric fields are integers ..
-        for key in outconn_as2_int_config_keys:
-            value = config[key]
-            if isinstance(value, str):
-                config[key] = int(value)
-
-        # .. and make sure boolean fields are booleans.
-        for key in outconn_as2_bool_config_keys:
-            value = config[key]
-            if isinstance(value, str):
-                config[key] = as_bool(value)
 
 # ################################################################################################################################
 

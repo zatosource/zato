@@ -17,7 +17,7 @@ from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.api import AS2, AS4, CONNECTION, HTTP_SOAP, MISC, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, HTTP_SOAP, MISC, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config, extract_bearer_token
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
@@ -984,21 +984,6 @@ class URLData(PyURLData):
             'is_deprecated', 'deprecation_sunset', 'deprecation_successor', 'deprecation_since'):
 
             channel_item[name] = msg.get(name)
-
-        # Dispatcher-handled channels, such as AS2 ones, have no service of their own,
-        # so the message carries None - the runtime spells that as an empty string.
-        if channel_item['service_name'] is None:
-            channel_item['service_name'] = ''
-
-        # AS4 channels carry their own configuration fields
-        if channel_item['transport'] == URL_TYPE.AS4:
-            for name in AS4.Common_Fields + AS4.Channel_Fields:
-                channel_item[name] = msg.get(name)
-
-        # AS2 channels carry their own configuration fields too
-        if channel_item['transport'] == URL_TYPE.AS2:
-            for name in AS2.Common_Fields + AS2.Channel_Fields:
-                channel_item[name] = msg.get(name)
 
         # REST and SOAP channels carry the queue switch, the retry and DLQ settings and the static queue response,
         # at their defaults for a channel written before the settings existed

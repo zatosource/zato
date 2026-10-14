@@ -71,7 +71,7 @@ class TestFieldNames:
             GENERIC.CONNECTION.TYPE.OUTCONN_SMB):
             assert conn_type_to_alert_type[conn_type] == _alert_type
 
-        assert GENERIC.CONNECTION.TYPE.OUTCONN_AS2 not in conn_type_to_alert_type
+        assert GENERIC.CONNECTION.TYPE.OUTCONN_LDAP not in conn_type_to_alert_type
 
 # ################################################################################################################################
 

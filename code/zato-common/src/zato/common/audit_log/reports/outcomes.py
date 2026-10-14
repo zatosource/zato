@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Delivered vs failed per partner and document type, with the failures broken down
-# by their disposition modifier so the number is actionable.
+# by their failure modifier so the number is actionable.
 
 from __future__ import annotations
 
@@ -47,9 +47,8 @@ def _format_breakdown(modifiers:'anydict') -> 'str':
 # ################################################################################################################################
 
 def get_outcomes(now:'datetime', time_range:'str' = Default_Range, partner:'str' = '') -> 'outcome_row_list':
-    """ Delivered vs failed per partner and document type over the range - the MDNs received
-    for outbound AS2 exchanges, the messages that arrived from partners and the X12
-    acknowledgments, with failures broken down by their disposition modifier.
+    """ Delivered vs failed per partner and document type over the range - the X12
+    acknowledgments received, with failures broken down by their failure modifier.
     """
     cutoff_iso = get_range_cutoff(now, time_range)
 
@@ -101,7 +100,7 @@ def get_outcomes(now:'datetime', time_range:'str' = Default_Range, partner:'str'
             group.delivered += 1
             continue
 
-        # .. and a failure additionally counts against its disposition modifier.
+        # .. and a failure additionally counts against its failure modifier.
         group.failed += 1
 
         modifier_key = _modifier_key[event_type]

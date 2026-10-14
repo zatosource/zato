@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.as2.reconcile import MDNReconciler
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditSource
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import dumps
@@ -23,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Audit_Source = 'as2'
+_Audit_Source = 'x12'
 
 # The tab labels of the message overlay when the payload carries an EDI document
 _Raw_Tab_Label    = 'Raw'
@@ -101,13 +100,12 @@ class TestAuditLogParsedView:
         base_url = zato_dashboard['dashboard_url']
 
         # The identities are unique per run so only this test's events show up.
-        suffix = CryptoManager.generate_hex_string()
-        pair = f'ZatoRetail.{suffix}:PartnerCorp.{suffix}'
-        message_id = f'{suffix}@zato.test'
+        suffix = CryptoManager.generate_hex_string().upper()
+        pair = f'ZATORETAIL{suffix}:PARTNERCORP{suffix}'
 
         # Seed one event whose payload is a complete X12 purchase order ..
         audit_log = AuditLog('audit-log-test')
-        audit_log.insert(AuditSource.AS2, AuditEvent.Message_Sent, pair, cid='cid-edi-' + suffix, msg_id=message_id,
+        audit_log.insert(AuditSource.X12, AuditEvent.Interchange_Sent, pair, cid='cid-edi-' + suffix, msg_id='905',
             size=len(_purchase_order_850), data=_purchase_order_850)
 
         # .. open the page pre-filtered to that pair and open the message overlay.
@@ -158,19 +156,15 @@ class TestAuditLogParsedView:
         base_url = zato_dashboard['dashboard_url']
 
         # The identities are unique per run so only this test's events show up.
-        suffix = CryptoManager.generate_hex_string()
-        as2_from = f'ZatoRetail.{suffix}'
-        as2_to = f'PartnerCorp.{suffix}'
-        pair = f'{as2_from}:{as2_to}'
-        message_id = f'{suffix}@zato.test'
+        suffix = CryptoManager.generate_hex_string().upper()
+        pair = f'ZATORETAIL{suffix}:PARTNERCORP{suffix}'
 
-        # Seed one complete exchange - the MDN arrival carries a JSON payload, not an EDI one.
-        reconciler = MDNReconciler()
-        reconciler.record_message_sent(as2_from, as2_to, message_id, mic='T3JkZXJzTUlDVmFsdWU=, sha-256',
-            cid='cid-sent-' + suffix)
+        # Seed one event whose payload is JSON, not an EDI document.
+        json_data = dumps({'control_number': '905', 'status': 'accepted'})
 
-        mdn_data = dumps({'disposition': 'processed', 'modifier_kind': '', 'modifier': '', 'mic': ''})
-        reconciler.record_mdn_received(message_id, cid='cid-mdn-' + suffix, data=mdn_data)
+        audit_log = AuditLog('audit-log-test')
+        audit_log.insert(AuditSource.X12, AuditEvent.Ack_Received, pair, cid='cid-ack-' + suffix, msg_id='905',
+            size=len(json_data), data=json_data)
 
         # Open the page pre-filtered to that pair and open the overlay of the newest event.
         goto_audit_log(page, base_url, _Audit_Source, pair)
@@ -182,7 +176,7 @@ class TestAuditLogParsedView:
 
         # .. and the editor holds the raw payload itself.
         editor_text = _get_editor_text(page)
-        assert editor_text == mdn_data, f'Expected the raw JSON payload, got: "{editor_text}"'
+        assert editor_text == json_data, f'Expected the raw JSON payload, got: "{editor_text}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

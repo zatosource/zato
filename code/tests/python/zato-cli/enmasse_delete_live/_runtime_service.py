@@ -36,7 +36,6 @@ _security_stores = ('basic_auth', 'apikey', 'oauth', 'ntlm', 'mtls', 'spnego', '
 _outgoing_stores = {
     'plain_http': 'out_plain_http',
     'soap':       'out_soap',
-    'as4':        'out_as4',
 }
 
 # The sections whose objects are AMQP connectors

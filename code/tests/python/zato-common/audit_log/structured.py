@@ -368,35 +368,35 @@ def _run_buffered_writer_checks() -> 'None':
     buffered = AuditLog(_server_name, flush_max_size=3, flush_max_wait_ms=300)
 
     # Buffered writes return no id and nothing is visible yet ..
-    result = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    result = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
     assert result is None
-    assert _count_source_events(AuditSource.AS2) == 0
+    assert _count_source_events(AuditSource.PubSub) == 0
 
     # .. the third event fills the batch up and everything lands at once ..
-    _ = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    _ = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    assert _count_source_events(AuditSource.AS2) == 3
+    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    assert _count_source_events(AuditSource.PubSub) == 3
 
     # .. an explicit flush writes out a partial batch ..
-    _ = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    assert _count_source_events(AuditSource.AS2) == 3
+    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    assert _count_source_events(AuditSource.PubSub) == 3
 
     buffered.flush()
-    assert _count_source_events(AuditSource.AS2) == 4
+    assert _count_source_events(AuditSource.PubSub) == 4
 
     # .. and an event left in the buffer is flushed by time, without any further writes.
-    _ = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
 
     deadline = monotonic() + _flush_wait_seconds
 
     while monotonic() < deadline:
 
-        if _count_source_events(AuditSource.AS2) == 5:
+        if _count_source_events(AuditSource.PubSub) == 5:
             break
 
         sleep(0.1)
 
-    assert _count_source_events(AuditSource.AS2) == 5, 'The time-based flush never ran'
+    assert _count_source_events(AuditSource.PubSub) == 5, 'The time-based flush never ran'
 
     # A caller that links further events to one it writes receives the id from a buffered writer too,
     # so the links of the events that follow are written as they are under a synchronous writer ..

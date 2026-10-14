@@ -117,10 +117,8 @@ generic_type_to_section = {
 http_soap_sections = {
     'channel_rest':  (CONNECTION.CHANNEL,  URL_TYPE.PLAIN_HTTP),
     'channel_soap':  (CONNECTION.CHANNEL,  URL_TYPE.SOAP),
-    'channel_as4':   (CONNECTION.CHANNEL,  URL_TYPE.AS4),
     'outgoing_rest': (CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP),
     'outgoing_soap': (CONNECTION.OUTGOING, URL_TYPE.SOAP),
-    'outgoing_as4':  (CONNECTION.OUTGOING, URL_TYPE.AS4),
 }
 
 # The generic connection sections, each with the connection type its rows are stored under
@@ -153,7 +151,6 @@ generic_sections = {
     'sftp':                     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
     'smb':                      GENERIC.CONNECTION.TYPE.OUTCONN_SMB,
     'ftp':                      GENERIC.CONNECTION.TYPE.OUTCONN_FTP,
-    'outgoing_as2':             GENERIC.CONNECTION.TYPE.OUTCONN_AS2,
     'elastic_search':           GENERIC.CONNECTION.TYPE.OUTCONN_ES,
     'channel_openapi':          GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
 }
@@ -229,15 +226,12 @@ delete_order = [
     'sftp',
     'smb',
     'ftp',
-    'outgoing_as2',
     'elastic_search',
     Custom_Sections_Marker,
     'channel_rest',
     'channel_soap',
-    'channel_as4',
     'outgoing_rest',
     'outgoing_soap',
-    'outgoing_as4',
     'sql',
     'email_imap',
     'email_smtp',

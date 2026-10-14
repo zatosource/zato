@@ -19,8 +19,6 @@ _all_sources_section_title = 'All sources'
 # What each source is called in the filter selects of the all-events page.
 # Every member of AuditSource is here, in the order the selects offer them.
 _source_label = {
-    AuditSource.AS2: 'AS2',
-    AuditSource.AS4: 'AS4',
     AuditSource.Certificate: 'Certificate checks',
     AuditSource.Email_IMAP: 'IMAP',
     AuditSource.Email_SMTP: 'SMTP',
@@ -67,8 +65,6 @@ _source_except_label = {
 # What one event's source is called on a row and in the detail pane.
 _source_event_label = {
     AuditSource.Config: 'Log access',
-    AuditSource.AS2: 'AS2',
-    AuditSource.AS4: 'AS4',
     AuditSource.Certificate: 'Certificate check',
     AuditSource.Email_IMAP: 'IMAP',
     AuditSource.Email_SMTP: 'SMTP',
@@ -102,8 +98,6 @@ _source_event_label = {
 # What the object of each source is called in the detail pane.
 _source_object_label = {
     AuditSource.Config: 'Screen',
-    AuditSource.AS2: 'Partner',
-    AuditSource.AS4: 'Partner',
     AuditSource.Certificate: 'Connection',
     AuditSource.Email_IMAP: 'Connection',
     AuditSource.Email_SMTP: 'Connection',
@@ -182,10 +176,6 @@ _event_type_label = {
     AuditEvent.Ack_Sent: 'ACK sent',
     AuditEvent.Ack_Received: 'ACK received',
     AuditEvent.Message_Sent: 'Message sent',
-    AuditEvent.MDN_Sent: 'MDN sent',
-    AuditEvent.MDN_Received: 'MDN received',
-    AuditEvent.Receipt_Sent: 'Receipt sent',
-    AuditEvent.Receipt_Received: 'Receipt received',
     AuditEvent.Alert_Raised: 'Alert raised',
     AuditEvent.Alert_Explained: 'Alert explained',
     AuditEvent.MCP_Initialize: 'MCP initialize',
@@ -231,8 +221,6 @@ _source_title = {
     'email-smtp': 'SMTP audit log',
     'file-outgoing': 'File transfer audit log',
     'sql-outgoing': 'SQL audit log',
-    'as2': 'AS2 audit log',
-    'as4': 'AS4 audit log',
     'x12': 'X12 audit log',
     'mcp': 'MCP audit log',
     'mllp-channel': 'MLLP channel audit log',

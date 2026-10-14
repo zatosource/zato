@@ -16,7 +16,6 @@ from traceback import format_exc
 from zato.common.api import GENERIC, SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.const import SECRETS
-from zato.common.ext_db.api import is_ext_object_id, to_local_id
 from zato.common.odb.model import Cluster
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_response_value, make_cid_public
@@ -305,16 +304,7 @@ class ChangePasswordBase(AdminService):
         logger.info('ChangePasswordBase._handle: action=%s, class=%s, id=%s, name=%s',
             action, class_.__name__, instance_id, instance_name)
 
-        # Objects from the external AS2/AS4 database are recognized by their offset ids
-        # and they are stored in that database under their local ids.
-        object_id = instance_id or 0
-
-        if is_ext_object_id(object_id):
-            db_instance_id = to_local_id(instance_id)
-        else:
-            db_instance_id = instance_id
-
-        with closing(self.server.get_config_session(object_id=object_id)) as session:
+        with closing(self.odb.session()) as session:
             password = self.request.input.get('password', '')
 
             password_decrypted = self.server.decrypt(password) if password else password
@@ -329,7 +319,7 @@ class ChangePasswordBase(AdminService):
 
                 # .. look up by ID if it is given ..
                 if instance_id:
-                    query = query.filter(class_.id==db_instance_id)
+                    query = query.filter(class_.id==instance_id)
 
                 # .. try to use the name if ID is not available ..
                 elif instance_name:

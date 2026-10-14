@@ -359,17 +359,12 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's config manager.
     """
-    __slots__ = ('amqp', 'as2', 'as4', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap',
-        '_config_manager')
+    __slots__ = ('amqp', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap', '_config_manager')
 
     def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
-            ldap=None, as2=None, as4=None, config_manager=None):
+            ldap=None, config_manager=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
-
-        self.as2 = cast_('stranydict', as2)
-
-        self.as4 = cast_('ConfigDict', as4)
 
         self.graphql = cast_('GraphQLFacade', graphql)
 

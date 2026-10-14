@@ -83,8 +83,6 @@ _direction_sent     = 'sent'
 _direction_received = 'received'
 
 _volume_direction = {
-    AuditEvent.Message_Sent:         _direction_sent,
-    AuditEvent.Message_Received:     _direction_received,
     AuditEvent.Interchange_Sent:     _direction_sent,
     AuditEvent.Interchange_Received: _direction_received,
 }
@@ -93,19 +91,15 @@ _volume_event_types = tuple(_volume_direction)
 
 # ################################################################################################################################
 
-# Which JSON key carries the failure modifier of each outcome-bearing event - the MDNs
-# of outbound AS2 exchanges report a disposition modifier, an inbound message that
-# could not be processed reports its error, and an X12 acknowledgment that rejected
-# what it answered may name its modifier too.
+# Which JSON key carries the failure modifier of each outcome-bearing event -
+# an X12 acknowledgment that rejected what it answered may name its modifier.
 _modifier_key = {
-    AuditEvent.MDN_Received:     'modifier',
-    AuditEvent.Message_Received: 'error',
-    AuditEvent.Ack_Received:     'modifier',
+    AuditEvent.Ack_Received: 'modifier',
 }
 
 _outcome_event_types = tuple(_modifier_key)
 
-# What a failure without a disposition modifier is reported as
+# What a failure that names no modifier is reported as
 _modifier_unspecified = 'unspecified'
 
 # ################################################################################################################################
@@ -137,7 +131,7 @@ class VolumeRow:
 @dataclass(init=False)
 class OutcomeRow:
     """ Delivered vs failed of one source, partner and document type, with the failures
-    broken down by their disposition modifier so the number is actionable.
+    broken down by their failure modifier so the number is actionable.
     """
     source:        str = ''
     partner:       str = ''
@@ -145,7 +139,7 @@ class OutcomeRow:
     delivered:     int = 0
     failed:        int = 0
 
-    # The per-modifier failure counts, e.g. 'decryption-failed: 2, integrity-check-failed: 1'
+    # The per-modifier failure counts, e.g. 'missing-segment: 2, unspecified: 1'
     failure_breakdown: str = ''
 
     # The filtered audit log page behind this row
@@ -233,7 +227,7 @@ def _parse_details(data:'str') -> 'anydict':
     if not data:
         return {}
 
-    # A payload that is not JSON, e.g. a raw MIME body, has nothing to extract.
+    # A payload that is not JSON, e.g. a raw interchange, has nothing to extract.
     try:
         out = loads(data)
     except ValueError:
@@ -270,7 +264,7 @@ def _load_events(event_types:'strtuple', cutoff_iso:'str', partner:'str') -> 'di
     """ Reads all the B2B events of the given types recorded after the cutoff, oldest first,
     with their JSON data parsed - what the aggregates below run on.
     """
-    source_matches = event_table.c.source.in_((AuditSource.AS2, AuditSource.X12))
+    source_matches = event_table.c.source == AuditSource.X12
     event_type_matches = event_table.c.event_type.in_(event_types)
 
     conditions = and_(

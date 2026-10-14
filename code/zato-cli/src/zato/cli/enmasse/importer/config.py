@@ -312,13 +312,6 @@ class ConfigSync:
         if channels_soap_updated:
             self.updated_objects['channel_soap'] = channels_soap_updated
 
-        # Process AS4 channels which may depend on security definitions
-        channels_as4_created, channels_as4_updated = importer.sync_channel_as4(yaml_config.get('channel_as4', []), session)
-        if channels_as4_created:
-            self.created_objects['channel_as4'] = channels_as4_created
-        if channels_as4_updated:
-            self.updated_objects['channel_as4'] = channels_as4_updated
-
         # Process Odoo connection definitions
         odoo_created, odoo_updated = importer.sync_odoo(yaml_config.get('odoo', []), session)
         if odoo_created:
@@ -682,20 +675,6 @@ class ConfigSync:
             self.created_objects['outgoing_soap'] = outgoing_soap_created
         if outgoing_soap_updated:
             self.updated_objects['outgoing_soap'] = outgoing_soap_updated
-
-        # Process outgoing AS2 connection definitions
-        outgoing_as2_created, outgoing_as2_updated = importer.sync_outgoing_as2(yaml_config.get('outgoing_as2', []), session)
-        if outgoing_as2_created:
-            self.created_objects['outgoing_as2'] = outgoing_as2_created
-        if outgoing_as2_updated:
-            self.updated_objects['outgoing_as2'] = outgoing_as2_updated
-
-        # Process outgoing AS4 connection definitions
-        outgoing_as4_created, outgoing_as4_updated = importer.sync_outgoing_as4(yaml_config.get('outgoing_as4', []), session)
-        if outgoing_as4_created:
-            self.created_objects['outgoing_as4'] = outgoing_as4_created
-        if outgoing_as4_updated:
-            self.updated_objects['outgoing_as4'] = outgoing_as4_updated
 
         # Process pubsub topic definitions
         pubsub_topic_created, pubsub_topic_updated = importer.sync_pubsub_topic(yaml_config.get('pubsub_topic', []), session)

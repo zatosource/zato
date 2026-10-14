@@ -230,9 +230,9 @@ class TestExplainPath:
 
         session = _new_session()
 
-        # No explanation skill ships for AS2 connections
+        # No explanation skill ships for X12 exchanges
         service = _new_service(
-            _new_payload(AlertAction.Slack, {'slack_channel': _slack_channel}, AuditSource.AS2),
+            _new_payload(AlertAction.Slack, {'slack_channel': _slack_channel}, AuditSource.X12),
             session,
             repo_dir,
             llm=_LLMFacade(llm_connections, llm_address),

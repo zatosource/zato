@@ -59,7 +59,7 @@ _other_cluster_id = 2
 _sftp_name = 'sftp.settings'
 _ftp_name = 'ftp.settings'
 _other_cluster_name = 'sftp.elsewhere'
-_as2_name = 'as2.no-alerts'
+_ldap_name = 'ldap.no-alerts'
 _fhir_name = 'ehr.fhir'
 _llm_name = 'support.assistant'
 _mllp_name = 'adt.mllp'
@@ -320,7 +320,7 @@ class TestLoadObjectSettings:
         with _session() as session:
             _add_connection(session, _sftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, _cluster_id, {})
             _add_connection(session, _other_cluster_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, _other_cluster_id, {})
-            _add_connection(session, _as2_name, GENERIC.CONNECTION.TYPE.OUTCONN_AS2, _cluster_id, {})
+            _add_connection(session, _ldap_name, GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, _cluster_id, {})
             settings = load_object_settings(session, _cluster_id)
 
         assert list(settings[alert_type_file_transfer]) == [_sftp_name]

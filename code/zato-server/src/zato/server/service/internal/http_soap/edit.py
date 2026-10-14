@@ -15,16 +15,14 @@ from traceback import format_exc
 from zato.common.api import CONNECTION, MISC, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.audit_log.common import Export_Payload_Flag
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.ext_db.api import needs_ext_db, to_local_id, to_public_id
 from zato.common.odb.model import HTTPSOAP
-from zato.common.typing_ import cast_
 from zato.common.util.api import utcnow
 from zato.common.util.channel import validate_channel_url_path
 from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import AsIs, Boolean
 from zato.server.service.internal.http_soap.alert_settings import alert_input, prepare_alert_settings
-from zato.server.service.internal.http_soap.common import _as2_input, _as4_input, _CreateEdit, _invocation_input, \
-    _is_declarative, _normalize_retry_config, _pem_secret_fields, _retry_input, _validate_invocation_config
+from zato.server.service.internal.http_soap.common import _CreateEdit, _invocation_input, \
+    _is_declarative, _normalize_retry_config, _retry_input, _validate_invocation_config
 from zato.server.service.internal.http_soap.delivery_settings import delivery_input, prepare_delivery_settings
 from zato.server.service.internal.http_soap.destination_settings import destination_input, prepare_destination_settings
 from zato.server.service.internal.http_soap.health_check import preserve_job_ids, sync_linked_jobs
@@ -50,8 +48,6 @@ class Edit(_CreateEdit):
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
         *_retry_input, \
-        *_as4_input, \
-        *_as2_input, \
         *alert_input, \
         *delivery_input, \
         *destination_input
@@ -87,17 +83,8 @@ class Edit(_CreateEdit):
 
         input.data_encoding = input.get('data_encoding') or 'utf-8'
 
-        # AS4 private keys are stored encrypted
-        self._encrypt_as4_secrets(input)
-
-        # AS2 private keys are stored encrypted too
-        self._encrypt_as2_secrets(input)
-
-        # .. and so is the object's own password
+        # The object's own password is stored encrypted
         self._encrypt_own_password(input)
-
-        # The numeric AS2 fields arrive as strings from Dashboard forms
-        self._normalize_as2_fields(input)
 
         # Remove extra whitespace
         input_name = input.name
@@ -128,27 +115,18 @@ class Edit(_CreateEdit):
             _validate_invocation_config(self, input)
             _normalize_retry_config(input)
 
-        # AS2/AS4 objects are stored in the external database when one is configured,
-        # under their local ids, without the offset they are known under everywhere else.
-        is_ext = needs_ext_db(input.transport)
-
         # Dashboard forms send the id as a string, whereas the collision check below compares it
         # against database ids, so it is an int from here on
         input_id = int(input.id)
 
-        if is_ext:
-            local_id = to_local_id(input_id)
-        else:
-            local_id = input_id
-
-        with closing(self.server.get_config_session(object_type=input.transport)) as session:
+        with closing(self.odb.session()) as session:
 
             existing_one = session.query(
                 HTTPSOAP.id,
                 HTTPSOAP.url_path,
                 ).\
                 filter(HTTPSOAP.cluster_id==input.cluster_id).\
-                filter(HTTPSOAP.id!=local_id).\
+                filter(HTTPSOAP.id!=input_id).\
                 filter(HTTPSOAP.name==input.name).\
                 filter(HTTPSOAP.connection==input.connection).\
                 filter(HTTPSOAP.transport==input.transport).\
@@ -163,24 +141,24 @@ class Edit(_CreateEdit):
                 raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
             if input.connection == CONNECTION.CHANNEL:
-                service = self._get_channel_service(session, input, is_ext)
+                service = self._get_service_from_input(session, input)
             else:
                 service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._get_security_info(session, input, is_ext)
+            sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
 
             # An edit can move a channel onto another channel's URL path, so it is checked
             # the same way a create is, with this channel itself left out of the comparison
             if input.connection == CONNECTION.CHANNEL:
                 validate_channel_url_path(input.url_path)
                 self.ensure_channel_is_unique(session,
-                    input.url_path, input.http_accept, input.method, input.cluster_id, local_id)
-                self.ensure_channel_does_not_conflict(session, input, input.cluster_id, local_id)
+                    input.url_path, input.http_accept, input.method, input.cluster_id, input_id)
+                self.ensure_channel_does_not_conflict(session, input, input.cluster_id, input_id)
 
             try:
-                item = session.query(HTTPSOAP).filter_by(id=local_id).one()
+                item = session.query(HTTPSOAP).filter_by(id=input_id).one()
 
                 opaque = parse_instance_opaque_attr(item)
 
@@ -209,23 +187,6 @@ class Edit(_CreateEdit):
 
                 # A channel edited by a caller that sent no fan-out keeps the one it has
                 prepare_destination_settings(input, skip_opaque, opaque)
-
-                # Secrets are never returned to the Dashboard, so an edit form cannot send them back.
-                for name in _pem_secret_fields:
-
-                    # A secret given on input is a new one and is stored as given ..
-                    if input.get(name):
-                        continue
-
-                    # .. the staged next decryption key is cleared along with
-                    # .. its certificate once a rotation completes ..
-                    if name == 'as2_next_decryption_key':
-                        if not input.get('as2_next_decryption_cert'):
-                            continue
-
-                    # .. and any other empty secret on input means the stored one is kept.
-                    if stored_value := opaque.get(name):
-                        input[name] = stored_value
 
                 old_name = item.name
                 old_url_path = item.url_path
@@ -314,13 +275,7 @@ class Edit(_CreateEdit):
                 if _is_declarative(input):
                     sync_linked_jobs(self, input, item.id)
 
-                # Everyone else knows objects from the external database under their offset ids
-                item_id = cast_('int', item.id)
-
-                if is_ext:
-                    self.response.payload.id = to_public_id(item_id)
-                else:
-                    self.response.payload.id = item_id
+                self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
             except Exception:

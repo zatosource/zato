@@ -331,7 +331,7 @@ def build_full_spec(server:'ParallelServer') -> 'tuple_[anydict, anydict]':
         if channel_item['is_internal']:
             continue
 
-        # .. channels without a service of their own, e.g. dispatcher-handled ones, are skipped ..
+        # .. channels without a service of their own are skipped ..
         if not channel_item['service_name']:
             continue
 

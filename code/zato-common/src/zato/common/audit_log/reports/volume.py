@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Traffic counts per period, partner and document type - the messages of AS2
-# and the interchanges of X12, sent and received.
+# Traffic counts per period, partner and document type - the interchanges of X12,
+# sent and received.
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ if 0:
 
 def get_volume(now:'datetime', time_range:'str' = Default_Range, partner:'str' = '') -> 'volume_row_list':
     """ Traffic counts per period, partner and document type over the range -
-    the messages of AS2 and the interchanges of X12, sent and received.
+    the interchanges of X12, sent and received.
     """
     cutoff_iso = get_range_cutoff(now, time_range)
 

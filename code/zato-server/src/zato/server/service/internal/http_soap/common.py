@@ -7,14 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 
-# stdlib
-from contextlib import closing
-
 # Zato
-from zato.common.api import AS2, AS4, CONNECTION, Groups, HTTP_SOAP, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import CONNECTION, Groups, HTTP_SOAP, SEC_DEF_TYPE, URL_TYPE
 from zato.common.const import SECRETS
 from zato.common.exception import ServiceMissingException
-from zato.common.ext_db.api import ensure_security_copy, ensure_service_copy
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.util.channel import channel_security_key, find_channel_collision, find_channel_conflict, \
@@ -81,39 +77,6 @@ _declarative_transports = (URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP)
 # Security types that only outgoing connections use - there is no inbound verification for them,
 # so a channel that named one would accept every caller.
 _outgoing_only_sec_types = (SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.SPNEGO)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# All the AS4 fields, each optional on input - the boolean and the numeric ones
-# are declared separately below.
-_as4_fields = []
-
-for _as4_field_name in AS4.Common_Fields + AS4.Channel_Fields + ('as4_sml_domain',):
-    _as4_fields.append('-' + _as4_field_name)
-
-_as4_fields = tuple(_as4_fields)
-
-# The reception awareness parameters arrive from the Dashboard as text, so they are declared
-# as numbers - a form field left empty arrives as an empty value and stays unset.
-_as4_numeric_fields = []
-
-for _as4_field_name in AS4.Numeric_Fields:
-    _as4_numeric_fields.append(Int('-' + _as4_field_name))
-
-_as4_input = _as4_fields + tuple(_as4_numeric_fields) + (Boolean('-as4_use_discovery'),)
-
-# All the AS2 fields, each optional on input.
-_as2_fields = []
-
-for _as2_field_name in AS2.Common_Fields + AS2.Channel_Fields:
-    _as2_fields.append('-' + _as2_field_name)
-
-_as2_input = tuple(_as2_fields)
-
-# The secret fields of AS2 and AS4 objects, i.e. their private keys and passwords - they are
-# stored encrypted and they are never returned to any caller.
-_pem_secret_fields = AS2.Secret_Fields + AS4.Secret_Fields
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -308,8 +271,6 @@ class _BaseGet(AdminService):
         '-transport', Boolean('-is_audit_log_active'), \
         *_invocation_input, \
         *_retry_input, \
-        *_as4_input, \
-        *_as2_input, \
         *delivery_input
 
 # ################################################################################################################################
@@ -496,45 +457,6 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
 # ################################################################################################################################
 
-    def _get_channel_service_from_input(self, session, input):
-        """ Returns the service a channel routes to - AS2 and AS4 channels may have none
-        because their messages can go to a pub/sub topic instead.
-        """
-        if input.transport in (URL_TYPE.AS2, URL_TYPE.AS4):
-            if not (input.service or input.service_id):
-                return None
-
-        out = self._get_service_from_input(session, input)
-        return out
-
-# ################################################################################################################################
-
-    def _encrypt_as4_secrets(self, input):
-        """ Encrypts the AS4 private keys and password unless they are encrypted already.
-        """
-        if input.transport != URL_TYPE.AS4:
-            return
-
-        for name in AS4.Secret_Fields:
-            if value := input.get(name):
-                if not value.startswith(SECRETS.PREFIX):
-                    input[name] = self.server.encrypt(value)
-
-# ################################################################################################################################
-
-    def _encrypt_as2_secrets(self, input):
-        """ Encrypts the AS2 private keys unless they are encrypted already.
-        """
-        if input.transport != URL_TYPE.AS2:
-            return
-
-        for name in AS2.Secret_Fields:
-            if value := input.get(name):
-                if not value.startswith(SECRETS.PREFIX):
-                    input[name] = self.server.encrypt(value)
-
-# ################################################################################################################################
-
     def _encrypt_own_password(self, input):
         """ Encrypts the object's own password unless it is encrypted already. This is the password
         that a channel or connection carries itself, not the one of a security definition it points to.
@@ -542,57 +464,6 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
         if password := input.get('password'):
             if not password.startswith(SECRETS.PREFIX):
                 input['password'] = self.server.encrypt(password)
-
-# ################################################################################################################################
-
-    def _normalize_as2_fields(self, input):
-        """ Casts the numeric AS2 fields to integers - a Dashboard form submits them as strings,
-        and normalizing here means both the stored value and the published config event carry a number.
-        """
-        if input.transport != URL_TYPE.AS2:
-            return
-
-        if value := input.get('as2_duplicate_window_days'):
-            input['as2_duplicate_window_days'] = int(value)
-
-# ################################################################################################################################
-
-    def _get_channel_service(self, session:'any_', input:'any_', is_ext:'bool') -> 'any_':
-        """ Returns the service a channel routes to. For external-database objects, the service is validated
-        against the main ODB and then mirrored in the external database so the foreign key holds.
-        """
-        if not is_ext:
-            out = self._get_channel_service_from_input(session, input)
-            return out
-
-        with closing(self.odb.session()) as odb_session:
-            service = self._get_channel_service_from_input(odb_session, input)
-
-        if not service:
-            return None
-
-        out = ensure_service_copy(session, service.name, service.impl_name, input.cluster_id)
-        return out
-
-# ################################################################################################################################
-
-    def _get_security_info(self, session:'any_', input:'any_', is_ext:'bool') -> 'any_':
-        """ Returns security-related information for the input object. Security definitions always live
-        in the main ODB - for external-database objects they are validated there and mirrored
-        in the external database so AS2/AS4 rows can reference them by id.
-        """
-        if not is_ext:
-            out = self._handle_security_info(session, input.security_id, input.connection, input.transport)
-            return out
-
-        with closing(self.odb.session()) as odb_session:
-            out = self._handle_security_info(odb_session, input.security_id, input.connection, input.transport)
-
-            if input.security_id:
-                sec_def = odb_session.query(SecurityBase).filter(SecurityBase.id == input.security_id).one()
-                ensure_security_copy(session, sec_def, input.cluster_id)
-
-        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

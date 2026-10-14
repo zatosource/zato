@@ -31,7 +31,7 @@ from orjson import dumps
 # Zato
 from zato.common.ext.bunch import Bunch
 from zato.common import broker_message
-from zato.common.api import API_Key, AS4 as COMMON_AS4, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
+from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
      HTTP_SOAP, PARAMS_PRIORITY, PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
@@ -48,7 +48,6 @@ from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, 
 from zato.common.util.retry import get_remaining_time, get_sleep_time
 from zato.server.base.config_manager.common import _pubsub_amqp_bridge_service, ConfigManagerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
-from zato.server.connection.as4 import AS4Wrapper
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.connector import ConnectorStore, Connector_Type
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -73,7 +72,6 @@ from zato.server.generic.api.gateway_rule_engine import GatewayRuleEngineWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
-from zato.server.generic.api.outconn_as2 import OutconnAS2Wrapper
 from zato.server.generic.api.outconn_es import OutconnESWrapper
 from zato.server.generic.api.outconn_ftp import OutconnFTPWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
@@ -105,6 +103,7 @@ if 0:
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
+    from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
     from zato.server.service import Service
     from zato.server.store import BaseAPI
     ConfigStore    = ConfigStore
@@ -236,14 +235,6 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - Rule engine API
         self.gateway_rule_engine = {}
 
-        # Generic connections - AS2 outconns
-        self.outconn_as2 = {}
-
-        # How many times the AS2 outgoing connections changed. An AS2 channel turns these configs
-        # into partnerships, which means parsing an X.509 certificate per configured partner, and
-        # it needs to do that again only when one of them is created, edited or deleted.
-        self.as2_config_generation = 0
-
         # Generic connections - GraphQL outconns
         self.outconn_graphql = {}
 
@@ -354,7 +345,6 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: self.gateway_mcp,
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: self.gateway_rule_engine,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: self.outconn_as2,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: self.outconn_es,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: self.outconn_graphql,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: self.outconn_grpc,
@@ -389,7 +379,6 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: GatewayMCPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: GatewayRuleEngineWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: OutconnAS2Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: OutconnESWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: OutconnGRPCWrapper,
@@ -526,56 +515,9 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _as4_wrapper_from_config(self, config:'bunch_') -> 'AS4Wrapper':
-        """ Creates a new AS4 connection wrapper out of a configuration dictionary.
-        The private keys stay encrypted here - the wrapper decrypts them on first use.
-        """
-        # The ODB columns are an integer and a boolean but a config event published
-        # by an edit in the Dashboard carries the raw form values, which are strings.
-        timeout = config['timeout']
-        if isinstance(timeout, str):
-            timeout = int(timeout)
-
-        validate_tls = config['validate_tls']
-        if isinstance(validate_tls, str):
-            validate_tls = validate_tls == 'True'
-
-        wrapper_config = {
-            'id':config['id'],
-            'name':config['name'],
-            'is_active':config['is_active'],
-            'transport':config['transport'],
-            'address_host':config['host'],
-            'address_url_path':config['url_path'],
-            'timeout':timeout,
-            'validate_tls':validate_tls,
-
-            # Whether this connection's exchanges go to the audit log - it arrives as an opaque attribute
-            'is_audit_log_active':config.get('is_audit_log_active'),
-
-            # Whether its payloads leave with the audit export - an opaque attribute too, off unless set
-            'is_audit_export_payload_active':config.get('is_audit_export_payload_active'),
-        }
-
-        # The AS4 fields arrive as opaque attributes, which hold only what the connection was saved
-        # with - a connection saved without one of them carries no key for it at all.
-        for name in COMMON_AS4.Common_Fields + COMMON_AS4.Outgoing_Fields:
-            wrapper_config[name] = config.get(name)
-
-        out = AS4Wrapper(self.server, wrapper_config)
-        return out
-
-# ################################################################################################################################
-
-    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'any_':
+    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
-
-        # AS4 connections have their own wrapper class - everything they need
-        # is in their own configuration fields, not in security definitions.
-        if config['transport'] == URL_TYPE.AS4:
-            out = self._as4_wrapper_from_config(config)
-            return out
 
         # Populate it upfront
         conn_name = config['name']
@@ -741,7 +683,7 @@ class ConfigManager(_ConfigManagerBase):
 
         out:'any_' = []
 
-        for transport in('soap', 'plain_http', 'as4'):
+        for transport in('soap', 'plain_http'):
             config_dict = getattr(self.config_store, 'out_' + transport)
             for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
                 config_data = config_dict[name]
@@ -1068,7 +1010,6 @@ class ConfigManager(_ConfigManagerBase):
         gateway_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP, {})
         gateway_rule_engine_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE, {})
-        outconn_as2_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2, {})
         outconn_es_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES, {})
         outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
         outconn_grpc_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC, {})
@@ -1103,7 +1044,6 @@ class ConfigManager(_ConfigManagerBase):
             cloud_salesforce_map,
             gateway_mcp_map,
             gateway_rule_engine_map,
-            outconn_as2_map,
             outconn_es_map,
             outconn_graphql_map,
             outconn_grpc_map,
@@ -2592,19 +2532,16 @@ class ConfigManager(_ConfigManagerBase):
         is_plain_http = msg['transport'] == URL_TYPE.PLAIN_HTTP
         is_rename = bool(old_name) and old_name != msg['name']
 
-        # Only REST and SOAP connections have a queue and a DLQ - an AS4 one has neither
-        has_queue = msg['transport'] in http_soap_outgoing_types
-        is_queue_rename = has_queue and is_rename
+        # Which kind of outgoing connection this is, for its queue and its DLQ
+        outgoing_type = http_soap_outgoing_types[msg['transport']]
 
         # A renamed connection has its topic moved to the new name, and both that and the config
         # this method replaces happen with the queue held still - nothing is published to the connection
         # and no round of its delivery is in flight in between, because both resolve their topics from
         # what the config says the connection is called.
-        if is_queue_rename:
-            outgoing_type = http_soap_outgoing_types[msg['transport']]
+        if is_rename:
             hold = self.hold_outgoing_queue(outgoing_type, msg['id'])
         else:
-            outgoing_type = ''
             hold = nullcontext()
 
         with hold:
@@ -2629,7 +2566,7 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. and whatever was queued for this connection now waits under its new topic,
             # .. which is a move from the name the old configuration was deleted under.
-            if is_queue_rename:
+            if is_rename:
                 self.rename_outgoing_subscription(outgoing_type, msg['id'], del_name, msg['name'])
 
         # An MCP gateway that exposes this connection as a tool rebuilds its registry now
@@ -2642,11 +2579,9 @@ class ConfigManager(_ConfigManagerBase):
         """
         self._delete_config_close_wrapper_http_soap(msg['name'], msg['transport'], logger.error)
 
-        # A deleted connection takes its queue with it, along with whatever that queue still held,
-        # which an AS4 connection never has.
-        if msg['transport'] in http_soap_outgoing_types:
-            outgoing_type = http_soap_outgoing_types[msg['transport']]
-            self.delete_outgoing_subscription(outgoing_type, msg['id'], msg['name'])
+        # A deleted connection takes its queue with it, along with whatever that queue still held
+        outgoing_type = http_soap_outgoing_types[msg['transport']]
+        self.delete_outgoing_subscription(outgoing_type, msg['id'], msg['name'])
 
         # An MCP gateway that exposed this connection as a tool rebuilds its registry now
         mcp_group = 'rest' if msg['transport'] == URL_TYPE.PLAIN_HTTP else 'soap'

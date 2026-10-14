@@ -128,7 +128,7 @@ class TestExtractX12(unittest.TestCase):
 
         # The interchange is lifted out of the surrounding MIME content.
         text = 'Content-Type: application/edi-x12\r\nContent-Disposition: attachment\r\n\r\n' + \
-            _purchase_order_850 + '\r\n--as2-boundary--\r\n'
+            _purchase_order_850 + '\r\n--edi-boundary--\r\n'
 
         out = extract_x12(text)
         self.assertEqual(out, _purchase_order_850)
@@ -357,7 +357,7 @@ class TestRenderDocumentBoundary(unittest.TestCase):
 # ################################################################################################################################
 
     def test_document_embedded_in_mime_renders(self) -> 'None':
-        text = 'Content-Type: application/edi-x12\r\n\r\n' + _purchase_order_850 + '\r\n--as2-boundary--\r\n'
+        text = 'Content-Type: application/edi-x12\r\n\r\n' + _purchase_order_850 + '\r\n--edi-boundary--\r\n'
 
         rendered = render_document(text)
 

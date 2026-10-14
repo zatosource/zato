@@ -35,7 +35,6 @@ _top_level_order = [
     'groups',
     'channel_rest',
     'channel_soap',
-    'channel_as4',
     'outgoing_rest',
     'scheduler',
     'ldap',
@@ -45,8 +44,6 @@ _top_level_order = [
     'sql',
     'mongodb',
     'outgoing_soap',
-    'outgoing_as2',
-    'outgoing_as4',
     'microsoft_cloud',
     'microsoft_fabric',
     'microsoft_power_automate',
@@ -141,31 +138,6 @@ _object_order['sap'] = _object_order['odata']
 _object_order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username', 'extra:list', 'pool_size', \
     'timeout', 'audit_log', 'is_audit_export_payload_active', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', \
     'ssl_verify',
-
-_object_order['outgoing_as2'] = 'name', 'is_active', 'as2_from', 'as2_to', 'endpoint_url', 'isa_qualifier', 'isa_id', \
-    'gs_id', 'unb_id', 'sign', 'sign_algorithm', 'encrypt', 'encryption_algorithm', 'compress', \
-    'compress_before_signing', 'mdn_mode', 'mdn_signed', 'async_mdn_url', 'subject', 'content_type', \
-    'as2_version', 'content_transfer_encoding', 'http_transfer_mode', 'http_timeout_seconds', \
-    'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries', 'ship_notice_window_hours', \
-    'alerting_opt_out', 'preserve_filename', \
-    'warn_on_duplicate_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', \
-    'inbound_topic', 'inbound_service', 'as2_partner_cert', 'as2_partner_next_cert', \
-    'as2_partner_next_cert_from', 'as2_signing_cert_chain', 'as2_next_decryption_cert', \
-    'as2_peer_signing_cert', 'as2_peer_encryption_cert', 'as2_trust_anchors', \
-    'is_audit_log_active', 'is_audit_export_payload_active',
-_object_order['channel_as4'] = 'name', 'is_active', 'url_path', 'service', 'security', 'as4_profile', 'as4_from_party', \
-    'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', 'as4_final_recipient', \
-    'as4_extra_pmodes', 'as4_serviced_participants', 'as4_inbound_topic', 'as4_token_type', 'as4_username', \
-    'as4_password', 'as4_signing_key', 'as4_signing_cert_chain', 'as4_decryption_key', 'as4_saml_assertion', \
-    'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors', \
-    'is_audit_log_active', 'is_audit_export_payload_active',
-_object_order['outgoing_as4'] = 'name', 'is_active', 'host', 'url_path', 'timeout', 'validate_tls', 'as4_profile', \
-    'as4_from_party', 'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', \
-    'as4_final_recipient', 'as4_extra_pmodes', 'as4_use_discovery', 'as4_sml_domain', 'as4_retry_max_attempts', \
-    'as4_retry_interval', 'as4_missing_receipt_after', 'as4_token_type', 'as4_username', 'as4_password', \
-    'as4_signing_key', 'as4_signing_cert_chain', 'as4_decryption_key', 'as4_saml_assertion', \
-    'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors', \
-    'is_audit_log_active', 'is_audit_export_payload_active',
 
 # The scopes field carries no :list marker because it is a string when the definition
 # has one line of scopes and a list when it has more, so the writer picks the shape itself.

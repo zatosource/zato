@@ -17,7 +17,6 @@ from urllib.parse import parse_qsl
 
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
-from zato.common.ext_db.api import is_ext_object_id, to_local_id
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.util.time_ import utcnow
@@ -46,19 +45,10 @@ class Ping(_BaseService):
     output = 'info', '-is_success'
 
     def handle(self) -> 'None':
-
-        # Objects from the external AS2/AS4 database are stored under their local ids there
-        input_id = self.request.input.id
-
-        if is_ext_object_id(input_id):
-            local_id = to_local_id(input_id)
-        else:
-            local_id = input_id
-
-        with closing(self.server.get_config_session(object_id=input_id)) as session:
+        with closing(self.odb.session()) as session:
 
             # To ensure that the input ID is correct
-            instance = self._get_instance_by_id(session, ModelGenericConn, local_id)
+            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
 
             # Different code paths will be taken depending on what kind of a generic connection this is
             custom_ping_func_dict = {}

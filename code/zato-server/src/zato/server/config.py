@@ -302,7 +302,6 @@ class ConfigStore:
     def __init__(self):
 
         # Outgoing connections
-        self.out_as4 = None   # type: ConfigDict
         self.out_odoo = None  # type: ConfigDict
         self.out_soap = None  # type: ConfigDict
         self.out_sql = None   # type: ConfigDict

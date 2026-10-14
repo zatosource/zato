@@ -72,10 +72,6 @@ def full_input(class_:'any_', input_data:'stranydict') -> 'Bunch':
 def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') -> 'any_':
     """ A service with its collaborators standing in - the sessions are real, the server is not.
     """
-    def get_config_session(**kwargs:'any_') -> 'any_':
-        out = session_factory()
-        return out
-
     def encrypt(value:'any_') -> 'any_':
         out = value
         return out
@@ -92,7 +88,6 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
 
     server = SimpleNamespace(
         cluster_id=Cluster_Id,
-        get_config_session=get_config_session,
         encrypt=encrypt,
         fs_server_config=SimpleNamespace(misc=SimpleNamespace(return_internal_objects='True')),
     )

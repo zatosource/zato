@@ -146,32 +146,6 @@ _sql_outgoing_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
-_as2_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
-    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
-    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
-    {'key': 'disposition', 'label': 'Disposition', 'type': 'text'},
-    {'key': 'mic', 'label': 'MIC', 'type': 'text'},
-    {'key': 'size', 'label': 'Size', 'type': 'size'},
-    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
-    {'key': 'action', 'label': 'Actions', 'type': 'action'},
-]
-
-_as4_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
-    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
-    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
-    {'key': 'conversation_id', 'label': 'Conversation id', 'type': 'text'},
-    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
-    {'key': 'size', 'label': 'Size', 'type': 'size'},
-    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
-    {'key': 'action', 'label': 'Actions', 'type': 'action'},
-]
-
 _x12_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -415,8 +389,6 @@ _source_columns = {
     'email-smtp': _email_smtp_columns,
     'file-outgoing': _file_outgoing_columns,
     'sql-outgoing': _sql_outgoing_columns,
-    'as2': _as2_columns,
-    'as4': _as4_columns,
     'x12': _x12_columns,
     'mcp': _mcp_columns,
     'mllp-channel': _mllp_columns,

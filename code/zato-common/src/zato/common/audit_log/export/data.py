@@ -51,7 +51,6 @@ _data_keys_by_source:'stranydict' = {
     AuditSource.FHIR_Bulk_Export: All_Keys,
     AuditSource.CCDA:          All_Keys,
     AuditSource.Email_IMAP:    ('sent_from', 'sent_to'),
-    AuditSource.AS2:           ('mic', 'disposition'),
 }
 
 # The sources whose data column is a payload, or has nothing worth exporting, and so leaves only under the payload flag
@@ -62,7 +61,6 @@ _sources_without_data = {
     AuditSource.REST_Outgoing,
     AuditSource.SOAP_Outgoing,
     AuditSource.Email_SMTP,
-    AuditSource.AS4,
     AuditSource.X12,
     AuditSource.MLLP_Channel,
     AuditSource.MLLP_Outgoing,

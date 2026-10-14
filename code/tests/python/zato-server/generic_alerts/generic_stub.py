@@ -96,10 +96,6 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
         out = value
         return out
 
-    def get_config_session(**kwargs:'any_') -> 'any_':
-        out = session_factory()
-        return out
-
     def identity(value:'any_') -> 'any_':
         out = value
         return out
@@ -122,7 +118,6 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
         name='test-server',
         cluster_id=Cluster_Id,
         odb=service.odb,
-        get_config_session=get_config_session,
         encrypt=identity,
         decrypt=identity,
         config_manager=SimpleNamespace(sdk_connector_types={}),

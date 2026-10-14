@@ -17,7 +17,6 @@ from zato.admin.web.views import account, config_db, datadog, demo_config, desti
     grafana_cloud, highlight as highlight_view, http_soap, http_soap_limits, live_form_updates, log_streaming, logging_, \
     main, news, on_prem_gateway, openapi_, python_packages, redis_, sbom, scheduler, service, ssl_config, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
-from zato.admin.web.views.channel import as4 as channel_as4
 from zato.admin.web.views.channel.hl7 import dashboard as channel_hl7_dashboard
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
@@ -48,8 +47,6 @@ from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import grpc as out_grpc
 from zato.admin.web.views.outgoing import ibm_mq as out_ibm_mq
 from zato.admin.web.views.outgoing import kafka as out_kafka
-from zato.admin.web.views.outgoing import as2 as out_as2
-from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import es as out_es
 from zato.admin.web.views.outgoing import file_transfer_schedule as out_file_transfer_schedule
 from zato.admin.web.views.outgoing import delivery as out_delivery
@@ -81,7 +78,6 @@ from zato.admin.web.views.pubsub import queue as pubsub_queue
 from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
-from zato.admin.web.views import as2_keystore
 from zato.admin.web.views import audit_log
 from zato.admin.web.views.analytics import screens as analytics_screens
 from zato.admin.web.views import b2b
@@ -488,13 +484,6 @@ urlpatterns += [
 
     url(r'^zato/destinations/get-connection-list/$',
         login_required(destinations.get_connection_list), name='destinations-get-connection-list'),
-
-    # AS2 keystore
-
-    url(r'^zato/as2/keystore/$',
-        login_required(as2_keystore.index), name='as2-keystore'),
-    url(r'^zato/as2/keystore/save/$',
-        login_required(as2_keystore.save), name='as2-keystore-save'),
 
     # X12 control numbers
 
@@ -1019,46 +1008,6 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # Outgoing AS2 connections
-
-    url(r'^zato/outgoing/as2/$',
-        login_required(out_as2.Index()), name=out_as2.Index.url_name),
-    url(r'^zato/outgoing/as2/create/$',
-        login_required(out_as2.Create()), name=out_as2.Create.url_name),
-    url(r'^zato/outgoing/as2/edit/$',
-        login_required(out_as2.Edit()), name=out_as2.Edit.url_name),
-    url(r'^zato/outgoing/as2/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_as2.Delete()), name=out_as2.Delete.url_name),
-    url(r'^zato/outgoing/as2/change-password/$',
-        login_required(out_as2.change_password), name='out-as2-change-password'),
-    url(r'^zato/outgoing/as2/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_as2.ping), name='out-as2-ping'),
-    url(r'^zato/outgoing/as2/send-test-message/$',
-        login_required(out_as2.send_test_message), name='out-as2-send-test-message'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # Outgoing AS4 connections
-
-    url(r'^zato/outgoing/as4/$',
-        login_required(out_as4.Index()), name=out_as4.Index.url_name),
-    url(r'^zato/outgoing/as4/create/$',
-        login_required(out_as4.Create()), name=out_as4.Create.url_name),
-    url(r'^zato/outgoing/as4/edit/$',
-        login_required(out_as4.Edit()), name=out_as4.Edit.url_name),
-    url(r'^zato/outgoing/as4/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_as4.Delete()), name=out_as4.Delete.url_name),
-    url(r'^zato/outgoing/as4/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_as4.ping), name='out-as4-ping'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
     # SQL connection pools
 
     url(r'^zato/outgoing/sql/$',
@@ -1109,22 +1058,6 @@ urlpatterns += [
         login_required(channel_amqp.edit), {'subtype': 'azure-service-bus'}, name='channel-azure-service-bus-edit'),
     url(r'^zato/channel/azure-service-bus/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_amqp.Delete('azure-service-bus')), name='channel-azure-service-bus-delete'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. AS4
-
-    url(r'^zato/channel/as4/$',
-        login_required(channel_as4.Index()), name=channel_as4.Index.url_name),
-    url(r'^zato/channel/as4/create/$',
-        login_required(channel_as4.Create()), name=channel_as4.Create.url_name),
-    url(r'^zato/channel/as4/edit/$',
-        login_required(channel_as4.Edit()), name=channel_as4.Edit.url_name),
-    url(r'^zato/channel/as4/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_as4.Delete()), name=channel_as4.Delete.url_name),
     ]
 
 # ################################################################################################################################

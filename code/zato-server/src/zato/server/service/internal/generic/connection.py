@@ -12,7 +12,7 @@ from copy import deepcopy
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HL7, HTTP_SOAP, KAFKA, \
+from zato.common.api import Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, HL7, HTTP_SOAP, KAFKA, \
     SchedulerLink, SEC_DEF_TYPE, Sec_Def_Type_Name, ZATO_NONE
 from zato.common.alerting import config_map
 from zato.common.alerting.object_config import conn_type_to_alert_type, get_field_kinds as get_alert_field_kinds, \
@@ -28,7 +28,6 @@ from zato.common.hl7.mllp.fields import Channel_Int_Names as MLLP_Channel_Int_Na
     Channel_Rest_Channel_Id_Key as MLLP_Rest_Channel_Id_Key, Channel_Text_Names as MLLP_Channel_Text_Names, \
     Outgoing_Int_Names as MLLP_Outgoing_Int_Names
 from zato.common.hl7.mllp.tls import validate_client_paths as validate_mllp_client_paths
-from zato.common.ext_db.api import is_ext_object_id, needs_ext_db, to_local_id, to_public_id
 from zato.common.json_internal import loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.typing_ import cast_
@@ -240,7 +239,7 @@ extra_secret_keys = (
 
 # Keys that hold secrets - they are never returned in listings, no matter whether their values
 # are stored in clear text or encrypted, because the browser must never receive them at all.
-never_returned_keys = ('secret', 'secret_value', 'password') + extra_secret_keys + AS2.Secret_Fields
+never_returned_keys = ('secret', 'secret_value', 'password') + extra_secret_keys
 
 # Note that this is a set, unlike extra_secret_keys, because we do not make it part of I/O.
 extra_simple_type = {
@@ -264,40 +263,6 @@ skip_simple_type = {
     # Secrets and API keys must stay strings too - an all-digit key would otherwise
     # arrive as an integer and encryption works only with text.
     'secret',
-
-    # AS2 fields that must stay strings even when their values look numeric -
-    # the version travels as the AS2-Version HTTP header and the identifiers
-    # and EDI addressing fields are frequently all-digit strings.
-    'as2_version',
-    'as2_from',
-    'as2_to',
-    'subject',
-    'isa_qualifier',
-    'isa_id',
-    'gs_id',
-    'unb_id',
-    'as2_partner_next_cert_from',
-
-    # PEM keys and certificates are always strings - running them through the literal
-    # parser would only make the compiler emit SyntaxWarning on key material that
-    # happens to contain digits-then-letters tokens.
-    'as2_partner_cert',
-    'as2_partner_next_cert',
-    'as2_signing_key',
-    'as2_signing_cert_chain',
-    'as2_decryption_key',
-    'as2_next_decryption_key',
-    'as2_next_decryption_cert',
-    'as2_peer_signing_cert',
-    'as2_peer_encryption_cert',
-    'as2_trust_anchors',
-    'as4_signing_key',
-    'as4_signing_cert_chain',
-    'as4_decryption_key',
-    'as4_saml_assertion',
-    'as4_peer_signing_cert',
-    'as4_peer_encryption_cert',
-    'as4_trust_anchors',
 
     # Kafka fields that are text even when they look like a number, a boolean or JSON - acks of `1` or `0`
     # are what Kafka calls these settings, not a count or a flag
@@ -421,14 +386,6 @@ class _CreateEdit(_BaseService):
 
             data[key] = value
 
-        # AS2 private keys are pasted as PEM and stored encrypted, unless they arrive encrypted already,
-        # e.g. when an edit sends back the values a previous save produced.
-        if data.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2:
-            for name in AS2.Secret_Fields:
-                if value := data.get(name):
-                    if not value.startswith(SECRETS.PREFIX):
-                        data[name] = self.server.encrypt(value)
-
         # Build a reusable flag indicating that a secret was sent on input. This is checked only after the
         # raw_request merge above because the plaintext secret arrives in the raw request, not in self.request.input.
         secret = data.get('secret', ZATO_NONE)
@@ -527,44 +484,16 @@ class _CreateEdit(_BaseService):
                 data[_bulk.Field_Run_Every] = run_every
                 conn.opaque[_bulk.Field_Run_Every] = run_every
 
-        # AS2 outgoing connections are stored in the external database when one is configured,
-        # under their local ids, without the offset they are known under everywhere else.
-        is_ext = needs_ext_db(data.type_)
-
-        with closing(self.server.get_config_session(object_type=data.type_)) as session:
+        with closing(self.server.odb.session()) as session:
 
             # If this is the edit action, we need to find our instance in the database
             # and we need to make sure that we publish its encrypted secret for other layers ..
             if self.is_edit:
-                if is_ext:
-                    local_id = to_local_id(int(data.id))
-                else:
-                    local_id = data.id
-                model = self._get_instance_by_id(session, ModelGenericConn, local_id)
+                model = self._get_instance_by_id(session, ModelGenericConn, data.id)
 
                 # What the connection looked like before this edit - the config-audit
                 # event compares it with the state the commit produces.
                 before_snapshot = get_model_snapshot(model)
-
-                # Private keys are never returned to the Dashboard, so an edit form cannot send them back.
-                if data.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2:
-                    model_opaque = parse_instance_opaque_attr(model)
-                    for name in AS2.Secret_Fields:
-
-                        # A key given on input is a new one and is stored as given ..
-                        if data.get(name):
-                            continue
-
-                        # .. the staged next decryption key is cleared along with
-                        # .. its certificate once a rotation completes ..
-                        if name == 'as2_next_decryption_key':
-                            if not data.get('as2_next_decryption_cert'):
-                                continue
-
-                        # .. and any other empty key on input means the stored one is kept.
-                        if stored_value := model_opaque.get(name):
-                            data[name] = stored_value
-                            conn.opaque[name] = stored_value
 
                 # File transfer schedules are managed on their own screen so an edit of the connection
                 # itself must not lose them - the connection's edit form does not carry them.
@@ -618,11 +547,7 @@ class _CreateEdit(_BaseService):
             # .. and ensure that its secret is stored - either the one given on input,
             # .. so that later edits without a secret can keep using it, or an auto-generated one.
             else:
-                # The external database has its own cluster row that all its objects point to
-                if is_ext:
-                    model = ModelGenericConn()
-                else:
-                    model = self._new_zato_instance_with_cluster(ModelGenericConn)
+                model = self._new_zato_instance_with_cluster(ModelGenericConn)
 
                 # A creation has no earlier state to compare with
                 before_snapshot = {}
@@ -682,13 +607,7 @@ class _CreateEdit(_BaseService):
             # of the config-audit comparison.
             after_snapshot = get_model_snapshot(instance)
 
-            # Everyone else knows objects from the external database under their offset ids
-            if is_ext:
-                public_id = to_public_id(instance.id)
-            else:
-                public_id = instance.id
-
-            self.response.payload.id = public_id
+            self.response.payload.id = instance.id
             self.response.payload.name = instance.name
 
             # File transfer schedules follow their connection's name - a rename rebuilds each linked job
@@ -701,15 +620,15 @@ class _CreateEdit(_BaseService):
         # The connection is committed by now so its health check job can be created, updated or deleted -
         # the job pings the connection and each ping lands in the audit log under the connection's health source.
         if data.type_ in _health_check_link_types:
-            sync_health_check_job(self, data, public_id, _health_check_link_types[data.type_])
+            sync_health_check_job(self, data, instance.id, _health_check_link_types[data.type_])
 
         # .. and so can its bulk export job, which starts an export on the tab's schedule.
         if data.type_ in _bulk_export_link_types:
-            sync_bulk_export_job(self, data, public_id, _bulk_export_link_types[data.type_])
+            sync_bulk_export_job(self, data, instance.id, _bulk_export_link_types[data.type_])
 
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
-        data['id'] = public_id
+        data['id'] = instance.id
 
         self.logger.info('GenericConn _CreateEdit step 7: publishing config event, action=%s, id=%s, type_=%s',
             data['action'], data['id'], data.get('type_'))
@@ -795,28 +714,18 @@ class ChangePassword(ChangePasswordBase):
                 instance.secret = self.server.encrypt(secret)
 
         if self.request.input.id:
-            instance_id = int(self.request.input.id)
+            instance_id = self.request.input.id
         else:
-            with closing(self.server.get_config_session(object_type=self.request.input.type_)) as session:
+            with closing(self.odb.session()) as session:
                 instance_id = session.query(ModelGenericConn).\
                     filter(ModelGenericConn.name==self.request.input.name).\
                     filter(ModelGenericConn.type_==self.request.input.type_).\
                     one().id
 
-            # Everyone else knows objects from the external database under their offset ids
-            if needs_ext_db(self.request.input.type_):
-                instance_id = to_public_id(instance_id)
-
-        # Objects from the external AS2/AS4 database are stored under their local ids there
-        if is_ext_object_id(instance_id):
-            local_id = to_local_id(instance_id)
-        else:
-            local_id = instance_id
-
         # To ensure that the input ID is correct
-        with closing(self.server.get_config_session(object_id=instance_id)) as session:
+        with closing(self.odb.session()) as session:
             query = session.query(ModelGenericConn)
-            query = query.filter(ModelGenericConn.id==local_id)
+            query = query.filter(ModelGenericConn.id==instance_id)
             _ = query.one()
 
         # This step updates the secret.

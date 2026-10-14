@@ -221,11 +221,6 @@ def run_retention_tiers_scenario() -> 'None':
             attrs={'control_number': '000000102'},
             bodies={'request': 'the body of a row past the retention window'})
 
-        # .. an AS2 event of exactly that age, which is evidence rather than diagnostics
-        # and is kept for years without anyone configuring anything ..
-        evidence_id = _insert_event_at(audit_log, _row_expired_age_days,
-            source=AuditSource.AS2, data='the receipt a dispute is settled with')
-
         # .. a recent event linked to the expired one - the link goes when its parent does ..
         recent_id = _insert_event_at(audit_log, 0, data='a recent payload retention never touches')
         audit_log.add_links(recent_id, [expired_id], AuditLink.Resubmit_Of)
@@ -257,9 +252,6 @@ def run_retention_tiers_scenario() -> 'None':
         assert _count_rows(event_attr_table, event_attr_table.c.event_id, expired_id) == 0
         assert _count_rows(event_body_table, event_body_table.c.event_id, expired_id) == 0
         assert _count_rows(event_link_table, event_link_table.c.parent_event_id, expired_id) == 0
-
-        # .. the AS2 event of the same age is still there, because its source outlives the others ..
-        assert _get_event_row(evidence_id) is not None
 
         # .. the recent event was never touched ..
         row = _get_event_row(recent_id)

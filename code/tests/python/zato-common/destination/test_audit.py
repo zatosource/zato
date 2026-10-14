@@ -142,9 +142,9 @@ class TestAuditTrail:
 
         # .. while a source that fans out to nothing has no delivery to repeat.
         try:
-            _ = get_hop_entry(AuditSource.AS2, 'partner', {})
+            _ = get_hop_entry(AuditSource.X12, 'partner', {})
         except DestinationException as e:
-            assert AuditSource.AS2 in str(e)
+            assert AuditSource.X12 in str(e)
         else:
             raise Exception('A source with no destinations was expected to be rejected')
 

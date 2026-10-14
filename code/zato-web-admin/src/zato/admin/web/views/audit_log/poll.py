@@ -158,7 +158,7 @@ def poll(req:'any_') -> 'HttpResponse':
         # attrs, a preview of a payload kept elsewhere, the lineage, the message bodies there
         # are to read and the resubmitted marker - is merged in here, a query per set of rows
         # rather than one per row. The rows still carry their full data documents because
-        # the per-source enrichment reads columns out of them, e.g. an AS4 conversation id.
+        # the per-source enrichment reads columns out of them, e.g. a file transfer's counts.
         _hydrate_rows(connection, rows)
 
         # The watched rows the page no longer holds are read on their own.

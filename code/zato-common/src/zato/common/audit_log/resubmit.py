@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The source-agnostic core of every resubmit - loading a stored event back, the registry
 # of per-source handlers, the per-hop resend over outgoing events, and bulk resubmit.
 # Each source contributes its own resend and reprocess semantics on top of this module,
-# the way zato.common.as2.resubmit and zato.common.hl7.resubmit do.
+# the way zato.common.hl7.resubmit and zato.common.email.resubmit do.
 
 from __future__ import annotations
 
@@ -74,15 +74,6 @@ Resend_Hop_Service = 'zato.audit-log.resend-hop'
 # its per-row actions out of this catalog and the alerting collectors read it to say whether
 # an alert's newest failing event can be sent again, which is what turns the alert's link
 # into a deep link at that event.
-_as2_actions = {
-    AuditEvent.Message_Sent:     {'label': Resubmit_Label, 'service': 'zato.audit-log.as2.resend'},
-    AuditEvent.Message_Received: {'label': Resubmit_Label, 'service': 'zato.audit-log.as2.reprocess'},
-}
-
-_as4_actions = {
-    AuditEvent.Message_Sent:     {'label': Resubmit_Label, 'service': 'zato.audit-log.as4.resend'},
-    AuditEvent.Message_Received: {'label': Resubmit_Label, 'service': 'zato.audit-log.as4.reprocess'},
-}
 
 # What a channel received is re-run through the channel's own machinery
 _mllp_channel_actions = {
@@ -141,8 +132,6 @@ _http_channel_actions = {
 
 # The sources whose events carry resubmit actions at all, each with its own catalog
 source_resubmit_actions = {
-    AuditSource.AS2: _as2_actions,
-    AuditSource.AS4: _as4_actions,
     AuditSource.MLLP_Channel: _mllp_channel_actions,
     AuditSource.MLLP_Outgoing: _mllp_outgoing_actions,
     AuditSource.FHIR: _hop_actions,

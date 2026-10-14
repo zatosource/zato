@@ -44,8 +44,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The official XSDs live in the AS4 fixture tree and are shared by both suites.
-Schemas_Dir = os.path.join(os.path.dirname(__file__), '..', 'as4', 'fixtures', 'schemas')
+# Local copies of the official XSDs
+Schemas_Dir = os.path.join(os.path.dirname(__file__), 'fixtures', 'schemas')
 
 # RSA parameters for throwaway test keys.
 _rsa_public_exponent = 65537

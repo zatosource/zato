@@ -542,7 +542,6 @@ class TestTheConfigManagerTellsTheChannelAboutAnEdit(_WiringTestCase):
         manager.generic_conn_api = {
             GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: {wrapper.config.name: conn_dict},
         }
-        manager._note_as2_config_change = MagicMock()
         manager.delete_outgoing_dlq = MagicMock()
 
         return manager

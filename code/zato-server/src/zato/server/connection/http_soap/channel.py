@@ -45,8 +45,6 @@ from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDic
 from zato.common.util.logging_ import current_cid, current_service_name
 from zato.common.util.url_dispatcher import normalize_path_info, to_internal_accept
 from zato.server.reqresp.payload import IOPayload
-from zato.server.connection.as2 import AS2ChannelRuntime
-from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.connection.ccda import CCDAFacade
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.connection.http_soap import response_cache
@@ -98,8 +96,6 @@ _content_type_json = CONTENT_TYPE['JSON']
 _content_type_sse = 'text/event-stream'
 _transport_plain_http = URL_TYPE.PLAIN_HTTP
 _transport_soap = URL_TYPE.SOAP
-_transport_as2 = URL_TYPE.AS2
-_transport_as4 = URL_TYPE.AS4
 _data_format_hl7_v2 = HL7.Const.Version.v2.id
 _data_format_ccda = HL7.CCDA.Data_Format
 _ccda_reason_not_cda = HL7.CCDA.Reason.Not_CDA
@@ -741,17 +737,6 @@ class RequestDispatcher:
                 response_headers[Header_Rate_Limit_Limit] = str(sec_def_rate_limit_result.limit)
                 response_headers[Header_Rate_Limit_Remaining] = str(sec_def_rate_limit_result.remaining)
 
-        # .. AS4 channels run the AS4 inbound pipeline instead of invoking a service directly -
-        # the pipeline itself routes accepted payloads to the channel's topic or service ..
-        if channel_item['transport'] == _transport_as4:
-            out = self._handle_as4_channel(cid, channel_item, request_ctx, payload)
-            return out
-
-        # .. and so do AS2 channels with the AS2 inbound pipeline ..
-        if channel_item['transport'] == _transport_as2:
-            out = self._handle_as2_channel(cid, channel_item, request_ctx, payload)
-            return out
-
         # .. a channel with response caching may have the response ready ..
         cache_ctx = response_cache.get_context(config_manager.cache_api, channel_item, request_ctx, payload)
 
@@ -777,96 +762,6 @@ class RequestDispatcher:
         # .. invoke the service ..
         out = self._invoke_and_format(*invoke_args)
 
-        return out
-
-# ################################################################################################################################
-
-    def _handle_as4_channel(
-        self,
-        cid:'str',
-        channel_item:'anydict',
-        request_ctx:'stranydict',
-        payload:'bytes',
-    ) -> 'bytes':
-        """ Runs one incoming request through the AS4 inbound pipeline of the matched channel,
-        returning the signed receipt, an ebMS error signal, or - for a pull request - the message
-        waiting on the partition channel it asked about.
-        """
-
-        # The runtime lives as long as this channel_item does -
-        # a configuration change rebuilds the item, which rebuilds the runtime.
-        runtime = channel_item.get('as4_runtime')
-
-        if runtime is None:
-            runtime = AS4ChannelRuntime(self.server, channel_item)
-            channel_item['as4_runtime'] = runtime
-
-        # The pipeline works with the raw wire bytes.
-        if isinstance(payload, str):
-            payload = payload.encode('utf8')
-
-        content_type = request_ctx.get('CONTENT_TYPE')
-        if content_type is None:
-            content_type = ''
-
-        result = runtime.handle(cid, payload, content_type)
-
-        # What goes back is a signal for a delivery and a whole user message with its attachments
-        # for a pull request, so the pipeline is what says how the response is packaged.
-        request_ctx['zato.http.response.headers']['Content-Type'] = result.content_type
-        request_ctx['zato.http.response.status'] = status_response[result.status_code]
-
-        out = result.body
-        return out
-
-# ################################################################################################################################
-
-    def _handle_as2_channel(
-        self,
-        cid:'str',
-        channel_item:'anydict',
-        request_ctx:'stranydict',
-        payload:'bytes',
-    ) -> 'bytes':
-        """ Runs one incoming request through the AS2 inbound pipeline of the matched channel,
-        returning the MDN the sender asked for - a positive one or one with an error disposition.
-        """
-
-        # The runtime lives as long as this channel_item does -
-        # a configuration change rebuilds the item, which rebuilds the runtime.
-        runtime = channel_item.get('as2_runtime')
-
-        if runtime is None:
-            runtime = AS2ChannelRuntime(self.server, channel_item)
-            channel_item['as2_runtime'] = runtime
-
-        # The pipeline works with the raw wire bytes.
-        if isinstance(payload, str):
-            payload = payload.encode('utf8')
-
-        # The AS2 identities and the MIME headers of the top-level entity
-        # all travel as HTTP headers, which the request context spells with the HTTP_ prefix ..
-        headers:'stranydict' = {}
-
-        for key, value in request_ctx.items():
-            if key.startswith('HTTP_'):
-                header_name = key[5:].replace('_', '-').lower()
-                headers[header_name] = value
-
-        # .. except for Content-Type, which the request context keeps under its own key.
-        if content_type := request_ctx.get('CONTENT_TYPE'):
-            headers['content-type'] = content_type
-
-        result = runtime.handle(cid, payload, headers)
-
-        # What goes back is the MDN's own headers and body - or an empty response
-        # when no MDN was requested or an asynchronous one is to follow.
-        for name, value in result.headers.items():
-            request_ctx['zato.http.response.headers'][name] = value
-
-        request_ctx['zato.http.response.status'] = status_response[result.status_code]
-
-        out = result.body
         return out
 
 # ################################################################################################################################

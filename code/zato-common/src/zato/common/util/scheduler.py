@@ -27,7 +27,7 @@ from traceback import format_exc
 from zato.common.ext.bunch import Bunch
 
 # Zato
-from zato.common.api import Alerting, AS2, AS4, PubSub, SCHEDULER
+from zato.common.api import Alerting, PubSub, SCHEDULER
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 
 # ################################################################################################################################
@@ -45,15 +45,9 @@ logger = getLogger('zato_scheduler')
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The Python path of the service the AS2 rotation job invokes - the job may be created
+# The Python path of the service the generic alerting job invokes - the job may be created
 # before the service is deployed for the first time, in which case the service's ODB row
 # is created upfront and the deployment sync finds it already in place.
-_as2_rotation_service_impl_name = 'zato.server.service.internal.generic.connection.CompleteAS2Rotation'
-
-# The Python path of the service the B2B alerting job invokes, created upfront the same way.
-_b2b_alerting_service_impl_name = 'zato.server.service.internal.b2b.B2BAlerting'
-
-# The Python path of the service the generic alerting job invokes, created upfront the same way.
 _alerting_service_impl_name = 'zato.server.service.internal.alerting.AlertingRun'
 
 # The Python paths of the three alerting probe services, created upfront the same way.
@@ -61,68 +55,8 @@ _cert_check_service_impl_name = 'zato.server.service.internal.alerting.AlertingC
 _ms_health_service_impl_name = 'zato.server.service.internal.alerting.AlertingMicrosoftHealth'
 _test_transfer_service_impl_name = 'zato.server.service.internal.alerting.AlertingTestTransfer'
 
-# The Python paths of the two services the AS2 reliability jobs invoke, created upfront the same way.
-_as2_async_mdn_service_impl_name = 'zato.server.service.internal.as2.DeliverAsyncMDNs'
-_as2_resend_service_impl_name = 'zato.server.service.internal.as2.ResendOverdueMessages'
-
-# The Python path of the service the AS4 reception awareness job invokes, created upfront the same way.
-_as4_resend_service_impl_name = 'zato.server.service.internal.as4.ResendOverdueMessages'
-
 # The Python path of the service the DLQ rule job invokes
 _dlq_rule_service_impl_name = 'zato.server.service.internal.pubsub.dlq.DLQRun'
-
-# Whether the AS2/AS4 jobs are created on startup
-_as2_as4_jobs_enabled = False
-
-# Whether the B2B alerting job is created on startup
-_b2b_alerting_job_enabled = False
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_as2_rotation_job_exists(session:'any_', cluster_id:'int') -> 'bool':
-    """ Checks if the interval job that completes AS2 certificate rotations exists, creates it if not.
-    Returns True if created, False if already existed.
-    """
-    if not _as2_as4_jobs_enabled:
-        return False
-
-    existing = session.query(Job).\
-        filter(Job.name==AS2.Default.Rotation_Job_Name).\
-        filter(Job.cluster_id==cluster_id).\
-        first()
-
-    if existing:
-        return False
-
-    cluster = session.query(Cluster).\
-        filter(Cluster.id==cluster_id).\
-        one()
-
-    service = session.query(Service).\
-        filter(Service.name==AS2.Default.Rotation_Service).\
-        filter(Service.cluster_id==cluster_id).\
-        first()
-
-    # On a first-ever start the service is not in ODB yet, so its row is created here
-    # and the deployment sync will find it already in place.
-    if not service:
-        service = Service(None, AS2.Default.Rotation_Service, True, _as2_rotation_service_impl_name, True, cluster)
-        session.add(service)
-        session.flush()
-
-    # The start date is only the anchor the hourly interval counts from.
-    start_date = datetime.now(timezone.utc)
-    start_date = start_date.replace(tzinfo=None)
-
-    job = Job(None, AS2.Default.Rotation_Job_Name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date,
-        cluster=cluster, service=service)
-    interval = IntervalBasedJob(None, job, hours=AS2.Default.Rotation_Job_Interval_Hours)
-
-    session.add(job)
-    session.add(interval)
-
-    return True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -175,98 +109,6 @@ def _ensure_interval_job_exists(
         interval = IntervalBasedJob(None, job, hours=hours)
     else:
         interval = IntervalBasedJob(None, job, minutes=minutes)
-
-    session.add(job)
-    session.add(interval)
-
-    return True
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_as2_async_mdn_job_exists(session:'any_', cluster_id:'int') -> 'bool':
-    """ Checks if the interval job that drains the asynchronous MDN queue exists, creates it if not.
-    Returns True if created, False if already existed.
-    """
-    if not _as2_as4_jobs_enabled:
-        return False
-
-    out = _ensure_interval_job_exists(session, cluster_id, AS2.Async_MDN.Job_Name, AS2.Async_MDN.Service,
-        _as2_async_mdn_service_impl_name, AS2.Async_MDN.Job_Interval_Minutes)
-
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_as2_resend_job_exists(session:'any_', cluster_id:'int') -> 'bool':
-    """ Checks if the interval job that resends messages with an overdue MDN exists, creates it
-    if not. Returns True if created, False if already existed.
-    """
-    if not _as2_as4_jobs_enabled:
-        return False
-
-    out = _ensure_interval_job_exists(session, cluster_id, AS2.Resend.Job_Name, AS2.Resend.Service,
-        _as2_resend_service_impl_name, AS2.Resend.Job_Interval_Minutes)
-
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_as4_resend_job_exists(session:'any_', cluster_id:'int') -> 'bool':
-    """ Checks if the interval job that repeats the delivery of messages with an overdue AS4 receipt
-    exists, creates it if not. Returns True if created, False if already existed.
-    """
-    if not _as2_as4_jobs_enabled:
-        return False
-
-    out = _ensure_interval_job_exists(session, cluster_id, AS4.Resend.Job_Name, AS4.Resend.Service,
-        _as4_resend_service_impl_name, AS4.Resend.Job_Interval_Minutes)
-
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_b2b_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
-    """ Checks if the interval job that runs the B2B alerting sweep exists, creates it if not.
-    Returns True if created, False if already existed.
-    """
-    if not _b2b_alerting_job_enabled:
-        return False
-
-    existing = session.query(Job).\
-        filter(Job.name==AS2.Alerting.Job_Name).\
-        filter(Job.cluster_id==cluster_id).\
-        first()
-
-    if existing:
-        return False
-
-    cluster = session.query(Cluster).\
-        filter(Cluster.id==cluster_id).\
-        one()
-
-    service = session.query(Service).\
-        filter(Service.name==AS2.Alerting.Service).\
-        filter(Service.cluster_id==cluster_id).\
-        first()
-
-    # On a first-ever start the service is not in ODB yet, so its row is created here
-    # and the deployment sync will find it already in place.
-    if not service:
-        service = Service(None, AS2.Alerting.Service, True, _b2b_alerting_service_impl_name, True, cluster)
-        session.add(service)
-        session.flush()
-
-    # The start date is only the anchor the hourly interval counts from.
-    start_date = datetime.now(timezone.utc)
-    start_date = start_date.replace(tzinfo=None)
-
-    job = Job(None, AS2.Alerting.Job_Name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date,
-        cluster=cluster, service=service)
-    interval = IntervalBasedJob(None, job, hours=AS2.Alerting.Job_Interval_Hours)
 
     session.add(job)
     session.add(interval)

@@ -11,16 +11,11 @@ from contextlib import closing
 from logging import getLogger
 
 # Zato
-from zato.common.api import GENERIC, HTTP_SOAP
+from zato.common.api import HTTP_SOAP
 from zato.common.ext.bunch import Bunch
 from zato.common.const import SECRETS
-from zato.common.ext_db.api import get_ext_db_session, get_ext_http_soap_list, is_ext_db_configured, \
-    merge_ext_channel_items, merge_ext_config_entries
 from zato.common.json_internal import loads
-from zato.common.odb.query import http_soap_list
-from zato.common.odb.query.generic import connection_list
 from zato.common.pubsub.outgoing import http_soap_inbound_types
-from zato.common.typing_ import cast_
 from zato.common.util.config import resolve_name
 from zato.common.util.delivery_config import apply_delivery_defaults
 from zato.common.util.sql import elems_with_opaque
@@ -187,17 +182,6 @@ class ConfigLoader:
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query, decrypt_func=self.decrypt)
 
-        # AS4
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'as4', True)
-        self.config.out_as4 = ConfigDict.from_query('out_as4', query, decrypt_func=self.decrypt)
-
-        # AS4 - outgoing connections kept in the external AS2/AS4 database, if one is configured
-        if is_ext_db_configured():
-            with closing(get_ext_db_session()) as ext_session:
-                ext_query = http_soap_list(ext_session, server.cluster_id, 'outgoing', 'as4', True, None, True)
-                ext_out_as4 = ConfigDict.from_query('out_as4', ext_query, decrypt_func=self.decrypt)
-            merge_ext_config_entries(self.config.out_as4._impl, ext_out_as4._impl)
-
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
@@ -224,16 +208,6 @@ class ConfigLoader:
         self.config.generic_connection = ConfigDict.from_query('generic_connection', query, decrypt_func=self.decrypt,
             key_func=generic_connection_key)
 
-        # Connections kept in the external AS2/AS4 database, if one is configured
-        if is_ext_db_configured():
-            ext_cluster_id = cast_('int', server.cluster_id)
-            with closing(get_ext_db_session()) as ext_session:
-                ext_query = connection_list(
-                    ext_session, ext_cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_AS2, True)
-                ext_generic = ConfigDict.from_query('generic_connection', ext_query, decrypt_func=self.decrypt,
-                    key_func=generic_connection_key)
-            merge_ext_config_entries(self.config.generic_connection._impl, ext_generic._impl)
-
         #
         # Generic - end
         #
@@ -254,15 +228,8 @@ class ConfigLoader:
 
         # All the HTTP/SOAP channels.
         http_soap = []
-        channel_items = elems_with_opaque(self.odb.get_http_soap_list(server.cluster.id, 'channel'))
 
-        # Channels kept in the external AS2/AS4 database override same-name ones from the main ODB
-        if is_ext_db_configured():
-            ext_cluster_id = cast_('int', server.cluster_id)
-            ext_channel_items = get_ext_http_soap_list(ext_cluster_id, 'channel')
-            merge_ext_channel_items(channel_items, ext_channel_items)
-
-        for item in channel_items:
+        for item in elems_with_opaque(self.odb.get_http_soap_list(server.cluster.id, 'channel')):
 
             # The runtime hands this very object to services and to the dispatcher, both of which
             # reach into it by attribute as well as by key, and it is built once per channel here
@@ -273,11 +240,6 @@ class ConfigLoader:
                 channel[key] = getattr(item, key)
 
             channel['name'] = resolve_name(channel['name'])
-
-            # Dispatcher-handled channels, such as AS2 ones, have no service of their own,
-            # so the outer-joined column comes back as NULL - the runtime spells that as an empty string.
-            if channel['service_name'] is None:
-                channel['service_name'] = ''
 
             # The Accept value a channel names is an opaque attribute, so a channel saved without one
             # arrives without the field itself - the dispatcher reads it alongside the match target

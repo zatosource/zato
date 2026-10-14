@@ -50,9 +50,9 @@ from zato.common.util.time_ import utcnow
 from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, FTPFacade, IBMMQFacade, KafkaFacade, \
-    GraphQLFacade, KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SalesforceFacade, SchedulerFacade, \
-    SFTPFacade, SMBFacade, SOAPFacade
+from zato.server.connection.facade import ESFacade, FHIRFacade, FTPFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
+    KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SalesforceFacade, SchedulerFacade, SFTPFacade, \
+    SMBFacade, SOAPFacade
 from zato.server.connection.ccda import CCDAFacade
 from zato.server.connection.grpc_ import GRPCFacade
 from zato.server.destination.facade import DestinationFacade
@@ -379,8 +379,6 @@ class Service:
     logger: 'Logger'
     process_name:'str' = 'No name'
 
-    as2: 'AS2Facade'
-    as4: 'AS4Facade'
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
@@ -510,16 +508,8 @@ class Service:
             self._config_store.out_soap,
             self._config_manager.sql_pool_store,
             self._config_manager.outconn_ldap,
-            as2=self._config_manager.outconn_as2,
-            as4=self._config_manager.config_store.out_as4,
             config_manager=self._config_manager,
         ) # type: Outgoing
-
-        # AS2 facade for outgoing connections
-        self.as2 = AS2Facade()
-
-        # AS4 facade for outgoing connections
-        self.as4 = AS4Facade()
 
         # REST facade for outgoing connections
         self.rest = RESTFacade()
@@ -683,12 +673,6 @@ class Service:
         self.redis = self._config_manager.cache_api.redis
         self.kvdb = self.redis
         self.cache = self.redis
-
-        # AS2 facade
-        self.as2.init(self.cid, self._config_manager)
-
-        # AS4 facade
-        self.as4.init(self.cid, self._config_manager.config_store.out_as4)
 
         # REST facade
         self.rest.init(self.cid, self._config_manager.config_store.out_plain_http)

@@ -48,10 +48,9 @@ class TestRowRetention:
 
 # ################################################################################################################################
 
-    def test_the_b2b_sources_outlive_it(self) -> 'None':
+    def test_the_b2b_source_outlives_it(self) -> 'None':
 
         # What a partner sent and what it signed for settles a dispute that surfaces years later.
-        assert get_retention_days(AuditSource.AS2) == _evidence_retention_days
         assert get_retention_days(AuditSource.X12) == _evidence_retention_days
 
 # ################################################################################################################################
@@ -94,7 +93,7 @@ class TestRowRetention:
             assert get_retention_days() == 7
 
             # .. and deleting evidence is a decision made for the source it concerns by name.
-            assert get_retention_days(AuditSource.AS2) == _evidence_retention_days
+            assert get_retention_days(AuditSource.X12) == _evidence_retention_days
 
         finally:
             _ = os.environ.pop(Env_Retention_Days, None)
@@ -103,15 +102,15 @@ class TestRowRetention:
 
     def test_one_source_says_how_long_it_is_kept_for(self) -> 'None':
 
-        env_name = _env_name(Env_Retention_Days_Prefix, AuditSource.AS2)
+        env_name = _env_name(Env_Retention_Days_Prefix, AuditSource.X12)
 
         try:
             os.environ[env_name] = '90'
 
-            assert get_retention_days(AuditSource.AS2) == 90
+            assert get_retention_days(AuditSource.X12) == 90
 
             # No other source is affected by it.
-            assert get_retention_days(AuditSource.X12) == _evidence_retention_days
+            assert get_retention_days(AuditSource.REST_Channel) == _default_retention_days
             assert get_retention_days(AuditSource.PubSub) == _default_retention_days
 
         finally:
@@ -138,22 +137,22 @@ class TestRowRetention:
 class TestContentRetention:
 
     def test_content_lives_as_long_as_its_rows_by_default(self) -> 'None':
-        assert get_content_retention_days(AuditSource.AS2) == 0
+        assert get_content_retention_days(AuditSource.X12) == 0
         assert get_content_retention_days() == 0
 
 # ################################################################################################################################
 
     def test_one_source_says_how_long_its_content_is_kept_for(self) -> 'None':
 
-        env_name = _env_name(Env_Content_Retention_Days_Prefix, AuditSource.AS2)
+        env_name = _env_name(Env_Content_Retention_Days_Prefix, AuditSource.X12)
 
         try:
             os.environ[Env_Content_Retention_Days] = '7'
             os.environ[env_name] = '400'
 
-            # The payload of an AS2 exchange is evidence too, so it may be kept
+            # The payload of an X12 exchange is evidence too, so it may be kept
             # long after the payloads of everything else are gone.
-            assert get_content_retention_days(AuditSource.AS2) == 400
+            assert get_content_retention_days(AuditSource.X12) == 400
             assert get_content_retention_days(AuditSource.PubSub) == 7
 
         finally:

@@ -12,7 +12,7 @@
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
-	test-as2 test-as4 test-edifact test-x12 test-soap \
+	test-edifact test-x12 test-soap \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
 	test-hl7 test-fhir-bulk-export test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
@@ -898,27 +898,6 @@ test-grpc: ## gRPC live tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_grpc -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-as2: ## Every AS2 test - offline messaging, live interop and the browser lifecycle.
-	$(Zato_Log_Reset)
-	$(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/as2/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2 -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/as2_interop/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2_interop -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/as2_live/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2_live -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-test-as4: ## AS4 messaging tests - fully offline, no external services needed.
-	$(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/as4/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as4 -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
-
 test-edifact: ## EDIFACT tests - fully offline, no external services needed.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/edifact/ \
@@ -1381,7 +1360,6 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 Zato_Test_Static := test-lint
 
 # Offline unit suites, no server, no container, no browser
-# test-as4
 Zato_Test_Offline := \
 	test-message-filters test-demo-seed test-truncate test-safeguards \
 	test-edifact test-alerting test-x12 test-request-response test-destinations \
@@ -1393,7 +1371,6 @@ Zato_Test_Toolchain := \
 	test-audit-log test-analytics
 
 # Suites needing a live server or an external service
-# test-as2
 # discord_disabled - test-discord
 Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \

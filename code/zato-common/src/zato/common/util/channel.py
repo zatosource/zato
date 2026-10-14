@@ -29,8 +29,6 @@ openapi_channel_name = 'zato.channel.openapi.get'
 openapi_channel_url_path = '/openapi/{name}'
 openapi_service_name = 'zato.server.service.internal.helpers.OpenAPIHandler'
 
-as2_mdn_service_name = 'zato.server.service.internal.channel.as2.AS2MDNEndpoint'
-
 # The longest URL path a channel may have, which is the width of the database column it is stored in.
 Channel_URL_Path_Max_Length = 200
 
@@ -100,37 +98,6 @@ def ensure_openapi_channel_exists(session, cluster_id):
         None, openapi_channel_name, True, True, CONNECTION.CHANNEL,
         URL_TYPE.PLAIN_HTTP, None, openapi_channel_url_path, None, '', None, DATA_FORMAT.JSON,
         service=service, cluster=cluster)
-    session.add(channel)
-
-    return True
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_as2_channel_exists(session, cluster_id):
-    """ Checks if the AS2 inbound channel exists, creates it if not.
-    Returns True if created, False if already existed.
-    """
-    from zato.common.api import AS2, CONNECTION, URL_TYPE
-    from zato.common.odb.model import Cluster, HTTPSOAP
-
-    existing = session.query(HTTPSOAP).filter(
-        HTTPSOAP.name == AS2.Default.Channel_Name,
-        HTTPSOAP.cluster_id == cluster_id,
-        HTTPSOAP.connection == CONNECTION.CHANNEL,
-    ).first()
-
-    if existing:
-        return False
-
-    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
-
-    # The dispatcher handles AS2 channels itself, so there is no service to point to,
-    # and the data format is None so the raw MIME body arrives untouched.
-    channel = HTTPSOAP(
-        None, AS2.Default.Channel_Name, True, True, CONNECTION.CHANNEL,
-        URL_TYPE.AS2, None, AS2.Default.Channel_URL_Path, None, '', None, None,
-        cluster=cluster)
     session.add(channel)
 
     return True
@@ -549,46 +516,6 @@ def ensure_channel_definitions_are_unique(session:'any_', cluster_id:'int', chan
             raise Exception(f'{both_part} method and Accept header: `{url_path}`')
 
         claimed[target] = name
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_as2_mdn_channel_exists(session, cluster_id):
-    """ Checks if the channel for incoming asynchronous AS2 MDNs exists, creates it if not.
-    Returns True if created, False if already existed.
-    """
-    from zato.common.api import AS2, CONNECTION, URL_TYPE
-    from zato.common.odb.model import Cluster, HTTPSOAP, Service
-
-    existing = session.query(HTTPSOAP).filter(
-        HTTPSOAP.name == AS2.Default.MDN_Channel_Name,
-        HTTPSOAP.cluster_id == cluster_id,
-        HTTPSOAP.connection == CONNECTION.CHANNEL,
-    ).first()
-
-    if existing:
-        return False
-
-    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
-
-    service = session.query(Service).filter(
-        Service.name == as2_mdn_service_name,
-        Service.cluster_id == cluster_id,
-    ).first()
-
-    if not service:
-        service = Service(None, as2_mdn_service_name, True, as2_mdn_service_name, True, cluster)
-        session.add(service)
-        session.flush()
-
-    # The data format is None so the raw MDN body arrives untouched.
-    channel = HTTPSOAP(
-        None, AS2.Default.MDN_Channel_Name, True, True, CONNECTION.CHANNEL,
-        URL_TYPE.PLAIN_HTTP, None, AS2.Default.MDN_Channel_URL_Path, None, '', None, None,
-        service=service, cluster=cluster)
-    session.add(channel)
-
-    return True
 
 # ################################################################################################################################
 # ################################################################################################################################

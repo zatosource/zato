@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Shared audit log queries - the conditions the Dashboard filters build on.
 # The outstanding filter pairs the event that opens an exchange with the acknowledgment
 # that closes it, so one query lists everything still waiting for its receipt -
-# an AS2 message without its MDN or an X12 interchange without its 997/999.
+# an X12 interchange without its 997/999 or an HL7 message without its ACK.
 
 # stdlib
 from dataclasses import dataclass
@@ -34,10 +34,10 @@ if 0:
 @dataclass(init=False)
 class OutstandingFilter:
     """ The outstanding filter of one source - the event that opens an exchange, the acknowledgment
-    that closes it, and whether the close matches on the partner pair too. AS2 MDNs answer
-    the Message-ID alone while X12 acknowledgments echo both the pair and the control number.
-    A source whose events are single rows updated in place has no exchange to pair - what is
-    open there is an event still carrying its in-progress outcome, which open_outcome names.
+    that closes it, and whether the close matches on the partner pair too - X12 acknowledgments
+    echo both the pair and the control number. A source whose events are single rows updated
+    in place has no exchange to pair - what is open there is an event still carrying its
+    in-progress outcome, which open_outcome names.
     """
     open_event: str = ''
     close_event: str = ''
@@ -67,8 +67,6 @@ def _new_outcome_filter(open_outcome:'str') -> 'OutstandingFilter':
 # The sources whose events can be outstanding at all - what opens and what closes
 # each one's exchanges.
 source_outstanding = {
-    'as2': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.MDN_Received, False),
-    'as4': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Receipt_Received, True),
     'x12': _new_outstanding_filter(AuditEvent.Interchange_Sent, AuditEvent.Ack_Received, True),
     'mllp-outgoing': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
 
@@ -86,8 +84,8 @@ def outstanding_conditions(
     needs_object_name_match:'bool',
     ) -> 'anylist':
     """ Builds the WHERE conditions selecting the open events of one source whose closing event
-    has not arrived. AS2 MDNs answer the Message-ID alone while X12 acknowledgments echo
-    both the partner pair and the control number, which is what the object name match toggles.
+    has not arrived. A closing event always matches on the message id, and X12 acknowledgments also echo
+    the partner pair next to the control number, which is what the object name match toggles.
     """
 
     # A closing event matches on the same source and message id ..

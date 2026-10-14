@@ -211,13 +211,9 @@ def _round_trip_item(section:'str') -> 'anydict':
         'channel_rest': rest_channel(name, url_path_of(section)),
         'channel_soap': {'name': name, 'service': Ping_Service, 'url_path': url_path_of(section),
             'soap_action': 'urn:enmasse:delete:live', 'soap_version': '1.1'},
-        'channel_as4': {'name': name, 'url_path': url_path_of(section), 'as4_profile': 'peppol',
-            'as4_to_party': 'enmasse-ap', 'as4_serviced_participants': '0192:991825827', 'service': Ping_Service},
         'outgoing_rest': outgoing_rest(name),
         'outgoing_soap': {'name': name, 'host': 'https://example.com', 'url_path': '/soap',
             'soap_action': 'urn:enmasse:delete:live', 'soap_version': '1.1'},
-        'outgoing_as4': {'name': name, 'host': 'https://ap.example.com', 'url_path': '/as4',
-            'as4_profile': 'peppol', 'as4_from_party': 'enmasse-ap', 'as4_original_sender': '0192:991825827'},
 
         'scheduler': {'name': name, 'service': Ping_Service, 'job_type': 'interval_based',
             'start_date': '2030-01-01 00:00:00', 'hours': 24, 'is_active': False},
@@ -299,8 +295,6 @@ def _round_trip_item(section:'str') -> 'anydict':
             'password': 'Zato_Enmasse_Delete_Live_Password_26', 'is_active': False},
         'ftp': {'name': name, 'host': 'ftp.example.com', 'port': 21, 'username': 'enmasse',
             'password': 'Zato_Enmasse_Delete_Live_Password_27', 'is_active': False},
-        'outgoing_as2': {'name': name, 'as2_from': 'Enmasse', 'as2_to': 'Partner',
-            'endpoint_url': 'https://as2.example.com/as2', 'is_active': False},
         'elastic_search': {'name': name, 'is_active': False, 'address_list': ['http://127.0.0.1:9200']},
     }
 
