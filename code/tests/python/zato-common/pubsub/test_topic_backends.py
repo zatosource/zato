@@ -137,7 +137,7 @@ class TestLoadPubSubTopicBackends(unittest.TestCase):
 
     def _set_odb_rows(self, rows:'list') -> 'None':
         session = MagicMock()
-        session.query.return_value.filter.return_value.all.return_value = rows
+        session.query.return_value.all.return_value = rows
         self.stub.server.odb.session.return_value = session
 
 # ################################################################################################################################
