@@ -51,7 +51,6 @@ class TestSchedulerHistory:
 
     def test_01_create_job_for_history(self, client:'any_'):
         resp = client.create(f'{JOB_SERVICE}.create',
-            cluster_id=1,
             name='test-hist-job-1',
             is_active=True,
             job_type='interval_based',

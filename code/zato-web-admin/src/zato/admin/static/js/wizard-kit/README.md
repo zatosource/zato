@@ -169,7 +169,7 @@ Some answers can be proven right there and then. A probe is one button, the spin
 $.fn.zato.wizard_kit.probe.init(wizard, {
     slotId: 'mllp-outconn-wizard-slot-check',
     buttonId: 'mllp-outconn-wizard-check',
-    endpoint: '/zato/outgoing/hl7/mllp/wizard/test/?cluster=1',
+    endpoint: '/zato/outgoing/hl7/mllp/wizard/test/',
     fields: ['address', 'start_seq', 'end_seq', 'recv_timeout'],
     validate: function() { return wizard.field('address').val() ? '' : 'The address is empty'; },
     validatedField: 'address',

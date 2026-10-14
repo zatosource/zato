@@ -32,7 +32,6 @@ $(document).ready(function() {
 <div id="markup">
 
     <form method="get" action="{% url "channel-usage" %}" class="report-filter-form" id="report-filter-form">
-        <input type="hidden" name="cluster" value="{{ cluster_id }}">
         <input type="hidden" name="range" value="{{ time_range }}" id="report-filter-range">
         <input type="hidden" name="sources" value="{{ sources }}" id="report-filter-sources">
         <input type="hidden" name="objects" value="{{ objects }}" id="report-filter-objects">
@@ -43,7 +42,7 @@ $(document).ready(function() {
                 <span class="report-filter-select" id="report-filter-object"></span>
             </div>
 
-            <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;sources={{ sources|urlencode }}&amp;objects={{ objects|urlencode }}&amp;cluster={{ cluster_id }}">Export to CSV</a>
+            <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;sources={{ sources|urlencode }}&amp;objects={{ objects|urlencode }}">Export to CSV</a>
         </div>
 
         <div class="dashboard-tabs" role="tablist" aria-label="Time range">

@@ -96,8 +96,7 @@
     kit.record_detail._fetch_logs = function($panel_log, params, config) {
         var body = {
             action: config.log_action,
-            since_idx: params.since_idx,
-            cluster_id: config.cluster_id
+            since_idx: params.since_idx
         };
         body[config.object_id_field] = params.object_id;
         body[config.run_id_field] = params.run_id;
@@ -133,8 +132,7 @@
             data: JSON.stringify({
                 action: config.run_action,
                 job_id: config.record_id,
-                current_run: run_number,
-                cluster_id: config.cluster_id
+                current_run: run_number
             }),
             contentType: 'application/json',
             error: function(xhr, status, err) {

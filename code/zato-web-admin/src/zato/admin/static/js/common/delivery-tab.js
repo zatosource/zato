@@ -141,22 +141,22 @@ $.fn.zato.delivery_tab.config.channelDeliveryCellClass = 'kafka-channel-dlq-cell
 // /////////////////////////////////////////////////////////////////////////////
 
 // The cell of a new row that links to the connection's delivery page
-$.fn.zato.delivery_tab.link_cell = function(connType, item, clusterId) {
+$.fn.zato.delivery_tab.link_cell = function(connType, item) {
 
     var config = $.fn.zato.delivery_tab.config;
 
-    var url = config.deliveryPageUrl + connType + '/' + item.id + '/?cluster=' + clusterId + '&tab=' + config.deliveryPageTab;
+    var url = config.deliveryPageUrl + connType + '/' + item.id + '/?tab=' + config.deliveryPageTab;
 
     var out = String.format('<td><a href="{0}">{1}</a></td>', url, config.deliveryLinkLabel);
     return out;
 }
 
 // The cell of a new row that links to a channel's delivery page
-$.fn.zato.delivery_tab.channel_link_cell = function(connType, item, clusterId) {
+$.fn.zato.delivery_tab.channel_link_cell = function(connType, item) {
 
     var config = $.fn.zato.delivery_tab.config;
 
-    var url = config.channelDeliveryPageUrl + connType + '/' + item.id + '/?cluster=' + clusterId + '&tab=' + config.channelDeliveryPageTab;
+    var url = config.channelDeliveryPageUrl + connType + '/' + item.id + '/?tab=' + config.channelDeliveryPageTab;
 
     var out = String.format('<td class="{0}"><a href="{1}">{2}</a></td>', config.channelDeliveryCellClass, url,
         config.channelDeliveryLinkLabel);

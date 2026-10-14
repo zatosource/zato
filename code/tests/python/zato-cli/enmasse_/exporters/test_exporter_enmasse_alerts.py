@@ -33,7 +33,7 @@ from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.cli.enmasse.util import FileWriter
 from zato.common.alerting.object_config import Alerts_Key
 from zato.common.api import EMAIL, GENERIC
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -47,9 +47,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The cluster every object in the test database belongs to
-_cluster_id = 1
 
 # The SMTP connection the alerts mappings name
 _smtp_name = 'enmasse.alerts.export.smtp'
@@ -131,13 +128,12 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster,
+    """ A real ODB session over an in-memory SQLite database holding
     the generic connection tables and the SMTP connection the alerts mappings name.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -151,10 +147,7 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
-    service = Service(None, _service_name, True, 'enmasse.alerts.export.Service', False, cluster)
+    service = Service(None, _service_name, True, 'enmasse.alerts.export.Service', False)
     session.add(service)
 
     smtp = cast_('any_', SMTP())
@@ -166,7 +159,6 @@ def session() -> 'any_':
     smtp.is_debug = False
     smtp.mode = EMAIL.SMTP.MODE.STARTTLS
     smtp.ping_address = 'ping@example.com'
-    smtp.cluster = cluster
     session.add(smtp)
 
     llm = cast_('any_', GenericConn())
@@ -176,7 +168,6 @@ def session() -> 'any_':
     llm.is_internal = False
     llm.is_channel = False
     llm.is_outconn = True
-    llm.cluster = cluster
     session.add(llm)
 
     session.commit()
@@ -226,10 +217,10 @@ def _import_and_export(
     _, _ = ChannelImporter(importer).sync_channel_rest(yaml_config['channel_rest'], session)
 
     out = {
-        'sftp': SFTPExporter(exporter).export(session, _cluster_id),
-        'ftp': FTPExporter(exporter).export(session, _cluster_id),
-        'smb': SMBExporter(exporter).export(session, _cluster_id),
-        'channel_rest': ChannelExporter(exporter).export(session, _cluster_id),
+        'sftp': SFTPExporter(exporter).export(session),
+        'ftp': FTPExporter(exporter).export(session),
+        'smb': SMBExporter(exporter).export(session),
+        'channel_rest': ChannelExporter(exporter).export(session),
     }
     return out
 

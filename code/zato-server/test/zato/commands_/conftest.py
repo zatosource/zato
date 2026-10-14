@@ -141,7 +141,6 @@ def zato_server() -> 'any_':
         _zato_bin, 'quickstart', 'create', _temp_directory,
         '--force',
         '--password', _password,
-        '--servers', '1',
         '--server-api-client-for-scheduler-password', _password,
         '--no-scheduler',
     ]

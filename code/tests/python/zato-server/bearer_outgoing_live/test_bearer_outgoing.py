@@ -44,9 +44,6 @@ _http_timeout = 30
 _get_list_service = 'zato.security.oauth.get-list'
 _invoker_service  = 'zato.server.invoker'
 
-# The cluster every quickstart environment has
-_cluster_id = 1
-
 # How much longer than the token lifespan to wait for a cached token to be dropped, in seconds
 _cache_wait_extra = 1
 
@@ -80,7 +77,7 @@ def _call_outconn(zato_server:'stranydict', conn_name:'str') -> 'stranydict':
 def _get_definitions(zato_server:'stranydict') -> 'anylist':
     """ Returns all bearer token definitions the server has.
     """
-    out = _invoke(zato_server, _get_list_service, {'cluster_id': _cluster_id})
+    out = _invoke(zato_server, _get_list_service, {})
     return out
 
 # ################################################################################################################################

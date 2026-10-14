@@ -46,7 +46,6 @@ from live_trace import Channel_Explain, Channel_IMAP, Channel_LLM, Channel_SFTP,
 
 explain_helpers = cast_('any_', import_module('explain_helpers'))
 _alert_id = explain_helpers._alert_id
-_cluster_id = explain_helpers._cluster_id
 _email_from = explain_helpers._email_from
 _get_explained_events = explain_helpers.get_explained_events
 _llm_conn_name = explain_helpers._llm_conn_name
@@ -347,7 +346,6 @@ def _seed_sftp_connection(session_maker:'any_', sftp_server:'any_') -> 'None':
     row.address = config.address
     row.username = config.username
     row.secret = ''
-    row.cluster_id = _cluster_id
     row.opaque1 = json.dumps(opaque)
 
     session = session_maker()
@@ -402,7 +400,7 @@ def _produce_sftp_failures(sftp_server:'any_', server:'_ParallelServer') -> 'Non
 # ################################################################################################################################
 
 def _stored_explanation(session_maker:'any_') -> 'stranydict':
-    store = ExplanationStore(session_maker, _cluster_id)
+    store = ExplanationStore(session_maker)
     out = store.get(f'explanation.{_alert_id}')
 
     assert out is not None

@@ -59,14 +59,14 @@ class ChannelAMQPImporter:
 
 # ################################################################################################################################
 
-    def get_channels_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_channels_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
         label = self.subtype['label']
-        logger.info('Retrieving %s channel definitions from database for cluster_id=%s', label, cluster_id)
+        logger.info('Retrieving %s channel definitions from database', label)
 
         # Only channels of this importer's subtype are taken into account
-        query_result = channel_amqp_list(session, cluster_id, self.subtype_key, False)
+        query_result = channel_amqp_list(session, self.subtype_key, False)
         definitions = to_json(query_result, return_as_dict=True)
 
         for item in definitions:
@@ -196,7 +196,7 @@ class ChannelAMQPImporter:
         label = self.subtype['label']
         logger.info('Processing %d %s channel definitions from YAML', len(channel_list), label)
 
-        db_defs = self.get_channels_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_channels_from_db(session)
         to_create, to_update = self.compare_channels(channel_list, db_defs)
 
         out_created = []
@@ -237,14 +237,14 @@ class OutgoingAMQPImporter:
 
 # ################################################################################################################################
 
-    def get_connections_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_connections_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
         label = self.subtype['label']
-        logger.info('Retrieving outgoing %s connection definitions from database for cluster_id=%s', label, cluster_id)
+        logger.info('Retrieving outgoing %s connection definitions from database', label)
 
         # Only connections of this importer's subtype are taken into account
-        query_result = out_amqp_list(session, cluster_id, self.subtype_key, False)
+        query_result = out_amqp_list(session, self.subtype_key, False)
         definitions = to_json(query_result, return_as_dict=True)
 
         for item in definitions:
@@ -373,7 +373,7 @@ class OutgoingAMQPImporter:
         label = self.subtype['label']
         logger.info('Processing %d outgoing %s connection definitions from YAML', len(connection_list), label)
 
-        db_defs = self.get_connections_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_connections_from_db(session)
         to_create, to_update = self.compare_connections(connection_list, db_defs)
 
         out_created = []

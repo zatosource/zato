@@ -27,7 +27,7 @@ from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, HTTPSOAP, IMAP, SecurityBase, Service, SMTP
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, HTTPSOAP, IMAP, SecurityBase, Service, SMTP
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -41,9 +41,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The cluster every object in the test database belongs to
-_cluster_id = 1
 
 # The email connections an alerts mapping may name - one SMTP, one Microsoft 365 IMAP
 # and one generic IMAP which has nothing to send alerts with.
@@ -131,13 +128,12 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster, the generic
+    """ A real ODB session over an in-memory SQLite database holding the generic
     connection tables and the three email connections the alerts mappings may name.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         SMTP.__table__,
@@ -151,10 +147,7 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
-    service = Service(None, _service_name, True, 'enmasse.alerts.Service', False, cluster)
+    service = Service(None, _service_name, True, 'enmasse.alerts.Service', False)
     session.add(service)
 
     smtp = cast_('any_', SMTP())
@@ -166,13 +159,12 @@ def session() -> 'any_':
     smtp.is_debug = False
     smtp.mode = EMAIL.SMTP.MODE.STARTTLS
     smtp.ping_address = 'ping@example.com'
-    smtp.cluster = cluster
     session.add(smtp)
 
-    imap_m365 = _new_imap(_imap_m365_name, EMAIL.IMAP.ServerType.Microsoft365, cluster)
+    imap_m365 = _new_imap(_imap_m365_name, EMAIL.IMAP.ServerType.Microsoft365)
     session.add(imap_m365)
 
-    imap_generic = _new_imap(_imap_generic_name, EMAIL.IMAP.ServerType.Generic, cluster)
+    imap_generic = _new_imap(_imap_generic_name, EMAIL.IMAP.ServerType.Generic)
     session.add(imap_generic)
 
     llm = cast_('any_', GenericConn())
@@ -182,7 +174,6 @@ def session() -> 'any_':
     llm.is_internal = False
     llm.is_channel = False
     llm.is_outconn = True
-    llm.cluster = cluster
     session.add(llm)
 
     session.commit()
@@ -194,7 +185,7 @@ def session() -> 'any_':
 
 # ################################################################################################################################
 
-def _new_imap(name:'str', server_type:'str', cluster:'Cluster') -> 'IMAP':
+def _new_imap(name:'str', server_type:'str') -> 'IMAP':
     out = cast_('any_', IMAP())
     out.name = name
     out.is_active = True
@@ -205,7 +196,6 @@ def _new_imap(name:'str', server_type:'str', cluster:'Cluster') -> 'IMAP':
     out.mode = EMAIL.IMAP.MODE.SSL
     out.get_criteria = '{}'
     out.opaque1 = dumps({'server_type': server_type})
-    out.cluster = cluster
     return out
 
 # ################################################################################################################################

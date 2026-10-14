@@ -66,7 +66,6 @@ def _make_manager(tier_rows:'any_', sec_rows:'any_', group_rows:'any_', member_r
     session_factory = MagicMock(return_value=mock_session)
 
     server = MagicMock()
-    server.cluster_id = 1
 
     manager = QuotaTiersManager(server, session_factory)
 

@@ -11,7 +11,6 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.engine import CursorResult
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.typing_ import cast_
 
 # Local
@@ -41,10 +40,8 @@ def _get_view(session:'Session', actor:'str', name:'str') -> 'RuleViewRecord | N
     """
     # Query the one promoted view identity ..
     query = select(rule_view_table)
-    cluster_condition = rule_view_table.c.cluster_id == default_cluster_id
     actor_condition = rule_view_table.c.actor == actor
     name_condition = rule_view_table.c.name == name
-    query = query.where(cluster_condition)
     query = query.where(actor_condition)
     query = query.where(name_condition)
     result = session.execute(query)
@@ -99,7 +96,6 @@ class ViewStore:
                     # .. and the record keeps its original creation time.
                     out = RuleViewRecord(
                         id=existing.id,
-                        cluster_id=default_cluster_id,
                         actor=actor,
                         name=name,
                         payload=payload_text,
@@ -110,7 +106,6 @@ class ViewStore:
                 # .. while a new name stores a whole new view.
                 else:
                     values = {
-                        'cluster_id': default_cluster_id,
                         'actor':      actor,
                         'name':       name,
                         'payload':    payload_text,
@@ -125,7 +120,6 @@ class ViewStore:
 
                     out = RuleViewRecord(
                         id=view_id,
-                        cluster_id=default_cluster_id,
                         actor=actor,
                         name=name,
                         payload=payload_text,
@@ -169,9 +163,7 @@ class ViewStore:
 
         # .. ask for the actor's complete view list ..
         query = select(rule_view_table)
-        cluster_condition = rule_view_table.c.cluster_id == default_cluster_id
         actor_condition = rule_view_table.c.actor == actor
-        query = query.where(cluster_condition)
         query = query.where(actor_condition)
         query = query.order_by(rule_view_table.c.name)
         session = self._session_factory()
@@ -203,10 +195,8 @@ class ViewStore:
 
                 # Remove the one promoted view identity ..
                 statement = delete(rule_view_table)
-                cluster_condition = rule_view_table.c.cluster_id == default_cluster_id
                 actor_condition = rule_view_table.c.actor == actor
                 name_condition = rule_view_table.c.name == name
-                statement = statement.where(cluster_condition)
                 statement = statement.where(actor_condition)
                 statement = statement.where(name_condition)
                 result = session.execute(statement)
@@ -239,10 +229,8 @@ class ViewStore:
                 # .. a repeat visit only moves its timestamp forward ..
                 now = utc_now()
                 statement = update(rule_recent_table)
-                cluster_condition = rule_recent_table.c.cluster_id == default_cluster_id
                 actor_condition = rule_recent_table.c.actor == actor
                 definition_condition = rule_recent_table.c.definition_id == definition_id
-                statement = statement.where(cluster_condition)
                 statement = statement.where(actor_condition)
                 statement = statement.where(definition_condition)
                 statement = statement.values(visited_at=now)
@@ -252,7 +240,6 @@ class ViewStore:
                 # .. while a first visit stores the one row this pair will ever have.
                 if result.rowcount == 0:
                     values = {
-                        'cluster_id':    default_cluster_id,
                         'definition_id': definition_id,
                         'actor':         actor,
                         'visited_at':    now,
@@ -277,9 +264,7 @@ class ViewStore:
 
         # .. ask for the newest visits first ..
         query = select(rule_recent_table)
-        cluster_condition = rule_recent_table.c.cluster_id == default_cluster_id
         actor_condition = rule_recent_table.c.actor == actor
-        query = query.where(cluster_condition)
         query = query.where(actor_condition)
         visited_descending = rule_recent_table.c.visited_at.desc()
         id_descending = rule_recent_table.c.id.desc()

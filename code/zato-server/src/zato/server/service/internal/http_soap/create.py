@@ -40,7 +40,7 @@ class Create(_CreateEdit):
         '-timeout', '-content_type', \
         Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
-        '-is_active', '-transport', '-is_internal', '-cluster_id', \
+        '-is_active', '-transport', '-is_internal', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', Boolean('-is_audit_log_active'), Boolean('-should_include_in_openapi'), \
         Boolean('-is_deprecated'), '-deprecation_sunset', '-deprecation_successor', \
@@ -84,7 +84,6 @@ class Create(_CreateEdit):
             input.deprecation_since = ''
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
-        input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
         input.data_format = input.get('data_format') or ''
 
         input.data_encoding = input.get('data_encoding') or 'utf-8'
@@ -132,14 +131,13 @@ class Create(_CreateEdit):
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(HTTPSOAP.id).\
-                filter(HTTPSOAP.cluster_id==input.cluster_id).\
                 filter(HTTPSOAP.name==input.name).\
                 filter(HTTPSOAP.connection==input.connection).\
                 filter(HTTPSOAP.transport==input.transport).\
                 first()
 
             if existing_one:
-                raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
+                raise Exception('An object of that name `{}` already exists'.format(input.name))
 
             if input.connection == CONNECTION.CHANNEL:
                 service = self._get_service_from_input(session, input)
@@ -154,12 +152,12 @@ class Create(_CreateEdit):
             if input.connection == CONNECTION.CHANNEL:
                 validate_channel_url_path(input.url_path)
                 self.ensure_channel_is_unique(session,
-                    input.url_path, input.http_accept, input.method, input.cluster_id, None)
-                self.ensure_channel_does_not_conflict(session, input, input.cluster_id, None)
+                    input.url_path, input.http_accept, input.method, None)
+                self.ensure_channel_does_not_conflict(session, input, None)
 
             try:
 
-                item = self._new_zato_instance_with_cluster(HTTPSOAP)
+                item = HTTPSOAP()
                 item.connection = input.connection
                 item.transport = input.transport
                 item.is_internal = input.is_internal

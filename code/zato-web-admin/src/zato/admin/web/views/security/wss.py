@@ -26,7 +26,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'username'
     output_optional = 'mode', 'use_digest', 'sign', 'encrypt', 'signing_key', 'signing_certificate_chain', \
         'decryption_key', 'peer_certificate', 'trust_anchors', 'issuer', 'subject', 'audience'

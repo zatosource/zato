@@ -28,7 +28,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-LLM_Outconn_Page_Url = '/zato/outgoing/llm/?cluster=1&type_=outconn-llm'
+LLM_Outconn_Page_Url = '/zato/outgoing/llm/?type_=outconn-llm'
 
 # How long to wait for a pre-deployed service to respond to its first invocation
 _Service_Deploy_Timeout = 60
@@ -318,7 +318,7 @@ def open_llm_invoker_in_ide(page:'Page', base_url:'str') -> 'None':
     """ Opens the pre-deployed invoker service in the IDE and waits until the Invoke button is usable.
     """
 
-    _ = page.goto(f'{base_url}/zato/service/ide/service/{LLM_Invoker_Service_Name}/?cluster=1')
+    _ = page.goto(f'{base_url}/zato/service/ide/service/{LLM_Invoker_Service_Name}/')
     _ = page.wait_for_selector('#invoke-service:not([disabled])', state='visible', timeout=15000)
 
 # ################################################################################################################################

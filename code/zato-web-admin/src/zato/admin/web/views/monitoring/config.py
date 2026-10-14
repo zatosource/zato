@@ -14,7 +14,6 @@ from django.template.response import TemplateResponse
 
 def config(req):
     return_data = {
-        'cluster_id': req.zato.cluster_id,
     }
 
     return TemplateResponse(req, 'zato/monitoring/config.html', return_data)

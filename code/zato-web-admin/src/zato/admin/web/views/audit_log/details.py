@@ -54,7 +54,6 @@ _access_log = AuditLog(_dashboard_server_name)
 _ = start_audit_export(
     service_name=ExportCtx.Service_Dashboard,
     server_name=_dashboard_server_name,
-    cluster_name='',
     instance_id=CryptoManager.generate_hex_string(),
     version=get_version().replace('Zato ', '', 1),
 )

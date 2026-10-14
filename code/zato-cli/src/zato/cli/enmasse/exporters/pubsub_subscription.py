@@ -39,7 +39,7 @@ class PubSubSubscriptionExporter:
 
 # ################################################################################################################################
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'pubsub_subscription_def_list':
+    def export(self, session: 'SASession') -> 'pubsub_subscription_def_list':
         """ Exports pub/sub subscription definitions from the database.
         """
         logger.info('Exporting pub/sub subscription definitions')
@@ -59,8 +59,6 @@ class PubSubSubscriptionExporter:
             join(PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id).\
             join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
             outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
-            filter(PubSubSubscription.cluster_id == cluster_id).\
-            filter(PubSubSubscriptionTopic.cluster_id == cluster_id).\
             order_by(PubSubSubscription.id, PubSubTopic.name, SecurityBase.name).all()
 
         # Group subscriptions by subscription ID to collect all topics

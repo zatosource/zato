@@ -49,7 +49,7 @@ _url_path_probe = '\x00probe'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def create_openapi_channel(session, cluster, service):
+def create_openapi_channel(session, service):
     """ Creates the OpenAPI handler channel.
     """
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
@@ -58,7 +58,7 @@ def create_openapi_channel(session, cluster, service):
     channel = HTTPSOAP(
         None, openapi_channel_name, True, True, CONNECTION.CHANNEL,
         URL_TYPE.PLAIN_HTTP, None, openapi_channel_url_path, None, '', None, DATA_FORMAT.JSON,
-        service=service, cluster=cluster)
+        service=service)
     session.add(channel)
 
     return channel
@@ -66,38 +66,34 @@ def create_openapi_channel(session, cluster, service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_openapi_channel_exists(session, cluster_id):
+def ensure_openapi_channel_exists(session):
     """ Checks if OpenAPI channel exists, creates it if not.
     Returns True if created, False if already existed.
     """
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
-    from zato.common.odb.model import Cluster, HTTPSOAP, Service
+    from zato.common.odb.model import HTTPSOAP, Service
 
     existing = session.query(HTTPSOAP).filter(
         HTTPSOAP.name == openapi_channel_name,
-        HTTPSOAP.cluster_id == cluster_id,
         HTTPSOAP.connection == CONNECTION.CHANNEL,
     ).first()
 
     if existing:
         return False
 
-    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
-
     service = session.query(Service).filter(
         Service.name == openapi_service_name,
-        Service.cluster_id == cluster_id,
     ).first()
 
     if not service:
-        service = Service(None, openapi_service_name, True, openapi_service_name, True, cluster)
+        service = Service(None, openapi_service_name, True, openapi_service_name, True)
         session.add(service)
         session.flush()
 
     channel = HTTPSOAP(
         None, openapi_channel_name, True, True, CONNECTION.CHANNEL,
         URL_TYPE.PLAIN_HTTP, None, openapi_channel_url_path, None, '', None, DATA_FORMAT.JSON,
-        service=service, cluster=cluster)
+        service=service)
     session.add(channel)
 
     return True
@@ -444,8 +440,8 @@ def find_channel_conflict(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_channel_collision_items(session:'any_', cluster_id:'int') -> 'anylist':
-    """ Returns every channel in the cluster with the fields the collision and conflict rules compare.
+def get_channel_collision_items(session:'any_') -> 'anylist':
+    """ Returns every channel with the fields the collision and conflict rules compare.
     """
     from zato.common.api import CONNECTION
     from zato.common.odb.model import HTTPSOAP
@@ -453,7 +449,6 @@ def get_channel_collision_items(session:'any_', cluster_id:'int') -> 'anylist':
     from zato.common.util.url_dispatcher import resolve_match_slash
 
     existing_ones = session.query(HTTPSOAP).\
-        filter(HTTPSOAP.cluster_id==cluster_id).\
         filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
         all()
 
@@ -476,11 +471,11 @@ def get_channel_collision_items(session:'any_', cluster_id:'int') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_channel_definitions_are_unique(session:'any_', cluster_id:'int', channel_defs:'anylist') -> 'None':
-    """ Checks a batch of channel definitions against the channels already in the cluster and
+def ensure_channel_definitions_are_unique(session:'any_', channel_defs:'anylist') -> 'None':
+    """ Checks a batch of channel definitions against the existing channels and
     against each other, the same way the create and edit services check a single one.
     """
-    existing_items = get_channel_collision_items(session, cluster_id)
+    existing_items = get_channel_collision_items(session)
 
     # What the batch itself has already claimed, so that one batch cannot define
     # two channels that resolve to the same match target.

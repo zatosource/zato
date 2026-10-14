@@ -43,7 +43,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active'
     output_optional = ('url_path', 'services', 'security_groups') + _shaping_fields
     output_repeated = True

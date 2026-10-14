@@ -104,7 +104,6 @@ class TestLogLevelEnvOverride:
         # Create a plain REST channel whose requests the zato_rest logger would
         # normally describe with an INFO line in server.log ..
         response = client.create('zato.http-soap.create',
-            cluster_id=1,
             name=_channel_name,
             is_active=True,
             is_internal=False,

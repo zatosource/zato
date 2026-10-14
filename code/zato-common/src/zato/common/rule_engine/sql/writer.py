@@ -23,7 +23,6 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from typing_extensions import TypeAlias
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.typing_ import cast_
 
 # Local
@@ -306,7 +305,6 @@ class DecisionBatchWriter:
             # .. and create that one row when this is the bucket's first increment.
             if result.rowcount == 0:
                 event_row:'rowdict' = {
-                    'cluster_id':    default_cluster_id,
                     'definition_id': key.ruleset_id,
                     'version':       key.rules_version,
                     'event_type':    Event_Type_Rule_Fired_Daily,

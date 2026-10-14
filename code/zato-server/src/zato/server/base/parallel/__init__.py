@@ -32,7 +32,7 @@ from redis.exceptions import RedisError
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, KAFKA, \
-    OAuth, On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+    OAuth, On_Prem_Gateway, PubSub, SCHEDULER, SEC_DEF_TYPE, SERVER_STARTUP, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
@@ -44,7 +44,6 @@ from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.model import Job, PubSubPermission, PubSubSubscription, SecurityBase
-from zato.common.odb.post_process import ODBPostProcess
 from zato.common.odb.query.generic import connection_list
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -81,8 +80,6 @@ from zato.server.config import ConfigStore
 from zato.server.connection.ccda import log_converter_status
 from zato.server.connection.mcp.session import MCPSessionReaper
 from zato.server.connection.outgoing_delivery import register_delivery_handlers
-from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
-from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.generic.connection import GenericConnection
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
@@ -102,7 +99,6 @@ if 0:
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
-    from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset, strtuple
     from zato.server.service.store import ServiceStore
@@ -202,12 +198,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
 
-    cluster: 'ClusterModel'
     config_manager: 'ConfigManager'
     service_store: 'ServiceStore'
     service_audit_log: 'AuditLog'
 
-    rpc: 'ServerRPC'
     config_dispatcher: 'ConfigDispatcher'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
@@ -245,7 +239,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.host = ''
         self.port = -1
         self.use_tls = False
-        self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
@@ -271,9 +264,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.id = -1
         self.name = ''
         self.process_cid = new_cid_server()
-        self.server_pid = -1
-        self.cluster_id = -1
-        self.cluster_name = ''
         self.startup_jobs = {}
 
         # The configuration each MCP gateway's wrapper was last built from, keyed by gateway name -
@@ -290,8 +280,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.return_tracebacks = False
         self.default_error_message = ''
         self.time_util = TimeUtil()
-        self.preferred_address = ''
-        self.crypto_use_tls = False
         self.pid = -1
         self.sync_internal = False
         self.shmem_size = -1.0
@@ -361,11 +349,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def maybe_on_first_server(self, server:'ParallelServer') -> 'anyset':
-        """ This method will execute code with a distributed lock held. We need a lock because we can have multiple server
-        processes fighting over the right to redeploy services. The first server to obtain the lock will actually perform
-        the redeployment and set a flag meaning that for this particular deployment key (and remember that each server restart
-        means a new deployment key) the services have been already deployed. Further servers will check that the flag exists
-        and will skip the deployment altogether.
+        """ Removes the deployed service rows of this server from the ODB and deploys
+        the internal and user-defined services again.
         """
         def import_initial_services_jobs() -> 'anyset':
 
@@ -419,17 +404,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Remove all the deployed services from the DB ..
         self.odb.drop_deployed_services(server.id)
 
-        # .. deploy them back including any missing ones found on other servers.
+        # .. and deploy them back.
         locally_deployed = import_initial_services_jobs()
 
         return locally_deployed
-
-# ################################################################################################################################
-
-    def get_full_name(self) -> 'str':
-        """ Returns this server's full name in the form of server@cluster.
-        """
-        return '{}@{}'.format(self.name, self.cluster_name)
 
 # ################################################################################################################################
 
@@ -650,7 +628,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def _after_init_common(self, server:'ParallelServer') -> 'anyset':
-        """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
+        """ Initializes the parts of the server that are common to every start.
         """
 
         # Static config files
@@ -785,19 +763,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def build_server_rpc(self) -> 'ServerRPC':
-
-        # What our configuration backend is
-        config_source = ODBConfigSource(self.odb, self.cluster_name, self.name, self.decrypt)
-
-        # A combination of backend and runtime configuration
-        config_ctx = _ServerRPC_ConfigCtx(config_source, self)
-
-        # A publicly available RPC client
-        return ServerRPC(config_ctx)
-
-# ################################################################################################################################
-
     def handle_enmasse_auto_from(self) -> 'None':
 
         # Zato
@@ -906,22 +871,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.server.metrics import set_server_info
         set_server_info(self.name)
 
-        self.cluster = self.odb.cluster
-        self.cluster_id = self.cluster.id
-        self.cluster_name = self.cluster.name
-
         # The OTLP export of the audit log, on only if an endpoint is configured
         self._start_audit_export()
-
-        # SQL post-processing
-        ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
         # Things like initializing SQL data on demand
         self._pre_initialize()
 
         logger.info(
-            'Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`',
-            self.name, self.cluster_name, self.pid, 's' if use_tls else '', self.preferred_address, self.port)
+            'Server `%s` (pid: %s) binds to `http%s://%s:%s`',
+            self.name, self.pid, 's' if use_tls else '', self.host, self.port)
 
         # Configure which HTTP methods can be invoked via REST or SOAP channels
         methods_allowed = self.fs_server_config.http.methods_allowed
@@ -1021,7 +979,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.config_manager.set_config_dispatcher(self.config_dispatcher)
 
         self._after_init_accepted(locally_deployed)
-        self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
             'server': self,
@@ -1085,7 +1042,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # The file transfer demo, if it is on, needs its local servers back after a restart
         _ = spawn_greenlet(self.resume_demo_file_transfer)
 
-        logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+        logger.info('Started `%s` (pid: %s)', server.name, self.pid)
 
 # ################################################################################################################################
 
@@ -1164,7 +1121,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         try:
             logger.info('Connecting to scheduler')
 
-            scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
+            scheduler_adapter = SchedulerODBAdapter(self.odb)
 
             # Job runs are recorded in the audit log the same way any other source's events are.
             self._scheduler_audit_log = AuditLog(self.name)
@@ -1467,7 +1424,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         try:
             with closing(self.odb.session()) as session:
-                target_job = session.query(Job).filter_by(name=target_job_name, cluster_id=1).first()
+                target_job = session.query(Job).filter_by(name=target_job_name).first()
 
             if target_job is None:
                 logger.warning(
@@ -1549,7 +1506,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             with closing(self.odb.session()) as session:
                 for type_ in channel_types + outgoing_types:
-                    items = connection_list(session, self.cluster_id, type_, False)
+                    items = connection_list(session, type_, False)
                     for item in items:
                         conn = GenericConnection.from_model(item)
                         config = conn.to_dict()
@@ -1590,7 +1547,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         with closing(self.odb.session()) as session:
             for type_ in channel_types + outgoing_types:
-                items = connection_list(session, self.cluster_id, type_, False)
+                items = connection_list(session, type_, False)
                 for item in items:
                     conn = GenericConnection.from_model(item)
                     config = conn.to_dict()
@@ -1836,7 +1793,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         _ = start_audit_export(
             service_name=ExportCtx.Service_Server,
             server_name=self.name,
-            cluster_name=self.cluster_name,
             instance_id=self.deployment_key,
             version=version,
         )
@@ -1848,20 +1804,20 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         with closing(self.odb.session()) as session:
 
             # The built-in channels and gateways ..
-            openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
-            mcp_created = ensure_mcp_gateway_exists(session, self.cluster_id)
-            mcp_oauth_metadata_created = ensure_mcp_oauth_metadata_channel_exists(session, self.cluster_id)
+            openapi_created = ensure_openapi_channel_exists(session)
+            mcp_created = ensure_mcp_gateway_exists(session)
+            mcp_oauth_metadata_created = ensure_mcp_oauth_metadata_channel_exists(session)
 
             # .. the alerting sweep ..
-            alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
+            alerting_job_created = ensure_alerting_job_exists(session)
 
             # .. and the alerting probes, of which the test transfer one is created inactive.
-            cert_check_job_created = ensure_cert_check_job_exists(session, self.cluster_id)
-            ms_health_job_created = ensure_ms_health_job_exists(session, self.cluster_id)
-            test_transfer_job_created = ensure_test_transfer_job_exists(session, self.cluster_id)
+            cert_check_job_created = ensure_cert_check_job_exists(session)
+            ms_health_job_created = ensure_ms_health_job_exists(session)
+            test_transfer_job_created = ensure_test_transfer_job_exists(session)
 
             # .. and the DLQ rule of outgoing connections.
-            dlq_rule_job_created = ensure_dlq_rule_job_exists(session, self.cluster_id)
+            dlq_rule_job_created = ensure_dlq_rule_job_exists(session)
 
             created_flags = [
                 openapi_created,
@@ -1918,7 +1874,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             ).join(
                 SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
             ).filter(
-                PubSubPermission.cluster_id == self.cluster_id
             ).filter(
                 SecurityBase.is_active == True  # noqa: E712
             ).all()
@@ -1963,7 +1918,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             ).join(
                 SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id
             ).filter(
-                PubSubSubscription.cluster_id == self.cluster_id
             ).filter(
                 SecurityBase.is_active == True  # noqa: E712
             ).all()
@@ -2013,7 +1967,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # .. reload the scheduler if it was started ..
         if self._scheduler_started:
-            scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
+            scheduler_adapter = SchedulerODBAdapter(self.odb)
             self._scheduler.reload(odb_adapter=scheduler_adapter)
 
         # .. reload the queue bridge if it was started ..
@@ -2508,7 +2462,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def invoke(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_') -> 'any_':
-        """ Invokes a service either in our own process or, if PID is given on input, in another process of this server.
+        """ Invokes a service in the current process.
         """
         response = self.config_manager.invoke(
             service, request,
@@ -2516,19 +2470,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             serialize=kwargs.pop('serialize', True),
             *args, **kwargs)
         return response
-
-# ################################################################################################################################
-
-    def on_ipc_invoke_callback(self, msg:'bunch_') -> 'anydict':
-
-        service:'str' = msg['service']
-        data:'any_'   = msg['data']
-
-        response:'any_' = self.invoke(service, data)
-        if isinstance(response, dict):
-            if 'response' in response:
-                response:'any_' = response['response']
-        return response # type: ignore
 
 # ################################################################################################################################
 
@@ -2590,7 +2531,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'server': server,
         })
 
-        server.server_pid = os.getpid()
         ParallelServer.start_server(server, deployment_key)
 
 # ################################################################################################################################
@@ -2599,18 +2539,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """ A shutdown cleanup procedure.
         """
 
-        # Tell the ODB we've gone through a clean shutdown but only if the
-        # ODB session has never been initialized (pre-server-start path).
+        # A process that stops before the server started has no resources to release
         if not self.odb.session_initialized:
-
-            self.config.odb_data = self.get_config_odb_data(self)
-            self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-            self.set_up_odb()
-
-            self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
-
-            self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
-            self.odb.close()
+            return
 
         # Cleanup
         else:
@@ -2644,8 +2575,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def notify_new_package(self, package_id:'int') -> 'None':
-        """ Publishes a message on the broker so all the servers (this one including
-        can deploy a new package).
+        """ Publishes a message on the broker so the server deploys a new package.
         """
         msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id}
         self.config_dispatcher.publish(msg)
@@ -2711,7 +2641,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # so uniqueness must be scoped by the connection direction and transport.
         # Groups are rows in generic_object and OpenAPI channels are rows in generic_conn,
         # so both must be scoped by their respective type_ discriminator columns -
-        # the unique index on generic_object is (name, type_, cluster_id), regardless of subtype ..
+        # the unique index on generic_object is (name, type_), regardless of subtype ..
         _entity_type_to_extra_where = {
             'outgoing_rest': "connection = 'outgoing' AND transport = 'plain_http'",
             'outgoing_soap': "connection = 'outgoing' AND transport = 'soap'",

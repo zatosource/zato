@@ -26,10 +26,10 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # The list page with all the Bearer token definitions
-Bearer_Page_Url = '/zato/security/oauth/outconn/client-credentials/?cluster=1'
+Bearer_Page_Url = '/zato/security/oauth/outconn/client-credentials/'
 
 # The list page with all the API client security groups
-Groups_Page_Url = '/zato/groups/group/zato-api-creds/?cluster=1'
+Groups_Page_Url = '/zato/groups/group/zato-api-creds/'
 
 # Cell indexes in the Bearer token definitions table
 Cell_Name       = 2

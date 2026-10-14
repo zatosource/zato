@@ -43,12 +43,12 @@ class OutgoingGraphQLExporter:
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'graphql_def_list':
+    def export(self, session:'SASession') -> 'graphql_def_list':
         """ Exports GraphQL outgoing definitions.
         """
         logger.info('Exporting GraphQL outgoing definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL)
 
         if not db_items:
             logger.info('No GraphQL outgoing definitions found in DB')

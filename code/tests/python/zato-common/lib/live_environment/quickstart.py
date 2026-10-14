@@ -173,7 +173,6 @@ class ZatoEnvironment:
 
         command = [
             _zato_bin, 'quickstart', 'create', self.environment_directory,
-            '--servers', '1',
             '--password', self.password,
             '--server-api-client-for-scheduler-password', self.password,
         ]

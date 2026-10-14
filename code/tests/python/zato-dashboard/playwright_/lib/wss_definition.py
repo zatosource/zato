@@ -24,7 +24,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-WSS_Page_Url = '/zato/security/wss/?cluster=1'
+WSS_Page_Url = '/zato/security/wss/'
 
 # Plain text fields in the create and edit forms, keyed by option name
 _Text_Fields = ('name', 'username', 'issuer', 'subject', 'audience', 'signing_key', 'signing_certificate_chain',

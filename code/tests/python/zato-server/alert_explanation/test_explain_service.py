@@ -24,7 +24,7 @@ from zato.common.alerting.explain.store import ExplanationStore
 
 # Test helpers
 from chat_simulators import SlackTestHandler
-from explain_helpers import _alert_id, _alert_link, _alert_message, _cluster_id, _conn_name, _email_from, _email_to, \
+from explain_helpers import _alert_id, _alert_link, _alert_message, _conn_name, _email_from, _email_to, \
     _error_data, _explanation_text, _llm_conn_name, _slack_channel, _slack_token, _EmailAPI, _LLMFacade, _SlackFacade, \
     _TeamsFacade, get_explained_events as _get_explained_events, LLMTestHandler, new_payload as _new_payload, \
     new_service as _new_service, new_session as _new_session, seed_error_events as _seed_error_events
@@ -78,7 +78,7 @@ class TestExplainPath:
         assert '# Evidence' in LLMTestHandler.prompts[0]
 
         # .. the explanation is stored next to the alert ..
-        store = ExplanationStore(session, _cluster_id)
+        store = ExplanationStore(session)
         explanation = store.get(f'explanation.{_alert_id}')
 
         assert explanation is not None
@@ -204,7 +204,7 @@ class TestExplainPath:
         assert LLMTestHandler.prompts == []
 
         # .. the alert is stored without an explanation ..
-        store = ExplanationStore(session, _cluster_id)
+        store = ExplanationStore(session)
         explanation = store.get(f'explanation.{_alert_id}')
 
         assert explanation is not None
@@ -244,7 +244,7 @@ class TestExplainPath:
         # Nothing was asked of the LLM and nothing was stored ..
         assert service.llm.invoked_names == []
 
-        store = ExplanationStore(session, _cluster_id)
+        store = ExplanationStore(session)
         assert store.get_list() == []
 
         # .. while the alert itself went out all the same.
@@ -281,7 +281,7 @@ class TestExplainPath:
         service.handle()
         service.handle()
 
-        store = ExplanationStore(session, _cluster_id)
+        store = ExplanationStore(session)
         assert len(store.get_list()) == 1
 
         assert service.llm.invoked_names == [_llm_conn_name]
@@ -355,7 +355,7 @@ class TestExplainPerSource:
         assert _error_data in LLMTestHandler.prompts[0]
 
         # .. the explanation is stored next to the alert ..
-        store = ExplanationStore(session, _cluster_id)
+        store = ExplanationStore(session)
         explanation = store.get(f'explanation.{_alert_id}')
 
         assert explanation is not None

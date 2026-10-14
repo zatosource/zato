@@ -690,7 +690,6 @@ class OpenAPIHandler(Service):
             if rest_channel.service:
                 try:
                     source_info = self.invoke('zato.service.get-source-info', {
-                        'cluster_id': self.server.cluster_id,
                         'name': rest_channel.service.name,
                     })
                     if source_info:
@@ -738,7 +737,6 @@ class OpenAPIHandler(Service):
                 channel = session.query(GenericConn).filter(
                     GenericConn.type_ == GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
                     GenericConn.name == channel_name,
-                    GenericConn.cluster_id == self.server.cluster_id,
                 ).first()
 
                 # Reject if channel not found
@@ -753,7 +751,6 @@ class OpenAPIHandler(Service):
                 if active_rest_channel_ids:
                     rest_channels = list(session.query(HTTPSOAP).filter(
                         HTTPSOAP.id.in_(active_rest_channel_ids),
-                        HTTPSOAP.cluster_id == self.server.cluster_id,
                         HTTPSOAP.connection == CONNECTION.CHANNEL,
                         HTTPSOAP.transport == URL_TYPE.PLAIN_HTTP,
                     ))

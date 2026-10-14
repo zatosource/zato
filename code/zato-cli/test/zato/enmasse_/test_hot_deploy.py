@@ -153,7 +153,6 @@ class TestHotDeploy(TestCase):
 
         qs_cmd = [
             _ZATO_BIN, 'quickstart', 'create', qs_dir,
-            '--servers', '1',
             '--server-api-client-for-scheduler-password', _PASSWORD,
             '--no-scheduler',
         ]

@@ -54,13 +54,13 @@ class ElasticSearchExporter:
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'es_def_list':
+    def export(self, session:'SASession') -> 'es_def_list':
         """ Exports Elasticsearch connection definitions.
         """
         logger.info('Exporting Elasticsearch connection definitions')
 
         # Get Elasticsearch connections from database using the generic connection query
-        db_es = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_ES)
+        db_es = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_ES)
 
         if not db_es:
             logger.info('No Elasticsearch connection definitions found in DB')

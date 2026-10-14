@@ -41,7 +41,6 @@ from zato.common.alerting.fault_codes import apply_fault_codes
 from zato.common.alerting.outcome_codes import apply_outcome_codes
 from zato.common.alerting.status_codes import apply_status_codes
 from zato.common.api import Alerting
-from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.document import resolve_defaults
 from zato.common.rule_engine.loading import documents_from_version, load_documents
 from zato.common.rule_engine.references import referenced_terms
@@ -240,7 +239,7 @@ def build_finding_link(fact:'stranydict') -> 'str':
     source = quote(fact['source'])
     object_name = quote(fact['object_name'])
 
-    out = f'{Audit_Log_Path}?source={source}&object_name={object_name}&cluster={default_cluster_id}'
+    out = f'{Audit_Log_Path}?source={source}&object_name={object_name}'
 
     # A failure the audit log page can send again deep-links at the event itself
     if fact['is_resubmittable'] and fact['last_error_event_id']:

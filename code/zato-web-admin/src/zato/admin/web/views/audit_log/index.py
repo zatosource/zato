@@ -24,7 +24,6 @@ from zato.admin.web.views.audit_log.columns import get_source_outcomes, _all_sou
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding
 from zato.common.audit_log.api import event_table, get_audit_engine
 from zato.common.audit_log.file_transfer_words import file_transfer_words
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,7 +137,6 @@ def object_index(req:'any_') -> 'TemplateResponse':
         exchange['close_event'] = outstanding.close_event
 
     return_data = {
-        'cluster_id': default_cluster_id,
         'source': source,
         'object_name': object_name,
         'audit_log_title': audit_log_title,
@@ -164,7 +162,6 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'run_links_json': json.dumps(_run_page_url),
         'event_labels_json': json.dumps(_event_type_label),
         'file_transfer_words_json': file_transfer_words_json,
-        'zato_clusters': True,
         'zato_template_name': 'zato/audit-log.html',
     }
 

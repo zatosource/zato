@@ -15,16 +15,15 @@ default_interval_value = 0
 
 class SchedulerODBAdapter:
 
-    def __init__(self, odb, cluster_id):
+    def __init__(self, odb):
         self.odb = odb
-        self.cluster_id = cluster_id
 
     def get_scheduler_jobs(self):
         from zato.common.odb.model import Job, IntervalBasedJob
         from zato.common.util.sql import parse_instance_opaque_attr
 
         with closing(self.odb.session()) as session:
-            jobs = session.query(Job).filter_by(cluster_id=self.cluster_id).all()
+            jobs = session.query(Job).all()
 
             result = {}
             for job in jobs:

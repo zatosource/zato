@@ -181,7 +181,6 @@ class TestEnmasseMCPGatewayImporter(TestCase):
         channel = self.session.query(HTTPSOAP).filter(
             HTTPSOAP.name == gateway_name,
             HTTPSOAP.connection == CONNECTION.CHANNEL,
-            HTTPSOAP.cluster_id == self.importer.cluster_id,
         ).one()
 
         opaque = parse_instance_opaque_attr(channel)

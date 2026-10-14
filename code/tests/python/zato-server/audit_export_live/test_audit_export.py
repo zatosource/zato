@@ -182,8 +182,6 @@ def _assert_resource(record:'anydict', live:'AuditExportEnvironment') -> 'None':
 
     assert resource['service.name'] == APICtx.Service_Server
     assert resource['zato.server.name'] == ModuleCtx.Server_Name
-    assert resource['service.namespace']
-    assert resource['service.namespace'] == resource['zato.cluster.name']
     assert resource['service.instance.id']
     assert resource['service.version']
     assert resource['host.name']

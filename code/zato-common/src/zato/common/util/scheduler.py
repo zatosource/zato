@@ -28,7 +28,7 @@ from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.api import Alerting, PubSub, SCHEDULER
-from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
+from zato.common.odb.model import IntervalBasedJob, Job, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,7 +63,6 @@ _dlq_rule_service_impl_name = 'zato.server.service.internal.pubsub.dlq.DLQRun'
 
 def _ensure_interval_job_exists(
     session:'any_',
-    cluster_id:'int',
     job_name:'str',
     service_name:'str',
     service_impl_name:'str',
@@ -77,25 +76,19 @@ def _ensure_interval_job_exists(
 
     existing = session.query(Job).\
         filter(Job.name==job_name).\
-        filter(Job.cluster_id==cluster_id).\
         first()
 
     if existing:
         return False
 
-    cluster = session.query(Cluster).\
-        filter(Cluster.id==cluster_id).\
-        one()
-
     service = session.query(Service).\
         filter(Service.name==service_name).\
-        filter(Service.cluster_id==cluster_id).\
         first()
 
     # On a first-ever start the service is not in ODB yet, so its row is created here
     # and the deployment sync will find it already in place.
     if not service:
-        service = Service(None, service_name, True, service_impl_name, True, cluster)
+        service = Service(None, service_name, True, service_impl_name, True)
         session.add(service)
         session.flush()
 
@@ -103,7 +96,7 @@ def _ensure_interval_job_exists(
     start_date = datetime.now(timezone.utc)
     start_date = start_date.replace(tzinfo=None)
 
-    job = Job(None, job_name, is_active, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date, cluster=cluster, service=service)
+    job = Job(None, job_name, is_active, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date, service=service)
 
     if hours:
         interval = IntervalBasedJob(None, job, hours=hours)
@@ -118,32 +111,26 @@ def _ensure_interval_job_exists(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+def ensure_alerting_job_exists(session:'any_') -> 'bool':
     """ Checks if the interval job that runs the generic alerting sweep exists, creates it if not.
     Returns True if created, False if already existed.
     """
 
     existing = session.query(Job).\
         filter(Job.name==Alerting.Job_Name).\
-        filter(Job.cluster_id==cluster_id).\
         first()
 
     if existing:
         return False
 
-    cluster = session.query(Cluster).\
-        filter(Cluster.id==cluster_id).\
-        one()
-
     service = session.query(Service).\
         filter(Service.name==Alerting.Service).\
-        filter(Service.cluster_id==cluster_id).\
         first()
 
     # On a first-ever start the service is not in ODB yet, so its row is created here
     # and the deployment sync will find it already in place.
     if not service:
-        service = Service(None, Alerting.Service, True, _alerting_service_impl_name, True, cluster)
+        service = Service(None, Alerting.Service, True, _alerting_service_impl_name, True)
         session.add(service)
         session.flush()
 
@@ -152,7 +139,7 @@ def ensure_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     start_date = start_date.replace(tzinfo=None)
 
     job = Job(None, Alerting.Job_Name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date,
-        cluster=cluster, service=service)
+        service=service)
     interval = IntervalBasedJob(None, job, minutes=Alerting.Job_Interval_Minutes)
 
     session.add(job)
@@ -163,11 +150,11 @@ def ensure_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_cert_check_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+def ensure_cert_check_job_exists(session:'any_') -> 'bool':
     """ Checks if the daily job that measures TLS certificates for alerting exists, creates it
     if not. Returns True if created, False if already existed.
     """
-    out = _ensure_interval_job_exists(session, cluster_id, Alerting.Cert_Job_Name, Alerting.Cert_Service,
+    out = _ensure_interval_job_exists(session, Alerting.Cert_Job_Name, Alerting.Cert_Service,
         _cert_check_service_impl_name, hours=Alerting.Cert_Job_Interval_Hours)
 
     return out
@@ -175,11 +162,11 @@ def ensure_cert_check_job_exists(session:'any_', cluster_id:'int') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_ms_health_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+def ensure_ms_health_job_exists(session:'any_') -> 'bool':
     """ Checks if the job that polls Microsoft service health for alerting exists, creates it
     if not. Returns True if created, False if already existed.
     """
-    out = _ensure_interval_job_exists(session, cluster_id, Alerting.Health_Job_Name, Alerting.Health_Service,
+    out = _ensure_interval_job_exists(session, Alerting.Health_Job_Name, Alerting.Health_Service,
         _ms_health_service_impl_name, minutes=Alerting.Health_Job_Interval_Minutes)
 
     return out
@@ -187,12 +174,12 @@ def ensure_ms_health_job_exists(session:'any_', cluster_id:'int') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_test_transfer_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+def ensure_test_transfer_job_exists(session:'any_') -> 'bool':
     """ Checks if the test transfer job exists, creates it if not - inactive,
     because the test transfer writes to remote systems and activating it is the opt-in.
     Returns True if created, False if already existed.
     """
-    out = _ensure_interval_job_exists(session, cluster_id, Alerting.Test_Transfer_Job_Name, Alerting.Test_Transfer_Service,
+    out = _ensure_interval_job_exists(session, Alerting.Test_Transfer_Job_Name, Alerting.Test_Transfer_Service,
         _test_transfer_service_impl_name, minutes=Alerting.Test_Transfer_Job_Interval_Minutes, is_active=False)
 
     return out
@@ -200,10 +187,10 @@ def ensure_test_transfer_job_exists(session:'any_', cluster_id:'int') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_dlq_rule_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+def ensure_dlq_rule_job_exists(session:'any_') -> 'bool':
     """ Creates the DLQ rule job if it does not exist.
     """
-    out = _ensure_interval_job_exists(session, cluster_id, PubSub.Outgoing.DLQ_Job_Name, PubSub.Outgoing.DLQ_Rule_Service,
+    out = _ensure_interval_job_exists(session, PubSub.Outgoing.DLQ_Job_Name, PubSub.Outgoing.DLQ_Rule_Service,
         _dlq_rule_service_impl_name, minutes=PubSub.Outgoing.DLQ_Job_Interval_Minutes)
 
     return out
@@ -211,13 +198,12 @@ def ensure_dlq_rule_job_exists(session:'any_', cluster_id:'int') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def set_job_active(session:'any_', cluster_id:'int', job_name:'str', is_active:'bool') -> 'bool':
+def set_job_active(session:'any_', job_name:'str', is_active:'bool') -> 'bool':
     """ Flips one scheduler job's active flag in ODB - the commit stays with the caller.
     Returns whether the row actually changed.
     """
     job = session.query(Job).\
         filter(Job.name==job_name).\
-        filter(Job.cluster_id==cluster_id).\
         one()
 
     # A job already in the desired state has nothing to change
@@ -232,7 +218,7 @@ def set_job_active(session:'any_', cluster_id:'int', job_name:'str', is_active:'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def wait_for_odb_service_by_odb(session:'any_', cluster_id:'int', service_name:'str') -> 'None':
+def wait_for_odb_service_by_odb(session:'any_', service_name:'str') -> 'None':
 
     # Assume we do not have it
     service = None
@@ -242,7 +228,6 @@ def wait_for_odb_service_by_odb(session:'any_', cluster_id:'int', service_name:'
         # Try to look it up ..
         service = session.query(Service).\
             filter(Service.name==service_name).\
-            filter(Cluster.id==cluster_id).\
             first()
 
         # .. if not found, sleep for a moment.
@@ -292,7 +277,7 @@ def _add_scheduler_job(api:'SchedulerAPI', job_data:'Bunch', spawn:'bool', sourc
 
 # ################################################################################################################################
 
-def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_') -> 'None':
+def add_startup_jobs_to_odb_by_odb(odb:'any_', jobs:'any_') -> 'None':
     """ Uses a direction ODB connection to add initial startup jobs to the ODB.
     """
     with closing(odb.session()) as session:
@@ -318,21 +303,16 @@ def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_') ->
                 # It is required to do it because the scheduler may start before servers
                 # in which case services will not be in the ODB yet and we need to wait for them.
                 #
-                service = wait_for_odb_service_by_odb(session, cluster_id, item['service'])
-
-                cluster = session.query(Cluster).\
-                    filter(Cluster.id==cluster_id).\
-                    one()
+                service = wait_for_odb_service_by_odb(session, item['service'])
 
                 existing_one = session.query(Job).\
                     filter(Job.name==item['name']).\
-                    filter(Job.cluster_id==cluster_id).\
                     first()
 
                 if existing_one:
                     continue
 
-                job = Job(None, item['name'], True, 'interval_based', now, cluster=cluster, service=service, extra=extra)
+                job = Job(None, item['name'], True, 'interval_based', now, service=service, extra=extra)
 
                 kwargs = {}
                 for name in('seconds', 'minutes'):
@@ -353,12 +333,12 @@ def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_') ->
 
 # ################################################################################################################################
 
-def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int', spawn:'bool'=True) -> 'None':
+def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', spawn:'bool'=True) -> 'None':
     """ Uses ODB connections directly to obtain a list of all jobs that the scheduler should run.
     """
 
     # Get a list of jobs ..
-    job_list = odb.get_job_list(cluster_id)
+    job_list = odb.get_job_list()
 
     # .. go through each of them ..
     for(id, name, is_active, job_type, start_date, extra, service_name, _,

@@ -17,7 +17,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.account import BasicSettingsForm
-from zato.admin.web.models import ClusterColorMarker
+from zato.admin.web.models import EnvironmentColorMarker
 from zato.admin.web.views import method_allowed
 
 # ################################################################################################################################
@@ -45,15 +45,14 @@ def settings_basic(req):
         initial[attr] = getattr(req.zato.user_profile, attr, None)
 
     return_data = {
-        'clusters': req.zato.clusters,
         'default_prompt': DEFAULT_PROMPT,
         'form':BasicSettingsForm(initial),
-        'username': req.user.username
+        'username': req.user.username,
+        'environment_color': '',
     }
 
-    cluster_color_markers = req.zato.user_profile.cluster_color_markers.all()
-    cluster_colors = {str(item.cluster_id):item.color for item in cluster_color_markers}
-    return_data['cluster_colors'] = cluster_colors
+    if marker := req.zato.user_profile.environment_color_markers.first():
+        return_data['environment_color'] = marker.color
 
     return TemplateResponse(req, 'zato/account/settings.html', return_data)
 
@@ -71,22 +70,20 @@ def settings_basic_save(req):
     # Save the profile
     req.zato.user_profile.save()
 
-    # Save preferred cluster colour markers
-    for key, value in req.POST.items():
-        if key.startswith('color_') and value != DEFAULT_PROMPT:
-            cluster_id = key.replace('color_', '')
+    # Save the preferred environment color marker
+    color = req.POST['color_environment']
 
-            if 'checkbox_{}'.format(cluster_id) in req.POST:
-                try:
-                    ccm = ClusterColorMarker.objects.get(cluster_id=cluster_id, user_profile=req.zato.user_profile)
-                except ClusterColorMarker.DoesNotExist:
-                    ccm = ClusterColorMarker()
-                    ccm.cluster_id = cluster_id
-                    ccm.user_profile = req.zato.user_profile
-                ccm.color = value
-                ccm.save()
-            else:
-                ClusterColorMarker.objects.filter(cluster_id=cluster_id, user_profile=req.zato.user_profile).delete()
+    if color != DEFAULT_PROMPT:
+        if 'checkbox_environment' in req.POST:
+            try:
+                marker = EnvironmentColorMarker.objects.get(user_profile=req.zato.user_profile)
+            except EnvironmentColorMarker.DoesNotExist:
+                marker = EnvironmentColorMarker()
+                marker.user_profile = req.zato.user_profile
+            marker.color = color
+            marker.save()
+        else:
+            EnvironmentColorMarker.objects.filter(user_profile=req.zato.user_profile).delete()
 
     msg = 'Settings saved'
     messages.add_message(req, messages.INFO, msg, extra_tags='success')

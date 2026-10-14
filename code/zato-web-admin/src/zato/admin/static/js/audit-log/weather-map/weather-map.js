@@ -291,7 +291,7 @@ map.init = function(page) {
     var card = document.getElementById('weather-map-card');
     var empty = document.getElementById('weather-map-empty');
 
-    // A cluster with nothing configured yet has no world to draw
+    // An environment with nothing configured yet has no world to draw
     if(!page.inventory.length) {
         empty.className = 'weather-map-empty weather-map-empty-visible';
         return;

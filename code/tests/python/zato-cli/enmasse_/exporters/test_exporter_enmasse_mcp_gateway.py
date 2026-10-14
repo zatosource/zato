@@ -105,14 +105,12 @@ class TestEnmasseMCPGatewayExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file_path)
 
-        _ = self.importer.get_cluster(self.session)
-
         # .. import the gateways ..
         gateway_definitions = self.yaml_config['mcp_gateway']
         _, _ = self.gateway_importer.sync_definitions(gateway_definitions, self.session)
 
         # .. and export them back.
-        all_exported = self.gateway_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.gateway_exporter.export(self.session)
 
         out = {}
 

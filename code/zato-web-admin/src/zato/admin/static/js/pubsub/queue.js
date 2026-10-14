@@ -30,13 +30,13 @@
 
         var badgeKey = queue._badge_class;
 
-        var messageLink = '/zato/pubsub/subscription/queue/message/?cluster=1' +
-            '&sub_key=' + encodeURIComponent(subKey) +
+        var messageLink = '/zato/pubsub/subscription/queue/message/' +
+            '?sub_key=' + encodeURIComponent(subKey) +
             '&queue_name=' + encodeURIComponent(queue._queueName) +
             '&msg_id=' + encodeURIComponent(message.msg_id) +
             '&topic_name=' + encodeURIComponent(topicName);
 
-        var topicLink = '/zato/pubsub/topic/?cluster=1&query=' + encodeURIComponent(topicName);
+        var topicLink = '/zato/pubsub/topic/?query=' + encodeURIComponent(topicName);
 
         var row = '<tr>';
         row += '<td class="queue-row-num"></td>';

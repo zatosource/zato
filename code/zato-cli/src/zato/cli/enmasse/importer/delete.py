@@ -52,9 +52,6 @@ class DeleteSync:
     """ Takes the items marked should_delete out of a YAML config and deletes them through the admin services.
     """
 
-    # Set by EnmasseYAMLImporter.__init__, declared here for the type checker
-    cluster_id:'int'
-
 # ################################################################################################################################
 
     def init_deletions(self) -> 'None':
@@ -230,13 +227,12 @@ class DeleteSync:
     def _delete_through_service(self, target:'any_', session:'SASession', server_dir:'strnone') -> 'None':
         """ Invokes the admin service that deletes the row - the one the Dashboard invokes.
         """
-        cluster_id = self.cluster_id
 
         # The session holds no open transaction while the service writes to the same database ..
         session.commit()
 
         client = self.get_delete_client(session, server_dir)
-        request = {'cluster_id': cluster_id, 'id': target.id}
+        request = {'id': target.id}
 
         logger.info('Invoking %s for `%s` `%s` (id=%s)', target.service, target.section, target.key, target.id)
         response = client.invoke(target.service, request)
@@ -253,19 +249,18 @@ class DeleteSync:
     def _run_sections(self, sections:'strlist', session:'SASession', server_dir:'strnone') -> 'None':
         """ Deletes every marked item of the sections given, in the order given.
         """
-        cluster_id = self.cluster_id
 
         for section in sections:
             for key in self.deletions[section]:
 
-                targets = resolve_targets(section, key, session, cluster_id)
+                targets = resolve_targets(section, key, session)
 
                 if not targets:
                     logger.info('No `%s` object named `%s` exists, nothing to delete', section, key)
                     continue
 
                 for target in targets:
-                    log_dependents(target, session, cluster_id)
+                    log_dependents(target, session)
 
                     if target.service:
                         self._delete_through_service(target, session, server_dir)

@@ -71,7 +71,7 @@ class OnPremGatewayImporter:
         # Our response to produce
         out = {}
 
-        wrapper = OnPremGatewayWrapper(session, self.importer.cluster_id)
+        wrapper = OnPremGatewayWrapper(session)
 
         rows = wrapper.get_list()
 
@@ -156,7 +156,7 @@ class OnPremGatewayImporter:
 
         db_gateways = self.get_gateways_from_db(session)
 
-        wrapper = OnPremGatewayWrapper(session, self.importer.cluster_id)
+        wrapper = OnPremGatewayWrapper(session)
 
         # A loopback listener serves a single endpoint, hence an address belongs to exactly
         # one gateway

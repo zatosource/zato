@@ -30,7 +30,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-SOAP_Outconn_Page_Url = '/zato/outgoing/soap/?cluster=1'
+SOAP_Outconn_Page_Url = '/zato/outgoing/soap/'
 
 # How long to wait for a pre-deployed service to respond to its first invocation
 _Service_Deploy_Timeout = 60
@@ -355,7 +355,7 @@ def open_soap_invoker_in_ide(page:'Page', base_url:'str') -> 'None':
     """ Opens the pre-deployed invoker service in the IDE and waits until the Invoke button is usable.
     """
 
-    _ = page.goto(f'{base_url}/zato/service/ide/service/{SOAP_Invoker_Service_Name}/?cluster=1')
+    _ = page.goto(f'{base_url}/zato/service/ide/service/{SOAP_Invoker_Service_Name}/')
     _ = page.wait_for_selector('#invoke-service:not([disabled])', state='visible', timeout=15000)
 
 # ################################################################################################################################

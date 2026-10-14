@@ -1,7 +1,6 @@
 (function($) {
 
 $.fn.zato.security.posture.config = {
-    clusterId: '1',
     pollUrl: '/zato/security/posture/poll/',
     scanUrl: '/zato/security/posture/scan/',
     saveUrl: '/zato/security/posture/save/',

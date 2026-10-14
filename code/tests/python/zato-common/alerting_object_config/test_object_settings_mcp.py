@@ -20,7 +20,7 @@ from zato.common.alerting.object_config import alert_type_channels, alert_type_l
 from zato.common.alerting.object_settings import get_muted_rule_names, get_silence_expected_names, load_object_settings
 from zato.common.api import GENERIC
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Base, Cluster, GenericConn, HTTPSOAP
+from zato.common.odb.model import Base, GenericConn, HTTPSOAP
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -40,9 +40,6 @@ if 0:
 # The moment the muting resolves against - ten in the morning UTC
 _now = datetime(2026, 9, 12, 10, 0, 0)
 
-# The cluster the gateway belongs to
-_cluster_id = 1
-
 # The gateway the tests store and a channel listed next to it
 _mcp_name = 'orders.gateway'
 _rest_channel_name = 'orders.api'
@@ -61,12 +58,11 @@ _silence_rule_name = 'Gateway_Silent'
 
 @contextmanager
 def _session() -> 'sessiongen':
-    """ An in-memory SQLite database with the tables the settings are read from and one cluster.
+    """ An in-memory SQLite database with the tables the settings are read from.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConn.__table__,
         HTTPSOAP.__table__,
     ]
@@ -75,7 +71,6 @@ def _session() -> 'sessiongen':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    session.add(Cluster(_cluster_id, 'test-cluster', '', 'sqlite'))
     session.commit()
 
     yield session
@@ -95,7 +90,6 @@ def _add_gateway(session:'SASession', opaque:'stranydict') -> 'None':
     item.is_internal = False
     item.is_channel = True
     item.is_outconn = False
-    item.cluster_id = _cluster_id
     item.opaque1 = dumps(opaque)
 
     session.add(item)
@@ -116,7 +110,7 @@ class TestLoadGatewaySettings:
 
         with _session() as session:
             _add_gateway(session, stored)
-            settings = load_object_settings(session, _cluster_id)
+            settings = load_object_settings(session)
 
         by_object = settings[alert_type_mcp]
 
@@ -138,7 +132,7 @@ class TestLoadGatewaySettings:
     def test_a_gateway_with_nothing_stored_reads_at_the_defaults(self) -> 'None':
         with _session() as session:
             _add_gateway(session, {})
-            settings = load_object_settings(session, _cluster_id)
+            settings = load_object_settings(session)
 
         assert settings[alert_type_mcp] == {_mcp_name: get_defaults(alert_type_mcp)}
 

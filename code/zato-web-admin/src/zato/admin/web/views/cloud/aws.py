@@ -31,7 +31,7 @@ class Index(_Index):
     output_class = AWSConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active'
     output_optional = generic_attrs + ('region', 'access_key_id', 'endpoint_url')
     output_repeated = True
@@ -104,7 +104,7 @@ def change_password(req:'any_') -> 'any_':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req:'any_', id:'int', cluster_id:'int') -> 'any_':
+def ping(req:'any_', id:'int') -> 'any_':
     return ping_connection(req, 'zato.generic.connection.ping', id, 'AWS connection')
 
 # ################################################################################################################################

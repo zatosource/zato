@@ -76,11 +76,11 @@ class GenericConnectionImporter:
 
 # ################################################################################################################################
 
-    def get_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
         logger.info('Retrieving connection definitions from database (%s)', self.connection_type)
-        connections = connection_list(session, cluster_id, self.connection_type, False)
+        connections = connection_list(session, self.connection_type, False)
 
         self._process_defs(connections, out)
         logger.info('Total connection definitions from DB: %d (%s)', len(out), self.connection_type)
@@ -227,12 +227,8 @@ class GenericConnectionImporter:
         # after the connection exists, so they must not land in the opaque attributes as-is.
         schedules = connection_def.pop('schedules', None) if self.supports_schedules else None
 
-        # Get the cluster instance from the importer
-        cluster = self.importer.get_cluster(session)
-
         # Create a new generic connection
         connection = GenericConn()
-        connection.cluster = cluster
 
         # Apply defaults unless overridden in YAML
         for key, default_value in self.connection_defaults.items():
@@ -417,7 +413,7 @@ class GenericConnectionImporter:
                 job_def['start_date'] = entry['start_date']
 
             # The job may already exist from a previous import, in which case it is updated in place
-            existing_job = session.query(Job).filter_by(name=job_name, cluster_id=self.importer.cluster_id).first()
+            existing_job = session.query(Job).filter_by(name=job_name).first()
 
             if existing_job:
                 job_def['id'] = existing_job.id
@@ -436,7 +432,7 @@ class GenericConnectionImporter:
         # by the naming convention that ties a job to its connection.
         prefix = get_job_name(connection.type_, connection.name, '')
         job_query = session.query(Job).filter(Job.name.startswith(prefix)) # type: ignore
-        existing_jobs = job_query.filter(Job.cluster_id==self.importer.cluster_id).all() # type: ignore
+        existing_jobs = job_query.all() # type: ignore
 
         for job in existing_jobs:
             if job.name not in wanted_job_names:
@@ -453,7 +449,7 @@ class GenericConnectionImporter:
     def sync_definitions(self, conn_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d connection definitions from YAML (%s)', len(conn_list), self.connection_type)
 
-        db_defs = self.get_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_defs_from_db(session)
         to_create, to_update = self.compare_defs(conn_list, db_defs)
 
         out_created = []

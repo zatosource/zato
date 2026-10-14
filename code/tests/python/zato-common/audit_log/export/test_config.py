@@ -388,7 +388,7 @@ class TestOTELVariables(_EnvTestCase):
         self.assertIsNotNone(config)
 
         if config:
-            export = AuditExport(config, service_name=APICtx.Service_Server, server_name='server1', cluster_name='cluster1',
+            export = AuditExport(config, service_name=APICtx.Service_Server, server_name='server1',
                 instance_id='deploy-1', version='4.1')
 
             attributes = {}
@@ -396,11 +396,9 @@ class TestOTELVariables(_EnvTestCase):
                 attributes[key_value.key] = key_value.value.string_value or key_value.value.int_value
 
             self.assertEqual(attributes['service.name'], APICtx.Service_Server)
-            self.assertEqual(attributes['service.namespace'], 'cluster1')
             self.assertEqual(attributes['service.instance.id'], 'deploy-1')
             self.assertEqual(attributes['service.version'], '4.1')
             self.assertEqual(attributes['zato.server.name'], 'server1')
-            self.assertEqual(attributes['zato.cluster.name'], 'cluster1')
             self.assertEqual(attributes['deployment.environment.name'], 'production')
             self.assertEqual(attributes['process.pid'], os.getpid())
             self.assertIn('host.name', attributes)
@@ -500,7 +498,7 @@ class TestSenders(_EnvTestCase):
             config = get_export_config()
 
             if config:
-                export = AuditExport(config, service_name=APICtx.Service_Server, server_name='server1', cluster_name='',
+                export = AuditExport(config, service_name=APICtx.Service_Server, server_name='server1',
                     instance_id='deploy-1', version='4.1')
 
                 self.assertIsInstance(export.queue.sender, sender_class)

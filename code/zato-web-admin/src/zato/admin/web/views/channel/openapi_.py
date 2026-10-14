@@ -37,14 +37,13 @@ def get_openapi_path_prefix():
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_openapi_spec(req, cluster_id, channel_name, rest_channel_list):
+def build_openapi_spec(req, channel_name, rest_channel_list):
     """ Collects service info and delegates to shared OpenAPI generation.
     """
     from zato.common.util.openapi_.exporter import build_openapi_spec as _build_openapi_spec
 
-    # Get all REST channels for this cluster
+    # Get all REST channels
     rest_channels_response = req.zato.client.invoke('zato.http-soap.get-list', {
-        'cluster_id': cluster_id,
         'connection': CONNECTION.CHANNEL,
         'transport': URL_TYPE.PLAIN_HTTP,
     })
@@ -67,7 +66,6 @@ def build_openapi_spec(req, cluster_id, channel_name, rest_channel_list):
             if rest_channel:
                 try:
                     source_info = req.zato.client.invoke('zato.service.get-source-info', {
-                        'cluster_id': cluster_id,
                         'name': rest_channel.service_name,
                     })
                     source_path = None
@@ -140,7 +138,7 @@ class Index(_Index):
     output_class = OpenAPIChannelConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active'
     output_optional = generic_attrs
     output_repeated = True
@@ -234,12 +232,10 @@ class Delete(_Delete):
 
 @method_allowed('GET')
 def generate_openapi(req):
-    cluster_id = req.GET['cluster_id']
     channel_id = req.GET['channel_id']
 
     try:
         channel_response = req.zato.client.invoke('zato.generic.connection.get-list', {
-            'cluster_id': cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
         })
 
@@ -269,7 +265,7 @@ def generate_openapi(req):
             else:
                 rest_channel_list = raw
 
-        yaml_output = build_openapi_spec(req, cluster_id, channel_name, rest_channel_list)
+        yaml_output = build_openapi_spec(req, channel_name, rest_channel_list)
 
         logger.info('Generated OpenAPI for channel %s (%s)', channel_id, channel_name)
         response = HttpResponse(yaml_output, content_type='application/x-yaml')
@@ -288,11 +284,9 @@ def generate_openapi(req):
 
 @method_allowed('GET')
 def get_rest_channels(req):
-    cluster_id = req.GET['cluster_id']
 
     try:
         response = req.zato.client.invoke('zato.http-soap.get-list', {
-            'cluster_id': cluster_id,
             'connection': CONNECTION.CHANNEL,
             'transport': URL_TYPE.PLAIN_HTTP,
         })

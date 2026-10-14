@@ -130,7 +130,7 @@ class Index(_Index):
         out = {'id':[]}
 
         for key, value in self.req.GET.items():
-            if key in {'action', 'cluster_id'}:
+            if key == 'action':
                 continue
             else:
                 if key.startswith(form_item_id_prefix):

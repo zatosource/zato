@@ -146,12 +146,6 @@ $.fn.zato.gateway.rule_engine.field_descriptions = {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.gateway.rule_engine.config = {
-    'cluster_id': '1'
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.gateway.rule_engine.create = function() {
     $.fn.zato.gateway.rule_engine.security_badge_picker.load('create', null);
     $.fn.zato.data_table._create_edit('create', 'Create a new Rule engine API object', null);
@@ -245,8 +239,7 @@ $.fn.zato.gateway.rule_engine.data_table.new_row = function(item, data, include_
 $.fn.zato.gateway.rule_engine.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Rule engine API object `{0}` deleted',
-        'Are you sure you want to delete Rule engine API object `{0}`?',
-        true);
+        'Are you sure you want to delete Rule engine API object `{0}`?');
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

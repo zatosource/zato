@@ -125,8 +125,7 @@ $.fn.zato.cloud.salesforce.data_table.new_row = function(item, data, include_tr)
 $.fn.zato.cloud.salesforce.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Salesforce connection `{0}` deleted',
-        'Are you sure you want to delete Salesforce connection `{0}`?',
-        true);
+        'Are you sure you want to delete Salesforce connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

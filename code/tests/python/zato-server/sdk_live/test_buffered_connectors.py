@@ -89,7 +89,6 @@ def test_buffered_delete_flushes_remainder(zato_server:'stranydict') -> 'None':
     # Editing the definition swaps in a client whose periodic flush never comes.
     _ = client.edit('zato.generic.connection.edit',
         id=_TestState.conn_id,
-        cluster_id=1,
         name=_conn_name,
         type_=_conn_type,
         is_active=True,

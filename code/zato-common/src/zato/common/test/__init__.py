@@ -30,7 +30,7 @@ from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secr
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb import model
-from zato.common.odb.model import Cluster, SMTP
+from zato.common.odb.model import SMTP
 from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import email_smtp_list
 from zato.common.py23_ import maxint
@@ -64,7 +64,6 @@ test_class_name = '<my-test-class>'
 # ################################################################################################################################
 
 class test_odb_data:
-    cluster_id = 1
     name = 'my.name'
     is_active = True
     smtp_host = 'my.host'
@@ -243,30 +242,17 @@ def enrich_with_static_config(object_):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCluster:
-    def __init__(self, name:'str') -> 'None':
-        self.name = name
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestParallelServer:
     def __init__(
         self,
-        cluster,    # type: TestCluster
         odb,        # type: ODBManager
         server_name # type: str
     ) -> 'None':
-        self.cluster = cluster
-        self.cluster_name = self.cluster.name
         self.odb = odb
         self.name = server_name
 
     def decrypt(self, data:'str') -> 'str':
         return data
-
-    def invoke_all_pids(*args, **kwargs):
-        return []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -383,7 +369,6 @@ class TestServer:
         self.servers = []
         self.component_enabled = Bunch()
 
-        self.cluster_id = 1
         self.name = 'TestServerObject'
         self.pid = 9988
 
@@ -615,13 +600,6 @@ class ODBTestCase(TestCase):
     def get_sample_odb_orm_result(self, is_list):
         # type: (bool) -> object
 
-        cluster = Cluster()
-        cluster.id = test_odb_data.cluster_id
-        cluster.name = 'my.cluster'
-        cluster.odb_type = 'sqlite'
-        cluster.broker_host = 'my.broker.host'
-        cluster.broker_port = 1234
-
         item = self.ODBTestModelClass()
         item.name = test_odb_data.name
         item.is_active = test_odb_data.is_active
@@ -631,17 +609,15 @@ class ODBTestCase(TestCase):
         item.is_debug = test_odb_data.smtp_is_debug
         item.mode = test_odb_data.smtp_mode
         item.ping_address = test_odb_data.smtp_ping_address
-        item.cluster_id = test_odb_data.cluster_id
 
         session = self.session_wrapper._session
 
-        session.add(cluster)
         session.add(item)
         session.commit()
 
         session = self.session_wrapper._session
 
-        result = email_smtp_list(session, test_odb_data.cluster_id) # type: tuple
+        result = email_smtp_list(session) # type: tuple
         result = result[0] # type: SearchResults
 
         # This is a one-element tuple of SMTP ORM objects
@@ -654,7 +630,7 @@ class ODBTestCase(TestCase):
 
 class MyODBService(Service):
     class IO:
-        output = 'cluster_id', 'is_active', 'name'
+        output = 'is_active', 'name'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -669,7 +645,6 @@ class MyODBServiceWithResponseElem(MyODBService):
 class MyZatoClass:
     def to_zato(self):
         return {
-            'cluster_id': test_odb_data.cluster_id,
             'is_active':  test_odb_data.is_active,
             'name':       test_odb_data.name,
         }
@@ -801,7 +776,7 @@ class BaseZatoTestCase(TestCase):
         # .. invoke the service and obtain its response ..
         out = invoker.invoke_cli(cli_params, command_name) # type: str
 
-        # .. let the changes propagate across servers ..
+        # .. let the changes take effect ..
         sleep(1)
 
         # .. and let the parent class handle the result

@@ -30,7 +30,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/outgoing/es/?cluster=1&type_=outconn-es'
+_Page_Url_Pattern = '/zato/outgoing/es/?type_=outconn-es'
 
 _Test_Name_Prefix = 'test.es.' + CryptoManager.generate_hex_string(32) + '.'
 

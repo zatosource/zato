@@ -26,7 +26,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
 
 logger = logging.getLogger(__name__)
-from zato.common.odb.model import Cluster, ChannelAMQP, DeployedService, HTTPSOAP, Server, Service as ODBService
+from zato.common.odb.model import ChannelAMQP, DeployedService, HTTPSOAP, Server, Service as ODBService
 from zato.common.odb.query import service_deployment_list, service_list
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy
@@ -60,7 +60,7 @@ class GetList(AdminService):
     """
     _filter_by = ODBService.name,
 
-    input = 'cluster_id', '-should_include_scheduler', *query_parameters
+    input = '-should_include_scheduler', *query_parameters
     output = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
 # ################################################################################################################################
@@ -69,7 +69,7 @@ class GetList(AdminService):
 
         out = []
 
-        search_result = self._search(service_list, session, self.request.input.cluster_id, return_internal, include_list, False)
+        search_result = self._search(service_list, session, return_internal, include_list, False)
         search_result = elems_with_opaque(search_result)
 
         for item in search_result:
@@ -147,14 +147,11 @@ class IsDeployed(Service):
 
 class _Get(AdminService):
 
-    input = 'cluster_id',
     output = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Integer('slow_threshold'), Boolean('may_be_deleted')
 
     def get_data(self, session): # type: ignore
         query = session.query(ODBService.id, ODBService.name, ODBService.is_active,
-            ODBService.impl_name, ODBService.is_internal, ODBService.slow_threshold).\
-            filter(Cluster.id==ODBService.cluster_id).\
-            filter(Cluster.id==self.request.input.cluster_id)
+            ODBService.impl_name, ODBService.is_internal, ODBService.slow_threshold)
 
         query = self.add_filter(query) # type: ignore
         return query.one()
@@ -179,7 +176,7 @@ class _Get(AdminService):
 class GetByName(_Get):
     """ Returns a particular service by its name.
     """
-    input = 'cluster_id', 'name'
+    input = 'name'
 
     def add_filter(self, query): # type: ignore
         return query.\
@@ -191,7 +188,7 @@ class GetByName(_Get):
 class GetByID(_Get):
     """ Returns a particular service by its ID.
     """
-    input = 'cluster_id', 'id'
+    input = 'id'
 
     def add_filter(self, query): # type: ignore
         return query.\
@@ -397,15 +394,13 @@ class GetDeploymentInfoList(AdminService):
 class GetSourceInfo(AdminService):
     """ Returns information on the service's source code.
     """
-    input = 'cluster_id', 'name'
+    input = 'name'
     output = '-service_id', '-server_name', '-source', '-source_path', '-source_hash', '-source_hash_method'
 
     def get_data(self, session): # type: ignore
         return session.query(ODBService.id.label('service_id'), Server.name.label('server_name'), # type: ignore
             DeployedService.source, DeployedService.source_path,
             DeployedService.source_hash, DeployedService.source_hash_method).\
-            filter(Cluster.id==ODBService.cluster_id).\
-            filter(Cluster.id==self.request.input.cluster_id).\
             filter(ODBService.name==self.request.input.name).\
             filter(ODBService.id==DeployedService.service_id).\
             filter(Server.id==DeployedService.server_id).\
@@ -428,7 +423,7 @@ class GetSourceInfo(AdminService):
 class UploadPackage(AdminService):
     """ Uploads a package with service(s) to be hot-deployed.
     """
-    input = 'cluster_id', 'payload', 'payload_name'
+    input = 'payload', 'payload_name'
 
     def handle(self):
 

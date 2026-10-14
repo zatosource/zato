@@ -90,14 +90,13 @@ def _destination_lines(opaque:'stranydict') -> 'anylist':
 
 # ################################################################################################################################
 
-def describe_mllp_channel(session:'SASession', cluster_id:'int', name:'str') -> 'anylist | None':
+def describe_mllp_channel(session:'SASession', name:'str') -> 'anylist | None':
     """ The label and value pairs describing one MLLP channel - which messages it takes, whether it is the default
     channel, the service that handles them, its destinations, what produces the acknowledgment and how the other
     destinations receive their copy, whether its audit log is on and the alert thresholds it sets of its own.
-    None when no MLLP channel goes by the name in the cluster.
+    None when no MLLP channel goes by the name.
     """
     row = session.query(GenericConn).\
-        filter(GenericConn.cluster_id==cluster_id).\
         filter(GenericConn.type_==GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP).\
         filter(GenericConn.name==name).\
         first()

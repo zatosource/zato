@@ -16,7 +16,7 @@ import os
 
 # Zato
 from zato.common.typing_ import cast_
-from zato.server.demo_config import First_Start_Set_Names, get_demo_config_details, has_user_services, is_cluster_empty, \
+from zato.server.demo_config import First_Start_Set_Names, get_demo_config_details, has_user_services, is_environment_empty, \
     save_demo_config, Set_File_Transfer, Set_Names, _delete_generic_connections, _delete_http_soap, _delete_jobs, \
     _existing_names_funcs, _import_file_transfer, _import_funcs, _manifests, _remove_file_transfer, _remove_funcs
 from zato.server.demo_file_transfer.common import Root_Env_Name
@@ -384,12 +384,12 @@ class TestSaveDemoConfig:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestIsClusterEmpty:
+class TestIsEnvironmentEmpty:
 
     def test_a_new_environment_is_empty(self):
 
         server = _FakeServer()
-        assert is_cluster_empty(server) is True # type: ignore[arg-type]
+        assert is_environment_empty(server) is True # type: ignore[arg-type]
 
     def test_a_scheduler_job_makes_it_non_empty(self):
 
@@ -400,7 +400,7 @@ class TestIsClusterEmpty:
         }
 
         server = _FakeServer(rows_by_model)
-        assert is_cluster_empty(server) is False # type: ignore[arg-type]
+        assert is_environment_empty(server) is False # type: ignore[arg-type]
 
     def test_a_channel_makes_it_non_empty(self):
 
@@ -411,7 +411,7 @@ class TestIsClusterEmpty:
         }
 
         server = _FakeServer(rows_by_model)
-        assert is_cluster_empty(server) is False # type: ignore[arg-type]
+        assert is_environment_empty(server) is False # type: ignore[arg-type]
 
     def test_a_pubsub_topic_makes_it_non_empty(self):
 
@@ -422,7 +422,7 @@ class TestIsClusterEmpty:
         }
 
         server = _FakeServer(rows_by_model)
-        assert is_cluster_empty(server) is False # type: ignore[arg-type]
+        assert is_environment_empty(server) is False # type: ignore[arg-type]
 
 # ################################################################################################################################
 # ################################################################################################################################

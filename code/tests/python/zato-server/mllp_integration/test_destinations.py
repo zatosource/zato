@@ -447,7 +447,6 @@ class TestChannelDestinations:
         # The connection the messages are forwarded through, pointing at the standalone backend ..
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_forward_outconn,
             type_=_connection_type_outconn,
             is_active=True,
@@ -465,7 +464,6 @@ class TestChannelDestinations:
         # what a channel replying from a destination has something to relay ..
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_reply_outconn,
             type_=_connection_type_outconn,
             is_active=True,
@@ -483,7 +481,6 @@ class TestChannelDestinations:
         # its own retries off, the engine's are the only ones a failing delivery goes through ..
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_dead_outconn,
             type_=_connection_type_outconn,
             is_active=True,
@@ -501,7 +498,6 @@ class TestChannelDestinations:
         # .. and the FHIR server one of the destinations writes a resource to ..
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_fhir_outconn,
             type_=_connection_type_fhir,
             is_active=True,
@@ -520,7 +516,6 @@ class TestChannelDestinations:
 
         response = zato_client.create(
             f'{_http_soap_service_name}.create',
-            cluster_id=1,
             name=_rest_outconn,
             is_active=True,
             is_internal=False,
@@ -542,7 +537,6 @@ class TestChannelDestinations:
 
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_fanout_channel,
             type_=_connection_type_channel,
             is_active=True,
@@ -565,7 +559,6 @@ class TestChannelDestinations:
         # .. the channel that answers its sender with what its destination said ..
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_reply_channel,
             type_=_connection_type_channel,
             is_active=True,
@@ -587,7 +580,6 @@ class TestChannelDestinations:
         # .. the channel whose only destination cannot be reached ..
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_dead_channel,
             type_=_connection_type_channel,
             is_active=True,
@@ -609,7 +601,6 @@ class TestChannelDestinations:
         # .. the channel with no service of its own, which passes on what it accepts ..
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_plain_channel,
             type_=_connection_type_channel,
             is_active=True,
@@ -636,7 +627,6 @@ class TestChannelDestinations:
 
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_order_channel,
             type_=_connection_type_channel,
             is_active=True,
@@ -659,7 +649,6 @@ class TestChannelDestinations:
         # to receive the message as text rather than the parsed object its service is given.
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_parsed_channel,
             type_=_connection_type_channel,
             is_active=True,

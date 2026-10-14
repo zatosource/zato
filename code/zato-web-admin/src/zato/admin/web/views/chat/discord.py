@@ -35,7 +35,7 @@ class Index(_Index):
     output_class = DiscordConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active', 'address', 'timeout'
     output_optional = ('default_channel_id',) + generic_attrs
     output_repeated = True
@@ -127,7 +127,7 @@ def change_password(req:'any_') -> 'any_':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req:'any_', id:'str', cluster_id:'str') -> 'any_':
+def ping(req:'any_', id:'str') -> 'any_':
     out = ping_connection(req, 'zato.generic.connection.ping', id, 'Discord connection')
     return out
 

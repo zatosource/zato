@@ -40,9 +40,6 @@ class Enmasse(ZatoCommand):
         {'name':'--result-file', 'help':'Path to a JSON file to write counts of created and updated objects to after an import'},
     ]
 
-    def get_cluster_id(self, args:'any_') -> 'int':
-        return 1 # Always this value because there is always going to be one cluster only
-
     def execute(self, args:'any_') -> 'None':
 
         # stdlib
@@ -51,7 +48,6 @@ class Enmasse(ZatoCommand):
 
         # Zato
         from zato.cli.enmasse.client import get_server_client, get_session_from_server_dir
-        from zato.cli.enmasse.config import ModuleCtx
         from zato.cli.enmasse.exporter import EnmasseYAMLExporter
         from zato.cli.enmasse.importer import EnmasseYAMLImporter
         from zato.cli.enmasse.util import FileWriter
@@ -61,9 +57,6 @@ class Enmasse(ZatoCommand):
 
         # Exit with a clear message instead of failing deep inside the crypto setup if this is not a server
         self.ensure_path_is_a_server(server_path)
-
-        # Store cluster ID for exporters and importers
-        ModuleCtx.Cluster_ID = self.get_cluster_id(args)
 
         # Set component_dir - needed by importer/exporter
         self.component_dir = server_path

@@ -16,7 +16,7 @@ from uuid import uuid4
 from zato.common.api import OAuth as COMMON_OAUTH, query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.const import SECRETS
-from zato.common.odb.model import Cluster, OAuth
+from zato.common.odb.model import OAuth
 from zato.common.odb.query import oauth_list
 from zato.common.private_key_jwt import get_public_jwk, get_public_key_pem, load_private_key, validate_definition
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
@@ -76,7 +76,7 @@ class GetList(AdminService):
     """
     _filter_by = OAuth.name,
 
-    input = 'cluster_id', *query_parameters
+    input = query_parameters
     output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
         '-auth_server_url', '-scopes', '-extra_fields', '-data_format', \
         '-static_header', 'is_static_token', '-static_prefix', \
@@ -84,7 +84,7 @@ class GetList(AdminService):
         '-client_auth_method', 'has_private_key', '-jwt_algorithm', '-key_id', '-assertion_audience', '-certificate'
 
     def get_data(self, session:'any_') -> 'anylist':
-        data = elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
+        data = elems_with_opaque(self._search(oauth_list, session, False)) # type: ignore
 
         # The token itself is never returned - only a flag indicating whether the definition uses one ..
         for item in data:
@@ -107,7 +107,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Bearer token definition.
     """
-    input = 'cluster_id', 'name', 'is_active', *_common_optional_input
+    input = 'name', 'is_active', *_common_optional_input
     output = 'id', 'name', 'has_private_key'
 
     def handle(self):
@@ -123,16 +123,14 @@ class Create(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(OAuth).\
-                    filter(Cluster.id==input.cluster_id).\
                     filter(OAuth.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('Bearer token definition `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('Bearer token definition `{}` already exists'.format(input.name))
 
                 definition = OAuth()
                 definition.name = input.name
@@ -141,7 +139,6 @@ class Create(AdminService):
                 definition.proto_version = 'not-used' # type: ignore
                 definition.sig_method = 'not-used' # type: ignore
                 definition.max_nonce_log = 0 # type: ignore
-                definition.cluster = cluster # type: ignore
 
                 set_instance_opaque_attrs(definition, input)
 
@@ -173,7 +170,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an Bearer token definition.
     """
-    input = 'id', 'cluster_id', 'name', 'is_active', *_common_optional_input
+    input = 'id', 'name', 'is_active', *_common_optional_input
     output = 'id', 'name', 'has_private_key'
 
     def handle(self):
@@ -182,13 +179,12 @@ class Edit(AdminService):
         with closing(self.odb.session()) as session:
             try:
                 existing_one = session.query(OAuth).\
-                    filter(Cluster.id==input.cluster_id).\
                     filter(OAuth.name==input.name).\
                     filter(OAuth.id!=input.id).\
                     first()
 
                 if existing_one:
-                    raise Exception('Bearer token definition `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('Bearer token definition `{}` already exists'.format(input.name))
 
                 definition = session.query(OAuth).filter_by(id=input.id).one()
                 old_name = definition.name

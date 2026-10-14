@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 _Test_Name_Prefix = 'test.imap.audit.' + rand_string() + '.'
 
-_IMAP_Page_URL = '/zato/email/imap/?cluster=1'
+_IMAP_Page_URL = '/zato/email/imap/'
 
 _Audit_Log_URL_Prefix = '/zato/audit-log/'
 

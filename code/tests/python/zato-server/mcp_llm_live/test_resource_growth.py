@@ -266,7 +266,7 @@ class CatalogItem{item_index:04d}(Service):
         def catalog_is_deployed() -> 'bool':
             try:
                 _ = _helpers.admin_invoke(zato_server, 'zato.service.get-by-name',
-                    {'cluster_id': 1, 'name': last_service_name})
+                    {'name': last_service_name})
             except Exception:
                 out = False
             else:

@@ -32,7 +32,7 @@ from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.util import FileWriter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -48,9 +48,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The cluster every object in the test database belongs to
-_cluster_id = 1
 
 # The email and LLM connections the alerts mappings name
 _smtp_name = 'enmasse.alerts.rest.smtp'
@@ -96,13 +93,12 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster and the SMTP and LLM
+    """ A real ODB session over an in-memory SQLite database holding the SMTP and LLM
     connections the alerts mappings name.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -116,9 +112,6 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
     smtp = cast_('any_', SMTP())
     smtp.name = _smtp_name
     smtp.is_active = True
@@ -128,7 +121,6 @@ def session() -> 'any_':
     smtp.is_debug = False
     smtp.mode = EMAIL.SMTP.MODE.STARTTLS
     smtp.ping_address = 'ping@example.com'
-    smtp.cluster = cluster
     session.add(smtp)
 
     llm = cast_('any_', GenericConn())
@@ -138,7 +130,6 @@ def session() -> 'any_':
     llm.is_internal = False
     llm.is_channel = False
     llm.is_outconn = True
-    llm.cluster = cluster
     session.add(llm)
 
     session.commit()
@@ -340,7 +331,7 @@ class TestOutgoingRESTAlertsExport:
     ) -> 'None':
         _, _ = rest_importer.sync_outgoing_rest(yaml_config['outgoing_rest'], session)
 
-        exported = rest_exporter.export(session, _cluster_id)
+        exported = rest_exporter.export(session)
         item = _by_name(exported)[_conn_name_1]
 
         expected = {
@@ -376,7 +367,7 @@ class TestOutgoingRESTAlertsExport:
         tmp_path:'Path',
     ) -> 'None':
         _, _ = rest_importer.sync_outgoing_rest(yaml_config['outgoing_rest'], session)
-        exported = rest_exporter.export(session, _cluster_id)
+        exported = rest_exporter.export(session)
 
         path = tmp_path / 'enmasse.yaml'
         FileWriter(str(path)).write({'outgoing_rest': exported})

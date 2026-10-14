@@ -43,7 +43,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address', \
         'server_type', 'server_type_human'
     output_optional = 'username', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address', 'tenant_id', \
@@ -87,7 +86,7 @@ class Delete(_Delete):
     service_name = 'zato.email.smtp.delete'
 
 @method_allowed('POST')
-def ping(req:'any_', id:'any_', cluster_id:'any_') -> 'any_':
+def ping(req:'any_', id:'any_') -> 'any_':
     ret = id_only_service(req, 'zato.email.smtp.ping', id, 'SMTP ping error: {}')
     if isinstance(ret, HttpResponseServerError):
         error_text = ret.content.decode('utf-8', 'replace')

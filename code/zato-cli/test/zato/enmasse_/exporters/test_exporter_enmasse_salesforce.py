@@ -83,7 +83,6 @@ class TestEnmasseSalesforceExporter(TestCase):
         salesforce_list_from_yaml = self.yaml_config['salesforce']
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_salesforce_connections, _ = self.salesforce_importer.sync_definitions(salesforce_list_from_yaml, self.session)
 
         created_count = len(created_salesforce_connections)

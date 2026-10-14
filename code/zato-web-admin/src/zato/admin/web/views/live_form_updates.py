@@ -250,7 +250,7 @@ def _fetch_list(req:'any_', object_type:'str') -> 'dictlist':
             _fl_logger.info('live_form_updates._fetch_list: EXCEPTION in fetch_func for %s: %s', object_type, format_exc())
             return []
     else:
-        params = {'cluster_id': req.zato.cluster_id}
+        params = {}
         params.update(config['extra_params'])
 
         try:

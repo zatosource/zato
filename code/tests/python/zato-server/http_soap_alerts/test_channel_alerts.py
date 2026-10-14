@@ -21,7 +21,7 @@ from zato.server.service.internal.http_soap.edit import Edit
 # Test support
 from http_soap_stub import base_input as _base_input, create as _create, get as _get, get_list as _get_list, \
     new_service as _new_service, soap_input as _soap_input, soap_outgoing_input as _soap_outgoing_input, \
-    stored_opaque as _stored_opaque, Channel_Name as _channel_name, Cluster_Id as _cluster_id
+    stored_opaque as _stored_opaque, Channel_Name as _channel_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -194,7 +194,6 @@ class TestEdit:
         # What the listing's inline edit does - read the object, change one field, save it whole
         item_dict = _get(session_factory, item_id)
         item_dict['id'] = item_id
-        item_dict['cluster_id'] = _cluster_id
         item_dict['service'] = item_dict['service_name']
         item_dict['is_active'] = False
         item_dict['security_groups'] = None

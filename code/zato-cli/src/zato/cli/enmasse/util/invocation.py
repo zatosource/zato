@@ -234,7 +234,7 @@ def _sync_one_invocation_job(
         job_def['start_date'] = start_date
 
     # The job may already exist from a previous import, in which case it is updated in place
-    existing_job = session.query(Job).filter_by(name=job_name, cluster_id=importer.cluster_id).first()
+    existing_job = session.query(Job).filter_by(name=job_name).first()
 
     if existing_job:
         job_def['id'] = existing_job.id

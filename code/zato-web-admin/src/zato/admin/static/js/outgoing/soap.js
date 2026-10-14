@@ -7,9 +7,6 @@
 
     $.fn.zato.outgoing.soap.config = {
 
-        // There is always exactly one cluster.
-        cluster_id: '1',
-
         // The default 40em dialog is too narrow for all the tabs this screen has.
         dialogWidth: '55em',
 
@@ -245,8 +242,7 @@
     $.fn.zato.outgoing.soap.delete_ = function(id) {
         $.fn.zato.data_table.delete_(id, 'td.item_id_',
             'Outgoing SOAP connection `{0}` deleted',
-            'Are you sure you want to delete outgoing SOAP connection `{0}`?',
-            true);
+            'Are you sure you want to delete outgoing SOAP connection `{0}`?');
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -354,14 +350,14 @@
 
         // A connection created through the UI is never internal, so the cell is always a link
         row += String.format(
-            '<td><a href="/zato/audit-log/?source=soap-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
-            encodeURIComponent(item.name), config.cluster_id);
+            '<td><a href="/zato/audit-log/?source=soap-outgoing&object_name={0}">Audit log</a></td>',
+            encodeURIComponent(item.name));
 
         row += String.format(
             '<td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping(\'{0}\', this)" class="ping-link">Ping</a></td>',
             item.id);
         row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.invoke(\'{0}\')">Invoke</a></td>', item.id);
-        row += $.fn.zato.delivery_tab.link_cell(config.deliveryConnType, item, config.cluster_id);
+        row += $.fn.zato.delivery_tab.link_cell(config.deliveryConnType, item);
 
         row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.edit(\'{0}\')">Edit</a></td>', item.id);
         row += String.format('<td><a href="javascript:$.fn.zato.outgoing.soap.delete_(\'{0}\');">Delete</a></td>', item.id);

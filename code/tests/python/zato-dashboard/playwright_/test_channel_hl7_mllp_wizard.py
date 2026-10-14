@@ -188,7 +188,7 @@ class TestChannelHL7MLLPWizard:
         # stores is what it opens with - the destination in its hidden JSON field ..
         item_id = get_item_id(page, channel_name)
 
-        _ = page.goto(f'{base_url}/zato/channel/hl7/mllp/wizard/{item_id}/?cluster=1')
+        _ = page.goto(f'{base_url}/zato/channel/hl7/mllp/wizard/{item_id}/')
         _ = page.wait_for_selector('#mllp-wizard', state='visible')
 
         stored_destinations = page.input_value('#id_edit-destinations')
@@ -324,7 +324,7 @@ class TestChannelHL7MLLPWizard:
 
         item_id = get_item_id(page, channel_name)
 
-        _ = page.goto(f'{base_url}/zato/channel/hl7/mllp/wizard/{item_id}/?cluster=1')
+        _ = page.goto(f'{base_url}/zato/channel/hl7/mllp/wizard/{item_id}/')
         _ = page.wait_for_selector('#mllp-wizard', state='visible')
 
         assert page.input_value('#id_edit-alert_ack_codes') == _Created_Ack_Codes

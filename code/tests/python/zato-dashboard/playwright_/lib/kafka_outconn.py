@@ -24,7 +24,7 @@ if 0:
 
 # The type_ parameter is required for the page to list its connections,
 # the same way the dashboard's own menu links carry it.
-Kafka_Outconn_Page_Url = '/zato/outgoing/kafka/?cluster=1&type_=outconn-kafka'
+Kafka_Outconn_Page_Url = '/zato/outgoing/kafka/?type_=outconn-kafka'
 
 # Plain text fields in the create and edit forms, keyed by option name
 _Text_Fields = ('name', 'address', 'topic', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file')

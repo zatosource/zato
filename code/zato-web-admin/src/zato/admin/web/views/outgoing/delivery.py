@@ -30,7 +30,6 @@ from zato.admin.web.views.audit_log.details import _access_log
 from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.config_audit import record_view_event
 from zato.common.content_type import format_content
-from zato.common.defaults import default_cluster_id
 from zato.common.pubsub.dlq import Header_Moved_Time, Header_Rule_Rounds, Key_DLQ
 from zato.common.pubsub.outgoing import Body_Mode_HL7, Body_Mode_JSON, Body_Mode_Text, Body_Mode_XML, Key_CID, Key_Conn_Name, \
     Key_Data, Key_Msg_ID, Key_Request
@@ -190,7 +189,7 @@ def _page_url(kind:'str', query:'str', page:'int') -> 'str':
     """ The address of one page of one tab's list.
     """
     query_encoded = quote(query, safe='')
-    out = f'?cluster={default_cluster_id}&tab={kind}&query={query_encoded}&cur_page={page}'
+    out = f'?tab={kind}&query={query_encoded}&cur_page={page}'
     return out
 
 # ################################################################################################################################
@@ -294,7 +293,6 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
         active_tab = Kind_DLQ
 
     out = TemplateResponse(req, _template, {
-        'cluster_id': default_cluster_id,
         'active_tab': active_tab,
         'conn_type': conn_type,
         'conn_id': conn_id,
@@ -305,7 +303,6 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
         'queue_tab': tabs[Kind_Queue],
         'dlq_tab': tabs[Kind_DLQ],
         'req': req,
-        'zato_clusters': True,
         'zato_template_name': _template,
     })
 

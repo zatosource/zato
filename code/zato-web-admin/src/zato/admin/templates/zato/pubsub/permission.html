@@ -409,13 +409,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Pub/sub" %}Permissions</h2>
@@ -455,7 +451,7 @@
 
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url 'security-basic-auth' %}?cluster={{ cluster_id }}&query={{ item.name|urlencode }}">{{ item.name }}</a></td>
+                        <td><a href="{% url 'security-basic-auth' %}?query={{ item.name|urlencode }}">{{ item.name }}</a></td>
 
                         <td>
                             <div class="pattern-display" data-patterns="{{ item.pattern|escapejs }}">
@@ -536,7 +532,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -581,11 +576,8 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
 
-    {% endif %}
-{% endif %}
 {% endblock %}

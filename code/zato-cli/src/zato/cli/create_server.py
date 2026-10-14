@@ -101,7 +101,6 @@ last_backup_work_dir=./hot-deploy/backup/last
 [misc]
 return_internal_objects=False
 internal_services_may_be_deleted=False
-initial_cluster_name={{initial_cluster_name}}
 initial_server_name={{initial_server_name}}
 queue_build_cap=30000000 # All queue-based connections need to initialize in that many seconds
 http_proxy=
@@ -152,12 +151,6 @@ odoo=True
 
 [content_type]
 json = {JSON}
-
-[preferred_address]
-address=
-ip=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, eth0
-boot_if_preferred_not_found=False
-allow_loopback=False
 
 [logging]
 http_access_log_ignore=
@@ -287,7 +280,6 @@ class Create(ZatoCommand):
 
     opts:'any_' = deepcopy(common_odb_opts)
 
-    opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':'Server\'s name'})
     opts.append({'name':'--redis-host', 'help':'Redis host', 'default':REDIS.DEFAULT.HOST})
     opts.append({'name':'--redis-port', 'help':'Redis port', 'default':str(REDIS.DEFAULT.PORT)})
@@ -295,7 +287,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--priv-key-path', 'help':'Path to the server\'s private key in PEM'})
     opts.append({'name':'--cert-path', 'help':'Path to the server\'s certificate in PEM'})
     opts.append({'name':'--ca-certs-path', 'help':'Path to list of PEM certificates the server will trust'})
-    opts.append({'name':'--secret-key', 'help':'Server\'s secret key (must be the same for all servers)'})
+    opts.append({'name':'--secret-key', 'help':'Server\'s secret key'})
     opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
     opts.append({'name':'--scheduler-host', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
     opts.append({'name':'--scheduler-port', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
@@ -423,7 +415,6 @@ class Create(ZatoCommand):
         # stdlib
         import os
         import platform
-        from datetime import datetime
         from traceback import format_exc
 
         # Cryptography
@@ -433,10 +424,9 @@ class Create(ZatoCommand):
         from sqlalchemy.exc import IntegrityError
 
         # Zato
-        from zato.common.api import SERVER_JOIN_STATUS
         from zato.common.crypto.const import well_known_data
         from zato.common.defaults import http_plain_server_port
-        from zato.common.odb.model import Cluster, Server
+        from zato.common.odb.model import Server
         from zato.common.util.logging_ import get_logging_conf_contents
 
         logging_conf_contents = get_logging_conf_contents()
@@ -451,21 +441,12 @@ class Create(ZatoCommand):
         engine = self._get_engine(args)
         session = self._get_session(engine) # type: ignore
 
-        cluster = session.query(Cluster).filter(Cluster.name == args.cluster_name).first() # type: ignore
-
-        if not cluster:
-            self.logger.error("Cluster `%s` doesn't exist in ODB", args.cluster_name)
-            return self.SYS_ERROR.NO_SUCH_CLUSTER
-
-        server = Server(cluster=cluster)
+        server = Server()
         server.name = args.server_name
         if isinstance(self.token, (bytes, bytearray)): # type: ignore
             server.token = self.token.decode('utf8') # type: ignore
         else:
             server.token = self.token
-        server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED # type: ignore
-        server.last_join_mod_by = self._get_user_host() # type: ignore
-        server.last_join_mod_date = datetime.utcnow() # type: ignore
         session.add(server)
 
         try:
@@ -530,7 +511,6 @@ class Create(ZatoCommand):
                     odb_engine=args.odb_type,
                     redis_host=self.get_arg('redis_host'),
                     redis_port=self.get_arg('redis_port'),
-                    initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
                     scheduler_host=scheduler_config.scheduler_host,
                     scheduler_port=scheduler_config.scheduler_port,

@@ -27,13 +27,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
-from sqlalchemy.sql.expression import true
 from sqlalchemy.sql.type_api import TypeEngine
 
 # Zato
 from zato.common.odb import oracle as oracle
-from zato.common.api import DEPLOYMENT_STATUS, HTTP_SOAP, MS_SQL, NotGiven, SEC_DEF_TYPE, SECRET_SHADOW, \
-     SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.api import HTTP_SOAP, MS_SQL, NotGiven, SEC_DEF_TYPE, SECRET_SHADOW, UNITTEST, ZATO_NONE, \
+     ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import Export_Payload_Flag
@@ -43,17 +42,16 @@ from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
-from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     MTLSSecurity, NTLM, OAuth, SecurityBase, Server, Service, SPNEGOSecurity, WSSecurity
+from zato.common.odb.model import APIKeySecurity, DeployedService, DeploymentPackage, HTTPBasicAuth, MTLSSecurity, \
+     NTLM, OAuth, SecurityBase, Server, Service, SPNEGOSecurity, WSSecurity
 from zato.common.odb.ssl_config import get_ssl_connect_args
 from zato.common.oracledb import RowsOut
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
 from zato.common.typing_ import cast_
-from zato.common.util.api import asbool, current_host, get_component_name, get_engine_url, new_cid, new_cid_server, \
+from zato.common.util.api import asbool, get_component_name, get_engine_url, new_cid, new_cid_server, \
      parse_extra_into_dict, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
-from zato.common.util.time_ import utcnow
 from zato.common.util.url_dispatcher import get_match_target
 
 # ################################################################################################################################
@@ -61,8 +59,8 @@ from zato.common.util.url_dispatcher import get_match_target
 if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
-    from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import any_, anylist, anylistnone, anyset, callable_, callnone, commondict, intnone, \
+    from zato.common.odb.model import Server as ServerModel
+    from zato.common.typing_ import any_, anylist, anylistnone, callable_, callnone, commondict, intnone, \
         strdict, strdictnone
     from zato.server.base.parallel import ParallelServer
 
@@ -965,13 +963,10 @@ class _Server:
     """ A plain Python object which is used instead of an SQLAlchemy model so the latter is not tied to a session
     for as long a server is up.
     """
-    def __init__(self, odb_server, odb_cluster):
+    def __init__(self, odb_server):
         self.id = odb_server.id
         self.name = odb_server.name
-        self.last_join_status = odb_server.last_join_status
         self.token = odb_server.token
-        self.cluster_id = odb_cluster.id
-        self.cluster = odb_cluster
 
 # ################################################################################################################################
 
@@ -984,11 +979,9 @@ class ODBManager(SessionWrapper):
     crypto_manager:'CryptoManager'
     server_id:'int'
     server_name:'str'
-    cluster_id:'int'
     pool:'SQLConnectionPool'
     decrypt_func:'callable_'
     server:'ServerModel'
-    cluster:'ClusterModel'
 
 # ################################################################################################################################
 
@@ -1000,8 +993,7 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def fetch_server(self, odb_config):
-        """ Fetches the server from the ODB. Also sets the 'cluster' attribute
-        to the value pointed to by the server's .cluster attribute.
+        """ Fetches the server from the ODB.
         """
         if not self.session_initialized:
             self.init_session(ZATO_ODB_POOL_NAME, odb_config, self.pool, False)
@@ -1010,10 +1002,8 @@ class ODBManager(SessionWrapper):
             try:
 
                 server = session.query(Server).filter(Server.token == self.token).one() # type: ignore
-                self.server = _Server(server, server.cluster)
+                self.server = _Server(server)
                 self.server_id = server.id
-                self.cluster = server.cluster
-                self.cluster_id = server.cluster.id
                 return self.server
             except Exception:
                 msg = 'Could not find server in ODB, token:`{}`'.format(
@@ -1023,83 +1013,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_servers(self, up_status=SERVER_UP_STATUS.RUNNING, filter_out_self=True):
-        """ Returns all servers matching criteria provided on input.
-        """
-        with closing(self.session()) as session:
-
-            query = session.query( # type: ignore
-                        Server).\
-                        filter(Server.cluster_id == self.cluster_id)
-
-            if up_status:
-                query = query.filter(Server.up_status == up_status) # type: ignore
-
-            if filter_out_self:
-                query = query.filter(Server.id != self.server_id) # type: ignore
-
-            return query.all() # type: ignore
-
-# ################################################################################################################################
-
-    def get_missing_services(self, server, locally_deployed) -> 'anyset':
-        """ Returns services deployed on the server given on input that are not among locally_deployed.
-        """
-        missing = set()
-
-        with closing(self.session()) as session:
-            server_services = session.query(
-                Service.id, Service.name,
-                DeployedService.source_path, DeployedService.source # type: ignore
-                ).\
-                join(DeployedService, Service.id==DeployedService.service_id # type: ignore
-                ).\
-                join(Server, DeployedService.server_id==Server.id # type: ignore
-                ).\
-                filter(Service.is_internal!=true()).\
-                all()
-
-            for item in server_services:
-                if item.name not in locally_deployed:
-                    missing.add(item)
-
-        return missing
-
-# ################################################################################################################################
-
-    def server_up_down(self, token, status, update_host=False, bind_host=None, bind_port=None, preferred_address=None,
-        crypto_use_tls=None):
-        """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.
-        and what host it's running on.
-        """
-        with closing(self.session()) as session:
-            server = session.query(Server # type: ignore
-                ).\
-                filter(Server.token==token).\
-                first() # type: ignore
-
-            # It may be the case that the server has been deleted from web-admin before it shut down,
-            # in which case during the shut down it will not be able to find itself in ODB anymore.
-            if not server:
-                logger.info('No server found for token `%s`, status:`%s`', token, status)
-                return
-
-            server.up_status = status
-            server.up_mod_date = utcnow() # type: ignore
-
-            if update_host:
-                server.host = current_host()
-                server.bind_host = bind_host
-                server.bind_port = bind_port
-                server.preferred_address = preferred_address
-                server.crypto_use_tls = crypto_use_tls
-
-            session.add(server)
-            session.commit()
-
-# ################################################################################################################################
-
-    def get_url_security(self, cluster_id, connection=None, any_internal=HTTP_SOAP.ACCEPT.ANY_INTERNAL):
+    def get_url_security(self, connection=None, any_internal=HTTP_SOAP.ACCEPT.ANY_INTERNAL):
         """ Returns the security configuration of HTTP URLs.
         """
 
@@ -1121,7 +1035,7 @@ class ODBManager(SessionWrapper):
 
             result = {}
 
-            q = query.http_soap_security_list(session, cluster_id, connection)
+            q = query.http_soap_security_list(session, connection)
             columns = Bunch()
 
             # So ConfigDict has its data in the format it expects
@@ -1213,8 +1127,8 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_sql_internal_service_list(self, cluster_id):
-        """ Returns a list of service name and IDs for input cluster ID. It represents what is currently found in the ODB
+    def get_sql_internal_service_list(self):
+        """ Returns a list of service names and IDs. It represents what is currently found in the ODB
         and is used during server startup to decide if any new services should be added from what is found in the filesystem.
         """
         with closing(self.session()) as session:
@@ -1224,7 +1138,6 @@ class ODBManager(SessionWrapper):
                 Service.is_active,
                 Service.slow_threshold,
                 ).\
-                filter(Service.cluster_id==cluster_id).\
                 all() # type: ignore
 
 # ################################################################################################################################
@@ -1236,9 +1149,7 @@ class ODBManager(SessionWrapper):
             ServiceTable.c.id,
             ServiceTable.c.name,
             ServiceTable.c.impl_name,
-        ]).where(
-            ServiceTable.c.cluster_id==self.cluster_id
-        )
+        ])
 
         return session.execute(query).\
             fetchall()
@@ -1267,9 +1178,8 @@ class ODBManager(SessionWrapper):
         try:
             session.execute(ServiceTableInsert().values(data)) # type: ignore
         except IntegrityError:
-            # This can be ignored because it is possible that there will be
-            # more than one server trying to insert rows related to services
-            # that are hot-deployed from web-admin or another source.
+            # The rows may already exist if the same services are deployed concurrently
+            # from Dashboard and from another source.
             logger.debug('Ignoring IntegrityError with `%s`', data) # type: ignore
 
 # ################################################################################################################################
@@ -1279,7 +1189,7 @@ class ODBManager(SessionWrapper):
         try:
             session.execute(DeployedServiceInsert().values(data))
         except IntegrityError:
-            # Another server of the same environment may have already inserted these rows
+            # The rows may already exist if the same services are deployed concurrently
             logger.debug('Ignoring IntegrityError with `%s`', data) # type: ignore
 
 # ################################################################################################################################
@@ -1317,9 +1227,7 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
-        """ Inserts hot-deployed data into the DB along with setting the preliminary
-        AWAITING_DEPLOYMENT status for each of the servers this server's cluster
-        is aware of.
+        """ Inserts hot-deployed data into the DB.
         """
         with closing(self.session()) as session:
             # Create the deployment package info ..
@@ -1330,24 +1238,8 @@ class ODBManager(SessionWrapper):
             dp.payload = payload
             dp.server_id = server_id
 
-            # .. add it to the session ..
+            # .. and store it.
             session.add(dp)
-
-            # .. for each of the servers in this cluster set the initial status ..
-            servers = session.query(Cluster # type: ignore
-                   ).\
-                   filter(Cluster.id == self.server.cluster_id).\
-                   one().servers # type: ignore
-
-            for server in servers:
-                ds = DeploymentStatus()
-                ds.package_id = dp.id
-                ds.server_id = server.id
-                ds.status = DEPLOYMENT_STATUS.AWAITING_DEPLOYMENT
-                ds.status_change_time = utcnow() # type: ignore
-
-                session.add(ds)
-
             session.commit()
 
             return dp.id
@@ -1361,196 +1253,196 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_internal_channel_list(self, cluster_id, needs_columns=False):
+    def get_internal_channel_list(self):
         """ Returns the list of internal HTTP/SOAP channels, that is,
         channels pointing to internal services.
         """
         with closing(self.session()) as session:
-            return query.internal_channel_list(session, cluster_id, needs_columns) # type: ignore
+            return query.internal_channel_list(session)
 
-    def get_http_soap_list(self, cluster_id, connection=None, transport=None, needs_columns=False):
+    def get_http_soap_list(self, connection=None, transport=None, needs_columns=False):
         """ Returns the list of all HTTP/SOAP connections.
         """
         with closing(self.session()) as session:
-            return query.http_soap_list(session, cluster_id, connection, transport, True, None, needs_columns)
+            return query.http_soap_list(session, connection, transport, True, None, needs_columns)
 
 # ################################################################################################################################
 
-    def get_job_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of jobs defined on the given cluster.
+    def get_job_list(self, needs_columns=False):
+        """ Returns a list of jobs.
         """
         with closing(self.session()) as session:
-            return query.job_list(session, cluster_id, None, needs_columns)
+            return query.job_list(session, None, needs_columns)
 
 # ################################################################################################################################
 
-    def get_service_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of services defined on the given cluster.
+    def get_service_list(self, needs_columns=False):
+        """ Returns a list of services.
         """
         with closing(self.session()) as session:
-            return elems_with_opaque(query.service_list(session, cluster_id, needs_columns=needs_columns))
+            return elems_with_opaque(query.service_list(session, needs_columns=needs_columns))
 
 # ################################################################################################################################
 
-    def get_service_id_list(self, session, cluster_id, name_list):
+    def get_service_id_list(self, session, name_list):
         """ Returns a list of IDs matching input service names.
         """
-        return query.service_id_list(session, cluster_id, name_list)
+        return query.service_id_list(session, name_list)
 
 # ################################################################################################################################
 
-    def get_service_list_with_include(self, session, cluster_id, include_list, needs_columns=False):
+    def get_service_list_with_include(self, session, include_list, needs_columns=False):
         """ Returns a list of all services from the input include_list.
         """
-        return query.service_list_with_include(session, cluster_id, include_list, needs_columns)
+        return query.service_list_with_include(session, include_list, needs_columns)
 
 # ################################################################################################################################
 
-    def get_apikey_security_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of API keys existing on the given cluster.
+    def get_apikey_security_list(self, needs_columns=False):
+        """ Returns a list of API keys.
         """
         with closing(self.session()) as session:
-            return elems_with_opaque(query.apikey_security_list(session, cluster_id, needs_columns))
+            return elems_with_opaque(query.apikey_security_list(session, needs_columns))
 
 # ################################################################################################################################
 
-    def get_basic_auth_list(self, cluster_id, cluster_name, needs_columns=False):
-        """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
+    def get_basic_auth_list(self, needs_columns=False):
+        """ Returns a list of HTTP Basic Auth definitions.
         """
         with closing(self.session()) as session:
-            return elems_with_opaque(query.basic_auth_list(session, cluster_id, cluster_name, needs_columns))
+            return elems_with_opaque(query.basic_auth_list(session, needs_columns))
 
 # ################################################################################################################################
 
-    def get_mtls_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of mTLS definitions existing on the given cluster.
+    def get_mtls_list(self, needs_columns=False):
+        """ Returns a list of mTLS definitions.
         """
         with closing(self.session()) as session:
-            return query.mtls_list(session, cluster_id, needs_columns)
+            return query.mtls_list(session, needs_columns)
 
 # ################################################################################################################################
 
-    def get_spnego_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of Kerberos (SPNEGO) definitions existing on the given cluster.
+    def get_spnego_list(self, needs_columns=False):
+        """ Returns a list of Kerberos (SPNEGO) definitions.
         """
         with closing(self.session()) as session:
-            return query.spnego_list(session, cluster_id, needs_columns)
+            return query.spnego_list(session, needs_columns)
 
 # ################################################################################################################################
 
-    def get_ntlm_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of NTLM definitions existing on the given cluster.
+    def get_ntlm_list(self, needs_columns=False):
+        """ Returns a list of NTLM definitions.
         """
         with closing(self.session()) as session:
-            return query.ntlm_list(session, cluster_id, needs_columns)
+            return query.ntlm_list(session, needs_columns)
 
 # ################################################################################################################################
 
-    def get_oauth_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of OAuth accounts existing on the given cluster.
+    def get_oauth_list(self, needs_columns=False):
+        """ Returns a list of OAuth accounts.
         """
         with closing(self.session()) as session:
-            return query.oauth_list(session, cluster_id, needs_columns)
+            return query.oauth_list(session, needs_columns)
 
 # ################################################################################################################################
 
-    def get_wss_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of WS-Security definitions existing on the given cluster.
+    def get_wss_list(self, needs_columns=False):
+        """ Returns a list of WS-Security definitions.
         """
         with closing(self.session()) as session:
-            return elems_with_opaque(query.wss_list(session, cluster_id, needs_columns))
+            return elems_with_opaque(query.wss_list(session, needs_columns))
 
 # ################################################################################################################################
 
-    def get_channel_amqp(self, cluster_id, channel_id):
+    def get_channel_amqp(self, channel_id):
         """ Returns a particular AMQP channel.
         """
         with closing(self.session()) as session:
-            return query.channel_amqp(session, cluster_id, channel_id)
+            return query.channel_amqp(session, channel_id)
 
 # ################################################################################################################################
 
-    def get_channel_amqp_list(self, cluster_id, needs_columns=False):
+    def get_channel_amqp_list(self, needs_columns=False):
         """ Returns a list of AMQP channels of all subtypes.
         """
         with closing(self.session()) as session:
-            return query.channel_amqp_list(session, cluster_id, None, needs_columns)
+            return query.channel_amqp_list(session, None, needs_columns)
 
 # ################################################################################################################################
 
-    def get_out_amqp(self, cluster_id, out_id):
+    def get_out_amqp(self, out_id):
         """ Returns an outgoing AMQP connection's details.
         """
         with closing(self.session()) as session:
-            return query.out_amqp(session, cluster_id, out_id)
+            return query.out_amqp(session, out_id)
 
 # ################################################################################################################################
 
-    def get_out_amqp_list(self, cluster_id, needs_columns=False):
+    def get_out_amqp_list(self, needs_columns=False):
         """ Returns a list of outgoing AMQP connections of all subtypes.
         """
         with closing(self.session()) as session:
-            return query.out_amqp_list(session, cluster_id, None, needs_columns)
+            return query.out_amqp_list(session, None, needs_columns)
 
 # ################################################################################################################################
 
-    def get_out_sql(self, cluster_id, out_id):
+    def get_out_sql(self, out_id):
         """ Returns an outgoing SQL connection's details.
         """
         with closing(self.session()) as session:
-            return query.out_sql(session, cluster_id, out_id)
+            return query.out_sql(session, out_id)
 
 # ################################################################################################################################
 
-    def get_out_sql_list(self, cluster_id, needs_columns=False):
+    def get_out_sql_list(self, needs_columns=False):
         """ Returns a list of outgoing SQL connections.
         """
         with closing(self.session()) as session:
-            return query.out_sql_list(session, cluster_id, needs_columns)
+            return query.out_sql_list(session, needs_columns)
 
 # ################################################################################################################################
 
-    def get_out_odoo(self, cluster_id, out_id):
+    def get_out_odoo(self, out_id):
         """ Returns an outgoing Odoo connection's details.
         """
         with closing(self.session()) as session:
-            return query.out_odoo(session, cluster_id, out_id)
+            return query.out_odoo(session, out_id)
 
 # ################################################################################################################################
 
-    def get_out_odoo_list(self, cluster_id, needs_columns=False):
+    def get_out_odoo_list(self, needs_columns=False):
         """ Returns a list of outgoing Odoo connections.
         """
         with closing(self.session()) as session:
-            return query.out_odoo_list(session, cluster_id, needs_columns)
+            return query.out_odoo_list(session, needs_columns)
 
 # ################################################################################################################################
 
-    def get_email_smtp_list(self, cluster_id, needs_columns=False):
+    def get_email_smtp_list(self, needs_columns=False):
         """ Returns a list of SMTP connections.
         """
-        return query.email_smtp_list(self._session, cluster_id, needs_columns)
+        return query.email_smtp_list(self._session, needs_columns)
 
 # ################################################################################################################################
 
-    def get_email_imap_list(self, cluster_id, needs_columns=False):
+    def get_email_imap_list(self, needs_columns=False):
         """ Returns a list of IMAP connections.
         """
-        return query.email_imap_list(self._session, cluster_id, needs_columns)
+        return query.email_imap_list(self._session, needs_columns)
 
 # ################################################################################################################################
 
-    def get_generic_connection_list(self, cluster_id, needs_columns=False):
+    def get_generic_connection_list(self, needs_columns=False):
         """ Returns a list of generic connections.
         """
-        return query_generic.connection_list(self._session, cluster_id, needs_columns=needs_columns)
+        return query_generic.connection_list(self._session, needs_columns=needs_columns)
 
 # ################################################################################################################################
 
-    def get_pubsub_subscription_list(self, cluster_id, needs_columns=False):
+    def get_pubsub_subscription_list(self, needs_columns=False):
         """ Returns a list of pub/sub subscriptions.
         """
-        return query.pubsub_subscription_list(self._session, cluster_id, needs_columns=needs_columns)
+        return query.pubsub_subscription_list(self._session, needs_columns=needs_columns)
 
 # ################################################################################################################################
 

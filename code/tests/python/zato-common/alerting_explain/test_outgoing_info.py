@@ -21,7 +21,7 @@ from sqlalchemy.orm import sessionmaker
 from zato.common.alerting.explain.outgoing_info import describe_outgoing_http
 from zato.common.api import CONNECTION, HTTP_SOAP, URL_TYPE
 from zato.common.audit_log.api import AuditSource
-from zato.common.odb.model import Base, Cluster, HTTPSOAP, SecurityBase
+from zato.common.odb.model import Base, HTTPSOAP, SecurityBase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +35,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_cluster_id = 1
 _conn_name = 'crm.api'
 _conn_host = 'https://crm.example.com'
 _conn_url_path = '/orders'
@@ -53,7 +52,6 @@ def _new_session() -> 'any_':
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         SecurityBase.__table__,
         HTTPSOAP.__table__,
     ]
@@ -62,7 +60,6 @@ def _new_session() -> 'any_':
     out = sessionmaker(bind=engine)
 
     session = out()
-    session.add(Cluster(_cluster_id, 'test-cluster', '', 'sqlite'))
     session.commit()
     session.close()
 
@@ -74,7 +71,6 @@ def _seed_connection(session_maker:'any_', transport:'str', opaque:'anydict', *,
     """ One outgoing connection of the transport, with the given opaque attributes.
     """
     session = session_maker()
-    cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
     row = HTTPSOAP()
     row.name = _conn_name
@@ -92,7 +88,6 @@ def _seed_connection(session_maker:'any_', transport:'str', opaque:'anydict', *,
     row.soap_action = _soap_action if transport == URL_TYPE.SOAP else ''
     row.soap_version = _soap_version if transport == URL_TYPE.SOAP else None
     row.security = None
-    row.cluster = cluster
     row.opaque1 = json.dumps(opaque)
 
     session.add(row)
@@ -105,7 +100,7 @@ def _describe(session_maker:'any_', source:'str') -> 'anylist':
     """ The label and value pairs of the connection the source names.
     """
     session = session_maker()
-    out = describe_outgoing_http(session, _cluster_id, source, _conn_name)
+    out = describe_outgoing_http(session, source, _conn_name)
     session.close()
 
     assert out is not None
@@ -185,7 +180,7 @@ class TestTransportLines:
 
         # There is no REST row of that name, so the REST check has nothing to describe
         session = session_maker()
-        assert describe_outgoing_http(session, _cluster_id, AuditSource.REST_Outgoing_Health, _conn_name) is None
+        assert describe_outgoing_http(session, AuditSource.REST_Outgoing_Health, _conn_name) is None
         session.close()
 
 # ################################################################################################################################

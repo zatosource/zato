@@ -174,7 +174,6 @@ def _create_quickstart(directory:'str') -> 'str':
 
     command = [
         _zato_bin, 'quickstart', 'create', directory,
-        '--servers', '1',
         '--password', _password,
         '--server-api-client-for-scheduler-password', _password,
         '--no-scheduler',

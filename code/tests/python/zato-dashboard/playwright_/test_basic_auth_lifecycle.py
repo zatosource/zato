@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
+_Page_Url_Pattern = '/zato/security/basic-auth/'
 
 _Test_Name_Prefix = 'test.life.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -311,7 +311,7 @@ class TestBasicAuthLifecycle:
         assert defn['name'] in heading_text, f'Expected name in heading, got: "{heading_text}"'
 
         # .. navigate back with query filter so the row is visible ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={defn["name"]}')
         _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
         # .. verify the row is still present.
@@ -340,7 +340,7 @@ class TestBasicAuthLifecycle:
         sorted_desc = [name_c, name_b, name_a]
 
         # .. reload with query filter so all three test rows are visible ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}sort')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={_Test_Name_Prefix}sort')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. click the Name column header to trigger a sort ..

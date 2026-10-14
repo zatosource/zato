@@ -147,7 +147,7 @@ class TestDemoConfig:
         flipped_state = page.is_checked(selector)
         assert flipped_state == (not initial_state), f'Expected {not initial_state}, got: {flipped_state}'
 
-        # .. a reload shows the same state, so it really is what exists in the cluster ..
+        # .. a reload shows the same state, so it really is what exists in the environment ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         _ = page.wait_for_selector('#id_demo_config_all', state='visible')
 

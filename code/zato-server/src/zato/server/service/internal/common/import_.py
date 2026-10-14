@@ -142,7 +142,6 @@ class ImportObjects(Service):
                     if new_item['name'] == existing_item['name']:
                         new_item['id'] = existing_item['id']
                         new_item['sec_type'] = existing_item['sec_type']
-                        new_item['cluster_id'] = self.server.cluster_id
                         _ = new_item.pop('realm', None)
                         out.to_update.append(new_item)
                         break
@@ -155,7 +154,6 @@ class ImportObjects(Service):
                     new_item['password'] = self.name + ' ' + cast_('str', CryptoManager.generate_secret(as_str=True))
 
                 new_item['sec_type'] = Sec_Def_Type.BASIC_AUTH
-                new_item['cluster_id'] = self.server.cluster_id
                 out.to_add.append(new_item)
 
         # .. now, we can return the response to our caller.
@@ -232,13 +230,11 @@ class ImportObjects(Service):
             for existing_item in existing:
                 if new_item['name'] == existing_item['name']:
                     new_item['id'] = existing_item['id']
-                    new_item['cluster_id'] = self.server.cluster_id
                     out.to_update.append(new_item)
                     break
 
             # .. if we are here, it means that there was no match, which means that this item truly is new ..
             else:
-                new_item['cluster_id'] = self.server.cluster_id
                 out.to_add.append(new_item)
 
         # .. now, we can return the response to our caller.

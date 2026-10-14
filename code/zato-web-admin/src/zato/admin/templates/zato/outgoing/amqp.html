@@ -69,13 +69,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
         <div id="markup">
             <h2 class="zato">{% if subtype.label == "Azure Service Bus" %}{% include "zato/include/header-brand.html" with logo="azure" %}{% else %}{% include "zato/include/header-brand.html" with badge="AMQP" %}{% endif %}Outgoing {{ subtype.label }} connections</h2>
 
@@ -122,7 +118,7 @@
                         <td style="text-align:center">{{ item.username }}</td>
                         <td style="text-align:center">{{ item.app_id|no_value_indicator }}</td>
                         <td>
-                            <a href="{% url invoke_url item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Publish</a>
+                            <a href="{% url invoke_url item.id item.name item.name|slugify %}">Publish</a>
                         </td>
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.delete_('{{ item.id }}')">Delete</a></td>
@@ -218,7 +214,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -291,14 +286,11 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
-    {% endif %}
 
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

@@ -29,8 +29,7 @@ $(document).ready(function() {
         inventory: {{ inventory_json|safe }},
         sourceLinks: {{ source_links_json|safe }},
         objectLinks: {{ object_links_json|safe }},
-        auditLogPage: '{% url "audit-log" %}',
-        clusterId: '{{ cluster_id }}'
+        auditLogPage: '{% url "audit-log" %}'
     });
 });
 </script>

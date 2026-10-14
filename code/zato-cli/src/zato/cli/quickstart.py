@@ -28,8 +28,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-DEFAULT_NO_SERVERS=1
-
 vscode_launch_json = """
 {
     "version": "0.2.0",
@@ -117,9 +115,8 @@ export ZATO_CLI_DONT_SHOW_OUTPUT=1
 {script_dir}
 ZATO_BIN={zato_bin}
 STEPS={start_steps}
-CLUSTER={cluster_name}
 
-{cluster_starting}
+{environment_starting}
 echo Checking configuration
 """
 
@@ -166,20 +163,20 @@ echo [$STEPS/$STEPS] Dashboard started
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_qs_cluster_starting = """
-echo Starting Zato environment $CLUSTER
+zato_qs_environment_starting = """
+echo Starting Zato environment
 """
 
-zato_qs_cluster_started = """
-echo Zato environment $CLUSTER started
+zato_qs_environment_started = """
+echo Zato environment started
 """
 
-zato_qs_cluster_stopping = """
-echo Stopping Zato environment $CLUSTER
+zato_qs_environment_stopping = """
+echo Stopping Zato environment
 """
 
-zato_qs_cluster_stopped = """
-echo Zato environment $CLUSTER stopped
+zato_qs_environment_stopped = """
+echo Zato environment stopped
 """
 
 # ################################################################################################################################
@@ -189,7 +186,7 @@ zato_qs_start_tail_template = """
 {start_dashboard}
 
 cd $BASE_DIR
-{cluster_started}
+{environment_started}
 echo Visit https://zato.io/support for more information and support options
 exit 0
 """
@@ -228,7 +225,6 @@ then
   rm -f $BASE_DIR/load-balancer/pidfile
   rm -f $BASE_DIR/load-balancer/zato-lb-agent.pid
   rm -f $BASE_DIR/server1/pidfile
-  rm -f $BASE_DIR/server2/pidfile
   rm -f $BASE_DIR/web-admin/pidfile
   rm -f $BASE_DIR/scheduler/pidfile
 
@@ -237,9 +233,8 @@ fi
 
 ZATO_BIN={zato_bin}
 STEPS={stop_steps}
-CLUSTER={cluster_name}
 
-{cluster_stopping}
+{environment_stopping}
 
 # Start the load balancer first ..
 $ZATO_BIN stop $BASE_DIR/load-balancer
@@ -255,7 +250,7 @@ echo [{web_admin_step_count}/$STEPS] Dashboard stopped
 {stop_scheduler}
 
 cd $BASE_DIR
-{cluster_stopped}
+{environment_stopped}
 """
 
 # ################################################################################################################################
@@ -300,10 +295,8 @@ class Create(ZatoCommand):
     """
     needs_empty_dir = True
     opts:'any_' = deepcopy(common_odb_opts)
-    opts.append({'name':'--cluster-name', 'help':'Name to be given to the new environment'})
-    opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1}) # type: ignore
-    opts.append({'name':'--threads-per-server', 'help':'How many main threads to use per server', 'default':1}) # type: ignore
-    opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
+    opts.append({'name':'--threads-per-server', 'help':'How many main threads the server will use', 'default':1}) # type: ignore
+    opts.append({'name':'--secret-key', 'help':'Main secret key the server will use'})
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
     opts.append({'name':'--redis-host', 'help':'Redis host', 'default':REDIS.DEFAULT.HOST})
@@ -315,7 +308,7 @@ class Create(ZatoCommand):
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
-    def _bunch_from_args(self, args:'any_', admin_invoke_password:'str', cluster_name:'str'='') -> 'Bunch':
+    def _bunch_from_args(self, args:'any_', admin_invoke_password:'str') -> 'Bunch':
 
         # Bunch
         from zato.common.ext.bunch import Bunch
@@ -330,7 +323,6 @@ class Create(ZatoCommand):
         out.redis_host = self.get_arg('redis_host')
         out.redis_port = self.get_arg('redis_port')
         out.redis_password = self.get_arg('redis_password')
-        out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
         out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server', '')
         out.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler', '')
@@ -361,9 +353,7 @@ class Create(ZatoCommand):
 
         # stdlib
         import os
-        import random
         import stat
-        from collections import OrderedDict
         from itertools import count
         from uuid import uuid4
 
@@ -375,14 +365,13 @@ class Create(ZatoCommand):
         if password:
             os.environ['Zato_Password'] = password
 
-        # These are shared by all servers
+        # The secret key of the server
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
 
         # Zato
-        from zato.cli import create_cluster, create_odb, create_server, create_web_admin
+        from zato.cli import create_initial_data, create_odb, create_server, create_web_admin
         from zato.common.crypto.api import CryptoManager
         from zato.common.defaults import http_plain_server_port
-        random.seed()
 
         # Possibly used by startup scripts
         preamble_script = self.get_arg('preamble_script') or '# No preamble script'
@@ -413,13 +402,7 @@ class Create(ZatoCommand):
         args.odb_path = args.odb_path or os.path.join(args_path, 'zato.db')
 
         next_step = count(1)
-        next_port = count(http_plain_server_port)
-        cluster_name = getattr(args, 'cluster_name', None) or 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
-        servers = int(getattr(args, 'servers', 0) or DEFAULT_NO_SERVERS)
-
-        server_names = OrderedDict() # type: ignore
-        for idx in range(1, servers+1):
-            server_names['{}'.format(idx)] = 'server{}'.format(idx)
+        server_name = 'server1'
 
         try:
             threads_per_server = int(args.threads_per_server)
@@ -442,14 +425,14 @@ class Create(ZatoCommand):
         create_components_other_than_scheduler = not scheduler_only
 
         # Under Windows, even if the load balancer is created, we do not log this information.
-        total_non_servers_steps = 3 if is_windows else 5
-        total_steps = total_non_servers_steps + servers
+        total_non_server_steps = 3 if is_windows else 5
+        total_steps = total_non_server_steps + 1
 
         # Take the scheduler into account
         if no_scheduler:
             total_steps -= 1
         elif scheduler_only:
-            # 1 for servers
+            # 1 for the server
             # 1 for Dashboard
             # 1 for the load-balancer
             total_steps -= 3
@@ -469,9 +452,9 @@ class Create(ZatoCommand):
         #
         # 2) ODB initial data
         #
-        create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
-        create_cluster_args.secret_key = secret_key
-        create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
+        create_initial_data_args = self._bunch_from_args(args, admin_invoke_password)
+        create_initial_data_args.secret_key = secret_key
+        create_initial_data.Create(create_initial_data_args).execute(create_initial_data_args, False) # type: ignore
 
         self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
 
@@ -503,27 +486,26 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 3) servers
+        # 3) Server
         #
         if create_components_other_than_scheduler:
 
-            for name in server_names: # type: ignore
-                server_path = os.path.join(args_path, server_names[name])
-                os.mkdir(server_path)
+            server_path = os.path.join(args_path, server_name)
+            os.mkdir(server_path)
 
-                create_server_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
-                create_server_args.server_name = server_names[name]
-                create_server_args.path = server_path
-                create_server_args.secret_key = secret_key
-                create_server_args.threads = threads_per_server
-                create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
-                create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
-                create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
+            create_server_args = self._bunch_from_args(args, admin_invoke_password)
+            create_server_args.server_name = server_name
+            create_server_args.path = server_path
+            create_server_args.secret_key = secret_key
+            create_server_args.threads = threads_per_server
+            create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
+            create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
+            create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
-                _ = create_server.Create(
-                    create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
+            _ = create_server.Create(
+                create_server_args).execute(create_server_args, http_plain_server_port, False, True) # type: ignore
 
-                self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
+            self.logger.info('[{}/{}] {} created'.format(next(next_step), total_steps, server_name))
 
 # ################################################################################################################################
 
@@ -535,7 +517,7 @@ class Create(ZatoCommand):
             web_admin_path = os.path.join(args_path, 'web-admin')
             os.mkdir(web_admin_path)
 
-            create_web_admin_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
+            create_web_admin_args = self._bunch_from_args(args, admin_invoke_password)
             create_web_admin_args.path = web_admin_path
             create_web_admin_args.admin_invoke_password = admin_invoke_password
 
@@ -600,10 +582,9 @@ class Create(ZatoCommand):
         stop_servers = []
 
         if create_components_other_than_scheduler:
-            for name in server_names: # type: ignore
-                check_config.append(check_config_template.format(server_name=server_names[name]))
-                start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+5))
-                stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
+            check_config.append(check_config_template.format(server_name=server_name))
+            start_servers.append(start_servers_template.format(server_name=server_name, step_number=6))
+            stop_servers.append(stop_servers_template.format(server_name=server_name, step_number=2))
 
         check_config = '\n'.join(check_config)
         start_servers = '\n'.join(start_servers)
@@ -613,10 +594,10 @@ class Create(ZatoCommand):
             start_servers = '# No servers to start'
             check_config_extra = ''
             check_tcp_ports_suffix = 'scheduler-only'
-            cluster_starting = ''
-            cluster_started = ''
-            cluster_stopping = ''
-            cluster_stopped = ''
+            environment_starting = ''
+            environment_started = ''
+            environment_stopping = ''
+            environment_stopped = ''
             check_config_step_number = 1
             scheduler_step_count = 2
             start_steps = 2
@@ -627,13 +608,13 @@ class Create(ZatoCommand):
         else:
             check_config_extra = zato_qs_check_config_extra
             check_tcp_ports_suffix = ''
-            cluster_starting = zato_qs_cluster_started
-            cluster_started = zato_qs_cluster_started
-            cluster_stopping = zato_qs_cluster_stopping
-            cluster_stopped = zato_qs_cluster_stopped
+            environment_starting = zato_qs_environment_starting
+            environment_started = zato_qs_environment_started
+            environment_stopping = zato_qs_environment_stopping
+            environment_stopped = zato_qs_environment_stopped
             check_config_step_number = 3
-            start_steps = 6 + servers
-            stop_steps = 3 + servers
+            start_steps = 7
+            stop_steps = 4
             scheduler_step_count = start_steps - 2
 
             if no_scheduler:
@@ -653,9 +634,8 @@ class Create(ZatoCommand):
             preamble_script=preamble_script,
             zato_bin=zato_bin,
             script_dir=script_dir,
-            cluster_name=cluster_name,
             start_steps=start_steps,
-            cluster_starting=cluster_starting,
+            environment_starting=environment_starting,
         )
 
         zato_qs_start_body = zato_qs_start_body_template.format(
@@ -675,19 +655,18 @@ class Create(ZatoCommand):
 
         zato_qs_start_tail = zato_qs_start_tail_template.format(
             start_dashboard=start_dashboard,
-            cluster_started=cluster_started,
+            environment_started=environment_started,
         )
         zato_qs_start = zato_qs_start_head + zato_qs_start_body + zato_qs_start_tail
 
         zato_qs_stop = zato_qs_stop_template.format(
             zato_bin=zato_bin,
             script_dir=script_dir,
-            cluster_name=cluster_name,
             web_admin_step_count=web_admin_step_count,
             stop_steps=stop_steps,
             stop_servers=stop_servers,
-            cluster_stopping=cluster_stopping,
-            cluster_stopped=cluster_stopped,
+            environment_stopping=environment_stopping,
+            environment_stopped=environment_stopped,
             stop_scheduler=stop_scheduler,
         )
 
@@ -699,7 +678,7 @@ class Create(ZatoCommand):
         else:
             _ = open_w(zato_qs_start_path).write(zato_qs_start)
             _ = open_w(zato_qs_stop_path).write(zato_qs_stop)
-            _ = open_w(zato_qs_restart_path).write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
+            _ = open_w(zato_qs_restart_path).write(zato_qs_restart.format(script_dir=script_dir))
 
             file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
 
@@ -709,7 +688,7 @@ class Create(ZatoCommand):
 
             self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
 
-        self.logger.info('Quickstart environment {} created'.format(cluster_name))
+        self.logger.info('Quickstart environment created in %s', args_path)
 
         if admin_created:
             self.logger.info('Dashboard user:[admin], password:[%s]', web_admin_password.decode('utf8')) # type: ignore

@@ -63,14 +63,14 @@ class ODataExporter:
         self.field_defaults = dict(Field_Defaults)
         self.field_defaults['needs_csrf_token'] = self.subtype['needs_csrf_token']
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'odata_def_list':
+    def export(self, session: 'SASession') -> 'odata_def_list':
         """ Exports connection definitions of this exporter's subtype.
         """
         label = self.subtype['label']
         logger.info('Exporting %s connection definitions', label)
 
         # Get the connections from database using the generic connection query
-        db_odata = connection_list(session, cluster_id, self.subtype['type_'])
+        db_odata = connection_list(session, self.subtype['type_'])
 
         if not db_odata:
             logger.info('No %s connection definitions found in DB', label)

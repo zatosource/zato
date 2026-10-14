@@ -47,13 +47,9 @@
 
 {% block "content" %}
 
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Security" %}Basic Auth</h2>
@@ -97,7 +93,7 @@
                         <td>{{ item.username }}</td>
                         <td>{{ item.realm }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
-                        <td><a href="/zato/security/basic-auth/rate-limiting/{{ item.id }}/?cluster={{ cluster_id }}&name={{ item.name|urlencode }}">Rate limiting</a></td>
+                        <td><a href="/zato/security/basic-auth/rate-limiting/{{ item.id }}/?name={{ item.name|urlencode }}">Rate limiting</a></td>
                         <td><a href="javascript:$.fn.zato.security.basic_auth.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.basic_auth.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -149,7 +145,6 @@
                         </tr>
                     </table>
                     <input type="hidden" name="is_active" value="on" />
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -182,7 +177,6 @@
                         </tr>
                     </table>
                     <input type="hidden" name="edit-is_active" value="on" />
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
@@ -200,7 +194,6 @@
                             <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}">Password</label></td>
                             <td>{{ change_password_form.password }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
-                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>
                         </tr>
                         <tr>
@@ -214,8 +207,6 @@
             </div>
         </div>
 
-    {% endif %} {% comment %}cluster_id{% endcomment %}
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

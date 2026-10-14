@@ -160,15 +160,11 @@ function showTopicsAlert(pattern, event) {
         dialog.css(newPosition);
     }
 
-    // Make AJAX call to get matching topics
-    var clusterIdVal = '1';
-
     // Get the CSRF token
     var csrfToken = $.cookie('csrftoken');
 
     // Data to be sent to server
     var requestData = {
-        cluster_id: clusterIdVal,
         pattern: pattern,
         csrfmiddlewaretoken: csrfToken
     };
@@ -202,7 +198,7 @@ function showTopicsAlert(pattern, event) {
                     if (index > 0) contentHtml += '<div class="topic-divider"></div>';
                     contentHtml += '<div class="topic-item">';
                     var encodedTopicName = encodeURIComponent(topic.name);
-                    contentHtml += '<div class="topic-item-name"><a href="/zato/pubsub/topic/?cluster=1' + '&query=' + encodedTopicName + '" target="_blank">' + topic.name + '</a></div>';
+                    contentHtml += '<div class="topic-item-name"><a href="/zato/pubsub/topic/?query=' + encodedTopicName + '" target="_blank">' + topic.name + '</a></div>';
                     if (topic.description) {
                         contentHtml += '<div class="topic-item-description">' + topic.description + '</div>';
                     }
@@ -704,8 +700,7 @@ $.fn.zato.pubsub.permission.edit = function(id) {
         $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
 
         var secName = instance.name;
-        var clusterID = '1';
-        var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
+        var secLink = '<a href="/zato/security/basic-auth/?query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
         $container.append(secLink);
 
         updatePatternTypeOptions('edit');
@@ -798,7 +793,7 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     // Format security definition name as a clickable link
-    var secLink = String.format('<a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a>',
+    var secLink = String.format('<a href="/zato/security/basic-auth/?query={0}">{1}</a>',
                               encodeURIComponent(item.name),
                               item.name);
     row += String.format('<td>{0}</td>', secLink);
@@ -824,8 +819,7 @@ $.fn.zato.pubsub.permission.data_table.new_row = function(item, data, include_tr
 $.fn.zato.pubsub.permission.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Permission `{0}` deleted',
-        'Are you sure you want to delete permission `{0}`?',
-        true);
+        'Are you sure you want to delete permission `{0}`?');
 }
 
 // /////////////////////////////////////////////////////////////////////////////

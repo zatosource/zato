@@ -17,7 +17,7 @@ body:has(.weather-map-page) .pure-css-nav > nav ul ul {
 
 .weather-map-page {
 
-    /* The room under the top menu bar and the cluster colour strip */
+    /* The room under the top menu bar and the environment color strip */
     --weather-map-top-offset: 81px;
 
     /* The dark room and its inks - the same family the message flow speaks */

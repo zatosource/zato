@@ -95,7 +95,7 @@ class AlertConfigExporter:
 
 # ################################################################################################################################
 
-    def export_notifications(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def export_notifications(self, session:'SASession') -> 'anydict':
         """ Exports the notification targets the sweep job's extra holds, keyed
         by the YAML's own names - a target never filled in is left out entirely.
         """
@@ -103,7 +103,6 @@ class AlertConfigExporter:
 
         job = session.query(Job).\
             filter(Job.name==Alerting.Job_Name).\
-            filter(Job.cluster_id==cluster_id).\
             first()
 
         # An environment whose servers never ran has no sweep job yet,

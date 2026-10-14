@@ -21,7 +21,6 @@ $(document).ready(function() {
 var config = {};
 
 config.saveUrl = '/zato/demo-config/save';
-config.cluster_id = '1';
 
 // What a request that never reached its endpoint reports
 config.applyErrorText = 'The change could not be applied';
@@ -46,8 +45,7 @@ config.sets = ['tutorial', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq', 'fil
 config.howItWorksText = 'Slide "Everything" to import or remove all demo config, ' +
     'or pick cards with demo config individually.';
 
-// How each kind of object is called on a pill and where the pill points to -
-// the cluster query parameter is appended when the link is built.
+// How each kind of object is called on a pill and where the pill points to
 config.kinds = {
     'job':                 {one: 'job', many: 'jobs', url: '/zato/scheduler/', params: ''},
     'channel-rest':        {one: 'REST channel', many: 'REST channels', url: '/zato/http-soap/', params: '&connection=channel&transport=plain_http'},
@@ -139,7 +137,7 @@ var renderCard = function(setName, setInfo) {
             shownCount = group.items.length;
         }
 
-        pill.href = kindInfo.url + '?cluster=' + config.cluster_id + kindInfo.params;
+        pill.href = kindInfo.url + kindInfo.params;
 
         var kindLabel = shownCount === 1 ? kindInfo.one : kindInfo.many;
         pill.textContent = shownCount + ' ' + kindLabel;
@@ -404,7 +402,7 @@ var apply = function(desiredStates, changedSets, isFromMaster) {
             errorElement.textContent = errorTextFromResponse(xhr, config.applyErrorText);
 
             // Only this change's sliders go back to what is actually
-            // in the cluster - the others are none of its business
+            // in the environment - the others are none of its business
             for(var setIdx = 0; setIdx < changedSets.length; setIdx++) {
                 var changedName = changedSets[setIdx];
                 if(changedName in lastData) {

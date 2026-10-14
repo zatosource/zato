@@ -81,12 +81,12 @@ class ChannelMLLPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'channel_mllp_def_list':
+    def export(self, session:'SASession') -> 'channel_mllp_def_list':
         """ Exports HL7 MLLP channel definitions.
         """
         logger.info('Exporting HL7 MLLP channel definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP)
 
         if not db_items:
             logger.info('No HL7 MLLP channel definitions found in DB')

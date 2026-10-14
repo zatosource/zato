@@ -48,7 +48,7 @@ def _get_publisher() -> 'any_':
 def _get_subscriptions(admin:'any_', sec_name:'str') -> 'anylist':
     """ Returns all subscriptions for a given security definition name.
     """
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list
@@ -76,7 +76,7 @@ def _get_sub_keys_for_sec(admin:'any_', sec_name:'str') -> 'list[str]':
 def _get_permissions(admin:'any_', sec_name:'str') -> 'anylist':
     """ Returns all permissions for a given security definition name.
     """
-    perm_list = admin.invoke('zato.pubsub.permission.get-list', {'cluster_id': 1})
+    perm_list = admin.invoke('zato.pubsub.permission.get-list', {})
 
     if isinstance(perm_list, list):
         items:'anylist' = perm_list
@@ -178,7 +178,6 @@ class TestSecurityDeletePubSubCleanup:
             'is_active': True,
             'username': 'test.secdel.subscriber.v2',
             'realm': 'testrealm',
-            'cluster_id': 1,
         })
 
         new_sec_id = new_sec['id']
@@ -194,7 +193,6 @@ class TestSecurityDeletePubSubCleanup:
 
         # .. subscribe to a topic - this must succeed without conflicts ..
         sub_response = admin.invoke('zato.pubsub.subscription.create', {
-            'cluster_id': 1,
             'topic_name_list': ['secdel.topic.alpha'],
             'sec_base_id': new_sec_id,
             'delivery_type': 'pull',

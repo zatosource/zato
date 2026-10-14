@@ -52,12 +52,11 @@ class ChannelImporter:
 
 # ################################################################################################################################
 
-    def get_rest_channels_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_rest_channels_from_db(self, session:'SASession') -> 'anydict':
         out = {}
-        logger.info('Retrieving REST channels from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving REST channels from database')
 
         query = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
             filter(HTTPSOAP.transport==URL_TYPE.PLAIN_HTTP) # type: ignore
         channels = to_json(query, return_as_dict=True)
@@ -381,8 +380,7 @@ class ChannelImporter:
         delivery_attrs = take_channel_delivery_attrs(channel_def)
 
         service_name = channel_def['service']
-        service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
-        cluster = self.importer.get_cluster(session)
+        service = session.query(Service).filter_by(name=service_name).one()
 
         security_item = None
         if security_name := channel_def.get('security'):
@@ -397,7 +395,7 @@ class ChannelImporter:
         else:
             logger.info('No security definition specified for channel %s', name)
 
-        channel = HTTPSOAP(cluster=cluster, service=service)
+        channel = HTTPSOAP(service=service)
         channel.name = name
         channel.connection = CONNECTION.CHANNEL
         channel.transport = URL_TYPE.PLAIN_HTTP
@@ -491,7 +489,7 @@ class ChannelImporter:
         channel.url_path = channel_def['url_path']
 
         service_name = channel_def['service']
-        service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).first()
+        service = session.query(Service).filter_by(name=service_name).first()
         if not service:
             raise Exception(f'Service not found: {service_name}')
         channel.service = service
@@ -583,12 +581,12 @@ class ChannelImporter:
     def sync_channel_rest(self, channel_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d REST channels from YAML', len(channel_list))
 
-        db_channels = self.get_rest_channels_from_db(session, self.importer.cluster_id)
+        db_channels = self.get_rest_channels_from_db(session)
         to_create, to_update = self.compare_channel_rest(channel_list, db_channels)
 
         # Nothing is written before every definition is known to have a URL path of its own,
         # since two channels resolving to one match target leave only one of them reachable.
-        ensure_channel_definitions_are_unique(session, self.importer.cluster_id, to_create + to_update)
+        ensure_channel_definitions_are_unique(session, to_create + to_update)
 
         out_created = []
         out_updated = []

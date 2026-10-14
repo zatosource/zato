@@ -81,9 +81,6 @@ class TestEnmassePubSubPermissionExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Import security definitions first, as pubsub permissions depend on them
         security_defs_from_yaml = self.yaml_config['security']
         if security_defs_from_yaml:
@@ -128,7 +125,7 @@ class TestEnmassePubSubPermissionExporter(TestCase):
             _ = self.session.commit()
 
             # Now test the export functionality
-            exported_permissions = self.pubsub_permission_exporter.export(self.session, self.exporter.cluster_id)
+            exported_permissions = self.pubsub_permission_exporter.export(self.session)
             logger.info('Exported %d pubsub permission definitions', len(exported_permissions))
 
             # Verify that we exported the expected number of permission groups

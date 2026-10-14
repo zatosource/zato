@@ -23,10 +23,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
-_Channel_Url_Pattern = '/zato/http-soap/?cluster=1&connection=channel&transport=plain_http'
-_Outgoing_Url_Pattern = '/zato/http-soap/?cluster=1&connection=outgoing&transport=plain_http'
-_Groups_Url_Pattern = '/zato/groups/group/zato-api-creds/?cluster=1'
+_Page_Url_Pattern = '/zato/security/basic-auth/'
+_Channel_Url_Pattern = '/zato/http-soap/?connection=channel&transport=plain_http'
+_Outgoing_Url_Pattern = '/zato/http-soap/?connection=outgoing&transport=plain_http'
+_Groups_Url_Pattern = '/zato/groups/group/zato-api-creds/'
 
 _Test_Name_Prefix = 'test.xpage.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -90,7 +90,7 @@ def _delete_definition_via_ui(page:'Page', base_url:'str', name:'str') -> 'None'
     """
 
     # Navigate to basic auth page with query filter so the row is visible ..
-    _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={name}')
+    _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={name}')
     _ = page.wait_for_selector('#data-table', state='visible')
 
     # .. trigger delete ..
@@ -111,7 +111,7 @@ def _edit_definition_name_via_ui(page:'Page', base_url:'str', old_name:'str', ne
     """
 
     # Navigate to basic auth page with query filter so the row is visible ..
-    _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={old_name}')
+    _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={old_name}')
     _ = page.wait_for_selector('#data-table', state='visible')
 
     # .. open edit for the row ..

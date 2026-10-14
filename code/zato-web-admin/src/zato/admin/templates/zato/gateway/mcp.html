@@ -84,13 +84,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
         <div id="markup">
             <h2 class="zato">{% include "zato/include/header-brand.html" with badge="AI" %}MCP gateways</h2>
 
@@ -99,7 +95,7 @@
 {% endwith %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="{% url "gateway-mcp-wizard-create" %}?cluster={{ cluster_id }}">Create a new MCP gateway</a>
+            <a href="{% url "gateway-mcp-wizard-create" %}">Create a new MCP gateway</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -147,9 +143,9 @@
                             onclick="$.fn.zato.gateway.mcp.pickers.open_services(this)">{{ item.services|length }}</a></td>
                         <td class="text-center"><a href="javascript:void(0)" id="mcp-security-cell-{{ item.id }}" data-id="{{ item.id }}"
                             onclick="$.fn.zato.gateway.mcp.pickers.open_security(this)">{{ item.security_member_count }}</a></td>
-                        <td><a href="/zato/audit-log/?source=mcp&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
+                        <td><a href="/zato/audit-log/?source=mcp&amp;object_name={{ item.name|urlencode }}">Audit log</a></td>
                         <td><a href="{% url "gateway-mcp-export" item.id %}">Export</a></td>
-                        <td><a href="{% url "gateway-mcp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
+                        <td><a href="{% url "gateway-mcp-wizard-edit" item.id %}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.gateway.mcp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         {# What the two flags stand at #}
@@ -181,8 +177,6 @@ serves the whole table - the row clicked fills them in before the popover opens.
 {% include "zato/paginate/action-panel.html" %}
         </div>
 
-    {% endif %}
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

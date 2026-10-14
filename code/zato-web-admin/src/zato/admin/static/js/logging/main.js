@@ -1,7 +1,6 @@
 (function($) {
 
 $.fn.zato.logging.config = {
-    clusterId: '1',
     testUrl: '/zato/logging/test',
     saveUrl: '/zato/logging/save',
     destinationSaveUrl: '/zato/logging/destination/save',

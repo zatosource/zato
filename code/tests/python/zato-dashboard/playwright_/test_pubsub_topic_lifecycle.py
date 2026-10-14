@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/pubsub/topic/?cluster=1'
+_Page_Url_Pattern = '/zato/pubsub/topic/'
 
 _Test_Name_Prefix = 'test.life.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -169,7 +169,7 @@ class TestPubSubTopicLifecycle:
         sorted_desc = [name_c, name_b, name_a]
 
         # .. reload with query filter so our test rows are visible ..
-        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}sort')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}?query={_Test_Name_Prefix}sort')
 
         # .. click the Name column header to trigger a sort ..
         page.click('#data-table thead th:nth-child(3)')
@@ -220,7 +220,7 @@ class TestPubSubTopicLifecycle:
         topic = create_topic(page, base_url, _Test_Name_Prefix, 'edit-desc')
 
         # .. reload so the server renders the no-value indicator ..
-        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={topic["name"]}')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}?query={topic["name"]}')
 
         # .. verify the description cell shows the placeholder ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
@@ -258,7 +258,7 @@ class TestPubSubTopicLifecycle:
         topic = create_topic(page, base_url, _Test_Name_Prefix, 'edit-desc-clear', 'Has a description')
 
         # .. reload so the server renders the row ..
-        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={topic["name"]}')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}?query={topic["name"]}')
 
         # .. verify the description is shown ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
@@ -421,7 +421,7 @@ class TestPubSubTopicLifecycle:
             created_names.append(topic['name'])
 
         # .. navigate with query filter ..
-        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={filter_prefix}')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}?query={filter_prefix}')
 
         # .. collect all visible names ..
         cells = page.query_selector_all('#data-table tbody tr:not(.ignore) td:nth-child(3)')
@@ -627,7 +627,7 @@ class TestPubSubTopicLifecycle:
         topic = create_topic(page, base_url, _Test_Name_Prefix, 'edit-invalid')
 
         # .. reload so the server knows about it ..
-        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={topic["name"]}')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}?query={topic["name"]}')
 
         # .. open the edit dialog ..
         open_edit_dialog(page, 'topic', topic['item_id'])
@@ -667,7 +667,7 @@ class TestPubSubTopicLifecycle:
         topic_b = create_topic(page, base_url, _Test_Name_Prefix, 'dup-b')
 
         # .. reload so the server knows about both ..
-        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}dup')
+        navigate_to_page(page, base_url, f'{_Page_Url_Pattern}?query={_Test_Name_Prefix}dup')
 
         # .. edit topic_b to have topic_a's name ..
         item_id = get_item_id(page, topic_b['name'])

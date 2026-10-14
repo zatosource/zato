@@ -182,7 +182,7 @@ class TestRESTChannelExtras:
         assert response.status_code == OK, f'Expected OK before rate limiting, got {response.status_code}'
 
         # .. open the rate limiting page for the channel ..
-        _ = page.goto(f'{base_url}/zato/http-soap/rate-limiting/{channel_id}/?cluster=1')
+        _ = page.goto(f'{base_url}/zato/http-soap/rate-limiting/{channel_id}/')
         _ = page.wait_for_selector('#rate-limiting-container .rate-limiting-rule', state='visible', timeout=10000)
 
         # .. add the loopback CIDR as a pill ..

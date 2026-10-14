@@ -9,7 +9,6 @@ $.namespace('zato.pubsub.common');
 // Populate topics dropdown with AJAX loading and empty state handling
 $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, endpoint, selectId, callback) {
 
-    var clusterId = $('#cluster_id').val();
     var select = $(selectId);
     var selectContainer = select.parent();
 
@@ -28,7 +27,6 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, 
         url: endpoint,
         type: 'GET',
         data: {
-            cluster_id: clusterId,
             form_type: formType
         },
         success: function(data) {
@@ -96,7 +94,7 @@ $.fn.zato.pubsub.common.populateTopics = function(formType, selectedNamesOrIds, 
                 var hasExistingTopics = $.fn.zato.data_table.data && Object.keys($.fn.zato.data_table.data).length > 0;
                 var message = hasExistingTopics ? 'No topics left' : 'No topics available';
 
-                var messageElement = $('<span class="no-topics-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/pubsub/topic/?cluster=' + clusterId + '" target="_blank">Click to create one</a></span>');
+                var messageElement = $('<span class="no-topics-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/pubsub/topic/" target="_blank">Click to create one</a></span>');
                 selectContainer.append(messageElement);
 
                 var okButton = select.closest('form').find('input[type="submit"]');

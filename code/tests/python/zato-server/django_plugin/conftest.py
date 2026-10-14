@@ -150,14 +150,13 @@ def zato_server() -> 'any_':
     quickstart_env = os.environ.copy()
     _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
 
-    # .. set the Django channel password so create_cluster uses our known value ..
+    # .. set the Django channel password so create_initial_data uses our known value ..
     quickstart_env['Zato_Django_Password'] = _django_password
 
     quickstart_command = [
         _zato_bin, 'quickstart', 'create', _temp_directory,
         '--force',
         '--password', _password,
-        '--servers', '1',
         '--server-api-client-for-scheduler-password', _password,
         '--no-scheduler',
     ]

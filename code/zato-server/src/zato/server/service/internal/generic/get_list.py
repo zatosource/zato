@@ -40,14 +40,13 @@ class GetList(AdminService):
     name = 'zato.generic.connection.get-list'
     _filter_by = ModelGenericConn.name,
 
-    input = 'cluster_id', '-type_', *query_parameters
+    input = '-type_', *query_parameters
 
 # ################################################################################################################################
 
     def get_data(self, session:'any_') -> 'any_':
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
-        self.logger.info('GenericConn GetList.get_data: cluster_id=%s, type_=%s', cluster_id, self.request.input.type_)
-        data:'any_' = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
+        self.logger.info('GenericConn GetList.get_data: type_=%s', self.request.input.type_)
+        data:'any_' = self._search(connection_list, session, self.request.input.type_, False)
         self.logger.info('GenericConn GetList.get_data: result count=%s', data.count() if hasattr(data, 'count') else 'N/A')
         return data
 
@@ -61,7 +60,6 @@ class GetList(AdminService):
     def _enrich_conn_dict(self, conn_dict:'anydict') -> 'None':
 
         # Local aliases
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
         # Secrets never leave the server in listings ..
         for key in never_returned_keys:
@@ -84,7 +82,6 @@ class GetList(AdminService):
                     service_attr = prefix + '_service_name'
                     try:
                         service_name = self.invoke('zato.service.get-by-id', {
-                            'cluster_id': cluster_id,
                             'id': value,
                         })['zato_service_get_by_name_response']['name']
                     except Exception:

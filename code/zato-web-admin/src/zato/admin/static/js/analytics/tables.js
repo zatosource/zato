@@ -43,8 +43,7 @@
     // The address of one channel's analytics screen.
     dash.channel_href = function(name) {
         var href = dash.config.channel_page;
-        href += '?cluster=' + dash.config.cluster_id;
-        href += '&name=' + encodeURIComponent(name);
+        href += '?name=' + encodeURIComponent(name);
         href += '&range=' + encodeURIComponent(dash.config.time_range);
 
         return href;
@@ -53,8 +52,7 @@
     // The address of one consumer's analytics screen.
     dash.consumer_href = function(name) {
         var href = dash.config.consumer_page;
-        href += '?cluster=' + dash.config.cluster_id;
-        href += '&name=' + encodeURIComponent(name);
+        href += '?name=' + encodeURIComponent(name);
         href += '&range=' + encodeURIComponent(dash.config.time_range);
 
         return href;
@@ -64,8 +62,7 @@
     // caller is a real credential, to that caller too.
     dash.audit_href = function(row) {
         var href = dash.config.audit_log_page;
-        href += '?cluster=' + dash.config.cluster_id;
-        href += '&source=' + encodeURIComponent(row.source);
+        href += '?source=' + encodeURIComponent(row.source);
         href += '&object_name=' + encodeURIComponent(row.name);
 
         // The anonymous bucket has no credential to search for

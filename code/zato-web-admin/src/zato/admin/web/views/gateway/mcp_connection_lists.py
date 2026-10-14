@@ -33,7 +33,6 @@ def _get_gateway_allow_list(req:'any_', gateway_id:'str', config_key:'str') -> '
     out:'strset' = set()
 
     response = req.zato.client.invoke('zato.generic.connection.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
         'paginate': False,
     })

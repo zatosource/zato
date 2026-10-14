@@ -11,7 +11,6 @@ from http.client import NOT_FOUND
 
 # Zato
 from zato.cli.enmasse.importer.delete_targets import http_soap_sections
-from zato.common.defaults import default_cluster_id
 
 # Zato - the suite's own parts
 from _definitions import basic_auth, deletion_file, group, marked, outgoing_rest, permission, Ping_Service, Prefix, \
@@ -158,8 +157,7 @@ def _security_group_count(client:'AdminClient', channel_name:'str') -> 'int':
     """ How many security groups the server reports for a REST channel.
     """
     connection, transport = http_soap_sections['channel_rest']
-    items, _ = client.get_list('zato.http-soap.get-list',
-        cluster_id=default_cluster_id, connection=connection, transport=transport)
+    items, _ = client.get_list('zato.http-soap.get-list', connection=connection, transport=transport)
 
     for item in items:
         if item['name'] == channel_name:

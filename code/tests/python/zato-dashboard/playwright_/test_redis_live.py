@@ -131,7 +131,7 @@ def _publish_to_amqp_topic(page:'Page', base_url:'str', rabbitmq_broker:'anydict
     topic_name = _shared_state['amqp_topic_name']
 
     # The list is paginated so filter it by the topic's name first ..
-    navigate_to_page(page, base_url, f'/zato/pubsub/topic/?cluster=1&query={topic_name}')
+    navigate_to_page(page, base_url, f'/zato/pubsub/topic/?query={topic_name}')
     item_id = get_item_id(page, topic_name)
 
     # .. drain anything left on the queue ..
@@ -402,7 +402,7 @@ class TestRedisLive:
         # .. publish through the overlay ..
         marker = 'redis-pubsub-health-' + new_cid()
 
-        navigate_to_page(page, base_url, f'/zato/pubsub/topic/?cluster=1&query={topic_name}')
+        navigate_to_page(page, base_url, f'/zato/pubsub/topic/?query={topic_name}')
         item_id = get_item_id(page, topic_name)
 
         open_publish_overlay(page, item_id)

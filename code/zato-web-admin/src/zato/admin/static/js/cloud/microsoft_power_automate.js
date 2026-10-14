@@ -124,8 +124,7 @@ $.fn.zato.cloud.microsoft_power_automate.data_table.new_row = function(item, dat
 $.fn.zato.cloud.microsoft_power_automate.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Microsoft Power Automate connection `{0}` deleted',
-        'Are you sure you want to delete Microsoft Power Automate connection `{0}`?',
-        true);
+        'Are you sure you want to delete Microsoft Power Automate connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

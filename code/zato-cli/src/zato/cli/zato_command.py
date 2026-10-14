@@ -108,7 +108,6 @@ class CommandStore:
              analytics           as analytics_mod,           \
              check_config        as check_config_mod,        \
              component_version   as component_version_mod,   \
-             create_cluster      as create_cluster_mod,      \
              create_odb          as create_odb_mod,          \
              create_server       as create_server_mod,       \
              create_web_admin    as create_web_admin_mod,    \
@@ -195,11 +194,6 @@ class CommandStore:
             'basic-auth', description=sec_basic_auth_mod.CreateDefinition.__doc__, parents=[base_parser])
         create_basic_auth.set_defaults(command='create_basic_auth')
         self.add_opts(create_basic_auth, sec_basic_auth_mod.CreateDefinition.opts)
-
-        create_cluster = create_subs.add_parser(
-            'cluster', description=create_cluster_mod.Create.__doc__, parents=[base_parser])
-        create_cluster.set_defaults(command='create_cluster')
-        self.add_opts(create_cluster, create_cluster_mod.Create.opts)
 
         create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
         create_odb.set_defaults(command='create_odb')
@@ -345,11 +339,11 @@ class CommandStore:
         #
         # quickstart
         #
-        quickstart = subs.add_parser('quickstart', description='Quickly set up and manage Zato clusters', parents=[base_parser])
+        quickstart = subs.add_parser('quickstart', description='Quickly set up and manage Zato environments', parents=[base_parser])
         quickstart_subs = quickstart.add_subparsers()
 
         quickstart_create = quickstart_subs.add_parser('create', description=quickstart_mod.Create.__doc__, parents=[base_parser])
-        quickstart_create.add_argument('path', help='Path to an empty directory for the quickstart cluster')
+        quickstart_create.add_argument('path', help='Path to an empty directory for the quickstart environment')
         quickstart_create.set_defaults(command='quickstart_create')
         self.add_opts(quickstart_create, quickstart_mod.Create.opts)
 

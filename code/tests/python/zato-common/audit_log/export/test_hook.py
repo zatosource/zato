@@ -132,7 +132,7 @@ class _HookTestCase(TestCase):
         """
         config = build_config(**overrides)
 
-        out = AuditExport(config, service_name=APICtx.Service_Server, server_name=Server_Name, cluster_name='test-cluster',
+        out = AuditExport(config, service_name=APICtx.Service_Server, server_name=Server_Name,
             instance_id='deploy-1', version='4.1')
 
         # The real sender is replaced before anything is sent

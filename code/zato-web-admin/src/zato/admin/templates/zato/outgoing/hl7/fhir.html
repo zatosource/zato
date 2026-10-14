@@ -95,13 +95,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
         <div id="markup">
             <h2 class="zato">{% include "zato/include/header-brand.html" with badge="FHIR" %}HL7 FHIR connections</h2>
 
@@ -187,8 +183,8 @@
                         </td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="/zato/audit-log/?source=fhir&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% if not item.is_audit_log_active %} <span class="form_hint">(off)</span>{% endif %}</td>
-                        <td><a href="/zato/channel-usage/?sources=fhir&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a></td>
+                        <td><a href="/zato/audit-log/?source=fhir&amp;object_name={{ item.name|urlencode }}">Audit log</a>{% if not item.is_audit_log_active %} <span class="form_hint">(off)</span>{% endif %}</td>
+                        <td><a href="/zato/channel-usage/?sources=fhir&amp;objects={{ item.name|urlencode }}">Usage</a></td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="fhir" %}
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{{ item.id }}')">Delete</a></td>
@@ -293,7 +289,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -359,15 +354,12 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
 
-        {% endif %}
 
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

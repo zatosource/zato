@@ -79,35 +79,35 @@ def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 
     """
     if source == AuditSource.MLLP_Outgoing:
         with closing(service.odb.session()) as session:
-            mllp_outgoing_info = describe_mllp_outgoing(session, service.server.cluster_id, object_name)
+            mllp_outgoing_info = describe_mllp_outgoing(session, object_name)
 
         if mllp_outgoing_info is not None:
             return mllp_outgoing_info, object_name, False
 
     if source in _outgoing_http_sources:
         with closing(service.odb.session()) as session:
-            outgoing_info = describe_outgoing_http(session, service.server.cluster_id, source, object_name)
+            outgoing_info = describe_outgoing_http(session, source, object_name)
 
         if outgoing_info is not None:
             return outgoing_info, object_name, False
 
     if source in _outgoing_fhir_sources:
         with closing(service.odb.session()) as session:
-            fhir_info = describe_outgoing_fhir(session, service.server.cluster_id, object_name)
+            fhir_info = describe_outgoing_fhir(session, object_name)
 
         if fhir_info is not None:
             return fhir_info, object_name, False
 
     if source == AuditSource.LLM:
         with closing(service.odb.session()) as session:
-            llm_info = describe_outgoing_llm(session, service.server.cluster_id, object_name)
+            llm_info = describe_outgoing_llm(session, object_name)
 
         if llm_info is not None:
             return llm_info, object_name, False
 
     if source == AuditSource.MCP:
         with closing(service.odb.session()) as session:
-            mcp_info = describe_mcp_gateway(session, service.server.cluster_id, object_name)
+            mcp_info = describe_mcp_gateway(session, object_name)
 
         if mcp_info is not None:
             return mcp_info, object_name, False
@@ -119,14 +119,14 @@ def get_object_info(service:'AdminService', source:'str', object_name:'str') -> 
 
     if source == AuditSource.MLLP_Channel:
         with closing(service.odb.session()) as session:
-            mllp_info = describe_mllp_channel(session, service.server.cluster_id, object_name)
+            mllp_info = describe_mllp_channel(session, object_name)
 
         if mllp_info is not None:
             return mllp_info, object_name, False
 
     if source in channel_sources:
         with closing(service.odb.session()) as session:
-            channel_info = describe_channel(session, service.server.cluster_id, source, object_name)
+            channel_info = describe_channel(session, source, object_name)
 
         if channel_info is not None:
             return channel_info, object_name, False
@@ -145,7 +145,6 @@ def _get_file_transfer_info(service:'AdminService', object_name:'str') -> 'tuple
 
         rows = session.query(GenericConn).\
             filter(GenericConn.type_.in_(FileTransfer.ConnTypeList)).\
-            filter(GenericConn.cluster_id==service.server.cluster_id).\
             all()
 
         for row in rows:
@@ -170,7 +169,7 @@ def _get_file_transfer_info(service:'AdminService', object_name:'str') -> 'tuple
                 if key not in config or config[key] is None:
                     config[key] = default
 
-            test_transfers_on = _wants_test_transfer(session, service.server.cluster_id, row.name)
+            test_transfers_on = _wants_test_transfer(session, row.name)
 
             out = _describe_file_transfer(row, config, schedules, object_name, is_schedule, test_transfers_on)
 
@@ -242,10 +241,10 @@ def _describe_file_transfer(
 
 # ################################################################################################################################
 
-def _wants_test_transfer(session:'SASession', cluster_id:'int', conn_name:'str') -> 'bool':
+def _wants_test_transfer(session:'SASession', conn_name:'str') -> 'bool':
     """ Whether the connection's own Alerts tab has test transfers on.
     """
-    settings_by_object = load_object_settings(session, cluster_id)[alert_type_file_transfer]
+    settings_by_object = load_object_settings(session)[alert_type_file_transfer]
 
     if conn_name not in settings_by_object:
         return False

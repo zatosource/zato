@@ -55,7 +55,7 @@ _Channel_Type = 'channel-kafka'
 
 # The URL of a channel's DLQ page as its list links to it
 _Channel_DLQ_Conn_Type = 'kafka-channel'
-_Channel_DLQ_URL = '/zato/channel/delivery/{conn_type}/{conn_id}/?cluster=1&tab=dlq'
+_Channel_DLQ_URL = '/zato/channel/delivery/{conn_type}/{conn_id}/?tab=dlq'
 
 _Outconn_Tab_Order = ['config', 'producer', 'delivery']
 _Channel_Tab_Order = ['config', 'consumer', 'routing', 'delivery']
@@ -220,7 +220,7 @@ def _set_select(page:'Page', form_type:'str', field_name:'str', value:'str') -> 
 def _get_stored(api_client:'ZatoClient', type_:'str', name:'str') -> 'anydict':
     """ A generic connection as the server stores it.
     """
-    items = api_client.invoke(_Service_Get_List, {'cluster_id': 1, 'type_': type_})
+    items = api_client.invoke(_Service_Get_List, {'type_': type_})
 
     for item in items:
         if item['name'] == name:

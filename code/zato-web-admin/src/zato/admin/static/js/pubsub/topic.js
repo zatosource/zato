@@ -15,8 +15,8 @@ $.fn.zato.pubsub.topic.config = {
     },
     requiredFieldMessage: 'This field is required',
     createNewValue: 'zato-create-new',
-    createOutconnURL: '/zato/outgoing/amqp/?cluster=1&create=1',
-    createChannelURL: '/zato/channel/amqp/?cluster=1&create=1',
+    createOutconnURL: '/zato/outgoing/amqp/?create=1',
+    createChannelURL: '/zato/channel/amqp/?create=1',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -211,11 +211,11 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.description || $.fn.zato.empty_value);
     row += String.format("<td class='ignore' style='text-align:center'>{0}</td>", item.publisher_count);
     row += String.format("<td class='ignore' style='text-align:center'>{0}</td>", item.subscriber_count);
-    // row += String.format('<td><a href="/zato/pubsub/topic/{0}/?cluster=1">View</a></td>', encodeURIComponent(item.name));
+    // row += String.format('<td><a href="/zato/pubsub/topic/{0}/">View</a></td>', encodeURIComponent(item.name));
     row += String.format('<td>{0}</td>', String.format('<a href="javascript:$.fn.zato.pubsub.topic.edit(\'{0}\')">Edit</a>', item.id));
     row += String.format('<td>{0}</td>', String.format('<a href="javascript:$.fn.zato.pubsub.topic.delete_(\'{0}\');">Delete</a>', item.id));
     row += String.format('<td>{0}</td>', String.format('<a href="javascript:$.fn.zato.pubsub.topic.publishMessage(\'{0}\')">Publish a message</a>', item.id));
-    row += String.format('<td>{0}</td>', String.format('<a href="/zato/audit-log/?source=pubsub&object_name={0}&cluster=1">Audit log</a>', encodeURIComponent(item.name)));
+    row += String.format('<td>{0}</td>', String.format('<a href="/zato/audit-log/?source=pubsub&object_name={0}">Audit log</a>', encodeURIComponent(item.name)));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.description);
@@ -240,8 +240,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.pubsub.topic.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub topic `{0}` deleted',
-        'Are you sure you want to delete pub/sub topic `{0}`?',
-        true);
+        'Are you sure you want to delete pub/sub topic `{0}`?');
 }
 
 // /////////////////////////////////////////////////////////////////////////////

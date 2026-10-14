@@ -21,7 +21,7 @@ $.fn.zato.http_soap.inline.config = {
     groups_url: '/zato/http-soap/get-security-groups/zato-api-creds/?http_soap_channel_id=',
 
     // Where a service is opened
-    service_ide_url: '/zato/service/ide/service/{name}/?cluster=1',
+    service_ide_url: '/zato/service/ide/service/{name}/',
 
     // The things a cell's popup offers, one to a button
     open_ide_label: 'Open in IDE',

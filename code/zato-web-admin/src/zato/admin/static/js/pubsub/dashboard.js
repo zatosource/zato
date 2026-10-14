@@ -3,7 +3,6 @@
 $.fn.zato.pubsub.dashboard = {};
 
 $.fn.zato.pubsub.dashboard.config = {
-    cluster_id: '1',
     default_time_range: 0
 };
 

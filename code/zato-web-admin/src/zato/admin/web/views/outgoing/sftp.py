@@ -79,7 +79,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = ('id',) + _fields_required
     output_optional = _fields_optional + (FileTransfer.Scheduler.Schedules_Field,)
     output_repeated = True
@@ -194,17 +194,16 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'SFTP connection')
 
 # ################################################################################################################################
 
 @method_allowed('GET')
-def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'TemplateResponse':
+def command_shell(req:'any_', id:'str', name_slug:'str') -> 'TemplateResponse':
 
     # Every outgoing SFTP connection there is ..
     response = req.zato.client.invoke('zato.generic.connection.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'type_': GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
         'paginate': False,
     })
@@ -219,7 +218,7 @@ def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'T
         item_id = item['id']
         item_name = item['name']
         item_slug = slugify(item_name)
-        item_url = reverse('out-sftp-command-shell', args=[item_id, cluster_id, item_slug])
+        item_url = reverse('out-sftp-command-shell', args=[item_id, item_slug])
         item_name_encoded = quote(item_name)
         connection_list.append({
             'name': item_name,
@@ -233,8 +232,6 @@ def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'T
         form = CommandShellForm()
 
     return_data = {
-        'zato_clusters':req.zato.clusters,
-        'cluster_id':req.zato.cluster_id,
         'req': req,
         'conn_id': id,
         'name_slug': name_slug,
@@ -249,11 +246,10 @@ def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'T
 # ################################################################################################################################
 
 @method_allowed('POST')
-def command_shell_action(req, id, cluster_id, name_slug):
+def command_shell_action(req, id, name_slug):
 
     try:
         response = req.zato.client.invoke('zato.outgoing.sftp.execute', {
-            'cluster_id': req.zato.cluster_id,
             'id': id,
             'data': req.POST['data'],
             'log_level': req.POST['log_level'],

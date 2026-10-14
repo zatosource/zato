@@ -33,9 +33,7 @@ def get_outconn_amqp_choices(req:'HttpRequest') -> 'anylist':
     """ Returns a list of outgoing AMQP connections as form choices.
     """
     # Invoke the service ..
-    response = req.zato.client.invoke('zato.outgoing.amqp.get-list', {
-        'cluster_id': req.zato.cluster_id,
-    })
+    response = req.zato.client.invoke('zato.outgoing.amqp.get-list', {})
 
     # .. build the choices list ..
     out = [('', 'Select a connection')]
@@ -59,9 +57,7 @@ def get_channel_amqp_choices(req:'HttpRequest') -> 'anylist':
     """ Returns a list of AMQP channels as form choices.
     """
     # Invoke the service ..
-    response = req.zato.client.invoke('zato.channel.amqp.get-list', {
-        'cluster_id': req.zato.cluster_id,
-    })
+    response = req.zato.client.invoke('zato.channel.amqp.get-list', {})
 
     # .. build the choices list ..
     out = [('', 'Select a channel')]
@@ -110,7 +106,7 @@ class CreateForm(forms.Form):
         self.fields['amqp_outconn_name'].choices = [('', 'Select a connection')]
         self.fields['amqp_channel_name'].choices = [('', 'Select a channel')]
 
-        # .. otherwise, populate the AMQP selects from what the cluster has.
+        # .. otherwise, populate the AMQP selects from the existing connections and channels.
         if req:
             self.fields['amqp_outconn_name'].choices = get_outconn_amqp_choices(req)
             self.fields['amqp_channel_name'].choices = get_channel_amqp_choices(req)

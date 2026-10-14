@@ -20,7 +20,6 @@ import pytest
 
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
-from zato.common.defaults import default_cluster_id
 
 # Live environment
 from live_containers.ready import wait_until
@@ -76,7 +75,7 @@ def wait_for_runtime_service(client:'AdminClient') -> 'None':
     """ Waits until the server reports the runtime service as deployed.
     """
     def _is_deployed() -> 'bool':
-        request = {'cluster_id': default_cluster_id, 'name': SupportCtx.Runtime_Service}
+        request = {'name': SupportCtx.Runtime_Service}
         response = client.invoke('zato.service.get-by-name', request)
         out = response['name'] == SupportCtx.Runtime_Service
         return out

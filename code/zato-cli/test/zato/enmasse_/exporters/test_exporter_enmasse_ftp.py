@@ -132,7 +132,6 @@ class TestEnmasseFTPExporter(TestCase):
         ftp_list_from_yaml = self.get_definitions()
 
         # Import these definitions into the database to have something to export.
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context.
         created_ftp_connections, _ = self.ftp_importer.sync_definitions(ftp_list_from_yaml, self.session)
 
         self.assertEqual(len(created_ftp_connections), 2, 'Not all FTP connections were created.')
@@ -217,7 +216,6 @@ class TestEnmasseFTPExporter(TestCase):
         }
 
         # Import the connection along with its schedule ..
-        _ = self.importer.get_cluster(self.session)
         created, _ = self.ftp_importer.sync_definitions([conn_def], self.session)
         self.assertEqual(len(created), 1)
 

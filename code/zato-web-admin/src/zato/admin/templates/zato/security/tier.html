@@ -19,7 +19,7 @@
 {% include "zato/search-form.html" with page_prompt="Search" %}
 
 <div class='page_prompt' style="clear:left">
-    <a href="/zato/security/tier/create/?cluster={{ cluster_id }}">Create a quota tier</a>
+    <a href="/zato/security/tier/create/">Create a quota tier</a>
 </div>
 
 <table class="zato-table" id="data-table">
@@ -41,7 +41,7 @@
             <td>{{ tier.description }}</td>
             <td>{{ tier.limits_summary }}</td>
             <td class="text-center">{{ tier.referent_count }}</td>
-            <td><a href="/zato/security/tier/{{ tier.id }}/?cluster={{ cluster_id }}">Edit</a></td>
+            <td><a href="/zato/security/tier/{{ tier.id }}/">Edit</a></td>
             <td><a href="javascript:$.fn.zato.security.tier.delete_('{{ tier.id }}', '{{ tier.name }}')">Delete</a></td>
         </tr>
     {% endfor %}

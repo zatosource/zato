@@ -22,7 +22,6 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.common.audit_log.api import get_audit_engine
-from zato.common.defaults import default_cluster_id
 from zato.common.hl7.dashboard import derive_live_health, get_channel_dashboard, Default_Range, Health_Unknown, \
     Range_Day, Range_Hours, Range_Label, Range_Month, Range_Quarter, Range_Week
 
@@ -171,12 +170,10 @@ def index(req:'any_') -> 'TemplateResponse':
     data = _get_dashboard_data(req, time_range)
 
     return_data = {
-        'cluster_id': default_cluster_id,
         'time_range': time_range,
         'ranges': _get_ranges(),
         'poll_url': _poll_url,
         'dashboard_data': data,
-        'zato_clusters': True,
         'zato_template_name': 'zato/channel/hl7/dashboard.html',
     }
 

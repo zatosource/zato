@@ -42,7 +42,6 @@ def get_service_list(req:'any_') -> 'HttpResponse':
 
     # .. get all deployed services ..
     response = req.zato.client.invoke('zato.service.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'name_filter': '*',
         'paginate': False,
     })
@@ -51,7 +50,6 @@ def get_service_list(req:'any_') -> 'HttpResponse':
     assigned_names:'set[str]' = set()
     if gateway_id:
         gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
-            'cluster_id': req.zato.cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'id': gateway_id,
             'paginate': False,
@@ -141,7 +139,6 @@ def get_security_list(req:'any_') -> 'HttpResponse':
 
         # .. look up the gateway's security_groups field ..
         gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
-            'cluster_id': req.zato.cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'paginate': False,
         })
@@ -209,7 +206,6 @@ def get_skill_list(req:'any_') -> 'HttpResponse':
     assigned_names:'strset' = set()
     if gateway_id:
         gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
-            'cluster_id': req.zato.cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'paginate': False,
         })

@@ -257,8 +257,7 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
 $.fn.zato.pubsub.on_sec_def_changed = function() {
     var sec_base_id = $('#id_sec_base_id').val();
     if(sec_base_id) {
-        var cluster_id = $('#cluster_id').val();
-        var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
+        var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', sec_base_id);
         var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
         $.fn.zato.post(url, function(data, status) {
             $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null, sec_base_id, request_generation);
@@ -348,8 +347,7 @@ $(document).ready(function() {
 
             // Load topics for the current security definition in edit mode
             if(instance.sec_base_id) {
-                var cluster_id = $('#cluster_id').val();
-                var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+                var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', instance.sec_base_id);
                 var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
                 $.fn.zato.post(url, function(data, status) {
                     $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);
@@ -477,7 +475,6 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
         url: '/zato/pubsub/subscription/get-rest-endpoints/',
         type: 'GET',
         data: {
-            cluster_id: '1',
             form_type: form_type
         },
         success: function(response) {
@@ -509,7 +506,7 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
 
             $endpointSelect.off('change.create_new').on('change.create_new', function() {
                 if ($(this).val() === '__create_new__') {
-                    window.open('/zato/http-soap/?cluster=1&connection=outgoing&transport=plain_http', '_blank');
+                    window.open('/zato/http-soap/?connection=outgoing&transport=plain_http', '_blank');
                     $(this).val('');
                     $endpointSelect.trigger('chosen:updated');
                 }
@@ -534,15 +531,11 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
 
 // Function to load REST channels using multi-checkbox component
 $.fn.zato.pubsub.subscription.loadRestChannels = function() {
-    var cluster_id = $('#cluster_id').val();
     var containerId = 'rest-channels-div';
 
     $.ajax({
         url: '/zato/pubsub/subscription/get-rest-channels/',
         type: 'GET',
-        data: {
-            cluster_id: cluster_id
-        },
         success: function(response) {
             if (response.rest_channels.length > 0) {
                 var items = [];
@@ -551,7 +544,7 @@ $.fn.zato.pubsub.subscription.loadRestChannels = function() {
                     items.push({
                         id: channel.id,
                         state: $.fn.zato.multi_checkbox.State.Off,
-                        link: '/zato/http-soap/?cluster=' + cluster_id + '&connection=channel&transport=plain_http&query=' + encodeURIComponent(channel.name),
+                        link: '/zato/http-soap/?connection=channel&transport=plain_http&query=' + encodeURIComponent(channel.name),
                         linkText: channel.name,
                         description: channel.url_path
                     });
@@ -589,8 +582,6 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId,
         showSpan = true;
     }
 
-    var cluster_id = '1';
-
     var serviceSelectId = form_type === 'create' ? '#id_push_service_name' : '#id_edit-push_service_name';
     var $serviceSelect = $(serviceSelectId);
     var serviceSpanId = form_type === 'create' ? '#push-service-create' : '#push-service-edit';
@@ -603,7 +594,6 @@ $.fn.zato.pubsub.subscription.populateServices = function(form_type, selectedId,
     $serviceSelect.append('<option value="">Select a service</option>');
 
     $.get('/zato/pubsub/subscription/get-service-list/', {
-        cluster_id: cluster_id,
         form_type: form_type
     })
     .done(function(response) {
@@ -679,7 +669,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td style="white-space:nowrap"><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
+    row += String.format('<td style="white-space:nowrap"><a href="/zato/security/basic-auth/?query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
 
     row += String.format('<td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{0}">{0}</span></td>', item.sub_key);
 
@@ -707,10 +697,10 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
                     if(endpointName) break;
                 }
             }
-            row += String.format('<td style="text-align:center"><div class="col-center-left">Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></div></td>',
+            row += String.format('<td style="text-align:center"><div class="col-center-left">Push <a href="/zato/http-soap/?query={0}&connection=outgoing&transport=plain_http">{1}</a></div></td>',
                 encodeURIComponent(endpointName), endpointName);
         } else if(item.push_type === 'service' && item.push_service_name) {
-            row += String.format('<td style="text-align:center"><div class="col-center-left">Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></div></td>',
+            row += String.format('<td style="text-align:center"><div class="col-center-left">Push <a href="/zato/service/?query={0}">{1}</a></div></td>',
                 encodeURIComponent(item.push_service_name), item.push_service_name);
         } else {
             row += '<td style="text-align:center"><div class="col-center-left">Push</div></td>';
@@ -723,7 +713,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     if (pendingDepth === undefined || pendingDepth === null) {
         pendingDepth = 0;
     }
-    row += String.format('<td><a href="/zato/pubsub/subscription/queue/?cluster=1&sub_key={0}&queue_name={1}&state=pending">{2}</a></td>',
+    row += String.format('<td><a href="/zato/pubsub/subscription/queue/?sub_key={0}&queue_name={1}&state=pending">{2}</a></td>',
         encodeURIComponent(item.sub_key), encodeURIComponent(item.security), pendingDepth);
 
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit('{0}');\">Edit</a>", item.id));
@@ -830,8 +820,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
         // Display the security definition name as a link
         var secName = instance.security;
-        var clusterID = '1';
-        var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
+        var secLink = '<a href="/zato/security/basic-auth/?query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
         $container.append(secLink);
     } else {
         // Default to original behavior if container doesn't exist
@@ -897,8 +886,7 @@ $.fn.zato.pubsub.subscription.delete_ = function(id) {
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,
-        'Are you sure you want to delete pub/sub subscription?\n\n' + descriptor,
-        true, null, null, null, null, afterDeleteCallback);
+        'Are you sure you want to delete pub/sub subscription?\n\n' + descriptor, null, null, null, null, afterDeleteCallback);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1037,8 +1025,7 @@ $.fn.zato.pubsub.subscription._reload_create_topics = function() {
     var sec_base_id = $('#id_sec_base_id').val();
     if (sec_base_id) {
         var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#multi-select-div');
-        var cluster_id = $('#cluster_id').val();
-        var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
+        var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', sec_base_id);
         var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
         $.fn.zato.post(url, function(data, status) {
             $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null, sec_base_id, request_generation);
@@ -1053,8 +1040,7 @@ $.fn.zato.pubsub.subscription._reload_edit_topics = function() {
         var instance = $.fn.zato.data_table.data[instance_id];
         if (instance && instance.sec_base_id) {
             var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#id_edit-multi-select-div');
-            var cluster_id = $('#cluster_id').val();
-            var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+            var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', instance.sec_base_id);
             var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
             $.fn.zato.post(url, function(data, status) {
                 $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);

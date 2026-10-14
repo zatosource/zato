@@ -30,7 +30,7 @@ from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager
 from zato.cli.enmasse_command import write_result_file
 from zato.common.api import AMQP, HTTP_SOAP, SCHEDULER, SEC_DEF_TYPE
 from zato.common.crypto.api import ServerCryptoManager
-from zato.common.odb.model import Base, ChannelAMQP, Cluster, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, IMAP, \
+from zato.common.odb.model import Base, ChannelAMQP, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, IMAP, \
     IntervalBasedJob, Job, OutgoingAMQP, OutgoingOdoo, PubSubPermission, PubSubSubscription, PubSubTopic, SecurityBase, \
     Service, SMTP, SQLConnectionPool
 from zato.common.typing_ import cast_
@@ -44,9 +44,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The cluster every object in the test database belongs to
-_cluster_id = 1
 
 # The service the channels and jobs point to
 _service_name = 'enmasse.should_delete.service'
@@ -110,7 +107,7 @@ class _RecordingClient:
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database with the whole schema, one cluster and the service
+    """ A real ODB session over an in-memory SQLite database with the whole schema and the service
     the channels and jobs point to.
     """
     engine = create_engine('sqlite://')
@@ -121,12 +118,9 @@ def session() -> 'any_':
 
     session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
-    session.add(Service(None, _service_name, True, 'enmasse.should_delete.Service', False, cluster))
+    session.add(Service(None, _service_name, True, 'enmasse.should_delete.Service', False))
     session.add(Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
-        'zato.server.service.internal.connection.HealthCheckRun', True, cluster))
+        'zato.server.service.internal.connection.HealthCheckRun', True))
 
     session.commit()
 
@@ -149,8 +143,7 @@ def importer() -> 'any_':
 # ################################################################################################################################
 
 def _add_security(session:'any_', name:'str') -> 'any_':
-    cluster = session.query(Cluster).one()
-    row = HTTPBasicAuth(None, name, True, 'user', 'realm', 'password', cluster)
+    row = HTTPBasicAuth(None, name, True, 'user', 'realm', 'password')
     session.add(row)
     session.commit()
     return row
@@ -189,33 +182,32 @@ def _insert_amqp(section:'str', session:'any_', name:'str') -> 'any_':
 # ################################################################################################################################
 
 def _insert_model(section:'str', session:'any_', name:'str') -> 'any_':
-    cluster = session.query(Cluster).one()
 
     if section == 'scheduler':
         service_row = session.query(Service).filter_by(name=_service_name).one()
-        row = Job(None, name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, datetime.utcnow(), None, cluster, service=service_row)
+        row = Job(None, name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, datetime.utcnow(), None, service=service_row)
         _ = IntervalBasedJob(None, row, seconds=60)
 
     elif section == 'sql':
         out = _insert(session, SQLConnectionPool.__table__, name=name, is_active=True, username='user', password='password',
-            db_name='db', engine='postgresql+pg8000', host='localhost', port=5432, pool_size=1, cluster_id=_cluster_id)
+            db_name='db', engine='postgresql+pg8000', host='localhost', port=5432, pool_size=1)
         return out
 
     elif section == 'email_smtp':
         row = SMTP(name=name, is_active=True, host='localhost', port=25, timeout=10, is_debug=False, mode='plain',
-            ping_address='test@example.com', cluster=cluster)
+            ping_address='test@example.com')
 
     elif section == 'email_imap':
         row = IMAP(name=name, is_active=True, host='localhost', port=993, timeout=10, debug_level=0, mode='ssl',
-            get_criteria='UNSEEN', cluster=cluster)
+            get_criteria='UNSEEN')
 
     elif section == 'odoo':
         out = _insert(session, OutgoingOdoo.__table__, name=name, is_active=True, host='localhost', port=8069, user='user',
-            database='db', protocol='jsonrpc', pool_size=1, password='password', cluster_id=_cluster_id)
+            database='db', protocol='jsonrpc', pool_size=1, password='password')
         return out
 
     else:
-        row = PubSubTopic(name=name, is_active=True, cluster_id=_cluster_id)
+        row = PubSubTopic(name=name, is_active=True)
 
     session.add(row)
     session.commit()
@@ -229,9 +221,9 @@ def _add_security_keyed(section:'str', session:'any_') -> 'any_':
     security = _add_security(session, _security_name)
 
     if section == 'pubsub_permission':
-        row = PubSubPermission(pattern='orders.*', access_type='publisher', sec_base_id=security.id, cluster_id=_cluster_id)
+        row = PubSubPermission(pattern='orders.*', access_type='publisher', sec_base_id=security.id)
     else:
-        row = PubSubSubscription(sub_key='zpsk.test', delivery_type='pull', sec_base_id=security.id, cluster_id=_cluster_id)
+        row = PubSubSubscription(sub_key='zpsk.test', delivery_type='pull', sec_base_id=security.id)
 
     return row
 
@@ -240,7 +232,6 @@ def _add_security_keyed(section:'str', session:'any_') -> 'any_':
 def _create_object(section:'str', session:'any_', name:'str'=_object_name) -> 'any_':
     """ Creates the row an item of the section resolves to and returns its id.
     """
-    cluster = session.query(Cluster).one()
 
     if section in targets.model_sections:
         out = _insert_model(section, session, name)
@@ -253,19 +244,18 @@ def _create_object(section:'str', session:'any_', name:'str'=_object_name) -> 'a
     if section in targets.http_soap_sections:
         connection, transport = targets.http_soap_sections[section]
         row = HTTPSOAP(name=name, is_active=True, is_internal=False, connection=connection, transport=transport,
-            url_path='/enmasse/should-delete', soap_action='', cluster=cluster)
+            url_path='/enmasse/should-delete', soap_action='')
 
     elif section in targets.generic_sections or targets.is_custom_section(section):
         if targets.is_custom_section(section):
             type_ = custom_key_to_connection_type(section)
         else:
             type_ = targets.generic_sections[section]
-        row = GenericConn(name=name, type_=type_, is_active=True, is_channel=False, is_outconn=True,
-            cluster_id=_cluster_id)
+        row = GenericConn(name=name, type_=type_, is_active=True, is_channel=False, is_outconn=True)
 
     elif section in targets.generic_object_sections:
         type_, subtype, _ = targets.generic_object_sections[section]
-        row = GenericObject(name=name, type_=type_, subtype=subtype, cluster_id=_cluster_id)
+        row = GenericObject(name=name, type_=type_, subtype=subtype)
 
     elif section == 'security':
         row = _add_security(session, name)
@@ -361,8 +351,8 @@ class TestResolutionAndServices:
         assert importer.deleted_objects == {section: [{'name': key, 'id': row_id}]}
 
         if service:
-            # .. and the service of the section received the id and the cluster, never the name.
-            assert importer.delete_client.invocations == [(service, {'cluster_id': _cluster_id, 'id': row_id})]
+            # .. and the service of the section received the id, never the name.
+            assert importer.delete_client.invocations == [(service, {'id': row_id})]
         else:
             # .. or, for a section no service deletes, the row was removed in the session.
             assert importer.delete_client.invocations == []
@@ -378,7 +368,7 @@ class TestResolutionAndServices:
         _ = importer.sync_from_yaml({alias: [_marked_item(section)]}, session)
 
         assert importer.deletions == {section: [_object_name]}
-        assert importer.delete_client.invocations == [(_expected_service(section), {'cluster_id': _cluster_id, 'id': row_id})]
+        assert importer.delete_client.invocations == [(_expected_service(section), {'id': row_id})]
 
 # ################################################################################################################################
 
@@ -393,7 +383,7 @@ class TestResolutionAndServices:
         _ = importer.sync_from_yaml({targets.Section_Generic_Connection: [item]}, session)
 
         assert importer.deletions == {section: [_object_name]}
-        assert importer.delete_client.invocations == [(targets.Service_Generic, {'cluster_id': _cluster_id, 'id': row_id})]
+        assert importer.delete_client.invocations == [(targets.Service_Generic, {'id': row_id})]
 
 # ################################################################################################################################
 
@@ -408,16 +398,15 @@ class TestResolutionAndServices:
         _ = importer.sync_from_yaml({'security': [_marked_item('security')]}, session)
 
         service = targets.security_services[SEC_DEF_TYPE.OAUTH]
-        assert importer.delete_client.invocations == [(service, {'cluster_id': _cluster_id, 'id': row.id})]
+        assert importer.delete_client.invocations == [(service, {'id': row.id})]
 
 # ################################################################################################################################
 
     def test_every_permission_of_a_security_definition_is_deleted(self, session:'any_', importer:'any_') -> 'None':
         security = _add_security(session, _security_name)
 
-        first = PubSubPermission(pattern='orders.*', access_type='publisher', sec_base_id=security.id, cluster_id=_cluster_id)
-        second = PubSubPermission(pattern='invoices.*', access_type='subscriber', sec_base_id=security.id,
-            cluster_id=_cluster_id)
+        first = PubSubPermission(pattern='orders.*', access_type='publisher', sec_base_id=security.id)
+        second = PubSubPermission(pattern='invoices.*', access_type='subscriber', sec_base_id=security.id)
         session.add_all([first, second])
         session.commit()
 
@@ -647,7 +636,7 @@ class TestOrderAndReporting:
         created, _ = importer.sync_from_yaml(config, session)
 
         assert len(created['security']) == 1
-        assert importer.delete_client.invocations == [(targets.Service_Quota_Tier, {'cluster_id': _cluster_id, 'id': tier_id})]
+        assert importer.delete_client.invocations == [(targets.Service_Quota_Tier, {'id': tier_id})]
         assert counts_at_deletion == [1]
 
 # ################################################################################################################################

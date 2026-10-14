@@ -20,13 +20,12 @@ from django.urls import resolve
 # Zato
 from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, SASession, settings_db
 from zato.admin.web.forms import SearchForm
-from zato.admin.web.models import ClusterColorMarker
+from zato.admin.web.models import EnvironmentColorMarker
 from zato.admin.web.util import get_user_profile
 from zato.client import ZatoClient
 from zato.common.const import ServiceConst
 from zato.common.config_db import get_default_env_file_path, refresh_env_from_file
 from zato.common.json_internal import loads
-from zato.common.odb.model import Cluster
 from zato.common.util.api import asbool
 from zato.common.version import get_version
 
@@ -185,7 +184,7 @@ class ZatoMiddleware:
         req.zato.settings_db = settings_db
         req.zato.args = Bunch() # Arguments read from URL
 
-        # Auth-related paths do not need the cluster query or invoke client
+        # Auth-related paths do not need the invoke client
         if req.path in _Auth_Paths:
             return
 
@@ -195,29 +194,16 @@ class ZatoMiddleware:
         try:
             resolved_kwargs = resolve(req.path).kwargs
             req.zato.id = resolved_kwargs.get('id')
-            req.zato.cluster_id = req.GET.get('cluster') \
-                or req.POST.get('cluster_id') \
-                or resolved_kwargs.get('cluster_id') \
-                or resolved_kwargs.get('cluster') \
-                or 1 # By default, this will be the very first cluster so we can just assume it here as the last option.
 
-            if req.zato.cluster_id:
+            if url := os.environ.get('Zato_Server_Address'):
+                pass
+            else:
+                url = 'http://127.0.0.1:17010'
 
-                # Get the cluster we are running under ..
-                req.zato.cluster = req.zato.odb.query(Cluster).\
-                    filter_by(id=req.zato.cluster_id).\
-                    one()
+            auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
+            req.zato.client = Client(req, url, ServiceConst.API_Invoke_Url_Path, auth, to_bunch=True)
 
-                if url := os.environ.get('Zato_Server_Address'):
-                    pass
-                else:
-                    url = 'http://127.0.0.1:17010'
-
-                auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
-                req.zato.client = Client(req, url, ServiceConst.API_Invoke_Url_Path, auth, to_bunch=True)
-
-            req.zato.clusters = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
-            req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
+            req.zato.search_form = SearchForm(req.GET)
 
             if not req.user.is_anonymous:
                 needs_logging = not req.get_full_path().endswith(('.js', '.css', '.png'))
@@ -260,11 +246,11 @@ class ZatoMiddleware:
         resp.context_data['security_posture_enabled'] = asbool(os.environ.get('Zato_Security_Posture_Enabled', 'false'))
         if req.path not in _Auth_Paths:
             try:
-                ccm = ClusterColorMarker.objects.get(cluster_id=1, user_profile=req.zato.user_profile)
-            except ClusterColorMarker.DoesNotExist:
+                marker = EnvironmentColorMarker.objects.get(user_profile=req.zato.user_profile)
+            except EnvironmentColorMarker.DoesNotExist:
                 pass
             else:
-                resp.context_data['cluster_color'] = ccm.color
+                resp.context_data['environment_color'] = marker.color
 
         resp.render()
 

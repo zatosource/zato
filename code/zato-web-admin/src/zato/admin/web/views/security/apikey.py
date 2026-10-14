@@ -36,7 +36,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'username'
     output_optional = 'header',
     output_repeated = True
@@ -102,7 +101,6 @@ def rate_limiting(req, id): # type: ignore
     tier_list = get_tier_list(req)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'entity_id': id,
         'entity_name': req.GET.get('name', ''),
         'rules_json': dumps(rules_response.data.rate_limiting),

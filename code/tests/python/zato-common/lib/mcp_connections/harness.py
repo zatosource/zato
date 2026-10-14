@@ -167,7 +167,6 @@ def start_environment(prefix:'str', extra_environ:'anydict | None' = None) -> 'L
 
     quickstart_command = [
         _zato_bin, 'quickstart', 'create', temp_directory,
-        '--servers', '1',
         '--password', password,
         '--server-api-client-for-scheduler-password', password,
         '--no-scheduler',

@@ -119,7 +119,6 @@ class TestODBSQLiteDefault(TestCase):
 
         qs_cmd = [
             _ZATO_BIN, 'quickstart', 'create', _tmpdir,
-            '--servers', '1',
             '--server-api-client-for-scheduler-password', _PASSWORD,
             '--no-scheduler',
             '--force',

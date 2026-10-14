@@ -132,11 +132,11 @@ $.fn.zato.outgoing.smb.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.port ? item.port : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.username ? item.username : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>',
-        String.format('<a href="/zato/outgoing/file-transfer/schedules/smb/{0}/cluster/{1}/{2}/?name={3}">{4}</a>',
-        item.id, item.cluster_id, data.name_slug, item.name,
+        String.format('<a href="/zato/outgoing/file-transfer/schedules/smb/{0}/{1}/?name={2}">{3}</a>',
+        item.id, data.name_slug, item.name,
         $.fn.zato.count_text(data.scheduler_schedule_count, 'schedule', 'schedules')));
-    row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
-        encodeURIComponent(item.name), item.cluster_id);
+    row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}">Audit log</a></td>',
+        encodeURIComponent(item.name));
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.smb.edit('{0}')\">Edit</a>", item.id));
@@ -169,6 +169,5 @@ $.fn.zato.outgoing.smb.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.outgoing.smb.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing SMB connection `{0}` deleted',
-        'Are you sure you want to delete outgoing SMB connection `{0}`?',
-        true);
+        'Are you sure you want to delete outgoing SMB connection `{0}`?');
 }

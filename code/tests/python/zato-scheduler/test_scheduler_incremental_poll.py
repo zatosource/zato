@@ -49,7 +49,6 @@ class TestGetCurrentStateResponse:
 
     def test_01_create_job(self, client:'any_') -> 'None':
         response = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-incremental-poll-job',
             is_active=True,
             job_type='interval_based',

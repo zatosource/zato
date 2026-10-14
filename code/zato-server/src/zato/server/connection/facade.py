@@ -153,7 +153,6 @@ class SchedulerFacade:
         # Now, we are ready to create a new job ..
         response = self.server.invoke(
             'zato.scheduler.job.create', {
-                'cluster_id': self.server.cluster_id,
                 'name': name,
                 'is_active': True,
                 'job_type': SCHEDULER.JOB_TYPE.ONE_TIME,

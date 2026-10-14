@@ -1474,12 +1474,10 @@
 
     /* config:
          base_url:     e.g. '/zato/scheduler/dashboard/'
-         cluster_id:   numeric cluster id
          object_path:  template with {id}, e.g. 'job/{id}/'
          run_path:     template with {id} and {run_id}, e.g. 'job/{id}/run/{run_id}/' */
     kit.urls.init = function(config) {
         kit.urls._base = config.base_url;
-        kit.urls._cluster_id = config.cluster_id;
         kit.urls._object_path = config.object_path || '';
         kit.urls._run_path = config.run_path || '';
         kit.urls._range_minutes = config.range_minutes;
@@ -1490,12 +1488,12 @@
     };
 
     kit.urls.dashboard = function() {
-        return kit.urls._base + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
+        return kit.urls._base + '?range=' + kit.urls._range_minutes;
     };
 
     kit.urls.object_detail = function(object_id, params) {
         var path = kit.urls._object_path.replace('{id}', encodeURIComponent(object_id));
-        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
+        var url = kit.urls._base + path + '?range=' + kit.urls._range_minutes;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
@@ -1508,7 +1506,7 @@
         var path = kit.urls._run_path
             .replace('{id}', encodeURIComponent(object_id))
             .replace('{run_id}', encodeURIComponent(run_id));
-        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
+        var url = kit.urls._base + path + '?range=' + kit.urls._range_minutes;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);

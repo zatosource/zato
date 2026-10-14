@@ -18,7 +18,6 @@ from six import add_metaclass
 # Zato
 from zato.common.api import EMAIL as EMail_Common, IMAPAttachment, SCHEDULER, Zato_None
 from zato.common.broker_message import EMAIL
-from zato.common.defaults import default_cluster_id
 from zato.common.exception import BadRequest
 from zato.common.odb.model import IMAP, Job
 from zato.common.odb.query import email_imap_list
@@ -198,7 +197,6 @@ def _sync_scheduler_job(service:'Service', input:'Bunch', instance:'any_', attrs
         })
 
         request = {
-            'cluster_id': default_cluster_id,
             'is_active': input.is_active,
             'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
             'service': _scheduler_common.Dispatch_Service,

@@ -142,7 +142,6 @@ command_imports = (
     ('check_config', 'zato.cli.check_config.CheckConfig'),
     ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
     ('create_basic_auth', 'zato.cli.security.basic_auth.CreateDefinition'),
-    ('create_cluster', 'zato.cli.create_cluster.Create'),
     ('create_odb', 'zato.cli.create_odb.Create'),
     ('create_rest_channel', 'zato.cli.rest.channel.CreateChannel'),
     ('create_server', 'zato.cli.create_server.Create'),
@@ -226,9 +225,7 @@ class ZatoCommand:
         NOT_A_ZATO_COMPONENT = 3
         NO_ODB_FOUND = 4
         DIR_NOT_EMPTY = 5
-        CLUSTER_NAME_ALREADY_EXISTS = 6
         SERVER_NAME_ALREADY_EXISTS = 7
-        NO_SUCH_CLUSTER = 8
         COMPONENT_ALREADY_RUNNING = 9
         NO_PID_FOUND = 10
         NO_SUCH_WEB_ADMIN_USER = 11
@@ -858,7 +855,7 @@ class CACreateCommand(ZatoCommand):
             'target_dir':self.target_dir
         }
 
-        for arg in('cluster_name', 'server_name', 'scheduler_name'):
+        for arg in('server_name', 'scheduler_name'):
             if hasattr(args, arg):
                 file_args[arg] = getattr(args, arg)
 

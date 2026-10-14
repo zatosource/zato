@@ -16,7 +16,6 @@ import pytest
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.defaults import default_cluster_id
 
 # Live environment
 from live_containers.ready import wait_until
@@ -80,7 +79,7 @@ class Run(NamedTuple):
 # ################################################################################################################################
 
 def _job_id(client:'AdminClient', job_name:'str') -> 'int':
-    response = client.invoke(Job_Service, {'cluster_id': default_cluster_id, 'name': job_name})
+    response = client.invoke(Job_Service, {'name': job_name})
 
     out = response['id']
     return out

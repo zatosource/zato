@@ -10,7 +10,6 @@ $.namespace('zato.common.security');
  * @param {string} selectId - CSS selector for the dropdown
  */
 $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selectedId, endpoint, selectId) {
-    var clusterId = $('#cluster_id').val();
     var select = $(selectId);
     var selectContainer = select.parent();
 
@@ -35,7 +34,6 @@ $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selec
         url: endpoint,
         type: 'GET',
         data: {
-            cluster_id: clusterId,
             form_type: formType
         },
         success: function(response) {
@@ -94,7 +92,7 @@ $.fn.zato.common.security.populateSecurityDefinitions = function(formType, selec
                         var message = hasExistingClients ? 'No security definitions left' : 'No security definitions available';
 
                         // Add message with link
-                        var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/security/basic-auth/?cluster=' + clusterId + '" target="_blank">Click to create one</a></span>');
+                        var messageElement = $('<span class="no-security-definitions-message" style="font-style: italic; color: #666;">' + message + ' - <a href="/zato/security/basic-auth/" target="_blank">Click to create one</a></span>');
                         selectContainer.append(messageElement);
 
                         // Disable OK button

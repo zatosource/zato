@@ -95,7 +95,7 @@ class PubSubRESTService(Service):
         """ Returns the security definition the given username belongs to, out of the pub/sub clients
         the server knows of - a definition that pub/sub was never told about is not a caller here.
         """
-        # The pub/sub client store is filled from the permissions and subscriptions of the cluster,
+        # The pub/sub client store is filled from the permissions and subscriptions of the environment,
         # so this is both the lookup by username and what says the definition may be used here ..
         sec_name = self.server.pubsub_subscriptions.get_sec_name_by_username(username)
 

@@ -14,7 +14,7 @@ from uuid import uuid4
 # Zato
 from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
-from zato.common.odb.model import Cluster, NTLM
+from zato.common.odb.model import NTLM
 from zato.common.odb.query import ntlm_list
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
@@ -32,11 +32,11 @@ class GetList(AdminService):
     """
     _filter_by = NTLM.name,
 
-    input = 'cluster_id', *query_parameters
+    input = query_parameters
     output = 'id', 'name', 'is_active', 'username'
 
     def get_data(self, session):
-        return self._search(ntlm_list, session, self.request.input.cluster_id, False)
+        return self._search(ntlm_list, session, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -49,7 +49,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new NTLM definition.
     """
-    input = 'cluster_id', 'name', 'is_active', 'username'
+    input = 'name', 'is_active', 'username'
     output = 'id', 'name'
 
     def handle(self):
@@ -58,18 +58,16 @@ class Create(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(NTLM).\
-                    filter(Cluster.id==input.cluster_id).\
                     filter(NTLM.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('NTLM definition [{0}] already exists on this cluster'.format(input.name))
+                    raise Exception('NTLM definition [{0}] already exists'.format(input.name))
 
-                auth = NTLM(None, input.name, input.is_active, input.username, input.password, cluster)
+                auth = NTLM(None, input.name, input.is_active, input.username, input.password)
 
                 session.add(auth)
                 session.commit()
@@ -98,7 +96,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an NTLM definition.
     """
-    input = 'id', 'cluster_id', 'name', 'is_active', 'username'
+    input = 'id', 'name', 'is_active', 'username'
     output = 'id', 'name'
 
     def handle(self):
@@ -106,13 +104,12 @@ class Edit(AdminService):
         with closing(self.odb.session()) as session:
             try:
                 existing_one = session.query(NTLM).\
-                    filter(Cluster.id==input.cluster_id).\
                     filter(NTLM.name==input.name).\
                     filter(NTLM.id!=input.id).\
                     first()
 
                 if existing_one:
-                    raise Exception('NTLM definition [{0}] already exists on this cluster'.format(input.name))
+                    raise Exception('NTLM definition [{0}] already exists'.format(input.name))
 
                 definition = session.query(NTLM).filter_by(id=input.id).one()
                 old_name = definition.name

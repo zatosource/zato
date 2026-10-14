@@ -159,7 +159,7 @@ class _OnUpdate(Service):
 
         #
         # First, we need to combine relative_dir with our own server's root directory.
-        # This is needed because other servers may be in different root directories
+        # This is needed because a server may be installed in any root directory
         # yet the relative_dir to the file will be the same.
         #
         # For instance, we can have server directories as such

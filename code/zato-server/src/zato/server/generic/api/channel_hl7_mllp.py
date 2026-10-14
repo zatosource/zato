@@ -13,7 +13,6 @@ from threading import Lock
 # Zato
 from zato.common.api import CHANNEL
 from zato.common.audit_log.api import AuditLog
-from zato.common.defaults import default_cluster_id
 from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_message_size
 from zato.common.hl7.mllp.haproxy import resolve_internal_port
 from zato.common.hl7.mllp.preprocess import build_channel_tolerance_config
@@ -536,7 +535,6 @@ def delete_rest_channel(service:'Service', rest_channel_id:'int | None') -> 'Non
     # A REST channel the Dashboard has already deleted is not an error
     request = {
         'id': rest_channel_id,
-        'cluster_id': default_cluster_id,
         'should_raise_if_missing': False,
     }
 

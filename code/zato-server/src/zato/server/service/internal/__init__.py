@@ -16,7 +16,6 @@ from traceback import format_exc
 from zato.common.api import GENERIC, SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.const import SECRETS
-from zato.common.odb.model import Cluster
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_response_value, make_cid_public
 from zato.common.util.sql import search as sql_search
@@ -122,21 +121,6 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _new_zato_instance_with_cluster(self, instance_class, cluster_id=None, **kwargs):
-
-        if not cluster_id:
-            cluster_id = self.request.input.get('cluster_id')
-            cluster_id = cluster_id or self.server.cluster_id
-
-        with closing(self.odb.session()) as session:
-            cluster_id = cluster_id or self.request.input.cluster_id
-            cluster = session.query(Cluster).\
-                   filter(Cluster.id==cluster_id).\
-                   one()
-        return instance_class(cluster=cluster, **kwargs)
-
-# ################################################################################################################################
-
     def after_handle(self):
 
         if self.server.is_admin_enabled_for_info:
@@ -162,7 +146,7 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _search(self, search_func, session=None, cluster_id=None, *args, **kwargs) -> 'anylist':
+    def _search(self, search_func, session=None, *args, **kwargs) -> 'anylist':
         """ Adds search criteria to an SQLAlchemy query based on the service's (self) search configuration.
         """
 
@@ -170,12 +154,12 @@ class AdminService(Service):
         needs_pagination = self.request.input.get('paginate')
 
         if needs_pagination:
-            result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
+            result = sql_search(search_func, self.request.input, self._filter_by, session, *args, **kwargs)
             self._search_tool.set_output_meta(result)
             logger.info('_search: pagination meta -> %s', self._search_tool.output_meta)
         else:
             # No pagination requested at all
-            result = search_func(session, cluster_id, *args)
+            result = search_func(session, *args)
 
         return result
 
@@ -230,7 +214,7 @@ class Ping(AdminService):
 
 # ################################################################################################################################
 
-class ServerInvoker(AdminService):
+class ServerFunctionInvoker(AdminService):
 
     name = 'zato.server.invoker'
 

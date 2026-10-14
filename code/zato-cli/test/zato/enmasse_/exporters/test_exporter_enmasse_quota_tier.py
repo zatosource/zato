@@ -64,9 +64,6 @@ class TestEnmasseQuotaTierExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Import quota tier definitions
         tiers_from_yaml = self.yaml_config.get('quota_tier', [])
         if tiers_from_yaml:

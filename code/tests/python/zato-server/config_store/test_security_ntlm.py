@@ -29,12 +29,11 @@ class TestSecurityNTLM:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-ntlm-1',
             is_active=True,
             username='testntlmuser1',
@@ -44,14 +43,13 @@ class TestSecurityNTLM:
         self.__class__.created_ids.append(resp['id'])
 
     def test_03_get_list_after_create(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-ntlm-1' in names
 
     def test_04_create_batch(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'test-ntlm-{i}',
                 is_active=True,
                 username=f'testntlmuser{i}',
@@ -60,7 +58,7 @@ class TestSecurityNTLM:
             self.__class__.created_ids.append(resp['id'])
 
     def test_05_get_list_batch(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-ntlm-')]
         assert len(test_items) >= 5
 
@@ -68,7 +66,6 @@ class TestSecurityNTLM:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-ntlm-1-edited',
             is_active=True,
             username='testntlmuser1-edited',
@@ -76,7 +73,7 @@ class TestSecurityNTLM:
         assert resp['id'] == item_id
 
     def test_07_get_list_after_edit(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-ntlm-1-edited' in names
         assert 'test-ntlm-1' not in names
@@ -92,7 +89,7 @@ class TestSecurityNTLM:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_10_get_list_after_delete(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-ntlm-')]
         assert len(test_items) >= 4
 
@@ -102,6 +99,6 @@ class TestSecurityNTLM:
             self.__class__.created_ids.remove(item_id)
 
     def test_12_get_list_final(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-ntlm-')]
         assert len(test_items) == 0

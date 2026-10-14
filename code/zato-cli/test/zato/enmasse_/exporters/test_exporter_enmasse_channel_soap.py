@@ -79,9 +79,6 @@ class TestEnmasseChannelSOAPExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Import security definitions first, as channels may depend on them
         security_defs_from_yaml = self.yaml_config['security']
         created_sec, updated_sec = self.security_importer.sync_security_definitions(security_defs_from_yaml, self.session)
@@ -110,7 +107,7 @@ class TestEnmasseChannelSOAPExporter(TestCase):
         logger.info('Imported %d SOAP channels (created=%d, updated=%d)', len(created) + len(updated), len(created), len(updated))
 
         # Test that the imported channels can be exported correctly
-        all_exported_channels = self.channel_soap_exporter.export(self.session, self.importer.cluster_id)
+        all_exported_channels = self.channel_soap_exporter.export(self.session)
 
         # Filter exported channels to only include those with names starting with "enmasse"
         exported_channels = [channel for channel in all_exported_channels if channel['name'].startswith('enmasse')]

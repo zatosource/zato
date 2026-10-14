@@ -43,12 +43,11 @@ class TestChannelHL7MLLP:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-ch-hl7mllp-1',
             type_=TYPE,
             is_active=True,
@@ -68,7 +67,6 @@ class TestChannelHL7MLLP:
         # The Dashboard's MLLP view sends security_id as a plain integer,
         # with no security-type prefix in front of it
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-ch-hl7mllp-mtls',
             type_=TYPE,
             is_active=True,
@@ -88,7 +86,6 @@ class TestChannelHL7MLLP:
     def test_02b_create_with_destinations(self, client:'ZatoClient') -> 'None':
         # The destination fields ride through the opaque store with everything else
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-ch-hl7mllp-dest',
             type_=TYPE,
             is_active=True,
@@ -108,7 +105,7 @@ class TestChannelHL7MLLP:
         self.__class__.created_ids.append(resp['id'])
 
     def test_02c_destination_fields_come_back_as_stored(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
 
         item = None
         for entry in data:
@@ -123,14 +120,13 @@ class TestChannelHL7MLLP:
         assert item['delivery_mode'] == 'in-order'
 
     def test_03_get_list_after_create(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         names = [item['name'] for item in data]
         assert 'test-ch-hl7mllp-1' in names
 
     def test_04_create_batch(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'test-ch-hl7mllp-{i}',
                 type_=TYPE,
                 is_active=True,
@@ -146,7 +142,7 @@ class TestChannelHL7MLLP:
             self.__class__.created_ids.append(resp['id'])
 
     def test_05_get_list_batch(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-ch-hl7mllp-')]
         assert len(test_items) >= 5
 
@@ -154,7 +150,6 @@ class TestChannelHL7MLLP:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-ch-hl7mllp-1-edited',
             type_=TYPE,
             is_active=True,
@@ -169,7 +164,7 @@ class TestChannelHL7MLLP:
         assert resp['id'] == item_id
 
     def test_07_get_list_after_edit(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         names = [item['name'] for item in data]
         assert 'test-ch-hl7mllp-1-edited' in names
         assert 'test-ch-hl7mllp-1' not in names
@@ -185,7 +180,7 @@ class TestChannelHL7MLLP:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_10_get_list_after_delete(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-ch-hl7mllp-')]
         assert len(test_items) >= 4
 
@@ -195,6 +190,6 @@ class TestChannelHL7MLLP:
             self.__class__.created_ids.remove(item_id)
 
     def test_12_get_list_final(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-ch-hl7mllp-')]
         assert len(test_items) == 0

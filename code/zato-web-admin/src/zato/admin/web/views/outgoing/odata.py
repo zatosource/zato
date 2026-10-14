@@ -35,7 +35,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active', 'address', 'odata_version', 'auth_type'
     output_optional = ('username', 'token_url', 'tenant_id', 'client_id', 'scopes', 'needs_csrf_token', 'page_size',
         'timeout', 'pool_size')
@@ -127,7 +127,7 @@ def change_password(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id, subtype):
+def ping(req, id, subtype):
     label = ODATA_Subtype[subtype]['label']
     return ping_connection(req, 'zato.generic.connection.ping', id, '{} connection'.format(label))
 

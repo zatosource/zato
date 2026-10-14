@@ -18,11 +18,11 @@ from zato.common.alerting.model import AlertAction
 from zato.common.alerting.object_config import storage_name
 from zato.common.api import GENERIC, HTTP_SOAP
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.odb.model import Cluster, GenericConn, HTTPBasicAuth
+from zato.common.odb.model import GenericConn, HTTPBasicAuth
 from zato.common.typing_ import cast_
 
 # Test helpers
-from explain_helpers import _cluster_id, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
+from explain_helpers import _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
     new_payload as _new_payload, new_service as _new_service, new_session as _new_session, \
     object_section as _object_section, stored_explanation as _stored_explanation
 
@@ -71,9 +71,8 @@ def _seed_connection(session_maker:'any_') -> 'None':
     and alert settings of its own.
     """
     session = session_maker()
-    cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
-    security = HTTPBasicAuth(None, _security_name, True, 'ehr', 'Zato', 'never-shown', cluster)
+    security = HTTPBasicAuth(None, _security_name, True, 'ehr', 'Zato', 'never-shown')
     session.add(security)
     session.flush()
 
@@ -98,7 +97,6 @@ def _seed_connection(session_maker:'any_') -> 'None':
     row.is_outconn = True
     row.address = _conn_address
     row.pool_size = 10
-    row.cluster = cluster
     row.opaque1 = json.dumps(opaque)
 
     session.add(row)

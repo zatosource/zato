@@ -63,7 +63,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     input_optional = 'query',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
     output_repeated = True
@@ -134,7 +133,7 @@ def upload(req:'HttpRequest') -> 'any_':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
+def invoke(req:'HttpRequest', name:'str') -> 'HttpResponse':
     """ Executes a service directly, even if it isn't exposed through any channel.
     """
 
@@ -172,7 +171,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         data = enriched_exc.args
 
     except Exception as e:
-        msg = 'Service could not be invoked; name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
+        msg = 'Service could not be invoked; name:`{}`, e:`{}`'.format(name, format_exc())
         logger.error(msg)
         data = e.args
         status_code = HTTPStatus.BAD_REQUEST

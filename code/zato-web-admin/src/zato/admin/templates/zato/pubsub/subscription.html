@@ -394,13 +394,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Pub/sub" %}Subscriptions</h2>
@@ -453,7 +449,7 @@
 
                         <td class='numbering' style="width:1%; white-space:nowrap;">&nbsp;</td>
                         <td class='impexp' style="width:1%; white-space:nowrap;"><input type='checkbox' /></td>
-                        <td style="white-space:nowrap"><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security|urlencode }}">{{ item.security }}</a></td>
+                        <td style="white-space:nowrap"><a href="/zato/security/basic-auth/?query={{ item.security|urlencode }}">{{ item.security }}</a></td>
 
                         <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{{ item.sub_key }}">{{ item.sub_key }}</span></td>
                         <td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></div></td>
@@ -462,15 +458,15 @@
                             {% if item.delivery_type == 'pull' %}
                                 Pull
                             {% elif item.delivery_type == 'push' and item.push_type == 'rest' %}
-                                Push <a href="/zato/http-soap/?cluster={{ cluster_id }}&amp;query={{ item.rest_push_endpoint_name }}&amp;connection=outgoing&amp;transport=plain_http">{{ item.rest_push_endpoint_name }}</a>
+                                Push <a href="/zato/http-soap/?query={{ item.rest_push_endpoint_name }}&amp;connection=outgoing&amp;transport=plain_http">{{ item.rest_push_endpoint_name }}</a>
                             {% elif item.delivery_type == 'push' and item.push_type == 'service' %}
-                                Push <a href="{% url "service-ide" "service" item.push_service_name %}?cluster={{ cluster_id }}">{{ item.push_service_name }}</a>
+                                Push <a href="{% url "service-ide" "service" item.push_service_name %}">{{ item.push_service_name }}</a>
                             {% else %}
                                 Push
                             {% endif %}
                         </div></td>
                         <td>{{ item.topic_link_list|safe }}</td>
-                        <td><a href="/zato/pubsub/subscription/queue/?cluster={{ cluster_id }}&sub_key={{ item.sub_key }}&queue_name={{ item.security|urlencode }}&state=pending">{{ item.pending_depth|intcomma }}</a></td>
+                        <td><a href="/zato/pubsub/subscription/queue/?sub_key={{ item.sub_key }}&queue_name={{ item.security|urlencode }}&state=pending">{{ item.pending_depth|intcomma }}</a></td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
 
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a></td>
@@ -557,7 +553,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -616,14 +611,11 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-sub_key" name="edit-sub_key" />
                 </form>
             </div>
         </div>
 
-    {% endif %} {% comment %}cluster_id{% endcomment %}
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

@@ -246,7 +246,6 @@ class TestHL7Volume:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-hl7-volume-accept',
             type_=_connection_type_channel,
             is_active=True,
@@ -267,7 +266,6 @@ class TestHL7Volume:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-hl7-volume-error',
             type_=_connection_type_channel,
             is_active=True,

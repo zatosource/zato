@@ -28,7 +28,6 @@ _text_type        = Text()
 # ################################################################################################################################
 
 _definition_id              = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_definition_cluster_id      = Column('cluster_id', _integer_type, nullable=False)
 _definition_parent_foreign  = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _definition_parent_id       = Column('parent_id', _integer_type, _definition_parent_foreign, nullable=True)
 _definition_parent_key      = Column('parent_key', _integer_type, nullable=False)
@@ -41,7 +40,6 @@ _definition_created_at      = Column('created_at', _datetime_type, nullable=Fals
 _definition_updated_at      = Column('updated_at', _datetime_type, nullable=False)
 _definition_document        = Column('document', _text_type, nullable=False)
 _definition_unique_name     = UniqueConstraint(
-    'cluster_id',
     'parent_key',
     'object_type',
     'name',
@@ -54,7 +52,6 @@ rule_definition_table = Table(
     'rule_definition',
     metadata,
     _definition_id,
-    _definition_cluster_id,
     _definition_parent_id,
     _definition_parent_key,
     _definition_name,
@@ -70,14 +67,13 @@ rule_definition_table = Table(
     _definition_parent_check,
 )
 
-_ = Index('rd_parent', rule_definition_table.c.cluster_id, rule_definition_table.c.parent_id)
+_ = Index('rd_parent', rule_definition_table.c.parent_id)
 _ = Index(
     'rd_type',
-    rule_definition_table.c.cluster_id,
     rule_definition_table.c.object_type,
     rule_definition_table.c.is_active,
 )
-_ = Index('rd_updated', rule_definition_table.c.cluster_id, rule_definition_table.c.updated_at)
+_ = Index('rd_updated', rule_definition_table.c.updated_at)
 
 # ################################################################################################################################
 
@@ -113,7 +109,6 @@ _ = Index('rv_created', rule_version_table.c.definition_id, rule_version_table.c
 # ################################################################################################################################
 
 _event_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_event_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
 _event_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _event_definition_id      = Column('definition_id', _integer_type, _event_definition_foreign, nullable=False)
 _event_version            = Column('version', _integer_type, nullable=True)
@@ -130,7 +125,6 @@ rule_event_table = Table(
     'rule_event',
     metadata,
     _event_id,
-    _event_cluster_id,
     _event_definition_id,
     _event_version,
     _event_type,
@@ -143,7 +137,7 @@ rule_event_table = Table(
     _event_count_check,
 )
 
-_ = Index('re_feed', rule_event_table.c.cluster_id, rule_event_table.c.created_at, rule_event_table.c.id)
+_ = Index('re_feed', rule_event_table.c.created_at, rule_event_table.c.id)
 _ = Index('re_parent', rule_event_table.c.definition_id, rule_event_table.c.created_at, rule_event_table.c.id)
 
 # The notify loop reads one destination's slice of the feed by id, not by time, so it needs the id
@@ -161,7 +155,6 @@ _ = Index(
 # ################################################################################################################################
 
 _decision_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_decision_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
 _decision_external_id        = Column('decision_id', _string_191_type, nullable=False)
 _decision_ruleset_foreign    = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _decision_ruleset_id         = Column('ruleset_id', _integer_type, _decision_ruleset_foreign, nullable=False)
@@ -176,7 +169,7 @@ _decision_duration_ms        = Column('duration_ms', _integer_type, nullable=Fal
 _decision_has_payload        = Column('has_payload', _boolean_type, nullable=False)
 _decision_payload            = Column('payload', _text_type, nullable=True)
 _decision_fired_rule_ids     = Column('fired_rule_ids', _text_type, nullable=True)
-_decision_unique_external_id = UniqueConstraint('cluster_id', 'decision_id', name='rdec_uq_decision')
+_decision_unique_external_id = UniqueConstraint('decision_id', name='rdec_uq_decision')
 _decision_version_check      = CheckConstraint('rules_version >= 1', name='rdec_ck_version')
 _decision_duration_check     = CheckConstraint('duration_ms >= 0', name='rdec_ck_duration')
 
@@ -184,7 +177,6 @@ rule_decision_table = Table(
     'rule_decision',
     metadata,
     _decision_id,
-    _decision_cluster_id,
     _decision_external_id,
     _decision_ruleset_id,
     _decision_rules_version,
@@ -203,36 +195,31 @@ rule_decision_table = Table(
     _decision_duration_check,
 )
 
-_ = Index('rdec_time', rule_decision_table.c.cluster_id, rule_decision_table.c.occurred_at, rule_decision_table.c.id)
+_ = Index('rdec_time', rule_decision_table.c.occurred_at, rule_decision_table.c.id)
 _ = Index(
     'rdec_business',
-    rule_decision_table.c.cluster_id,
     rule_decision_table.c.business_key,
     rule_decision_table.c.occurred_at,
 )
 _ = Index(
     'rdec_caller',
-    rule_decision_table.c.cluster_id,
     rule_decision_table.c.caller,
     rule_decision_table.c.occurred_at,
 )
 _ = Index(
     'rdec_outcome',
-    rule_decision_table.c.cluster_id,
     rule_decision_table.c.ruleset_id,
     rule_decision_table.c.outcome,
     rule_decision_table.c.occurred_at,
 )
 _ = Index(
     'rdec_version',
-    rule_decision_table.c.cluster_id,
     rule_decision_table.c.ruleset_id,
     rule_decision_table.c.rules_version,
     rule_decision_table.c.occurred_at,
 )
 _ = Index(
     'rdec_error',
-    rule_decision_table.c.cluster_id,
     rule_decision_table.c.is_error,
     rule_decision_table.c.occurred_at,
 )
@@ -244,14 +231,12 @@ _ = Index(
 )
 _ = Index(
     'rdec_bucket',
-    rule_decision_table.c.cluster_id,
     rule_decision_table.c.ruleset_id,
     rule_decision_table.c.time_bucket,
     rule_decision_table.c.outcome,
 )
 _ = Index(
     'rdec_duration',
-    rule_decision_table.c.cluster_id,
     rule_decision_table.c.ruleset_id,
     rule_decision_table.c.duration_ms,
 )
@@ -259,7 +244,6 @@ _ = Index(
 # ################################################################################################################################
 
 _reference_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_reference_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
 _reference_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _reference_definition_id      = Column('definition_id', _integer_type, _reference_definition_foreign, nullable=False)
 _reference_rule_name          = Column('rule_name', _string_191_type, nullable=False)
@@ -271,7 +255,6 @@ rule_reference_table = Table(
     'rule_reference',
     metadata,
     _reference_id,
-    _reference_cluster_id,
     _reference_definition_id,
     _reference_rule_name,
     _reference_term,
@@ -279,25 +262,23 @@ rule_reference_table = Table(
     _reference_role,
 )
 
-_ = Index('rref_term', rule_reference_table.c.cluster_id, rule_reference_table.c.term)
+_ = Index('rref_term', rule_reference_table.c.term)
 _ = Index('rref_parent', rule_reference_table.c.definition_id)
 
 # ################################################################################################################################
 
 _follow_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_follow_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
 _follow_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _follow_definition_id      = Column('definition_id', _integer_type, _follow_definition_foreign, nullable=False)
 _follow_actor              = Column('actor', _string_191_type, nullable=False)
 _follow_created_at         = Column('created_at', _datetime_type, nullable=False)
 _follow_last_seen_at       = Column('last_seen_at', _datetime_type, nullable=False)
-_follow_unique_actor       = UniqueConstraint('cluster_id', 'actor', 'definition_id', name='rf_uq_follow')
+_follow_unique_actor       = UniqueConstraint('actor', 'definition_id', name='rf_uq_follow')
 
 rule_follow_table = Table(
     'rule_follow',
     metadata,
     _follow_id,
-    _follow_cluster_id,
     _follow_definition_id,
     _follow_actor,
     _follow_created_at,
@@ -305,24 +286,22 @@ rule_follow_table = Table(
     _follow_unique_actor,
 )
 
-_ = Index('rf_actor', rule_follow_table.c.cluster_id, rule_follow_table.c.actor)
+_ = Index('rf_actor', rule_follow_table.c.actor)
 
 # ################################################################################################################################
 
 _view_id         = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_view_cluster_id = Column('cluster_id', _integer_type, nullable=False)
 _view_actor      = Column('actor', _string_191_type, nullable=False)
 _view_name       = Column('name', _string_191_type, nullable=False)
 _view_payload    = Column('payload', _text_type, nullable=False)
 _view_created_at = Column('created_at', _datetime_type, nullable=False)
 _view_updated_at = Column('updated_at', _datetime_type, nullable=False)
-_view_unique_name = UniqueConstraint('cluster_id', 'actor', 'name', name='rvw_uq_name')
+_view_unique_name = UniqueConstraint('actor', 'name', name='rvw_uq_name')
 
 rule_view_table = Table(
     'rule_view',
     metadata,
     _view_id,
-    _view_cluster_id,
     _view_actor,
     _view_name,
     _view_payload,
@@ -331,46 +310,42 @@ rule_view_table = Table(
     _view_unique_name,
 )
 
-_ = Index('rvw_actor', rule_view_table.c.cluster_id, rule_view_table.c.actor)
+_ = Index('rvw_actor', rule_view_table.c.actor)
 
 # ################################################################################################################################
 
 _recent_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_recent_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
 _recent_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _recent_definition_id      = Column('definition_id', _integer_type, _recent_definition_foreign, nullable=False)
 _recent_actor              = Column('actor', _string_191_type, nullable=False)
 _recent_visited_at         = Column('visited_at', _datetime_type, nullable=False)
-_recent_unique_visit       = UniqueConstraint('cluster_id', 'actor', 'definition_id', name='rrec_uq_visit')
+_recent_unique_visit       = UniqueConstraint('actor', 'definition_id', name='rrec_uq_visit')
 
 rule_recent_table = Table(
     'rule_recent',
     metadata,
     _recent_id,
-    _recent_cluster_id,
     _recent_definition_id,
     _recent_actor,
     _recent_visited_at,
     _recent_unique_visit,
 )
 
-_ = Index('rrec_actor', rule_recent_table.c.cluster_id, rule_recent_table.c.actor, rule_recent_table.c.visited_at)
+_ = Index('rrec_actor', rule_recent_table.c.actor, rule_recent_table.c.visited_at)
 
 # ################################################################################################################################
 
 _chat_config_id         = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_chat_config_cluster_id = Column('cluster_id', _integer_type, nullable=False)
 _chat_config_kind       = Column('kind', _string_64_type, nullable=False)
 _chat_config_payload    = Column('payload', _text_type, nullable=False)
 _chat_config_updated_at = Column('updated_at', _datetime_type, nullable=False)
 _chat_config_updated_by = Column('updated_by', _string_191_type, nullable=False)
-_chat_config_unique_kind = UniqueConstraint('cluster_id', 'kind', name='rcc_uq_kind')
+_chat_config_unique_kind = UniqueConstraint('kind', name='rcc_uq_kind')
 
 rule_chat_config_table = Table(
     'rule_chat_config',
     metadata,
     _chat_config_id,
-    _chat_config_cluster_id,
     _chat_config_kind,
     _chat_config_payload,
     _chat_config_updated_at,
@@ -381,7 +356,6 @@ rule_chat_config_table = Table(
 # ################################################################################################################################
 
 _destination_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_destination_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
 _destination_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _destination_definition_id      = Column('definition_id', _integer_type, _destination_definition_foreign, nullable=False)
 _destination_kind               = Column('kind', _string_64_type, nullable=False)
@@ -393,14 +367,13 @@ _destination_last_error         = Column('last_error', _text_type, nullable=True
 _destination_last_delivery_at   = Column('last_delivery_at', _datetime_type, nullable=True)
 _destination_created_at         = Column('created_at', _datetime_type, nullable=False)
 _destination_created_by         = Column('created_by', _string_191_type, nullable=False)
-_destination_unique_target      = UniqueConstraint('cluster_id', 'definition_id', 'kind', 'target', name='rnd_uq_target')
+_destination_unique_target      = UniqueConstraint('definition_id', 'kind', 'target', name='rnd_uq_target')
 _destination_cursor_check       = CheckConstraint('cursor_id >= 0', name='rnd_ck_cursor')
 
 rule_notify_destination_table = Table(
     'rule_notify_destination',
     metadata,
     _destination_id,
-    _destination_cluster_id,
     _destination_definition_id,
     _destination_kind,
     _destination_target,
@@ -415,23 +388,21 @@ rule_notify_destination_table = Table(
     _destination_cursor_check,
 )
 
-_ = Index('rnd_parent', rule_notify_destination_table.c.cluster_id, rule_notify_destination_table.c.definition_id)
+_ = Index('rnd_parent', rule_notify_destination_table.c.definition_id)
 
 # ################################################################################################################################
 
 _job_cursor_id         = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_job_cursor_cluster_id = Column('cluster_id', _integer_type, nullable=False)
 _job_cursor_name       = Column('name', _string_64_type, nullable=False)
 _job_cursor_last_id    = Column('last_id', _integer_type, nullable=False)
 _job_cursor_updated_at = Column('updated_at', _datetime_type, nullable=False)
-_job_cursor_unique_name = UniqueConstraint('cluster_id', 'name', name='rjc_uq_name')
+_job_cursor_unique_name = UniqueConstraint('name', name='rjc_uq_name')
 _job_cursor_check       = CheckConstraint('last_id >= 0', name='rjc_ck_last_id')
 
 rule_job_cursor_table = Table(
     'rule_job_cursor',
     metadata,
     _job_cursor_id,
-    _job_cursor_cluster_id,
     _job_cursor_name,
     _job_cursor_last_id,
     _job_cursor_updated_at,
@@ -442,7 +413,6 @@ rule_job_cursor_table = Table(
 # ################################################################################################################################
 
 _approval_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_approval_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
 _approval_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _approval_definition_id      = Column('definition_id', _integer_type, _approval_definition_foreign, nullable=False)
 _approval_version            = Column('version', _integer_type, nullable=False)
@@ -450,14 +420,13 @@ _approval_content_hash       = Column('content_hash', _string_64_type, nullable=
 _approval_approver           = Column('approver', _string_191_type, nullable=False)
 _approval_comment            = Column('comment', _string_1000_type, nullable=True)
 _approval_created_at         = Column('created_at', _datetime_type, nullable=False)
-_approval_unique_version     = UniqueConstraint('cluster_id', 'definition_id', 'version', name='rap_uq_version')
+_approval_unique_version     = UniqueConstraint('definition_id', 'version', name='rap_uq_version')
 _approval_version_check      = CheckConstraint('version >= 1', name='rap_ck_version')
 
 rule_approval_table = Table(
     'rule_approval',
     metadata,
     _approval_id,
-    _approval_cluster_id,
     _approval_definition_id,
     _approval_version,
     _approval_content_hash,
@@ -468,12 +437,11 @@ rule_approval_table = Table(
     _approval_version_check,
 )
 
-_ = Index('rap_parent', rule_approval_table.c.cluster_id, rule_approval_table.c.definition_id)
+_ = Index('rap_parent', rule_approval_table.c.definition_id)
 
 # ################################################################################################################################
 
 _approval_config_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
-_approval_config_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
 _approval_config_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
 _approval_config_definition_id      = Column(
     'definition_id',
@@ -485,13 +453,12 @@ _approval_config_gate_enabled       = Column('gate_enabled', _boolean_type, null
 _approval_config_allow_self         = Column('allow_self_approval', _boolean_type, nullable=False)
 _approval_config_updated_at         = Column('updated_at', _datetime_type, nullable=False)
 _approval_config_updated_by         = Column('updated_by', _string_191_type, nullable=False)
-_approval_config_unique_definition  = UniqueConstraint('cluster_id', 'definition_id', name='rac_uq_definition')
+_approval_config_unique_definition  = UniqueConstraint('definition_id', name='rac_uq_definition')
 
 rule_approval_config_table = Table(
     'rule_approval_config',
     metadata,
     _approval_config_id,
-    _approval_config_cluster_id,
     _approval_config_definition_id,
     _approval_config_gate_enabled,
     _approval_config_allow_self,

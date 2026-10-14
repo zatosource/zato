@@ -48,9 +48,8 @@ class GenericObjectWrapper:
     subtype:'strnone' = None
     model_class:'type_[ModelGenericObject]' = ModelGenericObject # type: ignore
 
-    def __init__(self, session:'SASession', cluster_id:'int') -> 'None':
+    def __init__(self, session:'SASession') -> 'None':
         self.session = session
-        self.cluster_id = cluster_id
 
 # ################################################################################################################################
 
@@ -63,7 +62,6 @@ class GenericObjectWrapper:
         return and_(
             self.model_class.name==name,
             self.model_class.type_==self.type_,
-            self.model_class.cluster_id==self.cluster_id,
         )
 
 # ################################################################################################################################
@@ -76,7 +74,6 @@ class GenericObjectWrapper:
         item = self.session.query(self.model_class).\
             filter(self.model_class.name==name).\
             filter(self.model_class.type_==type_).\
-            filter(self.model_class.cluster_id==self.cluster_id).\
             first() # type: ignore
 
         return cast_('any_', get_dict_with_opaque(item) if item else None)
@@ -92,7 +89,7 @@ class GenericObjectWrapper:
         # Our response to produce
         out:'dictlist' = []
 
-        items = self.session.query(self.model_class).filter(self.model_class.type_==type_).filter(self.model_class.cluster_id==self.cluster_id) # type: ignore
+        items = self.session.query(self.model_class).filter(self.model_class.type_==type_) # type: ignore
 
         if subtype:
             items = items.filter(self.model_class.subtype==subtype)
@@ -142,7 +139,6 @@ class GenericObjectWrapper:
             item['type_'] = type_
             item['subtype'] = subtype
             item['parent_object_id'] = parent_object_id
-            item['cluster_id'] = self.cluster_id
             item['creation_time'] = now
             item['last_modified'] = now
 
@@ -192,7 +188,6 @@ class GenericObjectWrapper:
         # .. build a basic filter for the query ..
         and_filter:'any_' = (
             ModelGenericObjectTable.c.type_==type_,
-            ModelGenericObjectTable.c.cluster_id==self.cluster_id,
         )
 
         # .. if we have an ID on input, we update by its value ..
@@ -313,11 +308,10 @@ class GroupsWrapper(GenericObjectWrapper):
 # ################################################################################################################################
 
 @query_wrapper
-def connection_list(session:'SASession', cluster_id:'int', type_:'strnone'=None, needs_columns:'bool'=False) -> 'any_':
+def connection_list(session:'SASession', type_:'strnone'=None, needs_columns:'bool'=False) -> 'any_':
     """ A list of generic connections by their type.
     """
-    q = session.query(ModelGenericConn).\
-        filter(ModelGenericConn.cluster_id==cluster_id) # type: ignore
+    q = session.query(ModelGenericConn)
 
     if type_:
         q = q.filter(ModelGenericConn.type_==type_)

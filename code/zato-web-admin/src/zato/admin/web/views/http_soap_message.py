@@ -78,7 +78,6 @@ def get_edit_create_message(params:'any_', prefix:'str'='', user_profile:'any_'=
         'connection': params['connection'],
         'transport': params['transport'],
         'id': params.get('id'),
-        'cluster_id': params['cluster_id'],
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
         'is_audit_log_active': bool(params.get(prefix + 'is_audit_log_active')),

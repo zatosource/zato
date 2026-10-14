@@ -25,7 +25,7 @@ from typing_extensions import TypeAlias
 from zato.common.alerting.config_store import apply_type_config, get_type_definition
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.api import Alerting
-from zato.common.odb.model import Base, Cluster, IntervalBasedJob, Job, Service
+from zato.common.odb.model import Base, IntervalBasedJob, Job, Service
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
@@ -49,9 +49,6 @@ engine_generator:TypeAlias = Generator[Engine, None, None]
 # Who the test says made the changes
 _actor = 'test-test-transfer-state'
 
-# The cluster the test jobs belong to
-_cluster_id = 1
-
 # The rule the test transfers checkbox flips
 _test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
 
@@ -61,12 +58,11 @@ _test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
 @pytest.fixture
 def odb_session() -> 'any_':
     """ A real ODB session over an in-memory SQLite database holding
-    the scheduler tables and one cluster.
+    the scheduler tables.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         Service.__table__,
         Job.__table__,
         IntervalBasedJob.__table__,
@@ -76,8 +72,6 @@ def odb_session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
     session.commit()
 
     yield session
@@ -110,7 +104,6 @@ def backend(tmp_path:'Path') -> 'RuleSQLBackend':
 def _get_test_transfer_job(session:'any_') -> 'Job':
     out = session.query(Job).\
         filter(Job.name==Alerting.Test_Transfer_Job_Name).\
-        filter(Job.cluster_id==_cluster_id).\
         one()
     return out
 
@@ -131,7 +124,7 @@ class TestTransferJobState:
 
     def test_the_test_transfer_job_ships_inactive(self, odb_session:'any_') -> 'None':
 
-        created = ensure_test_transfer_job_exists(odb_session, _cluster_id)
+        created = ensure_test_transfer_job_exists(odb_session)
         odb_session.commit()
         assert created is True
 
@@ -142,17 +135,17 @@ class TestTransferJobState:
 
     def test_the_job_row_follows_the_checkbox_in_either_direction(self, odb_session:'any_') -> 'None':
 
-        _ = ensure_test_transfer_job_exists(odb_session, _cluster_id)
+        _ = ensure_test_transfer_job_exists(odb_session)
         odb_session.commit()
 
         # On - the way the service flips it when the checkbox is checked
-        changed = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, True)
+        changed = set_job_active(odb_session, Alerting.Test_Transfer_Job_Name, True)
         odb_session.commit()
         assert changed is True
         assert _get_test_transfer_job(odb_session).is_active is True
 
         # Off again
-        changed = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, False)
+        changed = set_job_active(odb_session, Alerting.Test_Transfer_Job_Name, False)
         odb_session.commit()
         assert changed is True
         assert _get_test_transfer_job(odb_session).is_active is False
@@ -161,11 +154,11 @@ class TestTransferJobState:
 
     def test_a_flip_to_the_same_state_changes_nothing(self, odb_session:'any_') -> 'None':
 
-        _ = ensure_test_transfer_job_exists(odb_session, _cluster_id)
+        _ = ensure_test_transfer_job_exists(odb_session)
         odb_session.commit()
 
         # The job already ships inactive, so another off is a no-op
-        changed = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, False)
+        changed = set_job_active(odb_session, Alerting.Test_Transfer_Job_Name, False)
         odb_session.commit()
         assert changed is False
 
@@ -180,7 +173,7 @@ class TestTransferRuleAndJobTogether:
         backend:'RuleSQLBackend',
     ) -> 'None':
 
-        _ = ensure_test_transfer_job_exists(odb_session, _cluster_id)
+        _ = ensure_test_transfer_job_exists(odb_session)
         odb_session.commit()
 
         # Both ship off - the test transfer writes to remote systems, so both are the opt-in
@@ -191,7 +184,7 @@ class TestTransferRuleAndJobTogether:
         changed = apply_type_config(backend, 'file_transfer', actor=_actor, values={'test_transfers': True})
         assert changed is True
 
-        _ = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, True)
+        _ = set_job_active(odb_session, Alerting.Test_Transfer_Job_Name, True)
         odb_session.commit()
 
         assert _get_test_transfer_rule_state(backend) is True
@@ -201,7 +194,7 @@ class TestTransferRuleAndJobTogether:
         changed = apply_type_config(backend, 'file_transfer', actor=_actor, values={'test_transfers': False})
         assert changed is True
 
-        _ = set_job_active(odb_session, _cluster_id, Alerting.Test_Transfer_Job_Name, False)
+        _ = set_job_active(odb_session, Alerting.Test_Transfer_Job_Name, False)
         odb_session.commit()
 
         assert _get_test_transfer_rule_state(backend) is False

@@ -179,8 +179,6 @@ _attr_default[_object_type.Scheduler] = {
 
 class ModuleCtx:
 
-    # This is always the same
-    Cluster_ID = 1
     Initial_Wait_Time = 10
     Missing_Wait_Time = 1
 

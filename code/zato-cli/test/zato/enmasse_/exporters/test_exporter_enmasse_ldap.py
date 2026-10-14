@@ -98,7 +98,6 @@ class TestEnmasseLDAPExporter(TestCase):
             self.yaml_config['ldap'] = ldap_list_from_yaml
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_ldap_connections, _ = self.ldap_importer.sync_definitions(ldap_list_from_yaml, self.session)
 
         self.assertTrue(len(created_ldap_connections) > 0, 'No LDAP connections were created.')

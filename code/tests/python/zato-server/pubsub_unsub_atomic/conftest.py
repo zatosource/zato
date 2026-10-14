@@ -69,7 +69,7 @@ def _build_config(
 
         # .. look up the subscriber sec_base_id for subscription re-creation ..
         admin = AdminClient(TestConfig.base_url, invoke_password)
-        sec_list = admin.invoke('zato.security.get-list', {'cluster_id': 1})
+        sec_list = admin.invoke('zato.security.get-list', {})
 
         if isinstance(sec_list, list):
             sec_items:'anylist' = sec_list

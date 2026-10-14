@@ -72,7 +72,6 @@ def create_definition(zato_server:'stranydict', name:'str', type_:'str', **field
     client = get_client(zato_server)
 
     response = client.create('zato.generic.connection.create',
-        cluster_id=1,
         name=name,
         type_=type_,
         is_active=True,

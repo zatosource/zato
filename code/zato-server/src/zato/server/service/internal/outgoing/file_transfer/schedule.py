@@ -13,7 +13,6 @@ from posixpath import normpath
 
 # Zato
 from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
-from zato.common.defaults import default_cluster_id
 from zato.common.exception import BadRequest
 from zato.common.file_transfer.api import Default_Expected_By, Default_Expected_Days, Default_Expected_Files, \
     Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff
@@ -280,7 +279,6 @@ def sync_schedule_job(service:'Service', conn:'any_', schedule:'stranydict') -> 
     job_name = get_job_name(conn.type_, conn.name, schedule['name'])
 
     request = {
-        'cluster_id': default_cluster_id,
         'is_active': schedule['is_active'],
         'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
         'service': _scheduler.Dispatch_Service[conn.type_],

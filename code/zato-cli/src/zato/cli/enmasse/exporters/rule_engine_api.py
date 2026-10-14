@@ -58,8 +58,8 @@ class RuleEngineAPIExporter:
 
 # ################################################################################################################################
 
-    def _load_security_groups(self, session:'SASession', cluster_id:'int') -> 'None':
-        """ Loads the security groups of the cluster and builds an id-to-name mapping.
+    def _load_security_groups(self, session:'SASession') -> 'None':
+        """ Loads the security groups and builds an id-to-name mapping.
         """
 
         # The session belongs to the caller, so this method must not close it.
@@ -69,7 +69,6 @@ class RuleEngineAPIExporter:
         ).where(and_(
             GenericObject.type_ == Groups.Type.Group_Parent,
             GenericObject.subtype == Groups.Type.API_Clients,
-            GenericObject.cluster_id == cluster_id,
         ))
 
         result = session.execute(query)
@@ -105,7 +104,7 @@ class RuleEngineAPIExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'rule_engine_api_def_list':
+    def export(self, session:'SASession') -> 'rule_engine_api_def_list':
         """ Exports Rule engine API definitions.
         """
         logger.info('Exporting Rule engine API definitions')
@@ -113,9 +112,9 @@ class RuleEngineAPIExporter:
         # Our response to produce
         out = []
 
-        self._load_security_groups(session, cluster_id)
+        self._load_security_groups(session)
 
-        connections = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE)
+        connections = connection_list(session, GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE)
 
         if not connections:
             logger.info('No Rule engine API definitions found in DB')

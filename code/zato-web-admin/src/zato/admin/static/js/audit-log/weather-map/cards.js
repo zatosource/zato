@@ -59,8 +59,6 @@ cards.showLogURL = function(source, objectName) {
         out += '&object_name=' + encodeURIComponent(objectName);
     }
 
-    out += '&cluster=' + cards.page.clusterId;
-
     return out;
 };
 

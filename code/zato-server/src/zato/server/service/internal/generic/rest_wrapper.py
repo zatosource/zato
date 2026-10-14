@@ -57,7 +57,6 @@ class GetList(Service):
         # This response has all the REST connections possible ..
         response = self.invoke(service_name, {
             'include_wrapper': True,
-            'cluster_id': self.server.cluster_id,
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
             'paginate': False,
@@ -110,7 +109,6 @@ class _WrapperBase(Service):
         # Base request to create a new wrapper ..
         request = {
             'is_wrapper': True,
-            'cluster_id': self.server.cluster_id,
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
             'url_path': r'{_zato_path}'
@@ -206,7 +204,7 @@ class ChangePassword(_WrapperBase):
             session.add(item)
             session.commit()
 
-        # Notify all the members of the cluster of the change
+        # Notify the configuration dispatcher of the change
         self.config_dispatcher.publish({
             'action': OUTGOING.REST_WRAPPER_CHANGE_PASSWORD.value,
             'id': id,

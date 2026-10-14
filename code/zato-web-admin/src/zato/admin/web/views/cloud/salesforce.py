@@ -29,7 +29,7 @@ class Index(_Index):
     output_class = SalesforceConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'username', 'api_version', \
         'password', 'consumer_key', 'consumer_secret'
     output_optional = generic_attrs
@@ -99,7 +99,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req:'any_', id:'any_', cluster_id:'any_') -> 'any_':
+def ping(req:'any_', id:'any_') -> 'any_':
     out = ping_connection(req, 'zato.generic.connection.ping', id, 'Salesforce connection')
     return out
 

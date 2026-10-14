@@ -122,7 +122,7 @@ class TestEnmasseChannelOpenAPIFromYAML(TestCase):
 
         channel_def = channel_openapi_defs[0]
 
-        rest_channels_map = self.channel_openapi_importer._get_rest_channels_map(self.session, self.importer.cluster_id)
+        rest_channels_map = self.channel_openapi_importer._get_rest_channels_map(self.session)
         instance = self.channel_openapi_importer.create_definition(channel_def, self.session, rest_channels_map)
         self.session.commit()
 

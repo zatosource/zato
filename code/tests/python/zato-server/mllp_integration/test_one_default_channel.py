@@ -92,8 +92,7 @@ def _import_channel(directory:'str', server_directory:'str', channel_name:'str')
 def _default_channel_names(zato_client:'any_') -> 'anylist':
     """ The names of the channels of this module that store the default flag.
     """
-    items, _ = zato_client.get_list('zato.generic.connection.get-list',
-        cluster_id=1, type_=GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP)
+    items, _ = zato_client.get_list('zato.generic.connection.get-list', type_=GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP)
 
     out = []
 

@@ -38,13 +38,13 @@ class MicrosoftPowerAutomateExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'microsoft_power_automate_def_list':
+    def export(self, session: 'SASession') -> 'microsoft_power_automate_def_list':
         """ Exports Microsoft Power Automate connection definitions.
         """
         logger.info('Exporting Microsoft Power Automate connection definitions')
 
         # Get Microsoft Power Automate connections from database using the generic connection query
-        db_connections = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE)
+        db_connections = connection_list(session, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE)
 
         if not db_connections:
             logger.info('No Microsoft Power Automate connection definitions found in DB')

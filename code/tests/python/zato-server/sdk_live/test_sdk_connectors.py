@@ -118,7 +118,6 @@ def test_create_definition(zato_server:'stranydict') -> 'None':
     client = _get_client(zato_server)
 
     response = client.create('zato.generic.connection.create',
-        cluster_id=1,
         name=_conn_name,
         type_=_conn_type,
         is_active=True,
@@ -159,7 +158,7 @@ def test_secrets_never_returned(zato_server:'stranydict') -> 'None':
     """
     client = _get_client(zato_server)
 
-    data, _ = client.get_list('zato.generic.connection.get-list', type_=_conn_type, cluster_id=1)
+    data, _ = client.get_list('zato.generic.connection.get-list', type_=_conn_type)
     assert len(data) == 1
 
     item = data[0]
@@ -175,7 +174,6 @@ def test_edit_definition(zato_server:'stranydict') -> 'None':
 
     _ = client.edit('zato.generic.connection.edit',
         id=_TestState.conn_id,
-        cluster_id=1,
         name=_conn_name,
         type_=_conn_type,
         is_active=True,

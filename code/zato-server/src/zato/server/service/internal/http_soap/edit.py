@@ -41,7 +41,7 @@ class Edit(_CreateEdit):
         '-params_pri', '-timeout', '-content_type', \
         Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
-        '-cluster_id', '-is_active', '-transport', \
+        '-is_active', '-transport', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', Boolean('-is_audit_log_active'), Boolean('-should_include_in_openapi'), \
         Boolean('-is_deprecated'), '-deprecation_sunset', '-deprecation_successor', \
@@ -78,7 +78,6 @@ class Edit(_CreateEdit):
         input.deprecation_successor = input.get('deprecation_successor') or ''
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
-        input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
         input.data_format = input.get('data_format') or ''
 
         input.data_encoding = input.get('data_encoding') or 'utf-8'
@@ -125,7 +124,6 @@ class Edit(_CreateEdit):
                 HTTPSOAP.id,
                 HTTPSOAP.url_path,
                 ).\
-                filter(HTTPSOAP.cluster_id==input.cluster_id).\
                 filter(HTTPSOAP.id!=input_id).\
                 filter(HTTPSOAP.name==input.name).\
                 filter(HTTPSOAP.connection==input.connection).\
@@ -137,7 +135,7 @@ class Edit(_CreateEdit):
                     object_type = 'channel'
                 else:
                     object_type = 'connection'
-                msg = 'A {} of that name:`{}` already exists in this cluster; path: `{}` (id:{})'
+                msg = 'A {} of that name:`{}` already exists; path: `{}` (id:{})'
                 raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
             if input.connection == CONNECTION.CHANNEL:
@@ -154,8 +152,8 @@ class Edit(_CreateEdit):
             if input.connection == CONNECTION.CHANNEL:
                 validate_channel_url_path(input.url_path)
                 self.ensure_channel_is_unique(session,
-                    input.url_path, input.http_accept, input.method, input.cluster_id, input_id)
-                self.ensure_channel_does_not_conflict(session, input, input.cluster_id, input_id)
+                    input.url_path, input.http_accept, input.method, input_id)
+                self.ensure_channel_does_not_conflict(session, input, input_id)
 
             try:
                 item = session.query(HTTPSOAP).filter_by(id=input_id).one()
@@ -205,7 +203,6 @@ class Edit(_CreateEdit):
                 item.security_id = input.security_id or None # So that SQLite does not reject ''
                 item.connection = input.connection
                 item.transport = input.transport
-                item.cluster_id = input.cluster_id
                 item.method = input.method
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version or None

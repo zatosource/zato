@@ -29,7 +29,7 @@ class TestSecurityAPIKey:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'any_'):
@@ -42,7 +42,7 @@ class TestSecurityAPIKey:
         self.__class__.created_ids.append(resp['id'])
 
     def test_03_get_list_after_create(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-apikey-1' in names
 
@@ -56,7 +56,7 @@ class TestSecurityAPIKey:
             self.__class__.created_ids.append(resp['id'])
 
     def test_05_get_list_batch(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-apikey-')]
         assert len(test_items) >= 5
 
@@ -70,7 +70,7 @@ class TestSecurityAPIKey:
         assert resp['id'] == item_id
 
     def test_07_get_list_after_edit(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-apikey-1-edited' in names
         assert 'test-apikey-1' not in names
@@ -86,7 +86,7 @@ class TestSecurityAPIKey:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_10_get_list_after_delete(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-apikey-')]
         assert len(test_items) >= 4
 
@@ -96,6 +96,6 @@ class TestSecurityAPIKey:
             self.__class__.created_ids.remove(item_id)
 
     def test_12_get_list_final(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-apikey-')]
         assert len(test_items) == 0

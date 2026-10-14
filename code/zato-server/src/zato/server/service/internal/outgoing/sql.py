@@ -20,7 +20,7 @@ from zato.common.api import query_parameters, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, Level_Off as SQL_Audit_Off
 from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
-from zato.common.odb.model import Cluster, SQLConnectionPool
+from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
 from zato.common.util.api import get_sql_engine_display_name
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
@@ -55,13 +55,13 @@ class GetList(AdminService):
     """
     _filter_by = SQLConnectionPool.name,
 
-    input = 'cluster_id', *query_parameters
-    output = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+    input = query_parameters
+    output = 'id', 'name', 'is_active', 'engine', 'host', Integer('port'), 'db_name', 'username', \
         Integer('pool_size'), '-extra', '-engine_display_name', '-audit_log'
 
     def get_data(self, session):
         # The audit level lives in the opaque column, which is what elems_with_opaque surfaces
-        return elems_with_opaque(self._search(out_sql_list, session, self.request.input.cluster_id, False))
+        return elems_with_opaque(self._search(out_sql_list, session, False))
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -79,7 +79,7 @@ class GetList(AdminService):
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
-    input = 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+    input = 'name', 'is_active', 'engine', 'host', Integer('port'), 'db_name', 'username', \
         Integer('pool_size'), '-extra', '-audit_log'
     output = 'id', 'name', 'display_name'
 
@@ -96,16 +96,14 @@ class Create(AdminService, _SQLService):
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
-                filter(SQLConnectionPool.cluster_id==input.cluster_id).\
                 filter(SQLConnectionPool.name==input.name).\
                 first()
 
             if existing_one:
-                raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing SQL connection [{0}] already exists'.format(input.name))
 
             try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).one()
-                item = SQLConnectionPool(cluster=cluster)
+                item = SQLConnectionPool()
                 item.name = input.name
                 item.is_active = input.is_active
                 item.engine = input.engine
@@ -141,7 +139,7 @@ class Create(AdminService, _SQLService):
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
-    input = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+    input = 'id', 'name', 'is_active', 'engine', 'host', Integer('port'), 'db_name', 'username', \
         Integer('pool_size'), '-extra', '-audit_log'
     output = 'id', 'name', 'display_name'
 
@@ -157,20 +155,18 @@ class Edit(AdminService, _SQLService):
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
-                filter(SQLConnectionPool.cluster_id==input.cluster_id).\
                 filter(SQLConnectionPool.name==input.name).\
                 filter(SQLConnectionPool.id!=input.id).\
                 first()
 
             if existing_one:
-                raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing SQL connection [{0}] already exists'.format(input.name))
 
             try:
                 item = session.query(SQLConnectionPool).filter_by(id=input.id).one()
                 old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
-                item.cluster_id = input.cluster_id
                 item.engine = input.engine
                 item.host = input.host
                 item.port = input.port
@@ -281,7 +277,7 @@ class AutoPing(AdminService):
         except Exception:
             self.logger.warning('Could not ping ODB, e:`%s`', format_exc())
 
-        response = self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})
+        response = self.invoke(GetList.get_name(), {})
 
         for item in response:
             if not item.get('is_active'):

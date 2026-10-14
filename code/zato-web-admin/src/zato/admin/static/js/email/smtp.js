@@ -276,6 +276,5 @@ $.fn.zato.email.smtp.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.email.smtp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'SMTP connection [{0}] deleted',
-        'Are you sure you want to delete the SMTP connection [{0}]?',
-        true);
+        'Are you sure you want to delete the SMTP connection [{0}]?');
 }

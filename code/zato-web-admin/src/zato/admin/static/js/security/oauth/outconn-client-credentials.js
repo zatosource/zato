@@ -48,7 +48,7 @@ $.fn.zato.security.oauth.config = {
     jwt_algorithm_default: 'RS384',
     private_key_stored_hint: 'A key is stored - leave empty to keep it',
     private_key_missing_hint: 'No key is stored yet',
-    public_key_url: '/zato/security/oauth/outconn/client-credentials/public-key/{0}/cluster/{1}/'
+    public_key_url: '/zato/security/oauth/outconn/client-credentials/public-key/{0}/'
 };
 
 $.fn.zato.security.oauth.update_auth_method_rows = function(action) {
@@ -236,8 +236,7 @@ $.fn.zato.security.oauth.edit = function(id) {
             $.fn.zato.security.oauth.config.private_key_missing_hint;
         $('#edit-private-key-hint').text(hint);
 
-        var cluster_id = $('#id_edit-cluster_id').val();
-        var public_key_url = String.format($.fn.zato.security.oauth.config.public_key_url, instance.id, cluster_id);
+        var public_key_url = String.format($.fn.zato.security.oauth.config.public_key_url, instance.id);
         $('#edit-public-key-link').attr('href', public_key_url);
         $('#edit-public-key-link-holder').toggleClass('hidden', !has_private_key);
 
@@ -334,8 +333,7 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.security.oauth.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Bearer token definition `{0}` deleted',
-        'Are you sure you want to delete Bearer token definition `{0}`?',
-        true);
+        'Are you sure you want to delete Bearer token definition `{0}`?');
 }
 
 $.fn.zato.security.oauth._get_token_parse = function(jqXHR) {

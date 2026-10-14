@@ -45,7 +45,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
         'static_header', 'is_static_token', 'static_prefix', \
@@ -132,7 +131,7 @@ def change_secret(req):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_public_key(req:'any_', id:'str', cluster_id:'str') -> 'HttpResponse':
+def get_public_key(req:'any_', id:'str') -> 'HttpResponse':
     """ Returns the public half of a definition's private key - the PEM form followed by the JWK set,
     both of which authorization servers accept when the client is registered with them.
     """

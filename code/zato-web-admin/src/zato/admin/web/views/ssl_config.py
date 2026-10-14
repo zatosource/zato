@@ -71,7 +71,6 @@ def index(req:'any_') -> 'TemplateResponse':
     ssl_config = _get_ssl_config(req)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'ssl_config': ssl_config,
         'ssl_config_json': dumps(ssl_config),
         'zato_template_name': _Template_Name,

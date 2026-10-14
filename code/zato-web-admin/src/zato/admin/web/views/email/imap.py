@@ -38,7 +38,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', \
          'get_criteria', 'server_type', 'server_type_human'
     output_optional = 'username', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria', \
@@ -120,7 +119,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     ret = id_only_service(req, 'zato.email.imap.ping', id, 'IMAP ping error: {}')
     if isinstance(ret, HttpResponseServerError):
         error_text = ret.content.decode('utf-8', 'replace')

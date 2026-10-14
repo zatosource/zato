@@ -81,17 +81,16 @@ def health_check_line(opaque:'anydict') -> 'str':
 
 # ################################################################################################################################
 
-def describe_outgoing_http(session:'SASession', cluster_id:'int', source:'str', name:'str') -> 'anylist | None':
+def describe_outgoing_http(session:'SASession', source:'str', name:'str') -> 'anylist | None':
     """ The label and value pairs describing one outgoing REST or SOAP connection - its transport, address,
     method, timeout, pool size, whether TLS is validated, its security definition, how it retries, whether its
     audit log is on, how often its health check runs and the alert thresholds it sets of its own. The source
     is the connection's own traffic or its health check, and says which transport's row to read.
-    None when no outgoing connection of that transport goes by the name in the cluster.
+    None when no outgoing connection of that transport goes by the name.
     """
     transport = transport_by_outgoing_source[source]
 
     row = session.query(HTTPSOAP).\
-        filter(HTTPSOAP.cluster_id==cluster_id).\
         filter(HTTPSOAP.connection==CONNECTION.OUTGOING).\
         filter(HTTPSOAP.transport==transport).\
         filter(HTTPSOAP.name==name).\

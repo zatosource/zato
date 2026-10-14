@@ -43,7 +43,6 @@ class GroupsManager:
     def __init__(self, server:'ParallelServer', session:'any_'=None) -> 'None':
         self.server = server
         self.session = session or self.server.odb.session
-        self.cluster_id = self.server.cluster_id
 
 # ################################################################################################################################
 
@@ -53,7 +52,7 @@ class GroupsManager:
         with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
-            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper = GroupsWrapper(session)
             wrapper.type_ = Groups.Type.Group_Parent
             wrapper.subtype = group_type
 
@@ -81,7 +80,7 @@ class GroupsManager:
         with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
-            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper = GroupsWrapper(session)
             wrapper.type_ = Groups.Type.Group_Parent
             wrapper.subtype = group_type
 
@@ -136,7 +135,7 @@ class GroupsManager:
         with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
-            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper = GroupsWrapper(session)
 
             # .. delete the group ..
             delete_group = wrapper.delete_by_id(group_id)
@@ -162,7 +161,7 @@ class GroupsManager:
         with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
-            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper = GroupsWrapper(session)
             wrapper.type_ = Groups.Type.Group_Parent
             wrapper.subtype = group_type
 
@@ -186,7 +185,7 @@ class GroupsManager:
         with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
-            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper = GroupsWrapper(session)
 
             # .. get all the results ..
             results = wrapper.get_list(Groups.Type.Group_Member, group_type, parent_object_id=group_id)
@@ -287,7 +286,7 @@ class GroupsManager:
         with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
-            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper = GroupsWrapper(session)
 
             # .. do add the members to the group now ..
             insert = wrapper.create_many(
@@ -316,7 +315,7 @@ class GroupsManager:
         with closing(self.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
-            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper = GroupsWrapper(session)
 
             # .. delete members from the group now ..
             for member_id in member_id_list:

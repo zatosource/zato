@@ -35,7 +35,7 @@ _settle_time = 0.5
 def _get_sub_key(admin_client:'any_', username:'str') -> 'str':
     """ Looks up the sub_key for a given security username via the admin API.
     """
-    result = admin_client.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    result = admin_client.invoke('zato.pubsub.subscription.get-list', {})
 
     # .. the response may be a list or a single dict ..
     if isinstance(result, list):
@@ -56,7 +56,7 @@ def _get_sub_key(admin_client:'any_', username:'str') -> 'str':
 def _get_sub_id(admin_client:'any_', username:'str') -> 'int':
     """ Looks up the subscription ID for a given security username via the admin API.
     """
-    result = admin_client.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    result = admin_client.invoke('zato.pubsub.subscription.get-list', {})
 
     # .. the response may be a list or a single dict ..
     if isinstance(result, list):
@@ -420,7 +420,6 @@ class TestZZ_AckDuringUnsubscribe:
         finally:
             # .. re-create the subscription so the environment stays consistent.
             _ = admin.invoke('zato.pubsub.subscription.create', {
-                'cluster_id': 1,
                 'topic_name_list': [_topic_sole, _topic_shared],
                 'sec_base_id': TestConfig.puller_a_sec_base_id,
                 'delivery_type': 'pull',

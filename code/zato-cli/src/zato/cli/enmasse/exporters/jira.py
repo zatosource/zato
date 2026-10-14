@@ -38,13 +38,13 @@ class JiraExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'jira_def_list':
+    def export(self, session: 'SASession') -> 'jira_def_list':
         """ Exports JIRA connection definitions.
         """
         logger.info('Exporting JIRA connection definitions')
 
         # Get JIRA connections from database using the generic connection query
-        db_jira = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_JIRA)
+        db_jira = connection_list(session, GENERIC.CONNECTION.TYPE.CLOUD_JIRA)
 
         if not db_jira:
             logger.info('No JIRA connection definitions found in DB')

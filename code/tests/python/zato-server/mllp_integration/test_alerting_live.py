@@ -185,7 +185,7 @@ def _get_smtp_conn(zato_client:'any_', name:'str') -> 'any_':
     connection always exists, so not finding it is an error of its own.
     """
 
-    data, _ = zato_client.get_list(f'{_smtp_service_name}.get-list', cluster_id=1)
+    data, _ = zato_client.get_list(f'{_smtp_service_name}.get-list')
 
     for item in data:
         if item['name'] == name:
@@ -205,7 +205,6 @@ def _set_notification_smtp_conn(zato_client:'any_', host:'str', port:'int', is_a
 
     _ = zato_client.invoke(f'{_smtp_service_name}.edit', {
         'id': item['id'],
-        'cluster_id': 1,
         'name': conn_name,
         'is_active': is_active,
         'host': host,
@@ -239,7 +238,7 @@ class TestAlertingLive:
         the job invokes the sweep service on its interval with no setup at all.
         """
 
-        job = zato_client.invoke('zato.scheduler.job.get-by-name', {'cluster_id': 1, 'name': Alerting.Job_Name})
+        job = zato_client.invoke('zato.scheduler.job.get-by-name', {'name': Alerting.Job_Name})
 
         assert job['name'] == Alerting.Job_Name, job
         assert job['service_name'] == Alerting.Service, job
@@ -263,7 +262,6 @@ class TestAlertingLive:
         # The audited default route - healthy traffic
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_channel_name,
             type_=_connection_type_channel,
             is_active=True,
@@ -282,7 +280,6 @@ class TestAlertingLive:
         # The audited error route - its service always raises
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_error_channel_name,
             type_=_connection_type_channel,
             is_active=True,

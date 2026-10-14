@@ -30,7 +30,7 @@ if 0:
 # ################################################################################################################################
 
 # The page these helpers drive - where the outgoing connections are is mllp_outconn's own
-Channel_Page_Url = '/zato/channel/hl7/mllp/?cluster=1&type_=channel-hl7-mllp'
+Channel_Page_Url = '/zato/channel/hl7/mllp/?type_=channel-hl7-mllp'
 
 # Where a save that went through lands - the channel list, pointed at the saved row
 Saved_Redirect_Pattern = '**/zato/channel/hl7/mllp/**highlight=*'

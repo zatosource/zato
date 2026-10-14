@@ -116,12 +116,11 @@ class TestEnmasseOutgoingDeclarativeImport(TestCase):
 
     def _setup_test_environment(self) -> 'None':
         self.session = get_session_from_server_dir(self.server_path)
-        _ = self.importer.get_cluster(self.session)
 
 # ################################################################################################################################
 
     def _get_job(self, job_name:'str') -> 'Job':
-        job = self.session.query(Job).filter_by(name=job_name, cluster_id=self.importer.cluster_id).first()
+        job = self.session.query(Job).filter_by(name=job_name).first()
         self.assertIsNotNone(job, f'Job `{job_name}` was not created')
 
         return job

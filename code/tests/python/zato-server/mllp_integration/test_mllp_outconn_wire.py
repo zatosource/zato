@@ -152,7 +152,6 @@ class TestMLLPOutconnWire:
         """
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-wire-outconn',
             type_=_connection_type_outconn,
             is_active=True,
@@ -175,7 +174,6 @@ class TestMLLPOutconnWire:
         """
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-wire-forward',
             type_=_connection_type_channel,
             is_active=True,
@@ -252,7 +250,6 @@ class TestMLLPOutconnWire:
         # .. verify the channel is gone ..
         channel_data, _ = zato_client.get_list( # type: ignore[union-attr]
             f'{_generic_service_name}.get-list',
-            cluster_id=1,
             type_=_connection_type_channel,
         )
 
@@ -266,7 +263,6 @@ class TestMLLPOutconnWire:
         # .. verify the outconn is gone ..
         outconn_data, _ = zato_client.get_list( # type: ignore[union-attr]
             f'{_generic_service_name}.get-list',
-            cluster_id=1,
             type_=_connection_type_outconn,
         )
 
@@ -289,7 +285,6 @@ class TestMLLPOutconnWire:
         # Create an outconn pointing to the dead port ..
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-wire-outconn',
             type_=_connection_type_outconn,
             is_active=True,
@@ -306,7 +301,6 @@ class TestMLLPOutconnWire:
         # .. create a forward channel that will use this dead outconn ..
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-wire-forward-dead',
             type_=_connection_type_channel,
             is_active=True,

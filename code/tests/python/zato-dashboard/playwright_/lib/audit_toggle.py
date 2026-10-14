@@ -32,7 +32,7 @@ def goto_audit_log(page:'Page', base_url:'str', source:'str', object_name:'str')
 
     # Build the per-object URL ..
     encoded_name = quote(object_name)
-    url = f'{base_url}{_Audit_Log_Url_Prefix}?source={source}&object_name={encoded_name}&cluster=1'
+    url = f'{base_url}{_Audit_Log_Url_Prefix}?source={source}&object_name={encoded_name}'
 
     # .. go there ..
     _ = page.goto(url)

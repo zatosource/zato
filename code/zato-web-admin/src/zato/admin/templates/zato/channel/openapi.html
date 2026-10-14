@@ -53,13 +53,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with logo="openapi" %}OpenAPI channels</h2>
@@ -108,7 +104,7 @@
                         {% if 0 %}<td style="text-align:center">{{ item.is_public|yesno:'Yes,No' }}</td>{% endif %}
                         <td style="text-align:center">{{ item.channel_count }}</td>
                         <td style="text-align:center">{{ item.url_path }}</td>
-                        <td><a href="/zato/channel/openapi/generate/?cluster_id={{ cluster_id }}&channel_id={{ item.id }}">Download OpenAPI</a></td>
+                        <td><a href="/zato/channel/openapi/generate/?channel_id={{ item.id }}">Download OpenAPI</a></td>
 
                         <td><a href="javascript:$.fn.zato.channel.openapi.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.openapi.delete_('{{ item.id }}')">Delete</a></td>
@@ -191,7 +187,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -253,15 +248,12 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
 
-        {% endif %}
 
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

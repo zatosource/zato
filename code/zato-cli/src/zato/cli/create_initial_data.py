@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,23 +17,16 @@ from uuid import uuid4
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
 from zato.common.const import ServiceConst
-from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 
 class Create(ZatoCommand):
-    """ Creates a new Zato cluster in the ODB
+    """ Creates the initial data in the ODB
     """
     opts = deepcopy(common_odb_opts)
 
-    opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
-    opts.append({'name':'--lb-host', 'help':'Load-balancer host', 'default':'127.0.0.1'})
-    opts.append({'name':'--lb-port', 'help':'Load-balancer port', 'default':'11223'})
-    opts.append({'name':'--lb-agent_port', 'help':'Load-balancer agent\'s port', 'default':'20151'})
-    opts.append({'name':'--secret-key', 'help':'Secret key that servers will use for decryption and decryption'})
-    opts.append({'name':'--admin-invoke-password', 'help':'Password for config API clients to connect to servers with'})
-    opts.append({'name':'--skip-if-exists',
-        'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
+    opts.append({'name':'--secret-key', 'help':'Secret key that the server will use for encryption and decryption'})
+    opts.append({'name':'--admin-invoke-password', 'help':'Password for config API clients to connect to the server with'})
 
 # ################################################################################################################################
 
@@ -47,23 +40,12 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import IDEDeploy
-        from zato.common.odb.model import Cluster, HTTPBasicAuth, Service
-        from zato.common.odb.post_process import ODBPostProcess
+        from zato.common.odb.model import HTTPBasicAuth, Service
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
         with session.no_autoflush:
-
-            cluster = Cluster()
-            cluster.name = args.cluster_name
-            cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), utcnow().isoformat())
-
-            cluster.odb_type = args.odb_type
-            session.add(cluster)
-
-            # With a cluster object in place, we can construct the ODB post-processor
-            odb_post_process = ODBPostProcess(session, cluster, None)
 
             # admin.invoke user's password may be possibly in one of these attributes,
             # but if it is now, generate a new one.
@@ -78,17 +60,17 @@ class Create(ZatoCommand):
 
             admin_invoke_sec = HTTPBasicAuth(
                 None, ServiceConst.API_Admin_Invoke_Username, True, ServiceConst.API_Admin_Invoke_Username,
-                'Zato admin invoke', admin_invoke_password, cluster)
+                'Zato admin invoke', admin_invoke_password)
 
             ide_publisher_sec = HTTPBasicAuth(
-                None, IDEDeploy.Username, True, IDEDeploy.Username, 'IDE Publishers', self.generate_password(), cluster)
+                None, IDEDeploy.Username, True, IDEDeploy.Username, 'IDE Publishers', self.generate_password())
 
             streaming_password = os.environ.get('Zato_Log_Streaming_Password')
             if not streaming_password:
                 streaming_password = self.generate_password()
 
             streaming_sec = HTTPBasicAuth(
-                None, 'zato.log.streaming', True, 'zato.log.streaming', 'Log streaming API', streaming_password, cluster)
+                None, 'zato.log.streaming', True, 'zato.log.streaming', 'Log streaming API', streaming_password)
 
             session.add(admin_invoke_sec)
             session.add(ide_publisher_sec)
@@ -98,38 +80,35 @@ class Create(ZatoCommand):
 
             # Create services
             ide_publisher_service_name = 'zato.server.service.internal.hot_deploy.Create'
-            ide_publisher_service = Service(None, ide_publisher_service_name, True, ide_publisher_service_name, True, cluster)
+            ide_publisher_service = Service(None, ide_publisher_service_name, True, ide_publisher_service_name, True)
             session.add(ide_publisher_service)
 
             metrics_service_name = 'zato.server.service.internal.helpers.GetMetrics'
-            metrics_service = Service(None, metrics_service_name, True, metrics_service_name, True, cluster)
+            metrics_service = Service(None, metrics_service_name, True, metrics_service_name, True)
             session.add(metrics_service)
 
             from zato.common.util.channel import create_openapi_channel, openapi_service_name
-            openapi_handler_service = Service(None, openapi_service_name, True, openapi_service_name, True, cluster)
+            openapi_handler_service = Service(None, openapi_service_name, True, openapi_service_name, True)
             session.add(openapi_handler_service)
 
-            ping_service = self.add_ping_service(session, cluster)
-            self.add_mcp_oauth_metadata_channel(session, cluster)
+            ping_service = self.add_ping_service(session)
+            self.add_mcp_oauth_metadata_channel(session)
 
             # Create Django security definition
             django_password = os.environ.get('Zato_Django_Password') or self.generate_password()
             django_sec = HTTPBasicAuth(
-                None, 'django', True, 'django', 'Django plugin', django_password, cluster)
+                None, 'django', True, 'django', 'Django plugin', django_password)
             session.add(django_sec)
 
             # Create channels
-            self.add_django_channel(session, cluster, admin_invoke_sec, django_sec)
-            self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
-            self.add_metrics_channel(session, cluster, metrics_service)
-            self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
-            create_openapi_channel(session, cluster, openapi_handler_service)
-            self.add_pubsub_rest_channels(session, cluster)
+            self.add_django_channel(session, admin_invoke_sec, django_sec)
+            self.add_ide_publisher_channel(session, ide_publisher_service, ide_publisher_sec)
+            self.add_metrics_channel(session, metrics_service)
+            self.add_streaming_channels(session, ping_service, streaming_sec)
+            create_openapi_channel(session, openapi_handler_service)
+            self.add_pubsub_rest_channels(session)
 
-            self.add_alert_notification_connections(session, cluster)
-
-            # Run ODB post-processing tasks
-            odb_post_process.run()
+            self.add_alert_notification_connections(session)
 
         try:
             session.commit()
@@ -141,12 +120,11 @@ class Create(ZatoCommand):
             self.logger.error(msg)
             session.rollback()
 
-            return self.SYS_ERROR.CLUSTER_NAME_ALREADY_EXISTS
+            return self.SYS_ERROR.ODB_EXISTS
 
         if show_output:
             if self.verbose:
-                msg = 'Successfully created a new cluster [{}]'.format(args.cluster_name)
-                self.logger.debug(msg)
+                self.logger.debug('Successfully created the initial data in the ODB')
             else:
                 self.logger.info('OK')
 
@@ -179,7 +157,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_ping_service(self, session, cluster):
+    def add_ping_service(self, session):
         """ Adds a channel for the ping service.
         """
 
@@ -189,30 +167,30 @@ class Create(ZatoCommand):
 
         ping_impl_name = 'zato.server.service.internal.Ping'
         ping_service_name = 'demo.ping'
-        ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
+        ping_service = Service(None, ping_service_name, True, ping_impl_name, True)
         session.add(ping_service)
 
         ping_no_sec_channel = HTTPSOAP(
             None, 'zato.ping', True, True, 'channel',
-            'plain_http', None, '/zato/ping', None, '', None, IO.FORMAT.JSON, service=ping_service, cluster=cluster)
+            'plain_http', None, '/zato/ping', None, '', None, IO.FORMAT.JSON, service=ping_service)
         session.add(ping_no_sec_channel)
 
         return ping_service
 
 # ################################################################################################################################
 
-    def add_mcp_oauth_metadata_channel(self, session, cluster):
+    def add_mcp_oauth_metadata_channel(self, session):
         """ Adds the channel serving the OAuth protected resource metadata of MCP gateways.
         """
 
         # Zato
         from zato.common.util.gateway import ensure_mcp_oauth_metadata_channel_exists
 
-        _ = ensure_mcp_oauth_metadata_channel_exists(session, cluster.id)
+        _ = ensure_mcp_oauth_metadata_channel_exists(session)
 
 # ################################################################################################################################
 
-    def add_metrics_channel(self, session, cluster, service):
+    def add_metrics_channel(self, session, service):
         """ Adds a channel for the metrics service.
         """
         from zato.common.api import DATA_FORMAT
@@ -220,18 +198,18 @@ class Create(ZatoCommand):
 
         metrics_password = os.environ.get('Zato_Metrics_Password') or uuid4().hex
 
-        security = HTTPBasicAuth(None, 'metrics', True, 'metrics', 'Metrics user', metrics_password, cluster)
+        security = HTTPBasicAuth(None, 'metrics', True, 'metrics', 'Metrics user', metrics_password)
         session.add(security)
 
         channel = HTTPSOAP(
             None, 'zato.metrics', True, True, 'channel',
             'plain_http', None, '/metrics', None, '', None, DATA_FORMAT.JSON,
-            service=service, cluster=cluster, security=security)
+            service=service, security=security)
         session.add(channel)
 
 # ################################################################################################################################
 
-    def add_django_channel(self, session, cluster, admin_invoke_sec, django_sec):
+    def add_django_channel(self, session, admin_invoke_sec, django_sec):
         """ Adds the admin and Django invoke channels, both pointing at ServiceInvoker.
         """
 
@@ -242,27 +220,27 @@ class Create(ZatoCommand):
 
         # Register the ServiceInvoker service in ODB
         service_impl = 'zato.server.service.internal.service.ServiceInvoker'
-        service = ODBService(None, ServiceConst.ServiceInvokerName, True, service_impl, True, cluster)
+        service = ODBService(None, ServiceConst.ServiceInvokerName, True, service_impl, True)
         session.add(service)
         session.flush()
 
-        # Admin invoke channel - used by web admin, CLI, and inter-server RPC
+        # Admin invoke channel - used by Dashboard and the CLI
         admin_channel = HTTPSOAP(
             None, MISC.DefaultAdminInvokeChannel, True, True, 'channel',
             'plain_http', None, '/zato/api/invoke/{service_name}', None, '', None, DATA_FORMAT.JSON,
-            service=service, cluster=cluster, security=admin_invoke_sec)
+            service=service, security=admin_invoke_sec)
         session.add(admin_channel)
 
         # Django invoke channel - used by the Django plugin, with per-channel service allow list
         django_channel = HTTPSOAP(
             None, 'zato.django', True, True, 'channel',
             'plain_http', None, '/zato/api/invoke/django/{service_name}', None, '', None, DATA_FORMAT.JSON,
-            service=service, cluster=cluster, security=django_sec)
+            service=service, security=django_sec)
         session.add(django_channel)
 
 # ################################################################################################################################
 
-    def add_ide_publisher_channel(self, session, cluster, service, security):
+    def add_ide_publisher_channel(self, session, service, security):
         """ Adds a channel for IDE deployments.
         """
 
@@ -273,13 +251,13 @@ class Create(ZatoCommand):
         channel = HTTPSOAP(
             None, 'zato.ide_publisher', True, True, 'channel', 'plain_http',
             None, '/ide-deploy', None, '', None,
-            IO.FORMAT.JSON, service=service, cluster=cluster,
+            IO.FORMAT.JSON, service=service,
             security=security)
         session.add(channel)
 
 # ################################################################################################################################
 
-    def add_streaming_channels(self, session, cluster, service, security):
+    def add_streaming_channels(self, session, service, security):
         """ Adds channels for log streaming API.
         """
 
@@ -291,19 +269,19 @@ class Create(ZatoCommand):
         toggle_channel = HTTPSOAP(
             None, 'zato.log.streaming.toggle', True, True, 'channel',
             'plain_http', None, '/api/log/streaming/toggle', None, '', None, DATA_FORMAT.JSON,
-            service=service, cluster=cluster, security=security)
+            service=service, security=security)
         session.add(toggle_channel)
 
         # Get log streaming status
         status_channel = HTTPSOAP(
             None, 'zato.log.streaming.status', True, True, 'channel',
             'plain_http', None, '/api/log/streaming/status', None, '', None, DATA_FORMAT.JSON,
-            service=service, cluster=cluster, security=security)
+            service=service, security=security)
         session.add(status_channel)
 
 # ################################################################################################################################
 
-    def add_alert_notification_connections(self, session, cluster):
+    def add_alert_notification_connections(self, session):
         """ Adds the default alert notification connections - one Slack, one Microsoft Teams
         and one SMTP, all inactive with placeholder details for people to fill in.
         """
@@ -333,7 +311,6 @@ class Create(ZatoCommand):
             connection.pool_size = 20
             connection.timeout = 250
             connection.secret = uuid4().hex
-            connection.cluster = cluster
 
             session.add(connection)
 
@@ -359,13 +336,11 @@ class Create(ZatoCommand):
             'needs_tls_verify': True,
         })
 
-        smtp_conn.cluster = cluster
-
         session.add(smtp_conn)
 
 # ################################################################################################################################
 
-    def add_pubsub_rest_channels(self, session, cluster):
+    def add_pubsub_rest_channels(self, session):
         """ Adds REST channels for pub/sub operations.
         """
 
@@ -375,32 +350,32 @@ class Create(ZatoCommand):
 
         # Create services
         publish_impl = 'zato.server.service.internal.pubsub.rest.Publish'
-        publish_service = Service(None, 'pubsub.rest.publish', True, publish_impl, True, cluster)
+        publish_service = Service(None, 'pubsub.rest.publish', True, publish_impl, True)
         session.add(publish_service)
 
         get_messages_impl = 'zato.server.service.internal.pubsub.rest.GetMessages'
-        get_messages_service = Service(None, 'pubsub.rest.get-messages', True, get_messages_impl, True, cluster)
+        get_messages_service = Service(None, 'pubsub.rest.get-messages', True, get_messages_impl, True)
         session.add(get_messages_service)
 
         subscribe_impl = 'zato.server.service.internal.pubsub.rest.Subscribe'
-        subscribe_service = Service(None, 'pubsub.rest.subscribe', True, subscribe_impl, True, cluster)
+        subscribe_service = Service(None, 'pubsub.rest.subscribe', True, subscribe_impl, True)
         session.add(subscribe_service)
 
         unsubscribe_impl = 'zato.server.service.internal.pubsub.rest.Unsubscribe'
-        unsubscribe_service = Service(None, 'pubsub.rest.unsubscribe', True, unsubscribe_impl, True, cluster)
+        unsubscribe_service = Service(None, 'pubsub.rest.unsubscribe', True, unsubscribe_impl, True)
         session.add(unsubscribe_service)
 
         # Create channels
         publish_channel = HTTPSOAP(
             None, 'pubsub.rest.publish', True, True, 'channel',
             'plain_http', None, '/pubsub/topic/{topic_name}', None, '', None, DATA_FORMAT.JSON,
-            service=publish_service, cluster=cluster)
+            service=publish_service)
         session.add(publish_channel)
 
         get_messages_channel = HTTPSOAP(
             None, 'pubsub.rest.get-messages', True, True, 'channel',
             'plain_http', None, '/pubsub/messages/get', None, '', None, DATA_FORMAT.JSON,
-            service=get_messages_service, cluster=cluster)
+            service=get_messages_service)
         session.add(get_messages_channel)
 
         # Subscribe and unsubscribe channels are intentionally not created -

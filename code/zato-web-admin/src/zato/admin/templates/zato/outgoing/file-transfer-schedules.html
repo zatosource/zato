@@ -70,9 +70,9 @@ recurring pickup task created through the schedule wizard. The view provides:
         </select></h2>
 
         <div class='page_prompt' style="clear:left">
-            <a href="{% url "out-file-transfer-schedule-wizard-create" transfer_type conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a> |
+            <a href="{% url "out-file-transfer-schedule-wizard-create" transfer_type conn_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a> |
             <a href="{{ back_url }}" class="common">Connection list</a> |
-            <a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ conn_name|urlencode }}&amp;cluster={{ cluster_id }}" class="common">Audit log</a>
+            <a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ conn_name|urlencode }}" class="common">Audit log</a>
         </div>
 
         <table class="zato-table" id="data-table" data-has-command-shell="{{ has_command_shell|yesno:'true,false' }}">
@@ -119,13 +119,13 @@ recurring pickup task created through the schedule wizard. The view provides:
                     {% comment %} 2 {% endcomment %}
                     <td>{{ item.directory }}</td>
                     <td>{{ item.pattern }}</td>
-                    <td><a href="{% url "service-ide" "service" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
+                    <td><a href="{% url "service-ide" "service" item.service %}">{{ item.service }}</a></td>
                     {% if has_command_shell %}
                     <td><a href="{{ item.command_shell_url }}">Command shell</a></td>
                     {% endif %}
 
                     {% comment %} 3 {% endcomment %}
-                    <td><a href="{% url "out-file-transfer-schedule-wizard-edit" transfer_type conn_id cluster_id name_slug item.id %}?name={{ conn_name|urlencode:"" }}">Edit</a></td>
+                    <td><a href="{% url "out-file-transfer-schedule-wizard-edit" transfer_type conn_id name_slug item.id %}?name={{ conn_name|urlencode:"" }}">Edit</a></td>
                     <td><a href="javascript:$.fn.zato.outgoing.file_transfer.schedules.delete_('{{ item.id }}', '{{ item.name }}')">Delete</a></td>
 
                 </tr>

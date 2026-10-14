@@ -261,7 +261,6 @@ def zato_server() -> 'any_':
         _zato_bin, 'quickstart', 'create', _state.quickstart_directory,
         '--force',
         '--password', invoke_password,
-        '--servers', '1',
         '--server-api-client-for-scheduler-password', invoke_password,
         '--no-scheduler',
     ]

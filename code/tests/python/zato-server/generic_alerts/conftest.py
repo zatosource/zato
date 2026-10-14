@@ -18,7 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnClient, GenericConnSec, GenericObject, HTTPSOAP, Job, \
+from zato.common.odb.model import Base, GenericConn, GenericConnClient, GenericConnSec, GenericObject, HTTPSOAP, Job, \
     SecurityBase, Service
 from zato.server.service.internal.generic import connection as connection_module
 
@@ -26,7 +26,7 @@ from zato.server.service.internal.generic import connection as connection_module
 sys.path.insert(0, os.path.dirname(__file__))
 
 # Test support
-from generic_stub import Cluster_Id, Service_Name
+from generic_stub import Service_Name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,7 +60,6 @@ def session_factory() -> 'any_':
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         Service.__table__,
         SecurityBase.__table__,
         GenericConn.__table__,
@@ -75,9 +74,7 @@ def session_factory() -> 'any_':
     factory = sessionmaker(bind=engine)
 
     session = factory()
-    cluster = Cluster(Cluster_Id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-    session.add(Service(None, Service_Name, True, 'zato.server.service.internal.connection.HealthCheckRun', True, cluster))
+    session.add(Service(None, Service_Name, True, 'zato.server.service.internal.connection.HealthCheckRun', True))
     session.commit()
     session.close()
 

@@ -78,7 +78,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = ('id',) + _fields_required
     output_optional = _fields_optional + (FileTransfer.Scheduler.Schedules_Field,)
     output_repeated = True
@@ -195,18 +195,17 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req:'any_', id:'str', cluster_id:'str') -> 'any_':
+def ping(req:'any_', id:'str') -> 'any_':
     out = ping_connection(req, 'zato.generic.connection.ping', id, 'FTP connection')
     return out
 
 # ################################################################################################################################
 
 @method_allowed('GET')
-def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'TemplateResponse':
+def command_shell(req:'any_', id:'str', name_slug:'str') -> 'TemplateResponse':
 
     # Every outgoing FTP connection there is ..
     response = req.zato.client.invoke('zato.generic.connection.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'type_': GENERIC.CONNECTION.TYPE.OUTCONN_FTP,
         'paginate': False,
     })
@@ -221,7 +220,7 @@ def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'T
         item_id = item['id']
         item_name = item['name']
         item_slug = slugify(item_name)
-        item_url = reverse('out-ftp-command-shell', args=[item_id, cluster_id, item_slug])
+        item_url = reverse('out-ftp-command-shell', args=[item_id, item_slug])
         item_name_encoded = quote(item_name)
         connection_list.append({
             'name': item_name,
@@ -235,8 +234,6 @@ def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'T
         form = CommandShellForm()
 
     return_data = {
-        'zato_clusters':req.zato.clusters,
-        'cluster_id':req.zato.cluster_id,
         'req': req,
         'conn_id': id,
         'name_slug': name_slug,
@@ -251,11 +248,10 @@ def command_shell(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'T
 # ################################################################################################################################
 
 @method_allowed('POST')
-def command_shell_action(req:'any_', id:'str', cluster_id:'str', name_slug:'str') -> 'any_':
+def command_shell_action(req:'any_', id:'str', name_slug:'str') -> 'any_':
 
     try:
         response = req.zato.client.invoke('zato.outgoing.ftp.execute', {
-            'cluster_id': req.zato.cluster_id,
             'id': id,
             'data': req.POST['data'],
         })

@@ -55,7 +55,7 @@ class SQLExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'sql_def_list':
+    def export(self, session:'SASession') -> 'sql_def_list':
         """ Exports SQL connection pool definitions.
         """
         logger.info('Exporting SQL connection pool definitions')
@@ -63,7 +63,7 @@ class SQLExporter:
         # Our response to produce
         out = []
 
-        db_sql_connections = out_sql_list(session, cluster_id)
+        db_sql_connections = out_sql_list(session)
 
         if not db_sql_connections:
             logger.info('No SQL connection pool definitions found in DB')

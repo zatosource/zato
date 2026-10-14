@@ -35,14 +35,13 @@ class Get(_BaseGet):
     """
     name = 'zato.http-soap.get'
 
-    input = '-cluster_id', '-id', '-name'
+    input = '-id', '-name'
 
     def handle(self):
         self.request.input.require_any('id', 'name')
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
-            item = http_soap(session, cluster_id, self.request.input.id, self.request.input.name)
+            item = http_soap(session, self.request.input.id, self.request.input.name)
             out = get_dict_with_opaque(item)
 
         self.response.payload = out
@@ -56,7 +55,7 @@ class GetList(_BaseGet):
 
     _filter_by = HTTPSOAP.name,
 
-    input = '-include_wrapper', '-cluster_id', '-connection', '-transport', '-data_format', '-needs_security_group_names', \
+    input = '-include_wrapper', '-connection', '-transport', '-data_format', '-needs_security_group_names', \
         *query_parameters
     output = 'id', 'name', 'is_active', 'is_internal', 'url_path', \
         '-service_id', '-service_name', '-security_id', '-security_name', '-sec_type', \
@@ -78,7 +77,6 @@ class GetList(_BaseGet):
 
         # Local aliases
         out:'anylist' = []
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         needs_security_group_names = self.request.input.get('needs_security_group_names') or False
         include_wrapper = self.request.input.get('include_wrapper') or False
         should_ignore_wrapper = not include_wrapper
@@ -92,7 +90,7 @@ class GetList(_BaseGet):
             all_security_groups = []
 
         # Obtain the basic result ..
-        result = self._search(http_soap_list, session, cluster_id,
+        result = self._search(http_soap_list, session,
             self.request.input.connection, self.request.input.transport,
             as_bool(self.server.fs_server_config.misc.return_internal_objects),
             self.request.input.get('data_format'),

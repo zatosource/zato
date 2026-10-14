@@ -56,12 +56,11 @@ class OutgoingRESTImporter:
 
 # ################################################################################################################################
 
-    def get_outgoing_rest_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_outgoing_rest_from_db(self, session:'SASession') -> 'anydict':
         out = {}
-        logger.info('Retrieving outgoing REST connections from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving outgoing REST connections from database')
 
         query = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.connection==CONNECTION.OUTGOING).\
             filter(HTTPSOAP.transport==URL_TYPE.PLAIN_HTTP) # type: ignore
         connections = to_json(query, return_as_dict=True)
@@ -169,7 +168,6 @@ class OutgoingRESTImporter:
         outgoing.name = name
         outgoing.connection = CONNECTION.OUTGOING
         outgoing.transport = URL_TYPE.PLAIN_HTTP
-        outgoing.cluster = self.importer.get_cluster(session)
         outgoing.is_active = outgoing_def.get('is_active', True)
         outgoing.is_internal = False
         outgoing.soap_action = '' # Must be an empty string
@@ -254,7 +252,7 @@ class OutgoingRESTImporter:
     def sync_outgoing_rest(self, outgoing_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d outgoing REST connections from YAML', len(outgoing_list))
 
-        db_outgoing = self.get_outgoing_rest_from_db(session, self.importer.cluster_id)
+        db_outgoing = self.get_outgoing_rest_from_db(session)
         to_create, to_update = self.compare_outgoing_rest(outgoing_list, db_outgoing)
 
         out_created = []

@@ -9,9 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # SQLAlchemy
 from sqlalchemy import func, insert, select
 
-# Zato
-from zato.common.defaults import default_cluster_id
-
 # Local
 from .constants import Root_Parent_Key
 from .data import anydict, RuleDefinitionRecord, RuleEventRecord, RuleVersionRecord
@@ -76,8 +73,6 @@ def newest_event_id(session:'Session') -> 'int':
     """ Returns the newest event id in the caller's transaction, 0 for an empty feed.
     """
     query = select(func.max(rule_event_table.c.id))
-    cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
-    query = query.where(cluster_condition)
     result = session.execute(query)
     newest_id = result.scalar()
 
@@ -94,11 +89,9 @@ def newest_event_id(session:'Session') -> 'int':
 def get_definition(session:'Session', definition_id:'int') -> 'RuleDefinitionRecord':
     """ Returns one definition in the caller's transaction.
     """
-    # Query inside the one Zato cluster ..
+    # Query the definition by its id ..
     query = select(rule_definition_table)
-    cluster_condition = rule_definition_table.c.cluster_id == default_cluster_id
     id_condition = rule_definition_table.c.id == definition_id
-    query = query.where(cluster_condition)
     query = query.where(id_condition)
     result = session.execute(query)
     row = result.one_or_none()
@@ -156,7 +149,6 @@ def add_event(
     created_at = utc_now()
     event_payload = payload_text(payload)
     values = {
-        'cluster_id':    default_cluster_id,
         'definition_id': definition_id,
         'version':       version,
         'event_type':    event_type,
@@ -177,7 +169,6 @@ def add_event(
     # .. and build the detached record from the values just written, avoiding a redundant re-read.
     out = RuleEventRecord(
         id=event_id,
-        cluster_id=default_cluster_id,
         definition_id=definition_id,
         version=version,
         event_type=event_type,

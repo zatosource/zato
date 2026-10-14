@@ -104,6 +104,5 @@ $.fn.zato.outgoing.sql.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.outgoing.sql.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing SQL connection [{0}] deleted',
-        'Are you sure you want to delete the outgoing SQL connection [{0}]?',
-        true);
+        'Are you sure you want to delete the outgoing SQL connection [{0}]?');
 }

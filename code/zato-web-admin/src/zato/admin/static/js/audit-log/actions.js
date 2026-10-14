@@ -328,7 +328,6 @@ $.fn.zato.audit_log.init = function(initConfig) {
     config.source = initConfig.source;
     config.exchange = initConfig.exchange;
     config.objectName = initConfig.object_name;
-    config.clusterId = initConfig.cluster_id;
     config.sourceLabels = initConfig.source_labels;
     config.sourceExceptLabels = initConfig.source_except_labels;
     config.objectLinks = initConfig.object_links;

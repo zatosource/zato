@@ -17,7 +17,6 @@ from django.utils.html import format_html
 from zato.admin.web.forms import INITIAL_CHOICES
 from zato.common.alerting.object_config import Email_Conn_Type_IMAP, Email_Conn_Type_SMTP, encode_email_connection
 from zato.common.api import EMAIL, GENERIC
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,7 +56,7 @@ def _get_email_connection_names(request:'any_', kind:'anydict') -> 'strlist':
     """
     out:'strlist' = []
 
-    payload = {'cluster_id': request.zato.cluster_id}
+    payload = {}
     response = request.zato.client.invoke(kind['service'], payload)
 
     for item in response:
@@ -78,7 +77,6 @@ def _get_llm_connection_names(request:'any_', kind:'anydict') -> 'strlist':
     out:'strlist' = []
 
     payload = {
-        'cluster_id': request.zato.cluster_id,
         'type_': GENERIC.CONNECTION.TYPE.OUTCONN_LLM,
         'paginate': False,
     }
@@ -185,7 +183,7 @@ def get_create_url(kind:'anydict') -> 'str':
     """ The kind's own page with its create form open.
     """
     url = reverse(kind['url_name'])
-    out = f'{url}?cluster={default_cluster_id}&create=1'
+    out = f'{url}?create=1'
 
     return out
 

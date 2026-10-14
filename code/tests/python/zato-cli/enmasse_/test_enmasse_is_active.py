@@ -30,7 +30,7 @@ from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager
 from zato.common.api import HTTP_SOAP
 from zato.common.crypto.api import ServerCryptoManager
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, IntervalBasedJob, Job, \
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, IntervalBasedJob, Job, \
     SecurityBase, Service, SMTP
 
 # ################################################################################################################################
@@ -43,9 +43,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The cluster every object in the test database belongs to
-_cluster_id = 1
 
 # The service the channels invoke
 _service_name = 'enmasse.is_active.service'
@@ -79,13 +76,12 @@ _types = {
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster, the service the channels invoke
+    """ A real ODB session over an in-memory SQLite database holding the service the channels invoke
     and the service a health check job dispatches to, carrying the crypto manager the importers encrypt secrets with.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -104,12 +100,9 @@ def session() -> 'any_':
     # The LLM definition carries an API key the importer encrypts through the session's crypto manager
     session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
-    session.add(Service(None, _service_name, True, 'enmasse.is_active.Service', False, cluster))
+    session.add(Service(None, _service_name, True, 'enmasse.is_active.Service', False))
     session.add(Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
-        'zato.server.service.internal.connection.HealthCheckRun', True, cluster))
+        'zato.server.service.internal.connection.HealthCheckRun', True))
 
     session.commit()
 

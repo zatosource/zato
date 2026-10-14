@@ -198,7 +198,6 @@ def zato_server(request:'any_'):
     qs_cmd = [
         _ZATO_BIN, 'quickstart', 'create', _tmpdir,
         '--force',
-        '--servers', '1',
         '--server-api-client-for-scheduler-password', _PASSWORD,
     ]
     result = subprocess.run(qs_cmd, capture_output=True, text=True, timeout=120, env=qs_env)

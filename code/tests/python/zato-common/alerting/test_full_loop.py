@@ -428,7 +428,7 @@ class TestFullLoop:
         # Where every message about the REST connection points - the audit log page
         # filtered down to the connection. Its failures are response events, a type
         # no source declares resubmittable, so no event is deep-linked.
-        rest_link = f'/zato/audit-log/?source=rest-outgoing&object_name={quote(_rest_conn_name)}&cluster=1'
+        rest_link = f'/zato/audit-log/?source=rest-outgoing&object_name={quote(_rest_conn_name)}'
 
         # Slack received exactly one message - the rendered slack template,
         # sent to the channel the rule names

@@ -43,10 +43,10 @@ class SecurityExporter:
 
 # ################################################################################################################################
 
-    def _load_tier_names(self, session:'SASession', cluster_id:'int') -> 'None':
+    def _load_tier_names(self, session:'SASession') -> 'None':
         """ Builds a map of quota tier ids to their names for reference resolution during export.
         """
-        wrapper = GenericObjectWrapper(session, cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
         rows = wrapper.get_list()
@@ -193,7 +193,7 @@ class SecurityExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'list_[anydict]':
+    def export(self, session:'SASession') -> 'list_[anydict]':
         """ Exports security definitions.
         """
         logger.info('Exporting security definitions with exclusions')
@@ -205,18 +205,18 @@ class SecurityExporter:
         excluded_prefixes = ['zato', 'pub.zato', 'demo']
 
         # Load tier names so quota tier references can be exported by name
-        self._load_tier_names(session, cluster_id)
+        self._load_tier_names(session)
 
         exported_security = []
 
         # Get all security definitions from the database
-        basic_auth_defs = basic_auth_list(session, cluster_id)
-        apikey_defs = apikey_security_list(session, cluster_id)
-        mtls_defs = mtls_list(session, cluster_id)
-        ntlm_defs = ntlm_list(session, cluster_id)
-        oauth_defs = oauth_list(session, cluster_id)
-        spnego_defs = spnego_list(session, cluster_id)
-        wss_defs = wss_list(session, cluster_id)
+        basic_auth_defs = basic_auth_list(session)
+        apikey_defs = apikey_security_list(session)
+        mtls_defs = mtls_list(session)
+        ntlm_defs = ntlm_list(session)
+        oauth_defs = oauth_list(session)
+        spnego_defs = spnego_list(session)
+        wss_defs = wss_list(session)
 
         # Process basic auth definitions
         if basic_auth_defs:

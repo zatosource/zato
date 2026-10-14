@@ -83,8 +83,6 @@ $.namespace('zato.cloud.microsoft_365');
 $.namespace('zato.cloud.microsoft_fabric');
 $.namespace('zato.cloud.microsoft_power_automate');
 $.namespace('zato.cloud.salesforce');
-$.namespace('zato.cluster');
-$.namespace('zato.cluster.servers');
 $.namespace('zato.common');
 $.namespace('zato.common.security');
 $.namespace('zato.config_db');
@@ -766,8 +764,7 @@ $.fn.zato.data_table._bounce_row = function(tr, action) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
-    append_cluster, confirm_challenge, url_pattern, post_data, remove_tr,
-    on_success_callback) {
+    confirm_challenge, url_pattern, post_data, remove_tr, on_success_callback) {
 
     // 99% of callers will not provide remove_tr in which case we default to True
     var _remove_tr = remove_tr == null ? true : remove_tr;
@@ -808,9 +805,6 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
             }
             else {
                 var url = String.format('./delete/{0}/', id);
-            }
-            if(append_cluster) {
-                url = url + String.format('cluster/{0}/', $('#cluster_id').val());
             }
             if(!post_data) {
                 post_data = {};
@@ -1476,18 +1470,18 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table.service_text = function(service, cluster_id) {
-    return String.format('<a href="/zato/service/ide/service/{0}/?cluster={1}">{0}</a>', service, cluster_id);
+$.fn.zato.data_table.service_text = function(service) {
+    return String.format('<a href="/zato/service/ide/service/{0}/">{0}</a>', service);
 }
 
-$.fn.zato.data_table.topic_text = function(topic, cluster_id) {
-    return String.format('<a href="/zato/pubsub/topic/?cluster={1}&amp;query={0}">{0}</a>', topic, cluster_id);
+$.fn.zato.data_table.topic_text = function(topic) {
+    return String.format('<a href="/zato/pubsub/topic/?query={0}">{0}</a>', topic);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.ping = function(id, link_elem) {
-    var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    var url = String.format('./ping/{0}/', id);
     $.fn.zato.action_runner.run({
         link_elem: link_elem,
         url: url,
@@ -2139,7 +2133,7 @@ $.fn.zato.populate_multi_checkbox = function(
         }
 
         var item_link = $("<a/>", {
-            "href": String.format(url_template, item["cluster_id"], item[name_field], item[id_field]),
+            "href": String.format(url_template, item[name_field], item[id_field]),
             "target": "_blank",
             "text": item[name_field],
         });
@@ -3707,8 +3701,7 @@ $.fn.zato.empty_table_cell = String.format('<td>{0}</td>', $.fn.zato.empty_value
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.service.export_config = function() {
-    var cluster_id = $(document).getUrlParam('cluster') || '1';
-    var export_url = '/zato/service/enmasse-export?cluster=' + cluster_id;
+    var export_url = '/zato/service/enmasse-export';
 
     var spinner_html = '<div id="export-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Exporting ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
     $('body').append(spinner_html);
@@ -3739,7 +3732,6 @@ $.fn.zato.service.export_config = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.service.import_config = function() {
-    var cluster_id = $(document).getUrlParam('cluster') || '1';
 
     var input = document.createElement('input');
     input.type = 'file';
@@ -3759,7 +3751,7 @@ $.fn.zato.service.import_config = function() {
             $('body').append(spinner_html);
 
             $.ajax({
-                url: '/zato/service/enmasse-import?cluster=' + cluster_id,
+                url: '/zato/service/enmasse-import',
                 method: 'POST',
                 data: {
                     file_content: fileContent,
@@ -4325,8 +4317,7 @@ $.fn.zato.system.show_version = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.pubsub.download_openapi = function() {
-    var cluster_id = $(document).getUrlParam('cluster') || '1';
-    var download_url = '/zato/pubsub/download-openapi?cluster=' + cluster_id;
+    var download_url = '/zato/pubsub/download-openapi';
 
     var spinner_html = '<div id="download-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Downloading ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
     $('body').append(spinner_html);

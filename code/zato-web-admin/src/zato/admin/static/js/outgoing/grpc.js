@@ -120,7 +120,7 @@ $.fn.zato.outgoing.grpc.data_table.new_row = function(item, data, includeTR) {
                 else if(securityType === 'apikey') {
                     securityHref += 'apikey/';
                 }
-                securityHref += '?cluster=1&query=' + encodeURIComponent(securityName);
+                securityHref += '?query=' + encodeURIComponent(securityName);
                 securityCell = String.format('<a href=\'{0}\'>{1}</a>', securityHref, securityName);
             }
         }
@@ -175,8 +175,7 @@ $.fn.zato.outgoing.grpc.data_table.new_row = function(item, data, includeTR) {
 $.fn.zato.outgoing.grpc.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'gRPC connection `{0}` deleted',
-        'Are you sure you want to delete gRPC connection `{0}`?',
-        true);
+        'Are you sure you want to delete gRPC connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

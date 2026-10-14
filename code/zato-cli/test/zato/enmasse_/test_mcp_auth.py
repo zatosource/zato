@@ -108,7 +108,6 @@ class TestMCPAuth(TestCase):
 
         qs_cmd = [
             _ZATO_BIN, 'quickstart', 'create', qs_dir,
-            '--servers', '1',
             '--server-api-client-for-scheduler-password', cls._password,
             '--no-scheduler',
         ]
@@ -479,7 +478,6 @@ mcp_gateway:
         from zato.common.api import GENERIC
 
         response_data = self._invoke_service('zato.generic.connection.get-list', {
-            'cluster_id': 1,
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'query': gateway_name,
         })
@@ -678,7 +676,6 @@ mcp_gateway:
 
         self._invoke_service('zato.generic.connection.edit', {
             'id': conn['id'],
-            'cluster_id': 1,
             'name': new_name,
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'is_active': True,

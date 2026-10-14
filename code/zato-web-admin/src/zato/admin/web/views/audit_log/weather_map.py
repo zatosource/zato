@@ -26,7 +26,6 @@ from zato.admin.web.views import method_allowed
 from zato.admin.web.views.audit_log.columns import _object_page_url, _source_label, _source_page_url
 from zato.common.api import CONNECTION, GENERIC, URL_TYPE
 from zato.common.audit_log.common import AuditSource
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,7 +47,7 @@ logger = logging.getLogger(__name__)
 # Most connection types are generic connections, all listed by this one service
 _generic_service = 'zato.generic.connection.get-list'
 
-# Which service lists each source's connections and with what request beyond the cluster id.
+# Which service lists each source's connections and with what request.
 # Every source here is an audit source, so every city and continent can lead into the log.
 _inventory_services = [
 
@@ -100,7 +99,7 @@ def _get_names(req:'any_', service:'str', request:'any_') -> 'strlist':
         logger.warning('Could not read the connection list from `%s`; details:`%s`', service, response.details)
         return out
 
-    # A cluster with no connection of that type at all answers with nothing to iterate over
+    # An environment with no connection of that type at all answers with nothing to iterate over
     if not response.data:
         return out
 
@@ -112,14 +111,14 @@ def _get_names(req:'any_', service:'str', request:'any_') -> 'strlist':
 # ################################################################################################################################
 
 def _get_inventory(req:'any_') -> 'anylist':
-    """ Returns every connection the cluster is configured with, grouped by source - one
+    """ Returns every connection the environment is configured with, grouped by source - one
     round trip per type. A type with no connections draws no landmass, so it is not returned.
     """
     out:'anylist' = []
 
     for source, service, request_extras in _inventory_services:
 
-        request = {'cluster_id': req.zato.cluster_id}
+        request = {}
         request.update(request_extras)
 
         names = _get_names(req, service, request)
@@ -133,7 +132,7 @@ def _get_inventory(req:'any_') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The map may be drawn out of a static enmasse file instead of the live cluster -
+# The map may be drawn out of a static enmasse file instead of the live environment -
 # point this environment variable to the file to use it.
 _enmasse_path_env = 'Zato_Weather_Map_Enmasse_Path'
 
@@ -190,11 +189,9 @@ def index(req:'any_') -> 'TemplateResponse':
         inventory = _get_inventory(req)
 
     return_data = {
-        'cluster_id': default_cluster_id,
         'inventory_json': json.dumps(inventory),
         'source_links_json': json.dumps(_source_page_url),
         'object_links_json': json.dumps(_object_page_url),
-        'zato_clusters': True,
         'zato_template_name': 'zato/audit-log-weather-map.html',
     }
 

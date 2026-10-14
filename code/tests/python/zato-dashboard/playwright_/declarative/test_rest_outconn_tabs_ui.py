@@ -41,7 +41,7 @@ _Test_Name_Prefix = 'test.rest.outconn.tabsui.' + rand_string() + '.'
 _Test_Host = 'http://127.0.0.1:1'
 
 # The REST channels page - the same view as outgoing connections, with a different connection type
-_Channel_Page_Url = '/zato/http-soap/?cluster=1&connection=channel&transport=plain_http'
+_Channel_Page_Url = '/zato/http-soap/?connection=channel&transport=plain_http'
 
 # The rows of the query string parameters in the create dialog
 _Query_Rows_Selector = '#request-query_string-rows-create .request-param-row'

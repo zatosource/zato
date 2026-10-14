@@ -120,8 +120,7 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
 $.fn.zato.cloud.microsoft_365.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Microsoft 365 connection `{0}` deleted',
-        'Are you sure you want to delete Microsoft 365 connection `{0}`?',
-        true);
+        'Are you sure you want to delete Microsoft 365 connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -62,7 +62,6 @@ class PubSubSubscriptionImporter:
                 'rest_push_endpoint_id': item.rest_push_endpoint_id,
                 'push_service_name': item.push_service_name,
                 'is_delivery_active': item.is_delivery_active,
-                'cluster_id': 1
             }
 
             sub_key = subscription_dict['sub_key']
@@ -71,10 +70,10 @@ class PubSubSubscriptionImporter:
 
 # ################################################################################################################################
 
-    def get_pubsub_subscription_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_pubsub_subscription_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
-        logger.info('Retrieving pubsub subscription definitions from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving pubsub subscription definitions from database')
 
         # Single query to get subscriptions with their topic names
         query = session.query(
@@ -84,7 +83,7 @@ class PubSubSubscriptionImporter:
             PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
         ).outerjoin(
             PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
-        ).filter(PubSubSubscription.cluster_id == cluster_id)
+        )
 
         results = query.all()
 
@@ -113,7 +112,6 @@ class PubSubSubscriptionImporter:
                 'rest_push_endpoint_id': subscription.rest_push_endpoint_id,
                 'push_service_name': subscription.push_service_name,
                 'is_delivery_active': subscription.is_delivery_active,
-                'cluster_id': subscription.cluster_id,
                 'topic_name_list': topic_names
             }
             out[subscription.sub_key] = subscription_dict
@@ -134,7 +132,6 @@ class PubSubSubscriptionImporter:
         logger.info('CREATE: session.bind.url=%s', session.bind.url if session.bind else 'NO BIND')
 
         instance = PubSubSubscription()
-        instance.cluster_id = self.importer.cluster_id
         instance.sub_key = new_sub_key()
         instance.sec_base_id = definition['sec_base_id']
         instance.delivery_type = definition['delivery_type']
@@ -143,7 +140,7 @@ class PubSubSubscriptionImporter:
         instance.push_service_name = definition.get('push_service_name')
         instance.is_delivery_active = definition.get('is_delivery_active', True)
 
-        logger.info('CREATE: sub_key=%s, sec_base_id=%s, cluster_id=%s', instance.sub_key, instance.sec_base_id, instance.cluster_id)
+        logger.info('CREATE: sub_key=%s, sec_base_id=%s', instance.sub_key, instance.sec_base_id)
         logger.info('CREATE: before session.add, session.new=%s', list(session.new))
 
         set_instance_opaque_attrs(instance, definition)
@@ -174,13 +171,12 @@ class PubSubSubscriptionImporter:
         logger.info('Creating topic associations for subscription ID %s with topics %s', instance.id, definition['topic_id_list'])
 
         for topic_id in definition['topic_id_list']:
-            logger.info('Adding topic association: subscription_id=%s, topic_id=%s, cluster_id=%s', instance.id, topic_id, self.importer.cluster_id)
+            logger.info('Adding topic association: subscription_id=%s, topic_id=%s', instance.id, topic_id)
 
             sub_topic = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
             sub_topic.topic_id = topic_id
             sub_topic.pattern_matched = 'enmasse'
-            sub_topic.cluster_id = self.importer.cluster_id
             session.add(sub_topic)
 
         session.commit()
@@ -219,7 +215,6 @@ class PubSubSubscriptionImporter:
             sub_topic.subscription_id = instance.id
             sub_topic.topic_id = topic_id
             sub_topic.pattern_matched = 'enmasse'
-            sub_topic.cluster_id = self.importer.cluster_id
             session.add(sub_topic)
 
         session.commit()
@@ -334,7 +329,7 @@ class PubSubSubscriptionImporter:
         logger.info('Processing %d pubsub subscription definitions from YAML', len(subscription_list))
 
         # Get existing definitions from database
-        db_defs = self.get_pubsub_subscription_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_pubsub_subscription_defs_from_db(session)
 
         created = []
         updated = []
@@ -403,7 +398,6 @@ class PubSubSubscriptionImporter:
                     'rest_push_endpoint_id': instance.rest_push_endpoint_id,
                     'push_service_name': instance.push_service_name,
                     'is_delivery_active': instance.is_delivery_active,
-                    'cluster_id': instance.cluster_id
                 }
 
             else:
@@ -426,7 +420,6 @@ class PubSubSubscriptionImporter:
                         'rest_push_endpoint_id': instance.rest_push_endpoint_id,
                         'push_service_name': instance.push_service_name,
                         'is_delivery_active': instance.is_delivery_active,
-                        'cluster_id': instance.cluster_id
                     }
 
         logger.info('Pubsub subscription definitions sync completed: created=%d, updated=%d', len(created), len(updated))

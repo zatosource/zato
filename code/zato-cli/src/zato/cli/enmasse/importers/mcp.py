@@ -159,7 +159,6 @@ class GatewayMCPImporter(GenericConnectionImporter):
             GenericObject.name == group_name,
             GenericObject.type_ == Groups.Type.Group_Parent,
             GenericObject.subtype == Groups.Type.API_Clients,
-            GenericObject.cluster_id == self.importer.cluster_id,
         ))
 
         row = session.execute(query).fetchone()
@@ -202,7 +201,6 @@ class GatewayMCPImporter(GenericConnectionImporter):
             session=session,
             channel_name=channel_name,
             url_path=connection_def.get('url_path', '/mcp'),
-            cluster_id=self.importer.cluster_id,
             is_active=connection_def.get('is_active', True),
             security_groups=security_groups,
         )
@@ -213,7 +211,7 @@ class GatewayMCPImporter(GenericConnectionImporter):
         """ A gateway with OAuth on is imported only with a bearer definition that can verify tokens.
         """
         security_groups = self._resolve_security_groups(connection_def, session)
-        validate_oauth_security(session, connection_def, security_groups, self.importer.cluster_id)
+        validate_oauth_security(session, connection_def, security_groups)
 
 # ################################################################################################################################
 

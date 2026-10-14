@@ -82,7 +82,6 @@ class TestEnmasseOdooExporter(TestCase):
         odoo_list_from_yaml = self.yaml_config.get('odoo', [])
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_odoo_connections, _ = self.odoo_importer.sync_odoo_definitions(odoo_list_from_yaml, self.session)
         self.session.commit()
 

@@ -19,7 +19,6 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,11 +101,9 @@ def index(req):
         data_json = '{}'
 
     return TemplateResponse(req, 'zato/scheduler/dashboard.html', {
-        'cluster_id': default_cluster_id,
         'range_minutes': range_minutes,
         'dashboard_data': data_json,
         'dashboard_base_url': dashboard_base_url,
-        'zato_clusters': True,
         'zato_template_name': 'zato/scheduler/dashboard.html',
     })
 
@@ -169,7 +166,6 @@ def job_detail(req, job_id:'int'):
 
     try:
         response = req.zato.client.invoke('zato.scheduler.job.get-by-id', {
-            'cluster_id': default_cluster_id,
             'id': job_id,
         })
         if response.ok:
@@ -198,13 +194,11 @@ def job_detail(req, job_id:'int'):
         logger.error('Scheduler job state error: %s', e)
 
     return TemplateResponse(req, 'zato/scheduler/job-detail.html', {
-        'cluster_id': default_cluster_id,
         'range_minutes': range_minutes,
         'job_id': job_id,
         'job_data': json.dumps(job_data),
         'dashboard_base_url': dashboard_base_url,
         'poll_url': '/zato/dashboard/detail-poll/',
-        'zato_clusters': True,
         'zato_template_name': 'zato/scheduler/job-detail.html',
     })
 
@@ -222,7 +216,6 @@ def run_detail(req, job_id:'int', run_number:'int'):
 
     try:
         response = req.zato.client.invoke('zato.scheduler.job.get-by-id', {
-            'cluster_id': default_cluster_id,
             'id': job_id,
         })
         if response.ok:
@@ -231,14 +224,12 @@ def run_detail(req, job_id:'int', run_number:'int'):
         logger.error('Scheduler run detail error: %s', e)
 
     return TemplateResponse(req, 'zato/scheduler/run_detail.html', {
-        'cluster_id': default_cluster_id,
         'range_minutes': range_minutes,
         'job_id': job_id,
         'run_number': run_number,
         'job_data': json.dumps(job_data),
         'dashboard_base_url': dashboard_base_url,
         'poll_url': '/zato/dashboard/detail-poll/',
-        'zato_clusters': True,
         'zato_template_name': 'zato/scheduler/run_detail.html',
     })
 

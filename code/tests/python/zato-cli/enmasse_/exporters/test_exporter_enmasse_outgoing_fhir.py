@@ -108,8 +108,6 @@ class TestEnmasseOutgoingFHIRExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        _ = self.importer.get_cluster(self.session)
-
         # A connection that names a security definition can only resolve it once the definitions exist,
         # which is the order the importer itself runs the two sections in
         security_list = self.yaml_config['security']
@@ -125,7 +123,7 @@ class TestEnmasseOutgoingFHIRExporter(TestCase):
         connection_defs = self.yaml_config['outgoing_fhir']
         _, _ = self.outgoing_fhir_importer.sync_definitions(connection_defs, self.session)
 
-        all_exported = self.outgoing_fhir_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.outgoing_fhir_exporter.export(self.session)
 
         out = {}
 

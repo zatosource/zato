@@ -16,7 +16,7 @@ from zato.admin.web import DATE_FORMATS, TIME_FORMATS
 from zato.admin.web.common import tz_names
 
 class BasicSettingsForm(forms.Form):
-    """ All the basic settings not including cluster color markers.
+    """ All the basic settings not including the environment color marker.
     """
     timezone = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     date_format = forms.ChoiceField()

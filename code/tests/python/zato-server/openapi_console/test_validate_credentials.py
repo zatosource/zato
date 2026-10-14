@@ -12,7 +12,6 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.common.api import SEC_DEF_TYPE
-from zato.common.defaults import default_cluster_id
 from zato.server.openapi_console.spec import validate_credentials
 
 # ################################################################################################################################
@@ -112,7 +111,6 @@ def _make_server(
     session = _FakeSession(rows)
 
     out = MagicMock()
-    out.cluster_id = default_cluster_id
     out.odb.session.return_value = session
 
     url_data = out.config_manager.request_dispatcher.url_data

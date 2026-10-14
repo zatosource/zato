@@ -26,8 +26,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
-_Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
+_Permission_Page_Url = '/zato/pubsub/permission/'
+_Topic_Page_Url = '/zato/pubsub/topic/'
 
 _Test_Name_Prefix = 'test.permission.' + CryptoManager.generate_hex_string(32) + '.'
 

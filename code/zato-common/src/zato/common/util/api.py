@@ -97,7 +97,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_snowflake, engine_def_sqlite, MISC, \
-     Secret_Shadow, IO, TRACE1, zato_no_op_marker
+     Secret_Shadow, TRACE1, zato_no_op_marker
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -105,12 +105,12 @@ from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
+from zato.common.odb.model import HTTPBasicAuth
 from zato.common.util.config import enrich_config_from_environment
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
-from zato.common.util.open_ import open_r, open_w
+from zato.common.util.open_ import open_r
 from zato.common.util.snowflake import new_snowflake
 from zato.common.util.time_ import utcnow
 
@@ -162,15 +162,11 @@ _data_format_json_like = DATA_FORMAT.JSON, DATA_FORMAT.DICT
 # ################################################################################################################################
 
 # Kept here for backward compatibility
+fs_safe_name = fs_safe_name
 get_free_port = get_free_port
 is_port_taken = is_port_taken
 wait_until_port_free = wait_until_port_free
 wait_until_port_taken = wait_until_port_taken
-
-# ################################################################################################################################
-
-class ModuleCtx:
-    PID_To_Port_Pattern = 'zato-ipc-port-{cluster_name}-{server_name}-{pid}.txt'
 
 # ################################################################################################################################
 
@@ -1234,12 +1230,6 @@ def get_basic_auth_credentials(auth):
 
 # ################################################################################################################################
 
-def get_http_json_channel(name, service, cluster, security):
-    return HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', None, '/zato/json/{}'.format(name),
-        None, '', None, IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
-
-# ################################################################################################################################
-
 def get_engine(args):
     return sa.create_engine(get_engine_url(args))
 
@@ -1859,59 +1849,6 @@ def get_new_tmp_full_path(file_name:'str'='', *, prefix:'str'='', suffix:'str'='
     full_path = os.path.join(tmp_dir, file_name)
 
     return full_path
-
-# ################################################################################################################################
-
-def get_ipc_pid_port_path(cluster_name:'str', server_name:'str', pid:'int') -> 'str':
-
-    # This is where the file name itself ..
-    file_name = ModuleCtx.PID_To_Port_Pattern.format(
-        cluster_name=cluster_name,
-        server_name=server_name,
-        pid=pid,
-    )
-
-    # .. make sure the name is safe to use in the file-system ..
-    file_name = fs_safe_name(file_name)
-
-    # .. now, we can obtain a full path to a temporary directory ..
-    full_path = get_new_tmp_full_path(file_name)
-
-    # .. and return the result to our caller.
-    return full_path
-
-# ################################################################################################################################
-
-def save_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int', port:'int') -> 'None':
-
-    # Make sure we store a string ..
-    port = str(port)
-
-    # .. get a path where we can save it ..
-    path = get_ipc_pid_port_path(cluster_name, server_name, pid)
-
-    # .. and do save it now.
-    with open_w(path) as f:
-        _ = f.write(port)
-        f.flush()
-
-# ################################################################################################################################
-
-def load_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int') -> 'int':
-
-    # Get a path to load the port from ..
-    path = get_ipc_pid_port_path(cluster_name, server_name, pid)
-
-    # .. wait until the file exists (which may be required when the server starts up) ..
-    wait_for_file(path, interval=2.5)
-
-    # .. load it now ..
-    with open_r(path) as f:
-        data = f.read()
-        data = data.strip()
-        out = int(data)
-
-    return out
 
 # ################################################################################################################################
 

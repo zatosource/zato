@@ -147,84 +147,23 @@ class ZatoInstallState(Base):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Cluster(Base):
-    """ Represents a Zato cluster.
-    """
-    __tablename__ = 'cluster'
-
-    id = Column(Integer, Sequence('cluster_id_seq'), primary_key=True)
-    name = Column(String(200), unique=True, nullable=False)
-    description = Column(String(1000), nullable=True)
-    odb_type = Column(String(30), nullable=False)
-    broker_host = Column(String(200), nullable=False, default='broker-host-unused')
-    broker_port = Column(Integer(), nullable=False, default=998877)
-    cw_srv_id = Column(Integer(), nullable=True)
-    cw_srv_keep_alive_dt = Column(DateTime(), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    def __init__(self, id=None, name=None, description=None, odb_type=None, broker_host=None, broker_port=None, cw_srv_id=None,
-            cw_srv_keep_alive_dt=None):
-        self.id = id
-        self.name = name
-        self.description = description
-        self.odb_type = odb_type
-        self.broker_host = broker_host
-        self.broker_port = broker_port
-        self.cw_srv_id = cw_srv_id
-        self.cw_srv_keep_alive_dt = cw_srv_keep_alive_dt
-
-    def to_json(self):
-        return to_json(self)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class Server(Base):
     """ Represents a Zato server.
     """
     __tablename__ = 'server'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __table_args__ = (UniqueConstraint('name'), {})
 
     id = Column(Integer, Sequence('server_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
-    host = Column(String(400), nullable=True)
-
-    bind_host = Column(String(400), nullable=True)
-    bind_port = Column(Integer(), nullable=True)
-    preferred_address = Column(String(400), nullable=True)
-    crypto_use_tls = Column(Boolean(), nullable=True)
-
-    # If the server's request to join a cluster has been accepted, and for now
-    # it will always be.
-    last_join_status = Column(String(40), nullable=True)
-    last_join_mod_date = Column(DateTime(), nullable=True)
-    last_join_mod_by = Column(String(200), nullable=True)
-
-    # Whether the server's up or not
-    up_status = Column(String(40), nullable=True)
-    up_mod_date = Column(DateTime(), nullable=True)
-
     token = Column(String(32), nullable=False)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('servers', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, cluster=None, token=None, last_join_status=None, last_join_mod_date=None,
-            last_join_mod_by=None):
+    def __init__(self, id=None, name=None, token=None):
         self.id = id
         self.name = name
-        self.cluster = cluster
         self.token = token
-        self.last_join_status = last_join_status
-        self.last_join_mod_date = last_join_mod_date
-        self.last_join_mod_by = last_join_mod_by
-        self.may_be_deleted = None # Not used by the database
-        self.up_mod_date_user = None # Not used by the database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -233,8 +172,8 @@ class SecurityBase(Base):
     """ A base class for all the security definitions.
     """
     __tablename__ = 'sec_base'
-    __table_args__ = (UniqueConstraint('cluster_id', 'name'),
-        UniqueConstraint('cluster_id', 'username', 'sec_type'), {})
+    __table_args__ = (UniqueConstraint('name'),
+        UniqueConstraint('username', 'sec_type'), {})
     __mapper_args__ = {'polymorphic_on': 'sec_type'}
 
     id = Column(Integer, Sequence('sec_base_seq'), primary_key=True)
@@ -251,9 +190,6 @@ class SecurityBase(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('security_list', order_by=name, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -261,7 +197,7 @@ class MultiSecurity(Base):
     """ An N:N mapping between security definitions and objects making use of them.
     """
     __tablename__ = 'sec_multi'
-    __table_args__ = (UniqueConstraint('cluster_id', 'conn_id', 'conn_type', 'security_id', 'is_channel', 'is_outconn'), {})
+    __table_args__ = (UniqueConstraint('conn_id', 'conn_type', 'security_id', 'is_channel', 'is_outconn'), {})
 
     id = Column(Integer, Sequence('sec_multi_seq'), primary_key=True)
     is_active = Column(Boolean(), nullable=False)
@@ -280,9 +216,6 @@ class MultiSecurity(Base):
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
     security = relationship(SecurityBase, backref=backref('sec_multi_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('sec_multi_list', order_by=id, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -295,14 +228,13 @@ class HTTPBasicAuth(SecurityBase):
     id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
     realm = Column(String(200), nullable=False)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None, realm=None, password=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, username=None, realm=None, password=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
         self.realm = realm
         self.password = password
-        self.cluster = cluster
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -319,7 +251,7 @@ class OAuth(SecurityBase):
     max_nonce_log = Column(Integer(), nullable=False)
 
     def __init__(self, id=None, name=None, is_active=None, username=None, password=None, proto_version=None, sig_method=None,
-            max_nonce_log=None, cluster=None):
+            max_nonce_log=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -328,7 +260,6 @@ class OAuth(SecurityBase):
         self.proto_version = proto_version
         self.sig_method = sig_method
         self.max_nonce_log = max_nonce_log
-        self.cluster = cluster
 
     def to_json(self):
         return to_json(self)
@@ -344,12 +275,11 @@ class NTLM(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
-        self.cluster = cluster
 
     def to_json(self):
         return to_json(self)
@@ -366,12 +296,11 @@ class MTLSSecurity(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, username=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
-        self.cluster = cluster
 
     def to_json(self):
         return to_json(self)
@@ -388,12 +317,11 @@ class SPNEGOSecurity(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, username=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
-        self.cluster = cluster
 
     def to_json(self):
         return to_json(self)
@@ -409,13 +337,12 @@ class APIKeySecurity(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
         self.password = password
-        self.cluster = cluster
         self.header = None # Not used by the DB
 
     def to_json(self):
@@ -432,13 +359,12 @@ class WSSecurity(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
         self.password = password
-        self.cluster = cluster
 
     def to_json(self):
         return to_json(self)
@@ -451,8 +377,8 @@ class HTTPSOAP(Base):
     """
     __tablename__ = 'http_soap'
     __table_args__ = (
-        UniqueConstraint('name', 'connection', 'transport', 'cluster_id'),
-        Index('path_host_conn_act_clus_idx', 'url_path', 'host', 'connection', 'soap_action', 'cluster_id', unique=False), {})
+        UniqueConstraint('name', 'connection', 'transport'),
+        Index('path_host_conn_act_idx', 'url_path', 'host', 'connection', 'soap_action', unique=False), {})
 
     id = Column(Integer, Sequence('http_soap_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -489,14 +415,11 @@ class HTTPSOAP(Base):
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
-
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None,
             url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
             pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None,
-            timeout=None, service_id=None, service=None, security=None, cluster_id=None,
-            cluster=None, service_name=None, security_id=None, security_name=None, content_type=None,
+            timeout=None, service_id=None, service=None, security=None,
+            service_name=None, security_id=None, security_name=None, content_type=None,
             match_slash=None,
             http_accept=None, validate_tls=None, opaque=None, **kwargs):
         super(HTTPSOAP, self).__init__(**kwargs)
@@ -521,8 +444,6 @@ class HTTPSOAP(Base):
         self.service_id = service_id
         self.service = service
         self.security = security
-        self.cluster_id = cluster_id
-        self.cluster = cluster
         self.service_name = service_name # Not used by the DB
         self.security_id = security_id
         self.security_name = security_name
@@ -544,7 +465,7 @@ class SQLConnectionPool(Base):
     """ An SQL connection pool.
     """
     __tablename__ = 'sql_pool'
-    __table_args__ = (UniqueConstraint('cluster_id', 'name'), {})
+    __table_args__ = (UniqueConstraint('name'), {})
 
     id = Column(Integer, Sequence('sql_pool_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -561,13 +482,10 @@ class SQLConnectionPool(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name, cascade='all, delete, delete-orphan'))
-
     engine_display_name = None # For auto-completion, not used by DB
 
     def __init__(self, id=None, name=None, is_active=None, db_name=None, username=None, engine=None, extra=None, host=None,
-            port=None, pool_size=None, cluster=None):
+            port=None, pool_size=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -578,16 +496,15 @@ class SQLConnectionPool(Base):
         self.host = host
         self.port = port
         self.pool_size = pool_size
-        self.cluster = cluster
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Service(Base):
-    """ A set of basic informations about a service available in a given cluster.
+    """ A set of basic informations about a service.
     """
     __tablename__ = 'service'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __table_args__ = (UniqueConstraint('name'), {})
 
     id = Column(Integer, Sequence('service_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -600,17 +517,13 @@ class Service(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, impl_name=None, is_internal=None, cluster=None, wsdl=None,
+    def __init__(self, id=None, name=None, is_active=None, impl_name=None, is_internal=None, wsdl=None,
             wsdl_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.impl_name = impl_name
         self.is_internal = is_internal
-        self.cluster = cluster
         self.wsdl = wsdl
         self.wsdl_name = wsdl_name
         self.plain_http_channels = [] # Not used by the database
@@ -664,7 +577,7 @@ class Job(Base):
     if it's a one-time job, otherwise the information is kept in related tables.
     """
     __tablename__ = 'job'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __table_args__ = (UniqueConstraint('name'), {})
 
     id = Column(Integer, Sequence('job_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -676,14 +589,11 @@ class Job(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
-
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, is_active=None, job_type=None, start_date=None, extra=None, cluster=None,
-            cluster_id=None, service=None, service_id=None, service_name=None, interval_based=None,
+    def __init__(self, id=None, name=None, is_active=None, job_type=None, start_date=None, extra=None,
+            service=None, service_id=None, service_name=None, interval_based=None,
             definition_text=None, job_type_friendly=None):
         self.id = id
         self.name = name
@@ -691,8 +601,6 @@ class Job(Base):
         self.job_type = job_type
         self.start_date = start_date
         self.extra = extra
-        self.cluster = cluster
-        self.cluster_id = cluster_id
         self.service = service
         self.service_id = service_id
         self.service_name = service_name # Not used by the database
@@ -793,7 +701,7 @@ class OutgoingOdoo(Base):
     """ An outgoing Odoo connection.
     """
     __tablename__ = 'out_odoo'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __table_args__ = (UniqueConstraint('name'), {})
 
     id = Column(Integer, Sequence('out_odoo_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -811,11 +719,7 @@ class OutgoingOdoo(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('out_conns_odoo', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, cluster=None):
-        self.cluster = cluster
+    def __init__(self):
         self.protocol_name = None # Not used by the DB
 
 # ################################################################################################################################
@@ -895,42 +799,9 @@ class DeploymentPackage(Base):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DeploymentStatus(Base):
-    """ Whether a server has already deployed a given package.
-    """
-    __tablename__ = 'deployment_status'
-    __table_args__ = (UniqueConstraint('package_id', 'server_id'), {})
-
-    id = Column(Integer, Sequence('depl_status_seq'), primary_key=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    package_id = Column(
-        Integer, ForeignKey('deployment_package.id', ondelete='CASCADE'), nullable=False, primary_key=False)
-    package = relationship(
-        DeploymentPackage, backref=backref('deployment_status_list', order_by=package_id, cascade='all, delete, delete-orphan'))
-
-    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False, primary_key=False)
-    server = relationship(
-        Server, backref=backref('deployment_status_list', order_by=server_id, cascade='all, delete, delete-orphan'))
-
-    # See zato.common.DEPLOYMENT_STATUS
-    status = Column(String(20), nullable=False)
-    status_change_time = Column(DateTime(), nullable=False)
-
-    def __init__(self, package_id=None, server_id=None, status=None, status_change_time=None):
-        self.package_id = package_id
-        self.server_id = server_id
-        self.status = status
-        self.status_change_time = status_change_time
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class SMTP(Base):
     __tablename__ = 'email_smtp'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __table_args__ = (UniqueConstraint('name'), {})
 
     id = Column(Integer, Sequence('email_smtp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -948,15 +819,12 @@ class SMTP(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('smtp_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class IMAP(Base):
     __tablename__ = 'email_imap'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __table_args__ = (UniqueConstraint('name'), {})
 
     id = Column(Integer, Sequence('email_imap_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -974,9 +842,6 @@ class IMAP(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('imap_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -985,13 +850,13 @@ class GenericObject(Base):
     """
     __tablename__ = 'generic_object'
     __table_args__ = (
-        Index('gen_obj_uq_name_type', 'name', 'type_', 'cluster_id', unique=True),
-        Index('gen_obj_par_id', 'cluster_id', 'parent_id', 'parent_type', unique=False),
-        Index('gen_obj_cat_id', 'cluster_id', 'category_id', unique=False),
-        Index('gen_obj_cat_subcat_id', 'cluster_id', 'category_id', 'subcategory_id', unique=False),
-        Index('gen_obj_cat_name', 'cluster_id', 'category_name', unique=False),
-        Index('gen_obj_cat_subc_name', 'cluster_id', 'category_name', 'subcategory_name', unique=False),
-        Index('gen_obj_par_obj_id', 'cluster_id', 'parent_object_id', unique=False),
+        Index('gen_obj_uq_name_type', 'name', 'type_', unique=True),
+        Index('gen_obj_par_id', 'parent_id', 'parent_type', unique=False),
+        Index('gen_obj_cat_id', 'category_id', unique=False),
+        Index('gen_obj_cat_subcat_id', 'category_id', 'subcategory_id', unique=False),
+        Index('gen_obj_cat_name', 'category_name', unique=False),
+        Index('gen_obj_cat_subc_name', 'category_name', 'subcategory_name', unique=False),
+        Index('gen_obj_par_obj_id', 'parent_object_id', unique=False),
     {})
 
     id = Column(Integer, Sequence('generic_object_seq'), primary_key=True)
@@ -1025,9 +890,6 @@ class GenericObject(Base):
     generic_conn_sec_id = Column(Integer, ForeignKey('generic_conn_sec.id', ondelete='CASCADE'), nullable=True)
     generic_conn_client_id = Column(Integer, ForeignKey('generic_conn_client.id', ondelete='CASCADE'), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('generic_object_list', order_by=name, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1036,7 +898,7 @@ class GenericConnDef(Base):
     """
     __tablename__ = 'generic_conn_def'
     __table_args__ = (
-        UniqueConstraint('name', 'type_', 'cluster_id'),
+        UniqueConstraint('name', 'type_'),
     {})
 
     id = Column(Integer, Sequence('generic_conn_def_seq'), primary_key=True)
@@ -1067,9 +929,6 @@ class GenericConnDef(Base):
     secret = Column(String(1000), nullable=True)
     secret_type = Column(String(45), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('generic_conn_def_list', order_by=id, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1078,7 +937,7 @@ class GenericConnDefSec(Base):
     """
     __tablename__ = 'generic_conn_def_sec'
     __table_args__ = (
-        UniqueConstraint('conn_def_id', 'sec_base_id', 'cluster_id'),
+        UniqueConstraint('conn_def_id', 'sec_base_id'),
     {})
 
     id = Column(Integer, Sequence('generic_conn_def_sec_seq'), primary_key=True)
@@ -1094,10 +953,6 @@ class GenericConnDefSec(Base):
     sec_base = relationship(SecurityBase, backref=backref('generic_conn_def_sec_list', order_by=id,
         cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('generic_conn_def_sec_list', order_by=id,
-        cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1106,7 +961,7 @@ class GenericConn(Base):
     """
     __tablename__ = 'generic_conn'
     __table_args__ = (
-        UniqueConstraint('name', 'type_', 'cluster_id'),
+        UniqueConstraint('name', 'type_'),
     {})
 
     id = Column(Integer, Sequence('generic_conn_def_seq'), primary_key=True)
@@ -1142,9 +997,6 @@ class GenericConn(Base):
     conn_def = relationship(GenericConnDef, backref=backref('generic_conn_def_list',
         order_by=id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('generic_conn_list', order_by=id, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1153,7 +1005,7 @@ class GenericConnSec(Base):
     """
     __tablename__ = 'generic_conn_sec'
     __table_args__ = (
-        UniqueConstraint('conn_id', 'sec_base_id', 'cluster_id'),
+        UniqueConstraint('conn_id', 'sec_base_id'),
     {})
 
     id = Column(Integer, Sequence('generic_conn_sec_seq'), primary_key=True)
@@ -1169,10 +1021,6 @@ class GenericConnSec(Base):
     sec_base = relationship(SecurityBase, backref=backref('generic_conn_sec_list', order_by=id,
         cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('generic_conn_sec_list', order_by=id,
-        cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1181,11 +1029,11 @@ class GenericConnClient(Base):
     """
     __tablename__ = 'generic_conn_client'
     __table_args__ = (
-        Index('gen_conn_cli_idx', 'cluster_id', 'pub_client_id', unique=False),
-        Index('gen_conn_cli_ext_n_idx', 'cluster_id', 'ext_client_name', unique=False),
-        Index('gen_conn_cli_ext_i_idx', 'cluster_id', 'ext_client_id', unique=False),
-        Index('gen_conn_cli_pr_addr_idx', 'cluster_id', 'peer_address', unique=False),
-        Index('gen_conn_cli_pr_fqdn_idx', 'cluster_id', 'peer_fqdn', unique=False),
+        Index('gen_conn_cli_idx', 'pub_client_id', unique=False),
+        Index('gen_conn_cli_ext_n_idx', 'ext_client_name', unique=False),
+        Index('gen_conn_cli_ext_i_idx', 'ext_client_id', unique=False),
+        Index('gen_conn_cli_pr_addr_idx', 'peer_address', unique=False),
+        Index('gen_conn_cli_pr_fqdn_idx', 'peer_fqdn', unique=False),
     {})
 
     # This ID is for SQL
@@ -1218,10 +1066,6 @@ class GenericConnClient(Base):
     server = relationship(
         Server, backref=backref('gen_conn_clients', order_by=local_address, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(
-        Cluster, backref=backref('gen_conn_clients', order_by=last_seen, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1230,7 +1074,7 @@ class PubSubTopic(Base):
     """
     __tablename__ = 'pubsub_topic'
     __table_args__ = (
-        UniqueConstraint('name', 'cluster_id'),
+        UniqueConstraint('name'),
         {}
     )
 
@@ -1244,9 +1088,6 @@ class PubSubTopic(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=id, cascade='all, delete, delete-orphan'))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1255,7 +1096,7 @@ class PubSubPermission(Base):
     """
     __tablename__ = 'pubsub_permission'
     __table_args__ = (
-        UniqueConstraint('sec_base_id', 'pattern', 'access_type', 'cluster_id'),
+        UniqueConstraint('sec_base_id', 'pattern', 'access_type'),
         {}
     )
 
@@ -1265,9 +1106,6 @@ class PubSubPermission(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     created = Column(DateTime, nullable=False, default=_utcnow)
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
 
     sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
     sec_base = relationship('SecurityBase', backref=backref('pubsub_permissions', order_by=id, cascade='all, delete, delete-orphan'))
@@ -1294,9 +1132,6 @@ class PubSubSubscription(Base):
     delivery_type = Column(String(20), nullable=False)
     push_type = Column(String(20), nullable=True) # Either 'rest' or 'service'
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
-
     sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
     sec_base = relationship('SecurityBase', backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -1318,7 +1153,7 @@ class PubSubSubscriptionTopic(Base):
     """
     __tablename__ = 'pubsub_subscription_topic'
     __table_args__ = (
-        UniqueConstraint('subscription_id', 'topic_id', 'cluster_id'),
+        UniqueConstraint('subscription_id', 'topic_id'),
     )
 
     id = Column(Integer, Sequence('pubsub_subscription_topic_id_seq'), primary_key=True)
@@ -1332,9 +1167,6 @@ class PubSubSubscriptionTopic(Base):
 
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship('PubSubTopic', backref=backref('subscription_topics', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pubsub_subscription_topics', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 # ################################################################################################################################

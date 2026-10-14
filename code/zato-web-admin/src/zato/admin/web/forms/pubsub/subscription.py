@@ -36,7 +36,6 @@ def get_rest_endpoint_choices(request:'HttpRequest') -> 'list':
     """
     # Invoke the service ..
     response = request.zato.client.invoke('zato.http-soap.get-list', {
-        'cluster_id': request.zato.cluster_id,
         'connection': 'outgoing',
         'transport': 'plain_http'
     })

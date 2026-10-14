@@ -225,7 +225,6 @@ class ChannelMLLPImporter(GenericConnectionImporter):
             return
 
         others = session.query(GenericConn).\
-            filter(GenericConn.cluster_id == self.importer.cluster_id).\
             filter(GenericConn.type_ == self.connection_type).\
             filter(GenericConn.id != connection.id).\
             all()

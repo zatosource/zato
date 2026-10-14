@@ -140,7 +140,6 @@ class RuleDefinitionRecord(NamedTuple):
     """
 
     id:              'int'
-    cluster_id:      'int'
     parent_id:       'int | None'
     parent_key:      'int'
     name:            'str'
@@ -173,7 +172,6 @@ class RuleEventRecord(NamedTuple):
     """
 
     id:            'int'
-    cluster_id:    'int'
     definition_id: 'int'
     version:       'int | None'
     event_type:    'str'
@@ -191,7 +189,6 @@ class RuleDecisionRecord(NamedTuple):
     """
 
     id:             'int'
-    cluster_id:     'int'
     decision_id:    'str'
     ruleset_id:     'int'
     rules_version:  'int'
@@ -213,7 +210,6 @@ class RuleReferenceRecord(NamedTuple):
     """
 
     id:            'int'
-    cluster_id:    'int'
     definition_id: 'int'
     rule_name:     'str'
     term:          'str'
@@ -227,7 +223,6 @@ class RuleFollowRecord(NamedTuple):
     """
 
     id:            'int'
-    cluster_id:    'int'
     definition_id: 'int'
     actor:         'str'
     created_at:    'datetime'
@@ -240,7 +235,6 @@ class RuleViewRecord(NamedTuple):
     """
 
     id:         'int'
-    cluster_id: 'int'
     actor:      'str'
     name:       'str'
     payload:    'str'
@@ -254,7 +248,6 @@ class RuleRecentRecord(NamedTuple):
     """
 
     id:            'int'
-    cluster_id:    'int'
     definition_id: 'int'
     actor:         'str'
     visited_at:    'datetime'
@@ -266,7 +259,6 @@ class RuleChatConfigRecord(NamedTuple):
     """
 
     id:         'int'
-    cluster_id: 'int'
     kind:       'str'
     payload:    'str'
     updated_at: 'datetime'
@@ -279,7 +271,6 @@ class RuleNotifyDestinationRecord(NamedTuple):
     """
 
     id:               'int'
-    cluster_id:       'int'
     definition_id:    'int'
     kind:             'str'
     target:           'str'
@@ -298,7 +289,6 @@ class RuleJobCursorRecord(NamedTuple):
     """
 
     id:         'int'
-    cluster_id: 'int'
     name:       'str'
     last_id:    'int'
     updated_at: 'datetime'
@@ -310,7 +300,6 @@ class RuleApprovalRecord(NamedTuple):
     """
 
     id:            'int'
-    cluster_id:    'int'
     definition_id: 'int'
     version:       'int'
     content_hash:  'str'
@@ -325,7 +314,6 @@ class RuleApprovalConfigRecord(NamedTuple):
     """
 
     id:                  'int'
-    cluster_id:          'int'
     definition_id:       'int'
     gate_enabled:        'bool'
     allow_self_approval: 'bool'

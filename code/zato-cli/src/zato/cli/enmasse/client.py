@@ -443,7 +443,7 @@ def wait_for_services(
                 logger.info(f'Still waiting for {service_label} after {log_after_seconds} seconds')
 
             # Get list of all available services including internal ones
-            db_services = service_list(session, 1, return_internal=True)
+            db_services = service_list(session, True, None, False)
             db_services = to_json(db_services)
             db_service_names = set()
 

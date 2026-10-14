@@ -55,7 +55,7 @@ class SMTPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'list_[anydict]':
+    def export(self, session:'SASession') -> 'list_[anydict]':
         """ Exports SMTP connection definitions.
         """
         logger.info('Exporting SMTP connection definitions with exclusions')
@@ -70,7 +70,7 @@ class SMTPExporter:
         exported_smtp = []
 
         # Get all SMTP connection definitions from the database
-        smtp_defs = email_smtp_list(session, cluster_id)
+        smtp_defs = email_smtp_list(session)
 
         smtp_items = to_json(smtp_defs, return_as_dict=True)
 

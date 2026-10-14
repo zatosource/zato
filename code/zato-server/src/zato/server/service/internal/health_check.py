@@ -16,7 +16,6 @@ from contextlib import closing
 
 # Zato
 from zato.common.api import HTTP_SOAP, SCHEDULER, SchedulerLink
-from zato.common.defaults import default_cluster_id
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Job
 from zato.common.util.api import utcnow
@@ -107,7 +106,6 @@ def sync_one_linked_job(
     if has_config:
 
         request = {
-            'cluster_id': default_cluster_id,
             'is_active': is_active,
             'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
             'service': job_service,

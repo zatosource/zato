@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/cloud/microsoft-365/?cluster=1&type_=cloud-microsoft-365'
+_Page_Url_Pattern = '/zato/cloud/microsoft-365/?type_=cloud-microsoft-365'
 
 _Test_Name_Prefix = 'test.microsoft365.' + CryptoManager.generate_hex_string(32) + '.'
 

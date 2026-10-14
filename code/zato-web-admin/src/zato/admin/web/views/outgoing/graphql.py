@@ -35,7 +35,7 @@ class Index(_Index):
     output_class = GraphQLConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
         'security_name'
     output_optional = ('extra', 'default_query_timeout', 'auth_type') + generic_attrs
@@ -52,7 +52,6 @@ class Index(_Index):
 
         security_list = SecurityList.from_service(
             self.req.zato.client,
-            self.cluster_id,
             security_type_list=[SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH, SEC_DEF_TYPE.APIKEY],
             needs_definition_type_name_label=True
         )
@@ -123,7 +122,7 @@ def change_password(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'GraphQL connection')
 
 # ################################################################################################################################

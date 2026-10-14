@@ -38,10 +38,10 @@ class ChannelOpenAPIExporter:
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'channel_openapi_def_list':
+    def export(self, session:'SASession') -> 'channel_openapi_def_list':
         logger.info('Exporting OpenAPI channel definitions')
 
-        db_channels = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI)
+        db_channels = connection_list(session, GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI)
 
         if not db_channels:
             logger.info('No OpenAPI channel definitions found in DB')
@@ -50,7 +50,7 @@ class ChannelOpenAPIExporter:
         channels = to_json(db_channels, return_as_dict=True)
         logger.debug('Processing %d OpenAPI channel definitions', len(channels))
 
-        rest_channels_by_id = self._get_rest_channels_map(session, cluster_id)
+        rest_channels_by_id = self._get_rest_channels_map(session)
 
         exported = []
 
@@ -80,9 +80,8 @@ class ChannelOpenAPIExporter:
         logger.info('Successfully prepared %d OpenAPI channel definitions for export', len(exported))
         return exported
 
-    def _get_rest_channels_map(self, session:'SASession', cluster_id:'int') -> 'dict':
+    def _get_rest_channels_map(self, session:'SASession') -> 'dict':
         result = session.query(HTTPSOAP).filter(
-            HTTPSOAP.cluster_id == cluster_id,
             HTTPSOAP.connection == CONNECTION.CHANNEL,
             HTTPSOAP.transport == URL_TYPE.PLAIN_HTTP,
         ).all()

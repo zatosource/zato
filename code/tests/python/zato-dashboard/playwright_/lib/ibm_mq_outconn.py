@@ -24,7 +24,7 @@ if 0:
 
 # The type_ parameter is required for the page to list its connections,
 # the same way the dashboard's own menu links carry it.
-IBM_MQ_Outconn_Page_Url = '/zato/outgoing/ibm-mq/?cluster=1&type_=outconn-ibm-mq'
+IBM_MQ_Outconn_Page_Url = '/zato/outgoing/ibm-mq/?type_=outconn-ibm-mq'
 
 # Plain text fields in the create and edit forms, keyed by option name
 _Text_Fields = ('name', 'address', 'queue_manager', 'mq_channel_name', 'queue',

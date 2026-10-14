@@ -57,7 +57,7 @@ class Index(_Index):
     output_class = HL7MLLPChannelConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name'
     output_optional = (
         'should_parse_on_input', 'should_validate', 'should_return_errors',
@@ -378,7 +378,6 @@ class _CreateEdit(CreateEdit):
         prefix = self.form_prefix
 
         out = {
-            'cluster_id': self.cluster_id,
             'is_internal': False,
             'is_active': True,
             'connection': 'channel',
@@ -439,7 +438,6 @@ class _CreateEdit(CreateEdit):
         """
         message = {
             'id': rest_channel_id,
-            'cluster_id': self.cluster_id,
         }
         response = self.req.zato.client.invoke('zato.http-soap.delete', message)
 
@@ -461,7 +459,6 @@ class _CreateEdit(CreateEdit):
         name = _REST_Channel_Name_Prefix + mllp_name
 
         response = self.req.zato.client.invoke('zato.http-soap.get-list', {
-            'cluster_id': self.cluster_id,
             'connection': 'channel',
             'transport': 'plain_http',
             'query': name,

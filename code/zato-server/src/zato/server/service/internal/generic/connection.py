@@ -160,7 +160,7 @@ def instance_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_
     """ Called before delete commit. Cleans up the HTTPSOAP channel for MCP and Rule engine API connections.
     """
     if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP:
-        on_mcp_gateway_delete(service, attrs._meta_session, instance.name, instance.cluster_id)
+        on_mcp_gateway_delete(service, attrs._meta_session, instance.name)
 
     elif instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE:
         on_rule_engine_api_delete(service, instance.name)
@@ -399,11 +399,6 @@ class _CreateEdit(_BaseService):
         if data.get('type_') in _delivery_settings_types:
             prepare_delivery_settings(self, data)
 
-        # The cluster ID may be missing on input, e.g. in API calls that give only the object's ID,
-        # or it may have been turned into a bool by the simple-type parser above (1 becomes True),
-        # so it is always set to our own server's cluster here.
-        data['cluster_id'] = self.server.cluster_id
-
         self.logger.info('GenericConn _CreateEdit step 2: data after raw_request merge, keys=%s', sorted(data.keys()))
         self.logger.info('GenericConn _CreateEdit step 2b: type_=%s, is_active=%s, security_id=%s',
             data.get('type_'), data.get('is_active'), data.get('security_id'))
@@ -516,13 +511,13 @@ class _CreateEdit(_BaseService):
 
                 secret = self.server.decrypt(secret)
                 conn.secret = secret
-                data.secret = secret # We need to set it here because we also publish this message to other servers
+                data.secret = secret # The published message requires the decrypted secret
 
             # .. but if it is the create action, we need to create a new instance
             # .. and ensure that its secret is stored - either the one given on input,
             # .. so that later edits without a secret can keep using it, or an auto-generated one.
             else:
-                model = self._new_zato_instance_with_cluster(ModelGenericConn)
+                model = ModelGenericConn()
 
                 # A creation has no earlier state to compare with
                 before_snapshot = {}
@@ -546,8 +541,8 @@ class _CreateEdit(_BaseService):
             conn_dict = conn.to_sql_dict()
 
             self.logger.info('GenericConn _CreateEdit step 4: conn_dict keys=%s', sorted(conn_dict.keys()))
-            self.logger.info('GenericConn _CreateEdit step 4b: conn_dict type_=%s, name=%s, cluster_id=%s',
-                conn_dict.get('type_'), conn_dict.get('name'), conn_dict.get('cluster_id'))
+            self.logger.info('GenericConn _CreateEdit step 4b: conn_dict type_=%s, name=%s',
+                conn_dict.get('type_'), conn_dict.get('name'))
 
             # This will be needed in case this is a rename
             old_name = cast_('str', model.name)

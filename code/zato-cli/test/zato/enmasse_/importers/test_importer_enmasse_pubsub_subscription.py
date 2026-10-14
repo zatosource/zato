@@ -312,10 +312,6 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
         for sub in all_subs:
             self.assertTrue(sub.is_delivery_active)
 
-        # Verify cluster_id is set correctly
-        for sub in all_subs:
-            self.assertEqual(sub.cluster_id, self.importer.cluster_id)
-
         # Verify each subscription has a unique sub_key
         sub_keys = [sub.sub_key for sub in all_subs]
         self.assertEqual(len(sub_keys), len(set(sub_keys)))

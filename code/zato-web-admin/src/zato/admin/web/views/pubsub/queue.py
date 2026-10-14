@@ -25,7 +25,6 @@ from pygments.formatters import HtmlFormatter
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.highlight import get_pygments_lexer, highlight_data_previews
 from zato.common.content_type import format_content, get_content_type
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,11 +106,10 @@ def index(request:'any_') -> 'TemplateResponse':
     page  = data['page']
     queue_name = request.GET['queue_name']
 
-    subscriptions_url = f'/zato/pubsub/subscription/?cluster={default_cluster_id}'
+    subscriptions_url = '/zato/pubsub/subscription/'
 
     # .. and render the template.
     out = TemplateResponse(request, 'zato/pubsub/queue.html', {
-        'cluster_id':          default_cluster_id,
         'sub_key':             sub_key,
         'queue_name':          queue_name,
         'state':               state,
@@ -121,7 +119,6 @@ def index(request:'any_') -> 'TemplateResponse':
         'page_size':           _default_page_size,
         'poll_url':            _poll_url,
         'subscriptions_url':   subscriptions_url,
-        'zato_clusters':       True,
         'zato_template_name':  'zato/pubsub/queue.html',
     })
 
@@ -221,11 +218,10 @@ def message_detail(request:'any_') -> 'TemplateResponse':
     # .. and render the template.
     sub_key_encoded = quote(sub_key, safe='')
     queue_name_encoded = quote(queue_name, safe='')
-    queue_url = f'/zato/pubsub/subscription/queue/?cluster={default_cluster_id}&sub_key={sub_key_encoded}&queue_name={queue_name_encoded}&state=pending'
-    topic_url = f'/zato/pubsub/topic/?cluster={default_cluster_id}'
+    queue_url = f'/zato/pubsub/subscription/queue/?sub_key={sub_key_encoded}&queue_name={queue_name_encoded}&state=pending'
+    topic_url = '/zato/pubsub/topic/'
 
     out = TemplateResponse(request, 'zato/pubsub/queue_message.html', {
-        'cluster_id':        default_cluster_id,
         'sub_key':           sub_key,
         'msg_id':            msg_id,
         'topic_name':        topic_name,
@@ -236,7 +232,6 @@ def message_detail(request:'any_') -> 'TemplateResponse':
         'payload_url':       _payload_url,
         'queue_url':         queue_url,
         'topic_url':         topic_url,
-        'zato_clusters':     True,
         'zato_template_name': 'zato/pubsub/queue_message.html',
     })
 

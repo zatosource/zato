@@ -50,14 +50,13 @@ class ExplanationStore:
     is written once, next to the alert it explains, and only ever read back.
     """
 
-    def __init__(self, session:'callable_', cluster_id:'int') -> 'None':
+    def __init__(self, session:'callable_') -> 'None':
         self.session = session
-        self.cluster_id = cluster_id
 
 # ################################################################################################################################
 
     def _new_wrapper(self, session:'any_') -> 'GenericObjectWrapper':
-        wrapper = GenericObjectWrapper(session, self.cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Alerting.Explanation_Type
 
         return wrapper

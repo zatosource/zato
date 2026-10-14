@@ -28,7 +28,7 @@ from zato.server.service.internal.http_soap.health_check import has_health_check
 
 # Test support
 from http_soap_stub import create as _create, get as _get, get_list as _get_list, new_service as _new_service, \
-    outgoing_input as _outgoing_input, stored_opaque as _stored_opaque, Cluster_Id as _cluster_id, \
+    outgoing_input as _outgoing_input, stored_opaque as _stored_opaque, \
     Outgoing_Name as _outgoing_name
 
 # ################################################################################################################################
@@ -195,7 +195,6 @@ class TestEdit:
         # What the listing's inline edit does - read the object, change one field, save it whole
         item_dict = _get(session_factory, item_id)
         item_dict['id'] = item_id
-        item_dict['cluster_id'] = _cluster_id
         item_dict['service'] = None
         item_dict['is_active'] = False
         item_dict['security_groups'] = None

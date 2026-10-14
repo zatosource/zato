@@ -375,7 +375,7 @@ def fill_soap_invocation_tabs(page:'Page', options:'anydict', action:'str'='crea
 def job_row_exists(page:'Page', base_url:'str', job_name:'str') -> 'bool':
     """ Returns True if the scheduler page shows a job of the given name.
     """
-    _ = page.goto(f'{base_url}/zato/scheduler/?cluster=1')
+    _ = page.goto(f'{base_url}/zato/scheduler/')
     _ = page.wait_for_selector('#data-table', state='visible')
 
     row = page.query_selector(f'#data-table tbody tr:has(td a:text-is("{job_name}"))')
@@ -388,7 +388,7 @@ def job_row_exists(page:'Page', base_url:'str', job_name:'str') -> 'bool':
 def get_job_row_id(page:'Page', base_url:'str', job_name:'str') -> 'str':
     """ Returns the server-side ID of a scheduler job row identified by name.
     """
-    _ = page.goto(f'{base_url}/zato/scheduler/?cluster=1')
+    _ = page.goto(f'{base_url}/zato/scheduler/')
     _ = page.wait_for_selector('#data-table', state='visible')
 
     row = cast_('any_', page.query_selector(f'#data-table tbody tr:has(td a:text-is("{job_name}"))'))

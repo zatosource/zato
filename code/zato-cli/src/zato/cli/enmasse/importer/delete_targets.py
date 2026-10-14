@@ -164,7 +164,7 @@ generic_object_sections = {
     'audit_extraction': (Audit_Config.Type.Extraction_Rules,       None,                    No_Service),
 }
 
-# The sections stored in a model of their own, each row found by name and cluster
+# The sections stored in a model of their own, each row found by name
 model_sections = {
     'scheduler':    (Job,               Service_Scheduler),
     'sql':          (SQLConnectionPool, Service_SQL),
@@ -328,9 +328,9 @@ def _new_target(section:'str', key:'str', row_id:'int', service:'str', model:'an
 
 # ################################################################################################################################
 
-def _resolve_http_soap(section:'str', key:'str', session:'SASession', cluster_id:'int') -> 'delete_target_list':
+def _resolve_http_soap(section:'str', key:'str', session:'SASession') -> 'delete_target_list':
     connection, transport = http_soap_sections[section]
-    row = session.query(HTTPSOAP).filter_by(name=key, connection=connection, transport=transport, cluster_id=cluster_id).first()
+    row = session.query(HTTPSOAP).filter_by(name=key, connection=connection, transport=transport).first()
 
     out:'delete_target_list' = []
 
@@ -341,14 +341,14 @@ def _resolve_http_soap(section:'str', key:'str', session:'SASession', cluster_id
 
 # ################################################################################################################################
 
-def _resolve_generic(section:'str', key:'str', session:'SASession', cluster_id:'int') -> 'delete_target_list':
+def _resolve_generic(section:'str', key:'str', session:'SASession') -> 'delete_target_list':
 
     if is_custom_section(section):
         type_ = custom_key_to_connection_type(section)
     else:
         type_ = generic_sections[section]
 
-    row = session.query(GenericConn).filter_by(name=key, type_=type_, cluster_id=cluster_id).first()
+    row = session.query(GenericConn).filter_by(name=key, type_=type_).first()
 
     out:'delete_target_list' = []
 
@@ -359,10 +359,10 @@ def _resolve_generic(section:'str', key:'str', session:'SASession', cluster_id:'
 
 # ################################################################################################################################
 
-def _resolve_generic_object(section:'str', key:'str', session:'SASession', cluster_id:'int') -> 'delete_target_list':
+def _resolve_generic_object(section:'str', key:'str', session:'SASession') -> 'delete_target_list':
     type_, subtype, service = generic_object_sections[section]
 
-    query = session.query(GenericObject).filter_by(name=key, type_=type_, cluster_id=cluster_id)
+    query = session.query(GenericObject).filter_by(name=key, type_=type_)
 
     if subtype is not None:
         query = query.filter_by(subtype=subtype)
@@ -378,9 +378,9 @@ def _resolve_generic_object(section:'str', key:'str', session:'SASession', clust
 
 # ################################################################################################################################
 
-def _resolve_model(section:'str', key:'str', session:'SASession', cluster_id:'int') -> 'delete_target_list':
+def _resolve_model(section:'str', key:'str', session:'SASession') -> 'delete_target_list':
     model, service = model_sections[section]
-    row = session.query(model).filter_by(name=key, cluster_id=cluster_id).first()
+    row = session.query(model).filter_by(name=key).first()
 
     out:'delete_target_list' = []
 
@@ -391,11 +391,11 @@ def _resolve_model(section:'str', key:'str', session:'SASession', cluster_id:'in
 
 # ################################################################################################################################
 
-def _resolve_amqp(section:'str', key:'str', session:'SASession', cluster_id:'int') -> 'delete_target_list':
+def _resolve_amqp(section:'str', key:'str', session:'SASession') -> 'delete_target_list':
     list_query, subtype, service = amqp_sections[section]
 
     # The list query narrows the rows down to the subtype, and the row of the name is picked out of them
-    rows = list_query(session, cluster_id, subtype, False)
+    rows = list_query(session, subtype, False)
 
     out:'delete_target_list' = []
 
@@ -408,8 +408,8 @@ def _resolve_amqp(section:'str', key:'str', session:'SASession', cluster_id:'int
 
 # ################################################################################################################################
 
-def _resolve_security(section:'str', key:'str', session:'SASession', cluster_id:'int') -> 'delete_target_list':
-    row = session.query(SecurityBase).filter_by(name=key, cluster_id=cluster_id).first()
+def _resolve_security(section:'str', key:'str', session:'SASession') -> 'delete_target_list':
+    row = session.query(SecurityBase).filter_by(name=key).first()
 
     out:'delete_target_list' = []
 
@@ -420,12 +420,12 @@ def _resolve_security(section:'str', key:'str', session:'SASession', cluster_id:
 
 # ################################################################################################################################
 
-def _resolve_security_keyed(section:'str', key:'str', session:'SASession', cluster_id:'int') -> 'delete_target_list':
+def _resolve_security_keyed(section:'str', key:'str', session:'SASession') -> 'delete_target_list':
     """ Resolves the pub/sub rows of the named security definition - every permission row, or the subscription row.
     """
     out:'delete_target_list' = []
 
-    security = session.query(SecurityBase).filter_by(name=key, cluster_id=cluster_id).first()
+    security = session.query(SecurityBase).filter_by(name=key).first()
 
     if security is None:
         return out
@@ -437,7 +437,7 @@ def _resolve_security_keyed(section:'str', key:'str', session:'SASession', clust
         model = PubSubSubscription
         service = Service_Subscription
 
-    rows = session.query(model).filter_by(sec_base_id=security.id, cluster_id=cluster_id).all()
+    rows = session.query(model).filter_by(sec_base_id=security.id).all()
 
     for row in rows:
         out.append(_new_target(section, key, row.id, service, model))
@@ -446,29 +446,29 @@ def _resolve_security_keyed(section:'str', key:'str', session:'SASession', clust
 
 # ################################################################################################################################
 
-def resolve_targets(section:'str', key:'str', session:'SASession', cluster_id:'int') -> 'delete_target_list':
+def resolve_targets(section:'str', key:'str', session:'SASession') -> 'delete_target_list':
     """ Returns the rows one item marked for deletion resolves to - an empty list if there is no such object.
     """
     if section in http_soap_sections:
-        out = _resolve_http_soap(section, key, session, cluster_id)
+        out = _resolve_http_soap(section, key, session)
 
     elif section in generic_sections or is_custom_section(section):
-        out = _resolve_generic(section, key, session, cluster_id)
+        out = _resolve_generic(section, key, session)
 
     elif section in generic_object_sections:
-        out = _resolve_generic_object(section, key, session, cluster_id)
+        out = _resolve_generic_object(section, key, session)
 
     elif section in model_sections:
-        out = _resolve_model(section, key, session, cluster_id)
+        out = _resolve_model(section, key, session)
 
     elif section in amqp_sections:
-        out = _resolve_amqp(section, key, session, cluster_id)
+        out = _resolve_amqp(section, key, session)
 
     elif section == 'security':
-        out = _resolve_security(section, key, session, cluster_id)
+        out = _resolve_security(section, key, session)
 
     elif section in security_keyed_sections:
-        out = _resolve_security_keyed(section, key, session, cluster_id)
+        out = _resolve_security_keyed(section, key, session)
 
     # .. anything else is a section this registry does not know.
     else:
@@ -484,25 +484,25 @@ def _log_dependent(target:'DeleteTarget', kind:'str', name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _log_security_dependents(target:'DeleteTarget', session:'SASession', cluster_id:'int') -> 'None':
+def _log_security_dependents(target:'DeleteTarget', session:'SASession') -> 'None':
 
     # Every HTTPSOAP row that uses the definition goes with it ..
-    for row in session.query(HTTPSOAP).filter_by(security_id=target.id, cluster_id=cluster_id).all():
+    for row in session.query(HTTPSOAP).filter_by(security_id=target.id).all():
         _log_dependent(target, f'{row.connection} {row.transport}', row.name)
 
     # .. and so do its pub/sub permissions and subscriptions.
-    for row in session.query(PubSubPermission).filter_by(sec_base_id=target.id, cluster_id=cluster_id).all():
+    for row in session.query(PubSubPermission).filter_by(sec_base_id=target.id).all():
         _log_dependent(target, 'pub/sub permission', row.pattern)
 
-    for row in session.query(PubSubSubscription).filter_by(sec_base_id=target.id, cluster_id=cluster_id).all():
+    for row in session.query(PubSubSubscription).filter_by(sec_base_id=target.id).all():
         _log_dependent(target, 'pub/sub subscription', row.sub_key)
 
 # ################################################################################################################################
 
-def _log_group_dependents(target:'DeleteTarget', session:'SASession', cluster_id:'int') -> 'None':
+def _log_group_dependents(target:'DeleteTarget', session:'SASession') -> 'None':
 
     # A channel whose security groups include this one loses it
-    channels = session.query(HTTPSOAP).filter_by(connection=CONNECTION.CHANNEL, cluster_id=cluster_id).all()
+    channels = session.query(HTTPSOAP).filter_by(connection=CONNECTION.CHANNEL).all()
 
     for channel in channels:
         opaque = parse_instance_opaque_attr(channel)
@@ -513,10 +513,10 @@ def _log_group_dependents(target:'DeleteTarget', session:'SASession', cluster_id
 
 # ################################################################################################################################
 
-def _log_topic_dependents(target:'DeleteTarget', session:'SASession', cluster_id:'int') -> 'None':
+def _log_topic_dependents(target:'DeleteTarget', session:'SASession') -> 'None':
 
     # A subscription left with no other topic is deleted along with the topic
-    links = session.query(PubSubSubscriptionTopic).filter_by(topic_id=target.id, cluster_id=cluster_id).all()
+    links = session.query(PubSubSubscriptionTopic).filter_by(topic_id=target.id).all()
 
     for link in links:
         topic_count = session.query(PubSubSubscriptionTopic).filter_by(subscription_id=link.subscription_id).count()
@@ -526,28 +526,28 @@ def _log_topic_dependents(target:'DeleteTarget', session:'SASession', cluster_id
 
 # ################################################################################################################################
 
-def _log_http_soap_dependents(target:'DeleteTarget', session:'SASession', cluster_id:'int') -> 'None':
+def _log_http_soap_dependents(target:'DeleteTarget', session:'SASession') -> 'None':
 
     # A subscription pushing to this endpoint goes with it
-    for row in session.query(PubSubSubscription).filter_by(rest_push_endpoint_id=target.id, cluster_id=cluster_id).all():
+    for row in session.query(PubSubSubscription).filter_by(rest_push_endpoint_id=target.id).all():
         _log_dependent(target, 'pub/sub subscription', row.sub_key)
 
 # ################################################################################################################################
 
-def log_dependents(target:'DeleteTarget', session:'SASession', cluster_id:'int') -> 'None':
+def log_dependents(target:'DeleteTarget', session:'SASession') -> 'None':
     """ Logs each row the delete service or its cascade removes or modifies along with the target.
     """
     if target.model is SecurityBase:
-        _log_security_dependents(target, session, cluster_id)
+        _log_security_dependents(target, session)
 
     elif target.section == 'groups':
-        _log_group_dependents(target, session, cluster_id)
+        _log_group_dependents(target, session)
 
     elif target.model is PubSubTopic:
-        _log_topic_dependents(target, session, cluster_id)
+        _log_topic_dependents(target, session)
 
     elif target.model is HTTPSOAP:
-        _log_http_soap_dependents(target, session, cluster_id)
+        _log_http_soap_dependents(target, session)
 
 # ################################################################################################################################
 # ################################################################################################################################

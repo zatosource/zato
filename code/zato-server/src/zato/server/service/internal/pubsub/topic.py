@@ -17,7 +17,7 @@ from zato.common.ext.bunch import Bunch
 from zato.common.api import PubSub, query_parameters
 from zato.common.broker_message import PUBSUB
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Cluster, PubSubTopic
+from zato.common.odb.model import PubSubTopic
 from zato.common.odb.query import pubsub_subscription_topic_names, pubsub_topic_list
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.util import validate_topic_name
@@ -87,12 +87,12 @@ class GetList(AdminService):
     """
     _filter_by = PubSubTopic.name, PubSubTopic.description,
 
-    input = 'cluster_id', *query_parameters
+    input = query_parameters
     output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count', '-backend_type', \
         '-amqp_outconn_name', '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
 
     def get_data(self, session:'any_') -> 'any_':
-        result = self._search(pubsub_topic_list, session, self.request.input.cluster_id, None, False)
+        result = self._search(pubsub_topic_list, session, None, False)
         data = []
 
         for item, publisher_count, subscriber_count in result:
@@ -123,13 +123,12 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub topic.
     """
-    input = 'name', 'is_active', '-cluster_id', '-description', '-backend_type', '-amqp_outconn_name', \
+    input = 'name', 'is_active', '-description', '-backend_type', '-amqp_outconn_name', \
         '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
     output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
-        cluster_id = self.server.cluster_id
 
         # The audit log is enabled unless it was turned off explicitly
         input.is_audit_log_active = input.get('is_audit_log_active', True)
@@ -142,21 +141,18 @@ class Create(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(PubSubTopic).\
-                    filter(Cluster.id==cluster_id).\
                     filter(PubSubTopic.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('Pub/sub topic `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('Pub/sub topic `{}` already exists'.format(input.name))
 
                 topic = PubSubTopic()
                 topic.name = input.name
                 topic.is_active = input.is_active
-                topic.cluster = cluster
                 topic.description = input.description
 
                 set_instance_opaque_attrs(topic, input)
@@ -171,7 +167,7 @@ class Create(AdminService):
                 raise
             else:
 
-                # All servers are notified about every new topic so they can register
+                # The server is notified about every new topic so it can register
                 # its audit log state, and AMQP-backed topics additionally need
                 # their publish calls routed to the AMQP broker along with
                 # the inbound channel override, which is why the backend fields go out too.
@@ -196,14 +192,13 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub topic.
     """
-    input = 'name', 'is_active', '-id', '-cluster_id', '-description', '-backend_type', '-amqp_outconn_name', \
+    input = 'name', 'is_active', '-id', '-description', '-backend_type', '-amqp_outconn_name', \
         '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
     output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
         input_id = input.get('id')
-        cluster_id = self.server.cluster_id
 
         # The audit log is enabled unless it was turned off explicitly
         input.is_audit_log_active = input.get('is_audit_log_active', True)
@@ -217,7 +212,6 @@ class Edit(AdminService):
         with closing(self.odb.session()) as session:
             try:
                 existing_one = session.query(PubSubTopic).\
-                    filter(Cluster.id==cluster_id).\
                     filter(PubSubTopic.name==input.name)
 
                 if input_id:
@@ -225,7 +219,7 @@ class Edit(AdminService):
                     existing_one = existing_one.first()
 
                 if existing_one:
-                    raise Exception('Pub/sub topic `{}` already exists on this cluster'.format(input.name))
+                    raise Exception('Pub/sub topic `{}` already exists'.format(input.name))
 
                 topic = session.query(PubSubTopic)
 
@@ -361,13 +355,12 @@ class Delete(AdminService):
 class GetMatches(AdminService):
     """ Returns a list of pub/sub topics matching a given pattern.
     """
-    input = 'cluster_id', 'pattern'
+    input = 'pattern'
     output = '-id', '-name', '-description'
 
     def handle(self):
 
         input_pattern = self.request.input.pattern
-        cluster_id = self.request.input.cluster_id
 
         # Extract the actual topic pattern (after pub= or sub= if present)
         if input_pattern.startswith('pub=') or input_pattern.startswith('sub='):
@@ -376,10 +369,8 @@ class GetMatches(AdminService):
             topic_pattern = input_pattern
 
         with closing(self.odb.session()) as session:
-            # Get all topics for this cluster
-            topics = session.query(PubSubTopic).filter(
-                PubSubTopic.cluster_id == cluster_id,
-            ).all()
+            # Get all topics
+            topics = session.query(PubSubTopic).all()
 
             # Create temporary matcher with the pattern
             matcher = PatternMatcher()

@@ -8,8 +8,7 @@ $.fn.zato.outgoing_delivery.messageUrl = function(baseUrl, kind, msgId, what) {
     var state = $.fn.zato.outgoing_delivery.state;
 
     var out = baseUrl +
-        '?cluster=' + encodeURIComponent(state.clusterId) +
-        '&conn_type=' + encodeURIComponent(state.connType) +
+        '?conn_type=' + encodeURIComponent(state.connType) +
         '&conn_id=' + encodeURIComponent(state.connId) +
         '&kind=' + encodeURIComponent(kind) +
         '&msg_id=' + encodeURIComponent(msgId);

@@ -1096,7 +1096,7 @@ class URLData(PyURLData):
         self._remove_from_cache(old_match_target)
 
         # The channel is found by its target rather than by walking the list, which is what
-        # keeps a cluster with many channels from paying for the walk on every configuration change
+        # keeps an environment with many channels from paying for the walk on every configuration change
         item = self.match_target_index.get(old_match_target)
 
         if item is None:

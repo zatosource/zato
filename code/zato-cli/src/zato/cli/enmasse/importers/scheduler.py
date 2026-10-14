@@ -102,11 +102,11 @@ class SchedulerImporter:
 
 # ################################################################################################################################
 
-    def get_job_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_job_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
-        logger.info('Retrieving scheduler job definitions from database for cluster_id=%s', cluster_id)
-        job_definitions = job_list(session, cluster_id)
+        logger.info('Retrieving scheduler job definitions from database')
+        job_definitions = job_list(session)
 
         self._process_job_defs(job_definitions, out)
         logger.info('Total scheduler job definitions from DB: %d', len(out))
@@ -146,12 +146,9 @@ class SchedulerImporter:
 
     def create_job_definition(self, job_def:'anydict', session:'SASession') -> 'any_':
 
-        # Get the cluster instance from the importer
-        cluster = self.importer.get_cluster(session)
-
         # Get the service instance
         service_name = job_def['service']
-        service = session.query(Service).filter(Service.name==service_name).filter(Service.cluster_id==cluster.id).one() # type: ignore
+        service = session.query(Service).filter(Service.name==service_name).one() # type: ignore
 
         # Parse the start_date from string to datetime object, defaulting to now
         start_date_value = job_def.get('start_date')
@@ -175,7 +172,7 @@ class SchedulerImporter:
             job_extra = '\n'.join(str(item) for item in job_extra if item)
 
         # Create a new job instance
-        job = Job(job_id, job_name, job_is_active, job_type, start_date, job_extra, cluster=cluster, service=service)
+        job = Job(job_id, job_name, job_is_active, job_type, start_date, job_extra, service=service)
 
         # Add to session and flush to get ID
         session.add(job)
@@ -268,7 +265,7 @@ class SchedulerImporter:
     def sync_job_definitions(self, job_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d scheduler job definitions from YAML', len(job_list))
 
-        db_defs = self.get_job_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_job_defs_from_db(session)
         to_create, to_update = self.compare_job_defs(job_list, db_defs)
 
         out_created = []

@@ -64,34 +64,34 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def set_up_security(self:'ParallelServer', cluster_id:'int') -> 'None':
+    def set_up_security(self:'ParallelServer') -> 'None':
 
         # API keys
-        query = self.odb.get_apikey_security_list(cluster_id, True)
+        query = self.odb.get_apikey_security_list(True)
         self.config.apikey = ConfigDict.from_query('apikey', query, decrypt_func=self.decrypt)
 
         # HTTP Basic Auth
-        query = self.odb.get_basic_auth_list(cluster_id, None, True)
+        query = self.odb.get_basic_auth_list(True)
         self.config.basic_auth = ConfigDict.from_query('basic_auth', query, decrypt_func=self.decrypt)
 
         # mTLS
-        query = self.odb.get_mtls_list(cluster_id, True)
+        query = self.odb.get_mtls_list(True)
         self.config.mtls = ConfigDict.from_query('mtls', query, decrypt_func=self.decrypt)
 
         # NTLM
-        query = self.odb.get_ntlm_list(cluster_id, True)
+        query = self.odb.get_ntlm_list(True)
         self.config.ntlm = ConfigDict.from_query('ntlm', query, decrypt_func=self.decrypt)
 
         # Kerberos (SPNEGO)
-        query = self.odb.get_spnego_list(cluster_id, True)
+        query = self.odb.get_spnego_list(True)
         self.config.spnego = ConfigDict.from_query('spnego', query, decrypt_func=self.decrypt)
 
         # OAuth
-        query = self.odb.get_oauth_list(cluster_id, True)
+        query = self.odb.get_oauth_list(True)
         self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
 
         # WS-Security
-        query = self.odb.get_wss_list(cluster_id, True)
+        query = self.odb.get_wss_list(True)
         self.config.wss = ConfigDict.from_query('wss', query, decrypt_func=self.decrypt)
 
         # Load rate limiting for security definitions - for every type a channel authenticates against
@@ -147,7 +147,7 @@ class ConfigLoader:
     ) -> 'None':
 
         # Services
-        query = self.odb.get_service_list(server.cluster.id, True)
+        query = self.odb.get_service_list(True)
         self.config.service = ConfigDict.from_query('service_list', query, decrypt_func=self.decrypt)
 
         #
@@ -155,7 +155,7 @@ class ConfigLoader:
         #
 
         # AMQP
-        query = self.odb.get_channel_amqp_list(server.cluster.id, True)
+        query = self.odb.get_channel_amqp_list(True)
         self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query, decrypt_func=self.decrypt)
 
         #
@@ -167,27 +167,27 @@ class ConfigLoader:
         #
 
         # AMQP
-        query = self.odb.get_out_amqp_list(server.cluster.id, True)
+        query = self.odb.get_out_amqp_list(True)
         self.config.out_amqp = ConfigDict.from_query('out_amqp', query, decrypt_func=self.decrypt)
 
         # Odoo
-        query = self.odb.get_out_odoo_list(server.cluster.id, True)
+        query = self.odb.get_out_odoo_list(True)
         self.config.out_odoo = ConfigDict.from_query('out_odoo', query, decrypt_func=self.decrypt)
 
         # REST
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
+        query = self.odb.get_http_soap_list('outgoing', 'plain_http', True)
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query, decrypt_func=self.decrypt)
 
         # SOAP
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
+        query = self.odb.get_http_soap_list('outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query, decrypt_func=self.decrypt)
 
         # SQL
-        query = self.odb.get_out_sql_list(server.cluster.id, True)
+        query = self.odb.get_out_sql_list(True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
 
         # Pub/sub
-        query = self.odb.get_pubsub_subscription_list(server.cluster.id, True)
+        query = self.odb.get_pubsub_subscription_list(True)
         self.config.pubsub_subs = ConfigDict.from_query('pubsub_subs', query, decrypt_func=self.decrypt, list_config=True)
 
         #
@@ -204,7 +204,7 @@ class ConfigLoader:
 
         # Connections - names are unique per type only, so the entries are keyed by type and name together
         # right as they are read, otherwise connections of different types sharing a name would overwrite each other.
-        query = self.odb.get_generic_connection_list(server.cluster.id, True)
+        query = self.odb.get_generic_connection_list(True)
         self.config.generic_connection = ConfigDict.from_query('generic_connection', query, decrypt_func=self.decrypt,
             key_func=generic_connection_key)
 
@@ -218,7 +218,7 @@ class ConfigLoader:
         # Security - start
         #
 
-        self.set_up_security(server.cluster_id)
+        self.set_up_security()
 
         #
         # Security - end
@@ -229,7 +229,7 @@ class ConfigLoader:
         # All the HTTP/SOAP channels.
         http_soap = []
 
-        for item in elems_with_opaque(self.odb.get_http_soap_list(server.cluster.id, 'channel')):
+        for item in elems_with_opaque(self.odb.get_http_soap_list('channel')):
 
             # The runtime hands this very object to services and to the dispatcher, both of which
             # reach into it by attribute as well as by key, and it is built once per channel here
@@ -253,7 +253,7 @@ class ConfigLoader:
                 channel['http_accept'] = ''
 
             # REST and SOAP channels carry the queue switch, the retry and DLQ settings and the static queue response,
-            # at their defaults for a channel written before the settings existed, such as the ones a cluster is born with.
+            # at their defaults for a channel written before the settings existed, such as the ones a new environment is created with.
             if channel['transport'] in http_soap_inbound_types:
                 apply_delivery_defaults(channel)
 
@@ -287,11 +287,11 @@ class ConfigLoader:
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # E-mail - SMTP
-        query = self.odb.get_email_smtp_list(server.cluster.id, True)
+        query = self.odb.get_email_smtp_list(True)
         self.config.email_smtp = ConfigDict.from_query('email_smtp', query, decrypt_func=self.decrypt)
 
         # E-mail - IMAP
-        query = self.odb.get_email_imap_list(server.cluster.id, True)
+        query = self.odb.get_email_imap_list(True)
         self.config.email_imap = ConfigDict.from_query('email_imap', query, decrypt_func=self.decrypt)
 
         # .. reusable ..

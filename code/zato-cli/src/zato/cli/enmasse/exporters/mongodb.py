@@ -66,13 +66,13 @@ class MongoDBExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'mongodb_def_list':
+    def export(self, session: 'SASession') -> 'mongodb_def_list':
         """ Exports MongoDB connection definitions.
         """
         logger.info('Exporting MongoDB connection definitions')
 
         # Get MongoDB connections from database using the generic connection query
-        db_mongodb = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB)
+        db_mongodb = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB)
 
         if not db_mongodb:
             logger.info('No MongoDB connection definitions found in DB')

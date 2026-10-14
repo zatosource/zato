@@ -26,10 +26,10 @@ if 0:
 logger = logging.getLogger('zato.test.playwright')
 
 # The service IDE starts the log streaming mechanism automatically on page load
-_IDE_Page_Url = '/zato/service/ide/service/demo.my-service/?cluster=1'
+_IDE_Page_Url = '/zato/service/ide/service/demo.my-service/'
 
 # A cheap page that the probe fetch requests while both IDE tabs are open
-_Probe_Page_Url = '/zato/pubsub/topic/?cluster=1'
+_Probe_Page_Url = '/zato/pubsub/topic/'
 
 # How long the browser-side fetch may wait before it is considered starved
 _Fetch_Abort_Ms = 8000

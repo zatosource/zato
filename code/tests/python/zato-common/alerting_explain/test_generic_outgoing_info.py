@@ -21,7 +21,7 @@ from sqlalchemy.orm import sessionmaker
 from zato.common.alerting.explain.fhir_info import describe_outgoing_fhir
 from zato.common.alerting.explain.mllp_outgoing_info import describe_mllp_outgoing
 from zato.common.api import GENERIC, HTTP_SOAP
-from zato.common.odb.model import Base, Cluster, GenericConn, SecurityBase
+from zato.common.odb.model import Base, GenericConn, SecurityBase
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -37,7 +37,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_cluster_id = 1
 _conn_name = 'lab.results'
 _conn_address = '10.0.0.7:2575'
 
@@ -56,7 +55,6 @@ def _new_session() -> 'any_':
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         SecurityBase.__table__,
         GenericConn.__table__,
     ]
@@ -65,7 +63,6 @@ def _new_session() -> 'any_':
     out = sessionmaker(bind=engine)
 
     session = out()
-    session.add(Cluster(_cluster_id, 'test-cluster', '', 'sqlite'))
     session.commit()
     session.close()
 
@@ -77,7 +74,6 @@ def _seed_connection(session_maker:'any_', type_:'str', opaque:'anydict') -> 'No
     """ One generic outgoing connection of the type, with the given opaque attributes.
     """
     session = session_maker()
-    cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
     row = cast_('any_', GenericConn())
     row.name = _conn_name
@@ -88,7 +84,6 @@ def _seed_connection(session_maker:'any_', type_:'str', opaque:'anydict') -> 'No
     row.is_outconn = True
     row.address = _conn_address
     row.pool_size = 5
-    row.cluster = cluster
     row.opaque1 = json.dumps(opaque)
 
     session.add(row)
@@ -101,7 +96,7 @@ def _describe(session_maker:'any_', type_:'str') -> 'anylist':
     """ The label and value pairs of the connection of the type.
     """
     session = session_maker()
-    out = _describers[type_](session, _cluster_id, _conn_name)
+    out = _describers[type_](session, _conn_name)
     session.close()
 
     assert out is not None
@@ -166,7 +161,7 @@ class TestQueueLines:
             session_maker = _new_session()
             session = session_maker()
 
-            assert describer(session, _cluster_id, 'no.such.connection') is None, type_
+            assert describer(session, 'no.such.connection') is None, type_
             session.close()
 
 # ################################################################################################################################

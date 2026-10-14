@@ -98,8 +98,8 @@ class GatewayMCPExporter:
 
 # ################################################################################################################################
 
-    def _load_security_groups(self, session:'SASession', cluster_id:'int') -> 'None':
-        """ Loads the security groups of the cluster and builds an id-to-name mapping,
+    def _load_security_groups(self, session:'SASession') -> 'None':
+        """ Loads the security groups and builds an id-to-name mapping,
         so gateways created through the dashboard, which stores ids, export names too.
         """
         self.group_id_to_name = {}
@@ -112,7 +112,6 @@ class GatewayMCPExporter:
         ]).where(and_(
             GenericObject.type_ == Groups.Type.Group_Parent,
             GenericObject.subtype == Groups.Type.API_Clients,
-            GenericObject.cluster_id == cluster_id,
         ))
 
         groups = session.execute(query).fetchall()
@@ -146,15 +145,15 @@ class GatewayMCPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'mcp_def_list':
+    def export(self, session: 'SASession') -> 'mcp_def_list':
         """ Exports MCP gateway definitions.
         """
         logger.info('Exporting MCP gateway definitions')
 
         # Load security groups for the id-to-name conversion
-        self._load_security_groups(session, cluster_id)
+        self._load_security_groups(session)
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.GATEWAY_MCP)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.GATEWAY_MCP)
 
         if not db_items:
             logger.info('No MCP gateway definitions found in DB')

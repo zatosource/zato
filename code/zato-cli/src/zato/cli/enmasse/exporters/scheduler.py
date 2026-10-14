@@ -45,12 +45,12 @@ class SchedulerExporter:
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'job_def_list':
+    def export(self, session:'SASession') -> 'job_def_list':
         """ Exports scheduler job definitions.
         """
         logger.info('Exporting scheduler job definitions')
 
-        db_jobs = job_list(session, cluster_id)
+        db_jobs = job_list(session)
 
         if not db_jobs:
             logger.info('No scheduler job definitions found in DB')

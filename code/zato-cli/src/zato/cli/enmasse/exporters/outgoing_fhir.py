@@ -66,12 +66,12 @@ class OutgoingFHIRExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'outgoing_fhir_def_list':
+    def export(self, session:'SASession') -> 'outgoing_fhir_def_list':
         """ Exports outgoing HL7 FHIR connection definitions.
         """
         logger.info('Exporting outgoing HL7 FHIR definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR)
 
         if not db_items:
             logger.info('No outgoing HL7 FHIR definitions found in DB')

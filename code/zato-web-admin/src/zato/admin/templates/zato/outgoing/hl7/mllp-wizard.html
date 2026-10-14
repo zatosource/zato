@@ -7,7 +7,6 @@ and the address, sit directly on the first step while everything that has
 a sensible default opens in a small popover micro-form. The generic
 machinery and look come from the wizard kit. The view provides:
 
-* cluster_id - the current cluster
 * form       - CreateForm on create, EditForm prefilled on edit
 * is_edit    - whether the wizard opened on an existing connection
 * item_id    - the id of the connection being edited, empty on create
@@ -79,8 +78,8 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.outgoing.hl7.mllp.wizard.init({
-        list_url: '{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id }}&type_=outconn-hl7-mllp',
-        test_url: '{% url "outgoing-hl7-mllp-wizard-test" %}?cluster={{ cluster_id }}',
+        list_url: '{% url "outgoing-hl7-mllp" %}?type_=outconn-hl7-mllp',
+        test_url: '{% url "outgoing-hl7-mllp-wizard-test" %}',
         is_edit: {% if is_edit %}true{% else %}false{% endif %}
     });
 });
@@ -319,7 +318,6 @@ $(document).ready(function() {
 
                 </div>
 
-                <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 {% if is_edit %}
                 <input type="hidden" id="id_edit-id" name="id" value="{{ item_id }}" />
                 {% endif %}

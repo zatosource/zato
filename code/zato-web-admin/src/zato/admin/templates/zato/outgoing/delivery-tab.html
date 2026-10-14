@@ -5,7 +5,6 @@
 <div class="search-bar" style="overflow:hidden">
     <div class="prompt" style="float:left; width:60%">
         <form novalidate action="." method="get">
-            <input type="hidden" name="cluster" value="{{ cluster_id }}" />
             <input type="hidden" name="tab" value="{{ tab.kind }}" />
             <input type="text" name="query" value="{{ tab.query }}" style="width:40%" class="required" placeholder="Enter search terms" />
             <input type="submit" style="vertical-align:top" value="Search" />

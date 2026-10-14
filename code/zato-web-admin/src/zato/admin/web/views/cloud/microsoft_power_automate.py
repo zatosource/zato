@@ -29,7 +29,7 @@ class Index(_Index):
     output_class = MicrosoftPowerAutomateConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active', 'address', 'tenant_id', 'client_id', 'environment_id'
     output_optional = generic_attrs
     output_repeated = True
@@ -120,7 +120,7 @@ def change_password(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'Microsoft Power Automate connection')
 
 # ################################################################################################################################

@@ -34,7 +34,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = ('id',) + _fields_required
     output_optional = _fields_optional
     output_repeated = True
@@ -106,7 +106,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'MongoDB connection')
 
 # ################################################################################################################################

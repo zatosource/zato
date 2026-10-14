@@ -808,7 +808,6 @@ class TestDeletingTheChannelDeletesItsRestChannel(TestCase):
 
         service.invoke.assert_called_once_with('zato.http-soap.delete', {
             'id': 42,
-            'cluster_id': 1,
             'should_raise_if_missing': False,
         })
 
@@ -839,7 +838,6 @@ class TestDeletingTheChannelDeletesItsRestChannel(TestCase):
 
         service.invoke.assert_called_once_with('zato.http-soap.delete', {
             'id': 42,
-            'cluster_id': 1,
             'should_raise_if_missing': False,
         })
 

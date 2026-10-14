@@ -100,7 +100,7 @@ def _open_invoker_in_ide(page:'Page', base_url:'str') -> 'None':
     """ Opens the pre-deployed IBM MQ invoker service in the IDE and waits until the Invoke button is usable.
     """
 
-    _ = page.goto(f'{base_url}/zato/service/ide/service/{_Invoker_Service}/?cluster=1')
+    _ = page.goto(f'{base_url}/zato/service/ide/service/{_Invoker_Service}/')
     _ = page.wait_for_selector('#invoke-service:not([disabled])', state='visible', timeout=15000)
 
 # ################################################################################################################################

@@ -59,7 +59,6 @@ import yaml
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
-from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.ext.bunch import Bunch
@@ -284,9 +283,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     # Zato
     from zato.common.util.cli import read_stdin_data
 
-    # Type hints
-    preferred_address: 'str'
-
     options = options or {}
 
     # Store a pidfile before doing anything else
@@ -386,17 +382,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
 
     server_config.main.token = server_config.main.token.encode('utf8')
 
-    # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
-    preferred_address = server_config.preferred_address.get('address') or ''
-
-    if not preferred_address:
-        preferred_address = get_preferred_ip(server_config.main.bind, server_config.preferred_address)
-
-    if not preferred_address and not server_config.server_to_server.boot_if_preferred_not_found:
-        msg = 'Unable to start the server. Could not obtain a preferred address, please configure [bind_options] in server.conf'
-        logger.warning(msg)
-        raise Exception(msg)
-
     # Create the startup callable tool as soon as practical
     startup_callable_tool = StartupCallableTool(server_config)
 
@@ -470,7 +455,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.logging_conf_path = logging_conf_path
     server.io_config = io_config
     server.user_config.update(server_config.user_config_items)
-    server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
     server.with_test_data = asbool(options.get('with_test_data'))
     server.env_manager = env_manager

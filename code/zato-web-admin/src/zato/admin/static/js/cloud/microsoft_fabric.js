@@ -120,8 +120,7 @@ $.fn.zato.cloud.microsoft_fabric.data_table.new_row = function(item, data, inclu
 $.fn.zato.cloud.microsoft_fabric.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Microsoft Fabric connection `{0}` deleted',
-        'Are you sure you want to delete Microsoft Fabric connection `{0}`?',
-        true);
+        'Are you sure you want to delete Microsoft Fabric connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

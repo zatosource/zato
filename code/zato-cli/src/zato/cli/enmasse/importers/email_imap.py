@@ -61,11 +61,11 @@ class IMAPImporter:
 
 # ################################################################################################################################
 
-    def get_imap_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_imap_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
-        logger.info('Retrieving IMAP connection definitions from database for cluster_id=%s', cluster_id)
-        imap_connections = email_imap_list(session, cluster_id)
+        logger.info('Retrieving IMAP connection definitions from database')
+        imap_connections = email_imap_list(session)
 
         self._process_imap_defs(imap_connections, out)
         logger.info('Total IMAP connection definitions from DB: %d', len(out))
@@ -140,7 +140,7 @@ class IMAPImporter:
             job_def['start_date'] = start_date
 
         # The job may already exist from a previous import, in which case it is updated in place
-        existing_job = session.query(Job).filter_by(name=job_def['name'], cluster_id=self.importer.cluster_id).first()
+        existing_job = session.query(Job).filter_by(name=job_def['name']).first()
 
         if existing_job:
             job_def['id'] = existing_job.id
@@ -154,12 +154,8 @@ class IMAPImporter:
 
     def create_imap_definition(self, imap_def:'anydict', session:'SASession') -> 'any_':
 
-        # Get the cluster instance from the importer
-        cluster = self.importer.get_cluster(session)
-
         # Create a new IMAP connection instance
         imap_conn = IMAP()
-        imap_conn.cluster_id = cluster.id
 
         name = imap_def.get('name', '')
         is_active = imap_def.get('is_active', True)
@@ -274,7 +270,7 @@ class IMAPImporter:
     def sync_imap_definitions(self, imap_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d IMAP connection definitions from YAML', len(imap_list))
 
-        db_defs = self.get_imap_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_imap_defs_from_db(session)
         to_create, to_update = self.compare_imap_defs(imap_list, db_defs)
 
         out_created = []

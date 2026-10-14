@@ -56,8 +56,7 @@
             activeTab: '{{ active_tab }}',
             connType: '{{ conn_type }}',
             connId: '{{ conn_id }}',
-            connName: '{{ conn_name|escapejs }}',
-            clusterId: '{{ cluster_id }}'
+            connName: '{{ conn_name|escapejs }}'
         });
     });
     </script>
@@ -66,13 +65,9 @@
 
 {% block "content" %}
 
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 
@@ -125,8 +120,6 @@
 
         </div>
 
-    {% endif %}
 
-{% endif %}
 
 {% endblock %}

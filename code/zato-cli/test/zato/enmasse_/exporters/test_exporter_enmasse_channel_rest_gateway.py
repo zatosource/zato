@@ -72,8 +72,6 @@ class TestEnmasseChannelRESTGatewayExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        _ = self.importer.get_cluster(self.session)
-
         self.session.commit()
 
 # ################################################################################################################################
@@ -86,11 +84,10 @@ class TestEnmasseChannelRESTGatewayExporter(TestCase):
         if rest_channels := self.yaml_config.get('channel_rest', []):
             logger.info('Importing %d REST channels for test', len(rest_channels))
 
-            self.channel_importer.importer.cluster_id = self.importer.cluster_id
             created, updated = self.channel_importer.sync_channel_rest(rest_channels, self.session)
             logger.info('Imported %d REST channels', len(created) + len(updated))
 
-            all_exported_channels = self.channel_exporter.export(self.session, self.importer.cluster_id)
+            all_exported_channels = self.channel_exporter.export(self.session)
 
             exported_channels = [
                 channel for channel in all_exported_channels

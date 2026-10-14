@@ -87,11 +87,9 @@ $.fn.zato.audit_log.config = {
     resubmitLabels: {},
 
     // Which source this page lists, which object of it and how this source's exchanges
-    // open and close, all assigned in init. The cluster is always the default one -
-    // pages that run init overwrite it with the same value the server rendered.
+    // open and close, all assigned in init.
     source: '',
     objectName: '',
-    clusterId: '1',
     exchange: {},
 
     // What one event's source is called on the screen, what its object is called,
@@ -540,8 +538,6 @@ $.fn.zato.audit_log.filterPicksURL = function(sources, objects, sourcesExcluded,
             params.set(config.objectsExcludedURLKey, objectsExcluded.join(','));
         }
     }
-
-    params.set('cluster', config.clusterId);
 
     return '/zato/audit-log/?' + params.toString();
 };

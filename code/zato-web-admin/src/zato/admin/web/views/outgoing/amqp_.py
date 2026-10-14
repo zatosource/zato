@@ -53,7 +53,6 @@ def _get_edit_create_message(params:'any_', subtype:'str', prefix:'str'='') -> '
     """
     return {
         'id': params.get('id'),
-        'cluster_id': params['cluster_id'],
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
         'address': params.get(prefix + 'address'),
@@ -93,7 +92,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = ('id', 'name', 'address', 'username', 'is_active', 'delivery_mode', 'priority',
         'content_type', 'content_encoding', 'expiration', 'pool_size', 'user_id', 'app_id', 'delivery_mode_text')
     output_repeated = True
@@ -190,7 +188,6 @@ def invoke(req:'any_', conn_id:'str', conn_name:'str', conn_slug:'str', subtype:
     return_data = {
         'conn_id': conn_id,
         'conn_name': conn_name,
-        'cluster_id': req.zato.cluster_id,
         'subtype': subtype_config,
         'index_url': url_prefix,
         'invoke_action_url': f'{url_prefix}-invoke-action',

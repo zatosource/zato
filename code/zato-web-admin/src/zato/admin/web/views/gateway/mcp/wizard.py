@@ -43,7 +43,6 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
     form = CreateForm(req=req)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': False,
         'item_id': '',
@@ -113,7 +112,6 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
         assigned_by_key[source.key] = assigned
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': True,
         'item_id': item_dict['id'],

@@ -45,7 +45,7 @@ _No_Permissions_HTML = (
     '<table id="multi-select-table" class="multi-select-table">'
     '<tr><td colspan="2">'
     '<span class="multi-select-message">No matching subscription permissions.'
-    '<a href="/zato/pubsub/permission/?cluster=1" style="color: #0936d5;" target="_new">Click to manage permissions</a></span>'
+    '<a href="/zato/pubsub/permission/" style="color: #0936d5;" target="_new">Click to manage permissions</a></span>'
     '</td></tr>'
     '</table>'
 )
@@ -65,7 +65,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'security', 'delivery_type', \
         'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
         'topic_link_list', 'pending_depth'
@@ -166,7 +165,7 @@ class Create(_CreateEdit):
     url_name = 'pubsub-subscription-create'
     service_name = 'zato.pubsub.subscription.create'
 
-    input_required = 'cluster_id', 'topic_name', 'sec_base_id', 'delivery_type'
+    input_required = 'topic_name', 'sec_base_id', 'delivery_type'
     input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
     output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'security', 'delivery_type', \
         'topic_name_list', 'topic_link_list',
@@ -199,7 +198,7 @@ class Edit(_CreateEdit):
     url_name = 'pubsub-subscription-edit'
     service_name = 'zato.pubsub.subscription.edit'
 
-    input_required = 'sub_key', 'cluster_id', 'topic_id_list', 'sec_base_id', 'delivery_type'
+    input_required = 'sub_key', 'topic_id_list', 'sec_base_id', 'delivery_type'
     input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
     output_required = 'id', 'sub_key', 'security', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
@@ -274,16 +273,14 @@ def get_topics(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics for pubsub subscriptions.
     """
     # Get the input parameters ..
-    cluster_id = request.GET['cluster_id']
     form_type = request.GET['form_type']
 
-    logger.info('VIEW get_topics: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
+    logger.info('VIEW get_topics: received request with form_type=%s', form_type)
 
     try:
 
         # .. invoke the service ..
         response = request.zato.client.invoke('zato.pubsub.topic.get-list', {
-            'cluster_id': cluster_id
         })
 
         # .. build the topic list ..
@@ -363,14 +360,13 @@ def _is_subscriber_access(access_type:'str') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_subscriber_patterns_for_sec_def(request:'HttpRequest', sec_base_id:'str', cluster_id:'str') -> 'strlist':
+def _get_subscriber_patterns_for_sec_def(request:'HttpRequest', sec_base_id:'str') -> 'strlist':
     """ Get subscriber patterns for a given security definition.
     """
 
-    # Get the permissions for this cluster ..
-    logger.info('Getting permissions for cluster_id=%s', cluster_id)
+    # Get the permissions ..
+    logger.info('Getting permissions')
     permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
-        'cluster_id': cluster_id,
     })
     logger.info('Got %d permissions', len(permissions_response.data))
 
@@ -399,7 +395,7 @@ def _get_subscriber_patterns_for_sec_def(request:'HttpRequest', sec_base_id:'str
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_topics_for_patterns(request:'HttpRequest', subscriber_patterns:'strlist', cluster_id:'str') -> 'set':
+def _get_topics_for_patterns(request:'HttpRequest', subscriber_patterns:'strlist') -> 'set':
     """ Get all topics matching the given patterns.
     """
 
@@ -408,7 +404,6 @@ def _get_topics_for_patterns(request:'HttpRequest', subscriber_patterns:'strlist
     for pattern in subscriber_patterns:
         try:
             matches_response = request.zato.client.invoke('zato.pubsub.topic.get-matches', {
-                'cluster_id': cluster_id,
                 'pattern': pattern
             })
             logger.info('Got %d matches for pattern: %s', len(matches_response.data), pattern)
@@ -424,7 +419,7 @@ def _get_topics_for_patterns(request:'HttpRequest', subscriber_patterns:'strlist
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _build_topic_checkbox_html(all_topics:'set', cluster_id:'str') -> 'str':
+def _build_topic_checkbox_html(all_topics:'set') -> 'str':
     """ Build HTML for topic checkboxes.
     """
     html_parts = []
@@ -440,7 +435,7 @@ def _build_topic_checkbox_html(all_topics:'set', cluster_id:'str') -> 'str':
             html_parts.append('</td>')
             html_parts.append('<td>')
             html_parts.append(f'<label for="{checkbox_id}">')
-            html_parts.append(f'<a href="/zato/pubsub/topic/?cluster={cluster_id}&query={topic_name}" target="_blank">{topic_name}</a>')
+            html_parts.append(f'<a href="/zato/pubsub/topic/?query={topic_name}" target="_blank">{topic_name}</a>')
             html_parts.append('</label>')
             html_parts.append('</td>')
             html_parts.append('</tr>')
@@ -456,16 +451,16 @@ def _build_topic_checkbox_html(all_topics:'set', cluster_id:'str') -> 'str':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def sec_def_topic_sub_list(request:'HttpRequest', sec_base_id:'str', cluster_id:'str') -> 'HttpResponse':
+def sec_def_topic_sub_list(request:'HttpRequest', sec_base_id:'str') -> 'HttpResponse':
     """ Returns HTML for topics to which a given security definition has access for subscription.
     """
 
-    logger.info('Starting with sec_base_id=%s, cluster_id=%s', sec_base_id, cluster_id)
+    logger.info('Starting with sec_base_id=%s', sec_base_id)
 
     try:
 
         # Get the subscriber patterns ..
-        subscriber_patterns = _get_subscriber_patterns_for_sec_def(request, sec_base_id, cluster_id)
+        subscriber_patterns = _get_subscriber_patterns_for_sec_def(request, sec_base_id)
 
         # .. check if any were found ..
         if not subscriber_patterns:
@@ -474,10 +469,10 @@ def sec_def_topic_sub_list(request:'HttpRequest', sec_base_id:'str', cluster_id:
             return out
 
         # .. get the matching topics ..
-        all_topics = _get_topics_for_patterns(request, subscriber_patterns, cluster_id)
+        all_topics = _get_topics_for_patterns(request, subscriber_patterns)
 
         # .. build the HTML ..
-        html_content = _build_topic_checkbox_html(all_topics, cluster_id)
+        html_content = _build_topic_checkbox_html(all_topics)
 
         # .. and return the response.
         out = HttpResponse(html_content, content_type='text/html')
@@ -499,10 +494,9 @@ def get_rest_endpoints(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of REST outgoing connections for pubsub subscriptions.
     """
     # Get the input parameters ..
-    cluster_id = request.GET['cluster_id']
     form_type = request.GET['form_type']
 
-    logger.info('VIEW get_rest_endpoints: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
+    logger.info('VIEW get_rest_endpoints: received request with form_type=%s', form_type)
 
     try:
 
@@ -547,10 +541,9 @@ def get_service_list(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of services for pubsub subscriptions.
     """
     # Get the input parameters ..
-    cluster_id = request.GET['cluster_id']
     form_type = request.GET['form_type']
 
-    logger.info('VIEW get_service_list: received request with cluster_id=%s, form_type=%s', cluster_id, form_type)
+    logger.info('VIEW get_service_list: received request with form_type=%s', form_type)
 
     try:
 
@@ -586,16 +579,14 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics filtered by security definition's subscribe permissions.
     """
     # Get the input parameters ..
-    cluster_id = request.GET['cluster_id']
     sec_base_id = request.GET['sec_base_id']
 
-    logger.info('VIEW get_topics_by_security: cluster_id=%s, sec_base_id=%s', cluster_id, sec_base_id)
+    logger.info('VIEW get_topics_by_security: sec_base_id=%s', sec_base_id)
 
     try:
 
         # .. get the permissions ..
         permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
-            'cluster_id': cluster_id
         })
 
         # .. filter for subscribe permissions ..
@@ -655,7 +646,6 @@ def get_topics_by_security(request:'HttpRequest') -> 'HttpResponse':
         for pattern in all_patterns:
             try:
                 matches_response = request.zato.client.invoke('zato.pubsub.topic.get-matches', {
-                    'cluster_id': cluster_id,
                     'pattern': pattern
                 })
 

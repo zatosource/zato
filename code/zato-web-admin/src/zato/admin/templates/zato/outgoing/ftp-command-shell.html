@@ -38,11 +38,10 @@ $(document).ready(function() {
             </div>
 
             <form novalidate id="file-shell-form"
-                  action="{% url "out-ftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
+                  action="{% url "out-ftp-command-shell-action" conn_id name_slug %}" method="post">
                 {% csrf_token %}
 
                 <input type="hidden" name="id" value="{{ conn_id }}" />
-                <input type="hidden" name="cluster_id" value="{{ cluster_id }}" />
 
                 <div class="file-shell-editor">
                     {{ form.data }}

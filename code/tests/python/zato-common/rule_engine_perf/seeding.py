@@ -16,9 +16,6 @@ from time import monotonic
 # SQLAlchemy
 from sqlalchemy import func, select
 
-# Zato
-from zato.common.defaults import default_cluster_id
-
 # Local
 from common import build_ssl_context, PerfDatabase, Rollup_Day_Count, Rollup_Rule_Count, \
     Seeded_Decision_Count, Seeded_Definition_Count, Type_MySQL, Type_PostgreSQL, Type_SQLite
@@ -86,19 +83,19 @@ _postgresql_default_port = 5432
 # ################################################################################################################################
 
 # The columns of rule_decision in seeding order - the id column is omitted so the engine assigns it itself.
-_decision_columns = ('cluster_id, decision_id, ruleset_id, rules_version, occurred_at, time_bucket,'
+_decision_columns = ('decision_id, ruleset_id, rules_version, occurred_at, time_bucket,'
     ' business_key, outcome, is_error, duration_ms, has_payload, payload, fired_rule_ids')
 
 # The columns of rule_definition in seeding order - the id comes first and is assigned explicitly
 # so version and event rows can reference their definitions without any lookup.
-_definition_columns = ('id, cluster_id, parent_id, parent_key, name, object_type, current_version,'
+_definition_columns = ('id, parent_id, parent_key, name, object_type, current_version,'
     ' live_version, is_active, created_at, updated_at, document')
 
 # The columns of rule_version in seeding order.
 _version_columns = 'definition_id, version, author, comment, created_at, document'
 
 # The columns of rule_event in seeding order.
-_event_columns = 'cluster_id, definition_id, version, event_type, actor, subject_id, bucket_start, event_count, created_at, payload'
+_event_columns = 'definition_id, version, event_type, actor, subject_id, bucket_start, event_count, created_at, payload'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -324,7 +321,6 @@ def _decision_rows(ruleset_ids:'tuple[int, int]') -> 'row_iterator':
             payload = None
 
         yield (
-            default_cluster_id,
             f'seed-{index:08d}',
             ruleset_id,
             version_for(index),
@@ -384,7 +380,6 @@ def _rollup_rows(ruleset_ids:'tuple[int, int]') -> 'row_iterator':
                 event_count = 1 + (rule_index + day) % 40
 
                 yield (
-                    default_cluster_id,
                     ruleset_id,
                     1,
                     Event_Type_Rule_Fired_Daily,
@@ -448,7 +443,6 @@ def _definition_rows(parent_ids:'tuple[int, int]', child_count:'int') -> 'row_it
 
         yield (
             definition_id,
-            default_cluster_id,
             parent_id,
             parent_id,
             f'Coverage check {index:05d}',
@@ -494,7 +488,6 @@ def _definition_event_rows(child_count:'int') -> 'row_iterator':
 
         for event_type in (Event_Type_Version_Created, Event_Type_Version_Published):
             yield (
-                default_cluster_id,
                 definition_id,
                 Seed_Versions_Per_Definition,
                 event_type,

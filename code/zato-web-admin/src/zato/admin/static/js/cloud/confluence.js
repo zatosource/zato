@@ -124,8 +124,7 @@ $.fn.zato.cloud.confluence.data_table.new_row = function(item, data, include_tr)
 $.fn.zato.cloud.confluence.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Confluence connection `{0}` deleted',
-        'Are you sure you want to delete Confluence connection `{0}`?',
-        true);
+        'Are you sure you want to delete Confluence connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

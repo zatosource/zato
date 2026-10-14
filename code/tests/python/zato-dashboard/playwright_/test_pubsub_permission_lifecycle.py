@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
+_Permission_Page_Url = '/zato/pubsub/permission/'
 
 _Test_Name_Prefix = 'test.permission.lc.' + CryptoManager.generate_hex_string(32) + '.'
 

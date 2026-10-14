@@ -130,7 +130,6 @@ def test_pooled_create_definition(zato_server:'stranydict') -> 'None':
     client = _get_client(zato_server)
 
     response = client.create('zato.generic.connection.create',
-        cluster_id=1,
         name=_conn_name,
         type_=_conn_type,
         is_active=True,

@@ -44,37 +44,35 @@
         </tr>
 
         <tr>
-            <td class="inline_header" colspan="4">Cluster color markers</td>
+            <td class="inline_header" colspan="4">Environment color marker</td>
         </tr>
 
-        {% for cluster in clusters %}
-            <tr>
-                <td style="width:15%;line-height:25px">{{ cluster.name }}</td>
+        <tr>
+            <td style="width:15%;line-height:25px">Environment</td>
 
-                <td style="text-align:left;line-height:25px" colspan="3">
-                    <input type="checkbox"
-                        id="checkbox_{{ cluster.id }}"
-                        name="checkbox_{{ cluster.id }}"
-                        style="vertical-align:middle;margin-bottom:5px"
-                        {% if cluster.id|slugify in cluster_colors %}checked="checked"{% endif %}
-                        />&nbsp;
+            <td style="text-align:left;line-height:25px" colspan="3">
+                <input type="checkbox"
+                    id="checkbox_environment"
+                    name="checkbox_environment"
+                    style="vertical-align:middle;margin-bottom:5px"
+                    {% if environment_color %}checked="checked"{% endif %}
+                    />&nbsp;
 
-                    <span id="color_picker_span_{{ cluster.id }}" {% if not cluster.id|slugify in cluster_colors %}class="hidden"{% endif %}>
-                        {% if cluster.id|slugify in cluster_colors %}
-                            <input type="text"
-                                style="color:#{{ cluster_colors|bunchget:cluster.id }}; background-color:#{{ cluster_colors|bunchget:cluster.id }}"
-                                id="color_{{ cluster.id }}"
-                                name="color_{{ cluster.id }}"
-                                value="{{ cluster_colors|bunchget:cluster.id }}" />
+                <span id="color_picker_span_environment" {% if not environment_color %}class="hidden"{% endif %}>
+                    {% if environment_color %}
+                        <input type="text"
+                            style="color:#{{ environment_color }}; background-color:#{{ environment_color }}"
+                            id="color_environment"
+                            name="color_environment"
+                            value="{{ environment_color }}" />
 
-                        {% else %}
-                            <input type="text" style="color:#999" id="color_{{ cluster.id }}" name="color_{{ cluster.id }}" value="{{ default_prompt }}" />
-                        {% endif %}
-                        {% if cluster.id|slugify in cluster_colors %}<a id="previev_a_{{ cluster.id }}" href="javascript:$.fn.zato.account.basic_settings.preview('{{ cluster.id }}')">(preview)</a>{% endif %}
-                    </span>
-                </td>
-            </tr>
-        {% endfor %}
+                    {% else %}
+                        <input type="text" style="color:#999" id="color_environment" name="color_environment" value="{{ default_prompt }}" />
+                    {% endif %}
+                    {% if environment_color %}<a id="previev_a_environment" href="javascript:$.fn.zato.account.basic_settings.preview('environment')">(preview)</a>{% endif %}
+                </span>
+            </td>
+        </tr>
 
         <tr>
             <td colspan="4" style="text-align:right;border-top:1px solid #ddd"><button id="save_settings" name="save_settings" type="submit">Save settings</button></td>

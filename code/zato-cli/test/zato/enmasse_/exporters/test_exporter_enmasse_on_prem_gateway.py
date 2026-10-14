@@ -93,8 +93,6 @@ class TestEnmasseOnPremGatewayExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        _ = self.importer.get_cluster(self.session)
-
         gateways_from_yaml = self.yaml_config[_Section]
         _, _ = self.gateway_importer.sync_on_prem_gateways(gateways_from_yaml, self.session)
 

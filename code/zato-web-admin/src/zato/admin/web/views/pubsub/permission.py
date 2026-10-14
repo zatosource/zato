@@ -46,7 +46,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
     output_repeated = True
 
@@ -90,7 +89,6 @@ class _CreateEdit(CreateEdit):
 
         # Get the list of security definitions ..
         response = self.req.zato.client.invoke('zato.security.basic-auth.get-list', {
-            'cluster_id': self.req.zato.cluster_id,
         })
 
         # .. build the choices list ..
@@ -116,7 +114,6 @@ class Create(_CreateEdit):
     form_class = CreateForm
 
     input_required = 'sec_base_id', 'pattern', 'access_type'
-    input_optional = 'cluster_id',
     output_required = 'id', 'security'
 
     def success_message(self, item:'any_') -> 'str':
@@ -136,7 +133,6 @@ class Edit(_CreateEdit):
     form_prefix = 'edit-'
 
     input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
-    input_optional = 'cluster_id',
     output_required = 'id', 'security'
 
     def success_message(self, item:'any_') -> 'str':
@@ -146,7 +142,6 @@ class Edit(_CreateEdit):
 
         # .. look it up in the list of all definitions ..
         response = self.req.zato.client.invoke('zato.security.get-list', {
-            'cluster_id': self.req.zato.cluster_id,
         })
 
         # .. and return the name.

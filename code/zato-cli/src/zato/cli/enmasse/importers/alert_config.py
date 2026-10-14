@@ -59,14 +59,14 @@ yaml_to_extra = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _ensure_llm_connection_exists(name:'str', session:'SASession', cluster_id:'int') -> 'None':
+def _ensure_llm_connection_exists(name:'str', session:'SASession') -> 'None':
     """ Rejects a default LLM connection unless it exists - an empty name means there is no default.
     """
     if not name:
         return
 
     connection = session.query(GenericConn).\
-        filter_by(cluster_id=cluster_id, name=name, type_=GENERIC.CONNECTION.TYPE.OUTCONN_LLM).\
+        filter_by(name=name, type_=GENERIC.CONNECTION.TYPE.OUTCONN_LLM).\
         first()
 
     if connection is None:
@@ -177,7 +177,7 @@ class AlertConfigImporter:
         # The LLM connection named has to be there - explanations are never configured
         # to go through a connection that does not exist
         if 'llm_connection' in values:
-            _ensure_llm_connection_exists(values['llm_connection'], session, self.importer.cluster_id)
+            _ensure_llm_connection_exists(values['llm_connection'], session)
 
         # The YAML speaks the screen's vocabulary - the extra keeps its own keys
         extra_values:'stranydict' = {}
@@ -188,13 +188,13 @@ class AlertConfigImporter:
 
         # A server creates the sweep job on its first start, so an import into an environment that never started
         # creates it here, the same way, and the server then finds it in place with the values already on it
-        job_created = ensure_alerting_job_exists(session, self.importer.cluster_id)
+        job_created = ensure_alerting_job_exists(session)
 
         if job_created:
             session.flush()
             logger.info('Created the alerting sweep job for the notification targets')
 
-        changed = set_notification_config(session, self.importer.cluster_id, extra_values)
+        changed = set_notification_config(session, extra_values)
 
         if changed or job_created:
             session.commit()

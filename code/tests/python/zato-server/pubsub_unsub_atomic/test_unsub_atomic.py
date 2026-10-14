@@ -54,7 +54,7 @@ def _get_publisher() -> 'any_':
 def _get_subscriptions(admin:'any_', sec_name:'str') -> 'anylist':
     """ Returns all subscriptions for a given security definition name.
     """
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list
@@ -117,7 +117,6 @@ def _recreate_subscription(admin:'any_', topic_name:'str') -> 'None':
     from zato.common.test.config_pubsub_unsub_atomic import TestConfig
 
     _ = admin.invoke('zato.pubsub.subscription.create', {
-        'cluster_id': 1,
         'topic_name_list': [topic_name],
         'sec_base_id': TestConfig.subscriber_sec_base_id,
         'delivery_type': 'pull',

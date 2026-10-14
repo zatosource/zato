@@ -107,7 +107,7 @@ def test_generic_destination_types_read_their_own_generic_types() -> 'None':
 # ################################################################################################################################
 
 def test_a_type_with_no_connections_is_reported_as_empty() -> 'None':
-    """ A cluster with no connection of one kind still offers the other kinds, that group
+    """ An environment with no connection of one kind still offers the other kinds, that group
     simply being empty.
     """
     request = new_request()

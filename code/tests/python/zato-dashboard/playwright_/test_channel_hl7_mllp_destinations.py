@@ -82,10 +82,10 @@ _Mode_Timeout = 30
 _Absence_Wait = 3.0
 
 # The FHIR dashboard page the FHIR outgoing connection is created through
-_Fhir_Page_Url = '/zato/outgoing/hl7/fhir/?cluster=1&type_=outconn-hl7-fhir'
+_Fhir_Page_Url = '/zato/outgoing/hl7/fhir/?type_=outconn-hl7-fhir'
 
 # The SMTP dashboard page the e-mail connection is created through
-_Smtp_Page_Url = '/zato/email/smtp/?cluster=1'
+_Smtp_Page_Url = '/zato/email/smtp/'
 
 # The badge picker the wizard's destinations panel runs on, and the decision lines panel it opens in
 _Picker_Action = 'mllp-wizard-destinations'

@@ -12,7 +12,7 @@ from django import forms
 # Zato
 from zato.admin.web import alerts_tab, delivery_tab
 from zato.admin.web.forms import add_health_check_fields, add_security_select, add_services, \
-    SearchForm as _ChooseClusterForm, DataFormatForm
+    SearchForm as _SearchForm, DataFormatForm
 from zato.common.api import HTTP_SOAP, MISC, PARAMS_PRIORITY, IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
 
 # ################################################################################################################################
@@ -212,12 +212,12 @@ class EditForm(CreateForm):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SearchForm(_ChooseClusterForm):
+class SearchForm(_SearchForm):
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, clusters, data=None):
-        super(SearchForm, self).__init__(clusters, data)
+    def __init__(self, data):
+        super(SearchForm, self).__init__(data)
 
         self.initial['connection'] = data.get('connection') or ''
         self.initial['transport'] = data.get('transport') or ''

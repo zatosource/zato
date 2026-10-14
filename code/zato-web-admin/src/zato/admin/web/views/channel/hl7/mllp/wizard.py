@@ -67,7 +67,6 @@ def _populate_rest_bridge(req:'any_', item_dict:'stranydict', rest_channel_id:'i
     belong to the REST channel it keeps alongside itself.
     """
     response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
         'id': rest_channel_id,
     })
 
@@ -83,13 +82,12 @@ def _populate_rest_bridge(req:'any_', item_dict:'stranydict', rest_channel_id:'i
 def wizard_create(req:'any_') -> 'TemplateResponse':
     """ A multi-step wizard for a new HL7 MLLP channel.
     """
-    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.BASIC_AUTH])
-    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.MTLS])
+    security_list = SecurityList.from_service(req.zato.client, [SEC_DEF_TYPE.BASIC_AUTH])
+    mtls_security_list = SecurityList.from_service(req.zato.client, [SEC_DEF_TYPE.MTLS])
 
     form = CreateForm(req=req, security_list=security_list, mtls_security_list=mtls_security_list)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': False,
         'item_id': '',
@@ -140,8 +138,8 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     if rest_channel_id:
         _populate_rest_bridge(req, item_dict, rest_channel_id)
 
-    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.BASIC_AUTH])
-    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, [SEC_DEF_TYPE.MTLS])
+    security_list = SecurityList.from_service(req.zato.client, [SEC_DEF_TYPE.BASIC_AUTH])
+    mtls_security_list = SecurityList.from_service(req.zato.client, [SEC_DEF_TYPE.MTLS])
 
     # .. the edit endpoint reads its input under the edit- prefix, which is what the form
     # .. is built with and what the wizard's own fieldPrefix mirrors ..
@@ -152,7 +150,6 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     populate_form_initial(form, item_dict)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': True,
         'item_id': item_dict['id'],
@@ -210,7 +207,6 @@ def _clear_other_default(req:'any_', id:'str') -> 'int':
     """ Takes the default flag off whichever other channel held it, returning its id, zero if none did.
     """
     response = req.zato.client.invoke('zato.generic.connection.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'type_': GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP,
     })
 

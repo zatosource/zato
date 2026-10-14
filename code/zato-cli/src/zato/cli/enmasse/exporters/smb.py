@@ -54,13 +54,13 @@ class SMBExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'smb_def_list':
+    def export(self, session: 'SASession') -> 'smb_def_list':
         """ Exports SMB connection definitions.
         """
         logger.info('Exporting SMB connection definitions')
 
         # Get SMB connections from database using the generic connection query
-        db_smb = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_SMB)
+        db_smb = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_SMB)
 
         if not db_smb:
             logger.info('No SMB connection definitions found in DB')

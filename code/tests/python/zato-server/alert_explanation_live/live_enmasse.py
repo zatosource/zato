@@ -20,9 +20,6 @@ from uuid import uuid4
 # PyYAML
 import yaml
 
-# Zato
-from zato.common.defaults import default_cluster_id
-
 # Test helpers
 from live_config import LiveServer
 from live_trace import Channel_Enmasse, Received, Sent, separator, trace
@@ -105,7 +102,7 @@ def find_by_name(client:'AdminClient', service_name:'str', name:'str') -> 'anydi
     """ One object of a get-list service by its name, or None when the server has none of that name - how a proof
     learns the id of an object it imported. A list service answers with the list itself, unwrapped.
     """
-    items, _ = client.get_list(service_name, cluster_id=default_cluster_id)
+    items, _ = client.get_list(service_name)
 
     for item in items:
         if item['name'] == name:

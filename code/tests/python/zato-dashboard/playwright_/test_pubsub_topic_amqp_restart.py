@@ -48,7 +48,7 @@ if 0:
 
 logger = logging.getLogger('zato.test.playwright')
 
-_Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
+_Topic_Page_Url = '/zato/pubsub/topic/'
 
 _Test_Name_Prefix = 'test.amqp.restart.' + new_cid() + '.'
 
@@ -190,7 +190,7 @@ class TestPubSubTopicAMQPRestart:
 
         # .. reload the topics page after the restart, filtered by the topic's name because
         # .. the list is paginated and the topic may not be on the first page otherwise ..
-        navigate_to_page(page, base_url, f'{_Topic_Page_Url}&query={topic_name}')
+        navigate_to_page(page, base_url, f'{_Topic_Page_Url}?query={topic_name}')
         item_id = get_item_id(page, topic_name)
 
         # .. publish through the overlay ..

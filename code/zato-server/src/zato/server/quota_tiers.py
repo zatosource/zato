@@ -69,7 +69,6 @@ class QuotaTiersManager:
 
     def __init__(self, server:'ParallelServer', session:'any_' = None) -> 'None':
         self.server = server
-        self.cluster_id = self.server.cluster_id
 
         # A session factory may be given explicitly, e.g. in tests - otherwise the server's one is used.
         if session:
@@ -111,7 +110,7 @@ class QuotaTiersManager:
         # .. work in a new SQL transaction ..
         with closing(self.session()) as session:
 
-            wrapper = GenericObjectWrapper(session, self.cluster_id)
+            wrapper = GenericObjectWrapper(session)
             wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
             # .. do create the tier now ..
@@ -138,7 +137,7 @@ class QuotaTiersManager:
         # .. work in a new SQL transaction ..
         with closing(self.session()) as session:
 
-            wrapper = GenericObjectWrapper(session, self.cluster_id)
+            wrapper = GenericObjectWrapper(session)
             wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
             # .. build and run the update ..
@@ -153,7 +152,7 @@ class QuotaTiersManager:
         """
         with closing(self.session()) as session:
 
-            wrapper = GenericObjectWrapper(session, self.cluster_id)
+            wrapper = GenericObjectWrapper(session)
             wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
             delete = wrapper.delete_by_id(tier_id)
@@ -170,7 +169,6 @@ class QuotaTiersManager:
             row = session.query(ModelGenericObject).\
                 filter(ModelGenericObject.id==tier_id).\
                 filter(ModelGenericObject.type_==Quota_Tiers.Type.Quota_Tier).\
-                filter(ModelGenericObject.cluster_id==self.cluster_id).\
                 first()
 
             if row is None:
@@ -188,7 +186,7 @@ class QuotaTiersManager:
         """
         with closing(self.session()) as session:
 
-            wrapper = GenericObjectWrapper(session, self.cluster_id)
+            wrapper = GenericObjectWrapper(session)
             wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
             row = wrapper.get(name)
@@ -211,7 +209,7 @@ class QuotaTiersManager:
 
         with closing(self.session()) as session:
 
-            wrapper = GenericObjectWrapper(session, self.cluster_id)
+            wrapper = GenericObjectWrapper(session)
             wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
             rows = wrapper.get_list()
@@ -235,7 +233,6 @@ class QuotaTiersManager:
 
             # Check security definitions first ..
             sec_rows = session.query(SecurityBase).\
-                filter(SecurityBase.cluster_id==self.cluster_id).\
                 all()
 
             for sec_row in sec_rows:
@@ -252,7 +249,6 @@ class QuotaTiersManager:
 
             # .. now check channels ..
             channel_rows = session.query(HTTPSOAP).\
-                filter(HTTPSOAP.cluster_id==self.cluster_id).\
                 filter(HTTPSOAP.connection=='channel').\
                 all()
 
@@ -267,7 +263,7 @@ class QuotaTiersManager:
                     out['channels'].append(channel_row.name)
 
             # .. now check security groups.
-            wrapper = GenericObjectWrapper(session, self.cluster_id)
+            wrapper = GenericObjectWrapper(session)
             group_rows = wrapper.get_list(Groups.Type.Group_Parent, Groups.Type.API_Clients)
 
             for group_row in group_rows:
@@ -314,7 +310,6 @@ class QuotaTiersManager:
 
             # .. walk all security definitions to find own rules and direct tier references ..
             sec_rows = session.query(SecurityBase).\
-                filter(SecurityBase.cluster_id==self.cluster_id).\
                 all()
 
             for sec_row in sec_rows:
@@ -337,7 +332,6 @@ class QuotaTiersManager:
 
             # .. walk all channels the same way - own rules win, then a directly referenced tier ..
             channel_rows = session.query(HTTPSOAP).\
-                filter(HTTPSOAP.cluster_id==self.cluster_id).\
                 filter(HTTPSOAP.connection=='channel').\
                 all()
 
@@ -358,7 +352,7 @@ class QuotaTiersManager:
                         out.rules_by_channel[channel_row.id] = channel_rules
 
             # .. now resolve group tiers for members that have neither own rules nor own tiers ..
-            wrapper = GenericObjectWrapper(session, self.cluster_id)
+            wrapper = GenericObjectWrapper(session)
             group_rows = wrapper.get_list(Groups.Type.Group_Parent, Groups.Type.API_Clients)
 
             for group_row in group_rows:

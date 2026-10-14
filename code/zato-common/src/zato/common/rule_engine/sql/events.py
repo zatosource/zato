@@ -9,9 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # SQLAlchemy
 from sqlalchemy import select
 
-# Zato
-from zato.common.defaults import default_cluster_id
-
 # Local
 from .data import anydict, event_record_list, RuleEventRecord, strlist
 from .database import SessionFactory
@@ -85,10 +82,8 @@ class EventStore:
         if limit < 1:
             raise InvalidStoreInputError('Event list limit must be at least 1')
 
-        # .. start with the cluster shared by all feed views ..
+        # .. start with the event table shared by all feed views ..
         query = select(rule_event_table)
-        cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
-        query = query.where(cluster_condition)
 
         # .. add the optional parent and keyset boundaries ..
         if definition_id is not None:
@@ -159,10 +154,8 @@ class EventStore:
         if limit < 1:
             raise InvalidStoreInputError('Event list limit must be at least 1')
 
-        # .. start with the cluster shared by all feed views ..
+        # .. start with the event table shared by all feed views ..
         query = select(rule_event_table)
-        cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
-        query = query.where(cluster_condition)
 
         # .. everything a consumer reads lies strictly past its cursor ..
         cursor_condition = rule_event_table.c.id > since_id

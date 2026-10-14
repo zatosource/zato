@@ -68,10 +68,10 @@ _boolean_prefixes = ('by_', 'has_', 'is_', 'may_', 'needs_', 'should_')
 
 # ################################################################################################################################
 
-def invoke_list_service(client, cluster, service, extra=None):
+def invoke_list_service(client, service, extra=None):
 
     out = {}
-    request = {'cluster_id':cluster.id}
+    request = {}
     request.update(extra or {})
     for item in client.invoke(service, request):
         out[item.id] = item.name
@@ -85,7 +85,6 @@ def get_outconn_rest_list(req, name_to_id=False):
     """
     out = {}
     response = req.zato.client.invoke('zato.http-soap.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'connection': CONNECTION.OUTGOING,
         'transport': URL_TYPE.PLAIN_HTTP,
     })
@@ -202,7 +201,7 @@ def get_security_groups_from_checkbox_list(params, prefix, field_name_prefix='ht
 
 # ################################################################################################################################
 
-def build_sec_def_link(cluster_id, sec_type, sec_name):
+def build_sec_def_link(sec_type, sec_name):
 
     sec_type_name = Sec_Def_Type_Name[sec_type]
     sec_type = sec_type.replace('_', '-')
@@ -211,9 +210,8 @@ def build_sec_def_link(cluster_id, sec_type, sec_name):
     link = """
     {sec_type_name}
     <br/>
-    <a href="{url_path}?cluster={cluster_id}&amp;query={sec_name}">{sec_name}</a>
+    <a href="{url_path}?query={sec_name}">{sec_name}</a>
     """.format(**{
-           'cluster_id': cluster_id,
            'sec_type_name': sec_type_name,
            'sec_name': sec_name,
            'url_path': url_path,
@@ -223,7 +221,7 @@ def build_sec_def_link(cluster_id, sec_type, sec_name):
 
 # ################################################################################################################################
 
-def build_sec_def_link_by_input(req, cluster_id, input_data):
+def build_sec_def_link_by_input(req, input_data):
     # type: (dict) -> str
 
     security_id = input_data.get('security_id')
@@ -232,7 +230,7 @@ def build_sec_def_link_by_input(req, cluster_id, input_data):
         security_id = extract_security_id(input_data)
         sec_response = id_only_service(req, 'zato.security.get-by-id', security_id).data
 
-        return build_sec_def_link(cluster_id, sec_response.sec_type, sec_response.name)
+        return build_sec_def_link(sec_response.sec_type, sec_response.name)
 
 # ################################################################################################################################
 
@@ -243,18 +241,15 @@ class BaseView:
 
     def __init__(self):
         self.req = None # type: any_
-        self.cluster_id = None
         self.ctx = {}
 
     def __call__(self, req, *args, **kwargs):
         self.req = req
         for k, v in kwargs.items():
             self.req.zato.args[k] = v
-        self.cluster_id = None
-        self.fetch_cluster_id()
 
     def build_sec_def_link_by_input(self, input_data):
-        return build_sec_def_link_by_input(self.req, self.cluster_id, input_data)
+        return build_sec_def_link_by_input(self.req, input_data)
 
     def on_before_append_item(self, item):
         return item
@@ -274,29 +269,20 @@ class BaseView:
     def get_service_name(self, *_args, **_kwargs):
         raise NotImplementedError('May be implemented by subclasses')
 
-    def fetch_cluster_id(self):
-        # Doesn't look overtly smart right now but more code will follow to sanction
-        # the existence of this function
-        cluster_id = self.req.zato.cluster_id
-
-        if cluster_id:
-            self.cluster_id = int(cluster_id)
-
     def populate_initial_input_dict(self, initial_input_dict):
         """ May be overridden by subclasses if needed.
         """
 
     def get_sec_def_list(self, security_type_list):
         if self.req.zato.get('client'):
-            return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, security_type_list)
+            return SecurityList.from_service(self.req.zato.client, security_type_list)
         else:
             return []
 
     def set_input(self, req=None, default_attrs=('cur_page', 'query')):
         req = req or self.req
-        logger.info('set_input: paginate=%s, cluster_id=%s', getattr(self, 'paginate', False), self.cluster_id)
+        logger.info('set_input: paginate=%s', getattr(self, 'paginate', False))
         self.input.update({
-            'cluster_id':self.cluster_id,
             'paginate': getattr(self, 'paginate', False),
         })
         initial_input_dict = {}
@@ -304,33 +290,32 @@ class BaseView:
         self.input.update(initial_input_dict)
 
         for name in chain(self.input_required, self.input_optional, default_attrs):
-            if name != 'cluster_id':
 
-                value = req.GET.getlist(name)
+            value = req.GET.getlist(name)
+            if value:
+                value = value if len(value) > 1 else value[0]
+
+            if not value:
+                value = req.POST.getlist(self.form_prefix + name)
                 if value:
                     value = value if len(value) > 1 else value[0]
 
+            if not value:
+                value = req.zato.args.get(self.form_prefix + name)
+
+            is_boolean = name.startswith(_boolean_prefixes)
+
+            if is_boolean:
                 if not value:
-                    value = req.POST.getlist(self.form_prefix + name)
-                    if value:
-                        value = value if len(value) > 1 else value[0]
+                    value = False
+                elif isinstance(value, str):
+                    value = True
 
-                if not value:
-                    value = req.zato.args.get(self.form_prefix + name)
+            if name == 'is_active':
+                logger.info('set_input is_active trace -> value=%r, type=%s, form_prefix=%r',
+                    value, type(value).__name__, self.form_prefix)
 
-                is_boolean = name.startswith(_boolean_prefixes)
-
-                if is_boolean:
-                    if not value:
-                        value = False
-                    elif isinstance(value, str):
-                        value = True
-
-                if name == 'is_active':
-                    logger.info('set_input is_active trace -> value=%r, type=%s, form_prefix=%r',
-                        value, type(value).__name__, self.form_prefix)
-
-                self.input[name] = value
+            self.input[name] = value
 
         self.on_after_set_input()
 
@@ -354,19 +339,12 @@ class Index(BaseView):
         self.item = None
 
     def can_invoke_admin_service(self):
-        """ Returns a boolean flag indicating that we know what service to invoke, what cluster it is on
-        and that all the required parameters were given in GET request. cluster_id doesn't have to be in GET,
-        'cluster' will suffice.
+        """ Returns a boolean flag indicating that we know what service to invoke
+        and that all the required parameters were given in GET request.
         """
         input_elems = list(self.req.GET.keys()) + list(self.req.zato.args.keys())
 
-        if not self.cluster_id:
-            logger.info('Value missing; self.cluster_id `%s`', self.cluster_id)
-            return False
-
         for elem in self.input_required:
-            if elem == 'cluster_id':
-                continue
             if elem not in input_elems:
                 logger.info('Elem `%s` not in input_elems `%s`', elem, input_elems)
                 return False
@@ -396,19 +374,18 @@ class Index(BaseView):
         return True
 
     def invoke_admin_service(self) -> '_APIResponse':
-        if self.req.zato.get('cluster'):
-            service_name = self.service_name if self.service_name else self.get_service_name(self.req)
-            request = self.get_initial_input()
+        service_name = self.service_name if self.service_name else self.get_service_name(self.req)
+        request = self.get_initial_input()
 
-            if self.update_request_with_self_input:
-                request.update(self.input)
-            else:
-                logger.info('Not updating request with self.input')
+        if self.update_request_with_self_input:
+            request.update(self.input)
+        else:
+            logger.info('Not updating request with self.input')
 
-            if self.wrapper_type:
-                request['wrapper_type'] = self.wrapper_type
+        if self.wrapper_type:
+            request['wrapper_type'] = self.wrapper_type
 
-            return self.req.zato.client.invoke(service_name, request)
+        return self.req.zato.client.invoke(service_name, request)
 
     def should_include(self, item) -> 'bool':
         return True
@@ -497,7 +474,7 @@ class Index(BaseView):
             self.item = None
             self.set_input()
 
-            return_data = {'cluster_id':self.cluster_id}
+            return_data = {}
             response = None
 
             if self.can_invoke_admin_service():
@@ -530,7 +507,6 @@ class Index(BaseView):
             return_data['items'] = self.items
             return_data['item'] = self.item
             return_data['input'] = self.input
-            return_data['zato_clusters'] = req.zato.clusters
             return_data['search_form'] = req.zato.search_form
             return_data['meta'] = response.meta if response else {}
             return_data['paginate'] = getattr(self, 'paginate', False)
@@ -578,7 +554,7 @@ class CreateEdit(BaseView):
             self.set_input()
             self.populate_initial_input_dict(initial_input_dict)
 
-            input_dict = {'cluster_id': self.cluster_id}
+            input_dict = {}
             post_id = self.req.POST.get('id')
 
             if post_id:
@@ -685,7 +661,6 @@ class Delete(BaseCallView):
     def get_input_dict(self):
         return {
             self.id_elem: self.req.zato.id,
-            'cluster_id': self.cluster_id
         }
 
 # ################################################################################################################################
@@ -724,7 +699,6 @@ class SecurityList:
     @staticmethod
     def from_service(
         client:'any_',
-        cluster_id:'any_',
         security_type_list:'strlistnone'=None,
         needs_definition_type_name_label:'bool'=True,
     ) -> 'SecurityList':
@@ -732,9 +706,7 @@ class SecurityList:
         # Our response to produce
         out = SecurityList(needs_definition_type_name_label=needs_definition_type_name_label)
 
-        request = {
-            'cluster_id': cluster_id,
-        }
+        request = {}
 
         result = client.invoke('zato.security.get-list', request)
 
@@ -753,9 +725,7 @@ class SecurityList:
 
 def id_only_service(req, service, id, error_template='{}', initial=None):
     try:
-        request = {
-            'cluster_id': req.zato.cluster_id,
-        }
+        request = {}
 
         if id:
             request['id'] = id
@@ -947,7 +917,6 @@ def upload_to_server(
     client,
     data,
     payload_name,
-    cluster_id=1,
     service='zato.service.upload-package',
     error_msg_template='Deployment error, e:`{}`',
 ):
@@ -959,7 +928,6 @@ def upload_to_server(
             validate_python_syntax(data)
 
         input_dict = {
-            'cluster_id': cluster_id,
             'payload': b64encode(data),
             'payload_name': payload_name,
         }
@@ -1019,9 +987,7 @@ def get_http_channel_security_id(item):
 def invoke_action_handler(req, service_name:'str', send_attrs:'any_'=None, extra=None) -> 'any_':
 
     try:
-        request = {
-            'cluster_id': req.zato.cluster_id
-        }
+        request = {}
 
         send_attrs = send_attrs or {}
         for name in send_attrs:
@@ -1068,7 +1034,7 @@ def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
 
     # The name is user-defined and this string is rendered as markup, so the name
     # is quoted for the query string and escaped for the visible text
-    security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={quote(sec_name)}'
+    security_href = f'/zato/security/{sec_type_as_link}/?query={quote(sec_name)}'
     security_link = f'<a href="{security_href}">{escape(sec_name)}</a>'
     if needs_type:
         sec_name = f'{sec_type_name}<br/>{security_link}'

@@ -98,7 +98,6 @@ class Index(_Index):
             'transport': URL_TYPE.SOAP,
         }
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'is_internal'
     output_optional = ('host', 'url_path', 'soap_action', 'soap_version', 'security_id', 'security_name', 'sec_type', \
         'sec_type_name', 'validate_tls', 'ping_method', 'timeout', 'content_type', \
@@ -118,7 +117,7 @@ class Index(_Index):
             item.sec_type_name = Sec_Def_Type_Name[item.sec_type]
 
             # Where the definition's own page is, for the row's security menu
-            item.security_href = _get_security_href(self.req.zato.cluster_id, item.sec_type, item.security_name)
+            item.security_href = _get_security_href(item.sec_type, item.security_name)
 
         # The retry fields are opaque attributes - connections that predate them
         # carry no values, in which case the shared defaults are displayed.
@@ -285,7 +284,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id): # type: ignore
+def ping(req, id): # type: ignore
     response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
 
     if isinstance(response, HttpResponseServerError):

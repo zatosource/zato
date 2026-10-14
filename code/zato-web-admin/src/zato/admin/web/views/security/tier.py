@@ -67,7 +67,7 @@ def index(req): # type: ignore
 
     # Links from other pages use this parameter to land directly in the tier editor
     if req.GET.get('create'):
-        return redirect('/zato/security/tier/create/?cluster={}'.format(req.zato.cluster_id))
+        return redirect('/zato/security/tier/create/')
 
     tier_list = get_tier_list(req)
 
@@ -80,9 +80,8 @@ def index(req): # type: ignore
             if query in tier['name'].lower() or query in (tier['description'] or '').lower()]
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'tier_list': tier_list,
-        'search_form': SearchForm(req.zato.clusters, req.GET),
+        'search_form': SearchForm(req.GET),
         'show_search_form': True,
     }
 
@@ -95,7 +94,6 @@ def index(req): # type: ignore
 def create(req): # type: ignore
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'tier_id': '',
         'tier_name': '',
         'tier_description': '',
@@ -117,7 +115,6 @@ def edit(req, id): # type: ignore
     tier = response.data
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'tier_id': id,
         'tier_name': tier.name,
         'tier_description': tier.description,

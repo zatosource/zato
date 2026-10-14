@@ -62,13 +62,9 @@
 
 {% block "content" %}
 
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
             <h2 class="zato">{% if subtype.label == "Azure Service Bus" %}{% include "zato/include/header-brand.html" with logo="azure" %}{% else %}{% include "zato/include/header-brand.html" with badge="AMQP" %}{% endif %}{{ subtype.label }} channels</h2>
@@ -109,7 +105,7 @@
                         <td style="text-align:center">{{ item.address }}</td>
                         <td style="text-align:center">{{ item.username }}</td>
                         <td style="text-align:center">{{ item.queue }}</td>
-                        <td style="text-align:center"><a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                        <td style="text-align:center"><a href="{% url "service-ide" "service" item.service_name %}">{{ item.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -198,7 +194,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -271,14 +266,11 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
-    {% endif %}
 
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

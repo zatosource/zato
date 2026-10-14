@@ -195,7 +195,6 @@ def _create_aws_connection(client:'AdminClient', endpoint_url:'str') -> 'None':
     """ Creates the cloud-aws connection that all the tests use, pointing it at the simulator.
     """
     resp = client.create('zato.generic.connection.create',
-        cluster_id=1,
         name=_conn_name,
         type_='cloud-aws',
         is_active=True,
@@ -272,7 +271,6 @@ def zato_server() -> 'any_':
         _zato_bin, 'quickstart', 'create', _state.quickstart_directory,
         '--force',
         '--password', invoke_password,
-        '--servers', '1',
         '--server-api-client-for-scheduler-password', invoke_password,
         '--no-scheduler',
     ]

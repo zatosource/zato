@@ -14,9 +14,6 @@ $.fn.zato.data_table.HL7FHIROutconn = new Class({
 
 $.fn.zato.outgoing.hl7.fhir.config = {
 
-    // There is always exactly one cluster.
-    cluster_id: '1',
-
     // The delivery page link in a row names the connection type the page reads
     delivery_conn_type: 'fhir'
 };
@@ -167,11 +164,11 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
 
     // 3
     // The audit log of this connection's requests is filed under the connection's name
-    row += String.format('<td><a href="/zato/audit-log/?source=fhir&object_name={0}&cluster=1">Audit log</a>{1}</td>',
+    row += String.format('<td><a href="/zato/audit-log/?source=fhir&object_name={0}">Audit log</a>{1}</td>',
         encodeURIComponent(item.name), is_audit_log_active ? '' : ' <span class="form_hint">(off)</span>');
-    row += String.format('<td><a href="/zato/channel-usage/?sources=fhir&objects={0}&cluster=1">Usage</a></td>', encodeURIComponent(item.name));
+    row += String.format('<td><a href="/zato/channel-usage/?sources=fhir&objects={0}">Usage</a></td>', encodeURIComponent(item.name));
     var config = $.fn.zato.outgoing.hl7.fhir.config;
-    row += $.fn.zato.delivery_tab.link_cell(config.delivery_conn_type, item, config.cluster_id);
+    row += $.fn.zato.delivery_tab.link_cell(config.delivery_conn_type, item);
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{0}');\">Delete</a>", item.id));
@@ -211,8 +208,7 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
 $.fn.zato.outgoing.hl7.fhir.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'HL7 FHIR connection `{0}` deleted',
-        'Are you sure you want to delete HL7 FHIR connection `{0}`?',
-        true);
+        'Are you sure you want to delete HL7 FHIR connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -41,7 +41,7 @@ class OutgoingSOAPExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'outgoing_soap_def_list':
+    def export(self, session: 'SASession') -> 'outgoing_soap_def_list':
         """ Exports outgoing SOAP connection definitions.
         """
         logger.info('Exporting outgoing SOAP connection definitions')
@@ -49,7 +49,6 @@ class OutgoingSOAPExporter:
         # Get outgoing SOAP connections from database
         db_outgoing = http_soap_list(
             session,
-            cluster_id,
             connection=CONNECTION.OUTGOING,
             transport=URL_TYPE.SOAP,
             return_internal=False,

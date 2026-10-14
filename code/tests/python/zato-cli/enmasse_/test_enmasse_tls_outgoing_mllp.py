@@ -26,7 +26,7 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.outgoing_mllp import OutgoingMLLPImporter
 from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager
 from zato.common.crypto.api import ServerCryptoManager
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, SecurityBase, Service, SMTP
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, SecurityBase, Service, SMTP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +40,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_cluster_id = 1
 
 # One connection verifies the server alone, one presents a client certificate as well
 _conn_name_verified = 'enmasse.tls.mllp.verified'
@@ -75,13 +74,12 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster, with the crypto manager
+    """ A real ODB session over an in-memory SQLite database with the crypto manager
     the generic importer encrypts secrets with.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -96,8 +94,6 @@ def session() -> 'any_':
 
     session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
     session.commit()
 
     yield session

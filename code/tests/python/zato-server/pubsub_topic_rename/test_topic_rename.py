@@ -56,7 +56,7 @@ def _get_puller() -> 'any_':
 def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
     """ Finds a topic ID by name.
     """
-    topic_list = admin.invoke('zato.pubsub.topic.get-list', {'cluster_id': 1})
+    topic_list = admin.invoke('zato.pubsub.topic.get-list', {})
 
     if isinstance(topic_list, list):
         items:'anylist' = topic_list
@@ -74,7 +74,7 @@ def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
 def _get_subscriptions(admin:'any_', sec_name:'str') -> 'anylist':
     """ Returns all subscriptions for a given security definition name.
     """
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list
@@ -137,7 +137,6 @@ class TestTopicRename:
 
         _ = admin.invoke('zato.pubsub.topic.edit', {
             'id': topic_id,
-            'cluster_id': 1,
             'name': _renamed_topic_name,
             'is_active': True,
         })
@@ -145,7 +144,7 @@ class TestTopicRename:
         time.sleep(_settle_time)
 
         # .. verify the old name is gone and the new name exists ..
-        topic_list = admin.invoke('zato.pubsub.topic.get-list', {'cluster_id': 1})
+        topic_list = admin.invoke('zato.pubsub.topic.get-list', {})
 
         if isinstance(topic_list, list):
             items = topic_list
@@ -207,7 +206,6 @@ class TestTopicRename:
         # .. deactivate the topic ..
         _ = admin.invoke('zato.pubsub.topic.edit', {
             'id': topic_id,
-            'cluster_id': 1,
             'name': _renamed_topic_name,
             'is_active': False,
         })
@@ -240,7 +238,6 @@ class TestTopicRename:
         # .. reactivate the topic ..
         _ = admin.invoke('zato.pubsub.topic.edit', {
             'id': topic_id,
-            'cluster_id': 1,
             'name': _renamed_topic_name,
             'is_active': True,
         })

@@ -53,8 +53,7 @@ $.fn.zato.service.edit = function(id) {
 $.fn.zato.service.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Service `{0}` deleted',
-        'Are you sure you want to delete service `{0}`?',
-        true);
+        'Are you sure you want to delete service `{0}`?');
 }
 
 $.fn.zato.service.config = {
@@ -98,11 +97,9 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
 
     var is_internal = $.fn.zato.to_bool(data.is_internal);
 
-    var cluster_id = $(document).getUrlParam('cluster');
-
     row += "<td class='numbering'>&nbsp;</td>";
     row += '<td class="impexp"><input type="checkbox" /></td>';
-    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(data.name, cluster_id));
+    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(data.name));
     row += String.format('<td>{0}</td>', data.impl_name);
     row += String.format('<td>{0}</td>', is_internal ? 'Yes' : 'No');
 

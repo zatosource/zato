@@ -64,11 +64,11 @@ class ChannelOpenAPIImporter:
 
 # ################################################################################################################################
 
-    def get_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
         logger.info('Retrieving OpenAPI channel definitions from database')
-        connections = connection_list(session, cluster_id, self.connection_type, False)
+        connections = connection_list(session, self.connection_type, False)
 
         self._process_defs(connections, out)
         logger.info('Total OpenAPI channel definitions from DB: %d', len(out))
@@ -77,9 +77,8 @@ class ChannelOpenAPIImporter:
 
 # ################################################################################################################################
 
-    def _get_rest_channels_map(self, session:'SASession', cluster_id:'int') -> 'dict':
+    def _get_rest_channels_map(self, session:'SASession') -> 'dict':
         result = session.query(HTTPSOAP).filter(
-            HTTPSOAP.cluster_id == cluster_id,
             HTTPSOAP.connection == CONNECTION.CHANNEL,
             HTTPSOAP.transport == URL_TYPE.PLAIN_HTTP,
         ).all()
@@ -110,10 +109,8 @@ class ChannelOpenAPIImporter:
 # ################################################################################################################################
 
     def create_definition(self, channel_def:'anydict', session:'SASession', rest_channels_map:'dict') -> 'any_':
-        cluster = self.importer.get_cluster(session)
 
         connection = GenericConn()
-        connection.cluster = cluster
 
         for key, default_value in self.connection_defaults.items():
             value = channel_def.get(key, default_value)
@@ -185,10 +182,10 @@ class ChannelOpenAPIImporter:
     def sync_channel_openapi(self, channel_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d OpenAPI channel definitions from YAML', len(channel_list))
 
-        db_defs = self.get_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_defs_from_db(session)
         to_create, to_update = self.compare_defs(channel_list, db_defs)
 
-        rest_channels_map = self._get_rest_channels_map(session, self.importer.cluster_id)
+        rest_channels_map = self._get_rest_channels_map(session)
 
         out_created = []
         out_updated = []

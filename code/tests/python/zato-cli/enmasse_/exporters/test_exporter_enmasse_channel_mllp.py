@@ -76,8 +76,6 @@ class TestEnmasseChannelMLLPExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        _ = self.importer.get_cluster(self.session)
-
         # A channel that names a security definition can only resolve it once the definitions exist,
         # which is the order the importer itself runs the two sections in
         security_list = self.yaml_config['security']
@@ -99,7 +97,7 @@ class TestEnmasseChannelMLLPExporter(TestCase):
         logger.info('Imported %d HL7 MLLP %s', created_count, noun)
 
         # Export
-        all_exported = self.channel_mllp_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.channel_mllp_exporter.export(self.session)
 
         # Filter to only enmasse test channels
         exported = []
@@ -135,7 +133,7 @@ class TestEnmasseChannelMLLPExporter(TestCase):
         channel_defs = self.yaml_config['channel_mllp']
         _, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
-        all_exported = self.channel_mllp_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.channel_mllp_exporter.export(self.session)
 
         exported_by_name = {}
         for item in all_exported:
@@ -165,7 +163,7 @@ class TestEnmasseChannelMLLPExporter(TestCase):
         channel_defs = self.yaml_config['channel_mllp']
         _, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
-        all_exported = self.channel_mllp_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.channel_mllp_exporter.export(self.session)
 
         exported_by_name = {}
         for item in all_exported:
@@ -207,7 +205,7 @@ class TestEnmasseChannelMLLPExporter(TestCase):
 
         _, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
-        all_exported = self.channel_mllp_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.channel_mllp_exporter.export(self.session)
 
         for item in all_exported:
             if item['name'] == 'enmasse.hl7.mllp.plain.destination':
@@ -236,7 +234,7 @@ class TestEnmasseChannelMLLPExporter(TestCase):
         channel_defs = self.yaml_config['channel_mllp']
         _, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
-        all_exported = self.channel_mllp_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.channel_mllp_exporter.export(self.session)
 
         exported_by_name = {}
         for item in all_exported:
@@ -271,7 +269,7 @@ class TestEnmasseChannelMLLPExporter(TestCase):
 
         _, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
-        all_exported = self.channel_mllp_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.channel_mllp_exporter.export(self.session)
 
         for item in all_exported:
             if item['name'] == 'enmasse.hl7.mllp.tolerant.off':
@@ -298,7 +296,7 @@ class TestEnmasseChannelMLLPExporter(TestCase):
 
         _, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
-        all_exported = self.channel_mllp_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.channel_mllp_exporter.export(self.session)
 
         for item in all_exported:
             if item['name'] == 'enmasse.hl7.mllp.plain':
@@ -320,7 +318,7 @@ class TestEnmasseChannelMLLPExporter(TestCase):
         self._setup_test_environment()
 
         # Export without importing anything first
-        exported = self.channel_mllp_exporter.export(self.session, self.importer.cluster_id)
+        exported = self.channel_mllp_exporter.export(self.session)
 
         # There may be pre-existing channels from other tests, but at minimum the result should be a list
         self.assertIsInstance(exported, list)

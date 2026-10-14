@@ -67,13 +67,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Python" %}Services</h2>
@@ -89,7 +85,6 @@
             </div>
         </div>
 
-        <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
 
             <table class="zato-table" id="data-table">
                 <thead>
@@ -109,7 +104,7 @@
                     <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url "service-ide" "service" item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
+                        <td><a href="{% url "service-ide" "service" item.name %}">{{ item.name }}</a></td>
                         <td>{{ item.impl_name }}</td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -158,16 +153,13 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="edit-id" />
                 </form>
             </div>
         </div>
 
 
-    {% endif %}
 
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

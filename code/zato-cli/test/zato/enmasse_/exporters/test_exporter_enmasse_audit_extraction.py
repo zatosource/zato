@@ -67,9 +67,6 @@ class TestEnmasseAuditExtractionExporter(TestCase):
         if not self.session:
             self.session = get_session_from_server_dir(self.server_path)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Import the extraction rule set definition
         _, _ = self.audit_extraction_importer.sync_extraction_rules([self.extraction_def], self.session)
 

@@ -64,11 +64,11 @@ class PubSubTopicImporter:
 
 # ################################################################################################################################
 
-    def get_pubsub_topic_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_pubsub_topic_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
-        logger.info('Retrieving pubsub topic definitions from database for cluster_id=%s', cluster_id)
-        topics = pubsub_topic_list(session, cluster_id)
+        logger.info('Retrieving pubsub topic definitions from database')
+        topics = pubsub_topic_list(session)
 
         self._process_pubsub_topic_defs(topics, out)
         logger.info('Total pubsub topic definitions from DB: %d', len(out))
@@ -86,7 +86,6 @@ class PubSubTopicImporter:
         logger.info('Creating pubsub topic definition: %s', definition)
 
         instance = PubSubTopic()
-        instance.cluster_id = self.importer.cluster_id
         instance.name = definition['name']
         instance.description = definition.get('description', '')
         instance.is_active = definition.get('is_active', True)
@@ -187,7 +186,7 @@ class PubSubTopicImporter:
         logger.info('Processing %d pubsub topic definitions from YAML', len(topic_list))
 
         # Get existing definitions from database
-        db_defs = self.get_pubsub_topic_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_pubsub_topic_defs_from_db(session)
 
         created = []
         updated = []

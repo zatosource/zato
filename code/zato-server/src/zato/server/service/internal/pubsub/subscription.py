@@ -22,7 +22,7 @@ from zato.common.broker_message import PUBSUB
 logger = getLogger(__name__)
 
 from zato.common.api import PubSub, query_parameters
-from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
 from zato.common.util.api import as_bool, new_sub_key, utcnow
@@ -108,7 +108,7 @@ def get_topic_link(topic_name:'str', is_pub_enabled:'bool', is_delivery_enabled:
     pub_class = 'is-pub-enabled-true' if is_pub_enabled else 'is-pub-enabled-false'
     delivery_class = 'is-delivery-enabled-true' if is_delivery_enabled else 'is-delivery-enabled-false'
 
-    topic_link = '<a href="/zato/pubsub/topic/?cluster=1&query={}" class="{} {}">{}</a>'.format(
+    topic_link = '<a href="/zato/pubsub/topic/?query={}" class="{} {}">{}</a>'.format(
         quote(topic_name), pub_class, delivery_class, topic_name)
     return topic_link
 
@@ -120,7 +120,7 @@ class GetList(AdminService):
     """
     _filter_by = PubSubSubscription.sub_key,
 
-    input = 'cluster_id', '-needs_password', *query_parameters
+    input = '-needs_password', *query_parameters
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
         'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
         '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password', Int('-pending_depth')
@@ -129,10 +129,9 @@ class GetList(AdminService):
 
         # Check if password should be included in the response
         needs_password = self.request.input.needs_password
-        cluster_id = self.request.input.cluster_id
 
         # Query always returns password now, but we only need to use it if requested
-        result = self._search(pubsub_subscription_list, session, cluster_id, None, False)
+        result = self._search(pubsub_subscription_list, session, None, False)
 
         # Group by subscription ID
         subscriptions_by_id:'anydict' = {}
@@ -234,7 +233,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub subscription.
     """
-    input = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
+    input = AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
         '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'security', 'delivery_type', \
         AsIs('-topic_name_list'), AsIs('-topic_link_list')
@@ -269,8 +268,7 @@ class Create(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                # Get cluster and security definition
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
+                # Get the security definition
                 sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
 
                 logger.info('subscription Create.handle is_active trace -> sec_base.name=%s, sec_base.is_active=%r, type=%s',
@@ -311,11 +309,10 @@ class Create(AdminService):
 
                 for topic_name in topic_name_list:
                     topic = session.query(PubSubTopic).\
-                        filter(PubSubTopic.cluster_id==input.cluster_id).\
                         filter(PubSubTopic.name==topic_name).first()
 
                     if not topic:
-                        raise Exception('Pub/sub topic with ID `{}` not found in this cluster'.format(topic_name))
+                        raise Exception('Pub/sub topic with ID `{}` not found'.format(topic_name))
                     else:
                         topics.append(topic)
 
@@ -324,7 +321,6 @@ class Create(AdminService):
                 sub.sub_key = sub_key # type: ignore
                 sub.is_pub_active = input.is_pub_active
                 sub.is_delivery_active = input.is_delivery_active
-                sub.cluster = cluster
                 sub.sec_base = sec_base
                 sub.delivery_type = input.delivery_type
                 sub.push_type = input.push_type
@@ -345,7 +341,6 @@ class Create(AdminService):
                     sub_topic = PubSubSubscriptionTopic()
                     sub_topic.subscription = sub
                     sub_topic.topic = topic
-                    sub_topic.cluster = cluster
 
                     topic_data = topic_data_by_name[topic.name]
                     sub_topic.is_pub_enabled = topic_data['is_pub_enabled']
@@ -356,7 +351,6 @@ class Create(AdminService):
                             session,
                             sec_base.name,
                             input.sec_base_id,
-                            input.cluster_id,
                             topic.name
                         )
 
@@ -416,7 +410,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub subscription.
     """
-    input = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
+    input = 'sub_key', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
         '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name'
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'security', 'delivery_type', \
         AsIs('-topic_name_list'), AsIs('-topic_link_list')
@@ -430,7 +424,6 @@ class Edit(AdminService):
 
                 # Check if the subscription exists before calling one()
                 subscription_query = session.query(PubSubSubscription).\
-                    filter(PubSubSubscription.cluster_id==input.cluster_id).\
                     filter(PubSubSubscription.sub_key==input.sub_key)
 
                 # Now get the actual subscription
@@ -503,7 +496,6 @@ class Edit(AdminService):
 
                         # Make sure the topic exists
                         topic = session.query(PubSubTopic).\
-                            filter(PubSubTopic.cluster_id==input.cluster_id).\
                             filter(PubSubTopic.name==topic_name).\
                             first()
 
@@ -512,7 +504,6 @@ class Edit(AdminService):
 
                             # Create subscription-topic association
                             sub_topic = PubSubSubscriptionTopic()
-                            sub_topic.cluster_id = input.cluster_id
                             sub_topic.subscription_id = sub.id
                             sub_topic.topic_id = topic.id
 
@@ -526,7 +517,6 @@ class Edit(AdminService):
                                     session,
                                     sec_base.name,
                                     input.sec_base_id,
-                                    input.cluster_id,
                                     topic.name
                                 )
                             sub_topic.pattern_matched = cast_('any_', pattern_matched)
@@ -623,7 +613,6 @@ class Delete(AdminService):
             sec_def_name = sec_def.name
             sec_def_username = sec_def.username
 
-
             session.delete(sub)
             session.commit()
 
@@ -668,11 +657,10 @@ class _BaseModifyTopicList(AdminService):
 
 # ################################################################################################################################
 
-    def _get_subscriptions_by_sec(self, cluster_id:'int', sec_base_id:'int') -> 'any_':
+    def _get_subscriptions_by_sec(self, sec_base_id:'int') -> 'any_':
         """ Get subscriptions for a security definition.
         """
         get_list_request = {
-            'cluster_id': cluster_id,
             'sec_base_id': sec_base_id
         }
 
@@ -685,7 +673,6 @@ class _BaseModifyTopicList(AdminService):
     def handle(self):
 
         input = self.request.input
-        cluster_id = 1
 
         # Get security definition by username
         with closing(self.odb.session()) as session:
@@ -693,7 +680,6 @@ class _BaseModifyTopicList(AdminService):
                 # .. find security definition by username or sec_name ..
                 sec_base, lookup_field, lookup_value = get_security_definition(
                     session,
-                    cluster_id,
                     username=getattr(input, 'username', None),
                     sec_name=getattr(input, 'sec_name', None)
                 )
@@ -701,7 +687,7 @@ class _BaseModifyTopicList(AdminService):
                 sec_base_id = sec_base.id
 
                 # .. find any existing subscriptions using GetList service  ..
-                subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
+                subscriptions = self._get_subscriptions_by_sec(sec_base_id)
 
                 # Check if there's a subscription for THIS security definition
                 has_subscription_for_this_sec = False
@@ -722,7 +708,6 @@ class _BaseModifyTopicList(AdminService):
                         # .. prepare our request ..
                         create_request = Bunch()
                         create_request.sub_key = input.sub_key
-                        create_request.cluster_id = cluster_id
                         create_request.topic_name_list = input.topic_name_list
                         create_request.sec_base_id = sec_base_id
                         create_request.delivery_type = input.delivery_type
@@ -766,7 +751,6 @@ class _BaseModifyTopicList(AdminService):
 
                     # Check if the topic exists
                     topic = session.query(PubSubTopic).\
-                        filter(PubSubTopic.cluster_id==cluster_id).\
                         filter(PubSubTopic.name==topic_name).\
                         first()
 
@@ -778,7 +762,6 @@ class _BaseModifyTopicList(AdminService):
                         session,
                         sec_base.name,
                         sec_base_id,
-                        cluster_id,
                         topic_name
                     )
 
@@ -801,7 +784,6 @@ class _BaseModifyTopicList(AdminService):
                 # Update existing subscription with the combined topics
                 request = Bunch()
                 request.sub_key = sub_key
-                request.cluster_id = cluster_id
                 request.topic_name_list = all_topic_names
                 request.sec_base_id = sec_base_id
                 request.delivery_type = current_sub.delivery_type

@@ -178,16 +178,15 @@ class RuntimePresence(Service):
     def _is_in_odb(self, section:'str', name:'str') -> 'bool':
         """ Whether the ODB has a row of the section under the name given.
         """
-        cluster_id = self.server.cluster_id
 
         with closing(self.odb.session()) as session:
 
             if section in _odb_models:
                 model = _odb_models[section]
-                query = session.query(model).filter_by(cluster_id=cluster_id, name=name)
+                query = session.query(model).filter_by(name=name)
             else:
                 type_ = generic_object_sections[section][0]
-                query = session.query(GenericObject).filter_by(cluster_id=cluster_id, type_=type_, name=name)
+                query = session.query(GenericObject).filter_by(type_=type_, name=name)
 
             out = query.first() is not None
 

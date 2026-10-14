@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
+_Page_Url_Pattern = '/zato/security/basic-auth/'
 
 _Test_Name_Prefix = 'test.is.active.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -86,7 +86,7 @@ def _find_definition_via_api(api_client:'anydict', name:'str') -> 'dict':
     """ Finds a basic auth definition by name using the get-list API.
     """
 
-    items, _ = cast_('any_', api_client).get_list('zato.security.basic-auth.get-list', cluster_id=1)
+    items, _ = cast_('any_', api_client).get_list('zato.security.basic-auth.get-list')
 
     for item in items:
         if item['name'] == name:

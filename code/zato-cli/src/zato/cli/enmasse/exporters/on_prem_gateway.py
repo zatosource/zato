@@ -39,7 +39,7 @@ class OnPremGatewayExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'gateway_def_list':
+    def export(self, session:'SASession') -> 'gateway_def_list':
         """ Exports on-prem gateway definitions - a name, the flags and a list of
         addresses, which is everything the ODB stores about one.
         """
@@ -48,7 +48,7 @@ class OnPremGatewayExporter:
         # Our response to produce
         out = []
 
-        wrapper = OnPremGatewayWrapper(session, cluster_id)
+        wrapper = OnPremGatewayWrapper(session)
 
         rows = wrapper.get_list()
 

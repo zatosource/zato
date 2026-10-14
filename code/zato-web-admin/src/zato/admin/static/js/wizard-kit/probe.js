@@ -22,7 +22,7 @@
 //      $.fn.zato.wizard_kit.probe.init(wizard, {
 //          slotId: 'my-wizard-slot-check',
 //          buttonId: 'my-wizard-check',
-//          endpoint: '/zato/my/check/?cluster=1',
+//          endpoint: '/zato/my/check/',
 //          fields: ['address', 'start_seq', 'end_seq'],
 //          validate: function() { return wizard.field('address').val() ? '' : 'The address is empty'; },
 //          validatedField: 'address',

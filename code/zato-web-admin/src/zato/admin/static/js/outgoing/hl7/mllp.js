@@ -63,7 +63,7 @@ $.fn.zato.outgoing.hl7.mllp.delete_ = function(id) {
             confirmPattern = confirmPattern + String.format(config.deleteConfirmPending, queueText, dlqText);
         }
 
-        $.fn.zato.data_table.delete_(id, 'td.item_id_', config.deleteSuccess, confirmPattern, true);
+        $.fn.zato.data_table.delete_(id, 'td.item_id_', config.deleteSuccess, confirmPattern);
     });
 }
 

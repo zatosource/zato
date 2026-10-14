@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
+_Page_Url_Pattern = '/zato/security/basic-auth/'
 
 _Test_Name_Prefix = 'test.inter.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -269,7 +269,7 @@ class TestBasicAuthInteraction:
         defn = _create_definition(page, 'refresh')
 
         # .. reload with query filter so the row is visible ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={defn["name"]}')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the row is still present.
@@ -324,7 +324,7 @@ class TestBasicAuthInteraction:
 # ################################################################################################################################
 
     def test_46_hidden_is_active_sent(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Verifies that the create and edit forms contain hidden is_active and cluster_id fields.
+        """ Verifies that the create and edit forms contain hidden is_active fields.
         """
 
         page = logged_in_page
@@ -341,26 +341,12 @@ class TestBasicAuthInteraction:
         create_is_active_value = create_is_active.get_attribute('value')
         assert create_is_active_value == 'on', f'Expected is_active="on", got: "{create_is_active_value}"'
 
-        # .. check the create form's hidden cluster_id field ..
-        create_cluster_id = page.query_selector('#create-form input[name="cluster_id"][type="hidden"]')
-        assert create_cluster_id is not None, 'Create form should have hidden cluster_id input'
-
-        create_cluster_id_value = create_cluster_id.get_attribute('value')
-        assert create_cluster_id_value == '1', f'Expected cluster_id="1", got: "{create_cluster_id_value}"'
-
-        # .. check the edit form's hidden edit-is_active field ..
+        # .. and check the edit form's hidden edit-is_active field.
         edit_is_active = page.query_selector('#edit-form input[name="edit-is_active"][type="hidden"]')
         assert edit_is_active is not None, 'Edit form should have hidden edit-is_active input'
 
         edit_is_active_value = edit_is_active.get_attribute('value')
         assert edit_is_active_value == 'on', f'Expected edit-is_active="on", got: "{edit_is_active_value}"'
-
-        # .. check the edit form's hidden cluster_id field.
-        edit_cluster_id = page.query_selector('#edit-form input[name="cluster_id"][type="hidden"]')
-        assert edit_cluster_id is not None, 'Edit form should have hidden cluster_id input'
-
-        edit_cluster_id_value = edit_cluster_id.get_attribute('value')
-        assert edit_cluster_id_value == '1', f'Expected cluster_id="1", got: "{edit_cluster_id_value}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

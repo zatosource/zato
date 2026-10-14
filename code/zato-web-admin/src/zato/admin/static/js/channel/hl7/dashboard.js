@@ -9,7 +9,6 @@
 $.namespace('zato.channel.hl7.dashboard');
 
 $.fn.zato.channel.hl7.dashboard.config = {
-    cluster_id: '1',
     poll_url: '',
     time_range: 'week',
     audit_log_page: '/zato/audit-log/',
@@ -124,7 +123,6 @@ $.fn.zato.channel.hl7.dashboard.range_names = {
         var href = dash.config.audit_log_page;
         href += '?source=mllp-channel';
         href += '&object_name=' + encodeURIComponent(name);
-        href += '&cluster=' + dash.config.cluster_id;
 
         return href;
     };

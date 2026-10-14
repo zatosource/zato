@@ -1073,7 +1073,7 @@ class TestFindingLinks:
         # with the resubmit confirmation asked to open on it
         link = recorder.invocations[0][1]['link']
         assert link == (
-            f'/zato/audit-log/?source=email-smtp&object_name={_connection_name}&cluster=1'
+            f'/zato/audit-log/?source=email-smtp&object_name={_connection_name}'
             f'&event={newest_id}&action=resubmit')
 
 # ################################################################################################################################
@@ -1096,7 +1096,7 @@ class TestFindingLinks:
 
         # The link is the same page filtered down to the object, with no event to open
         link = recorder.invocations[0][1]['link']
-        assert link == f'/zato/audit-log/?source=mllp-channel&object_name={_channel_name}&cluster=1'
+        assert link == f'/zato/audit-log/?source=mllp-channel&object_name={_channel_name}'
 
 # ################################################################################################################################
 
@@ -1138,7 +1138,7 @@ class TestFindingLinks:
         link = recorder.invocations[0][1]['link']
         assert link == (
             f'https://dashboard.example.com/zato/audit-log/?source=email-smtp'
-            f'&object_name={_connection_name}&cluster=1&event={newest_id}&action=resubmit')
+            f'&object_name={_connection_name}&event={newest_id}&action=resubmit')
 
 # ################################################################################################################################
 
@@ -1149,7 +1149,7 @@ class TestFindingLinks:
 
         link = build_finding_link(fact)
 
-        assert link == f'/zato/audit-log/?source=rest-outgoing&object_name={_connection_name}&cluster=1&event=123&action=resubmit'
+        assert link == f'/zato/audit-log/?source=rest-outgoing&object_name={_connection_name}&event=123&action=resubmit'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -30,7 +30,7 @@ from zato.cli.enmasse.util import Channel_Delivery_Fields, channel_delivery_need
     take_channel_delivery_attrs
 from zato.cli.enmasse.util.delivery import Channel_Delivery_Defaults
 from zato.common.api import HTTP_SOAP
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,7 +48,6 @@ _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
 _retry = HTTP_SOAP.Retry
 
-_cluster_id = 1
 
 _service_name = 'enmasse.channel.delivery.service'
 
@@ -87,12 +86,11 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster and the service the channels invoke.
+    """ A real ODB session over an in-memory SQLite database holding the service the channels invoke.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -106,10 +104,7 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
-    service = Service(None, _service_name, True, 'enmasse.channel.delivery.Service', False, cluster)
+    service = Service(None, _service_name, True, 'enmasse.channel.delivery.Service', False)
     session.add(service)
 
     session.commit()
@@ -234,7 +229,7 @@ class TestRESTChannelDeliveryCompare:
     ) -> 'None':
         _, _ = rest_importer.sync_channel_rest(yaml_config['channel_rest'], session)
 
-        db_defs = rest_importer.get_rest_channels_from_db(session, _cluster_id)
+        db_defs = rest_importer.get_rest_channels_from_db(session)
         to_create, to_update = rest_importer.compare_channel_rest(_definitions('channel_rest'), db_defs)
 
         assert to_create == []
@@ -249,7 +244,7 @@ class TestRESTChannelDeliveryCompare:
         rest_importer:'ChannelImporter',
     ) -> 'None':
         _, _ = rest_importer.sync_channel_rest(yaml_config['channel_rest'], session)
-        db_defs = rest_importer.get_rest_channels_from_db(session, _cluster_id)
+        db_defs = rest_importer.get_rest_channels_from_db(session)
 
         for name, value in ((_dlq.Field_Retries, 1), (_queue.Field_Queue_Response, '{"accepted": false}'), (_retry.Field_Max_Retries, 2)):
             definitions = _definitions('channel_rest')
@@ -287,7 +282,7 @@ class TestSOAPChannelDeliveryCompare:
     ) -> 'None':
         _, _ = soap_importer.sync_channel_soap(yaml_config['channel_soap'], session)
 
-        db_defs = soap_importer.get_soap_channels_from_db(session, _cluster_id)
+        db_defs = soap_importer.get_soap_channels_from_db(session)
         to_create, to_update = soap_importer.compare_channel_soap(_definitions('channel_soap'), db_defs)
 
         assert to_create == []
@@ -302,7 +297,7 @@ class TestSOAPChannelDeliveryCompare:
         soap_importer:'ChannelSOAPImporter',
     ) -> 'None':
         _, _ = soap_importer.sync_channel_soap(yaml_config['channel_soap'], session)
-        db_defs = soap_importer.get_soap_channels_from_db(session, _cluster_id)
+        db_defs = soap_importer.get_soap_channels_from_db(session)
 
         for name, value in ((_dlq.Field_Retries, 1), (_queue.Field_Queue_Response, '<nack/>'), (_retry.Field_Max_Retries, 2)):
             definitions = _definitions('channel_soap')

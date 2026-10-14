@@ -137,6 +137,5 @@ $.fn.zato.outgoing.odata.delete_ = function(id) {
     var label = $.fn.zato.outgoing.odata.config.label;
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing ' + label + ' connection `{0}` deleted',
-        'Are you sure you want to delete outgoing ' + label + ' connection `{0}`?',
-        true);
+        'Are you sure you want to delete outgoing ' + label + ' connection `{0}`?');
 }

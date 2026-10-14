@@ -186,7 +186,6 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
             test_subject = os.environ.get(ModuleCtx.Env_Key_IMAP_Test_Subject)
 
         config = bunchify({
-            'cluster_id': 1,
             'id': 2,
             'is_active':True,
             'is_audit_log_active':True,
@@ -273,7 +272,6 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
             email = os.environ.get(ModuleCtx.Env_Key_MS365_Email)
 
         config = {
-            'cluster_id': 1,
             'id': 2,
             'is_active':True,
             'is_audit_log_active':True,

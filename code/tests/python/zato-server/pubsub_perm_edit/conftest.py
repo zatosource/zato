@@ -71,7 +71,7 @@ def _build_config(
         # .. look up sec_base_id values and the permission id ..
         admin = AdminClient(TestConfig.base_url, invoke_password)
 
-        sec_list = admin.invoke('zato.security.get-list', {'cluster_id': 1})
+        sec_list = admin.invoke('zato.security.get-list', {})
 
         if isinstance(sec_list, list):
             sec_items = sec_list
@@ -85,7 +85,7 @@ def _build_config(
                 TestConfig.subscriber_b_sec_base_id = sec_item['id']
 
         # .. look up the permission id for subscriber.a's sub permission ..
-        perm_list = admin.invoke('zato.pubsub.permission.get-list', {'cluster_id': 1})
+        perm_list = admin.invoke('zato.pubsub.permission.get-list', {})
 
         if isinstance(perm_list, list):
             perm_items = perm_list

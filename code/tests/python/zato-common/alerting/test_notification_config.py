@@ -20,7 +20,7 @@ from sqlalchemy.orm import sessionmaker
 from zato.common.alerting.notification_config import notification_keys, parse_extra, read_notification_config, \
     set_notification_config
 from zato.common.api import Alerting
-from zato.common.odb.model import Base, Cluster, IntervalBasedJob, Job, Service
+from zato.common.odb.model import Base, IntervalBasedJob, Job, Service
 from zato.common.util.scheduler import ensure_alerting_job_exists
 
 # ################################################################################################################################
@@ -32,9 +32,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The cluster the test job belongs to
-_cluster_id = 1
 
 # What the tests configure the notifications with
 _values = {
@@ -54,12 +51,11 @@ _values = {
 @pytest.fixture
 def odb_session() -> 'any_':
     """ A real ODB session over an in-memory SQLite database holding
-    the scheduler tables, one cluster and the alerting sweep job.
+    the scheduler tables and the alerting sweep job.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         Service.__table__,
         Job.__table__,
         IntervalBasedJob.__table__,
@@ -69,11 +65,9 @@ def odb_session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
     session.commit()
 
-    _ = ensure_alerting_job_exists(session, _cluster_id)
+    _ = ensure_alerting_job_exists(session)
     session.commit()
 
     yield session
@@ -87,7 +81,6 @@ def odb_session() -> 'any_':
 def _get_sweep_job(session:'any_') -> 'Job':
     out = session.query(Job).\
         filter(Job.name==Alerting.Job_Name).\
-        filter(Job.cluster_id==_cluster_id).\
         one()
     return out
 
@@ -130,7 +123,7 @@ class TestReadNotificationConfig:
 
     def test_what_was_set_is_what_is_read(self, odb_session:'any_') -> 'None':
 
-        changed = set_notification_config(odb_session, _cluster_id, _values)
+        changed = set_notification_config(odb_session, _values)
         odb_session.commit()
         assert changed is True
 
@@ -152,7 +145,7 @@ class TestSetNotificationConfig:
         odb_session.add(job)
         odb_session.commit()
 
-        _ = set_notification_config(odb_session, _cluster_id, _values)
+        _ = set_notification_config(odb_session, _values)
         odb_session.commit()
 
         parsed = parse_extra(_get_sweep_job(odb_session).extra)
@@ -164,14 +157,14 @@ class TestSetNotificationConfig:
 
     def test_an_empty_value_removes_its_key(self, odb_session:'any_') -> 'None':
 
-        _ = set_notification_config(odb_session, _cluster_id, _values)
+        _ = set_notification_config(odb_session, _values)
         odb_session.commit()
 
         # The Slack webhook is cleared on screen and saved
         cleared = dict(_values)
         cleared[Alerting.Extra_Slack_Webhook] = ''
 
-        changed = set_notification_config(odb_session, _cluster_id, cleared)
+        changed = set_notification_config(odb_session, cleared)
         odb_session.commit()
         assert changed is True
 
@@ -184,10 +177,10 @@ class TestSetNotificationConfig:
 
     def test_saving_the_same_values_changes_nothing(self, odb_session:'any_') -> 'None':
 
-        _ = set_notification_config(odb_session, _cluster_id, _values)
+        _ = set_notification_config(odb_session, _values)
         odb_session.commit()
 
-        changed = set_notification_config(odb_session, _cluster_id, _values)
+        changed = set_notification_config(odb_session, _values)
         odb_session.commit()
 
         assert changed is False
@@ -196,14 +189,14 @@ class TestSetNotificationConfig:
 
     def test_clearing_every_value_leaves_an_empty_extra(self, odb_session:'any_') -> 'None':
 
-        _ = set_notification_config(odb_session, _cluster_id, _values)
+        _ = set_notification_config(odb_session, _values)
         odb_session.commit()
 
         cleared = {}
         for key in notification_keys:
             cleared[key] = ''
 
-        _ = set_notification_config(odb_session, _cluster_id, cleared)
+        _ = set_notification_config(odb_session, cleared)
         odb_session.commit()
 
         # An extra with nothing left is stored as empty text, not as an empty object
@@ -213,11 +206,11 @@ class TestSetNotificationConfig:
 
     def test_a_key_not_sent_stays_as_it_was(self, odb_session:'any_') -> 'None':
 
-        _ = set_notification_config(odb_session, _cluster_id, _values)
+        _ = set_notification_config(odb_session, _values)
         odb_session.commit()
 
         # Only the dashboard URL travels in this save
-        _ = set_notification_config(odb_session, _cluster_id, {
+        _ = set_notification_config(odb_session, {
             Alerting.Extra_Dashboard_URL: 'https://other.example.com',
         })
         odb_session.commit()

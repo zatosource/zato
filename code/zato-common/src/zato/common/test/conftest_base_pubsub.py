@@ -307,7 +307,6 @@ def run_quickstart_and_enmasse(
         zato_bin, 'quickstart', 'create', state.quickstart_directory,
         '--force',
         '--password', invoke_password,
-        '--servers', '1',
         '--server-api-client-for-scheduler-password', invoke_password,
         '--no-scheduler',
     ]

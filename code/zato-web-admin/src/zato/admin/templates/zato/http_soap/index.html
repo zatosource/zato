@@ -279,13 +279,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with badge=transport_label %}{{ transport_label }} {{ connection_label_plural }}</h2>
@@ -302,7 +298,7 @@
             {% endif %}
             {% if connection == 'channel' and transport == 'plain_http' %}
             |
-            <a href="{% url "analytics" %}?cluster={{ cluster_id|default:"1" }}" class="common">Go to analytics</a>
+            <a href="{% url "analytics" %}" class="common">Go to analytics</a>
             {% endif %}
         </div>
 
@@ -552,27 +548,27 @@
                         {% endif %}
 
                         {% if connection == 'channel' %}
-                        <td><a href="/zato/http-soap/rate-limiting/{{ item.id }}/?cluster={{ cluster_id }}">Rate limiting</a></td>
+                        <td><a href="/zato/http-soap/rate-limiting/{{ item.id }}/">Rate limiting</a></td>
                         {% endif %}
 
                         {% if connection == 'channel' %}
-                        <td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{{ item.id }}/?cluster={{ cluster_id }}">Cache</a></td>
+                        <td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{{ item.id }}/">Cache</a></td>
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-channel&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-channel&amp;objects={{ item.name|urlencode }}">Usage</a>{% endif %}</td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="rest-channel" %}
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'soap' %}
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-channel&amp;object_name={{ item.name|urlencode }}">Audit log</a>{% endif %}</td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="soap-channel" %}
                         {% endif %}
 
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-outgoing&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-outgoing&amp;objects={{ item.name|urlencode }}">Usage</a>{% endif %}</td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="rest" %}
                         {% endif %}
 
@@ -991,7 +987,6 @@
                     </table>
                     {% endif %}
 
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
@@ -1348,7 +1343,6 @@
                     </table>
                     {% endif %}
 
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
@@ -1371,9 +1365,7 @@
         </form>
         {% endif %}
 
-    {% endif %}
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% if connection == 'outgoing' and transport == 'plain_http' %}
 <div id="openapi-copy-paste-overlay" class="openapi-overlay hidden">

@@ -465,9 +465,8 @@ class Create(AdminService):
         ttl = self.server.deployment_lock_expires
         block = self.server.deployment_lock_timeout
 
-        # Now, it's possible we don't have the config_dispatcher yet - this will happen if we are deploying
-        # missing services found on other servers during our own server's startup. In that case we just
-        # need to wait a moment for the server we are on to fully initialize.
+        # The config_dispatcher does not exist yet if services are deployed during the server's startup,
+        # in which case the deployment waits until the server is fully initialized.
         while not self.server.config_dispatcher:
             sleep(0.2)
 

@@ -54,7 +54,7 @@ class IMAPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'list_[anydict]':
+    def export(self, session:'SASession') -> 'list_[anydict]':
         """ Exports IMAP connection definitions.
         """
         logger.info('Exporting IMAP connection definitions with exclusions')
@@ -68,7 +68,7 @@ class IMAPExporter:
         exported_imap = []
 
         # Get all IMAP connection definitions from the database
-        imap_defs = email_imap_list(session, cluster_id)
+        imap_defs = email_imap_list(session)
 
         imap_items = to_json(imap_defs, return_as_dict=True)
 

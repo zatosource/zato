@@ -45,14 +45,13 @@ class TestSchedulerJobsCRUD:
     # ##############################################################################################################################
 
     def test_01_get_list_initial(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert isinstance(data, list)
 
     # ##############################################################################################################################
 
     def test_02_create_interval_job(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-sched-job-1',
             is_active=True,
             job_type='interval_based',
@@ -67,7 +66,7 @@ class TestSchedulerJobsCRUD:
     # ##############################################################################################################################
 
     def test_03_get_list_after_create(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-sched-job-1' in names
 
@@ -75,7 +74,6 @@ class TestSchedulerJobsCRUD:
 
     def test_04_create_one_time_job(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-sched-onetime-1',
             is_active=True,
             job_type='one_time',
@@ -91,7 +89,6 @@ class TestSchedulerJobsCRUD:
     def test_05_create_batch_interval_jobs(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'test-sched-job-{i}',
                 is_active=True,
                 job_type='interval_based',
@@ -105,7 +102,7 @@ class TestSchedulerJobsCRUD:
     # ##############################################################################################################################
 
     def test_06_get_list_batch(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-sched-')]
         assert len(test_items) >= 6
 
@@ -113,14 +110,14 @@ class TestSchedulerJobsCRUD:
 
     def test_07_get_by_id(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
-        resp = client.invoke(f'{SERVICE}.get-by-id', {'cluster_id': 1, 'id': item_id})
+        resp = client.invoke(f'{SERVICE}.get-by-id', {'id': item_id})
         assert resp['name'] == 'test-sched-job-1'
         assert resp['job_type'] == 'interval_based'
 
     # ##############################################################################################################################
 
     def test_08_get_by_name(self, client:'any_'):
-        resp = client.invoke(f'{SERVICE}.get-by-name', {'cluster_id': 1, 'name': 'test-sched-job-1'})
+        resp = client.invoke(f'{SERVICE}.get-by-name', {'name': 'test-sched-job-1'})
         assert resp['name'] == 'test-sched-job-1'
 
     # ##############################################################################################################################
@@ -129,7 +126,6 @@ class TestSchedulerJobsCRUD:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-sched-job-1-renamed',
             is_active=True,
             job_type='interval_based',
@@ -142,7 +138,7 @@ class TestSchedulerJobsCRUD:
     # ##############################################################################################################################
 
     def test_10_verify_rename(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-sched-job-1-renamed' in names
         assert 'test-sched-job-1' not in names
@@ -153,7 +149,6 @@ class TestSchedulerJobsCRUD:
         item_id = self.__class__.created_ids[2]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-sched-job-2',
             is_active=True,
             job_type='interval_based',
@@ -170,7 +165,6 @@ class TestSchedulerJobsCRUD:
         item_id = self.__class__.created_ids[2]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-sched-job-2',
             is_active=False,
             job_type='interval_based',
@@ -185,7 +179,7 @@ class TestSchedulerJobsCRUD:
 
     def test_13_verify_deactivated(self, client:'any_'):
         item_id = self.__class__.created_ids[2]
-        resp = client.invoke(f'{SERVICE}.get-by-id', {'cluster_id': 1, 'id': item_id})
+        resp = client.invoke(f'{SERVICE}.get-by-id', {'id': item_id})
         assert resp['is_active'] in (False, 'False', 0, '0', '')
 
     # ##############################################################################################################################
@@ -200,7 +194,6 @@ class TestSchedulerJobsCRUD:
     def test_15_duplicate_name_rejected(self, client:'any_'):
         with pytest.raises(Exception, match='already exists'):
             client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name='test-sched-job-1-renamed',
                 is_active=True,
                 job_type='interval_based',
@@ -218,7 +211,7 @@ class TestSchedulerJobsCRUD:
     # ##############################################################################################################################
 
     def test_17_verify_deleted(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-sched-job-1-renamed' not in names
 
@@ -232,7 +225,7 @@ class TestSchedulerJobsCRUD:
     # ##############################################################################################################################
 
     def test_19_get_list_final(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-sched-')]
         assert len(test_items) == 0
 
@@ -251,7 +244,6 @@ class TestSchedulerJobsNewFields:
 
     def test_01_create_with_jitter(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-sched-jitter-1',
             is_active=True,
             job_type='interval_based',
@@ -267,14 +259,13 @@ class TestSchedulerJobsNewFields:
 
     def test_02_verify_jitter_persisted(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
-        resp = client.invoke(f'{SERVICE}.get-by-id', {'cluster_id': 1, 'id': item_id})
+        resp = client.invoke(f'{SERVICE}.get-by-id', {'id': item_id})
         assert int(resp.get('jitter_ms', 0)) == 500
 
     # ##############################################################################################################################
 
     def test_03_create_with_timezone(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-sched-tz-1',
             is_active=True,
             job_type='interval_based',
@@ -290,14 +281,13 @@ class TestSchedulerJobsNewFields:
 
     def test_04_verify_timezone_persisted(self, client:'any_'):
         item_id = self.__class__.created_ids[1]
-        resp = client.invoke(f'{SERVICE}.get-by-id', {'cluster_id': 1, 'id': item_id})
+        resp = client.invoke(f'{SERVICE}.get-by-id', {'id': item_id})
         assert resp.get('timezone') == 'America/New_York'
 
     # ##############################################################################################################################
 
     def test_05_create_with_max_execution_time(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-sched-maxexec-1',
             is_active=True,
             job_type='interval_based',
@@ -313,7 +303,7 @@ class TestSchedulerJobsNewFields:
 
     def test_06_verify_max_execution_time_persisted(self, client:'any_'):
         item_id = self.__class__.created_ids[2]
-        resp = client.invoke(f'{SERVICE}.get-by-id', {'cluster_id': 1, 'id': item_id})
+        resp = client.invoke(f'{SERVICE}.get-by-id', {'id': item_id})
         assert int(resp.get('max_execution_time_ms', 0)) == 120000
 
     # ##############################################################################################################################
@@ -322,7 +312,6 @@ class TestSchedulerJobsNewFields:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-sched-jitter-1',
             is_active=True,
             job_type='interval_based',
@@ -339,7 +328,7 @@ class TestSchedulerJobsNewFields:
 
     def test_08_verify_all_new_fields(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
-        resp = client.invoke(f'{SERVICE}.get-by-id', {'cluster_id': 1, 'id': item_id})
+        resp = client.invoke(f'{SERVICE}.get-by-id', {'id': item_id})
         assert int(resp.get('jitter_ms', 0)) == 1000
         assert resp.get('timezone') == 'Europe/Prague'
         assert int(resp.get('max_execution_time_ms', 0)) == 60000

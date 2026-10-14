@@ -59,7 +59,6 @@ def _get_sec_names_by_username(server:'ParallelServer', username:'str') -> 'anyd
             SecurityBase.sec_type,
             SecurityBase.name,
         ).filter(
-            SecurityBase.cluster_id==server.cluster_id
         ).filter(
             SecurityBase.username==username
         ).filter(

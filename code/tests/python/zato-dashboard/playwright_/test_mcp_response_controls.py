@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 _Test_Name_Prefix = 'test.mcp.controls.' + CryptoManager.generate_hex_string(32) + '.'
 
-_Basic_Auth_Page_URL = '/zato/security/basic-auth/?cluster=1'
+_Basic_Auth_Page_URL = '/zato/security/basic-auth/'
 
 _Echo_Service = 'demo.echo'
 

@@ -28,7 +28,7 @@ from zato.common.alerting.object_settings import build_rule_values, build_window
 from zato.common.api import CONNECTION, FileTransfer, GENERIC, URL_TYPE
 from zato.common.audit_log.api import AuditSource
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Base, Cluster, GenericConn, HTTPSOAP
+from zato.common.odb.model import Base, GenericConn, HTTPSOAP
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -51,14 +51,9 @@ _now = datetime(2026, 9, 12, 10, 0, 0)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The cluster the test connections belong to, and one they do not
-_cluster_id = 1
-_other_cluster_id = 2
-
 # The connections the tests store
 _sftp_name = 'sftp.settings'
 _ftp_name = 'ftp.settings'
-_other_cluster_name = 'sftp.elsewhere'
 _ldap_name = 'ldap.no-alerts'
 _fhir_name = 'ehr.fhir'
 _llm_name = 'support.assistant'
@@ -91,12 +86,11 @@ _soap_outgoing_name = 'crm.soap'
 
 @contextmanager
 def _session() -> 'sessiongen':
-    """ An in-memory SQLite database with the cluster and generic connection tables and two clusters.
+    """ An in-memory SQLite database with the generic connection and HTTP channel tables.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConn.__table__,
         HTTPSOAP.__table__,
     ]
@@ -105,10 +99,6 @@ def _session() -> 'sessiongen':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    session.add(Cluster(_cluster_id, 'test-cluster', '', 'sqlite'))
-    session.add(Cluster(_other_cluster_id, 'other-cluster', '', 'sqlite'))
-    session.commit()
-
     yield session
 
     session.close()
@@ -116,7 +106,7 @@ def _session() -> 'sessiongen':
 
 # ################################################################################################################################
 
-def _add_connection(session:'SASession', name:'str', conn_type:'str', cluster_id:'int', opaque:'stranydict') -> 'None':
+def _add_connection(session:'SASession', name:'str', conn_type:'str', opaque:'stranydict') -> 'None':
     """ Stores one generic connection with the given opaque attributes.
     """
     item = cast_('any_', GenericConn())
@@ -126,7 +116,6 @@ def _add_connection(session:'SASession', name:'str', conn_type:'str', cluster_id
     item.is_internal = False
     item.is_channel = False
     item.is_outconn = True
-    item.cluster_id = cluster_id
     item.opaque1 = dumps(opaque)
 
     session.add(item)
@@ -139,7 +128,6 @@ def _add_http_soap(
     name:'str',
     connection:'str',
     transport:'str',
-    cluster_id:'int',
     opaque:'stranydict',
     ) -> 'None':
     """ Stores one HTTPSOAP row with the given opaque attributes.
@@ -152,7 +140,6 @@ def _add_http_soap(
     item.transport = transport
     item.url_path = '/' + name
     item.soap_action = ''
-    item.cluster = session.query(Cluster).filter(Cluster.id==cluster_id).one()
     item.opaque1 = dumps(opaque)
 
     session.add(item)
@@ -178,7 +165,7 @@ class TestLoadObjectSettings:
 
     def test_every_alert_type_is_present_even_with_no_connections(self) -> 'None':
         with _session() as session:
-            settings = load_object_settings(session, _cluster_id)
+            settings = load_object_settings(session)
 
         assert settings == {alert_type_file_transfer: {}, alert_type_fhir: {}, alert_type_llm: {}, alert_type_mcp: {}, \
             alert_type_mllp_channel: {}, alert_type_mllp_outgoing: {}, alert_type_kafka_outgoing: {}, alert_type_channels: {}, \
@@ -188,8 +175,8 @@ class TestLoadObjectSettings:
 
     def test_a_connection_without_stored_settings_reads_at_the_defaults(self) -> 'None':
         with _session() as session:
-            _add_connection(session, _sftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, _cluster_id, {})
-            settings = load_object_settings(session, _cluster_id)
+            _add_connection(session, _sftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
+            settings = load_object_settings(session)
 
         by_object = settings[alert_type_file_transfer]
 
@@ -202,8 +189,8 @@ class TestLoadObjectSettings:
         stored = to_storage(alert_type_file_transfer, {'warning_failures': 2, 'is_active': False, 'llm_connection': 'ops.llm'})
 
         with _session() as session:
-            _add_connection(session, _ftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_FTP, _cluster_id, stored)
-            settings = load_object_settings(session, _cluster_id)
+            _add_connection(session, _ftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_FTP, stored)
+            settings = load_object_settings(session)
 
         values = settings[alert_type_file_transfer][_ftp_name]
 
@@ -222,8 +209,8 @@ class TestLoadObjectSettings:
         stored[FileTransfer.Scheduler.Schedules_Field] = [_new_schedule(_schedule_name), _new_schedule(_other_schedule_name)]
 
         with _session() as session:
-            _add_connection(session, _sftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, _cluster_id, stored)
-            settings = load_object_settings(session, _cluster_id)
+            _add_connection(session, _sftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, stored)
+            settings = load_object_settings(session)
 
         by_object = settings[alert_type_file_transfer]
 
@@ -237,8 +224,8 @@ class TestLoadObjectSettings:
         stored = to_storage(alert_type_fhir, {'outcome_codes': 'exception, not-found', 'outcome_threshold': 5})
 
         with _session() as session:
-            _add_connection(session, _fhir_name, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, _cluster_id, stored)
-            settings = load_object_settings(session, _cluster_id)
+            _add_connection(session, _fhir_name, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, stored)
+            settings = load_object_settings(session)
 
         by_object = settings[alert_type_fhir]
 
@@ -257,8 +244,8 @@ class TestLoadObjectSettings:
         stored = to_storage(alert_type_llm, {'token_budget': 2000000, 'token_budget_window': 3600, 'status_codes': '429'})
 
         with _session() as session:
-            _add_connection(session, _llm_name, GENERIC.CONNECTION.TYPE.OUTCONN_LLM, _cluster_id, stored)
-            settings = load_object_settings(session, _cluster_id)
+            _add_connection(session, _llm_name, GENERIC.CONNECTION.TYPE.OUTCONN_LLM, stored)
+            settings = load_object_settings(session)
 
         by_object = settings[alert_type_llm]
 
@@ -279,8 +266,8 @@ class TestLoadObjectSettings:
         stored = to_storage(alert_type_mllp_channel, {'ack_codes': 'AR', 'ack_threshold': 2})
 
         with _session() as session:
-            _add_connection(session, _mllp_name, GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, _cluster_id, stored)
-            settings = load_object_settings(session, _cluster_id)
+            _add_connection(session, _mllp_name, GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, stored)
+            settings = load_object_settings(session)
 
         by_object = settings[alert_type_mllp_channel]
 
@@ -300,8 +287,8 @@ class TestLoadObjectSettings:
         stored = to_storage(alert_type_mllp_outgoing, {'ack_codes': 'AR', 'connection_failures': 5})
 
         with _session() as session:
-            _add_connection(session, _mllp_outgoing_name, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, _cluster_id, stored)
-            settings = load_object_settings(session, _cluster_id)
+            _add_connection(session, _mllp_outgoing_name, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, stored)
+            settings = load_object_settings(session)
 
         by_object = settings[alert_type_mllp_outgoing]
 
@@ -316,12 +303,11 @@ class TestLoadObjectSettings:
 
 # ################################################################################################################################
 
-    def test_other_clusters_and_other_types_are_left_out(self) -> 'None':
+    def test_other_types_are_left_out(self) -> 'None':
         with _session() as session:
-            _add_connection(session, _sftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, _cluster_id, {})
-            _add_connection(session, _other_cluster_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, _other_cluster_id, {})
-            _add_connection(session, _ldap_name, GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, _cluster_id, {})
-            settings = load_object_settings(session, _cluster_id)
+            _add_connection(session, _sftp_name, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
+            _add_connection(session, _ldap_name, GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
+            settings = load_object_settings(session)
 
         assert list(settings[alert_type_file_transfer]) == [_sftp_name]
 
@@ -332,13 +318,12 @@ class TestLoadObjectSettings:
         soap_stored = to_storage(alert_type_channels, {'auth_failures': 3})
 
         with _session() as session:
-            _add_http_soap(session, _rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, stored)
-            _add_http_soap(session, _plain_rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
-            _add_http_soap(session, _soap_channel_name, CONNECTION.CHANNEL, URL_TYPE.SOAP, _cluster_id, soap_stored)
-            _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
-            _add_http_soap(session, _soap_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.SOAP, _cluster_id, {})
-            _add_http_soap(session, 'elsewhere.api', CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _other_cluster_id, {})
-            settings = load_object_settings(session, _cluster_id)
+            _add_http_soap(session, _rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, stored)
+            _add_http_soap(session, _plain_rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, {})
+            _add_http_soap(session, _soap_channel_name, CONNECTION.CHANNEL, URL_TYPE.SOAP, soap_stored)
+            _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, {})
+            _add_http_soap(session, _soap_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.SOAP, {})
+            settings = load_object_settings(session)
 
         by_channel = settings[alert_type_channels]
 
@@ -360,10 +345,10 @@ class TestLoadObjectSettings:
         soap_stored = to_storage(alert_type_soap, {'status_code_threshold': 9, 'fault_codes': 'Receiver'})
 
         with _session() as session:
-            _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, _cluster_id, stored)
-            _add_http_soap(session, _soap_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.SOAP, _cluster_id, soap_stored)
-            _add_http_soap(session, _rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, _cluster_id, {})
-            settings = load_object_settings(session, _cluster_id)
+            _add_http_soap(session, _rest_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP, stored)
+            _add_http_soap(session, _soap_outgoing_name, CONNECTION.OUTGOING, URL_TYPE.SOAP, soap_stored)
+            _add_http_soap(session, _rest_channel_name, CONNECTION.CHANNEL, URL_TYPE.PLAIN_HTTP, {})
+            settings = load_object_settings(session)
 
         by_rest = settings[alert_type_rest]
         by_soap = settings[alert_type_soap]

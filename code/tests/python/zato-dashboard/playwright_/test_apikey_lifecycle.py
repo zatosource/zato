@@ -24,7 +24,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/security/apikey/?cluster=1'
+_Page_Url_Pattern = '/zato/security/apikey/'
 
 _Test_Name_Prefix = 'test.apikey.life.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -234,7 +234,7 @@ class TestAPIKeyLifecycle:
         assert header_text == _Custom_Header, f'Expected "{_Custom_Header}" in the header column, got: "{header_text}"'
 
         # .. reload the page and confirm the server-rendered rows show the same headers ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}crud')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={_Test_Name_Prefix}crud')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         header_text = _get_header_cell_text(page, default_id)

@@ -140,7 +140,6 @@ class _TestingWorkerConfig:
 @total_ordering
 class InRAMService:
 
-    cluster_id: 'int' = 0
     id: 'int' = 0
     impl_name: 'str' = ''
     name: 'str' = ''
@@ -169,7 +168,6 @@ class InRAMService:
             'impl_name': self.impl_name,
             'is_active': self.is_active,
             'is_internal': self.is_internal,
-            'cluster_id': self.cluster_id
         }
 
 inramlist = list_[InRAMService]
@@ -727,7 +725,7 @@ class ServiceStore:
 
         sql_services = {}
 
-        for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
+        for item in self.odb.get_sql_internal_service_list():
             sql_services[item.impl_name] = { # type: ignore
                 'id': item.id,               # type: ignore
                 'impl_name': item.impl_name, # type: ignore
@@ -851,7 +849,7 @@ class ServiceStore:
                 self.odb.add_services(session, elems)
 
                 # Now that we have them, we can look up their IDs ..
-                service_id_list = self.odb.get_service_id_list(session, self.server.cluster_id,
+                service_id_list = self.odb.get_service_id_list(session,
                     [elem['name'] for elem in elems]) # type: anydict
 
                 # .. and add them for later use.
@@ -1141,7 +1139,7 @@ class ServiceStore:
         # .. and now we know for which services to create ConfigDict objects.
 
         query = self.odb.get_service_list_with_include(
-            session, self.server.cluster_id, deployed_service_name_list, True) # type: anylist
+            session, deployed_service_name_list, True) # type: anylist
 
         service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
         self.server.config.service.update(service_list._impl)
@@ -1522,7 +1520,6 @@ class ServiceStore:
         # Note that at this point we do not have the service's ID, is_active and slow_threshold values;
         # this is because this object is created prior to its deployment in ODB.
         service = InRAMService()
-        service.cluster_id = self.server.cluster_id
         service.is_active = True
         service.is_internal = is_internal
         service.name = name

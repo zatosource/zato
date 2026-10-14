@@ -21,7 +21,6 @@ from _client import MCPClient
 # Zato
 from zato.common.api import GENERIC
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.defaults import default_cluster_id
 from zato.common.util.gateway import mcp_gateway_name
 
 # ################################################################################################################################
@@ -88,7 +87,6 @@ def _get_demo_gateway(zato_server:'anydict') -> 'anydict':
     """
 
     items:'dictlist' = _admin_invoke(zato_server, 'zato.generic.connection.get-list', {
-        'cluster_id': default_cluster_id,
         'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
     })
 

@@ -4,7 +4,6 @@ $.fn.zato.scheduler.job_detail = {};
 
 // Job detail page configuration.
 $.fn.zato.scheduler.job_detail.config = {
-    cluster_id: '1',
     default_tab: 'executions',
     default_time_range: 0,
     empty_history_text: 'No run history',
@@ -342,7 +341,7 @@ $.fn.zato.scheduler.job_detail._highlight_xml = function(raw) {
     });
 };
 
-$.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
+$.fn.zato.scheduler.job_detail.render_config = function(job) {
     var container = $('#detail-config-grid');
     var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
@@ -363,7 +362,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     html += '<div class="' + cards_class + '">';
 
     var config_service = job.service;
-    var service_link = config_service ? $.fn.zato.data_table.service_text(config_service, cluster_id) : '-';
+    var service_link = config_service ? $.fn.zato.data_table.service_text(config_service) : '-';
     html += card('Service', service_link, true);
 
     // A job with a timezone keeps its start date in that timezone, any other job keeps it in UTC.
@@ -409,7 +408,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
         html += card('Jitter', kit.format_number_full(job.jitter_ms) + ' ms', false);
     }
 
-    var manage_url = '/zato/scheduler/?cluster=' + cluster_id + '&query=' + encodeURIComponent(job.name);
+    var manage_url = '/zato/scheduler/?query=' + encodeURIComponent(job.name);
     html += card('Manage', '<a href="' + manage_url + '">Click to configure</a>', true);
 
     html += '</div>';
@@ -530,7 +529,7 @@ $.fn.zato.scheduler.job_detail._generate_fake_tags = function(run) {
             'Synced 142 records to CRM: {"endpoint": "https://crm.internal:8443/api/v2/contacts", "method": "PATCH", "created": 38, "updated": 97, "skipped": 7, "duration_ms": 3841, "avg_latency_ms": 27.0, "p99_latency_ms": 142, "rate_limited": false, "request_id": "sync-8f3a2c1e", "idempotency_key": "idem-20260423-0041"}',
             'Cache refreshed: evicted 24,817 stale entries (older than 3600s), loaded 31,204 new entries from PostgreSQL materialized view "mv_product_catalog", memory delta: +48MiB (now 1.2GiB/4GiB), refresh took 2.8s, next scheduled at 2026-04-23T23:03:15Z',
             'Checkpoint saved: {"checkpoint_id": "ckpt-0041", "offset": 847293, "partition": 7, "consumer_group": "etl-pipeline-v3", "topic": "events.enriched", "committed_at": "2026-04-23T22:03:15.441Z", "lag_after_commit": 12}',
-            'Heartbeat OK: cluster=zato-prod-east-1, node=worker-07, pid=48291, uptime=847291s, cpu=12.4%, rss=2841MiB, open_fds=847, active_connections={"http": 142, "amqp": 8, "redis": 24, "pg": 16}, requests_1m=4821, errors_1m=0'
+            'Heartbeat OK: environment=zato-prod-east-1, node=worker-07, pid=48291, uptime=847291s, cpu=12.4%, rss=2841MiB, open_fds=847, active_connections={"http": 142, "amqp": 8, "redis": 24, "pg": 16}, requests_1m=4821, errors_1m=0'
         ],
         'system': [
             'Job started: scheduler_tick=2026-04-23T22:03:14.001Z, planned_fire=2026-04-23T22:03:14.000Z, drift_ms=1, cid=zc8f3a2b, server=zato-prod-east-1/worker-07, pid=48291',
@@ -758,7 +757,6 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
                 var panel_config = {
                     poll_url: detail._poll_config.poll_url,
                     log_action: 'get-log-entries',
-                    cluster_id: detail.config.cluster_id,
                     object_id_field: 'job_id',
                     run_id_field: 'current_run',
                     record_id: detail._object_id,
@@ -1188,7 +1186,6 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                             }, {
                                 poll_url: detail._poll_config.poll_url,
                                 log_action: 'get-log-entries',
-                                cluster_id: detail.config.cluster_id,
                                 object_id_field: 'job_id',
                                 run_id_field: 'current_run',
                                 record_id: detail._object_id,
@@ -1236,8 +1233,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
 $.fn.zato.scheduler.job_detail.render_actions = function(job_id) {
     $('#btn-execute-now').on('click', function() {
         var tooltip_anchor = this;
-        var cluster_id = $.fn.zato.scheduler.job_detail.config.cluster_id;
-        var url = '/zato/scheduler/execute/' + job_id + '/cluster/' + cluster_id + '/';
+        var url = '/zato/scheduler/execute/' + job_id + '/';
 
         $.ajax({
             url: url,
@@ -1421,7 +1417,7 @@ $.fn.zato.scheduler.job_detail._redraw = function() {
 // Main render
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
+$.fn.zato.scheduler.job_detail.render = function(job, job_id) {
     var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
 
@@ -1438,7 +1434,7 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
     detail.render_stats(job);
     kit.countdown._on_now = function() { detail.poll(); };
     kit.countdown.start();
-    detail.render_config(job, cluster_id);
+    detail.render_config(job);
     detail.render_actions(job_id);
     detail.init_tabs();
 
@@ -1591,7 +1587,7 @@ $.fn.zato.scheduler.job_detail._generate_fake_history = function() {
     return rows;
 };
 
-$.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, poll_config) {
+$.fn.zato.scheduler.job_detail.init = function(job_data, job_id, poll_config) {
     var kit = $.fn.zato.dashboard_kit;
     var dash = $.fn.zato.scheduler.dashboard;
     var detail = $.fn.zato.scheduler.job_detail;
@@ -1605,7 +1601,6 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, pol
     }
     kit.urls.init({
         base_url: dash.config.base_url,
-        cluster_id: cluster_id,
         object_path: 'job/{id}/',
         run_path: 'job/{id}/run/{run_id}/',
         range_minutes: parseInt(new URLSearchParams(window.location.search).get('range'), 10)
@@ -1618,7 +1613,7 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, pol
         detail._runs_rendered = true;
     }
 
-    detail.render(job_data, job_id, cluster_id);
+    detail.render(job_data, job_id);
 
     if (kit.needsTestData) {
         detail._poll_in_flight = true;
@@ -1658,7 +1653,7 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, pol
             'Synced 142 records to CRM: {"endpoint": "https://crm.internal:8443/api/v2/contacts", "created": 38, "updated": 97, "skipped": 7, "duration_ms": 3841}',
             'Cache refreshed: evicted 24,817 stale entries, loaded 31,204 new entries from PostgreSQL materialized view "mv_product_catalog"',
             'Checkpoint saved: {"checkpoint_id": "ckpt-0041", "offset": 847293, "partition": 7, "consumer_group": "etl-pipeline-v3", "topic": "events.enriched"}',
-            'Heartbeat OK: cluster=zato-prod-east-1, node=worker-07, pid=48291, uptime=847291s, cpu=12.4%, rss=2841MiB, open_fds=847'
+            'Heartbeat OK: environment=zato-prod-east-1, node=worker-07, pid=48291, uptime=847291s, cpu=12.4%, rss=2841MiB, open_fds=847'
         ],
         'SYSTEM': [
             'Job started: scheduler_tick=2026-05-05T07:03:14.001Z, planned_fire=2026-05-05T07:03:14.000Z, drift_ms=1, cid=zc8f3a2b, server=zato-prod-east-1/worker-07',

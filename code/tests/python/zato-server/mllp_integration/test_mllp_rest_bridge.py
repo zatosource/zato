@@ -115,7 +115,6 @@ def _find_rest_channels_by_name(zato_client:'object', name:'str') -> 'list[dict]
 
     data, _ = zato_client.get_list( # type: ignore[union-attr]
         f'{_http_soap_service_name}.get-list',
-        cluster_id=1,
         connection='channel',
         transport='plain_http',
     )
@@ -150,7 +149,6 @@ class TestMLLPRestBridge:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_http_soap_service_name}.create',
-            cluster_id=1,
             name=self.__class__.rest_channel_name,
             is_active=True,
             is_internal=False,
@@ -177,7 +175,6 @@ class TestMLLPRestBridge:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-rest-bridge',
             type_=_connection_type_channel,
             is_active=True,
@@ -305,7 +302,6 @@ class TestMLLPRestOnlyMode:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_http_soap_service_name}.create',
-            cluster_id=1,
             name=self.__class__.rest_channel_name,
             is_active=True,
             is_internal=False,
@@ -331,7 +327,6 @@ class TestMLLPRestOnlyMode:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-rest-only',
             type_=_connection_type_channel,
             is_active=True,
@@ -422,7 +417,6 @@ def _find_mllp_channel_by_name(zato_client:'object', name:'str') -> 'dict':
 
     data, _ = zato_client.get_list( # type: ignore[union-attr]
         f'{_generic_service_name}.get-list',
-        cluster_id=1,
         type_=_connection_type_channel,
     )
 
@@ -451,7 +445,6 @@ class TestMLLPRestBridgePersistence:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-persist-bridge',
             type_=_connection_type_channel,
             is_active=True,
@@ -491,7 +484,6 @@ class TestMLLPRestBridgePersistence:
         zato_client.edit( # type: ignore[union-attr]
             f'{_generic_service_name}.edit',
             id=self.__class__.mllp_channel_id,
-            cluster_id=1,
             name='test-persist-bridge',
             type_=_connection_type_channel,
             is_active=True,
@@ -528,7 +520,6 @@ class TestMLLPRestBridgePersistence:
         zato_client.edit( # type: ignore[union-attr]
             f'{_generic_service_name}.edit',
             id=self.__class__.mllp_channel_id,
-            cluster_id=1,
             name='test-persist-bridge',
             type_=_connection_type_channel,
             is_active=True,
@@ -571,7 +562,6 @@ class TestMLLPRestBridgePersistence:
 
         data, _ = zato_client.get_list( # type: ignore[union-attr]
             f'{_generic_service_name}.get-list',
-            cluster_id=1,
             type_=_connection_type_channel,
         )
 

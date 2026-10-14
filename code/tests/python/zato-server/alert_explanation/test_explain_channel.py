@@ -18,10 +18,10 @@ from zato.common.alerting.explain.evidence import Heading_Object
 from zato.common.alerting.model import AlertAction
 from zato.common.alerting.object_config import storage_name
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Service
+from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service
 
 # Test helpers
-from explain_helpers import _cluster_id, _explanation_text, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
+from explain_helpers import _explanation_text, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
     new_payload as _new_payload, new_service as _new_service, new_session as _new_session, \
     object_section as _object_section, stored_explanation as _stored_explanation
 
@@ -69,18 +69,17 @@ def _seed_channel(
     }
 
     session = session_maker()
-    cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
     # A REST and a SOAP channel of one name share the service and the security definition
     service = session.query(Service).filter(Service.name==_channel_service_name).first()
     if service is None:
-        service = Service(None, _channel_service_name, True, 'orders.OrdersGet', False, cluster)
+        service = Service(None, _channel_service_name, True, 'orders.OrdersGet', False)
         session.add(service)
 
     if with_security:
         security = session.query(HTTPBasicAuth).filter(HTTPBasicAuth.name==_channel_security_name).first()
         if security is None:
-            security = HTTPBasicAuth(None, _channel_security_name, True, 'partner', 'Zato', 'never-shown', cluster)
+            security = HTTPBasicAuth(None, _channel_security_name, True, 'partner', 'Zato', 'never-shown')
             session.add(security)
     else:
         security = None
@@ -96,7 +95,6 @@ def _seed_channel(
     row.data_format = 'json'
     row.service = service
     row.security = security
-    row.cluster = cluster
     row.opaque1 = json.dumps(opaque)
 
     if transport == 'soap':

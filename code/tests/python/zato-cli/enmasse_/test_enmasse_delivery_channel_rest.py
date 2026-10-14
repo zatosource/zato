@@ -28,7 +28,7 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.util import channel_delivery_needs_update, FileWriter
 from zato.common.api import HTTP_SOAP
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,7 +47,6 @@ if 0:
 _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
 
-_cluster_id = 1
 
 # The service every channel of the file invokes
 _service_name = 'enmasse.delivery.channel.rest.service'
@@ -111,12 +110,11 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster and the service the channels invoke.
+    """ A real ODB session over an in-memory SQLite database holding the service the channels invoke.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -130,10 +128,7 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
-    service = Service(None, _service_name, True, 'enmasse.delivery.channel.rest.Service', False, cluster)
+    service = Service(None, _service_name, True, 'enmasse.delivery.channel.rest.Service', False)
     session.add(service)
 
     session.commit()
@@ -200,7 +195,7 @@ def _trimmed_definitions() -> 'any_':
 # ################################################################################################################################
 
 def _db_defs(channel_importer:'ChannelImporter', session:'any_') -> 'anydict':
-    out = channel_importer.get_rest_channels_from_db(session, _cluster_id)
+    out = channel_importer.get_rest_channels_from_db(session)
     return out
 
 # ################################################################################################################################
@@ -513,7 +508,7 @@ class TestRESTChannelDeliveryExport:
     ) -> 'None':
         _, _ = channel_importer.sync_channel_rest(yaml_config['channel_rest'], session)
 
-        exported = channel_exporter.export(session, _cluster_id)
+        exported = channel_exporter.export(session)
         item = _by_name(exported)[_channel_name_1]
 
         assert item['max_retries'] == 4
@@ -548,7 +543,7 @@ class TestRESTChannelDeliveryExport:
 
         _, _ = channel_importer.sync_channel_rest(definitions, session)
 
-        exported = _by_name(channel_exporter.export(session, _cluster_id))
+        exported = _by_name(channel_exporter.export(session))
 
         assert _queue.Field_Queue_Response not in exported[_channel_name_3]
         assert exported[_channel_name_3][_queue.Field_Use_Queue] is True
@@ -564,7 +559,7 @@ class TestRESTChannelDeliveryExport:
         tmp_path:'Path',
     ) -> 'None':
         _, _ = channel_importer.sync_channel_rest(yaml_config['channel_rest'], session)
-        exported = channel_exporter.export(session, _cluster_id)
+        exported = channel_exporter.export(session)
 
         path = tmp_path / 'enmasse.yaml'
         FileWriter(str(path)).write({'channel_rest': exported})

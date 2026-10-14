@@ -30,7 +30,7 @@ if 0:
 class GetList(AdminService):
     """ Returns a list of pub/sub permissions.
     """
-    input = 'cluster_id', '-cur_page', '-paginate', '-query'
+    input = '-cur_page', '-paginate', '-query'
     output = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
 
     def get_data(self, session:'any_') -> 'anylist':
@@ -40,7 +40,7 @@ class GetList(AdminService):
         if self.request.input['query']:
             query_config['query'] = self.request.input['query'].strip().split()
 
-        query_results = pubsub_permission_list(session, self.request.input.cluster_id, False, **query_config)
+        query_results = pubsub_permission_list(session, False, **query_config)
         processed_results = []
 
         for result in query_results:
@@ -66,12 +66,11 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub permission.
     """
-    input = 'sec_base_id', 'pattern', 'access_type', '-cluster_id'
+    input = 'sec_base_id', 'pattern', 'access_type'
     output = 'id', 'security'
 
     def handle(self):
         input = self.request.input
-        cluster_id = self.server.cluster_id
 
         # Validate patterns
         if not input.pattern or not input.pattern.strip():
@@ -88,7 +87,6 @@ class Create(AdminService):
             try:
                 # Check if permission already exists for this security definition and pattern combination
                 existing_perm = session.query(PubSubPermission).\
-                    filter(PubSubPermission.cluster_id==cluster_id).\
                     filter(PubSubPermission.sec_base_id==input.sec_base_id).\
                     filter(PubSubPermission.pattern==pattern).\
                     filter(PubSubPermission.access_type==input.access_type).first()
@@ -101,7 +99,6 @@ class Create(AdminService):
                 permission.sec_base_id = input.sec_base_id
                 permission.access_type = input.access_type
                 permission.pattern = pattern # type: ignore
-                permission.cluster_id = cluster_id       # type: ignore
 
                 set_instance_opaque_attrs(permission, input)
 
@@ -132,7 +129,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing pub/sub permission.
     """
-    input = 'id', 'sec_base_id', 'pattern', 'access_type', '-cluster_id'
+    input = 'id', 'sec_base_id', 'pattern', 'access_type'
     output = 'id', 'security'
 
     def handle(self):
@@ -156,7 +153,6 @@ class Edit(AdminService):
                 # .. capture old values before the update so we can check
                 # .. whether subscriptions need to be deleted afterwards ..
                 old_sec_base_id = permission.sec_base_id
-                cluster_id = permission.cluster_id
 
                 # Update permission fields
                 permission.sec_base_id = input.sec_base_id
@@ -185,12 +181,12 @@ class Edit(AdminService):
 
                 # .. GAP 16: if the pattern was narrowed, delete subscriptions
                 # .. whose topics no longer have a matching permission ..
-                _delete_subs_without_permission(self, session, input.sec_base_id, cluster_id)
+                _delete_subs_without_permission(self, session, input.sec_base_id)
 
                 # .. GAP 17: if sec_base_id changed, the old security definition
                 # .. lost a permission - check its subscriptions too ..
                 if old_sec_base_id != input.sec_base_id:
-                    _delete_subs_without_permission(self, session, old_sec_base_id, cluster_id)
+                    _delete_subs_without_permission(self, session, old_sec_base_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -218,7 +214,6 @@ def _delete_subs_without_permission(
     service:'AdminService',
     session:'any_',
     sec_base_id:'int',
-    cluster_id:'int',
 ) -> 'None':
     """ For each subscription belonging to the given security definition,
     removes individual topics that no longer have a matching permission.
@@ -226,10 +221,10 @@ def _delete_subs_without_permission(
     """
 
     # .. get remaining permissions after the change ..
-    remaining_permissions = get_permissions_for_sec_base(session, sec_base_id, cluster_id)
+    remaining_permissions = get_permissions_for_sec_base(session, sec_base_id)
 
     # .. get all subscriptions for this security definition ..
-    subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id, cluster_id)
+    subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id)
 
     for sub in subscriptions:
 
@@ -262,7 +257,6 @@ def _delete_subs_without_permission(
 
             _ = service.invoke('zato.pubsub.subscription.edit', {
                 'sub_key': sub.sub_key,
-                'cluster_id': cluster_id,
                 'topic_name_list': topic_name_list,
                 'sec_base_id': sec_base_id,
                 'delivery_type': sub.delivery_type,
@@ -288,7 +282,6 @@ class Delete(AdminService):
 
                 # .. store permission details before deletion ..
                 sec_base_id = permission.sec_base_id
-                cluster_id = permission.cluster_id
                 self.request.input.sec_base_id = sec_base_id
                 self.request.input.pattern = permission.pattern
                 self.request.input.access_type = permission.access_type
@@ -308,7 +301,7 @@ class Delete(AdminService):
 
                 # .. now, find and delete any subscriptions that no longer
                 # .. have a matching permission for this security definition.
-                _delete_subs_without_permission(self, session, sec_base_id, cluster_id)
+                _delete_subs_without_permission(self, session, sec_base_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

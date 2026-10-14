@@ -29,13 +29,13 @@ if 0:
 class GetByID(AdminService):
     """ Returns a single security definition by its ID.
     """
-    input = 'cluster_id', 'id'
+    input = 'id'
     output = 'id', 'name', 'is_active', 'sec_type', \
         '-username', '-realm', '-password_type', '-proto_version', '-sig_method', Integer('-max_nonce_log')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = query.sec_base(session, self.request.input.cluster_id, self.request.input.id)
+            self.response.payload = query.sec_base(session, self.request.input.id)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,13 +43,12 @@ class GetByID(AdminService):
 class GetList(AdminService):
     """ Returns a list of all security definitions available.
     """
-    input = '-cluster_id', List('-sec_type'), Boolean('-needs_internal', default=True)
+    input = List('-sec_type'), Boolean('-needs_internal', default=True)
     output = 'id', 'name', 'is_active', 'sec_type', \
         '-username', '-realm', '-password_type', '-proto_version', '-sig_method', Integer('-max_nonce_log')
 
     def handle(self):
 
-        _cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         _needs_internal = self.request.input.get('needs_internal') != ''
         _internal = {ServiceConst.API_Admin_Invoke_Username}
 
@@ -75,10 +74,7 @@ class GetList(AdminService):
                 if filter_by and def_type not in filter_by:
                     continue
 
-                if func is query.basic_auth_list:
-                    args = session, _cluster_id, None, False
-                else:
-                    args = session, _cluster_id, False
+                args = session, False
 
                 # By default, we have nothing to filter by ..
                 kwargs = {}

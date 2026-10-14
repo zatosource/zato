@@ -41,13 +41,13 @@ class DiscordExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'discord_def_list':
+    def export(self, session: 'SASession') -> 'discord_def_list':
         """ Exports Discord connection definitions.
         """
         logger.info('Exporting Discord connection definitions')
 
         # Get Discord connections from database using the generic connection query
-        db_discord = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHAT_DISCORD)
+        db_discord = connection_list(session, GENERIC.CONNECTION.TYPE.CHAT_DISCORD)
 
         if not db_discord:
             logger.info('No Discord connection definitions found in DB')

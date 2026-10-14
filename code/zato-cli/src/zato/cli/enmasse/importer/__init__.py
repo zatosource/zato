@@ -64,14 +64,12 @@ from zato.cli.enmasse.importer.config import ConfigSync
 from zato.cli.enmasse.importer.delete import DeleteSync
 from zato.cli.enmasse.importer.outgoing import OutgoingSync
 from zato.cli.enmasse.util.secrets import Known_Secret_Keys, redact_secrets
-from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,9 +124,6 @@ class EnmasseYAMLImporter(ConfigSync, DeleteSync, OutgoingSync):
     """
     def __init__(self) -> 'None':
 
-        # This is always the same
-        self.cluster_id = ModuleCtx.Cluster_ID
-
         # Nothing is marked for deletion until a config is read
         self.init_deletions()
 
@@ -182,7 +177,6 @@ class EnmasseYAMLImporter(ConfigSync, DeleteSync, OutgoingSync):
         self.pubsub_subscription_defs = {}
         self.channel_openapi_defs = {}
         self.objects = {}
-        self.cluster = None
 
         # Track created and updated objects for reporting
         self.created_objects = {}
@@ -245,16 +239,6 @@ class EnmasseYAMLImporter(ConfigSync, DeleteSync, OutgoingSync):
 
         # Importers for custom connector types are built on demand, one per top-level custom_ key.
         self.custom_importers = {}
-
-# ################################################################################################################################
-
-    def get_cluster(self, session:'SASession') -> 'any_':
-        """ Returns the cluster instance, retrieving it from the database if needed.
-        """
-        if not self.cluster:
-            logger.info('Getting cluster by id=%s', self.cluster_id)
-            self.cluster = session.query(Cluster).filter_by(id=self.cluster_id).one()
-        return self.cluster
 
 # ################################################################################################################################
 

@@ -32,7 +32,6 @@ class Index(_Index):
     paginate = True
     wrapper_type = Wrapper_Type.Keysight_Vision
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'host', 'username'
     output_repeated = True
 
@@ -98,7 +97,7 @@ def change_password(req:'any_') -> 'any_':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req:'any_', id:'int', cluster_id:'int') -> 'any_':
+def ping(req:'any_', id:'int') -> 'any_':
     service = 'zato.generic.rest-wrapper.ping'
     ping_path = '/api/users'
     return ping_connection(req, service, id, 'Keysight Vision Series connection', ping_path=ping_path)

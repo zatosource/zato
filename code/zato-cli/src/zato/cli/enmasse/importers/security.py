@@ -153,45 +153,37 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def get_security_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_security_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
-        logger.info('Retrieving security definitions from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving security definitions from database')
 
-        basic_auth = basic_auth_list(session, cluster_id)
+        basic_auth = basic_auth_list(session)
         logger.info('Getting basic_auth definitions')
         self._process_security_defs(basic_auth, 'basic_auth', out)
 
-        apikey = apikey_security_list(session, cluster_id)
+        apikey = apikey_security_list(session)
         logger.info('Getting apikey definitions')
         self._process_security_defs(apikey, 'apikey', out)
 
-        mtls = mtls_list(session, cluster_id)
+        mtls = mtls_list(session)
         logger.info('Getting mtls definitions')
         self._process_security_defs(mtls, 'mtls', out)
 
-        ntlm = ntlm_list(session, cluster_id)
+        ntlm = ntlm_list(session)
         logger.info('Getting ntlm definitions')
         self._process_security_defs(ntlm, 'ntlm', out)
 
-        spnego = spnego_list(session, cluster_id)
+        spnego = spnego_list(session)
         logger.info('Getting spnego definitions')
         self._process_security_defs(spnego, 'spnego', out)
 
-        oauth = oauth_list(session, cluster_id)
+        oauth = oauth_list(session)
         logger.info('Getting oauth/bearer_token definitions')
         self._process_security_defs(oauth, 'bearer_token', out)
 
-        wss = wss_list(session, cluster_id)
+        wss = wss_list(session)
         logger.info('Getting wss definitions')
         self._process_security_defs(wss, 'wss', out)
-
-        # Filter out specified keys from each security definition
-        to_remove = ['cluster_name']
-
-        for item in out.values():
-            for key in to_remove:
-                if key in item:
-                    del item[key]
 
         logger.info('Total security definitions from DB: %d', len(out))
         for name, details in out.items():
@@ -327,15 +319,14 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_basic_auth(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_basic_auth(self, security_def:'anydict') -> 'any_':
         auth = HTTPBasicAuth(
             None,
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
             security_def.get('realm', 'zato'),
-            security_def['password'],
-            cluster
+            security_def['password']
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -343,14 +334,13 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_apikey(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_apikey(self, security_def:'anydict') -> 'any_':
         auth = APIKeySecurity(
             None,
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
-            security_def['password'],
-            cluster
+            security_def['password']
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -358,14 +348,13 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_ntlm(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_ntlm(self, security_def:'anydict') -> 'any_':
         auth = NTLM(
             None,
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
-            security_def['password'],
-            cluster
+            security_def['password']
         )
 
         # The model's constructor does not store the password it is given
@@ -376,13 +365,12 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_mtls(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_mtls(self, security_def:'anydict') -> 'any_':
         auth = MTLSSecurity(
             None,
             security_def['name'],
             security_def.get('is_active', True),
-            security_def['name'],
-            cluster
+            security_def['name']
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -390,13 +378,12 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_spnego(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_spnego(self, security_def:'anydict') -> 'any_':
         auth = SPNEGOSecurity(
             None,
             security_def['name'],
             security_def.get('is_active', True),
-            security_def['name'],
-            cluster
+            security_def['name']
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -404,14 +391,13 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_wss(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_wss(self, security_def:'anydict') -> 'any_':
         auth = WSSecurity(
             None,
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
-            security_def.get('password'),
-            cluster
+            security_def.get('password')
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -419,7 +405,7 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_bearer_token(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_bearer_token(self, security_def:'anydict') -> 'any_':
         name = security_def['name']
 
         auth = OAuth(
@@ -430,8 +416,7 @@ class SecurityImporter:
             security_def.get('password'),
             'not-used',
             'not-used',
-            0,
-            cluster
+            0
         )
         set_instance_opaque_attrs(auth, security_def)
 
@@ -445,7 +430,6 @@ class SecurityImporter:
         def_name = security_def.get('name', 'unnamed')
 
         logger.info('Creating security definition: name=%s type=%s', def_name, sec_type)
-        cluster = self.importer.get_cluster(session)
 
         # The definition is written from a copy so that the YAML item keeps the password as the YAML gave it
         security_def = dict(security_def)
@@ -465,19 +449,19 @@ class SecurityImporter:
             encrypt_opaque_secrets(security_def, {}, _bearer_token_secret_keys, session, is_create=True)
 
         if sec_type == 'basic_auth':
-            auth = self._create_basic_auth(security_def, cluster)
+            auth = self._create_basic_auth(security_def)
         elif sec_type == 'apikey':
-            auth = self._create_apikey(security_def, cluster)
+            auth = self._create_apikey(security_def)
         elif sec_type == 'mtls':
-            auth = self._create_mtls(security_def, cluster)
+            auth = self._create_mtls(security_def)
         elif sec_type == 'spnego':
-            auth = self._create_spnego(security_def, cluster)
+            auth = self._create_spnego(security_def)
         elif sec_type == 'ntlm':
-            auth = self._create_ntlm(security_def, cluster)
+            auth = self._create_ntlm(security_def)
         elif sec_type == 'wss':
-            auth = self._create_wss(security_def, cluster)
+            auth = self._create_wss(security_def)
         elif sec_type == 'bearer_token':
-            auth = self._create_bearer_token(security_def, cluster)
+            auth = self._create_bearer_token(security_def)
         else:
             logger.warning('Unsupported security type: %s', sec_type)
             return None
@@ -669,7 +653,7 @@ class SecurityImporter:
 
             item['quota_tier'] = tier_def['id']
 
-        db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_security_defs_from_db(session)
         to_create, to_update = self.compare_security_defs(security_list, db_defs, session)
 
         out_created = []
@@ -713,7 +697,7 @@ class SecurityImporter:
     def populate_sec_defs_from_db(self, session:'SASession') -> 'None':
         """ Populates the importer's sec_defs dictionary from existing DB entries.
         """
-        db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_security_defs_from_db(session)
 
         for name, def_info in db_defs.items():
             self.importer.sec_defs[name] = {

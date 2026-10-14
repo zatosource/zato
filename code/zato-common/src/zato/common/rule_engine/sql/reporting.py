@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import case, func, select
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.typing_ import cast_
 
 # Local
@@ -275,9 +274,7 @@ class RuleReporting:
         decision_count = func.count(rule_decision_table.c.id)
 
         query = select(rule_decision_table.c.ruleset_id, is_bucket, decision_count)
-        cluster_condition = rule_decision_table.c.cluster_id == default_cluster_id
         window_condition = rule_decision_table.c.occurred_at >= normalize_utc(start_time)
-        query = query.where(cluster_condition)
         query = query.where(window_condition)
         query = query.group_by(rule_decision_table.c.ruleset_id, is_bucket)
         session = self._session_factory()
@@ -354,10 +351,8 @@ class RuleReporting:
             rule_event_table.c.version,
             firing_count,
         )
-        cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
         ruleset_condition = rule_event_table.c.definition_id == ruleset_id
         event_type_condition = rule_event_table.c.event_type == Event_Type_Rule_Fired_Daily
-        query = query.where(cluster_condition)
         query = query.where(ruleset_condition)
         query = query.where(event_type_condition)
 

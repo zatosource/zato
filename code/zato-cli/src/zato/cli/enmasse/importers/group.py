@@ -48,7 +48,6 @@ class GroupImporter:
         """ Returns all security groups from the database, keyed by name.
         """
         out = {}
-        cluster_id = self.importer.cluster_id
 
         # Use a single query to get all groups
         with closing(session) as session:
@@ -59,7 +58,6 @@ class GroupImporter:
                 ]).where(and_(
                     GenericObject.type_ == Groups.Type.Group_Parent,
                     GenericObject.subtype == Groups.Type.API_Clients,
-                    GenericObject.cluster_id == cluster_id,
                 ))
 
             # Execute the query and get results
@@ -89,7 +87,6 @@ class GroupImporter:
                         GenericObject.type_ == Groups.Type.Group_Member,
                         GenericObject.subtype == Groups.Type.API_Clients,
                         GenericObject.parent_object_id.in_(group_ids),
-                        GenericObject.cluster_id == cluster_id,
                     ))
 
                 # Execute the query and get results
@@ -125,7 +122,6 @@ class GroupImporter:
     def delete_group(self, group_name, group_id, session:'SASession') -> 'None':
         """ Deletes a group and all its members from the database.
         """
-        cluster_id = self.importer.cluster_id
 
         with closing(session) as session:
             # First, delete all members of the group
@@ -134,7 +130,6 @@ class GroupImporter:
                     GenericObject.type_ == Groups.Type.Group_Member,
                     GenericObject.subtype == Groups.Type.API_Clients,
                     GenericObject.parent_object_id == group_id,
-                    GenericObject.cluster_id == cluster_id
                 )
             )
             session.execute(member_delete)
@@ -145,7 +140,6 @@ class GroupImporter:
                     GenericObject.id == group_id,
                     GenericObject.type_ == Groups.Type.Group_Parent,
                     GenericObject.subtype == Groups.Type.API_Clients,
-                    GenericObject.cluster_id == cluster_id
                 )
             )
             session.execute(group_delete)
@@ -162,7 +156,6 @@ class GroupImporter:
         """
         group_name = group['name']
         members = group.get('members', [])
-        cluster_id = self.importer.cluster_id
 
         # A group may reference a quota tier by name - resolve it to the tier's id
         # because that is what the group's opaque data stores.
@@ -179,7 +172,7 @@ class GroupImporter:
 
         # Create the group
         with closing(session) as session:
-            wrapper = GroupsWrapper(session, cluster_id)
+            wrapper = GroupsWrapper(session)
 
             # Prepare the group data
             group_data = {
@@ -202,7 +195,6 @@ class GroupImporter:
                     GenericObject.name == group_name,
                     GenericObject.type_ == Groups.Type.Group_Parent,
                     GenericObject.subtype == Groups.Type.API_Clients,
-                    GenericObject.cluster_id == cluster_id
                 )
             )
             group_id_result = session.execute(query).fetchone()

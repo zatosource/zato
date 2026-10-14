@@ -12,7 +12,7 @@ from zato.common.api import CONNECTION, Groups, HTTP_SOAP, SEC_DEF_TYPE, URL_TYP
 from zato.common.const import SECRETS
 from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import HTTPSOAP, SecurityBase, Service
 from zato.common.util.channel import channel_security_key, find_channel_collision, find_channel_conflict, \
      get_channel_collision_items
 from zato.common.util.rest_invocation import parse_param_rows, validate_jsonata, validate_xpath
@@ -36,7 +36,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format', 'needs_security_group_names')
+_GetList_Optional = ('include_wrapper', 'connection', 'transport', 'data_format', 'needs_security_group_names')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -309,9 +309,8 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
 # ################################################################################################################################
 
-    def ensure_channel_is_unique(self, session, url_path, http_accept, http_method, cluster_id, skip_id):
+    def ensure_channel_is_unique(self, session, url_path, http_accept, http_method, skip_id):
         existing_ones = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.url_path==url_path).\
             filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
             all()
@@ -360,12 +359,12 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
 # ################################################################################################################################
 
-    def ensure_channel_does_not_conflict(self, session, input, cluster_id, skip_id):
+    def ensure_channel_does_not_conflict(self, session, input, skip_id):
         """ Refuses a channel that one request could reach in place of one already there, when the
         two secure that request differently and there is nothing but their names to settle which
         of them answers it.
         """
-        existing_items = get_channel_collision_items(session, cluster_id)
+        existing_items = get_channel_collision_items(session)
 
         security_groups = self._get_security_groups_to_compare(input, existing_items, skip_id)
         security = channel_security_key(input.security_id, security_groups)
@@ -435,9 +434,7 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
     def _get_service_from_input(self, session, input):
 
-        service = session.query(Service).\
-            filter(Cluster.id==input.cluster_id).\
-            filter(Service.cluster_id==Cluster.id)
+        service = session.query(Service)
 
         if input.service:
             service = service.filter(Service.name==input.service)
@@ -449,7 +446,7 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
         service = service.first()
 
         if not service:
-            msg = 'Service `{}` does not exist in this cluster'.format(input.service)
+            msg = 'Service `{}` does not exist'.format(input.service)
             self.logger.info(msg)
             raise ServiceMissingException(msg)
         else:

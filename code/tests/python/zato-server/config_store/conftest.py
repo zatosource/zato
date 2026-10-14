@@ -192,7 +192,6 @@ def zato_server(request:'any_'):
 
     qs_cmd = [
         _ZATO_BIN, 'quickstart', 'create', _tmpdir,
-        '--servers', '1',
         '--password', _PASSWORD,
         '--server-api-client-for-scheduler-password', _PASSWORD,
         '--no-scheduler',

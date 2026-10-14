@@ -35,9 +35,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The one cluster everything in the Dashboard belongs to
-Cluster_Id = 1
-
 # What a channel's three destination fields are given in the tests that do not vary them
 Destination_Connection = 'test.rest.billing'
 Destination_Type = 'rest'
@@ -137,9 +134,6 @@ def new_request(post_data:'stranydict | None'=None, method:'str'='POST') -> 'any
 
     out.zato = Bunch()
     out.zato.args = {}
-    out.zato.cluster_id = Cluster_Id
-    out.zato.cluster = Bunch()
-    out.zato.cluster.id = Cluster_Id
     out.zato.client = ClientRecorder()
 
     # A channel being saved is judged against the bounds of the listener it is to run on

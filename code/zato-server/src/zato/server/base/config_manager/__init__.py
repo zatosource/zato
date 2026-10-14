@@ -312,7 +312,7 @@ class ConfigManager(_ConfigManagerBase):
         # Pub/sub topic manager for topic-level lookups
         from zato.common.pubsub.topic_manager import TopicManager
         session = server.odb.session()
-        self.pubsub_topic_manager = TopicManager(session, server.cluster_id)
+        self.pubsub_topic_manager = TopicManager(session)
 
 # ################################################################################################################################
 
@@ -485,7 +485,7 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def _get_channel_url_sec(self) -> 'any_':
-        out:'any_' = self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0]
+        out:'any_' = self.server.odb.get_url_security('channel')[0]
         return out
 
 # ################################################################################################################################
@@ -853,7 +853,7 @@ class ConfigManager(_ConfigManagerBase):
         """
 
         # First, load up all the definitions from the database ..
-        self.server.set_up_security(self.server.cluster_id)
+        self.server.set_up_security()
 
         # .. update in-RAM config values ..
         url_sec = self._get_channel_url_sec()
@@ -1360,7 +1360,7 @@ class ConfigManager(_ConfigManagerBase):
 
         with closing(self.server.odb.session()) as session:
 
-            rows = pubsub_subscription_topic_pairs(session, self.server.cluster_id)
+            rows = pubsub_subscription_topic_pairs(session)
 
             for row in rows:
                 topic_name = row.name
@@ -1437,7 +1437,7 @@ class ConfigManager(_ConfigManagerBase):
 
         with closing(self.server.odb.session()) as session:
 
-            rows = pubsub_subscription_topic_pairs(session, self.server.cluster_id)
+            rows = pubsub_subscription_topic_pairs(session)
 
             synced = 0
             push_subs = {} # type: dict[str, list]
@@ -1464,7 +1464,7 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def _read_pubsub_topics(self) -> 'anylist':
-        """ Returns the name and the opaque attributes of each of the cluster's topics.
+        """ Returns the name and the opaque attributes of each topic.
         """
         from contextlib import closing
         from zato.common.odb.model import PubSubTopic
@@ -1474,8 +1474,7 @@ class ConfigManager(_ConfigManagerBase):
 
         with closing(self.server.odb.session()) as session:
 
-            rows = session.query(PubSubTopic).filter(
-                PubSubTopic.cluster_id == self.server.cluster_id).all()
+            rows = session.query(PubSubTopic).all()
 
             for row in rows:
                 opaque = parse_instance_opaque_attr(row)
@@ -3003,7 +3002,7 @@ class ConfigManager(_ConfigManagerBase):
         from zato.common.odb.query import pubsub_subscriptions_by_sec_base
 
         # .. find all subscriptions for this security definition ..
-        subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id, self.server.cluster_id)
+        subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id)
 
         # .. clean up each subscription's in-memory and Redis state ..
         for sub in subscriptions:
@@ -3023,7 +3022,7 @@ class ConfigManager(_ConfigManagerBase):
         from zato.common.odb.query import pubsub_subscriptions_by_rest_endpoint
 
         # .. find all subscriptions pointing at this REST endpoint ..
-        subscriptions = pubsub_subscriptions_by_rest_endpoint(session, rest_endpoint_id, self.server.cluster_id)
+        subscriptions = pubsub_subscriptions_by_rest_endpoint(session, rest_endpoint_id)
 
         # .. clean up each subscription's in-memory and Redis state ..
         for sub in subscriptions:
@@ -3159,7 +3158,6 @@ class ConfigManager(_ConfigManagerBase):
             ).filter(
                 PubSubTopic.name == topic_name,
                 PubSubTopic.is_active == True, # noqa: E712
-                PubSubSubscription.cluster_id == self.server.cluster_id,
             ).all()
 
             for row in rows:

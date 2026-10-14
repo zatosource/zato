@@ -463,7 +463,7 @@ $.fn.zato.on_prem_gateway.on_submit_complete = function(data, status) {
 $.fn.zato.on_prem_gateway.enrollment_token = function(id) {
 
     var config = $.fn.zato.on_prem_gateway.config;
-    var url = String.format('./enrollment-token/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    var url = String.format('./enrollment-token/{0}/', id);
 
     var callback = function(data, status) {
 
@@ -515,7 +515,7 @@ $.fn.zato.on_prem_gateway.reset_key = function(id) {
         $.fn.zato.on_prem_gateway.show_success(link, response.message);
     }
 
-    var url = String.format('./reset-key/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    var url = String.format('./reset-key/{0}/', id);
     $.fn.zato.post(url, callback, {});
 }
 
@@ -548,7 +548,7 @@ $.fn.zato.on_prem_gateway.delete_ = function(id) {
 
         $.fn.zato.show_action_overlay(config.delete_overlay_label);
 
-        var url = String.format('./delete/{0}/cluster/{1}/', id, $('#cluster_id').val());
+        var url = String.format('./delete/{0}/', id);
         $.fn.zato.post(url, callback, {});
     });
 }

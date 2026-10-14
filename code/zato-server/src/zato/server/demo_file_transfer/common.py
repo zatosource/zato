@@ -22,7 +22,6 @@ from time import sleep
 import yaml
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.odb.model import GenericConn, Job
 from zato.common.typing_ import cast_
 from zato.common.util.open_ import open_w
@@ -365,7 +364,6 @@ def get_stored_connections(server:'ParallelServer', names:'strlist') -> 'anydict
     with closing(server.odb.session()) as session:
         rows = session.query(GenericConn.id, GenericConn.name, GenericConn.type_, GenericConn.address, GenericConn.port).\
             filter(name_column.in_(names)).\
-            filter(GenericConn.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -388,7 +386,6 @@ def has_job(server:'ParallelServer', job_name:'str') -> 'bool':
     with closing(server.odb.session()) as session:
         row = session.query(Job.id).\
             filter(Job.name==job_name).\
-            filter(Job.cluster_id==default_cluster_id).\
             first()
 
     out = row is not None
@@ -409,7 +406,6 @@ def delete_jobs(server:'ParallelServer', job_names:'strlist') -> 'strlist':
     with closing(server.odb.session()) as session:
         rows = session.query(Job.id, Job.name).\
             filter(job_name_column.in_(job_names)).\
-            filter(Job.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -433,7 +429,7 @@ def delete_connections(server:'ParallelServer', names:'strlist') -> 'strlist':
     out:'strlist' = []
 
     for name, stored_connection in stored.items():
-        request = {'id': stored_connection['id'], 'cluster_id': default_cluster_id}
+        request = {'id': stored_connection['id']}
         _ = server.invoke('zato.generic.connection.delete', request)
         out.append(name)
 

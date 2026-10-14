@@ -34,7 +34,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = ('id', 'name', 'is_active', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list',
         'pool_size', 'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy',
         'username', 'auth_type')
@@ -103,7 +103,7 @@ def change_password(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'LDAP connection')
 
 # ################################################################################################################################

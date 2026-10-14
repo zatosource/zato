@@ -56,7 +56,7 @@ _zato_opaque_skip_attrs = {'needs_details'} | {elem.lstrip('-') for elem in quer
 
 # ################################################################################################################################
 
-def search(search_func, config, filter_by, session=None, cluster_id=None, *args, **kwargs):
+def search(search_func, config, filter_by, session=None, *args, **kwargs):
     """ Adds search criteria to an SQLAlchemy query based on current search configuration.
     """
     try:
@@ -89,7 +89,7 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
         if query:
             kwargs['query'] = query
 
-    result = search_func(session, cluster_id, *args, **kwargs)
+    result = search_func(session, *args, **kwargs)
 
     # Fills out all the search-related information
     result.set_data(cur_page, page_size)

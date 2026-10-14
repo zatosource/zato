@@ -73,7 +73,7 @@ def _get_names(req:'any_', service:'str', request:'any_') -> 'strlist':
         logger.warning('Could not read the connection list from `%s`; details:`%s`', service, response.details)
         return out
 
-    # A cluster with no connection of that type at all answers with nothing to iterate over
+    # An environment with no connection of that type at all answers with nothing to iterate over
     if not response.data:
         return out
 
@@ -88,7 +88,6 @@ def _get_rest_names(req:'any_') -> 'strlist':
     """ Returns the outgoing REST connections, which is what a REST destination delivers through.
     """
     request = {
-        'cluster_id': req.zato.cluster_id,
         'connection': CONNECTION.OUTGOING,
         'transport': URL_TYPE.PLAIN_HTTP,
     }
@@ -102,7 +101,6 @@ def _get_generic_names(req:'any_', destination_type:'str') -> 'strlist':
     """ Returns the outgoing connections of one generic type - the MLLP and FHIR destinations.
     """
     request = {
-        'cluster_id': req.zato.cluster_id,
         'type_': _generic_type[destination_type],
         'paginate': False,
     }
@@ -117,7 +115,6 @@ def _get_smtp_names(req:'any_') -> 'strlist':
     """
     # The list service is built by GetListMeta, whose pagination inputs have to be given
     request = {
-        'cluster_id': req.zato.cluster_id,
         'paginate': False,
         'cur_page': 1,
     }
@@ -131,7 +128,6 @@ def _get_service_names(req:'any_') -> 'strlist':
     """ Returns the user-defined services, which is what a service destination delivers to.
     """
     request = {
-        'cluster_id': req.zato.cluster_id,
         'paginate': False,
         'cur_page': 1,
     }

@@ -150,7 +150,7 @@ def _get_success_message(action, job_type, job_name):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
+def _get_create_edit_message(user_profile, params, form_prefix=''):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions, regardless of the job's type.
     """
@@ -164,7 +164,6 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
 
     message = {
         'name': params[form_prefix + 'name'],
-        'cluster_id': cluster.id,
         'is_active': bool(params.get(form_prefix + 'is_active')),
         'service': params.get(form_prefix + 'service', ''),
         'extra': params.get(form_prefix + 'extra', ''),
@@ -185,11 +184,11 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_create_edit_one_time_message(user_profile, cluster, params, form_prefix=''):
+def _get_create_edit_one_time_message(user_profile, params, form_prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create'
     actions. Used when creating one_time jobs.
     """
-    input_dict = _get_create_edit_message(user_profile, cluster, params, form_prefix)
+    input_dict = _get_create_edit_message(user_profile, params, form_prefix)
     input_dict['job_type'] = SCHEDULER.JOB_TYPE.ONE_TIME
 
     return input_dict
@@ -197,11 +196,11 @@ def _get_create_edit_one_time_message(user_profile, cluster, params, form_prefix
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_create_edit_interval_based_message(user_profile, cluster, params, form_prefix=''):
+def _get_create_edit_interval_based_message(user_profile, params, form_prefix=''):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions. Used when creating interval_based jobs.
     """
-    input_dict =_get_create_edit_message(user_profile, cluster, params, form_prefix)
+    input_dict =_get_create_edit_message(user_profile, params, form_prefix)
     input_dict['job_type'] = SCHEDULER.JOB_TYPE.INTERVAL_BASED
     input_dict['weeks'] = params.get(form_prefix + 'weeks', '')
     input_dict['days'] = params.get(form_prefix + 'days', '')
@@ -241,29 +240,29 @@ def _interval_fields_from_params(params:'any_', form_prefix:'str') -> 'intlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_one_time(client, user_profile, cluster, params):
+def _create_one_time(client, user_profile, params):
     """ Creates a one_time scheduler job.
     """
-    logger.debug('About to create a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
+    logger.debug('About to create a one_time job, params:[{0}]'.format(params))
 
-    input_dict = _get_create_edit_one_time_message(user_profile, cluster, params, create_one_time_prefix+'-')
+    input_dict = _get_create_edit_one_time_message(user_profile, params, create_one_time_prefix+'-')
     response = client.invoke('zato.scheduler.job.create', input_dict)
 
-    logger.debug('Successfully created a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
+    logger.debug('Successfully created a one_time job, params:[{0}]'.format(params))
 
     return {'id': response.data.id, 'definition_text':_one_time_job_def(user_profile, input_dict['start_date'])}
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_interval_based(client, user_profile, cluster, params):
+def _create_interval_based(client, user_profile, params):
     """ Creates an interval_based scheduler job.
     """
-    logger.debug('About to create an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
+    logger.debug('About to create an interval_based job, params:[{0}]'.format(params))
 
-    input_dict = _get_create_edit_interval_based_message(user_profile, cluster, params, create_interval_based_prefix+'-')
+    input_dict = _get_create_edit_interval_based_message(user_profile, params, create_interval_based_prefix+'-')
     response = client.invoke('zato.scheduler.job.create', input_dict)
-    logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
+    logger.debug('Successfully created an interval_based job, params:[{0}]'.format(params))
 
     interval_fields = _interval_fields_from_params(params, create_interval_based_prefix+'-')
     definition = interval_text(*interval_fields)
@@ -273,28 +272,28 @@ def _create_interval_based(client, user_profile, cluster, params):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _edit_one_time(client, user_profile, cluster, params):
+def _edit_one_time(client, user_profile, params):
     """ Updates a one_time scheduler job.
     """
-    logger.debug('About to change a one_time job, cluster.id:`%s`, params:`%s`', cluster.id, params)
+    logger.debug('About to change a one_time job, params:`%s`', params)
 
-    input_dict = _get_create_edit_one_time_message(user_profile, cluster, params, edit_one_time_prefix+'-')
+    input_dict = _get_create_edit_one_time_message(user_profile, params, edit_one_time_prefix+'-')
     client.invoke('zato.scheduler.job.edit', input_dict)
-    logger.debug('Successfully updated a one_time job, cluster.id:`%s`, params:`%s`', cluster.id, params)
+    logger.debug('Successfully updated a one_time job, params:`%s`', params)
 
     return {'definition_text':_one_time_job_def(user_profile, input_dict['start_date']), 'id':params['edit-one_time-id']}
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _edit_interval_based(client, user_profile, cluster, params):
+def _edit_interval_based(client, user_profile, params):
     """ Creates an interval_based scheduler job.
     """
-    logger.debug('About to change an interval_based job, cluster.id:`%s`, params:`%s`', cluster.id, params)
+    logger.debug('About to change an interval_based job, params:`%s`', params)
 
-    input_dict = _get_create_edit_interval_based_message(user_profile, cluster, params, edit_interval_based_prefix+'-')
+    input_dict = _get_create_edit_interval_based_message(user_profile, params, edit_interval_based_prefix+'-')
     client.invoke('zato.scheduler.job.edit', input_dict)
-    logger.debug('Successfully updated an interval_based job, cluster.id:`%s`, params:`%s`', cluster.id, params)
+    logger.debug('Successfully updated an interval_based job, params:`%s`', params)
 
     interval_fields = _interval_fields_from_params(params, edit_interval_based_prefix+'-')
     definition = interval_text(*interval_fields)
@@ -310,13 +309,10 @@ def index(req):
         jobs = []
         meta = None
 
-        # Build a list of schedulers for a given Zato cluster.
-        if req.zato.cluster_id and req.method == 'GET':
-
-            # We have a cluster to pick the schedulers from, try to invoke it now.
+        # Build the list of scheduler jobs.
+        if req.method == 'GET':
 
             request = {
-                'cluster_id': req.zato.cluster_id,
                 'paginate': True,
                 'cur_page': req.GET.get('cur_page', 1),
                 'query': req.GET.get('query', '')
@@ -425,7 +421,7 @@ def index(req):
 
             # .. invoke the action handler.
             try:
-                response = handler(req.zato.client, req.zato.user_profile, req.zato.cluster, req.POST)
+                response = handler(req.zato.client, req.zato.user_profile, req.POST)
                 response = response if response else ''
                 if response:
                     response['message'] = _get_success_message(action, job_type, job_name)
@@ -441,9 +437,7 @@ def index(req):
 
         from zato.admin.web.views.scheduler_dashboard import dashboard_base_url, default_time_range_minutes
 
-        return_data = {'zato_clusters':req.zato.clusters,
-            'cluster_id':req.zato.cluster_id,
-            'search_form':req.zato.search_form,
+        return_data = {'search_form':req.zato.search_form,
             'items':jobs,
             'friendly_names':job_type_friendly_names.items(),
             'create_one_time_form':OneTimeSchedulerJobForm(create_one_time_prefix, req),
@@ -479,13 +473,13 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def execute(req, job_id, cluster_id):
+def execute(req, job_id):
     """ Executes a scheduler's job.
     """
     try:
         req.zato.client.invoke('zato.scheduler.job.execute', {'job_id':job_id})
     except Exception:
-        msg = 'Job could not be executed. job_id:`{}`, cluster_id:`{}`, e:`{}`'.format(job_id, cluster_id, format_exc())
+        msg = 'Job could not be executed. job_id:`{}`, e:`{}`'.format(job_id, format_exc())
         logger.error(msg)
         return ping_json_response(False, msg)
     else:

@@ -50,13 +50,13 @@ class MicrosoftCloudExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'microsoft_cloud_def_list':
+    def export(self, session: 'SASession') -> 'microsoft_cloud_def_list':
         """ Exports connection definitions of this exporter's type.
         """
         logger.info('Exporting %s connection definitions', self.label)
 
         # Get the connections from database using the generic connection query
-        db_microsoft_cloud = connection_list(session, cluster_id, self.connection_type)
+        db_microsoft_cloud = connection_list(session, self.connection_type)
 
         if not db_microsoft_cloud:
             logger.info('No %s connection definitions found in DB', self.label)

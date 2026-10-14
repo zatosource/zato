@@ -18,13 +18,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.odb.model import Base, Cluster, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import Base, HTTPSOAP, SecurityBase, Service
 
 # The test doubles live next to the tests and are imported flat
 sys.path.insert(0, os.path.dirname(__file__))
 
 # Test support
-from http_soap_stub import Cluster_Id, Service_Name
+from http_soap_stub import Service_Name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +43,6 @@ def session_factory() -> 'any_':
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         Service.__table__,
         SecurityBase.__table__,
         HTTPSOAP.__table__,
@@ -53,9 +52,7 @@ def session_factory() -> 'any_':
     factory = sessionmaker(bind=engine)
 
     session = factory()
-    cluster = Cluster(Cluster_Id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-    session.add(Service(None, Service_Name, True, 'orders.OrdersGet', False, cluster))
+    session.add(Service(None, Service_Name, True, 'orders.OrdersGet', False))
     session.commit()
     session.close()
 

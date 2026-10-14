@@ -44,7 +44,6 @@ _skip_fields = {
     'is_channel',
     'is_outconn',
     'is_outgoing',
-    'cluster_id',
     'cache_expiry',
     'address',
     'port',
@@ -132,7 +131,7 @@ class CustomConnectorExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'dict[str, dictlist]':
+    def export(self, session:'SASession') -> 'dict[str, dictlist]':
         """ Exports all the definitions of custom connector types, mapping each type's
         top-level YAML key, e.g. custom_crm, to the list of its definitions.
         """
@@ -143,7 +142,7 @@ class CustomConnectorExporter:
 
         # Get all the generic connections there are - custom types are unknown upfront,
         # so they can only be recognized by what they are not.
-        db_connections = connection_list(session, cluster_id)
+        db_connections = connection_list(session)
         connections = to_json(db_connections, return_as_dict=True)
 
         out:'dict[str, dictlist]' = {}

@@ -97,7 +97,6 @@ def get_schedules_by_conn_id(req:'any_', conn_id:'str') -> 'dictlist':
     """ Returns the schedules stored with a connection, straight from the schedule services.
     """
     response = req.zato.client.invoke('zato.outgoing.file-transfer.schedule.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'conn_id': conn_id,
     })
 
@@ -202,16 +201,15 @@ def get_connection_command_shell_url(req:'any_', transfer_type:'str', conn_id:'s
 
     name_slug = slugify(conn_name)
 
-    out = _command_shell_url(transfer_type, conn_id, req.zato.cluster_id, name_slug, conn_name, command)
+    out = _command_shell_url(transfer_type, conn_id, name_slug, conn_name, command)
     return out
 
 # ################################################################################################################################
 
-def _get_connection_list(req:'any_', transfer_type:'str', cluster_id:'str') -> 'dictlist':
+def _get_connection_list(req:'any_', transfer_type:'str') -> 'dictlist':
     """ Returns every connection of the given transfer type along with the URL of its own schedule list.
     """
     response = req.zato.client.invoke('zato.generic.connection.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'type_': _connection_types[transfer_type],
         'paginate': False,
     })
@@ -225,7 +223,7 @@ def _get_connection_list(req:'any_', transfer_type:'str', cluster_id:'str') -> '
         item_id = item['id']
         item_name = item['name']
         item_slug = slugify(item_name)
-        item_url = reverse('out-file-transfer-schedules', args=[transfer_type, item_id, cluster_id, item_slug])
+        item_url = reverse('out-file-transfer-schedules', args=[transfer_type, item_id, item_slug])
         item_name_encoded = quote(item_name)
         out.append({
             'name': item_name,
@@ -276,13 +274,13 @@ def _shell_command(schedule:'stranydict') -> 'str':
 
 # ################################################################################################################################
 
-def _command_shell_url(transfer_type:'str', conn_id:'str', cluster_id:'str', name_slug:'str', conn_name:'str',
+def _command_shell_url(transfer_type:'str', conn_id:'str', name_slug:'str', conn_name:'str',
     command:'str') -> 'str':
     """ The URL of the connection's command shell, opening with the given command typed in - or, if there is none,
     with the shell's own default.
     """
     url_name = _command_shell_links[transfer_type]
-    url = reverse(url_name, args=[conn_id, cluster_id, name_slug])
+    url = reverse(url_name, args=[conn_id, name_slug])
 
     query = {'name': conn_name}
     if command:
@@ -297,7 +295,7 @@ def _command_shell_url(transfer_type:'str', conn_id:'str', cluster_id:'str', nam
 # ################################################################################################################################
 
 @method_allowed('GET')
-def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', name_slug:'str') -> 'TemplateResponse':
+def schedules(req:'any_', transfer_type:'str', conn_id:'str', name_slug:'str') -> 'TemplateResponse':
     """ The list of file transfer schedules of one SFTP, SMB or FTP connection.
     """
     conn_name = req.GET['name']
@@ -327,7 +325,7 @@ def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', 
         if has_command_shell:
             command = _shell_command(schedule)
             item['command_shell_url'] = _command_shell_url(
-                transfer_type, conn_id, cluster_id, name_slug, conn_name, command)
+                transfer_type, conn_id, name_slug, conn_name, command)
 
         items.append(item)
 
@@ -349,17 +347,15 @@ def schedules(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', 
 
     # The link back to the connection list of the right type
     back_url_name, back_type = _back_links[transfer_type]
-    back_url = reverse(back_url_name) + '?cluster={}&type_={}'.format(req.zato.cluster_id, back_type)
+    back_url = reverse(back_url_name) + '?type_={}'.format(back_type)
 
     # Every connection of this type, so the page's select can switch to any of them
-    connection_list = _get_connection_list(req, transfer_type, cluster_id)
+    connection_list = _get_connection_list(req, transfer_type)
 
     # How the page's badge reads, e.g. SFTP schedules or SMB schedules
     badge_label = _transfer_labels[transfer_type] + ' schedules'
 
     return_data = {
-        'zato_clusters': req.zato.clusters,
-        'cluster_id': req.zato.cluster_id,
         'req': req,
         'transfer_type': transfer_type,
         'conn_id': conn_id,
@@ -420,8 +416,6 @@ def _wizard_response(
     """ Renders the schedule wizard - the same template serves both the create and the edit flow.
     """
     return_data = {
-        'zato_clusters': req.zato.clusters,
-        'cluster_id': req.zato.cluster_id,
         'req': req,
         'transfer_type': transfer_type,
         'conn_id': conn_id,
@@ -442,7 +436,7 @@ def _wizard_response(
 # ################################################################################################################################
 
 @method_allowed('GET')
-def schedule_wizard_create(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str',
+def schedule_wizard_create(req:'any_', transfer_type:'str', conn_id:'str',
     name_slug:'str') -> 'TemplateResponse':
     """ A multi-step wizard for a new file transfer schedule of one SFTP, SMB or FTP connection.
     """
@@ -457,7 +451,7 @@ def schedule_wizard_create(req:'any_', transfer_type:'str', conn_id:'str', clust
 # ################################################################################################################################
 
 @method_allowed('GET')
-def schedule_wizard_edit(req:'any_', transfer_type:'str', conn_id:'str', cluster_id:'str', name_slug:'str',
+def schedule_wizard_edit(req:'any_', transfer_type:'str', conn_id:'str', name_slug:'str',
     schedule_id:'str') -> 'TemplateResponse':
     """ The schedule wizard prefilled with one existing schedule of an SFTP, SMB or FTP connection.
     """
@@ -505,7 +499,6 @@ def _schedule_request_from_post(req:'any_') -> 'stranydict':
     start_date = from_user_to_utc(req.POST['start_date'], req.zato.user_profile).isoformat()
 
     out = {
-        'cluster_id': req.zato.cluster_id,
         'conn_id': req.POST['conn_id'],
         'name': req.POST['name'],
         'is_active': bool(req.POST.get('is_active')),
@@ -599,7 +592,6 @@ def schedule_edit_interval_action(req:'any_') -> 'HttpResponse':
 
     # .. and hand the edit service everything it stores, with only the interval changed.
     request = {
-        'cluster_id': req.zato.cluster_id,
         'conn_id': conn_id,
         'id': schedule_id,
         'run_every': run_every,
@@ -628,7 +620,6 @@ def schedule_delete_action(req:'any_') -> 'HttpResponse':
     """ Deletes a file transfer schedule along with its scheduler job.
     """
     request = {
-        'cluster_id': req.zato.cluster_id,
         'conn_id': req.POST['conn_id'],
         'id': req.POST['id'],
     }

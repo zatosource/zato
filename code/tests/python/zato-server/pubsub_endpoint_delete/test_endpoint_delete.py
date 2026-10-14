@@ -50,7 +50,7 @@ def _get_publisher() -> 'any_':
 def _get_subscriptions(admin:'any_') -> 'anylist':
     """ Returns all subscriptions for the test subscriber security definition.
     """
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list
@@ -71,7 +71,6 @@ def _get_outgoing_rest_id(admin:'any_', connection_name:'str') -> 'int':
     """ Looks up an outgoing REST connection ID by name.
     """
     result = admin.invoke('zato.http-soap.get-list', {
-        'cluster_id': 1,
         'connection': 'outgoing',
         'transport': 'plain_http',
     })
@@ -234,7 +233,6 @@ class TestEndpointDelete:
 
         # .. create a new outgoing REST connection for this test ..
         _ = admin.invoke('zato.http-soap.create', {
-            'cluster_id': 1,
             'name': 'test.ed.out.pending',
             'connection': 'outgoing',
             'transport': 'plain_http',
@@ -258,7 +256,6 @@ class TestEndpointDelete:
 
         # .. create a push subscription pointing at this endpoint ..
         _ = admin.invoke('zato.pubsub.subscription.create', {
-            'cluster_id': 1,
             'topic_name_list': [topic_name],
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'push',
@@ -308,7 +305,6 @@ class TestEndpointDelete:
 
         # .. create a new outgoing REST connection for this test ..
         _ = admin.invoke('zato.http-soap.create', {
-            'cluster_id': 1,
             'name': 'test.ed.out.cgroup',
             'connection': 'outgoing',
             'transport': 'plain_http',
@@ -332,7 +328,6 @@ class TestEndpointDelete:
 
         # .. create a push subscription pointing at this endpoint ..
         _ = admin.invoke('zato.pubsub.subscription.create', {
-            'cluster_id': 1,
             'topic_name_list': [topic_name],
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'push',

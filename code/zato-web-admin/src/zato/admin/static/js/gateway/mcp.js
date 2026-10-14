@@ -25,7 +25,6 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.gateway.mcp.config = {
-    cluster_id: '1',
 
     // The connection type the name and URL path have to be unique within -
     // generic connection attributes are unique per type rather than across all of them
@@ -476,8 +475,7 @@ $.fn.zato.gateway.mcp.pickers.on_close = function(link, spec) {
 $.fn.zato.gateway.mcp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'MCP gateway `{0}` deleted',
-        'Are you sure you want to delete MCP gateway `{0}`?',
-        true);
+        'Are you sure you want to delete MCP gateway `{0}`?');
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

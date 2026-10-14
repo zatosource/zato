@@ -67,7 +67,6 @@ class AuditExport:
         *,
         service_name:'str',
         server_name:'str',
-        cluster_name:'str',
         instance_id:'str',
         version:'str',
         ) -> 'None':
@@ -77,7 +76,6 @@ class AuditExport:
         resource = self._build_resource(
             service_name=service_name,
             server_name=server_name,
-            cluster_name=cluster_name,
             instance_id=instance_id,
             version=version,
         )
@@ -105,7 +103,6 @@ class AuditExport:
         *,
         service_name:'str',
         server_name:'str',
-        cluster_name:'str',
         instance_id:'str',
         version:'str',
         ) -> 'Resource':
@@ -119,10 +116,6 @@ class AuditExport:
             'host.name': socket.gethostname(),
             'process.pid': os.getpid(),
         }
-
-        if cluster_name:
-            attributes['service.namespace'] = cluster_name
-            attributes['zato.cluster.name'] = cluster_name
 
         if self.config.environment:
             attributes['deployment.environment.name'] = self.config.environment
@@ -260,7 +253,6 @@ def start_audit_export(
     *,
     service_name:'str',
     server_name:'str',
-    cluster_name:'str',
     instance_id:'str',
     version:'str',
     ) -> 'AuditExport | None':
@@ -280,7 +272,6 @@ def start_audit_export(
         config,
         service_name=service_name,
         server_name=server_name,
-        cluster_name=cluster_name,
         instance_id=instance_id,
         version=version,
     )

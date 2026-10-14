@@ -22,7 +22,6 @@ import pytest
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
-from zato.common.defaults import default_cluster_id
 
 # Live environment
 from live_containers.ready import wait_until
@@ -130,7 +129,7 @@ def _wait_for_project(client:'AdminClient') -> 'None':
     """ Waits until the server reports the project's services as deployed.
     """
     def _is_deployed() -> 'bool':
-        request = {'cluster_id': default_cluster_id, 'name': ModuleCtx.Deployed_Service}
+        request = {'name': ModuleCtx.Deployed_Service}
         response = client.invoke('zato.service.get-by-name', request)
         out = response['name'] == ModuleCtx.Deployed_Service
         return out

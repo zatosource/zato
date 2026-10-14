@@ -112,7 +112,7 @@ def _tool_lines(opaque:'stranydict') -> 'anylist':
 
 # ################################################################################################################################
 
-def _group_ids(session:'SASession', cluster_id:'int', groups:'list') -> 'list':
+def _group_ids(session:'SASession', groups:'list') -> 'list':
     """ The ids of the gateway's security groups - a gateway saved through the dashboard stores their ids,
     one imported through enmasse stores their names, so the names are looked up.
     """
@@ -127,7 +127,6 @@ def _group_ids(session:'SASession', cluster_id:'int', groups:'list') -> 'list':
 
     if names:
         group_rows = session.query(GenericObject.id).\
-            filter(GenericObject.cluster_id==cluster_id).\
             filter(GenericObject.type_==Groups.Type.Group_Parent).\
             filter(GenericObject.subtype==Groups.Type.API_Clients).\
             filter(GenericObject.name.in_(names)).\
@@ -140,16 +139,15 @@ def _group_ids(session:'SASession', cluster_id:'int', groups:'list') -> 'list':
 
 # ################################################################################################################################
 
-def _caller_names(session:'SASession', cluster_id:'int', groups:'list') -> 'strlist':
+def _caller_names(session:'SASession', groups:'list') -> 'strlist':
     """ The names of the security definitions that may call the gateway - the members of its security groups.
     """
-    group_ids = _group_ids(session, cluster_id, groups)
+    group_ids = _group_ids(session, groups)
 
     if not group_ids:
         return []
 
     member_rows = session.query(GenericObject.name).\
-        filter(GenericObject.cluster_id==cluster_id).\
         filter(GenericObject.type_==Groups.Type.Group_Member).\
         filter(GenericObject.parent_object_id.in_(group_ids)).\
         all()
@@ -168,7 +166,6 @@ def _caller_names(session:'SASession', cluster_id:'int', groups:'list') -> 'strl
         return []
 
     security_rows = session.query(SecurityBase.name).\
-        filter(SecurityBase.cluster_id==cluster_id).\
         filter(SecurityBase.id.in_(security_ids)).\
         order_by(SecurityBase.name).\
         all()
@@ -217,13 +214,12 @@ def _shaping_lines(opaque:'stranydict') -> 'anylist':
 
 # ################################################################################################################################
 
-def describe_mcp_gateway(session:'SASession', cluster_id:'int', name:'str') -> 'anylist | None':
+def describe_mcp_gateway(session:'SASession', name:'str') -> 'anylist | None':
     """ The label and value pairs describing one MCP gateway - its path, the tools and skills it exposes, who may
     call it, how it shapes responses, whether its audit log is on and the alert thresholds it sets of its own.
-    None when no MCP gateway goes by the name in the cluster.
+    None when no MCP gateway goes by the name.
     """
     row = session.query(GenericConn).\
-        filter(GenericConn.cluster_id==cluster_id).\
         filter(GenericConn.type_==GENERIC.CONNECTION.TYPE.GATEWAY_MCP).\
         filter(GenericConn.name==name).\
         first()
@@ -245,7 +241,7 @@ def describe_mcp_gateway(session:'SASession', cluster_id:'int', name:'str') -> '
 
     out.extend(_tool_lines(opaque))
 
-    callers = _caller_names(session, cluster_id, _stored_list(opaque, 'security_groups'))
+    callers = _caller_names(session, _stored_list(opaque, 'security_groups'))
 
     if callers:
         out.append(('Callers', ', '.join(callers)))

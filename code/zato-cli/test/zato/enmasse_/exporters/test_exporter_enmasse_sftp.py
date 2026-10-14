@@ -140,7 +140,6 @@ class TestEnmasseSFTPExporter(TestCase):
         sftp_list_from_yaml = self.get_definitions()
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_sftp_connections, _ = self.sftp_importer.sync_definitions(sftp_list_from_yaml, self.session)
 
         self.assertEqual(len(created_sftp_connections), 2, 'Not all SFTP connections were created.')
@@ -220,7 +219,6 @@ class TestEnmasseSFTPExporter(TestCase):
         }
 
         # Import the connection along with its schedule ..
-        _ = self.importer.get_cluster(self.session)
         created, _ = self.sftp_importer.sync_definitions([conn_def], self.session)
         self.assertEqual(len(created), 1)
 

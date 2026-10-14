@@ -54,11 +54,11 @@ class OdooImporter:
 
 # ################################################################################################################################
 
-    def get_odoo_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_odoo_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
-        logger.info('Retrieving odoo connection definitions from database for cluster_id=%s', cluster_id)
-        odoo_connections = out_odoo_list(session, cluster_id)
+        logger.info('Retrieving odoo connection definitions from database')
+        odoo_connections = out_odoo_list(session)
 
         self._process_odoo_defs(odoo_connections, out)
         logger.info('Total odoo connection definitions from DB: %d', len(out))
@@ -98,11 +98,8 @@ class OdooImporter:
 
     def create_odoo_definition(self, odoo_def:'anydict', session:'SASession') -> 'any_':
 
-        # Get the cluster instance from the importer
-        cluster = self.importer.get_cluster(session)
-
         # Create a new odoo connection instance
-        odoo_conn = OutgoingOdoo(cluster)
+        odoo_conn = OutgoingOdoo()
 
         # Set default values
         defaults = {
@@ -182,7 +179,7 @@ class OdooImporter:
     def sync_odoo_definitions(self, odoo_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d odoo connection definitions from YAML', len(odoo_list))
 
-        db_defs = self.get_odoo_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_odoo_defs_from_db(session)
         to_create, to_update = self.compare_odoo_defs(odoo_list, db_defs)
 
         out_created = []

@@ -18,7 +18,6 @@ import yaml
 # Zato
 from zato.cli.enmasse.importer.delete_targets import generic_sections, http_soap_sections
 from zato.common.api import Groups
-from zato.common.defaults import default_cluster_id
 
 # Live environment
 from live_containers.ready import wait_until
@@ -183,7 +182,7 @@ def listed_names(client:'AdminClient', section:'str') -> 'strlist':
     """ The names the server's list service of a section returns - for the pub/sub sections keyed by security,
     the names of the security definitions.
     """
-    request:'anydict' = {'cluster_id': default_cluster_id}
+    request:'anydict' = {}
     name_field = 'name'
 
     if section in http_soap_sections:

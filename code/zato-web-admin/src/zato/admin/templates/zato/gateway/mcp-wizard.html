@@ -7,7 +7,6 @@ advanced opens in small popover micro-forms or folds away behind the
 More options line. The generic machinery and look come from the wizard
 kit. The view provides:
 
-* cluster_id   - the current cluster
 * form         - CreateForm with the defaults on create, EditForm carrying
                  the edit- prefix and the stored values on edit
 * is_edit      - whether the wizard opened on an existing gateway
@@ -76,7 +75,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.gateway.mcp.wizard.init({
-        list_url: '{% url "gateway-mcp" %}?cluster={{ cluster_id }}',
+        list_url: '{% url "gateway-mcp" %}',
         is_edit: {% if is_edit %}true{% else %}false{% endif %},
         item_id: '{{ item_id }}'
     });
@@ -430,7 +429,6 @@ $(document).ready(function() {
                 <input type="hidden" id="id_edit-id" name="id" value="{{ item_id }}" />
                 {% endif %}
 
-                <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
             </form>
 
         </div>

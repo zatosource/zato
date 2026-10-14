@@ -82,7 +82,6 @@ class TestEnmasseODataExporter(TestCase):
         odata_list_from_yaml = self.yaml_config['odata']
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_odata_connections, _ = self.odata_importer.sync_definitions(odata_list_from_yaml, self.session)
 
         self.assertTrue(len(created_odata_connections) > 0, 'No OData connections were created.')

@@ -99,7 +99,7 @@ class ConnKind(NamedTuple):
 
 _sftp_kind = ConnKind(
     label='sftp',
-    page_url='/zato/outgoing/sftp/?cluster=1&type_=outconn-sftp',
+    page_url='/zato/outgoing/sftp/?type_=outconn-sftp',
     namespace='$.fn.zato.outgoing.sftp',
     directory='/incoming/invoices',
     edited_directory='/incoming/invoices-v2',
@@ -107,7 +107,7 @@ _sftp_kind = ConnKind(
 
 _smb_kind = ConnKind(
     label='smb',
-    page_url='/zato/outgoing/smb/?cluster=1&type_=outconn-smb',
+    page_url='/zato/outgoing/smb/?type_=outconn-smb',
     namespace='$.fn.zato.outgoing.smb',
     directory='my-share/incoming/invoices',
     edited_directory='my-share/incoming/invoices-v2',
@@ -115,7 +115,7 @@ _smb_kind = ConnKind(
 
 _ftp_kind = ConnKind(
     label='ftp',
-    page_url='/zato/outgoing/ftp/?cluster=1&type_=outconn-ftp',
+    page_url='/zato/outgoing/ftp/?type_=outconn-ftp',
     namespace='$.fn.zato.outgoing.ftp',
     directory='incoming/invoices',
     edited_directory='incoming/invoices-v2',

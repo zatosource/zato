@@ -41,13 +41,12 @@ _number_keys = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-def describe_outgoing_llm(session:'SASession', cluster_id:'int', name:'str') -> 'anylist | None':
+def describe_outgoing_llm(session:'SASession', name:'str') -> 'anylist | None':
     """ The label and value pairs describing one outgoing LLM connection - its address, model, pool size,
     timeout, max tokens and the alert thresholds it sets of its own. None when no outgoing LLM connection
-    goes by the name in the cluster.
+    goes by the name.
     """
     row = session.query(GenericConn).\
-        filter(GenericConn.cluster_id==cluster_id).\
         filter(GenericConn.type_==GENERIC.CONNECTION.TYPE.OUTCONN_LLM).\
         filter(GenericConn.name==name).\
         first()

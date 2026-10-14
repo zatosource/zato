@@ -124,6 +124,5 @@ $.fn.zato.outgoing.es.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.outgoing.es.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing ElasticSearch connection `{0}` deleted',
-        'Are you sure you want to delete outgoing ElasticSearch connection `{0}`?',
-        true);
+        'Are you sure you want to delete outgoing ElasticSearch connection `{0}`?');
 }

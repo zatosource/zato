@@ -50,7 +50,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-_Page_URL_Pattern = '/zato/gateway/mcp/?cluster=1'
+_Page_URL_Pattern = '/zato/gateway/mcp/'
 
 _Test_Name_Prefix = 'test.mcp.playwright.' + rand_string() + '.'
 
@@ -266,7 +266,7 @@ class TestMCPGatewayCreate:
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.get-list'
         api_auth = ('admin.invoke', zato_dashboard['password'])
         api_headers = {'Content-Type': 'application/json'}
-        api_payload = json.dumps({'cluster_id': 1, 'type_': 'gateway-mcp'})
+        api_payload = json.dumps({'type_': 'gateway-mcp'})
 
         odb_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
         assert odb_response.status_code == OK, f'API call failed: {odb_response.status_code} {odb_response.text}'
@@ -369,7 +369,7 @@ class TestMCPGatewayCreate:
         apikey_name = _Test_Name_Prefix + 'apikey.mcp-export'
         apikey_value = 'key.' + CryptoManager.generate_hex_string()
 
-        navigate_to_page(page, base_url, '/zato/security/apikey/?cluster=1')
+        navigate_to_page(page, base_url, '/zato/security/apikey/')
         open_create_dialog(page)
 
         page.fill('#id_name', apikey_name)
@@ -1141,7 +1141,7 @@ class MCPTestHotDeployTools(Service):
         _delete_gateway_row(page, item_id, gateway_name)
 
         # .. delete the basic auth definition ..
-        basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
+        basic_auth_page_url = f'/zato/security/basic-auth/?query={security_name}'
         navigate_to_page(page, base_url, basic_auth_page_url)
 
         row_selector_security = f'#data-table tbody tr:has(td:text-is("{security_name}"))'
@@ -1192,7 +1192,7 @@ class MCPTestHotDeployTools(Service):
         new_password = 'changed.' + rand_string()
         # The query parameter makes sure the definition is on the first page of results,
         # otherwise it could land on a later page among definitions from earlier tests.
-        basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
+        basic_auth_page_url = f'/zato/security/basic-auth/?query={security_name}'
 
         navigate_to_page(page, base_url, basic_auth_page_url)
 
@@ -1422,7 +1422,7 @@ class MCPTestAllowListB(Service):
         _delete_gateway_row(page, item_id_b, gateway_name_b)
 
         # .. delete the shared basic auth definition ..
-        basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
+        basic_auth_page_url = f'/zato/security/basic-auth/?query={security_name}'
         navigate_to_page(page, base_url, basic_auth_page_url)
 
         row_selector_security = f'#data-table tbody tr:has(td:text-is("{security_name}"))'
@@ -1504,7 +1504,7 @@ class MCPTestAllowListB(Service):
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.http-soap.get-list'
         api_auth = ('admin.invoke', zato_dashboard['password'])
         api_headers = {'Content-Type': 'application/json'}
-        api_payload = json.dumps({'cluster_id': 1, 'connection': 'channel', 'transport': 'plain_http'})
+        api_payload = json.dumps({'connection': 'channel', 'transport': 'plain_http'})
 
         rest_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
         assert rest_response.status_code == OK, f'API get-list failed: {rest_response.status_code}'
@@ -1606,7 +1606,7 @@ class MCPTestAllowListB(Service):
 
         # .. reload to get a fresh paginated view, filtered to this test's gateways only,
         # otherwise gateways left over from other tests in this file would add extra pages ..
-        pagination_list_url = f'{_Page_URL_Pattern}&query={_Test_Name_Prefix}pag-'
+        pagination_list_url = f'{_Page_URL_Pattern}?query={_Test_Name_Prefix}pag-'
         navigate_to_page(page, base_url, pagination_list_url)
         _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
@@ -1828,7 +1828,7 @@ class MCPTestAllowListB(Service):
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.get-list'
         api_auth = ('admin.invoke', zato_dashboard['password'])
         api_headers = {'Content-Type': 'application/json'}
-        api_payload = json.dumps({'cluster_id': 1, 'type_': 'gateway-mcp'})
+        api_payload = json.dumps({'type_': 'gateway-mcp'})
 
         list_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
         assert list_response.status_code == OK, f'get-list failed: {list_response.status_code}'

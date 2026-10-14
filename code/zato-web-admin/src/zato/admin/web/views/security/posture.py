@@ -16,7 +16,6 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,7 +103,7 @@ def _build_field_descriptions() -> 'dict':
             '<br><br>'
             'They can create users, change passwords, deploy code, and read configuration.'
             '<br><br>'
-            'This check ' + _highlight('finds admin services mounted on channels reachable from outside the cluster') + '.'
+            'This check ' + _highlight('finds admin services mounted on channels reachable from outside the environment') + '.'
         ),
 
         'posture-toggle-internal-no-auth': _make_description('Internal services without auth',
@@ -321,11 +320,9 @@ def index(req:'object') -> 'TemplateResponse':
         logger.warning('Security posture dashboard error: %s', e)
 
     return TemplateResponse(req, 'zato/security/posture.html', {
-        'cluster_id': default_cluster_id,
         'scan_data': json.dumps(scan_data),
         'active_tab': active_tab,
         'field_descriptions': json.dumps(_build_field_descriptions()),
-        'zato_clusters': True,
         'zato_template_name': 'zato/security/posture.html',
     })
 

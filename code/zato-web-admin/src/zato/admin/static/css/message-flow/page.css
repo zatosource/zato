@@ -20,7 +20,7 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
 
 .message-flow-page {
 
-    /* The room under the top menu bar and the cluster colour strip */
+    /* The room under the top menu bar and the environment color strip */
     --message-flow-top-offset: 81px;
 
     /* The dark room and its inks - the same family the flow tab speaks */

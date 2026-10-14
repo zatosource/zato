@@ -86,7 +86,7 @@ class Index(_Index):
     output_class = OutgoingMLLPConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_'
     output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address', 'pool_size'
     output_optional = (
         'should_log_messages', 'logging_level',
@@ -242,7 +242,6 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
     form = CreateForm(req)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': False,
         'item_id': '',
@@ -281,7 +280,6 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     populate_form_initial(form, item_dict)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': True,
         'item_id': item_dict['id'],
