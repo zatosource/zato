@@ -63,10 +63,11 @@ class DiscordClient:
         self.name = config['name']
 
         # The bot token lives in the secret column, except when the connection
-        # was imported with the token given directly in its definition.
+        # was imported with the token given directly in its definition. A connection
+        # that has neither yet, e.g. one created in the Dashboard before its token was set, has an empty token.
         token = config.get('secret')
         if (not token) or token.startswith(SECRETS.Auto_Generated_Prefix):
-            token = config['token']
+            token = config.get('token') or ''
         self.token = token
 
         self.address = config['address'].rstrip('/')

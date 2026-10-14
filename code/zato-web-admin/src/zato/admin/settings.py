@@ -38,10 +38,6 @@ log_config:'any_' = None
 config_dir:'any_' = None
 DATABASES:'any_' = None
 db_type:'any_' = None
-django_sqlalchemy_engine:'any_' = None
-SSL_CA_CERTS:'any_' = None
-SSL_CERT_FILE:'any_' = None
-SSL_KEY_FILE:'any_' = None
 
 # Zato Django plugin configuration
 ZATO_URL = os.environ.get('ZATO_URL', 'http://localhost:17010/zato/api/invoke/django/{}')
@@ -51,9 +47,7 @@ ZATO_PASSWORD = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_P
 # Zato
 from zato.common.api import TRACE1
 from zato.common.crypto.api import CryptoManager
-from zato.common.odb.ssl_config import get_psycopg2_ssl_connect_args, get_ssl_connect_args
 from zato.common.settings_db import SettingsDB
-from zato.common.util.api import get_engine_url
 from zato.common.util.eval_ import as_bool
 # Star import is how these settings are pulled into Django's settings module.
 from zato.admin.zato_settings import * # noqa: F403
@@ -77,30 +71,8 @@ _default_common_name = 'localhost'
 _default_dashboard_port = '8183'
 _default_dashboard_ssl_port = '8184'
 
-# What the SSL configuration keys are read as when the injected configuration does not carry them.
-_no_ssl_value = ''
-
-# How often, in seconds, MySQL connections are recycled in the pool.
-_pool_recycle_seconds = 600
-
 # The values the module runs with when it is imported without an injected database configuration.
 _standalone_value = 'standalone'
-_standalone_db_port = 3306
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_mysql_ssl_connect_args(ssl_config:'any_') -> 'any_':
-    """ Returns the PyMySQL SSL connect arguments for a configuration.
-    """
-    out = get_ssl_connect_args(ssl_config, 'mysql')
-    return out
-
-# Which function builds the driver-level SSL connect arguments for each database type.
-_ssl_connect_args_func_by_db_type = {
-    'mysql': _get_mysql_ssl_connect_args,
-    'postgresql': get_psycopg2_ssl_connect_args,
-}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -285,50 +257,18 @@ LOGIN_REDIRECT_URL = '/'
 
 if DATABASES:
 
-    # So that Django doesn't complain about an unknown engine type.
-    if db_type.startswith('mysql'):
-        db_type = 'mysql'
-
     db_data = DATABASES['default']
-    db_data['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
-
-    for name in ('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT', 'OPTIONS'):
-        globals()[f'DATABASE_{name}'] = db_data.get(name)
-
+    db_data['ENGINE'] = 'django.db.backends.sqlite3'
     db_data['db_type'] = db_type
 
-    # SSL/TLS configuration of the database connection - the keys may be absent.
-    ssl_config = {
-        'ssl':           db_data.get('SSL', _no_ssl_value),
-        'ssl_ca_file':   db_data.get('SSL_CA_FILE', _no_ssl_value),
-        'ssl_cert_file': db_data.get('SSL_CERT_FILE', _no_ssl_value),
-        'ssl_key_file':  db_data.get('SSL_KEY_FILE', _no_ssl_value),
-        'ssl_verify':    db_data.get('SSL_VERIFY', _no_ssl_value),
-    }
-
-    # MySQL connects through PyMySQL, which accepts an SSL context,
-    # while PostgreSQL connects through psycopg2, which accepts libpq arguments.
-    if ssl_connect_args_func := _ssl_connect_args_func_by_db_type.get(db_type):
-        ssl_connect_args = ssl_connect_args_func(ssl_config)
-    else:
-        ssl_connect_args = {}
+    DATABASE_ENGINE  = db_data['ENGINE']
+    DATABASE_NAME    = db_data['NAME']
+    DATABASE_OPTIONS = db_data.get('OPTIONS')
 
     # SQLAlchemy setup for web admin's database.
     SASession = scoped_session(sessionmaker())
 
-    kwargs = {}
-
-    if db_data['db_type'] == 'mysql':
-        kwargs['pool_recycle'] = _pool_recycle_seconds
-
-    if ssl_connect_args:
-        kwargs['connect_args'] = ssl_connect_args
-
-        # Django's own connection to the same database receives the same arguments through its OPTIONS.
-        db_data['OPTIONS'] = ssl_connect_args
-
-    engine_url = get_engine_url(db_data)
-    engine = create_engine(engine_url, **kwargs)
+    engine = create_engine(f'sqlite:///{DATABASE_NAME}')
     SASession.configure(bind=engine)
 
     # Settings DB
@@ -347,19 +287,11 @@ else:
     DATABASES['default'] = {}
     DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
 
-    ssl_key_file  = _standalone_value
-    ssl_cert_file = _standalone_value
-    ssl_ca_certs  = _standalone_value
-
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
-    DATABASE_ENGINE   = DATABASES['default']['ENGINE']
-    DATABASE_NAME     = _standalone_value
-    DATABASE_USER     = _standalone_value
-    DATABASE_PASSWORD = _standalone_value
-    DATABASE_HOST     = _standalone_value
-    DATABASE_PORT     = _standalone_db_port
-    SECRET_KEY        = CryptoManager.generate_secret(as_str=True)
+    DATABASE_ENGINE = DATABASES['default']['ENGINE']
+    DATABASE_NAME   = _standalone_value
+    SECRET_KEY      = CryptoManager.generate_secret(as_str=True)
 
     settings_db = None
 

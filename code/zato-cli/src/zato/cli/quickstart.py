@@ -326,20 +326,9 @@ class Create(ZatoCommand):
         out.store_log = args.store_log
         out.store_config = args.store_config
         out.odb_type = args.odb_type
-        out.odb_host = args.odb_host
-        out.odb_port = args.odb_port
-        out.odb_user = args.odb_user
-        out.odb_db_name = args.odb_db_name
+        out.odb_path = args.odb_path
         out.redis_host = self.get_arg('redis_host')
         out.redis_port = self.get_arg('redis_port')
-        out.sqlite_path = getattr(args, 'sqlite_path', None)
-        out.postgresql_schema = getattr(args, 'postgresql_schema', None)
-        out.odb_password = args.odb_password
-        out.odb_ssl = getattr(args, 'odb_ssl', '')
-        out.odb_ssl_ca_file = getattr(args, 'odb_ssl_ca_file', '')
-        out.odb_ssl_cert_file = getattr(args, 'odb_ssl_cert_file', '')
-        out.odb_ssl_key_file = getattr(args, 'odb_ssl_key_file', '')
-        out.odb_ssl_verify = getattr(args, 'odb_ssl_verify', '')
         out.redis_password = self.get_arg('redis_password')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
@@ -420,8 +409,8 @@ class Create(ZatoCommand):
         # Make sure we always work with absolute paths
         args_path = os.path.abspath(args.path)
 
-        if args.odb_type == 'sqlite':
-            args.sqlite_path = os.path.join(args_path, 'zato.db')
+        # The ODB is a file in the environment's directory unless given explicitly
+        args.odb_path = args.odb_path or os.path.join(args_path, 'zato.db')
 
         next_step = count(1)
         next_port = count(http_plain_server_port)

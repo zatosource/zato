@@ -20,9 +20,6 @@ from zato.common.util.open_ import open_r, open_w
 class _WebAdminAuthCommand(ManageCommand):
     def _prepare(self, args):
 
-        import pymysql
-        pymysql.install_as_MySQLdb()
-
         # stdlib
         import os
 

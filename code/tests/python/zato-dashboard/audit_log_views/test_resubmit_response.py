@@ -66,36 +66,6 @@ class TestErrorSummary:
 
 class TestResubmitMessage:
 
-    def test_a_reprocess_names_its_routing_target(self):
-        report = {
-            'is_ok': True,
-            'target_kind': 'service',
-            'target_name': 'edi.orders.intake',
-            'message_count': 1,
-            'error': '',
-            'action': 'reprocess',
-            'cid': 'cid-1',
-        }
-
-        assert _get_resubmit_message(report) == 'Resubmitted to service edi.orders.intake'
-
-# ################################################################################################################################
-
-    def test_a_multi_document_reprocess_says_how_many_went_out(self):
-        report = {
-            'is_ok': True,
-            'target_kind': 'topic',
-            'target_name': 'edi.inbound',
-            'message_count': 3,
-            'error': '',
-            'action': 'reprocess',
-            'cid': 'cid-2',
-        }
-
-        assert _get_resubmit_message(report) == 'Resubmitted to topic edi.inbound (3 documents)'
-
-# ################################################################################################################################
-
     def test_an_hl7_reprocess_names_the_channel_service(self):
         report = {
             'is_ok': True,

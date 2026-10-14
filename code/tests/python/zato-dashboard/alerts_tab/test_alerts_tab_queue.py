@@ -7,17 +7,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The Queue section of the Alerts tab - the two queue delivery lines every outgoing connection that can use a queue
-# carries, REST, SOAP, FHIR and MLLP outgoing alike, each a popover over one number with no window, at the seeded
+# carries, REST, SOAP, FHIR, MLLP and Kafka outgoing alike, each a popover over one number with no window, at the seeded
 # defaults, in a section of their own at the end of the tab, and on no other type's tab. The cells of the alert
-# rules screen carry the two fields for the same four types.
+# rules screen carry the two fields for the same five types.
 
 # Zato
 from zato.admin.web import alerts_tab
 from zato.admin.web.alerts_tab_lines import Line_Kind_Popover
 from zato.admin.web.alerts_tab_lines_queue import queue_alert_types, Section_Queue
 from zato.admin.web.views.alerting_config_cells import _build_config_cell, _type_cells
-from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, alert_type_llm, \
-    alert_type_mcp, alert_type_mllp_channel, alert_type_mllp_outgoing, alert_type_rest, alert_type_soap, get_defaults
+from zato.common.alerting.object_config import alert_type_channels, alert_type_fhir, alert_type_file_transfer, \
+    alert_type_kafka_outgoing, alert_type_llm, alert_type_mcp, alert_type_mllp_channel, alert_type_mllp_outgoing, \
+    alert_type_rest, alert_type_soap, get_defaults
 from zato.common.alerting.seed.rules_queue import DLQ_Threshold_Value, Queue_Depth_Threshold_Value
 
 # ################################################################################################################################
@@ -52,8 +53,9 @@ def _lines_by_name(config:'anydict') -> 'anydict':
 
 class TestQueueSection:
 
-    def test_the_four_types_are_the_ones_that_can_use_a_queue(self) -> 'None':
-        assert sorted(queue_alert_types) == sorted([alert_type_rest, alert_type_soap, alert_type_fhir, alert_type_mllp_outgoing])
+    def test_the_five_types_are_the_ones_that_can_use_a_queue(self) -> 'None':
+        expected = [alert_type_rest, alert_type_soap, alert_type_fhir, alert_type_mllp_outgoing, alert_type_kafka_outgoing]
+        assert sorted(queue_alert_types) == sorted(expected)
 
 # ################################################################################################################################
 

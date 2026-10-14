@@ -6,8 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The one place that turns the ssl_* keys of an SQL connection configuration,
-# e.g. the [odb] stanza of server.conf or the options of an outgoing SQL connection,
+# The one place that turns the ssl_* keys of an outgoing SQL connection configuration
 # into the driver-level SSL connect arguments that PyMySQL and pg8000 accept.
 
 # Zato
@@ -102,40 +101,6 @@ def get_ssl_connect_args(config:'any_', engine_name:'str') -> 'stranydict':
 
     # .. and the MySQL and PostgreSQL drivers accept the same SSL context under the same keyword.
     out['ssl'] = build_ssl_context_from_values(values)
-
-    return out
-
-# ################################################################################################################################
-
-def get_psycopg2_ssl_connect_args(config:'any_') -> 'stranydict':
-    """ Returns SSL connect arguments in the libpq format that psycopg2 accepts -
-    the Dashboard connects to PostgreSQL through psycopg2 rather than pg8000.
-    """
-
-    # Our response to produce
-    out:'stranydict' = {}
-
-    # Read the ssl_* keys with the defaults filled in ..
-    values = get_ssl_values_from_config(config)
-
-    # .. SSL is off unless requested explicitly ..
-    if not values['ssl']:
-        return out
-
-    # .. the server certificate and its hostname are verified unless turned off explicitly ..
-    if values['ssl_verify']:
-        out['sslmode'] = 'verify-full'
-    else:
-        out['sslmode'] = 'require'
-
-    # .. the server certificate is verified against the given CA ..
-    if ca_file := values['ssl_ca_file']:
-        out['sslrootcert'] = ca_file
-
-    # .. and a client certificate is only needed for mutual TLS.
-    if cert_file := values['ssl_cert_file']:
-        out['sslcert'] = cert_file
-        out['sslkey']  = values['ssl_key_file']
 
     return out
 

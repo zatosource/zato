@@ -72,10 +72,6 @@ def _set_up_django(config_dir:'str') -> 'None':
         'config_dir': config_dir,
         'db_type': 'sqlite',
         'DATABASE_NAME': ':memory:',
-        'DATABASE_USER': '',
-        'DATABASE_PASSWORD': '',
-        'DATABASE_HOST': '',
-        'DATABASE_PORT': '',
         'DATABASE_OPTIONS': {},
     }
 

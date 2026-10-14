@@ -241,6 +241,11 @@ class ConfigLoader:
 
             channel['name'] = resolve_name(channel['name'])
 
+            # A channel without a service of its own comes back with the outer-joined column
+            # set to NULL - the runtime spells that as an empty string.
+            if channel['service_name'] is None:
+                channel['service_name'] = ''
+
             # The Accept value a channel names is an opaque attribute, so a channel saved without one
             # arrives without the field itself - the dispatcher reads it alongside the match target
             # built out of it here, so both find the same thing.
@@ -341,21 +346,6 @@ class ConfigLoader:
         odb_data.token = parallel_server.fs_server_config.main.token
 
         odb_data.is_odb = True
-
-        if odb_data.engine != 'sqlite':
-            odb_data.password = parallel_server.odb_data['password']
-            odb_data.host = parallel_server.odb_data['host']
-            odb_data.port = parallel_server.odb_data['port']
-            odb_data.engine = parallel_server.odb_data['engine']
-            odb_data.pool_size = parallel_server.odb_data['pool_size']
-            odb_data.username = parallel_server.odb_data['username']
-
-            # SSL/TLS configuration - configurations written by older releases may not carry these keys at all.
-            odb_data.ssl           = parallel_server.odb_data.get('ssl', '')
-            odb_data.ssl_ca_file   = parallel_server.odb_data.get('ssl_ca_file', '')
-            odb_data.ssl_cert_file = parallel_server.odb_data.get('ssl_cert_file', '')
-            odb_data.ssl_key_file  = parallel_server.odb_data.get('ssl_key_file', '')
-            odb_data.ssl_verify    = parallel_server.odb_data.get('ssl_verify', '')
 
         # Note that we don't read is_active off of anywhere - ODB always must
         # be active and it's not a regular connection pool anyway.

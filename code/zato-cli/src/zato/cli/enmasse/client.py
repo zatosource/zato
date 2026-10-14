@@ -83,7 +83,7 @@ def get_session_from_server_dir(server_dir:'str', stdin_data:'strnone'=None) -> 
     )
 
     # Create an ODB session from server configuration ..
-    session = get_odb_session_from_server_config(config, crypto_manager, False)
+    session = get_odb_session_from_server_config(config)
 
     # .. the importers encrypt and decrypt secrets through the session they receive,
     # .. and the custom connector importer asks the server of this directory about its connector types.

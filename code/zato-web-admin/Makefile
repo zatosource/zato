@@ -1,5 +1,5 @@
 
-.PHONY: build
+.PHONY: build test ruff
 MAKEFLAGS += --silent
 
 Zato_Python_Dir=$(CURDIR)/../bin

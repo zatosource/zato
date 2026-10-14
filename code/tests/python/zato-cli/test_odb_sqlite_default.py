@@ -211,6 +211,41 @@ class TestODBSQLiteDefault(TestCase):
 
 # ################################################################################################################################
 
+    def test_server_conf_odb_stanza_has_sqlite_keys_only(self):
+        from zato.common.util.config import get_config_object
+        repo_location = os.path.join(cast_('any_', self.server_dir), 'config', 'repo')
+        config = cast_('anydict', get_config_object(repo_location, 'server.conf'))
+        odb = config['odb']
+
+        self.assertEqual(sorted(odb.keys()), ['db_name', 'engine', 'extra'])
+        self.assertEqual(odb['db_name'], os.path.join(cast_('any_', _tmpdir), 'zato.db'))
+
+# ################################################################################################################################
+
+    def test_secrets_conf_has_no_odb_password(self):
+        from zato.common.util.config import get_config_object
+        repo_location = os.path.join(cast_('any_', self.server_dir), 'config', 'repo')
+        secrets = cast_('anydict', get_config_object(repo_location, 'secrets.conf'))
+
+        self.assertNotIn('server_conf.odb.password', secrets['zato'])
+
+# ################################################################################################################################
+
+    def test_web_admin_conf_points_to_sqlite_odb(self):
+        import json
+        web_admin_conf = os.path.join(cast_('any_', _tmpdir), 'web-admin', 'config', 'repo', 'web-admin.conf')
+        with open(web_admin_conf) as f:
+            config = json.load(f)
+
+        self.assertEqual(config['db_type'], 'sqlite')
+        self.assertEqual(config['DATABASE_NAME'], os.path.join(cast_('any_', _tmpdir), 'zato.db'))
+
+        for key in config:
+            if key.startswith('DATABASE_'):
+                self.assertIn(key, ('DATABASE_NAME', 'DATABASE_OPTIONS'), f'Unexpected key in web-admin.conf: {key}')
+
+# ################################################################################################################################
+
     def test_sqlite_db_has_tables(self):
         db_path = os.path.join(cast_('any_', _tmpdir), 'zato.db')
         conn = sqlite3.connect(db_path)

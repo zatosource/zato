@@ -28,7 +28,7 @@ if [[ "$SKIP_OS" != "y" ]]; then
 
     sudo apt-get install -y \
         build-essential cmake curl git haproxy \
-        libffi-dev libkrb5-dev libldap2-dev libpq-dev \
+        libffi-dev libkrb5-dev libldap2-dev \
         libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
         lsb-release ${PYTHON_DEPENDENCIES}
 

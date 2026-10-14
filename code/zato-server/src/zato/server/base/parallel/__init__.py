@@ -888,14 +888,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             raise Exception('Server does not exist in the ODB')
 
         # Set up the server-wide default lock manager
-        odb_data:'bunch_' = self.config.odb_data
-
         if is_posix:
-            backend_type:'str' = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+            backend_type:'str' = 'fcntl'
         else:
             backend_type = 'zato-pass-through'
 
-        self.zato_lock_manager = LockManager(backend_type, 'zato', self.odb.session)
+        self.zato_lock_manager = LockManager(backend_type, 'zato')
 
         # Just to make sure distributed locking is configured correctly
         with self.zato_lock_manager(uuid4().hex):

@@ -31,7 +31,7 @@ os.makedirs(_repo_directory)
 
 _database_path = os.path.join(_work_directory, 'web-admin.db')
 
-_default_database = {'NAME': _database_path, 'USER': '', 'PASSWORD': '', 'HOST': '', 'PORT': ''}
+_default_database = {'NAME': _database_path}
 
 # The settings module receives these values dynamically, the way update_globals injects them.
 _settings:'any_' = cast_('any_', zato_settings)

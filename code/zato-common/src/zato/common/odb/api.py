@@ -23,7 +23,7 @@ from zato.common.ext.bunch import Bunch, bunchify
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -1265,11 +1265,9 @@ class ODBManager(SessionWrapper):
 
         try:
             session.execute(DeployedServiceInsert().values(data))
-        except OperationalError as e:
-            if 'duplicate key value violates unique constraint' in str(e):
-                pass
-            else:
-                raise
+        except IntegrityError:
+            # Another server of the same environment may have already inserted these rows
+            logger.debug('Ignoring IntegrityError with `%s`', data) # type: ignore
 
 # ################################################################################################################################
 

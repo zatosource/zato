@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import time
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.typing_ import cast_
@@ -43,8 +46,11 @@ _Console_Noise_Patterns = [
 ]
 
 # The connections point at an address nothing listens on, so that the server's handshake loop
-# fails at once and makes no request to Discord itself
+# fails at once and makes no request to Discord itself ..
 _Test_Address = 'http://127.0.0.1:1'
+
+# .. which the server reports with this warning after each attempt, so the log check expects it.
+_Handshake_Failed_Log = 'Discord gateway handshake failed'
 
 # The default channel of the test connections and the one an edit changes it to
 _Default_Channel = '200000000000000001'
@@ -164,6 +170,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.expect_log_errors(_Handshake_Failed_Log)
 class TestChatDiscordLifecycle:
     """ Tests for console errors, HTTP 500s, full CRUD and Unicode names.
     """

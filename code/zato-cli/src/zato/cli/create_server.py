@@ -74,20 +74,9 @@ cert_location=zato-server-cert.pem
 ca_certs_location=zato-server-ca-certs.pem
 
 [odb]
-db_name={{odb_db_name}}
+db_name={{odb_path}}
 engine={{odb_engine}}
 extra=echo=False
-host={{odb_host}}
-port={{odb_port}}
-password=zato+secret://zato.server_conf.odb.password
-pool_size={{odb_pool_size}}
-ssl={{odb_ssl}}
-ssl_ca_file={{odb_ssl_ca_file}}
-ssl_cert_file={{odb_ssl_cert_file}}
-ssl_key_file={{odb_ssl_key_file}}
-ssl_verify={{odb_ssl_verify}}
-username={{odb_user}}
-use_async_driver=True
 
 [scheduler]
 scheduler_host={{scheduler_host}}
@@ -246,12 +235,7 @@ key1={keys_key1}
 well_known_data={zato_well_known_data} # Pi number
 server_conf.redis.password={zato_redis_password}
 server_conf.main.token={zato_main_token}
-server_conf.odb.password={zato_odb_password}
 """
-
-# ################################################################################################################################
-
-default_odb_pool_size = 60
 
 # ################################################################################################################################
 
@@ -524,10 +508,6 @@ class Create(ZatoCommand):
             if show_output:
                 self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
 
-            odb_engine=args.odb_type
-            if odb_engine.startswith('postgresql'):
-                odb_engine = 'postgresql+pg8000'
-
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open_w(server_conf_loc)
 
@@ -546,17 +526,8 @@ class Create(ZatoCommand):
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
                     num_threads=threads,
-                    odb_db_name=args.odb_db_name or args.sqlite_path,
-                    odb_engine=odb_engine,
-                    odb_host=args.odb_host or '',
-                    odb_port=args.odb_port or '',
-                    odb_pool_size=default_odb_pool_size,
-                    odb_ssl=args.odb_ssl or False,
-                    odb_ssl_ca_file=args.odb_ssl_ca_file or '',
-                    odb_ssl_cert_file=args.odb_ssl_cert_file or '',
-                    odb_ssl_key_file=args.odb_ssl_key_file or '',
-                    odb_ssl_verify=args.odb_ssl_verify or True,
-                    odb_user=args.odb_user or '',
+                    odb_path=args.odb_path,
+                    odb_engine=args.odb_type,
                     redis_host=self.get_arg('redis_host'),
                     redis_port=self.get_arg('redis_port'),
                     initial_cluster_name=args.cluster_name,
@@ -634,11 +605,6 @@ class Create(ZatoCommand):
             redis_password = fernet1.encrypt(redis_password)
             redis_password = redis_password.decode('utf8')
 
-            odb_password = self.get_arg('odb_password') or ''
-            odb_password = odb_password.encode('utf8')
-            odb_password = fernet1.encrypt(odb_password)
-            odb_password = odb_password.decode('utf8')
-
             zato_well_known_data = fernet1.encrypt(well_known_data.encode('utf8'))
             zato_well_known_data = zato_well_known_data.decode('utf8')
 
@@ -653,7 +619,6 @@ class Create(ZatoCommand):
                 zato_well_known_data=zato_well_known_data,
                 zato_redis_password=redis_password,
                 zato_main_token=zato_main_token,
-                zato_odb_password=odb_password,
             ))
             secrets_conf.close()
 

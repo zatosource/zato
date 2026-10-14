@@ -183,7 +183,8 @@ class TestMllpOutgoing:
         assert 'Connections kept open: 4' in section
         assert 'Ack wait: 5s' in section
         assert 'Retries: 7, waiting from 2s, up to 120s in total' in section
-        assert 'Queue: on' in section
+        assert 'Use queue: on' in section
+        assert 'Use DLQ: on' in section
         assert 'Sending pauses: at 50% failures in 60s, for 90s' in section
         assert 'Audit log: on' in section
 

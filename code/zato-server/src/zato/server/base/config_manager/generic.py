@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import nullcontext
+from traceback import format_exc
 
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -242,9 +243,18 @@ class Generic(ConfigManagerImpl):
         replace_query_string_items_in_dict(self.server, item_dict)
 
         config_attr[msg_name] = item_dict
-        conn_wrapper = wrapper(item_dict, self.server)
-        config_attr[msg_name].conn = conn_wrapper
-        config_attr[msg_name].conn.build_wrapper()
+
+        try:
+            conn_wrapper = wrapper(item_dict, self.server)
+            config_attr[msg_name].conn = conn_wrapper
+            config_attr[msg_name].conn.build_wrapper()
+        except Exception:
+            if raise_exc:
+                raise
+            else:
+                # At startup, one connection that cannot be built must not keep the server from starting
+                self.logger.warning('Could not build generic connection `%s` (%s), e:`%s`',
+                    msg_name, item.type_, format_exc())
 
 # ################################################################################################################################
 

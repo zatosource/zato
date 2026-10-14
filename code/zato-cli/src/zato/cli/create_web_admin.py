@@ -26,15 +26,6 @@ config_template = """{{
   "ALLOWED_HOSTS": ["*"],
 
   "DATABASE_NAME": "{DATABASE_NAME}",
-  "DATABASE_USER": "{DATABASE_USER}",
-  "DATABASE_PASSWORD": "{DATABASE_PASSWORD}",
-  "DATABASE_HOST": "{DATABASE_HOST}",
-  "DATABASE_PORT": "{DATABASE_PORT}",
-  "DATABASE_SSL": "{DATABASE_SSL}",
-  "DATABASE_SSL_CA_FILE": "{DATABASE_SSL_CA_FILE}",
-  "DATABASE_SSL_CERT_FILE": "{DATABASE_SSL_CERT_FILE}",
-  "DATABASE_SSL_KEY_FILE": "{DATABASE_SSL_KEY_FILE}",
-  "DATABASE_SSL_VERIFY": "{DATABASE_SSL_VERIFY}",
   "DATABASE_OPTIONS": {{"timeout": 30}},
 
   "TIME_ZONE": "America/New_York",
@@ -85,10 +76,6 @@ class Create(ZatoCommand):
         return True
 
     def execute(self, args, show_output=True, admin_password=None, needs_admin_created_flag=False):
-
-        # We need it here to make Django accept PyMySQL as if it was MySQLdb.
-        import pymysql
-        pymysql.install_as_MySQLdb()
 
         # stdlib
         import os
@@ -149,9 +136,6 @@ class Create(ZatoCommand):
         if isinstance(admin_invoke_password, unicode):
             admin_invoke_password = admin_invoke_password.encode('utf8')
 
-        odb_password = args.odb_password or ''
-        odb_password = odb_password.encode('utf8')
-
         config = {
             'host': web_admin_host,
             'port': web_admin_port,
@@ -159,16 +143,7 @@ class Create(ZatoCommand):
             'log_config': 'logging.conf',
             'zato_secret_key':zato_secret_key,
             'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
-            'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
-            'DATABASE_USER': args.odb_user or '',
-            'DATABASE_PASSWORD': cm.encrypt(odb_password),
-            'DATABASE_HOST': args.odb_host or '',
-            'DATABASE_PORT': args.odb_port or '',
-            'DATABASE_SSL': args.odb_ssl or False,
-            'DATABASE_SSL_CA_FILE': args.odb_ssl_ca_file or '',
-            'DATABASE_SSL_CERT_FILE': args.odb_ssl_cert_file or '',
-            'DATABASE_SSL_KEY_FILE': args.odb_ssl_key_file or '',
-            'DATABASE_SSL_VERIFY': args.odb_ssl_verify or True,
+            'DATABASE_NAME': args.odb_path,
             'SITE_ID': django_site_id,
             'SECRET_KEY': cm.encrypt(django_secret_key),
             'ADMIN_INVOKE_NAME':ServiceConst.API_Admin_Invoke_Username,
@@ -181,7 +156,7 @@ class Create(ZatoCommand):
         if is_windows:
             config['DATABASE_NAME'] = config['DATABASE_NAME'].replace('\\', '\\\\')
 
-        for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
+        for name in 'zato_secret_key', 'well_known_data', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
             config[name] = config[name].decode('utf8')
 
         logging_conf_contents = get_logging_conf_contents()
@@ -223,7 +198,7 @@ class Create(ZatoCommand):
             user.save()
 
         except (CommandError, IntegrityError):
-            # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
+            # This will happen if user 'admin' already exists
             admin_created = False
             connection._rollback()
 

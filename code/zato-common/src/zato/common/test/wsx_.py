@@ -38,7 +38,7 @@ ExtraProperties = WEB_SOCKET.ExtraProperties
 class _ParallelServer:
 
     def __init__(self) -> 'None':
-        self.zato_lock_manager = LockManager('zato-pass-through', 'zato', cast_('any_', None))
+        self.zato_lock_manager = LockManager('zato-pass-through', 'zato')
         self.wsx_connection_pool_wrapper = ConnectionPoolWrapper(cast_('any_', self), GENERIC.CONNECTION.TYPE.OUTCONN_WSX)
 
     def is_active_outconn_wsx(self, _ignored_conn_id:'str') -> 'bool':

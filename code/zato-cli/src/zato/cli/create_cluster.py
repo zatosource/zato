@@ -59,8 +59,7 @@ class Create(ZatoCommand):
             cluster.name = args.cluster_name
             cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), utcnow().isoformat())
 
-            for name in('odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name'):
-                setattr(cluster, name, getattr(args, name))
+            cluster.odb_type = args.odb_type
             session.add(cluster)
 
             # With a cluster object in place, we can construct the ODB post-processor

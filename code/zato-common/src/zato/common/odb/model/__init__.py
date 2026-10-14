@@ -156,11 +156,6 @@ class Cluster(Base):
     name = Column(String(200), unique=True, nullable=False)
     description = Column(String(1000), nullable=True)
     odb_type = Column(String(30), nullable=False)
-    odb_host = Column(String(200), nullable=True)
-    odb_port = Column(Integer(), nullable=True)
-    odb_user = Column(String(200), nullable=True)
-    odb_db_name = Column(String(200), nullable=True)
-    odb_schema = Column(String(200), nullable=True)
     broker_host = Column(String(200), nullable=False, default='broker-host-unused')
     broker_port = Column(Integer(), nullable=False, default=998877)
     cw_srv_id = Column(Integer(), nullable=True)
@@ -169,17 +164,12 @@ class Cluster(Base):
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
-    def __init__(self, id=None, name=None, description=None, odb_type=None, odb_host=None, odb_port=None, odb_user=None,
-            odb_db_name=None, odb_schema=None, broker_host=None, broker_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
+    def __init__(self, id=None, name=None, description=None, odb_type=None, broker_host=None, broker_port=None, cw_srv_id=None,
+            cw_srv_keep_alive_dt=None):
         self.id = id
         self.name = name
         self.description = description
         self.odb_type = odb_type
-        self.odb_host = odb_host
-        self.odb_port = odb_port
-        self.odb_user = odb_user
-        self.odb_db_name = odb_db_name
-        self.odb_schema = odb_schema
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.cw_srv_id = cw_srv_id
@@ -995,18 +985,12 @@ class GenericObject(Base):
     """
     __tablename__ = 'generic_object'
     __table_args__ = (
-        Index('gen_obj_uq_name_type', 'name', 'type_', 'cluster_id', unique=True,
-              mysql_length={'name':191, 'type_':191}),
-        Index('gen_obj_par_id', 'cluster_id', 'parent_id', 'parent_type', unique=False,
-              mysql_length={'parent_id':191, 'parent_type':191}),
-        Index('gen_obj_cat_id', 'cluster_id', 'category_id', unique=False,
-              mysql_length={'category_id':191}),
-        Index('gen_obj_cat_subcat_id', 'cluster_id', 'category_id', 'subcategory_id', unique=False,
-              mysql_length={'category_id':191, 'subcategory_id':191}),
-        Index('gen_obj_cat_name', 'cluster_id', 'category_name', unique=False,
-              mysql_length={'category_name':191}),
-        Index('gen_obj_cat_subc_name', 'cluster_id', 'category_name', 'subcategory_name', unique=False,
-              mysql_length={'category_name':191, 'subcategory_name':191}),
+        Index('gen_obj_uq_name_type', 'name', 'type_', 'cluster_id', unique=True),
+        Index('gen_obj_par_id', 'cluster_id', 'parent_id', 'parent_type', unique=False),
+        Index('gen_obj_cat_id', 'cluster_id', 'category_id', unique=False),
+        Index('gen_obj_cat_subcat_id', 'cluster_id', 'category_id', 'subcategory_id', unique=False),
+        Index('gen_obj_cat_name', 'cluster_id', 'category_name', unique=False),
+        Index('gen_obj_cat_subc_name', 'cluster_id', 'category_name', 'subcategory_name', unique=False),
         Index('gen_obj_par_obj_id', 'cluster_id', 'parent_object_id', unique=False),
     {})
 

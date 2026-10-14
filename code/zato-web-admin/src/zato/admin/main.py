@@ -18,13 +18,6 @@ else:
 import logging
 import os
 
-# MySQL
-try:
-    import pymysql
-    pymysql.install_as_MySQLdb()
-except ImportError:
-    pass
-
 # Django
 import django
 from django.core.management import call_command, execute_from_command_line

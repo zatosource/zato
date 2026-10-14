@@ -97,7 +97,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_snowflake, engine_def_sqlite, MISC, \
-     Secret_Shadow, IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
+     Secret_Shadow, IO, TRACE1, zato_no_op_marker
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -1241,21 +1241,7 @@ def get_http_json_channel(name, service, cluster, security):
 # ################################################################################################################################
 
 def get_engine(args):
-
-    # Imported here to avoid circular imports
-    from zato.common.odb.ssl_config import get_ssl_connect_args
-
-    # SSL/TLS configuration built out of the odb_ssl_* attributes, if any were given on input
-    ssl_config = {
-        'ssl':           getattr(args, 'odb_ssl', ''),
-        'ssl_ca_file':   getattr(args, 'odb_ssl_ca_file', ''),
-        'ssl_cert_file': getattr(args, 'odb_ssl_cert_file', ''),
-        'ssl_key_file':  getattr(args, 'odb_ssl_key_file', ''),
-        'ssl_verify':    getattr(args, 'odb_ssl_verify', ''),
-    }
-    connect_args = get_ssl_connect_args(ssl_config, getattr(args, 'odb_type', ''))
-
-    return sa.create_engine(get_engine_url(args), connect_args=connect_args)
+    return sa.create_engine(get_engine_url(args))
 
 # ################################################################################################################################
 
@@ -1277,26 +1263,11 @@ def get_crypto_manager_from_server_config(config, repo_dir):
 
 # ################################################################################################################################
 
-def get_odb_session_from_server_config(config, cm, odb_password_encrypted):
+def get_odb_session_from_server_config(config):
 
     engine_args = Bunch()
-    engine_args.odb_type = config.odb.engine
-    engine_args.odb_user = config.odb.username
-    engine_args.odb_host = config.odb.host
-    engine_args.odb_port = config.odb.port
-    engine_args.odb_db_name = config.odb.db_name
-
-    # SSL/TLS configuration - configurations written by older releases may not carry these keys at all.
-    engine_args.odb_ssl           = config.odb.get('ssl', '')
-    engine_args.odb_ssl_ca_file   = config.odb.get('ssl_ca_file', '')
-    engine_args.odb_ssl_cert_file = config.odb.get('ssl_cert_file', '')
-    engine_args.odb_ssl_key_file  = config.odb.get('ssl_key_file', '')
-    engine_args.odb_ssl_verify    = config.odb.get('ssl_verify', '')
-
-    if odb_password_encrypted:
-        engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
-    else:
-        engine_args.odb_password = config.odb.password
+    engine_args.engine = config.odb.engine
+    engine_args.sqlite_path = config.odb.db_name
 
     return get_session(get_engine(engine_args))
 
@@ -1309,7 +1280,7 @@ def get_odb_session_from_component_dir(component_dir, config_file, CryptoManager
     secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
     config = get_config(repo_dir, config_file, crypto_manager=cm, secrets_conf=secrets_conf)
 
-    return get_odb_session_from_server_config(config, None, False)
+    return get_odb_session_from_server_config(config)
 
 # ################################################################################################################################
 
@@ -1326,13 +1297,12 @@ def get_server_client_auth(
     config,
     repo_dir,
     cm,
-    odb_password_encrypted,
     *,
     url_path=None,
 ) -> 'any_':
     """ Returns credentials to authenticate with against Zato's own invocation channels.
     """
-    session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
+    session = get_odb_session_from_server_config(config)
 
     with closing(session) as session:
 
@@ -1387,44 +1357,11 @@ def get_repo_dir_from_component_dir(component_dir:'str') -> 'str':
 
 # ################################################################################################################################
 
-django_sa_mappings = {
-    'NAME': 'db_name',
-    'HOST': 'host',
-    'PORT': 'port',
-    'USER': 'username',
-    'PASSWORD': 'password',
-    'odb_type': 'engine',
-    'db_type': 'engine',
-}
-
-cli_sa_mappings = {
-    'odb_db_name': 'db_name',
-    'odb_host': 'host',
-    'odb_port': 'port',
-    'odb_user': 'username',
-    'odb_password': 'password',
-    'odb_type': 'engine',
-}
-
-# ################################################################################################################################
-
 def get_engine_url(args):
     attrs = {}
-    is_sqlite = False
-    is_django = 'NAME' in args
     has_get = getattr(args, 'get', False)
 
-    odb_type = getattr(args, 'odb_type', None)
-    if odb_type:
-        is_sqlite = odb_type == 'sqlite'
-    else:
-        is_sqlite = args.get('engine') == 'sqlite' or args.get('db_type') == 'sqlite'
-
-    names = (
-        'engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type', 'sqlite_path', 'odb_type',
-        'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
-        'PASSWORD', 'PORT'
-    )
+    names = ('engine', 'username', 'password', 'host', 'port', 'db_name', 'sqlite_path')
 
     for name in names:
         if has_get:
@@ -1432,24 +1369,10 @@ def get_engine_url(args):
         else:
             attrs[name] = getattr(args, name, '')
 
-    # Re-map Django params into SQLAlchemy params
-    if is_django:
-        for name in django_sa_mappings:
-            value = attrs.get(name, ZATO_NOT_GIVEN)
-            if value != ZATO_NOT_GIVEN:
-                if not value and (name in 'db_type', 'odb_type'):
-                    continue
-                attrs[django_sa_mappings[name]] = value
+    is_sqlite = attrs['engine'] == 'sqlite'
 
-    # Zato CLI to SQLAlchemy
-    if not attrs.get('engine'):
-        for name in cli_sa_mappings:
-            value = attrs.get(name, ZATO_NOT_GIVEN)
-            if value != ZATO_NOT_GIVEN:
-                attrs[cli_sa_mappings[name]] = value
-
-    # Re-map server ODB params into SQLAlchemy params
-    if attrs['engine'] == 'sqlite':
+    # An SQLite path may arrive under either of the two names
+    if is_sqlite:
         db_name = attrs.get('db_name')
         sqlite_path = attrs.get('sqlite_path')
 

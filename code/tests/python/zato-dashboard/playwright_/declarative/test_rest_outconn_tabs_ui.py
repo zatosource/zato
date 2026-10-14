@@ -46,8 +46,9 @@ _Channel_Page_Url = '/zato/http-soap/?cluster=1&connection=channel&transport=pla
 # The rows of the query string parameters in the create dialog
 _Query_Rows_Selector = '#request-query_string-rows-create .request-param-row'
 
-# The tabs of the declarative invocation profile, which outgoing connections have and channels do not
-_Outgoing_Only_Tabs = ('config', 'scheduler', 'delivery', 'request', 'response', 'callback')
+# The tabs of the declarative invocation profile, which outgoing connections have and channels do not.
+# The Delivery tab is not among them - REST channels have a queue of their own and carry that tab too.
+_Outgoing_Only_Tabs = ('config', 'scheduler', 'request', 'response', 'callback')
 
 # ################################################################################################################################
 # ################################################################################################################################
