@@ -33,7 +33,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = ('id',) + _fields_required
     output_optional = _fields_optional
     output_repeated = True

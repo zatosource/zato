@@ -29,7 +29,7 @@ class Index(_Index):
     output_class = SlackConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active'
     output_optional = generic_attrs
     output_repeated = True

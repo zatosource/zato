@@ -38,7 +38,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'address'
     output_optional = ('is_tls', 'tls_ca_certs_file', 'proto_path', 'stub_module', 'stub_class', 'ping_timeout',
         'max_send_message_size', 'max_recv_message_size', 'security_id', 'security_name', 'auth_type') + generic_attrs

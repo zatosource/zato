@@ -25,7 +25,7 @@ class Index(_Index):
     output_class = AtlassianConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'is_cloud', 'api_version', 'address', 'username'
     output_optional = generic_attrs
     output_repeated = True

@@ -34,7 +34,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = ('id', 'name', 'is_active', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list',
         'pool_size', 'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy',
         'username', 'auth_type')

@@ -51,7 +51,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active'
     output_optional = ('address', 'model', 'pool_size', 'timeout', 'max_tokens', 'max_history_turns', 'chat_expiry') + \
         _alert_field_names

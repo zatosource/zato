@@ -29,7 +29,7 @@ class Index(_Index):
     output_class = SalesforceConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'username', 'api_version', \
         'password', 'consumer_key', 'consumer_secret'
     output_optional = generic_attrs

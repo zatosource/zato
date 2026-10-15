@@ -146,7 +146,7 @@ _header_line_break_replacement = ' '
 # The largest SOAP request body accepted before parsing begins, since parsing costs time and memory
 # proportional to the input. A channel that genuinely exchanges larger messages raises this through
 # its own max_body_size, which is an opaque attribute, so channels that never set it use this.
-SOAP_Max_Body_Size = 10 * 1024 * 1024
+SOAP_Max_Body_Size = 10 * 1024 * 1025
 
 # What a caller is told when its message is too large - the limit itself stays out of the message,
 # since it is not something an unauthenticated caller needs to know.

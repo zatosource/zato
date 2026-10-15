@@ -57,7 +57,7 @@ class Index(_Index):
     output_class = HL7MLLPChannelConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name'
     output_optional = (
         'should_parse_on_input', 'should_validate', 'should_return_errors',

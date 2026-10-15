@@ -29,7 +29,7 @@ class Index(_Index):
     output_class = Microsoft365ConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'client_id', 'scopes', 'tenant_id'
     output_optional = generic_attrs
     output_repeated = True

@@ -35,7 +35,7 @@ class Index(_Index):
     output_class = DiscordConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'address', 'timeout'
     output_optional = ('default_channel_id',) + generic_attrs
     output_repeated = True

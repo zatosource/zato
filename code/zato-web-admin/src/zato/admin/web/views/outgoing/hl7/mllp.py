@@ -86,7 +86,7 @@ class Index(_Index):
     output_class = OutgoingMLLPConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address', 'pool_size'
     output_optional = (
         'should_log_messages', 'logging_level',

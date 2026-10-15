@@ -56,7 +56,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'address', 'group_id', 'service'
     output_optional = ('topic', 'security_name', 'auth_type') + _ssl_field_names + _security_field_names + \
         _consumer.FieldList + _retry_field_names + _delivery_field_names

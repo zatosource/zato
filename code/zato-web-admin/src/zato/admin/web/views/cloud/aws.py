@@ -31,7 +31,7 @@ class Index(_Index):
     output_class = AWSConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active'
     output_optional = generic_attrs + ('region', 'access_key_id', 'endpoint_url')
     output_repeated = True

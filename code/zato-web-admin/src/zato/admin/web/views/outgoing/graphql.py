@@ -35,7 +35,7 @@ class Index(_Index):
     output_class = GraphQLConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
         'security_name'
     output_optional = ('extra', 'default_query_timeout', 'auth_type') + generic_attrs

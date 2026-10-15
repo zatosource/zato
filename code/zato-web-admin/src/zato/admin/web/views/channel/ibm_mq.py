@@ -32,7 +32,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'address', 'queue_manager', 'mq_channel_name', 'queue', 'service'
     output_optional = 'username', 'ssl', 'cipher_spec', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', 'remove_jms_headers'
     output_repeated = True

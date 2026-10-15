@@ -69,7 +69,7 @@ class Index(_Index):
     output_class = OutgoingFHIRConfigObject
     paginate = True
 
-    input_required = 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', \
         'pool_size', 'security_name'
     output_optional = ('extra',) + generic_attrs + _health_check_field_names + _retry_field_names + \
