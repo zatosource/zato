@@ -5,7 +5,10 @@
 // comes from the wizard kit, configured here. This file holds only what
 // is MCP's own: the required fields, the help texts, the wizard-wide
 // overview and the badge picker inputs written on save. The micro-forms
-// live in forms.js and the summaries plus the review step in review.js.
+// live in forms.js, the hook services in hooks.js, the PII and data masking
+// section in pii.js, data masking in data-masking.js, masking-sets.js,
+// masking-popover.js and masking-filters.js, and the summaries plus the
+// review step in review.js.
 
 (function($) {
 
@@ -33,9 +36,10 @@ wizard.config_own = {
         security: 'Security',
         shaping: 'Response shaping',
         alerts: 'Alerts',
+        hooks: 'Hook services',
         gatewayOptions: 'Gateway options',
         compaction: 'Compaction',
-        pii: 'PII removal',
+        pii: 'PII and data masking',
         contentSafety: 'Content safety'
     },
 
@@ -129,10 +133,14 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         var action = wizard.state.isEdit ? 'edit' : 'create';
         var itemId = wizard.state.isEdit ? wizard.state.itemId : null;
 
-        // The size caps line, the Alerts line and the option cards of step 2 ..
+        // The size caps line, the Alerts line, the hook services, the option cards of step 2
+        // and the PII and data masking section with its data masking line ..
         wizard.forms.initRows();
         wizard.alerts.init();
+        wizard.hooks.init();
         wizard.review.initOptionCards();
+        wizard.dataMasking.init();
+        wizard.pii.init();
 
         // .. the PII multi-selects, the URL allow list chips and the master
         // toggles enabling the safeguard fields under them - the same wiring
@@ -325,9 +333,19 @@ wizard.helpDescriptions = function() {
 
     $.extend(out, wizard.alerts.descriptions());
 
-    // .. and the options folded away under it.
+    // .. the two hooks ..
+    out['mcp-wizard-slot-request-hook-chip'] = 'The service invoked each time the gateway receives an MCP request, ' +
+        'before the request is processed. It is independent of the services exposed as tools.';
+    out['mcp-wizard-slot-response-hook-chip'] = 'The service invoked each time the gateway is about to return ' +
+        'an MCP response. It is independent of the services exposed as tools.';
+
+    // .. the options folded away under the More options line ..
     out['mcp-wizard-edit-options'] = 'Input validation and the audit log, the compaction of responses, ' +
-        'PII removal and content safety. The line says what is currently set.';
+        'the hook services and content safety. The line says what is currently set.';
+
+    // .. and the fields the PII and data masking section masks in every response.
+    out[wizard.dataMasking.config.editLinkId] = 'Fields masked in every tool response, whatever the PII detectors find.';
+    out[wizard.forms.inputId(wizard.maskingPopover.config.customInputField)] = 'Field names masked in addition to the ones selected, one per line.';
 
     return out;
 };

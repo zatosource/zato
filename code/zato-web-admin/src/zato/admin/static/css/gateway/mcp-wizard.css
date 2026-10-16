@@ -5,8 +5,10 @@
  * strip, the decision lines, the review, the footer and the popover
  * micro-forms - comes from shared/wizard-kit.css and
  * shared/decision-lines.css. This file holds only what is MCP's own:
- * the badge picker sections of step 1 and the field grids inside the
- * PII and content safety cards.
+ * the badge picker sections of step 1 and the field grids of the PII and
+ * data masking section and the content safety card. The data masking
+ * line is styled in gateway/mcp-wizard-masking.css and the section's own
+ * line and surface in gateway/mcp-wizard-pii.css.
  */
 
 /* ------------------------------------------------------------ */
@@ -43,6 +45,27 @@
    longest label on one line inside it */
 #mcp-wizard .decision-line-label {
     white-space: nowrap;
+}
+
+/* The Request and Response lines of the hook services card are one grid,
+   whose label column is as wide as the longer of the two words, so each
+   chip follows its label at the gap the field grids of the cards keep */
+#mcp-wizard-hooks-body .decision-lines {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--decision-lines-gap) var(--mcp-wizard-control-gap);
+}
+
+/* A subgrid's own gap is what it uses, and a decision line has one of its own */
+#mcp-wizard-hooks-body .decision-line {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    column-gap: var(--mcp-wizard-control-gap);
+}
+
+#mcp-wizard-hooks-body .decision-line-label {
+    width: auto;
 }
 
 /* The three lines of step 2 read as one evenly spaced list, though the
@@ -296,7 +319,7 @@
 /* MCP wizard - PII multi-selects                                */
 /* ------------------------------------------------------------ */
 
-/* The selects take the card's whole width, past their labels */
+/* The selects take the section's whole width, past their labels */
 .mcp-wizard-pii-selects {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);

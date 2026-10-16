@@ -42,6 +42,10 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/tree.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-popover.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-filters.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-pii.css">
 {% endblock %}
 
 {% block dashboard_domain_js %}
@@ -56,6 +60,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/fields.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/resize.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/micro-forms/chips.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/decision-lines.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/time-slots-fields.js"></script>
@@ -70,6 +75,12 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/tool-sources.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/hooks.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-sets.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/data-masking.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-popover.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-filters.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/pii.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
 
 <script nonce="{{ CSP_NONCE }}">
@@ -239,11 +250,11 @@ $(document).ready(function() {
 
                 </div>
 
-                <!-- Step 2 - response shaping and the folded options -->
+                <!-- Step 2 - response shaping, PII and data masking, and the folded options -->
                 <div class="wizard-step-body" id="mcp-wizard-step-body-1" hidden>
 
                     <div class="wizard-section">
-                        <div class="decision-lines">
+                        <div class="decision-lines mcp-wizard-wide-labels">
 
                             <div class="decision-line" id="mcp-wizard-line-agent-filters">
                                 <label class="decision-line-label" for="{{ form.allow_agent_filters.id_for_label }}">Allow agent filters</label>
@@ -263,9 +274,46 @@ $(document).ready(function() {
                         </div>
                     </div>
 
+                    <div class="wizard-section mcp-wizard-pii" id="mcp-wizard-pii">
+
+                        <div class="decision-lines mcp-wizard-wide-labels">
+                            <div class="decision-line mcp-wizard-pii-line" id="mcp-wizard-pii-line">
+                                <span class="decision-line-label">PII and data masking</span>
+                                <span class="decision-line-slot"><span class="mcp-wizard-pii-summary" id="mcp-wizard-summary-pii"></span><svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                            </div>
+                        </div>
+
+                        <div class="mcp-wizard-pii-body" id="mcp-wizard-pii-body" hidden>
+
+                            <div class="mcp-wizard-field-grid mcp-wizard-masking">
+                                <label for="mcp-wizard-edit-data-masking">Data masking <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-data-masking"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-data-masking"></span><span class="zato-soft-hint">Click to edit</span></a></label>
+                            </div>
+
+                            <div class="mcp-wizard-field-grid">
+                                <label for="{{ form.safeguards_pii_enabled.id_for_label }}">Remove PII from responses {{ form.safeguards_pii_enabled }}</label>
+                            </div>
+
+                            <div class="mcp-wizard-pii-selects mcp-wizard-pii-dependent">
+                                <label for="{{ form.safeguards_pii_lands.id_for_label }}">Lands</label>
+                                {{ form.safeguards_pii_lands }}
+                                <label for="{{ form.safeguards_pii_detectors.id_for_label }}">Detectors</label>
+                                {{ form.safeguards_pii_detectors }}
+                                <label for="{{ form.safeguards_pii_exclude.id_for_label }}">Exclude</label>
+                                {{ form.safeguards_pii_exclude }}
+                            </div>
+
+                            <div class="mcp-wizard-field-grid mcp-wizard-pii-dependent">
+                                <label for="{{ form.safeguards_pii_validate.id_for_label }}">Validate matches with checksums {{ form.safeguards_pii_validate }}</label>
+                                <label for="{{ form.safeguards_pii_stable_replacements.id_for_label }}">Stable replacements across one response {{ form.safeguards_pii_stable_replacements }}</label>
+                            </div>
+
+                        </div>
+
+                    </div>
+
                     <div class="wizard-section">
 
-                        <div class="decision-line" id="mcp-wizard-row-options">
+                        <div class="decision-line mcp-wizard-wide-labels" id="mcp-wizard-row-options">
                             <label class="decision-line-label" for="mcp-wizard-edit-options">More options</label>
                             <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-options"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-options"></span><span class="zato-soft-hint" id="mcp-wizard-hint-options"></span></a></span>
                         </div>
@@ -286,32 +334,26 @@ $(document).ready(function() {
                             </div>
                         </div>
 
-                        <div class="wizard-option-card" id="mcp-wizard-card-pii">
-                            <div class="wizard-option-header" id="mcp-wizard-pii-header">
-                                <svg class="wizard-chevron" id="mcp-wizard-pii-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                <span class="wizard-option-label">PII removal</span>
-                                <span class="wizard-option-summary" id="mcp-wizard-summary-pii"></span>
+                        <div class="wizard-option-card" id="mcp-wizard-card-hooks">
+                            <div class="wizard-option-header" id="mcp-wizard-hooks-header">
+                                <svg class="wizard-chevron" id="mcp-wizard-hooks-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                <span class="wizard-option-label">Hook services</span>
+                                <span class="wizard-option-summary" id="mcp-wizard-summary-hooks"></span>
                             </div>
-                            <div class="wizard-option-body" id="mcp-wizard-pii-body">
+                            <div class="wizard-option-body" id="mcp-wizard-hooks-body">
+                                <div class="decision-lines">
 
-                                <div class="mcp-wizard-field-grid">
-                                    <label for="{{ form.safeguards_pii_enabled.id_for_label }}">Remove PII from responses {{ form.safeguards_pii_enabled }}</label>
+                                    <div class="decision-line" id="mcp-wizard-line-request-hook">
+                                        <label class="decision-line-label" for="mcp-wizard-slot-request-hook-chip">Request</label>
+                                        <span class="decision-line-slot" id="mcp-wizard-slot-request-hook"></span>
+                                    </div>
+
+                                    <div class="decision-line" id="mcp-wizard-line-response-hook">
+                                        <label class="decision-line-label" for="mcp-wizard-slot-response-hook-chip">Response</label>
+                                        <span class="decision-line-slot" id="mcp-wizard-slot-response-hook"></span>
+                                    </div>
+
                                 </div>
-
-                                <div class="mcp-wizard-pii-selects">
-                                    <label for="{{ form.safeguards_pii_lands.id_for_label }}">Lands</label>
-                                    {{ form.safeguards_pii_lands }}
-                                    <label for="{{ form.safeguards_pii_detectors.id_for_label }}">Detectors</label>
-                                    {{ form.safeguards_pii_detectors }}
-                                    <label for="{{ form.safeguards_pii_exclude.id_for_label }}">Exclude</label>
-                                    {{ form.safeguards_pii_exclude }}
-                                </div>
-
-                                <div class="mcp-wizard-field-grid">
-                                    <label for="{{ form.safeguards_pii_validate.id_for_label }}">Validate matches with checksums {{ form.safeguards_pii_validate }}</label>
-                                    <label for="{{ form.safeguards_pii_stable_replacements.id_for_label }}">Stable replacements across one response {{ form.safeguards_pii_stable_replacements }}</label>
-                                </div>
-
                             </div>
                         </div>
 
