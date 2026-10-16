@@ -84,7 +84,7 @@ pydantic==2.12.5
 pyftpdlib==2.2.0
 pygments==2.20.0
 PyJWT==2.15.0
-pymongo==4.17.0
+pymongo==4.18.2
 PyMySQL==1.1.1
 pyOpenSSL==26.4.0
 pyotp==2.9.0
