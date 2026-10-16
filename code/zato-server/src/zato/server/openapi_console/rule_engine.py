@@ -114,7 +114,7 @@ def _ruleset_operation(
 
     operation = {
         'operationId': f'invoke_{sanitized_name}',
-        'summary': f'Invoke ruleset {definition.name}',
+        'summary': definition.name,
         'tags': [_rule_engine_tag],
         'requestBody': {
             'required': True,

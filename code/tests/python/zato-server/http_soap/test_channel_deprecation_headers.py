@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.server.connection.http_soap.channel import _get_deprecation_headers
+from zato.server.connection.http_soap.channel import get_deprecation_headers
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,7 +66,7 @@ class DeprecationHeadersTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item(_deprecation_since, _deprecation_sunset, _deprecation_successor)
 
-        headers = _get_deprecation_headers(channel_item)
+        headers = get_deprecation_headers(channel_item)
 
         self.assertEqual(headers['Deprecation'], _deprecation_header_value)
         self.assertEqual(headers['Sunset'], _deprecation_sunset_http_date)
@@ -79,7 +79,7 @@ class DeprecationHeadersTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item(deprecation_since=_deprecation_since)
 
-        headers = _get_deprecation_headers(channel_item)
+        headers = get_deprecation_headers(channel_item)
 
         self.assertEqual(headers['Deprecation'], _deprecation_header_value)
         self.assertNotIn('Sunset', headers)
@@ -92,7 +92,7 @@ class DeprecationHeadersTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item()
 
-        headers = _get_deprecation_headers(channel_item)
+        headers = get_deprecation_headers(channel_item)
 
         self.assertEqual(headers, {})
 
@@ -103,12 +103,12 @@ class DeprecationHeadersTestCase(unittest.TestCase):
         """
         channel_item = _make_channel_item(_deprecation_since, _deprecation_sunset, _deprecation_successor)
 
-        first = _get_deprecation_headers(channel_item)
+        first = get_deprecation_headers(channel_item)
 
         # A later change to the attributes must not rebuild the memoized headers -
         # a real configuration change replaces the whole channel item instead.
         channel_item['deprecation_successor'] = '/api/v3/orders'
-        second = _get_deprecation_headers(channel_item)
+        second = get_deprecation_headers(channel_item)
 
         self.assertIs(second, first)
 

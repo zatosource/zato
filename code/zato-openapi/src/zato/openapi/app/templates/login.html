@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
     <title>{{ title }} - Sign in</title>
     <link rel="icon" href="{{ favicon_url }}">
     <link rel="stylesheet" href="/static/console/console.css">
@@ -10,28 +11,73 @@
 </head>
 <body class="console-login-body">
 
+    <div class="console-backdrop"></div>
+
     <main class="console-login-main">
         <form class="console-login-card" method="post" action="/openapi/console/login">
             {% csrf_token %}
 
             <div class="console-login-brand">
+                {% if logo_url %}
                 <img src="{{ logo_url }}" alt="Logo" class="console-login-logo">
-                <h1 class="console-login-title">{{ title }}</h1>
+                {% else %}
+                <span class="console-brand-text console-login-brand-text">{{ logo_text }}</span>
+                {% endif %}
             </div>
 
             {% if error %}
             <div class="console-login-error">{{ error }}</div>
             {% endif %}
 
-            <label class="console-login-label" for="username">Username</label>
-            <input class="console-login-input" type="text" id="username" name="username" autocomplete="username" autofocus required>
+            <label class="console-login-label" for="auth-type">Auth. type</label>
+            <select class="console-login-input console-login-select" id="auth-type" name="auth_type">
+                {% for value, label in auth_types %}
+                <option value="{{ value }}"{% if value == auth_type %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
 
-            <label class="console-login-label" for="password">Password</label>
-            <input class="console-login-input" type="password" id="password" name="password" autocomplete="current-password" required>
+            <div class="console-login-stack">
+
+            <fieldset class="console-login-fields" data-auth-type="{{ basic_auth_type }}"{% if auth_type != basic_auth_type %} hidden disabled{% endif %}>
+
+                <label class="console-login-label" for="username">Username</label>
+                <input class="console-login-input" type="text" id="username" name="username" autocomplete="username" autofocus required>
+
+                <label class="console-login-label" for="password">Password</label>
+                <div class="console-secret">
+                    <input class="console-login-input console-secret-input" type="password" id="password" name="password" autocomplete="current-password" required>
+                    <button class="console-secret-toggle" type="button">Show</button>
+                </div>
+
+            </fieldset>
+
+            <fieldset class="console-login-fields" data-auth-type="{{ api_key_type }}"{% if auth_type != api_key_type %} hidden disabled{% endif %}>
+
+                <label class="console-login-label" for="key">Key</label>
+                <div class="console-secret">
+                    <input class="console-login-input console-secret-input" type="password" id="key" name="key" autocomplete="off" required>
+                    <button class="console-secret-toggle" type="button">Show</button>
+                </div>
+
+            </fieldset>
+
+            <fieldset class="console-login-fields" data-auth-type="{{ bearer_token_type }}"{% if auth_type != bearer_token_type %} hidden disabled{% endif %}>
+
+                <label class="console-login-label" for="token">Token</label>
+                <div class="console-secret">
+                    <input class="console-login-input console-secret-input" type="password" id="token" name="token" autocomplete="off" required>
+                    <button class="console-secret-toggle" type="button">Show</button>
+                </div>
+
+            </fieldset>
+
+            </div>
 
             <button class="console-login-button" type="submit">Sign in</button>
         </form>
     </main>
+
+    <script src="/static/console/login.js"></script>
 
 </body>
 </html>

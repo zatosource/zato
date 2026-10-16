@@ -1,21 +1,134 @@
 /* ------------------------------------------------------------ */
-/* Console - shared tokens                                       */
+/* Console - fonts and tokens                                    */
 /* ------------------------------------------------------------ */
 
+@font-face {
+    font-family: ZatoMainFontLight;
+    src: url("/static/console/fonts/Jost-Light.ttf");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: ZatoMainFont;
+    src: url("/static/console/fonts/Jost-Regular.ttf");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: ZatoMainFontMedium;
+    src: url("/static/console/fonts/Jost-Medium.ttf");
+    font-display: swap;
+}
+
 :root {
-    --console-header-background: #012845;
-    --console-header-foreground: #f4f7fa;
-    --console-header-height: 52px;
-    --console-accent: #1d7af2;
-    --console-accent-hover: #3c8ef5;
-    --console-page-background: #f4f6f8;
-    --console-card-background: #ffffff;
-    --console-card-border: #dbe2ea;
-    --console-text: #1c2733;
-    --console-text-muted: #5d6b7a;
-    --console-error-background: #fdecec;
-    --console-error-border: #f2b8b5;
-    --console-error-text: #8c1d18;
+    --console-bg: #0a0e1a;
+    --console-bg-panel: rgba(13, 17, 23, 0.82);
+    --console-bg-raised: #111827;
+    --console-bg-raised-hover: #1e293b;
+    --console-border: rgba(255, 255, 255, 0.06);
+    --console-border-strong: rgba(255, 255, 255, 0.12);
+    --console-accent: #3b82f6;
+    --console-accent-light: #60a5fa;
+    --console-accent-cyan: #06b6d4;
+    --console-accent-soft: rgba(59, 130, 246, 0.08);
+    --console-accent-soft-strong: rgba(96, 165, 250, 0.18);
+    --console-green: #6fae84;
+    --console-red: #ef4444;
+    --console-red-soft: rgba(239, 68, 68, 0.08);
+    --console-red-border: rgba(239, 68, 68, 0.28);
+    --console-orange: #f59e0b;
+    --console-orange-soft: rgba(245, 158, 11, 0.08);
+    --console-yellow: #facc15;
+    --console-purple: #a78bfa;
+    --console-text: #f1f5f9;
+    --console-text-muted: #94a3b8;
+    --console-text-faint: #8391a7;
+    --console-text-on-accent: #ffffff;
+    --console-grid-line: rgba(255, 255, 255, 0.025);
+    --console-glow-accent: rgba(59, 130, 246, 0.11);
+    --console-glow-green: rgba(111, 174, 132, 0.07);
+    --console-shadow-small: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --console-shadow-large: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
+    --console-font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    --console-header-height: 3.5rem;
+    --console-page-padding: 2rem;
+    --console-hover-delay: 120ms;
+    --console-hover-duration: 0.2s;
+    --console-spinner-size: 3rem;
+    --console-spinner-duration: 1.4s;
+    --console-loading-delay: 0.2s;
+    --console-chip-radius: 3px;
+    --console-control-radius: 2px;
+    --console-sidebar-width: 19rem;
+    --console-sidebar-padding: 0.875rem;
+    --console-sidebar-collapsed-width: 2.75rem;
+    --console-resizer-hit-width: 9px;
+    --console-resizer-line-width: 2px;
+    --console-navigation-chevron-size: 0.75rem;
+    --console-login-logo-height: 2rem;
+    --console-header-logo-max-width: 16rem;
+    --console-layout-master-width: 28rem;
+    --console-layout-resizer-width: 1.5rem;
+    --console-layout-grip-height: 2.5rem;
+    --console-layout-grip-width: 4px;
+    --console-layout-grip-fill: rgba(255, 255, 255, 0.14);
+    --console-layout-end-padding: 1.5rem;
+    --console-exchange-minimum-height: 26rem;
+    --console-request-minimum-height: 10rem;
+    --console-response-minimum-height: 8rem;
+    --console-specification-minimum-width: 20rem;
+    --console-specification-minimum-height: 12rem;
+    --console-glass-fill: rgba(255, 255, 255, 0.08);
+    --console-glass-fill-hover: rgba(255, 255, 255, 0.14);
+    --console-glass-rim: rgba(255, 255, 255, 0.08);
+    --console-copy-border: rgba(255, 255, 255, 0.16);
+    --console-copy-fill: rgba(255, 255, 255, 0.04);
+    --console-copy-fill-hover: rgba(255, 255, 255, 0.1);
+    --console-tooltip-text: #f1f5f9;
+    --console-tooltip-fill: #1e293b;
+    --console-tooltip-border: rgba(255, 255, 255, 0.16);
+    --console-tooltip-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.5);
+    --console-tooltip-arrow-size: 8px;
+    --console-switch-track: rgba(255, 255, 255, 0.16);
+    --console-switch-knob: #cbd5e1;
+    --console-popover-width: 30rem;
+    --console-popover-max-height: 24rem;
+    --console-code-font-size: 0.8125rem;
+    --console-code-line-height: 1.55;
+    --console-secret-toggle-width: 4rem;
+
+    --console-chip-neutral-text: #c8c8d6;
+    --console-chip-neutral-fill: rgba(255, 255, 255, 0.1);
+    --console-chip-blue-text: #6fb6e8;
+    --console-chip-blue-fill: rgba(111, 182, 232, 0.18);
+    --console-chip-green-text: #7fd1a0;
+    --console-chip-green-fill: rgba(127, 209, 160, 0.18);
+    --console-chip-yellow-text: #e8c46f;
+    --console-chip-yellow-fill: rgba(232, 196, 111, 0.18);
+    --console-chip-purple-text: #cfa9ea;
+    --console-chip-purple-fill: rgba(207, 169, 234, 0.18);
+    --console-chip-red-text: #ff8a80;
+    --console-chip-red-fill: rgba(255, 138, 128, 0.18);
+
+    --console-code-key: #93c5fd;
+    --console-code-string: #a7d7a9;
+    --console-code-number: #f0b86e;
+    --console-code-boolean: #cfa9ea;
+    --console-code-null: #94a3b8;
+    --console-code-punctuation: #64748b;
+
+    color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+::selection {
+    color: var(--console-text);
+    background: var(--console-accent-soft-strong);
 }
 
 /* ------------------------------------------------------------ */
@@ -24,10 +137,28 @@
 
 body.console-body,
 body.console-login-body {
+    min-height: 100vh;
     margin: 0;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: ZatoMainFont, sans-serif;
     color: var(--console-text);
-    background: var(--console-page-background);
+    background:
+        radial-gradient(900px circle at 88% -12%, var(--console-glow-accent), transparent 60%),
+        radial-gradient(720px circle at -8% 112%, var(--console-glow-green), transparent 60%),
+        var(--console-bg);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+}
+
+.console-backdrop {
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(var(--console-grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--console-grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 50% 28%, #000 18%, transparent 72%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 28%, #000 18%, transparent 72%);
+    pointer-events: none;
 }
 
 /* ------------------------------------------------------------ */
@@ -36,46 +167,171 @@ body.console-login-body {
 
 .console-header {
     display: flex;
+    gap: 1.625rem;
     align-items: center;
-    gap: 14px;
     position: sticky;
     top: 0;
     z-index: 100;
     height: var(--console-header-height);
-    padding: 0 20px;
-    background: var(--console-header-background);
-    color: var(--console-header-foreground);
+    padding: 0 var(--console-page-padding) 0 var(--console-sidebar-padding);
+    border-bottom: 1px solid var(--console-border);
+    background: var(--console-bg);
+}
+
+.console-header-brand {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    text-decoration: none;
 }
 
 .console-header-logo {
-    height: 28px;
+    flex: none;
     width: auto;
+    max-width: var(--console-header-logo-max-width);
+    height: 1.5rem;
+    object-fit: contain;
 }
 
-.console-header-title {
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+.console-brand-text {
+    overflow: hidden;
+    font-family: ZatoMainFontMedium, sans-serif;
+    color: var(--console-text);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.console-header-brand-text {
+    font-size: 1.125rem;
 }
 
 .console-header-links {
     display: flex;
-    gap: 14px;
+    gap: 1.25rem;
     margin-left: auto;
 }
 
 .console-header-link,
-.console-header-logout {
-    font-size: 13px;
-    color: var(--console-header-foreground);
+.console-header-logout,
+.console-header-user {
+    font-family: var(--console-font-mono);
+    font-size: 0.8125rem;
     text-decoration: none;
-    opacity: 0.85;
+    white-space: nowrap;
+}
+
+.console-header-link,
+.console-header-logout {
+    color: var(--console-text-faint);
+    transition: color var(--console-hover-duration) ease;
 }
 
 .console-header-link:hover,
 .console-header-logout:hover {
-    opacity: 1;
-    text-decoration: underline;
+    color: var(--console-text);
+    transition-delay: var(--console-hover-delay);
+}
+
+.console-header-user {
+    margin-left: 0.875rem;
+    color: var(--console-accent-light);
+}
+
+/* ------------------------------------------------------------ */
+/* Console - empty and error states                              */
+/* ------------------------------------------------------------ */
+
+.console-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    inset: var(--console-header-height) 0 0 0;
+    padding: var(--console-page-padding);
+}
+
+.console-status[hidden] {
+    display: none;
+}
+
+.console-status-text {
+    font-family: ZatoMainFontLight, sans-serif;
+    font-size: 2.25rem;
+    letter-spacing: -0.025em;
+}
+
+.console-status-text {
+    position: relative;
+    max-width: 40rem;
+    line-height: 1.2;
+    color: var(--console-text-muted);
+    text-align: center;
+}
+
+/* ------------------------------------------------------------ */
+/* Console - loading state                                       */
+/* ------------------------------------------------------------ */
+
+.console-loading {
+    animation: console-loading-appear 0.3s ease var(--console-loading-delay) both;
+}
+
+.console-spinner {
+    display: block;
+    position: relative;
+    width: var(--console-spinner-size);
+    height: var(--console-spinner-size);
+    fill: none;
+    stroke-width: 4;
+    animation: console-spinner-rotate var(--console-spinner-duration) linear infinite;
+}
+
+.console-spinner-track {
+    stroke: var(--console-accent-soft-strong);
+}
+
+.console-spinner-arc {
+    stroke: var(--console-accent-light);
+    stroke-linecap: butt;
+    stroke-dasharray: 1 150;
+    animation: console-spinner-dash var(--console-spinner-duration) ease-in-out infinite;
+}
+
+@keyframes console-loading-appear {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes console-spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes console-spinner-dash {
+    0% {
+        stroke-dasharray: 1 150;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 90 150;
+        stroke-dashoffset: -35;
+    }
+    100% {
+        stroke-dasharray: 90 150;
+        stroke-dashoffset: -124;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .console-spinner,
+    .console-spinner-arc {
+        animation-duration: 6s;
+    }
 }
 
 /* ------------------------------------------------------------ */
@@ -86,84 +342,202 @@ body.console-login-body {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
     min-height: 100vh;
-    padding: 24px;
-    box-sizing: border-box;
+    padding: var(--console-page-padding);
 }
 
 .console-login-card {
     display: flex;
     flex-direction: column;
-    width: 340px;
-    padding: 32px;
-    background: var(--console-card-background);
-    border: 1px solid var(--console-card-border);
-    border-radius: 10px;
-    box-shadow: 0 8px 26px rgba(16, 36, 56, 0.08);
+    width: 23rem;
+    max-width: 100%;
+    padding: 2.5rem;
+    border: 1px solid var(--console-border);
+    background: var(--console-bg-panel);
+    box-shadow: var(--console-shadow-large);
 }
 
 .console-login-brand {
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 22px;
+    min-width: 0;
+    margin-bottom: 1.5rem;
 }
+
+/* A logo of any size takes the same height, a wide one shrinks to the width of the card, and none is distorted */
 
 .console-login-logo {
-    height: 40px;
+    display: block;
     width: auto;
-    background: var(--console-header-background);
-    border-radius: 8px;
-    padding: 8px 14px;
+    max-width: 100%;
+    height: var(--console-login-logo-height);
+    object-fit: contain;
 }
 
-.console-login-title {
+.console-login-brand-text {
+    font-size: 1.75rem;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Every auth type's fields occupy the same cell, so the card keeps the height of the tallest set */
+
+.console-login-stack {
+    display: grid;
+}
+
+.console-login-fields {
+    display: flex;
+    flex-direction: column;
+    grid-area: 1 / 1;
+    min-width: 0;
     margin: 0;
-    font-size: 18px;
-    font-weight: 600;
+    padding: 0;
+    border: 0;
+}
+
+.console-login-fields[hidden] {
+    display: flex;
+    visibility: hidden;
 }
 
 .console-login-label {
-    margin: 12px 0 5px;
-    font-size: 13px;
-    color: var(--console-text-muted);
+    margin: 1rem 0 0.5rem;
+    font-family: var(--console-font-mono);
+    font-size: 0.75rem;
+    color: var(--console-text-faint);
 }
 
 .console-login-input {
-    padding: 9px 11px;
-    font-size: 14px;
-    border: 1px solid var(--console-card-border);
-    border-radius: 6px;
+    width: 100%;
+    padding: 0.6875rem 0.875rem;
+    border: 1px solid var(--console-border-strong);
+    border-radius: var(--console-control-radius);
     outline: none;
+    font-family: ZatoMainFont, sans-serif;
+    font-size: 0.9375rem;
+    color: var(--console-text);
+    background: var(--console-bg-raised);
+    transition: border-color var(--console-hover-duration) ease, box-shadow var(--console-hover-duration) ease;
 }
 
 .console-login-input:focus {
-    border-color: var(--console-accent);
+    border-color: var(--console-accent-light);
+    box-shadow: 0 0 0 3px var(--console-accent-soft-strong);
+}
+
+.console-login-input:-webkit-autofill {
+    -webkit-text-fill-color: var(--console-text);
+    box-shadow: 0 0 0 100px var(--console-bg-raised) inset;
+    caret-color: var(--console-text);
 }
 
 .console-login-button {
-    margin-top: 22px;
-    padding: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-    background: var(--console-accent);
+    margin-top: 1.75rem;
+    padding: 0.75rem;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--console-control-radius);
+    font-family: ZatoMainFontMedium, sans-serif;
+    font-size: 0.9375rem;
+    color: var(--console-text-on-accent);
+    background: linear-gradient(90deg, var(--console-accent), var(--console-accent-cyan));
     cursor: pointer;
+    transition: filter var(--console-hover-duration) ease;
 }
 
 .console-login-button:hover {
-    background: var(--console-accent-hover);
+    filter: brightness(1.12);
+    transition-delay: var(--console-hover-delay);
+}
+
+.console-login-button:focus-visible {
+    outline: 2px solid var(--console-accent-light);
+    outline-offset: 2px;
+}
+
+.console-login-select {
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    cursor: pointer;
+    appearance: none;
+}
+
+.console-secret {
+    position: relative;
+}
+
+.console-secret-input {
+    padding-right: var(--console-secret-toggle-width);
+}
+
+.console-secret-input::-ms-reveal {
+    display: none;
+}
+
+.console-secret-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: var(--console-secret-toggle-width);
+    height: 100%;
+    padding: 0;
+    border: none;
+    font-family: var(--console-font-mono);
+    font-size: 0.65rem;
+    color: var(--console-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: transparent;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: color var(--console-hover-duration) ease;
+}
+
+.console-secret-toggle:hover {
+    color: var(--console-text);
+    transition-delay: var(--console-hover-delay);
+}
+
+.console-secret-toggle:focus-visible {
+    outline: 2px solid var(--console-accent-light);
+    outline-offset: -2px;
 }
 
 .console-login-error {
-    padding: 9px 11px;
-    margin-bottom: 6px;
-    font-size: 13px;
-    color: var(--console-error-text);
-    background: var(--console-error-background);
-    border: 1px solid var(--console-error-border);
-    border-radius: 6px;
+    margin-bottom: 0.375rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--console-red-border);
+    font-family: var(--console-font-mono);
+    font-size: 0.8125rem;
+    color: var(--console-red);
+    background: var(--console-red-soft);
+}
+
+/* ------------------------------------------------------------ */
+/* Console - narrow screens                                      */
+/* ------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    :root {
+        --console-page-padding: 1.125rem;
+    }
+
+    .console-header-links,
+    .console-header-user {
+        display: none;
+    }
+
+    .console-header-logout {
+        margin-left: auto;
+    }
+
+    .console-status-text {
+        font-size: 1.75rem;
+    }
 }

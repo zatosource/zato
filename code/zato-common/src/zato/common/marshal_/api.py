@@ -39,14 +39,15 @@ from typing_utils import issubtype
 from zato.common.api import ZatoNotGiven
 from zato.common.exception import BackendInvocationError
 from zato.common.marshal_.model import BaseModel
-from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from_union, isotimestamp, is_union, type_
+from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from_union, isotimestamp, is_union, optional, \
+     type_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, optional, strset, tuplist
+    from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, strset, tuplist
     from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
     boolnone = boolnone
@@ -339,6 +340,10 @@ class Model(BaseModel):
                 _model_type = bool
             else:
                 _model_type = str
+
+            # .. optional elements are unions with None, which is how from_dict tells them apart from required ones ..
+            if is_optional:
+                _model_type = optional[_model_type]
 
             # .. append a model-compatible definition of this field for later use ..
             model_fields.append((io_elem.name, _model_type))

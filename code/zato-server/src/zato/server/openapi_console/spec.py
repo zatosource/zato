@@ -14,10 +14,13 @@ from inspect import isclass
 
 # Zato
 from zato.common.api import SEC_DEF_TYPE, URL_TYPE
+from zato.common.bearer_token_verifier import build_verify_config
 from zato.common.crypto.api import is_string_equal
 from zato.common.odb.model import SecurityBase
 from zato.common.typing_ import cast_
+from zato.common.util.api import new_cid_server
 from zato.common.webapp.auth.dashboard_users import is_dashboard_admin
+from zato.common.webapp.auth.auth_type import ConsoleAuthType
 from zato.openapi.generator.io_scanner import TypeMapper, extract_model_fields_recursive
 from zato.openapi.generator.openapi_ import OpenAPIGenerator
 
@@ -44,6 +47,9 @@ _default_http_method = 'post'
 
 # The definition types whose callers sign in with the username the definition carries
 _username_sec_types = [SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH]
+
+# The name under which the bearer token verifier logs the console's token checks
+_bearer_channel_name = 'OpenAPI console'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,24 +96,59 @@ def _has_secret(sec_def:'anydict | None', password:'str') -> 'bool':
 
 # ################################################################################################################################
 
+def validate_api_key(server:'ParallelServer', key:'str') -> 'intnone':
+    """ Checks the key against the active API key definitions.
+    Returns the matching definition's ID or None if no definition has this key.
+    """
+    for sec_def in server.url_data.apikey_config.values():
+        if _has_secret(sec_def, key):
+            out = sec_def['config']['id']
+            break
+    else:
+        out = None
+
+    return out
+
+# ################################################################################################################################
+
+def validate_bearer_token(server:'ParallelServer', token:'str') -> 'intnone':
+    """ Checks the token against the active Bearer token definitions, static tokens and JWTs alike,
+    with the same verifier that inbound REST channels use. Returns the matching definition's ID
+    or None if no definition accepts this token.
+    """
+    url_data = server.url_data
+    verifier = url_data.get_bearer_token_verifier()
+    cid = new_cid_server()
+
+    for sec_def in url_data.oauth_config.values():
+        config = sec_def['config']
+
+        # Inactive definitions can never match ..
+        if not config['is_active']:
+            continue
+
+        # .. and an active one accepts the token if the verifier returns its claims.
+        verify_config = build_verify_config(config)
+        claims = verifier.verify(cid, _bearer_channel_name, token, verify_config)
+
+        if claims is not None:
+            out = config['id']
+            break
+    else:
+        out = None
+
+    return out
+
+# ################################################################################################################################
+
 def validate_credentials(server:'ParallelServer', username:'str', password:'str') -> 'intnone':
-    """ Checks the username and password against the active security definitions of the types
-    REST channels support - Basic Auth, API keys and Bearer tokens. API key callers sign in with
-    the definition's name as the username and the key itself as the password, Bearer token callers
-    with the definition's username and its secret.
+    """ Checks the username and password against the active Basic Auth and Bearer token definitions.
+    Bearer token callers sign in with the definition's client ID and its secret.
     Returns the matching definition's ID or None if the credentials are not valid.
     """
     url_data = server.url_data
 
-    # The generated usernames of API key definitions mean nothing to callers, so it is the definition's
-    # name that identifies one on the sign-in form, and that is what they are held under here ..
-    apikey_sec_def = url_data.apikey_config.get(username)
-
-    if apikey_sec_def:
-        if _has_secret(apikey_sec_def, password):
-            return apikey_sec_def['config']['id']
-
-    # .. Basic Auth and Bearer token definitions are reached by the username they carry,
+    # Basic Auth and Bearer token definitions are reached by the username they have,
     # which the database resolves to the one name each type can hold it under ..
     sec_names = _get_sec_names_by_username(server, username)
 
@@ -136,9 +177,19 @@ def resolve_caller(server:'ParallelServer', fields:'anydict') -> 'tuple_[intnone
     """ Resolves a console command's auth fields into the caller's security definition ID and admin flag.
     A caller with no ID and no admin flag could not be identified and gets nothing.
     """
+    # An API key is a secret of its own, with no username next to it ..
+    if fields['auth_type'] == ConsoleAuthType.API_Key:
+        security_id = validate_api_key(server, fields['password'])
+        return security_id, False
+
+    # .. so is a bearer token ..
+    if fields['auth_type'] == ConsoleAuthType.Bearer_Token:
+        security_id = validate_bearer_token(server, fields['password'])
+        return security_id, False
+
     username = fields['username']
 
-    # Dashboard users are the console's admins, so their credentials are checked first,
+    # .. Dashboard users are the console's admins, so their credentials are checked first,
     # against the auth_user table in the same database the server's ODB uses ..
     with closing(server.odb.session()) as session:
         is_admin = is_dashboard_admin(session, username, fields['password'])
@@ -282,6 +333,12 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
     deprecation_sunset    = channel_item.get('deprecation_sunset', '')
     deprecation_successor = channel_item.get('deprecation_successor', '')
 
+    # .. the service's own docstring, never an inherited one, describes the operation as a single paragraph ..
+    if docstring := class_.__doc__:
+        docstring = ' '.join(docstring.split())
+    else:
+        docstring = ''
+
     # .. and build one entry per method.
     out = []
 
@@ -289,6 +346,7 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
         entry = {
             'name': service_name,
             'class_name': class_.__name__,
+            'docstring': docstring,
             'url_path': channel_item['url_path'],
             'http_method': http_method.lower(),
             'input': input_definition,

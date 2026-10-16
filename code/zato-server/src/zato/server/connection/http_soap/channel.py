@@ -169,7 +169,7 @@ _soap_transport_status_codes = {
 
 # ################################################################################################################################
 
-def _get_deprecation_headers(channel_item:'anydict') -> 'stranydict':
+def get_deprecation_headers(channel_item:'anydict') -> 'stranydict':
     """ Returns the response headers a deprecated channel adds to every response.
     The headers are built once per channel configuration and memoized on the channel item,
     so the date conversions below run at config time, not per request.
@@ -1072,7 +1072,7 @@ class RequestDispatcher:
             # .. deprecated channels announce their status on every response,
             # including error and rate-limited ones ..
             if channel_item.get('is_deprecated'):
-                deprecation_headers = _get_deprecation_headers(channel_item)
+                deprecation_headers = get_deprecation_headers(channel_item)
                 request_ctx['zato.http.response.headers'].update(deprecation_headers)
 
             # .. record the incoming request in the audit log ..

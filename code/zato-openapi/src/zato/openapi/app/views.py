@@ -9,6 +9,7 @@ This file is a proprietary product, not an open-source one.
 # stdlib
 import logging
 from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
+from urllib.parse import quote, unquote
 
 # Django
 from django.http import FileResponse, HttpResponse, JsonResponse
@@ -20,15 +21,17 @@ import yaml
 
 # Zato
 from zato.common.typing_ import cast_
+from zato.common.webapp.auth.auth_type import ConsoleAuthType
 from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, decrypt_credentials, encrypt_credentials
-from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path
+from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path, \
+    get_logo_content_type, get_logo_file
 from zato.openapi.console.client import OpenAPIConsoleClient
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict, stranydict
     anydict = anydict
 
 # ################################################################################################################################
@@ -40,7 +43,20 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 # The message shown on the sign-in page when the credentials are rejected
-_invalid_credentials_message = 'Invalid username or password'
+_invalid_credentials_message = 'Invalid credentials'
+
+# The auth types of the sign-in form, in the order they are offered
+_auth_types = [
+    (ConsoleAuthType.Basic_Auth, 'Basic Auth'),
+    (ConsoleAuthType.API_Key, 'API Key'),
+    (ConsoleAuthType.Bearer_Token, 'Bearer token'),
+]
+
+# What the header shows for a caller signed in with a secret that has no username next to it
+_secret_only_identities = {
+    ConsoleAuthType.API_Key: 'API key',
+    ConsoleAuthType.Bearer_Token: 'Bearer token',
+}
 
 # The message shown when no server replied in time
 _no_server_message = 'No server is available, please try again'
@@ -49,9 +65,20 @@ _no_server_message = 'No server is available, please try again'
 # so that anonymous callers cannot tell apart missing, expired and rejected sessions.
 _unauthorized_message = 'Unauthorized'
 
+# The message returned for a branding file that was not provided
+_no_such_file_message = 'No such file'
+
 # The base URL under which try-it requests are relayed to the servers - the document's servers
 # entry points here, so the browser only ever talks to the console, never to the servers.
 _relay_url_base = '/openapi/console/relay'
+
+# The request header in which the browser sends the caller's own headers for the endpoint, as URL-encoded JSON,
+# so that none of the headers the browser adds on its own, e.g. the session cookie, ever reach a service.
+_relay_headers_key = 'HTTP_X_ZATO_CONSOLE_HEADERS'
+
+# The response header in which the browser receives the headers that the endpoint's REST channel would respond with,
+# as URL-encoded JSON, apart from the headers of the console's own response
+_relay_response_headers_name = 'X-Zato-Console-Response-Headers'
 
 # Maps rejection statuses from the reply stream to the HTTP status and message the browser receives
 _relay_rejections = {
@@ -75,7 +102,17 @@ def _get_client() -> 'OpenAPIConsoleClient':
 
 # ################################################################################################################################
 
-def _is_signed_in(req):
+def _text_response(message:'str', status:'int') -> 'HttpResponse':
+    """ Returns a response whose body is the given message.
+    """
+    content = message.encode('utf8')
+
+    out = HttpResponse(content, status=status)
+    return out
+
+# ################################################################################################################################
+
+def _is_signed_in(req:'any_') -> 'bool':
     """ Whether the session already has the caller's credentials.
     """
     out = Session_Credentials_Key in req.session
@@ -83,7 +120,7 @@ def _is_signed_in(req):
 
 # ################################################################################################################################
 
-def login_view(req):
+def login_view(req:'any_') -> 'any_':
     """ Renders the sign-in page and handles sign-in attempts. Credentials are validated by a Zato server
     and, once accepted, stored encrypted in the session cookie.
     """
@@ -92,22 +129,28 @@ def login_view(req):
         return redirect('console')
 
     context = get_branding_context()
+    context['auth_type'] = ConsoleAuthType.Basic_Auth
+    context['auth_types'] = _auth_types
+    context['basic_auth_type'] = ConsoleAuthType.Basic_Auth
+    context['api_key_type'] = ConsoleAuthType.API_Key
+    context['bearer_token_type'] = ConsoleAuthType.Bearer_Token
 
     if req.method == 'POST':
-        username = req.POST['username']
-        password = req.POST['password']
+        auth_type = req.POST['auth_type']
+        context['auth_type'] = auth_type
 
-        # Ask a server to validate the credentials by building the caller's document ..
-        client = _get_client()
-        spec = client.get_spec({
-            'username': username,
-            'password': password,
-        })
+        # Each auth type reads its own fields from the form ..
+        if build_credentials := _credential_builders.get(auth_type):
+            credentials = build_credentials(req.POST)
 
-        # .. a document means the credentials are valid and the session can be established ..
-        if spec is not None:
-            req.session[Session_Credentials_Key] = encrypt_credentials(username, password)
-            return redirect('console')
+            # .. a server validates them by building the caller's document ..
+            client = _get_client()
+            spec = client.get_spec(credentials)
+
+            # .. and a document means the credentials are valid and the session can be established ..
+            if spec is not None:
+                req.session[Session_Credentials_Key] = encrypt_credentials(credentials)
+                return redirect('console')
 
         # .. otherwise, show the sign-in page again with an error message.
         context['error'] = _invalid_credentials_message
@@ -116,7 +159,55 @@ def login_view(req):
 
 # ################################################################################################################################
 
-def logout_view(req):
+def _build_basic_auth_credentials(form:'any_') -> 'stranydict':
+    """ Returns the credentials of a username and password sign-in.
+    """
+    out = {
+        'auth_type': ConsoleAuthType.Basic_Auth,
+        'username': form['username'],
+        'password': form['password'],
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _build_api_key_credentials(form:'any_') -> 'stranydict':
+    """ Returns the credentials of an API key sign-in - the key is the only secret and there is no username.
+    """
+    out = {
+        'auth_type': ConsoleAuthType.API_Key,
+        'username': '',
+        'password': form['key'],
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _build_bearer_token_credentials(form:'any_') -> 'stranydict':
+    """ Returns the credentials of a bearer token sign-in - the token is the only secret and there is no username.
+    """
+    out = {
+        'auth_type': ConsoleAuthType.Bearer_Token,
+        'username': '',
+        'password': form['token'],
+    }
+
+    return out
+
+# ################################################################################################################################
+
+# Maps each auth type of the sign-in form to the function that reads its fields
+_credential_builders = {
+    ConsoleAuthType.Basic_Auth: _build_basic_auth_credentials,
+    ConsoleAuthType.API_Key: _build_api_key_credentials,
+    ConsoleAuthType.Bearer_Token: _build_bearer_token_credentials,
+}
+
+# ################################################################################################################################
+
+def logout_view(req:'any_') -> 'any_':
     """ Ends the session and returns to the sign-in page.
     """
     req.session.flush()
@@ -127,13 +218,25 @@ def logout_view(req):
 
 # ################################################################################################################################
 
-def console_view(req):
+def console_view(req:'any_') -> 'any_':
     """ Renders the console page - the actual document is loaded by the browser from the spec endpoint.
     """
-    if not _is_signed_in(req):
+    # A session without credentials that can be read signs in again ..
+    auth, error = _get_auth_or_error(req)
+    if error:
         return redirect('login')
 
+    # No error means the auth details are there, hence the cast
+    auth = cast_('anydict', auth)
+
+    # .. and the header shows who is signed in, which for an API key or a token is the kind of credentials only.
     context = get_branding_context()
+    auth_type = auth['auth_type']
+
+    if auth_type in _secret_only_identities:
+        context['identity'] = _secret_only_identities[auth_type]
+    else:
+        context['identity'] = auth['username']
 
     out = render(req, 'console.html', context)
 
@@ -141,32 +244,26 @@ def console_view(req):
 
 # ################################################################################################################################
 
-def _get_auth_or_error(req):
+def _get_auth_or_error(req:'any_') -> 'any_':
     """ Returns the signed-in caller's auth details and no error, or no details and an error response
     when there is no valid session. The details are the credentials the person signed in with.
     """
     # No session at all is unauthorized ..
     if not (token := req.session.get(Session_Credentials_Key)):
-        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+        return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
     # .. the token becomes invalid when the console is restarted, in which case the user signs in again ..
-    credentials = decrypt_credentials(token)
-    if not credentials:
+    auth = decrypt_credentials(token)
+    if not auth:
         req.session.flush()
-        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
-
-    username, password = credentials
+        return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
     # .. and the session has what the person typed at the sign-in form.
-    auth = {
-        'username': username,
-        'password': password,
-    }
     return auth, None
 
 # ################################################################################################################################
 
-def _get_spec_or_error(req):
+def _get_spec_or_error(req:'any_') -> 'any_':
     """ Returns the signed-in caller's filtered document and no error, or no document and an error response
     when the session or the credentials are not valid.
     """
@@ -181,7 +278,7 @@ def _get_spec_or_error(req):
     spec = client.get_spec(auth)
 
     if spec is None:
-        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+        return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
     # Try-it requests go through the console's relay, never directly to the servers
     spec['servers'] = [{'url': _relay_url_base}]
@@ -190,7 +287,7 @@ def _get_spec_or_error(req):
 
 # ################################################################################################################################
 
-def spec_view(req):
+def spec_view(req:'any_') -> 'any_':
     """ Serves the OpenAPI document filtered down to what the signed-in user's credentials give access to.
     The filtering happens on Zato servers - the document never contains endpoints the caller cannot invoke.
     """
@@ -204,7 +301,7 @@ def spec_view(req):
 
 # ################################################################################################################################
 
-def spec_yaml_view(req):
+def spec_yaml_view(req:'any_') -> 'any_':
     """ Serves the same per-caller filtered OpenAPI document as the JSON view, rendered as YAML.
     """
     spec, error = _get_spec_or_error(req)
@@ -212,15 +309,16 @@ def spec_yaml_view(req):
         return error
 
     document = yaml.dump(spec, sort_keys=False, allow_unicode=True)
+    content = document.encode('utf8')
 
-    out = HttpResponse(document, content_type='application/yaml')
+    out = HttpResponse(content, content_type='application/yaml')
 
     return out
 
 # ################################################################################################################################
 
 @csrf_exempt
-def relay_view(req, relay_path):
+def relay_view(req:'any_', relay_path:'str') -> 'any_':
     """ Relays a try-it invocation to the servers over Redis Streams and returns the response,
     so the browser only ever talks to the console. The target service is invoked with the signed-in
     user's own credentials and only if those credentials give access to the endpoint.
@@ -237,31 +335,34 @@ def relay_view(req, relay_path):
 
     body = req.body.decode('utf-8')
     query_string = req.META['QUERY_STRING']
+    headers = unquote(req.META[_relay_headers_key])
 
     client = _get_client()
-    reply = client.invoke(auth, req.method, url_path, query_string, body)
+    reply = client.invoke(auth, req.method, url_path, query_string, headers, body)
 
     # No reply means no server was available in time
     if reply is None:
-        return HttpResponse(_no_server_message, status=BAD_GATEWAY)
+        return _text_response(_no_server_message, BAD_GATEWAY)
 
     status = reply['status']
 
-    # A successful invocation passes the service's response through ..
+    # A successful invocation passes the service's response through, with the headers its REST channel would send ..
     if status == 'ok':
         http_status = int(reply['http_status'])
-        out = HttpResponse(reply['data'], status=http_status, content_type=reply['content_type'])
+        content = reply['data'].encode('utf8')
+        out = HttpResponse(content, status=http_status, content_type=reply['content_type'])
+        out[_relay_response_headers_name] = quote(reply['headers'])
 
     # .. anything else maps to one of the known rejections.
     else:
         http_status, message = _relay_rejections[status]
-        out = HttpResponse(message, status=http_status)
+        out = _text_response(message, http_status)
 
     return out
 
 # ################################################################################################################################
 
-def favicon_view(req):
+def favicon_view(req:'any_') -> 'any_':
     """ Answers the icon request browsers make at the root path on their own, with whichever
     icon the console is branded with.
     """
@@ -271,17 +372,31 @@ def favicon_view(req):
 
 # ################################################################################################################################
 
-def branding_view(req, file_name):
+def branding_view(req:'any_', file_name:'str') -> 'any_':
     """ Serves a user-provided branding file from the well-known branding directory.
     """
     full_path = get_branding_file_path(file_name)
 
     if not full_path:
-        return HttpResponse('No such file', status=NOT_FOUND)
+        return _text_response(_no_such_file_message, NOT_FOUND)
 
     content_type = Branding_Files[file_name]
 
     out = FileResponse(open(full_path, 'rb'), content_type=content_type)
+
+    return out
+
+# ################################################################################################################################
+
+def logo_view(req:'any_') -> 'any_':
+    """ Serves the custom logo file that the environment points to.
+    """
+    if not (logo_path := get_logo_file()):
+        return _text_response(_no_such_file_message, NOT_FOUND)
+
+    content_type = get_logo_content_type(logo_path)
+
+    out = FileResponse(open(logo_path, 'rb'), content_type=content_type)
 
     return out
 

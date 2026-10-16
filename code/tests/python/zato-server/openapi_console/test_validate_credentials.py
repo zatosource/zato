@@ -12,7 +12,8 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.common.api import SEC_DEF_TYPE
-from zato.server.openapi_console.spec import validate_credentials
+from zato.common.bearer_token_verifier import BearerTokenVerifier
+from zato.server.openapi_console.spec import validate_api_key, validate_bearer_token, validate_credentials
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,6 +38,10 @@ _bearer_name = 'orders.bearer'
 _bearer_username = 'orders.bearer.client'
 _bearer_password = 'password-0002'
 _bearer_id = 103
+
+_bearer_static_name = 'orders.bearer.static'
+_bearer_static_token = 'token-value-0001'
+_bearer_static_id = 104
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,15 +161,22 @@ class ValidateCredentialsTestCase(TestCase):
         result = validate_credentials(server, _basic_auth_username, _basic_auth_password)
         self.assertEqual(result, _basic_auth_id)
 
-    def test_an_apikey_caller_signs_in_with_the_definition_name(self):
+    def test_an_apikey_caller_signs_in_with_the_key_alone(self):
+
+        server = _make_default_server([])
+
+        result = validate_api_key(server, _apikey_value)
+        self.assertEqual(result, _apikey_id)
+
+        # An API key is matched in memory, so the database is left alone
+        self.assertEqual(server.test_session.query_count, 0)
+
+    def test_an_apikey_definition_name_is_not_a_username(self):
 
         server = _make_default_server([])
 
         result = validate_credentials(server, _apikey_name, _apikey_value)
-        self.assertEqual(result, _apikey_id)
-
-        # An API key definition is reached by name alone, so the database is left alone
-        self.assertEqual(server.test_session.query_count, 0)
+        self.assertIsNone(result)
 
     def test_a_bearer_token_caller_is_resolved(self):
 
@@ -200,7 +212,7 @@ class ValidateCredentialsTestCase(TestCase):
 
         server = _make_default_server([])
 
-        result = validate_credentials(server, _apikey_name, 'key-value-0009')
+        result = validate_api_key(server, 'key-value-0009')
         self.assertIsNone(result)
 
     def test_an_unknown_username_is_refused(self):
@@ -236,12 +248,12 @@ class ValidateCredentialsTestCase(TestCase):
 
         server = _make_server(_CountingDict({}), apikey_config, _CountingDict({}), [])
 
-        result = validate_credentials(server, _apikey_name, _apikey_value)
+        result = validate_api_key(server, _apikey_value)
         self.assertIsNone(result)
 
-    def test_a_definition_carrying_another_username_is_refused(self):
+    def test_a_definition_with_another_username_is_refused(self):
 
-        # What the database resolved has to be what the definition carries
+        # What the database resolved has to be what the definition has
         basic_auth_config = _CountingDict({
             _basic_auth_name: _make_sec_def(_basic_auth_id, _basic_auth_name, 'orders.client.renamed',
                 _basic_auth_password),
@@ -259,6 +271,65 @@ class ValidateCredentialsTestCase(TestCase):
         server = _make_default_server(rows)
 
         result = validate_credentials(server, _basic_auth_username, _basic_auth_password)
+        self.assertIsNone(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_bearer_server(static_token:'str', is_active:'bool'=True) -> 'MagicMock':
+    """ A server with one outgoing-only Bearer token definition and one that accepts the given static token inbound.
+    """
+    outgoing_only = _make_sec_def(_bearer_id, _bearer_name, _bearer_username, _bearer_password)
+
+    inbound = _make_sec_def(_bearer_static_id, _bearer_static_name, '', static_token, is_active=is_active)
+    inbound['config']['static_token'] = static_token
+
+    oauth_config = _CountingDict({
+        _bearer_name: outgoing_only,
+        _bearer_static_name: inbound,
+    })
+
+    out = _make_server(_CountingDict({}), _CountingDict({}), oauth_config, [])
+
+    # Static tokens are compared in memory, so the verifier never reaches its cache
+    out.url_data.get_bearer_token_verifier.return_value = BearerTokenVerifier(MagicMock())
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ValidateBearerTokenTestCase(TestCase):
+
+    def test_a_token_caller_signs_in_with_the_token_alone(self):
+
+        server = _make_bearer_server(_bearer_static_token)
+
+        result = validate_bearer_token(server, _bearer_static_token)
+        self.assertEqual(result, _bearer_static_id)
+
+        # A token is verified in memory, so the database is left alone
+        self.assertEqual(server.test_session.query_count, 0)
+
+    def test_a_wrong_token_is_refused(self):
+
+        server = _make_bearer_server(_bearer_static_token)
+
+        result = validate_bearer_token(server, 'token-value-0009')
+        self.assertIsNone(result)
+
+    def test_a_client_secret_is_not_a_token(self):
+
+        server = _make_bearer_server(_bearer_static_token)
+
+        result = validate_bearer_token(server, _bearer_password)
+        self.assertIsNone(result)
+
+    def test_an_inactive_token_definition_is_refused(self):
+
+        server = _make_bearer_server(_bearer_static_token, is_active=False)
+
+        result = validate_bearer_token(server, _bearer_static_token)
         self.assertIsNone(result)
 
 # ################################################################################################################################

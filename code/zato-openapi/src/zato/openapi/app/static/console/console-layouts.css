@@ -1,0 +1,242 @@
+/* ------------------------------------------------------------ */
+/* Console layout - the group shown                              */
+/* ------------------------------------------------------------ */
+
+.console-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: calc(100vh - var(--console-header-height));
+    padding: 1.75rem var(--console-page-padding) 0;
+    overflow: hidden;
+}
+
+.console-group {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.console-group[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Console layout - the list of operations and the detail        */
+/* ------------------------------------------------------------ */
+
+.console-layout-frame {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: var(--console-layout-master-width) var(--console-layout-resizer-width) minmax(0, 1fr);
+    min-height: 0;
+}
+
+.console-layout-master {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-height: 0;
+}
+
+.console-layout-filter {
+    flex: none;
+    margin-right: 0.5rem;
+}
+
+.console-layout-list,
+.console-layout-detail {
+    min-height: 0;
+    padding-bottom: var(--console-layout-end-padding);
+    overflow-y: scroll;
+}
+
+.console-layout-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding-right: 0.5rem;
+}
+
+.console-layout-detail {
+    display: flex;
+    flex-direction: column;
+    padding-right: 0.75rem;
+}
+
+.console-layout-detail .console-operation:not(.console-layout-active) {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Console layout - the rows of the list                         */
+/* ------------------------------------------------------------ */
+
+.console-layout-row {
+    display: grid;
+    flex: none;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.625rem;
+    align-items: baseline;
+    padding: 0.4375rem 0.625rem;
+    border: 1px solid transparent;
+    border-radius: var(--console-control-radius);
+    font: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    color: var(--console-text-muted);
+    background: transparent;
+    cursor: pointer;
+    transition: background var(--console-hover-duration) ease, color var(--console-hover-duration) ease;
+}
+
+.console-layout-row:hover {
+    color: var(--console-text);
+    background: var(--console-bg-raised-hover);
+    transition-delay: var(--console-hover-delay);
+}
+
+.console-layout-row.console-layout-active {
+    color: var(--console-accent-light);
+    background: var(--console-accent-soft);
+}
+
+.console-layout-row[hidden],
+.console-layout-row.console-layout-excluded {
+    display: none;
+}
+
+.console-layout-entry-path {
+    font-family: var(--console-font-mono);
+    font-size: 0.75rem;
+    color: var(--console-text);
+    overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ */
+/* Console layout - the handle between the list and the detail   */
+/* ------------------------------------------------------------ */
+
+.console-layout-resizer {
+    display: flex;
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.console-layout-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--console-border);
+    transition: background var(--console-hover-duration) ease;
+}
+
+.console-layout-grip {
+    position: relative;
+    width: var(--console-layout-grip-width);
+    height: var(--console-layout-grip-height);
+    border-radius: var(--console-layout-grip-width);
+    background: var(--console-layout-grip-fill);
+    transition: background var(--console-hover-duration) ease;
+}
+
+.console-layout-resizer:hover::before,
+.console-layout-resizer:hover .console-layout-grip {
+    background: var(--console-accent-light);
+    transition-delay: var(--console-hover-delay);
+}
+
+.console-resizing-layout .console-layout-resizer:active::before,
+.console-resizing-layout .console-layout-resizer:active .console-layout-grip {
+    background: var(--console-accent-light);
+    transition-delay: 0s;
+}
+
+body.console-resizing-layout {
+    cursor: col-resize;
+    user-select: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Console layout - the operation shown                          */
+/* ------------------------------------------------------------ */
+
+.console-layout-detail .console-operation {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+}
+
+.console-operation-header,
+.console-operation-description {
+    flex: none;
+}
+
+.console-operation-exchange,
+.console-operation-request,
+.console-operation-response {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.console-layout-detail .console-operation-exchange {
+    flex: 1 1 0;
+    min-height: var(--console-exchange-minimum-height);
+}
+
+.console-operation-request {
+    flex: 1 1 0;
+    min-height: var(--console-request-minimum-height);
+}
+
+.console-operation-response {
+    flex: 1 1 0;
+    min-height: var(--console-response-minimum-height);
+}
+
+.console-operation-request .console-panel-bar,
+.console-operation-response .console-panel-bar,
+.console-path-editor {
+    flex: none;
+}
+
+.console-editor,
+.console-raw,
+.console-response-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Console layout - narrow screens                               */
+/* ------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    .console-content {
+        height: auto;
+        padding-bottom: 4rem;
+        overflow: visible;
+    }
+
+    .console-layout-frame {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .console-layout-resizer {
+        display: none;
+    }
+
+    .console-layout-list,
+    .console-layout-detail {
+        overflow-y: visible;
+    }
+}

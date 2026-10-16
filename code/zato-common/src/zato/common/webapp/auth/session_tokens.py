@@ -17,9 +17,7 @@ from cryptography.fernet import Fernet, InvalidToken
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import optional, strtuple
-
-    strtuplenone = optional[strtuple]
+    from zato.common.typing_ import stranydict, strdictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,10 +38,10 @@ _credentials_fernet = Fernet(_credentials_key)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def encrypt_credentials(username:'str', password:'str') -> 'str':
+def encrypt_credentials(credentials:'stranydict') -> 'str':
     """ Encrypts the credentials into an opaque token that can be stored in the session cookie.
     """
-    data = json.dumps({'username': username, 'password': password})
+    data = json.dumps(credentials)
     token = _credentials_fernet.encrypt(data.encode('utf8'))
 
     out = token.decode('utf8')
@@ -52,7 +50,7 @@ def encrypt_credentials(username:'str', password:'str') -> 'str':
 
 # ################################################################################################################################
 
-def decrypt_credentials(token:'str') -> 'strtuplenone':
+def decrypt_credentials(token:'str') -> 'strdictnone':
     """ Decrypts the credentials from a session token. Returns None if the token is not valid,
     e.g. it was issued before the console was last restarted.
     """
@@ -62,9 +60,7 @@ def decrypt_credentials(token:'str') -> 'strtuplenone':
         logger.info('Could not decrypt session credentials - the application may have been restarted')
         return None
 
-    credentials = json.loads(data)
-
-    out = (credentials['username'], credentials['password'])
+    out = json.loads(data)
 
     return out
 

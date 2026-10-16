@@ -48,8 +48,16 @@ Spec_JSON_Path      = '/openapi/console/openapi.json'
 Spec_YAML_Path      = '/openapi/console/openapi.yaml'
 Relay_Base_Path     = '/openapi/console/relay'
 
+# The relay's request header with the caller's own headers for the endpoint, as URL-encoded JSON
+Relay_Headers_Name = 'X-Zato-Console-Headers'
+Relay_No_Headers   = '%7B%7D'
+
 # The console's admin is the Dashboard's own admin user, with the same username and password
 Admin_Username = 'admin'
+
+# The values of the sign-in form's auth type selector
+Auth_Type_Basic_Auth = 'basic_auth'
+Auth_Type_API_Key    = 'apikey'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -141,10 +149,34 @@ def console_logout(page:'Page', console_url:'str') -> 'None':
 # ################################################################################################################################
 
 def console_login(page:'Page', console_url:'str', username:'str', password:'str', timeout:'int'=_Login_Timeout) -> 'None':
-    """ Signs in to the console through its sign-in form, retrying while newly created
-    credentials propagate to the server. Returns once the console page has rendered.
+    """ Signs in to the console with a username and a password through its sign-in form, retrying while
+    newly created credentials propagate to the server. Returns once the console page has rendered.
     """
-    # The sign-in page sends a caller whose session already carries an identity straight
+    fields = {'#username': username, '#password': password}
+    _submit_login_form(page, console_url, Auth_Type_Basic_Auth, fields, username, timeout)
+
+# ################################################################################################################################
+
+def console_login_api_key(page:'Page', console_url:'str', key:'str', timeout:'int'=_Login_Timeout) -> 'None':
+    """ Signs in to the console with an API key through its sign-in form, retrying while
+    the newly created key propagates to the server. Returns once the console page has rendered.
+    """
+    fields = {'#key': key}
+    _submit_login_form(page, console_url, Auth_Type_API_Key, fields, Auth_Type_API_Key, timeout)
+
+# ################################################################################################################################
+
+def _submit_login_form(
+    page:'Page',
+    console_url:'str',
+    auth_type:'str',
+    fields:'anydict',
+    identity:'str',
+    timeout:'int',
+    ) -> 'None':
+    """ Chooses the auth type on the sign-in form, fills in its fields and submits it until the console page renders.
+    """
+    # The sign-in page sends a caller whose session already has an identity straight
     # to the console, so any previous session is ended before this one signs in.
     console_logout(page, console_url)
 
@@ -152,9 +184,12 @@ def console_login(page:'Page', console_url:'str', username:'str', password:'str'
 
     while True:
 
-        # Fill in the credentials ..
-        page.fill('#username', username)
-        page.fill('#password', password)
+        # Choose the kind of credentials, which shows the fields that belong to it ..
+        _ = page.select_option('#auth-type', auth_type)
+
+        # .. fill in the credentials ..
+        for selector, value in fields.items():
+            page.fill(selector, value)
 
         # .. submit the form - a success redirects to the console page,
         # a failure re-renders the form with an error message ..
@@ -167,7 +202,7 @@ def console_login(page:'Page', console_url:'str', username:'str', password:'str'
 
         # .. otherwise, the credentials may not have reached the server yet, so try again.
         if time.monotonic() >= deadline:
-            raise Exception(f'Could not sign in to the console as `{username}` within {timeout}s')
+            raise Exception(f'Could not sign in to the console as `{identity}` within {timeout}s')
 
         time.sleep(_Login_Poll_Interval)
 
@@ -252,10 +287,13 @@ def relay_invoke(page:'Page', console_url:'str', method:'str', url_path:'str', b
     """
     url = console_url + Relay_Base_Path + url_path
 
+    # The console's own pages always send the caller's request headers, even when there are none
+    headers = {Relay_Headers_Name: Relay_No_Headers}
+
     if body:
-        out = page.request.fetch(url, method=method, data=body)
+        out = page.request.fetch(url, method=method, headers=headers, data=body)
     else:
-        out = page.request.fetch(url, method=method)
+        out = page.request.fetch(url, method=method, headers=headers)
 
     return out
 

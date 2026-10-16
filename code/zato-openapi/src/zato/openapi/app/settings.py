@@ -15,7 +15,7 @@ from zato.common.webapp.settings import build_settings, build_templates
 globals().update(build_settings(
     root_urlconf='zato.openapi.app.urls',
     cookie_name='zato-openapi-console',
-    extra_apps=['zato.openapi.app'],
+    extra_apps=['zato.openapi.app', 'zato.common.webapp.ui'],
     extra_middleware=[],
 ))
 

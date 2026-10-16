@@ -1,0 +1,359 @@
+security:
+
+  - name: healthcare.clinician
+    type: basic_auth
+    username: healthcare.clinician
+    password: Zato_Enmasse_Env.Healthcare_Demo_Clinician_Password
+
+  - name: healthcare.scheduler
+    type: basic_auth
+    username: healthcare.scheduler
+    password: Zato_Enmasse_Env.Healthcare_Demo_Scheduler_Password
+
+  - name: healthcare.analyst
+    type: basic_auth
+    username: healthcare.analyst
+    password: Zato_Enmasse_Env.Healthcare_Demo_Analyst_Password
+
+  - name: healthcare.referral-partner
+    type: basic_auth
+    username: healthcare.referral-partner
+    password: Zato_Enmasse_Env.Healthcare_Demo_Referral_Partner_Password
+
+  - name: healthcare.lab-system
+    type: apikey
+    password: Zato_Enmasse_Env.Healthcare_Demo_Lab_System_Key
+
+  - name: healthcare.ward-board
+    type: apikey
+    password: Zato_Enmasse_Env.Healthcare_Demo_Ward_Board_Key
+
+  - name: healthcare.admission-feed
+    type: apikey
+    password: Zato_Enmasse_Env.Healthcare_Demo_Admission_Feed_Key
+
+  - name: healthcare.patient-portal
+    type: bearer_token
+    static_token: Zato_Enmasse_Env.Healthcare_Demo_Patient_Portal_Token
+
+groups:
+
+  - name: healthcare.clinical-staff
+    members:
+      - healthcare.clinician
+
+  - name: healthcare.scheduling
+    members:
+      - healthcare.scheduler
+      - healthcare.clinician
+
+  - name: healthcare.ward-operations
+    members:
+      - healthcare.ward-board
+      - healthcare.clinician
+
+  - name: healthcare.referrals
+    members:
+      - healthcare.referral-partner
+      - healthcare.clinician
+
+  - name: healthcare.interoperability
+    members:
+      - healthcare.lab-system
+      - healthcare.admission-feed
+      - healthcare.referral-partner
+
+  - name: healthcare.analytics
+    members:
+      - healthcare.analyst
+
+channel_rest:
+
+  # Patients - the patient index, as resources
+
+  - name: healthcare.patients.search-patients
+    service: healthcare.patients.search-patients
+    url_path: /api/healthcare/patients
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  - name: healthcare.patients.register-patient
+    service: healthcare.patients.register-patient
+    url_path: /api/healthcare/patients
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.scheduling
+
+  - name: healthcare.patients.get-patient
+    service: healthcare.patients.get-patient
+    url_path: /api/healthcare/patients/{patient_id}
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  - name: healthcare.patients.update-contact
+    service: healthcare.patients.update-contact
+    url_path: /api/healthcare/patients/{patient_id}/contact
+    method: PATCH
+    data_format: json
+    groups:
+      - healthcare.scheduling
+
+  - name: healthcare.patients.withdraw-consent
+    service: healthcare.patients.withdraw-consent
+    url_path: /api/healthcare/patients/{patient_id}/consents/{consent_id}
+    method: DELETE
+    data_format: json
+    security: healthcare.clinician
+
+  - name: healthcare.episodes.list-episodes
+    service: healthcare.episodes.list-episodes
+    url_path: /api/healthcare/patients/{patient_id}/episodes
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  - name: healthcare.patients.get-patient.v1
+    service: healthcare.patients.get-patient
+    url_path: /api/healthcare/v1/patients/{patient_id}
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+    is_deprecated: true
+    deprecation_sunset: '2027-06-30'
+    deprecation_successor: /api/healthcare/patients/{patient_id}
+
+  # Scheduling - the booking system, versioned, with actions and positional parameters in its paths
+
+  - name: healthcare.appointments.list-appointments
+    service: healthcare.appointments.list-appointments
+    url_path: /api/healthcare/scheduling/1.0/appointments/list
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.scheduling
+
+  - name: healthcare.appointments.book-appointment
+    service: healthcare.appointments.book-appointment
+    url_path: /api/healthcare/scheduling/1.0/appointments/book
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.scheduling
+
+  - name: healthcare.appointments.reschedule-appointment
+    service: healthcare.appointments.reschedule-appointment
+    url_path: /api/healthcare/scheduling/1.0/appointments/{appointment_id}/reschedule
+    method: PATCH
+    data_format: json
+    groups:
+      - healthcare.scheduling
+
+  - name: healthcare.appointments.cancel-appointment
+    service: healthcare.appointments.cancel-appointment
+    url_path: /api/healthcare/scheduling/1.0/appointments/{appointment_id}
+    method: DELETE
+    data_format: json
+    groups:
+      - healthcare.scheduling
+
+  - name: healthcare.appointments.report-no-shows
+    service: healthcare.appointments.report-no-shows
+    url_path: /api/healthcare/scheduling/1.0/no-shows/process
+    method: POST
+    data_format: json
+    security: healthcare.scheduler
+
+  - name: healthcare.appointments.get-availability
+    service: healthcare.appointments.get-availability
+    url_path: /api/healthcare/scheduling/1.0/availability/{clinic_code}/{date}
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.scheduling
+
+  - name: healthcare.wards.get-occupancy
+    service: healthcare.wards.get-occupancy
+    url_path: /api/healthcare/scheduling/1.0/wards/occupancy
+    method: GET
+    data_format: json
+    security: healthcare.ward-board
+
+  - name: healthcare.wards.beds
+    service: healthcare.wards.beds
+    url_path: /api/healthcare/scheduling/1.0/wards/{ward_code}/beds
+    data_format: json
+    groups:
+      - healthcare.ward-operations
+
+  # Clinical - the clinical record, one operation per channel
+
+  - name: healthcare.clinical.add-note
+    service: healthcare.clinical.add-note
+    url_path: /api/healthcare/channel.clinical.add-note
+    method: POST
+    data_format: json
+    security: healthcare.clinician
+
+  - name: healthcare.clinical.get-risk-assessment
+    service: healthcare.clinical.get-risk-assessment
+    url_path: /api/healthcare/channel.clinical.get-risk-assessment
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  - name: healthcare.episodes.open-episode
+    service: healthcare.episodes.open-episode
+    url_path: /api/healthcare/channel.clinical.open-episode
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  - name: healthcare.episodes.close-episode
+    service: healthcare.episodes.close-episode
+    url_path: /api/healthcare/channel.clinical.close-episode
+    method: PUT
+    data_format: json
+    security: healthcare.clinician
+
+  - name: healthcare.documents.upload-document
+    service: healthcare.documents.upload-document
+    url_path: /api/healthcare/channel.clinical.upload-document
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  - name: healthcare.clinical.submit-checklist
+    service: healthcare.clinical.submit-checklist
+    url_path: /api/healthcare/channel.clinical.submit-checklist
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+      - healthcare.ward-operations
+
+  - name: healthcare.outcomes.list-questionnaires
+    service: healthcare.outcomes.list-questionnaires
+    url_path: /api/healthcare/channel.clinical.list-questionnaires
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  - name: healthcare.outcomes.submit-response
+    service: healthcare.outcomes.submit-response
+    url_path: /api/healthcare/channel.clinical.submit-questionnaire-response
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  # Exchange - referral partners, laboratories, the hospital information system, FHIR clients and the patient portal
+
+  - name: healthcare.referrals.create-referral
+    service: healthcare.referrals.create-referral
+    url_path: /api/healthcare/exchange/referrals
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.referrals
+
+  - name: healthcare.referrals.get-referral-status
+    service: healthcare.referrals.get-referral-status
+    url_path: /api/healthcare/exchange/referrals/{referral_id}
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.referrals
+
+  - name: healthcare.referrals.create-referral.v1
+    service: healthcare.referrals.create-referral
+    url_path: /api/healthcare/exchange/v1/referral-letters
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.referrals
+    is_deprecated: true
+    deprecation_successor: /api/healthcare/exchange/referrals
+
+  - name: healthcare.lab.receive-result
+    service: healthcare.lab.receive-result
+    url_path: /api/healthcare/exchange/lab/receive-result
+    method: POST
+    data_format: json
+    security: healthcare.lab-system
+
+  - name: healthcare.admissions.receive-event
+    service: healthcare.admissions.receive-event
+    url_path: /api/healthcare/exchange/7c41e9b2/his/receive-event
+    method: POST
+    data_format: json
+    security: healthcare.admission-feed
+
+  - name: healthcare.fhir.patient-search
+    service: healthcare.fhir.patient-search
+    url_path: /api/healthcare/exchange/fhir/Patient
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.interoperability
+
+  - name: healthcare.portal.upcoming-appointments
+    service: healthcare.portal.upcoming-appointments
+    url_path: /api/healthcare/exchange/portal/appointments/upcoming
+    method: GET
+    data_format: json
+    security: healthcare.patient-portal
+
+  # Analytics - reporting and decision support
+
+  - name: healthcare.analytics.get-waiting-times
+    service: healthcare.analytics.get-waiting-times
+    url_path: /api/healthcare/analytics/2.0/waiting-times
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.analytics
+
+  - name: healthcare.analytics.get-contract-performance
+    service: healthcare.analytics.get-contract-performance
+    url_path: /api/healthcare/analytics/2.0/contracts/{contract_code}/performance
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.analytics
+
+  - name: healthcare.analytics.run-care-team-query
+    service: healthcare.analytics.run-care-team-query
+    url_path: /api/healthcare/analytics/2.0/care-team-queries/run
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.analytics
+      - healthcare.clinical-staff
+
+  - name: healthcare.decision-support.get-recommendations
+    service: healthcare.decision-support.get-recommendations
+    url_path: /api/healthcare/analytics/2.0/decision-support/recommendations
+    method: POST
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+
+  - name: healthcare.outcomes.get-outcome-scores
+    service: healthcare.outcomes.get-outcome-scores
+    url_path: /api/healthcare/analytics/2.0/outcome-scores/{patient_id}
+    method: GET
+    data_format: json
+    groups:
+      - healthcare.clinical-staff
+      - healthcare.analytics
