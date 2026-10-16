@@ -222,8 +222,8 @@ def open_edit_dialog(page:'Page', definition_id:'str') -> 'None':
 
 # ################################################################################################################################
 
-def edit_definition(page:'Page', base_url:'str', definition_id:'str', options:'anydict') -> 'None':
-    """ Opens the edit dialog for a definition, applies the given changes and submits the form.
+def fill_edit_form(page:'Page', base_url:'str', definition_id:'str', options:'anydict') -> 'None':
+    """ Opens the edit dialog for a definition and applies the given changes without submitting the form.
     """
 
     # Navigate to the Bearer tokens page first, since the caller may be on a different one ..
@@ -232,10 +232,15 @@ def edit_definition(page:'Page', base_url:'str', definition_id:'str', options:'a
     # .. open the dialog ..
     open_edit_dialog(page, definition_id)
 
-    # .. apply the changes ..
+    # .. and apply the changes.
     _fill_definition_form(page, options, 'edit-')
 
-    # .. and submit.
+# ################################################################################################################################
+
+def edit_definition(page:'Page', base_url:'str', definition_id:'str', options:'anydict') -> 'None':
+    """ Opens the edit dialog for a definition, applies the given changes and submits the form.
+    """
+    fill_edit_form(page, base_url, definition_id, options)
     submit_edit_form(page)
 
 # ################################################################################################################################
@@ -290,6 +295,23 @@ def edit_group_members(
     ) -> 'None':
     """ Edits a security group via the UI, adding and removing members through the badge picker.
     """
+    move_group_members(page, base_url, group_name, add_names, remove_names)
+
+    # .. submit and wait for the dialog to close.
+    submit_edit_form(page)
+
+# ################################################################################################################################
+
+def move_group_members(
+    page:'Page',
+    base_url:'str',
+    group_name:'str',
+    add_names:'strlistnone'=None,
+    remove_names:'strlistnone'=None,
+    ) -> 'None':
+    """ Opens the edit dialog of a security group and moves members between its badge picker zones,
+    without submitting the form.
+    """
 
     # Find the group and open its edit dialog ..
     group_id = get_group_id(page, base_url, group_name)
@@ -307,12 +329,9 @@ def edit_group_members(
     if add_names:
         _click_badges(page, 'badge-zone-available-edit', add_names)
 
-    # .. and each member to remove the other way around ..
+    # .. and each member to remove the other way around.
     if remove_names:
         _click_badges(page, 'badge-zone-assigned-edit', remove_names)
-
-    # .. submit and wait for the dialog to close.
-    submit_edit_form(page)
 
 # ################################################################################################################################
 

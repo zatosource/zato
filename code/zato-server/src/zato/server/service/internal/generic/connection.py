@@ -547,6 +547,18 @@ class _CreateEdit(_BaseService):
             # This will be needed in case this is a rename
             old_name = cast_('str', model.name)
 
+            # A name taken by another connection of the same type is refused before any hook writes
+            # objects of its own, e.g. the HTTP channel of an MCP gateway.
+            name_query = session.query(ModelGenericConn.id).\
+                filter(ModelGenericConn.name == data.name).\
+                filter(ModelGenericConn.type_ == data.type_)
+
+            if self.is_edit:
+                name_query = name_query.filter(ModelGenericConn.id != model.id)
+
+            if name_query.first():
+                raise BadRequest(self.cid, f'Connection `{data.name}` of type `{data.type_}` already exists')
+
             for key, value in sorted(conn_dict.items()):
 
                 # If we are merely creating this connection, do not set the field unless a secret was sent on input.

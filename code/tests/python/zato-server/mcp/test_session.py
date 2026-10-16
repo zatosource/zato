@@ -469,7 +469,7 @@ class HandlerSessionValidation(TestCase):
         request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
         mcp_response = handler.handle_raw_request(request, _test_identity, session_id='bogus-session-id')
 
-        self.assertEqual(mcp_response.status_code, BAD_REQUEST)
+        self.assertEqual(mcp_response.status_code, NOT_FOUND)
 
     def test_no_session_id_rejected(self) -> 'None':
 
@@ -497,7 +497,7 @@ class HandlerSessionValidation(TestCase):
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
         ping_response = handler.handle_raw_request(ping_request, other_identity, session_id=session_id)
 
-        self.assertEqual(ping_response.status_code, BAD_REQUEST)
+        self.assertEqual(ping_response.status_code, NOT_FOUND)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -573,7 +573,7 @@ class HandlerDeleteSession(TestCase):
         ping_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 2})
         ping_response = handler.handle_raw_request(ping_request, _test_identity, session_id=session_id)
 
-        self.assertEqual(ping_response.status_code, BAD_REQUEST)
+        self.assertEqual(ping_response.status_code, NOT_FOUND)
 
 # ################################################################################################################################
 # ################################################################################################################################

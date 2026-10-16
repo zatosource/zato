@@ -1231,6 +1231,9 @@ class MCP:
     # each gateway may override it through its invoke_timeout option.
     Default_Invoke_Timeout = 90
 
+    # The namespaces of internal services, which are never exposed as tools
+    Internal_Service_Prefixes = ('zato.', 'pub.zato.')
+
     # The opaque-config keys under which a gateway lists the connections
     # it exposes as tools, one key per connection group.
     Connection_List_Keys = [

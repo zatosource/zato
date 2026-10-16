@@ -378,24 +378,27 @@ class Create(AdminService):
 
         for gateway_config in self.server.config_manager.gateway_mcp.values():
 
-            # A gateway that is not built yet, or is being deleted, has no registry to rebuild
-            handler = gateway_config.conn.handler
+            wrapper = gateway_config.conn
+            allowed_names = set(wrapper.config.get('services', []))
 
-            if handler is None:
+            if not (allowed_names & deployed_names):
                 continue
 
-            tool_registry = handler.tool_registry
-            allowed_names = set(tool_registry.allowed_services)
+            # One gateway whose allow list references a since-removed service must not
+            # break the deployment of the others, so each rebuild fails on its own.
+            try:
 
-            if allowed_names & deployed_names:
+                # A gateway whose earlier build left no handler is built in full now that the service exists ..
+                if wrapper.handler is None:
+                    wrapper.build_wrapper()
 
-                # One gateway whose allow list references a since-removed service must not
-                # break the deployment of the others, so each rebuild fails on its own.
-                try:
-                    tool_registry.rebuild()
-                except Exception:
-                    self.logger.warning('Could not rebuild the MCP tool registry of `%s`:\n%s',
-                        gateway_config.name, format_exc())
+                # .. while one that was built has only its tools listed anew.
+                else:
+                    wrapper.handler.tool_registry.rebuild()
+
+            except Exception:
+                self.logger.warning('Could not rebuild the MCP tool registry of `%s`:\n%s',
+                    gateway_config.name, format_exc())
 
 # ################################################################################################################################
 

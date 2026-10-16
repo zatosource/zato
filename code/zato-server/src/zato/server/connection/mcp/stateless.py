@@ -15,6 +15,7 @@ from zato.common.api import MCP
 from zato.server.connection.mcp.common import _error_invalid_params, _error_invalid_request, _error_method_not_found, \
     _jsonrpc_version, _message_invalid_params, _message_missing_jsonrpc_version, _message_missing_method, \
     _method_tools_call, _server_name, _server_version, make_error_response, make_success_response, MCPResponse, printable
+from zato.server.connection.mcp.tools_call import add_response_filter_property
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -135,7 +136,7 @@ def _handle_discover(handler:'MCPHandler', request_id:'any_') -> 'stranydict':
     # .. a gateway that allows agent filters advertises the filter property here
     # the same way tools/list does ..
     if handler.allow_agent_filters:
-        tools = handler._add_response_filter_property(tools)
+        tools = add_response_filter_property(tools)
 
     # .. and the whole advertisement goes out as one result.
     result:'stranydict' = {

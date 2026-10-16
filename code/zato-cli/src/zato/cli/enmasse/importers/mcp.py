@@ -205,30 +205,31 @@ class GatewayMCPImporter(GenericConnectionImporter):
 
     def _ensure_rest_channel(self, connection_def:'anydict', session:'SASession') -> 'None':
 
-        channel_name = connection_def['name']
-        security_groups = self._resolve_security_groups(connection_def, session)
-
         ensure_mcp_rest_channel(
             session=session,
-            channel_name=channel_name,
+            channel_name=connection_def['name'],
             url_path=connection_def.get('url_path', '/mcp'),
             is_active=connection_def.get('is_active', True),
-            security_groups=security_groups,
+            security_groups=connection_def['security_groups'],
         )
 
 # ################################################################################################################################
 
-    def _validate_oauth(self, connection_def:'anydict', session:'SASession') -> 'None':
-        """ A gateway with OAuth on is imported only with a bearer definition that can verify tokens.
+    def _prepare_definition(self, connection_def:'anydict', session:'SASession') -> 'None':
+        """ Brings a gateway's definition to the form it is stored in - its security groups as ids,
+        which is what the dashboard stores too, and validated for OAuth.
         """
-        security_groups = self._resolve_security_groups(connection_def, session)
-        validate_oauth_security(session, connection_def, security_groups)
+        self._normalize_services(connection_def)
+
+        connection_def['security_groups'] = self._resolve_security_groups(connection_def, session)
+
+        # A gateway with OAuth on is imported only with a bearer definition that can verify tokens
+        validate_oauth_security(session, connection_def, connection_def['security_groups'])
 
 # ################################################################################################################################
 
     def create_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
-        self._normalize_services(connection_def)
-        self._validate_oauth(connection_def, session)
+        self._prepare_definition(connection_def, session)
         instance = super().create_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
         return instance
@@ -236,8 +237,7 @@ class GatewayMCPImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def update_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
-        self._normalize_services(connection_def)
-        self._validate_oauth(connection_def, session)
+        self._prepare_definition(connection_def, session)
         instance = super().update_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
         return instance

@@ -6,7 +6,7 @@
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console openapi-console-demo openapi-console-tutorial \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -187,6 +187,16 @@ file-listener:
 
 openapi-console:
 	$(ZATO_PY) -m zato.openapi.app.run
+
+openapi-console-demo: ## Healthcare demo for the OpenAPI console - services, security definitions, groups and REST channels, then the console itself.
+	$(ZATO_PY) -m zato.openapi.console.demo.install --server-dir $(Zato_Server_Dir) --zato $(CURDIR)/code/bin/zato
+	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
+	$(MAKE) openapi-console
+
+openapi-console-tutorial: ## The main tutorial for the OpenAPI console - its service, connections, API key, REST channel and scheduler job, then the console itself.
+	$(ZATO_PY) -m zato.openapi.console.demo.tutorial --server-dir $(Zato_Server_Dir)
+	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
+	$(MAKE) openapi-console
 
 # ############################################################################
 # Quickstart dev targets
@@ -793,6 +803,12 @@ test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real 
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard_masking.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard_hooks.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard_oauth.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard_oauth_live.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_gateway_groups_live.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_gateway_oauth_guard_live.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_gateway_channels_live.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_gateway_integrity.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_response_controls.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_audit_log.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_mcp_gateway.py \

@@ -18,6 +18,7 @@ from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util.api import utcnow
 from zato.common.util.channel import validate_channel_url_path
+from zato.common.util.gateway import mcp_service_name
 from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import AsIs, Boolean
 from zato.server.service.internal.http_soap.alert_settings import alert_input, prepare_alert_settings
@@ -138,10 +139,13 @@ class Edit(_CreateEdit):
                 msg = 'A {} of that name:`{}` already exists; path: `{}` (id:{})'
                 raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
+            # A gateway's channel serves its URL path with every method, so it collides with any other channel of that path
             if input.connection == CONNECTION.CHANNEL:
                 service = self._get_service_from_input(session, input)
+                claims_whole_path = service.name == mcp_service_name
             else:
                 service = None
+                claims_whole_path = False
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
@@ -152,7 +156,7 @@ class Edit(_CreateEdit):
             if input.connection == CONNECTION.CHANNEL:
                 validate_channel_url_path(input.url_path)
                 self.ensure_channel_is_unique(session,
-                    input.url_path, input.http_accept, input.method, input_id)
+                    input.url_path, input.http_accept, input.method, input_id, claims_whole_path)
                 self.ensure_channel_does_not_conflict(session, input, input_id)
 
             try:

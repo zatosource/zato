@@ -169,13 +169,13 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, itemId);
         $.fn.zato.gateway.mcp.skills_badge_picker.load(ownConfig.pickerAction, itemId);
 
-        // .. the OAuth scopes as chips and the toggle they are only editable under ..
+        // .. the OAuth scopes as chips, on the second tab of the Security card ..
         $.fn.zato.gateway.mcp._init_scope_list(action);
-        wizard._initOAuthToggle();
+        wizard._initSecurityTabs();
 
         // .. a live uniqueness indicator for the URL path - the name
         // has its own check through the kit config above ..
-        $.fn.zato.validate_unique(wizard.fieldSelector('url_path'), 'http_soap', 'url_path');
+        $.fn.zato.validate_unique(wizard.fieldSelector('url_path'), 'channel', 'url_path');
 
         // .. and the email and LLM connections the Alerts popup picks from stay fresh
         // while the page is open - no reloading to pick up new ones.
@@ -236,22 +236,27 @@ wizard._rememberOwnValue = function(fieldName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The scopes line follows the OAuth toggle - enabled while OAuth is on,
-// disabled and left as it was otherwise.
-wizard._initOAuthToggle = function() {
+// The tabs of the Security card show one pane at a time - the definitions
+// it authenticates with, or OAuth with its scopes.
+wizard._initSecurityTabs = function() {
 
-    var toggle = wizard.field('oauth');
-    var scopes = wizard.field('oauth_scopes');
+    var tabs = $('#mcp-wizard-security-tabs > .dashboard-tab');
+    var panes = $('#mcp-wizard-security-body .mcp-wizard-security-pane');
 
-    var syncScopes = function() {
-        var isOn = toggle.prop('checked');
-        scopes.prop('disabled', !isOn);
-        scopes.trigger('chip-list:updated');
-        $('#mcp-wizard-line-oauth-scopes').toggleClass('mcp-wizard-line-disabled', !isOn);
-    };
+    tabs.on('click', function() {
 
-    toggle.on('change', syncScopes);
-    syncScopes();
+        var paneName = this.getAttribute('data-pane');
+
+        tabs.each(function() {
+            var isActive = this.getAttribute('data-pane') === paneName;
+            this.classList.toggle('dashboard-tab-active', isActive);
+            this.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        panes.each(function() {
+            this.classList.toggle('mcp-wizard-security-pane-active', this.getAttribute('data-pane') === paneName);
+        });
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -373,8 +378,7 @@ wizard.helpDescriptions = function() {
         'Skills are authored on the AI - Skills screen. With none assigned, ' +
         'the gateway serves tools only.';
     out['badge-filter-text-sec-wizard'] = 'Security definitions used to authenticate incoming MCP requests. ' +
-        'More than one can be assigned. With none assigned, the gateway accepts ' +
-        'requests from anyone who knows its address.';
+        'More than one can be assigned. With none assigned, the gateway refuses every caller.';
 
     // .. the size caps line of step 2 ..
     out['mcp-wizard-edit-size-caps'] = 'How large a tool response may grow and what happens to one over the cap. ' +

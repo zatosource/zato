@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
-from http.client import BAD_REQUEST, OK
+from http.client import NOT_FOUND, OK
 
 # local
 import _audit
@@ -135,7 +135,7 @@ class TestIdentityOverTime:
         headers = _helpers.apikey_headers(zato_server['apikey_value'])
 
         response = apikey_client.jsonrpc('tools/list', session_id=session_id, extra_headers=headers)
-        assert response.status_code == BAD_REQUEST, response.text
+        assert response.status_code == NOT_FOUND, response.text
 
 # ################################################################################################################################
 

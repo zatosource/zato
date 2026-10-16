@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import BAD_REQUEST, NOT_FOUND, OK
+from http.client import NOT_FOUND, OK
 from unittest import TestCase
 
 # Hypothesis
@@ -21,7 +21,7 @@ from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
     _error_parse, _jsonrpc_version, _mcp_protocol_version
-from zato.server.connection.mcp.registry import ToolRegistry, _internal_prefix
+from zato.server.connection.mcp.registry import ToolRegistry, _internal_prefixes
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 
@@ -461,7 +461,7 @@ class SchemaExtractionProperties(TestCase):
 
         for tool in registry.get_tools():
             tool_name = tool['name']
-            starts_with_internal = tool_name.startswith(_internal_prefix)
+            starts_with_internal = tool_name.startswith(_internal_prefixes)
             self.assertFalse(starts_with_internal)
 
 # ################################################################################################################################
@@ -476,7 +476,7 @@ class SessionFuzzing(TestCase):
     @given(st.text(min_size=1, max_size=200))
     @settings(max_examples=200)
     def test_random_session_id_rejected(self, session_id:'str') -> 'None':
-        """ A random string as session ID must be rejected with 400.
+        """ A random string as session ID must be rejected with 404.
         """
 
         handler = _make_handler()
@@ -486,7 +486,7 @@ class SessionFuzzing(TestCase):
 
         response = handler.handle_raw_request(raw, _test_identity, session_id=session_id)
 
-        self.assertEqual(response.status_code, BAD_REQUEST)
+        self.assertEqual(response.status_code, NOT_FOUND)
 
 # ################################################################################################################################
 

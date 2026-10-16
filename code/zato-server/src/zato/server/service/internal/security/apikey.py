@@ -17,6 +17,7 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import APIKeySecurity
 from zato.common.odb.query import apikey_security_list
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
@@ -104,7 +105,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an API key.
     """
-    input = 'id', 'name', 'is_active', '-header'
+    input = Int('id'), 'name', 'is_active', '-header'
     output = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
@@ -172,7 +173,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an API key.
     """
-    input = 'id',
+    input = Int('id'),
 
     def handle(self) -> 'None':
         with closing(self.odb.session()) as session:

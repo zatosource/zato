@@ -2625,7 +2625,25 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'email_imap': 'email_imap',
             'email_smtp': 'email_smtp',
             'http_soap': 'http_soap',
+            'channel': 'http_soap',
             'pubsub_topic': 'pubsub_topic',
+        }
+
+        # The attribute and filter names become column names in the query below, so each entity type accepts only its own ..
+        _url_path_attr_names = ('name', 'url_path')
+        _entity_type_to_attr_names = {
+            'security': ('name', 'username'),
+            'outgoing_rest': _url_path_attr_names,
+            'outgoing_soap': _url_path_attr_names,
+            'channel_rest': _url_path_attr_names,
+            'channel_soap': _url_path_attr_names,
+            'http_soap': _url_path_attr_names,
+            'channel': _url_path_attr_names,
+        }
+
+        _entity_type_to_filter_names = {
+            'security': ('sec_type',),
+            'generic_connection': ('type_',),
         }
 
         # The http_soap table stores channels and outgoing connections together,
@@ -2638,6 +2656,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'outgoing_soap': "connection = 'outgoing' AND transport = 'soap'",
             'channel_rest':  "connection = 'channel' AND transport = 'plain_http'",
             'channel_soap':  "connection = 'channel' AND transport = 'soap'",
+            'channel':       "connection = 'channel'",
             'channel_openapi': "type_ = '{}'".format(GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI),
             'groups': "type_ = '{}'".format(Groups.Type.Group_Parent),
             'on_prem_gateway': "type_ = '{}'".format(On_Prem_Gateway.Type.On_Prem_Gateway),
@@ -2648,6 +2667,23 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         table_name = _entity_type_to_table.get(entity_type)
         if not table_name:
             raise Exception(f'Unmapped entity type `{entity_type}` in check_attr_exists')
+
+        if entity_type in _entity_type_to_attr_names:
+            attr_names = _entity_type_to_attr_names[entity_type]
+        else:
+            attr_names = ('name',)
+
+        if attr_name not in attr_names:
+            raise Exception(f'Invalid attribute `{attr_name}` for entity type `{entity_type}` in check_attr_exists')
+
+        if filter_name:
+            if entity_type in _entity_type_to_filter_names:
+                filter_names = _entity_type_to_filter_names[entity_type]
+            else:
+                filter_names = ()
+
+            if filter_name not in filter_names:
+                raise Exception(f'Invalid filter `{filter_name}` for entity type `{entity_type}` in check_attr_exists')
 
         # A channel's url_path is shared across all transports, so this check must mirror
         # ensure_channel_is_unique from the create service - scoped by connection but not by

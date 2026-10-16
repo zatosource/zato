@@ -172,16 +172,19 @@ def validate_channel_url_path(url_path:'str') -> 'None':
 # ################################################################################################################################
 
 def find_channel_collision(
-    url_path,       # type: str
-    http_accept,    # type: strnone
-    http_method,    # type: strnone
-    existing_items, # type: anylist
-    skip_id         # type: intnone
+    url_path,                # type: str
+    http_accept,             # type: strnone
+    http_method,             # type: strnone
+    existing_items,          # type: anylist
+    skip_id,                 # type: intnone
+    claims_whole_path=False, # type: bool
 ) -> 'strnone':
     """ The one collision rule for HTTP channels - a candidate collides with an existing channel
     when both sit at the same URL path and their HTTP method and Accept header are equal too.
-    Each existing item carries id, name, url_path, method and http_accept, and the item whose id
-    is skip_id is the candidate itself, which an edit compares against everything but itself.
+    A channel that claims its whole path, i.e. the channel of an MCP gateway, which answers every
+    HTTP method there, collides with any other channel at that path.
+    Each existing item carries id, name, url_path, method, http_accept and claims_whole_path, and the item
+    whose id is skip_id is the candidate itself, which an edit compares against everything but itself.
     Returns the name of the colliding channel or None. Callers differ only in how they load
     the existing items - zato.http-soap.create with its per-candidate query, enmasse with
     its one SELECT for everything.
@@ -196,7 +199,11 @@ def find_channel_collision(
         if item['id'] == skip_id:
             continue
 
-        # .. it takes both the same method and the same Accept header to collide.
+        # .. a path claimed as a whole is shared with no other channel ..
+        if claims_whole_path or item['claims_whole_path']:
+            return item['name']
+
+        # .. otherwise, it takes both the same method and the same Accept header to collide.
         if item['method'] == http_method:
             if item['http_accept'] == http_accept:
                 return item['name']
@@ -444,23 +451,26 @@ def get_channel_collision_items(session:'any_') -> 'anylist':
     """ Returns every channel with the fields the collision and conflict rules compare.
     """
     from zato.common.api import CONNECTION
-    from zato.common.odb.model import HTTPSOAP
+    from zato.common.odb.model import HTTPSOAP, Service
+    from zato.common.util.gateway import mcp_service_name
     from zato.common.util.sql import parse_instance_opaque_attr
     from zato.common.util.url_dispatcher import resolve_match_slash
 
-    existing_ones = session.query(HTTPSOAP).\
+    existing_ones = session.query(HTTPSOAP, Service.name).\
+        join(Service, HTTPSOAP.service_id == Service.id).\
         filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
         all()
 
     out = []
 
-    for item in existing_ones:
+    for item, service_name in existing_ones:
         opaque = parse_instance_opaque_attr(item)
         out.append({
             'id': item.id,
             'name': item.name,
             'url_path': item.url_path,
             'method': item.method,
+            'claims_whole_path': service_name == mcp_service_name,
             'http_accept': opaque.get('http_accept'),
             'match_slash': resolve_match_slash(opaque.get('match_slash')),
             'security': channel_security_key(item.security_id, opaque.get('security_groups')),

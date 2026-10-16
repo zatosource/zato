@@ -59,10 +59,12 @@ _method_initialize = 'initialize'
 # Error message returned when protocolVersion is absent from initialize params
 _message_missing_protocol_version = 'Missing required parameter: protocolVersion'
 
-# HTTP status code for a genuinely absent session resource on DELETE/GET
+# HTTP status code and message for a session that is unknown, expired or not the caller's,
+# the status code also for an absent session resource on DELETE/GET
 _http_not_found = NOT_FOUND
+_message_session_not_found = 'Session not found'
 
-# HTTP status code for a protocol-level rejection (missing, unknown, or expired session on a request that requires one)
+# HTTP status code for a protocol-level rejection, e.g. a request without the session it requires
 _http_bad_request = BAD_REQUEST
 
 # What a request body over the published size bound is refused with
@@ -132,10 +134,9 @@ class MCPHandler:
         protocol_version_header:'strnone',
         identity:'str',
         ) -> 'MCPResponse | None':
-        """ Validates session existence, identity, and protocol version match.
-        Returns an MCPResponse with a 400 error if the session is invalid, or None if everything is fine.
-        Called by handle_raw_request where an invalid session means it was terminated, never existed,
-        or belongs to a different identity.
+        """ Validates session existence, identity, and protocol version match. Returns None if everything is fine,
+        or an MCPResponse with a 404 error, the same for a session that was terminated, never existed, expired
+        or belongs to a different identity, so the client opens a new session in reply.
         """
 
         # If a session id was supplied, it must be valid ..
@@ -146,8 +147,8 @@ class MCPHandler:
             if validation_result != Session_Valid:
                 logger.info('MCP: Invalid or expired session `%s`', printable(session_id))
                 out = MCPResponse()
-                out.body = make_error_response(None, _error_invalid_request, _message_bad_request)
-                out.status_code = _http_bad_request
+                out.body = make_error_response(None, _error_invalid_request, _message_session_not_found)
+                out.status_code = _http_not_found
                 return out
 
             # .. when the session is valid, check the protocol version header ..

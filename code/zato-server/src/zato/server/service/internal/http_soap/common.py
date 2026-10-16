@@ -15,6 +15,7 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import HTTPSOAP, SecurityBase, Service
 from zato.common.util.channel import channel_security_key, find_channel_collision, find_channel_conflict, \
      get_channel_collision_items
+from zato.common.util.gateway import mcp_service_name
 from zato.common.util.rest_invocation import parse_param_rows, validate_jsonata, validate_xpath
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.url_dispatcher import resolve_match_slash
@@ -309,8 +310,17 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
 # ################################################################################################################################
 
-    def ensure_channel_is_unique(self, session, url_path, http_accept, http_method, skip_id):
-        existing_ones = session.query(HTTPSOAP).\
+    def ensure_channel_is_unique(
+        self,
+        session:'any_',
+        url_path:'str',
+        http_accept:'any_',
+        http_method:'any_',
+        skip_id:'any_',
+        claims_whole_path:'bool',
+        ) -> 'None':
+        existing_ones = session.query(HTTPSOAP, Service.name).\
+            join(Service, HTTPSOAP.service_id==Service.id).\
             filter(HTTPSOAP.url_path==url_path).\
             filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
             all()
@@ -320,17 +330,18 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
         # so the shared collision rule needs to look at each one.
         existing_items = []
 
-        for item in existing_ones:
+        for item, service_name in existing_ones:
             opaque = parse_instance_opaque_attr(item)
             existing_items.append({
                 'id': item.id,
                 'name': item.name,
                 'url_path': item.url_path,
                 'method': item.method,
+                'claims_whole_path': service_name == mcp_service_name,
                 'http_accept': opaque.get('http_accept'),
             })
 
-        colliding_name = find_channel_collision(url_path, http_accept, http_method, existing_items, skip_id)
+        colliding_name = find_channel_collision(url_path, http_accept, http_method, existing_items, skip_id, claims_whole_path)
 
         if colliding_name:
             self._raise_error(colliding_name, url_path, http_accept, http_method, 'chk1')

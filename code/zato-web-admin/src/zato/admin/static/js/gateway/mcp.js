@@ -226,7 +226,7 @@ $.fn.zato.micro_forms.setup($.fn.zato.gateway.mcp.size_caps, {
 
 // The Name and URL path columns - each is edited in the small form the scheduler
 // and the wizard's own name badge use, opened right above the value it changes.
-$.fn.zato.gateway.mcp.edit_text = function(id, link, name, label) {
+$.fn.zato.gateway.mcp.edit_text = function(id, link, name, label, unique) {
 
     var mcp = $.fn.zato.gateway.mcp;
     var instance = $.fn.zato.data_table.data[id];
@@ -236,11 +236,7 @@ $.fn.zato.gateway.mcp.edit_text = function(id, link, name, label) {
         title: label,
         input_width: '18em',
         rows: [
-            // The uniqueness check is scoped to MCP gateways because generic
-            // connection attributes are unique per connection type
-            {name: name, label: label, value: instance[name],
-                unique: {entity_type: 'generic_connection', attr_name: name,
-                    filter: {filter_name: 'type_', filter_value: mcp.config.connection_type}}}
+            {name: name, label: label, value: instance[name], unique: unique}
         ],
         validate: function(values) {
             if(!values[name]) {
@@ -267,14 +263,19 @@ $.fn.zato.gateway.mcp.edit_text = function(id, link, name, label) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// The name is unique per connection type, which scopes its check to MCP gateways
 $.fn.zato.gateway.mcp.edit_name = function(id, link) {
-    $.fn.zato.gateway.mcp.edit_text(id, link, 'name', 'Name');
+    var unique = {entity_type: 'generic_connection', attr_name: 'name',
+        filter: {filter_name: 'type_', filter_value: $.fn.zato.gateway.mcp.config.connection_type}};
+    $.fn.zato.gateway.mcp.edit_text(id, link, 'name', 'Name', unique);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// The URL path belongs to the gateway's HTTP channel, so it is checked against every channel
 $.fn.zato.gateway.mcp.edit_url_path = function(id, link) {
-    $.fn.zato.gateway.mcp.edit_text(id, link, 'url_path', 'URL path');
+    var unique = {entity_type: 'channel', attr_name: 'url_path'};
+    $.fn.zato.gateway.mcp.edit_text(id, link, 'url_path', 'URL path', unique);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -315,8 +316,12 @@ $.fn.zato.gateway.mcp.pickers = {
             $.fn.zato.badge_picker.init('row', items, $.fn.zato.gateway.mcp.badge_picker_config);
         },
 
+        // The service names travel in their original case, which data-name lowercases for filtering
         read: function() {
-            var out = $.fn.zato.badge_picker.get_assigned_names('row');
+            var out = [];
+            $('#badge-zone-assigned-row .badge-zone-body .security-badge').each(function() {
+                out.push($(this).attr('data-id'));
+            });
             out.sort();
             return out;
         }

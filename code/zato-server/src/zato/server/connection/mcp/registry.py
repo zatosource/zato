@@ -12,6 +12,7 @@ from operator import itemgetter
 from secrets import token_hex
 
 # Zato
+from zato.common.api import MCP
 from zato.common.util.logging_ import count_text
 from zato.server.connection.mcp.common import InvalidCursor
 from zato.server.connection.mcp.connection_tools.api import build_tool_name, group_registry
@@ -36,8 +37,8 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Internal service namespace - services under this prefix are never exposed as MCP tools
-_internal_prefix = 'zato.'
+# Internal service namespaces - services under these prefixes are never exposed as MCP tools
+_internal_prefixes = MCP.Internal_Service_Prefixes
 
 # Default page size for tools/list pagination
 _default_page_size = 100
@@ -114,15 +115,17 @@ class ToolRegistry:
         for service_name in self.allowed_services:
 
             # Never expose internal services regardless of allow list contents
-            if service_name.startswith(_internal_prefix):
+            if service_name.startswith(_internal_prefixes):
                 logger.info('Skipping internal service `%s` from MCP tool exposure', service_name)
                 continue
 
-            # Look up the service in the store ..
+            # Look up the service in the store - one that is not deployed yet becomes a tool
+            # once it is, when its deployment rebuilds the registry ..
             impl_name = self.service_store.name_to_impl_name.get(service_name)
 
             if impl_name is None:
-                raise ValueError(f'MCP allow list references service `{service_name}` which is not deployed')
+                logger.warning('MCP allow list references service `%s` which is not deployed', service_name)
+                continue
 
             service_info = self.service_store.services.get(impl_name)
 
@@ -284,11 +287,11 @@ class ToolRegistry:
             return True
 
         # .. internal services are never exposed as MCP tools ..
-        if service_name.startswith(_internal_prefix):
+        if service_name.startswith(_internal_prefixes):
             return False
 
-        # .. otherwise check membership in the allow list.
-        out = service_name in self.allowed_services
+        # .. otherwise, it takes a service the last rebuild resolved, i.e. one in the allow list that is deployed.
+        out = service_name in self._schema_by_name
         return out
 
 # ################################################################################################################################

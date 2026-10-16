@@ -800,6 +800,11 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
                 on_success_callback();
             }
         }
+
+        // A deletion the server refused keeps the row and says why
+        else {
+            $.fn.zato.user_message(false, data.responseText);
+        }
     }
 
     var callback = function(ok) {

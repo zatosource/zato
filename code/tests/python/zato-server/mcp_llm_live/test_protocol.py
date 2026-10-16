@@ -135,7 +135,7 @@ class TestSessionLifecycle:
 
         # .. and the old session no longer opens any door.
         response = client.jsonrpc('tools/list', session_id=session_id)
-        assert response.status_code == BAD_REQUEST, response.text
+        assert response.status_code == NOT_FOUND, response.text
 
 # ################################################################################################################################
 
@@ -638,7 +638,7 @@ class TestRequestValueRendering:
         session_id = f'mcp00000000\t{trailer}'
 
         response = client.jsonrpc('tools/list', session_id=session_id)
-        assert response.status_code == BAD_REQUEST, response.text
+        assert response.status_code == NOT_FOUND, response.text
 
         # .. and the log renders the id as plain text on the refusal's own line.
         new_log_text = _helpers.read_new_log_text(server_log_path, log_offset)

@@ -16,9 +16,10 @@ from django.http import HttpResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.gateway.mcp.common import _export_schema_url, _export_version, \
-    _sec_type_to_export_header, _slug_invalid_characters
+    _sec_type_to_export_header, _slug_invalid_characters, get_group_id_list, get_group_member_list, get_stored_group_list, \
+    read_gateway
 from zato.admin.web.views.gateway.mcp_tool_sources import Connection_Source_List
-from zato.common.api import Groups, MCP, SEC_DEF_TYPE
+from zato.common.api import MCP, SEC_DEF_TYPE
 from zato.common.util.mcp_oauth import get_metadata_url, get_server_address, parse_scopes
 
 # ################################################################################################################################
@@ -37,8 +38,7 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
     """
 
     # Look up the gateway by its ID ..
-    response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
-    gateway = response.data
+    gateway = read_gateway(req, id)
 
     gateway_name = gateway['name']
     url_path = gateway['url_path']
@@ -76,16 +76,11 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
     header_names = set()
     security_list = []
 
-    if security_groups := gateway.get('security_groups'):
-        group_id = security_groups[0]
-        member_response = req.zato.client.invoke('zato.groups.get-member-list', {
-            'group_type': Groups.Type.API_Clients,
-            'group_id': group_id,
-        })
+    for group_id in get_group_id_list(req, get_stored_group_list(gateway)):
 
         # .. each security type maps to one header, emitted once no matter how many members use it,
         # except that on a gateway with OAuth on a bearer definition is what the OAuth block describes ..
-        for member in member_response.data:
+        for member in get_group_member_list(req, group_id):
             sec_type = member['sec_type']
 
             security_list.append({

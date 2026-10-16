@@ -21,6 +21,7 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
@@ -132,7 +133,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
-    input = 'name', 'is_active', 'username', 'realm', '-id'
+    input = 'name', 'is_active', 'username', 'realm', Int('-id')
     output = 'id', 'name'
 
     def handle(self):
@@ -189,7 +190,8 @@ class Edit(AdminService):
                 raise
             else:
 
-                # Enrich the message for the server ..
+                # Enrich the message for the server, which finds the definition by its id ..
+                input.id = definition.id
                 input.action = SECURITY.BASIC_AUTH_EDIT.value
                 input.old_name = old_name
                 input.old_username = old_username
@@ -244,7 +246,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
     """
-    input = 'id',
+    input = Int('id'),
 
     def handle(self):
         logger.info('Delete.handle: id=%s', self.request.input.id)

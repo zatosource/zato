@@ -1785,12 +1785,8 @@ class ConfigManager(_ConfigManagerBase):
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
             self._visit_wrapper_edit, keys=('username', 'name'))
 
-        # .. extract the newest information  ..
-        sec_def = self.basic_auth_get_by_id(msg.id)
-
-        # .. update security groups ..
-        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-            security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+        # .. update security groups with the newest information ..
+        self.update_security_definition_in_groups(msg.id)
 
         # .. update pub/sub in-memory state if username or sec def name changed ..
         self._update_pubsub_security_rename(msg)
@@ -1876,12 +1872,8 @@ class ConfigManager(_ConfigManagerBase):
         # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_edit, keys=('username', 'name'))
 
-        # .. the call above already updated URL data, so the definition's header is the current one ..
-        sec_def = self.apikey_get_by_id(msg.id)
-
-        # .. and now security groups can be updated with the possibly new header.
-        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-            security_groups_ctx.set_current_apikey_header(msg.id, sec_def['header'])
+        # .. the call above already updated URL data, so security groups can be updated with the possibly new header.
+        self.update_security_definition_in_groups(msg.id)
 
 # ################################################################################################################################
 
@@ -2132,12 +2124,8 @@ class ConfigManager(_ConfigManagerBase):
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
 
-        # .. extract the newest information  ..
-        sec_def = self.oauth_get_by_id(msg.id)
-
-        # .. update security groups ..
-        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-            security_groups_ctx.set_current_bearer_token(msg.id, sec_def)
+        # .. update security groups with the newest information ..
+        self.update_security_definition_in_groups(msg.id)
 
         # .. and Kafka connections that authenticate with this definition.
         self._update_queue_bridge_security(msg.id)
@@ -2608,6 +2596,29 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _rebuild_mcp_tool_registries_without(self, service_name:'str') -> 'None':
+        """ Rebuilds the tool registry of each MCP gateway whose allow list contains a service that has just been deleted.
+        """
+        for gateway_name, gateway_config in self.gateway_mcp.items():
+
+            registry = gateway_config.conn.tool_registry
+
+            # A gateway whose wrapper is not built yet has nothing to rebuild
+            if registry is None:
+                continue
+
+            if service_name not in registry.allowed_services:
+                continue
+
+            # One gateway that cannot rebuild does not stop the others
+            try:
+                registry.rebuild()
+            except Exception:
+                logger.warning('MCP gateway `%s` could not rebuild after the deletion of service `%s`:\n%s',
+                    gateway_name, service_name, format_exc())
+
+# ################################################################################################################################
+
     def on_config_event_SERVICE_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
@@ -2621,8 +2632,11 @@ class ConfigManager(_ConfigManagerBase):
 
         fs_location = deployment_info['fs_location']
 
-        # Delete it from the service store
+        # Delete it from the service store ..
         self.server.service_store.delete_service_data(msg.name)
+
+        # .. MCP gateways stop listing it as a tool ..
+        self._rebuild_mcp_tool_registries_without(msg.name)
 
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore

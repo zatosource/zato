@@ -13,14 +13,16 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import OAuth as COMMON_OAUTH, query_parameters, SEC_DEF_TYPE
+from zato.common.api import Groups, OAuth as COMMON_OAUTH, query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.const import SECRETS
-from zato.common.odb.model import OAuth
+from zato.common.exception import BadRequest
+from zato.common.odb.model import GenericObject, OAuth
 from zato.common.odb.query import oauth_list
 from zato.common.private_key_jwt import get_public_jwk, get_public_key_pem, load_private_key, validate_definition
+from zato.common.util.gateway import find_stranded_oauth_gateway
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
@@ -28,6 +30,36 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 
 if 0:
     from zato.common.typing_ import any_, anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The types a bearer token definition may be stored under in the names of security group members
+_member_type_list = (SEC_DEF_TYPE.OAUTH, 'bearer_token')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _raise_if_gateway_stranded(service:'AdminService', session:'any_', definition:'any_') -> 'None':
+    """ Takes a session in which a change to the definition is flushed but not committed, and raises BadRequest
+    naming the first MCP gateway with OAuth on that the change leaves with no bearer token definition able to verify its tokens.
+    """
+    group_id_list = []
+
+    for member_type in _member_type_list:
+
+        member_list = session.query(GenericObject.parent_object_id).\
+            filter(GenericObject.type_ == Groups.Type.Group_Member).\
+            filter(GenericObject.name.startswith(f'{member_type}-{definition.id}-')).\
+            all()
+
+        for member in member_list:
+            group_id_list.append(member.parent_object_id)
+
+    if gateway_name := find_stranded_oauth_gateway(session, group_id_list):
+        msg = f'Bearer token definition `{definition.name}` is the only one that verifies tokens ' + \
+            f'for MCP gateway `{gateway_name}`, which has OAuth on'
+        raise BadRequest(service.cid, msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -170,7 +202,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an Bearer token definition.
     """
-    input = 'id', 'name', 'is_active', *_common_optional_input
+    input = Int('id'), 'name', 'is_active', *_common_optional_input
     output = 'id', 'name', 'has_private_key'
 
     def handle(self):
@@ -209,6 +241,11 @@ class Edit(AdminService):
                 set_instance_opaque_attrs(definition, input)
 
                 session.add(definition)
+                session.flush()
+
+                # A gateway with OAuth on keeps a bearer token definition that verifies its tokens
+                _raise_if_gateway_stranded(self, session, definition)
+
                 session.commit()
 
             except Exception:
@@ -256,7 +293,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an Bearer token definition.
     """
-    input = 'id',
+    input = Int('id'),
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -269,6 +306,11 @@ class Delete(AdminService):
                 self.server.config_manager.cleanup_security_pubsub(session, auth.id, auth.username)
 
                 session.delete(auth)
+                session.flush()
+
+                # .. a gateway with OAuth on keeps a bearer token definition that verifies its tokens ..
+                _raise_if_gateway_stranded(self, session, auth)
+
                 session.commit()
             except Exception:
                 msg = 'Bearer token definition could not be deleted, e:`%s`'

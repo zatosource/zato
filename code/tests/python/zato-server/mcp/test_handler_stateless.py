@@ -252,6 +252,40 @@ class ServerDiscover(TestCase):
         result = body['result']
         self.assertEqual(result['protocolVersions'], MCP.Protocol_Versions_Supported)
 
+    def test_discover_with_agent_filters_advertises_the_filter(self) -> 'None':
+        """ A gateway that allows agent filters advertises the response filter property in every tool it lists.
+        """
+
+        input_schema:'anydict' = {'type': 'object', 'properties': {'customer_id': {'type': 'string'}}}
+
+        tool = {
+            'name': _test_tool_name,
+            'description': 'Returns customer details.',
+            'inputSchema': input_schema,
+        }
+
+        registry = _MockToolRegistry(tools=[tool], allowed_tools={_test_tool_name})
+
+        handler = _make_handler(registry)
+        handler.allow_agent_filters = True
+
+        request = _make_request('server/discover')
+        mcp_response = _dispatch(handler, request, 'server/discover')
+
+        self.assertEqual(mcp_response.status_code, OK)
+
+        body = mcp_response.body
+        result = body['result']
+
+        advertised_tool = result['tools'][0]
+        properties = advertised_tool['inputSchema']['properties']
+
+        self.assertIn('customer_id', properties)
+        self.assertIn('response_filter', properties)
+
+        # The registry's own copy of the schema stays without the filter
+        self.assertNotIn('response_filter', input_schema['properties'])
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -47,8 +47,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-popover.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-filters.css">
-<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-pii.css">
-{% endblock %}
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-pii.css">{% endblock %}
 
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
@@ -82,8 +81,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/data-masking.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-popover.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-filters.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/pii.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/pii.js"></script><script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
 
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
@@ -218,37 +216,35 @@ $(document).ready(function() {
                             <span class="wizard-option-summary" id="mcp-wizard-summary-security"></span>
                         </div>
                         <div class="wizard-option-body" id="mcp-wizard-security-body">
-                        <div class="badge-picker-filter" id="badge-filter-sec-wizard">
-                            <input type="text" id="badge-filter-text-sec-wizard" placeholder="Filter security..." />
-                            <button type="button" class="badge-filter-clear" id="badge-filter-clear-sec-wizard">Clear</button>
+                        <div class="dashboard-tabs mcp-wizard-security-tabs" id="mcp-wizard-security-tabs" role="tablist">
+                            <button type="button" class="dashboard-tab dashboard-tab-active" data-pane="definitions" role="tab" aria-selected="true"><span class="dashboard-tab-label">Definitions</span></button>
+                            <button type="button" class="dashboard-tab" data-pane="oauth" role="tab" aria-selected="false"><span class="dashboard-tab-label">OAuth</span></button>
                         </div>
-                        <div class="badge-picker" id="badge-picker-sec-wizard">
-                            <div class="badge-zone" id="badge-zone-available-sec-wizard">
-                                <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
-                                <div class="badge-zone-body"></div>
+                        <div class="mcp-wizard-security-panes">
+                            <div class="mcp-wizard-security-pane mcp-wizard-security-pane-active" data-pane="definitions">
+                                <div class="badge-picker-filter" id="badge-filter-sec-wizard">
+                                    <input type="text" id="badge-filter-text-sec-wizard" placeholder="Filter security..." />
+                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-sec-wizard">Clear</button>
+                                </div>
+                                <div class="badge-picker" id="badge-picker-sec-wizard">
+                                    <div class="badge-zone" id="badge-zone-available-sec-wizard">
+                                        <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
+                                        <div class="badge-zone-body"></div>
+                                    </div>
+                                    <div class="badge-picker-resizer"></div>
+                                    <div class="badge-zone" id="badge-zone-assigned-sec-wizard">
+                                        <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
+                                        <div class="badge-zone-body"></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="badge-picker-resizer"></div>
-                            <div class="badge-zone" id="badge-zone-assigned-sec-wizard">
-                                <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
-                                <div class="badge-zone-body"></div>
+                            <div class="mcp-wizard-security-pane" data-pane="oauth">
+                                <div class="mcp-wizard-field-grid mcp-wizard-oauth-grid">
+                                    <label for="{{ form.oauth.id_for_label }}">OAuth {{ form.oauth }}</label>
+                                    <label class="mcp-wizard-wide-field mcp-wizard-oauth-scopes" for="{{ form.oauth_scopes.id_for_label }}">Scopes {{ form.oauth_scopes }}</label>
+                                </div>
                             </div>
                         </div>
-                        </div>
-                    </div>
-
-                    <div class="wizard-section mcp-wizard-oauth" id="mcp-wizard-oauth">
-                        <div class="decision-lines">
-
-                            <div class="decision-line" id="mcp-wizard-line-oauth">
-                                <label class="decision-line-label" for="{{ form.oauth.id_for_label }}">OAuth</label>
-                                <span class="decision-line-slot">{{ form.oauth }}</span>
-                            </div>
-
-                            <div class="decision-line" id="mcp-wizard-line-oauth-scopes">
-                                <label class="decision-line-label" for="{{ form.oauth_scopes.id_for_label }}">Scopes</label>
-                                <span class="decision-line-slot mcp-wizard-oauth-scopes-slot">{{ form.oauth_scopes }}</span>
-                            </div>
-
                         </div>
                     </div>
 

@@ -14,6 +14,7 @@ from time import monotonic
 from traceback import format_exc
 
 # Zato
+from zato.common.api import MCP
 from zato.common.bearer_token_identity import Auth_Info_Key, build_auth_block, Identity_Key
 from zato.common.json_internal import dumps
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
@@ -85,8 +86,8 @@ _not_deployed_note = 'Not deployed'
 # What the tool list says about a connection that is on an allow list but does not exist
 _not_found_note = 'Not found'
 
-# Internal service namespace - never exposed as MCP tools, the same rule the tool registry follows
-_internal_prefix = 'zato.'
+# Internal service namespaces - never exposed as MCP tools, the same rule the tool registry follows
+_internal_prefixes = MCP.Internal_Service_Prefixes
 
 # The header a gateway with OAuth on answers unauthenticated requests with
 _www_authenticate_header = 'WWW-Authenticate'
@@ -123,7 +124,7 @@ class GetToolList(AdminService):
 
             # Internal services are never exposed as tools, so they do not
             # belong in the document either - the same rule the registry follows.
-            if service_name.startswith(_internal_prefix):
+            if service_name.startswith(_internal_prefixes):
                 continue
 
             # A service that is on the list but not deployed is still reported,

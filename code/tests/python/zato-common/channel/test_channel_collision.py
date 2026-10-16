@@ -12,13 +12,21 @@ from zato.common.util.channel import find_channel_collision
 # ################################################################################################################################
 # ################################################################################################################################
 
-def make_item(name:'str', url_path:'str', method:'str'='', http_accept:'str'='*/*', item_id:'int'=1) -> 'dict':
+def make_item(
+    name:'str',
+    url_path:'str',
+    method:'str'='',
+    http_accept:'str'='*/*',
+    item_id:'int'=1,
+    claims_whole_path:'bool'=False,
+) -> 'dict':
     return {
         'id': item_id,
         'name': name,
         'url_path': url_path,
         'method': method,
         'http_accept': http_accept,
+        'claims_whole_path': claims_whole_path,
     }
 
 # ################################################################################################################################
@@ -75,6 +83,34 @@ class TestFindChannelCollision:
 
         existing = [make_item('channel.1', '/api/customer', item_id=7)]
         result = find_channel_collision('/api/customer', '*/*', '', existing, 7)
+
+        assert result is None
+
+    def test_channel_with_a_method_collides_with_a_gateway_channel(self) -> 'None':
+
+        existing = [make_item('mcp.customer', '/mcp/customer', http_accept='', claims_whole_path=True)]
+        result = find_channel_collision('/mcp/customer', 'application/json', 'POST', existing, None)
+
+        assert result == 'mcp.customer'
+
+    def test_gateway_channel_collides_with_a_channel_with_a_method(self) -> 'None':
+
+        existing = [make_item('channel.1', '/mcp/customer', method='POST')]
+        result = find_channel_collision('/mcp/customer', None, '', existing, None, claims_whole_path=True)
+
+        assert result == 'channel.1'
+
+    def test_gateway_channel_does_not_collide_with_itself(self) -> 'None':
+
+        existing = [make_item('mcp.customer', '/mcp/customer', item_id=7, claims_whole_path=True)]
+        result = find_channel_collision('/mcp/customer', None, '', existing, 7, claims_whole_path=True)
+
+        assert result is None
+
+    def test_gateway_channel_on_another_path(self) -> 'None':
+
+        existing = [make_item('mcp.customer', '/mcp/customer', claims_whole_path=True)]
+        result = find_channel_collision('/api/customer', '*/*', 'POST', existing, None)
 
         assert result is None
 
