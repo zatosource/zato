@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 # Every runtime field an MCP gateway stores - the same list the importer declares defaults for,
 # so what one environment exports another can import without losing a single option.
-GATEWAY_OPTIONAL_FIELDS = [
+Gateway_Optional_Fields = [
 
     # Routing and security
     'url_path', 'services', 'security_groups', 'is_audit_log_active',
@@ -68,6 +68,13 @@ GATEWAY_OPTIONAL_FIELDS = [
     'safeguards_pii_enabled', 'safeguards_pii_lands', 'safeguards_pii_detectors', 'safeguards_pii_exclude',
     'safeguards_pii_validate', 'safeguards_pii_stable_replacements',
 
+    # Data masking
+    'safeguards_masking_sets', 'safeguards_masking_excluded', 'safeguards_masking_custom_fields',
+    'safeguards_masking_custom_enabled',
+
+    # Hook services
+    'request_hook_service', 'response_hook_service',
+
     # Secrets removal
     'safeguards_secrets_enabled',
 
@@ -79,7 +86,7 @@ GATEWAY_OPTIONAL_FIELDS = [
     *MCP.Connection_List_Keys,
 ]
 
-GATEWAY_OPAQUE_FIELDS = list(GATEWAY_OPTIONAL_FIELDS)
+Gateway_Opaque_Fields = list(Gateway_Optional_Fields)
 
 # The documented default of each field - a stored value equal to its default is not exported.
 _field_defaults = GatewayMCPImporter.connection_extra_field_defaults
@@ -178,7 +185,7 @@ class GatewayMCPExporter:
             # A field is exported whenever the row carries a value other than the field's
             # documented default - an explicit False against a True default survives that way,
             # while fields left at their defaults stay out of the export.
-            for field in GATEWAY_OPTIONAL_FIELDS:
+            for field in Gateway_Optional_Fields:
 
                 if field not in row:
                     continue

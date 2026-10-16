@@ -23,6 +23,9 @@ hooks.config = {
     dataScriptId: 'mcp-wizard-tool-sources',
     servicesKey: 'services',
 
+    // Where the page embeds the stored hook services, empty on create
+    stateScriptId: 'mcp-wizard-masking-state',
+
     // The hooks in the order the lines show them, each with the slot its chip goes into
     kinds: ['request', 'response'],
 
@@ -81,6 +84,12 @@ hooks.init = function() {
             break;
         }
     }
+
+    var stateScript = document.getElementById(config.stateScriptId);
+    var stored = JSON.parse(stateScript.textContent);
+
+    hooks.state.request = stored.requestHook;
+    hooks.state.response = stored.responseHook;
 
     hooks.render();
 };

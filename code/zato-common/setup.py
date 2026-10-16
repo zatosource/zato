@@ -33,6 +33,7 @@ _ = setup(
 
       package_dir = {'':'src'},
       packages = find_packages('src'),
+      package_data = {'zato.common.util.safeguards': ['masking_sets/*.yaml']},
       install_requires = parse_requirements(
           os.path.join(os.path.dirname(os.path.realpath(__file__)), 'requirements.txt')),
 

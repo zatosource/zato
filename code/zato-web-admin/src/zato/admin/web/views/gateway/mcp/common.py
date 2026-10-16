@@ -15,14 +15,16 @@ import re
 from zato.admin.web import alerts_tab
 from zato.common.alerting.object_config import alert_type_mcp
 from zato.common.api import API_Key, Groups, SEC_DEF_TYPE
+from zato.common.util.api import asbool
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
+from zato.common.util.safeguards.masking import Default_Masking_Custom_Enabled
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strdict
     any_ = any_
 
 # ################################################################################################################################
@@ -184,6 +186,64 @@ _sec_type_to_export_header = {
         'isSecret': True,
     },
 }
+
+# The hidden inputs the wizard writes the data masking answers and the hook services into on save -
+# each list travels as one input per item, all of them under the same name.
+_masking_sets_input           = 'mcp_masking_set'
+_masking_excluded_input       = 'mcp_masking_excluded'
+_masking_custom_fields_input  = 'mcp_masking_custom_field'
+_masking_custom_enabled_input = 'mcp_masking_custom_enabled'
+_request_hook_input           = 'mcp_request_hook_service'
+_response_hook_input          = 'mcp_response_hook_service'
+
+# What a gateway that predates data masking or the hook services is opened with.
+_masking_state_defaults = {
+    'safeguards_masking_sets': [],
+    'safeguards_masking_excluded': [],
+    'safeguards_masking_custom_fields': [],
+    'safeguards_masking_custom_enabled': Default_Masking_Custom_Enabled,
+    'request_hook_service': '',
+    'response_hook_service': '',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_masking_state(item_dict:'strdict') -> 'strdict':
+    """ The data masking answers and the hook services of one gateway, in the shape the wizard's
+    scripts seed their state from - a key the gateway predates takes its default.
+    """
+    values:'strdict' = {}
+
+    for name, default_value in _masking_state_defaults.items():
+        if (value := item_dict.get(name)) is None:
+            value = default_value
+        values[name] = value
+
+    out = {
+        'sets': values['safeguards_masking_sets'],
+        'excluded': values['safeguards_masking_excluded'],
+        'customFields': values['safeguards_masking_custom_fields'],
+        'isCustomEnabled': values['safeguards_masking_custom_enabled'],
+        'requestHook': values['request_hook_service'],
+        'responseHook': values['response_hook_service'],
+    }
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def read_masking_input(post:'any_', input_dict:'strdict') -> 'None':
+    """ Moves the data masking answers and the hook services the wizard wrote into its hidden inputs
+    over to the keys the gateway's opaque configuration stores them under.
+    """
+    input_dict['safeguards_masking_sets'] = post.getlist(_masking_sets_input)
+    input_dict['safeguards_masking_excluded'] = post.getlist(_masking_excluded_input)
+    input_dict['safeguards_masking_custom_fields'] = post.getlist(_masking_custom_fields_input)
+    input_dict['safeguards_masking_custom_enabled'] = asbool(post[_masking_custom_enabled_input])
+    input_dict['request_hook_service'] = post[_request_hook_input]
+    input_dict['response_hook_service'] = post[_response_hook_input]
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -429,6 +429,16 @@ mcp_gateway:
       - email
     safeguards_pii_validate: false
     safeguards_pii_stable_replacements: true
+    safeguards_masking_sets:
+      - banking
+      - healthcare
+    safeguards_masking_excluded:
+      - iban
+    safeguards_masking_custom_fields:
+      - customer.loyalty_id
+    safeguards_masking_custom_enabled: false
+    request_hook_service: crm.mcp-request-hook
+    response_hook_service: crm.mcp-response-hook
     safeguards_normalize_unicode: true
     safeguards_unicode_mode: reject
     safeguards_sanitize_markup: true

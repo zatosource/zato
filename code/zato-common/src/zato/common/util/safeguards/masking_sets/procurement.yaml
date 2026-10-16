@@ -1,0 +1,47 @@
+label: Procurement
+position: 17
+fields:
+  - email
+  - bankaccountnumber
+  - iban
+  - firstname
+  - lastname
+  - bankaccountstandardid
+  - accountnumber
+  - bankaccountexternalid
+  - partytaxid
+  - longpartytaxid
+  - vatregistrationnumber
+  - line1
+  - city
+  - postalcode
+  - primary-contact
+  - po-email
+  - account-number
+  - duns
+  - cxml-http-password
+  - cxml-http-username
+  - cxml-secret
+  - cxml-invoice-secret
+  - invoice-emails
+  - display-name
+  - phonenumber
+  - taxpayerid
+  - nationalinsurancenumber
+  - providedbyemail
+  - providedbycontactname
+  - bic
+  - addressee
+  - suppliername
+  - phone
+  - emailaddress
+  - username
+  - swift_bic
+  - bankkey_aba
+  - beneficiaryname
+  - addressline1
+  - phoneno
+  - faxno
+  - name
+  - accountholdername
+  - linkedbbanoriban

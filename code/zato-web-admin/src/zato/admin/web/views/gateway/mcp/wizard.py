@@ -19,10 +19,11 @@ from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.gateway.mcp.common import _alert_type, _inline_field_names, _inline_flag_names, \
-    _numeric_shaping_fields, _shaping_display_defaults, _shaping_int_fields, _wizard_template, get_size_cap_label, \
-    numeric_from_bool, save_security_group
+    _numeric_shaping_fields, _shaping_display_defaults, _shaping_int_fields, _wizard_template, get_masking_state, \
+    get_size_cap_label, numeric_from_bool, save_security_group
 from zato.admin.web.views.gateway.mcp_tool_sources import build_tool_sources, Tool_Source_List
 from zato.common.util.api import asbool
+from zato.common.util.safeguards.masking import get_masking_config
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token
 
 # ################################################################################################################################
@@ -49,6 +50,8 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
         'tool_sources': build_tool_sources(req, {}),
         'alerts_tab': alerts_tab.get_alerts_tab_context(form, _alert_type),
         'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
+        'masking_sets': get_masking_config(),
+        'masking_state': get_masking_state({}),
     }
 
     out = TemplateResponse(req, _wizard_template, return_data)
@@ -118,6 +121,8 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
         'tool_sources': build_tool_sources(req, assigned_by_key),
         'alerts_tab': alerts_tab.get_alerts_tab_context(form, _alert_type),
         'alerts_tab_config': alerts_tab.get_alerts_tab_config(_alert_type),
+        'masking_sets': get_masking_config(),
+        'masking_state': get_masking_state(item_dict),
     }
 
     out = TemplateResponse(req, _wizard_template, return_data)

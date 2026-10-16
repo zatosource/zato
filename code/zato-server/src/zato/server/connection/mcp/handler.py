@@ -17,18 +17,20 @@ from zato.common.api import MCP
 from zato.common.json_internal import loads
 from zato.server.connection.mcp import stateless
 from zato.server.connection.mcp.common import _error_invalid_params, _error_invalid_request, _error_method_not_found, \
-    _error_parse, _jsonrpc_version, _message_bad_request, _message_invalid_cursor, _message_invalid_params, \
-    _message_invalid_request, _message_missing_jsonrpc_version, _message_missing_method, _message_missing_tool_name, \
-    _message_parse_error, _message_prompt_not_found, _method_prompts_get, _method_prompts_list, _method_tools_call, \
-    _server_name, _server_version, get_depth, InvalidCursor, make_error_response, make_success_response, MCPResponse, printable
+    _error_parse, _error_request_rejected, _error_response_rejected, _jsonrpc_version, _message_bad_request, \
+    _message_invalid_cursor, _message_invalid_params, _message_invalid_request, _message_missing_jsonrpc_version, \
+    _message_missing_method, _message_missing_tool_name, _message_parse_error, _message_prompt_not_found, \
+    _message_request_rejected, _message_response_rejected, \
+    _method_prompts_get, _method_prompts_list, _method_tools_call, _server_name, _server_version, get_depth, InvalidCursor, \
+    make_error_response, make_success_response, MCPResponse, printable
 from zato.server.connection.mcp.session import Session_Invalid_Identity, Session_Valid
-from zato.server.connection.mcp.tools_call import _response_filter_key, _response_filter_schema, handle_tools_call
+from zato.server.connection.mcp.tools_call import add_response_filter_property, handle_tools_call
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anydictnone, stranydict, strdictlist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, callable_, stranydict, strnone
     from zato.common.util.safeguards.common import SafeguardConfig
     from zato.common.util.truncate.tokens import TokenCapConfig
     from zato.server.connection.mcp.prompts import SkillPrompts
@@ -103,6 +105,8 @@ class MCPHandler:
         skill_prompts:'SkillPrompts',
         allow_agent_filters:'bool' = False,
         invoke_timeout:'int' = MCP.Default_Invoke_Timeout,
+        request_hook_func:'callable_ | None' = None,
+        response_hook_func:'callable_ | None' = None,
         ) -> 'None':
         self.tool_registry = tool_registry
         self.invoke_func = invoke_func
@@ -113,6 +117,12 @@ class MCPHandler:
         self.skill_prompts = skill_prompts
         self.allow_agent_filters = allow_agent_filters
         self.invoke_timeout = invoke_timeout
+
+        # The gateway's hook services - the request hook receives the identity and each parsed message
+        # and returns the message to process, the response hook receives the message, None when the body
+        # could not be parsed into one, and the reply body, and returns the body to send.
+        self.request_hook_func = request_hook_func
+        self.response_hook_func = response_hook_func
 
 # ################################################################################################################################
 
@@ -178,6 +188,44 @@ class MCPHandler:
         mcp_method_header:'strnone' = None,
         mcp_name_header:'strnone' = None,
         ) -> 'MCPResponse':
+        """ Parses raw bytes into JSON and dispatches, passing each message through the request hook service
+        and every reply body, the early errors included, through the response hook service.
+        """
+
+        # The message the response hook service receives - it stays None when the body never parsed into an object ..
+        hook_context:'anydict' = {'request': None}
+
+        # .. process the request ..
+        out = self._handle_raw_request(raw_data, identity, hook_context, session_id, remote_address,
+            protocol_version_header, mcp_method_header, mcp_name_header)
+
+        # .. and hand the reply to the response hook service, unless it is a notification's empty one -
+        # a reply the service refuses is never sent as it was, an error takes its place.
+        if self.response_hook_func is not None:
+            if out.body is not None:
+                try:
+                    out.body = self.response_hook_func(hook_context['request'], out.body)
+                except Exception:
+                    logger.info('MCP: Response hook refused a reply:\n%s', format_exc())
+
+                    request_id = out.body.get('id')
+                    out.body = make_error_response(request_id, _error_response_rejected, _message_response_rejected)
+
+        return out
+
+# ################################################################################################################################
+
+    def _handle_raw_request(
+        self,
+        raw_data:'bytes',
+        identity:'str',
+        hook_context:'anydict',
+        session_id:'strnone',
+        remote_address:'str',
+        protocol_version_header:'strnone',
+        mcp_method_header:'strnone',
+        mcp_name_header:'strnone',
+        ) -> 'MCPResponse':
         """ Parses raw bytes into JSON and dispatches.
         Requests of the stateless protocol revision are self-contained, while in the
         session-based revision every method other than initialize requires a valid session.
@@ -222,6 +270,20 @@ class MCPHandler:
             return out
 
         if isinstance(parsed, dict):
+
+            # .. the request hook service sees each message before anything else processes it,
+            # and whatever it returns is what is processed, while an exception refuses the message ..
+            if self.request_hook_func is not None:
+                try:
+                    parsed = self.request_hook_func(identity, parsed)
+                except Exception:
+                    logger.info('MCP: Request hook refused a message:\n%s', format_exc())
+
+                    out.body = make_error_response(parsed.get('id'), _error_request_rejected, _message_request_rejected)
+                    out.status_code = OK
+                    return out
+
+            hook_context['request'] = parsed
 
             method = parsed.get('method')
 
@@ -465,37 +527,6 @@ class MCPHandler:
 
 # ################################################################################################################################
 
-    def _add_response_filter_property(self, tools:'strdictlist') -> 'strdictlist':
-        """ Returns a copy of a tools page whose every input schema additionally advertises
-        the optional response_filter property - the cached originals are never touched,
-        so validation keeps seeing the schemas without it.
-        """
-
-        out:'strdictlist' = []
-
-        for tool in tools:
-
-            tool = dict(tool)
-            input_schema = dict(tool['inputSchema'])
-
-            # A schema with no properties of its own still advertises the filter
-            properties = input_schema.get('properties')
-
-            if properties is None:
-                properties = {}
-
-            properties = dict(properties)
-            properties[_response_filter_key] = _response_filter_schema
-
-            input_schema['properties'] = properties
-            tool['inputSchema'] = input_schema
-
-            out.append(tool)
-
-        return out
-
-# ################################################################################################################################
-
     def _handle_tools_list(self, request_id:'any_', params:'anydict') -> 'stranydict':
         """ Handles the MCP tools/list request.
         Supports cursor-based pagination - the client may pass a `cursor` in params
@@ -513,7 +544,7 @@ class MCPHandler:
         # When the gateway allows agent filters, every tool advertises the optional
         # response_filter argument so callers can discover it from the schema alone.
         if self.allow_agent_filters:
-            tools = self._add_response_filter_property(tools)
+            tools = add_response_filter_property(tools)
 
         result:'stranydict' = {
             'tools': tools,

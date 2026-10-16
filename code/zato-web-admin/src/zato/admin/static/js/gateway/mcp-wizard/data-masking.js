@@ -19,6 +19,9 @@ var maskingSets = wizard.maskingSets;
 
 dataMasking.config = {
 
+    // Where the page embeds the stored answers, the defaults on create
+    stateScriptId: 'mcp-wizard-masking-state',
+
     // The line in the PII and data masking section
     editLinkId: 'mcp-wizard-edit-data-masking',
     summaryId: 'mcp-wizard-summary-data-masking',
@@ -54,7 +57,18 @@ dataMasking.state = {
 
 dataMasking.init = function() {
 
-    $('#' + dataMasking.config.editLinkId).on('click', function() {
+    var config = dataMasking.config;
+    var state = dataMasking.state;
+
+    var stateScript = document.getElementById(config.stateScriptId);
+    var stored = JSON.parse(stateScript.textContent);
+
+    state.sets = stored.sets;
+    state.excluded = stored.excluded;
+    state.customFields = stored.customFields;
+    state.isCustomEnabled = stored.isCustomEnabled;
+
+    $('#' + config.editLinkId).on('click', function() {
         wizard.maskingPopover.open(this);
     });
 };

@@ -773,12 +773,26 @@ test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real 
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/mcp/ \
 		$(CURDIR)/code/tests/python/zato-server/mcp_live/ \
+		$(CURDIR)/code/tests/python/zato-common/safeguards/test_masking_config.py \
+		$(CURDIR)/code/tests/python/zato-common/safeguards/test_masking.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/js_/test_mcp_wizard_masking_js.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_mcp_masking_hooks.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_mcp_connection_lists.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_alerts_gateway_mcp.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/importers/test_importer_enmasse_mcp_gateway.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/exporters/test_exporter_enmasse_mcp_gateway.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mcp_enmasse -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_gateway_create.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard_masking.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_wizard_hooks.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_response_controls.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_audit_log.py \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_bearer_token_mcp_gateway.py \

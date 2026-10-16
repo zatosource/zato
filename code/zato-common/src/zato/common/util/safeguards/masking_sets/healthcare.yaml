@@ -1,0 +1,41 @@
+label: Healthcare
+position: 2
+fields:
+  - birthdate
+  - gender
+  - maritalstatus
+  - identifier
+  - name
+  - telecom
+  - address
+  - contact
+  - photo
+  - deceasedboolean
+  - deceaseddatetime
+  - birthdatetime
+  - names
+  - aliases
+  - addresses
+  - telecoms
+  - birthsex
+  - ethnicities
+  - races
+  - dateofdeath
+  - sourceidentifier
+  - firstname
+  - lastname
+  - dob
+  - ssn
+  - sex
+  - email
+  - homephone
+  - mobilephone
+  - workphone
+  - address1
+  - address2
+  - city
+  - zip
+  - guarantorssn
+  - contactname
+  - contacthomephone
+  - contactmobilephone

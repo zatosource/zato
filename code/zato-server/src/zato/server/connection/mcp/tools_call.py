@@ -27,7 +27,7 @@ from zato.server.connection.mcp.validate import _message_not_an_object, validate
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anydictnone, stranydict
+    from zato.common.typing_ import any_, anydict, anydictnone, stranydict, strdictlist
     from zato.server.connection.mcp.handler import MCPHandler
 
     MCPHandler = MCPHandler
@@ -67,6 +67,38 @@ class FilterInvalid(Exception):
     """ Raised when a client-supplied response filter does not compile or does not evaluate -
     the message becomes a JSON-RPC invalid-params error.
     """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def add_response_filter_property(tools:'strdictlist') -> 'strdictlist':
+    """ Returns a copy of a tools page whose every input schema additionally advertises
+    the optional response_filter property - the cached originals are never touched,
+    so validation keeps seeing the schemas without it.
+    """
+
+    out:'strdictlist' = []
+
+    for tool in tools:
+
+        tool = dict(tool)
+        input_schema = dict(tool['inputSchema'])
+
+        # A schema with no properties of its own still advertises the filter
+        properties = input_schema.get('properties')
+
+        if properties is None:
+            properties = {}
+
+        properties = dict(properties)
+        properties[_response_filter_key] = _response_filter_schema
+
+        input_schema['properties'] = properties
+        tool['inputSchema'] = input_schema
+
+        out.append(tool)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -233,6 +265,9 @@ def _record_safeguard_trace(result:'any_', trace:'stranydict') -> 'None':
     """ Copies what the safeguards did into the trace - only the counters
     that actually counted something are recorded.
     """
+
+    if result.fields_masked:
+        trace['fields_masked'] = result.fields_masked
 
     if result.pii_removed:
         trace['pii_removed'] = result.pii_removed

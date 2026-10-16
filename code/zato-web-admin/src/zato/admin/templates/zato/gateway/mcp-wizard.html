@@ -14,6 +14,8 @@ kit. The view provides:
 * tool_sources - the tool sources of the Tools card, each with its items
 * alerts_tab        - the fields of the alert settings, from alerts_tab.get_alerts_tab_context
 * alerts_tab_config - the lines the Alerts popover is built of, from alerts_tab.get_alerts_tab_config
+* masking_sets      - the industry sets of data masking, from get_masking_config
+* masking_state     - the stored data masking answers and hook services, the defaults on create
 {% endcomment %}
 
 {% block html_title %}MCP gateway - {% if is_edit %}Edit a gateway{% else %}Create a new gateway{% endif %}{% endblock %}
@@ -104,6 +106,8 @@ $(document).ready(function() {
 
         {{ tool_sources|json_script:"mcp-wizard-tool-sources" }}
         {{ alerts_tab_config|json_script:"mcp-wizard-alerts-tab-config" }}
+        {{ masking_sets|json_script:"mcp-wizard-masking-sets" }}
+        {{ masking_state|json_script:"mcp-wizard-masking-state" }}
 
         <div class="dashboard-card wizard-card" id="mcp-wizard">
 

@@ -1,0 +1,47 @@
+label: Identity and access
+position: 10
+fields:
+  - email
+  - streetaddress
+  - username
+  - givenname
+  - displayname
+  - mobilephone
+  - postalcode
+  - firstname
+  - lastname
+  - name
+  - mail
+  - primaryphone
+  - familyname
+  - emails
+  - phonenumbers
+  - userprincipalname
+  - surname
+  - businessphones
+  - city
+  - employeeid
+  - birthday
+  - passwordprofile
+  - othermails
+  - login
+  - secondemail
+  - employeenumber
+  - locality
+  - given_name
+  - family_name
+  - phone_number
+  - password
+  - password_hash
+  - picture
+  - last_ip
+  - identities
+  - emailaddress
+  - phone
+  - workphone
+  - personalemail
+  - identificationnumber
+  - mobilenumber
+  - officenumber
+  - homenumber
+  - credentials

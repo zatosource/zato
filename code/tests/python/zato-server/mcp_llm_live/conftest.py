@@ -475,8 +475,9 @@ def zato_server() -> 'any_':
 
     marker_path = os.path.join(marker_directory, 'invocations.txt')
     payload_path = os.path.join(marker_directory, 'payloads.txt')
+    hook_path = os.path.join(marker_directory, 'hooks.txt')
 
-    for _marker_file_path in (marker_path, payload_path):
+    for _marker_file_path in (marker_path, payload_path, hook_path):
         with open(_marker_file_path, 'w'):
             pass
 
@@ -583,6 +584,7 @@ def zato_server() -> 'any_':
         'audit_db_path': audit_db_path,
         'marker_path': marker_path,
         'payload_path': payload_path,
+        'hook_path': hook_path,
         'server_log_path': _server_log_path,
         'mcp_url': _mcp_url,
         'basic_auth': (_constants.Username_Basic, _constants.Password_Basic),

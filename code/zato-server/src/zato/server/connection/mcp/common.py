@@ -26,6 +26,14 @@ _error_invalid_request  = -32600
 _error_method_not_found = -32601
 _error_invalid_params   = -32602
 
+# Server-defined JSON-RPC error codes - the gateway's request or response hook service refused a message or a reply
+_error_request_rejected  = -32030
+_error_response_rejected = -32031
+
+# What a message or a reply a hook service refused is answered with, the reason stays in the log
+_message_request_rejected  = 'Request rejected'
+_message_response_rejected = 'Response rejected'
+
 # JSON-RPC 2.0 version string
 _jsonrpc_version = '2.0'
 

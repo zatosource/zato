@@ -13,7 +13,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.admin.web.views.gateway.mcp.common import _alert_field_names, _alert_type, _choice_field_defaults, \
     _numeric_shaping_fields, _row_edit_prefix, _security_input_prefix, _service_input_prefix, _shaping_checkbox_fields, \
     _shaping_choice_fields, _shaping_display_defaults, _shaping_fields, _shaping_int_fields, _shaping_list_fields, \
-    _skill_input_prefix, get_size_cap_label, numeric_from_bool, save_security_group
+    _skill_input_prefix, get_size_cap_label, numeric_from_bool, read_masking_input, save_security_group
 from zato.admin.web.views.gateway.mcp_tool_sources import Connection_Source_List
 from zato.common.alerting.object_config import Field_Prefix
 from zato.common.api import GENERIC, Groups
@@ -219,6 +219,9 @@ class _CreateEdit(CreateEdit):
 
         # .. and store them so they end up in opaque data too.
         input_dict['skills'] = skill_names
+
+        # The data masking answers and the hook services travel in hidden inputs of their own.
+        read_masking_input(self.req.POST, input_dict)
 
         # Collect security definitions from the security badge picker ..
         member_id_list:'strlist' = []

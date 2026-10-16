@@ -53,6 +53,16 @@ mcp_gateway:
     url_path: /mcp/enmasse-export-2
 """
 
+# The keys of data masking and of the hook services.
+_masking_and_hook_keys = [
+    'safeguards_masking_sets',
+    'safeguards_masking_excluded',
+    'safeguards_masking_custom_fields',
+    'safeguards_masking_custom_enabled',
+    'request_hook_service',
+    'response_hook_service',
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -149,6 +159,18 @@ class TestEnmasseMCPGatewayExporter(TestCase):
         item = exported_by_name['enmasse.mcp.export.2']
 
         for key in MCP.Connection_List_Keys:
+            self.assertNotIn(key, item, f'`{key}` should not be in the export')
+
+# ################################################################################################################################
+
+    def test_a_gateway_without_masking_or_hooks_exports_none(self:'any_') -> 'None':
+
+        exported_by_name = self._import_and_export()
+
+        # A gateway with data masking and the hook services at their defaults exports none of their keys.
+        item = exported_by_name['enmasse.mcp.export.2']
+
+        for key in _masking_and_hook_keys:
             self.assertNotIn(key, item, f'`{key}` should not be in the export')
 
 # ################################################################################################################################

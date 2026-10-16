@@ -18,6 +18,7 @@ from zato.common.api import GENERIC, Groups, MCP
 from zato.common.odb.model import GenericObject
 from zato.common.util.gateway import ensure_mcp_rest_channel, validate_oauth_security
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
+from zato.common.util.safeguards.masking import Default_Masking_Custom_Enabled
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
@@ -105,6 +106,16 @@ class GatewayMCPImporter(GenericConnectionImporter):
         'safeguards_pii_exclude': [],
         'safeguards_pii_validate': True,
         'safeguards_pii_stable_replacements': False,
+
+        # Data masking - the industry sets, the fields excluded from them and the custom fields
+        'safeguards_masking_sets': [],
+        'safeguards_masking_excluded': [],
+        'safeguards_masking_custom_fields': [],
+        'safeguards_masking_custom_enabled': Default_Masking_Custom_Enabled,
+
+        # Hook services - an empty name leaves the hook off
+        'request_hook_service': '',
+        'response_hook_service': '',
 
         # Secrets removal
         'safeguards_secrets_enabled': False,

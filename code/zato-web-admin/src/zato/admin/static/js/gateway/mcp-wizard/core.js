@@ -4,7 +4,7 @@
 // machinery - the step strip, the name badge, the footer and the save -
 // comes from the wizard kit, configured here. This file holds only what
 // is MCP's own: the required fields, the help texts, the wizard-wide
-// overview and the badge picker inputs written on save. The micro-forms
+// overview and the hidden inputs written on save. The micro-forms
 // live in forms.js, the hook services in hooks.js, the PII and data masking
 // section in pii.js, data masking in data-masking.js, masking-sets.js,
 // masking-popover.js and masking-filters.js, and the summaries plus the
@@ -56,7 +56,18 @@ wizard.config_own = {
 
     // What the edit endpoint reads its input under - the edit page's Django
     // form is built with the same prefix and the kit's fieldPrefix follows it
-    editFieldPrefix: 'edit-'
+    editFieldPrefix: 'edit-',
+
+    // The names of the hidden inputs the data masking answers and the hook
+    // services travel under, which both endpoints read
+    maskingInputs: {
+        sets: 'mcp_masking_set',
+        excluded: 'mcp_masking_excluded',
+        customFields: 'mcp_masking_custom_field',
+        isCustomEnabled: 'mcp_masking_custom_enabled',
+        requestHook: 'mcp_request_hook_service',
+        responseHook: 'mcp_response_hook_service'
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -134,11 +145,12 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         var itemId = wizard.state.isEdit ? wizard.state.itemId : null;
 
         // The size caps line, the Alerts line, the hook services, the option cards of step 2
-        // and the PII and data masking section with its data masking line ..
+        // and the PII and data masking section with its industry sets and its data masking line ..
         wizard.forms.initRows();
         wizard.alerts.init();
         wizard.hooks.init();
         wizard.review.initOptionCards();
+        wizard.maskingSets.init();
         wizard.dataMasking.init();
         wizard.pii.init();
 
@@ -178,8 +190,11 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     beforeSave: function(form) {
 
         // The badge picks travel as the repeated hidden inputs the create
-        // endpoint reads its services and security definitions from
+        // endpoint reads its services and security definitions from ..
         wizard._writeBadgeInputs(form);
+
+        // .. and the data masking answers and the hook services travel the same way.
+        wizard._writeMaskingInputs(form);
     }
 });
 
@@ -288,6 +303,48 @@ wizard._writeBadgeInputs = function(form) {
     wizard.assignedBadges(ownConfig.skillsPickerAction).each(function() {
         $.fn.zato.gateway.mcp.skills_badge_picker_config.inject_hidden_input(form, $(this));
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The data masking answers and the hook services become hidden inputs - each
+// list one input per item under one name, the switch and each hook one input.
+wizard._writeMaskingInputs = function(form) {
+
+    var inputNames = wizard.config_own.maskingInputs;
+    var masking = wizard.dataMasking.state;
+    var hooks = wizard.hooks.state;
+
+    form.find('input.mcp-wizard-masking-input').remove();
+
+    var append = function(name, value) {
+        form.append($('<input/>', {
+            type: 'hidden',
+            name: name,
+            value: value,
+            'class': 'mcp-wizard-masking-input'
+        }));
+    };
+
+    var lists = [
+        [inputNames.sets, masking.sets],
+        [inputNames.excluded, masking.excluded],
+        [inputNames.customFields, masking.customFields]
+    ];
+
+    for(var listIdx = 0; listIdx < lists.length; listIdx++) {
+
+        var inputName = lists[listIdx][0];
+        var values = lists[listIdx][1];
+
+        for(var valueIdx = 0; valueIdx < values.length; valueIdx++) {
+            append(inputName, values[valueIdx]);
+        }
+    }
+
+    append(inputNames.isCustomEnabled, masking.isCustomEnabled ? 'true' : 'false');
+    append(inputNames.requestHook, hooks.request);
+    append(inputNames.responseHook, hooks.response);
 };
 
 // ////////////////////////////////////////////////////////////////////////

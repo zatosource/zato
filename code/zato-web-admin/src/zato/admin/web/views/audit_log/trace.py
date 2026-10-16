@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 The human-readable lines the MCP detail pane says about what response shaping did to one
-event - PII and secrets replacements per detector, compaction counts, content safety findings,
+event - masked fields, PII and secrets replacements per detector, compaction counts, content safety findings,
 token cuts and the client's own filter - each count in the grammatical number it calls for.
 """
 
@@ -28,6 +28,7 @@ if 0:
 # ################################################################################################################################
 
 # What each family of trace lines is labelled with in the pane
+_label_data_masking   = 'Data masking'
 _label_pii            = 'PII removed'
 _label_secrets        = 'Secrets removed'
 _label_compaction     = 'Compaction'
@@ -56,7 +57,12 @@ def get_trace_lines(data:'stranydict') -> 'anylist':
     # Our response to produce
     out:'anylist' = []
 
-    # One line per detector, each count with its own noun ..
+    # How many fields data masking replaced ..
+    if fields_masked := data.get('fields_masked'):
+        counted = count_text(fields_masked, 'field', 'fields')
+        out.append({'label': _label_data_masking, 'text': f'masked {counted}'})
+
+    # .. one line per detector, each count with its own noun ..
     if pii_removed := data.get('pii_removed'):
         for detector_name in sorted(pii_removed):
 

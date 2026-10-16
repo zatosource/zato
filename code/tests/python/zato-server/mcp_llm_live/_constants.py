@@ -309,6 +309,22 @@ Gateway_URL_Reject       = 'test.llm.url.reject'
 Gateway_Audit_Off        = 'test.llm.audit.off'
 Gateway_Ops              = 'test.llm.ops'
 
+# Data masking - industry sets, exclusions with custom fields, custom fields switched off,
+# and masking together with PII removal
+Gateway_Masking            = 'test.llm.masking'
+Gateway_Masking_Custom     = 'test.llm.masking.custom'
+Gateway_Masking_Custom_Off = 'test.llm.masking.custom-off'
+Gateway_Masking_PII        = 'test.llm.masking.pii'
+
+# Hook services - recording, replacing and rejecting requests, replacing replies,
+# recording through the stateless revision, and hooks switched on at runtime
+Gateway_Hook_Record    = 'test.llm.hook.record'
+Gateway_Hook_Replace   = 'test.llm.hook.replace'
+Gateway_Hook_Reject    = 'test.llm.hook.reject'
+Gateway_Hook_Response  = 'test.llm.hook.response'
+Gateway_Hook_Stateless = 'test.llm.hook.stateless'
+Gateway_Hook_Runtime   = 'test.llm.hook.runtime'
+
 Path_Main             = '/mcp/llm/main'
 Path_Validate         = '/mcp/llm/validate'
 Path_Skills           = '/mcp/llm/skills'
@@ -356,6 +372,18 @@ Path_URL_Reject      = '/mcp/llm/url-reject'
 Path_Audit_Off       = '/mcp/llm/audit-off'
 Path_Ops             = '/mcp/llm/ops'
 
+Path_Masking            = '/mcp/llm/masking'
+Path_Masking_Custom     = '/mcp/llm/masking-custom'
+Path_Masking_Custom_Off = '/mcp/llm/masking-custom-off'
+Path_Masking_PII        = '/mcp/llm/masking-pii'
+
+Path_Hook_Record    = '/mcp/llm/hook-record'
+Path_Hook_Replace   = '/mcp/llm/hook-replace'
+Path_Hook_Reject    = '/mcp/llm/hook-reject'
+Path_Hook_Response  = '/mcp/llm/hook-response'
+Path_Hook_Stateless = '/mcp/llm/hook-stateless'
+Path_Hook_Runtime   = '/mcp/llm/hook-runtime'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -402,6 +430,39 @@ PII_Land_Japan = 'jp'
 # The detector the exclude gateway leaves out and the one the detector-only gateway names directly
 PII_Exclude_Detector = 'email'
 PII_Named_Detector   = 'email'
+
+# What every masked field holds
+Masked_Value = '********'
+
+# The industry set the masking gateways pick - it holds the record's email, city and device IMEIs
+Masking_Set = 'telecom'
+
+# The field the custom gateway excludes from the set and the custom fields it masks,
+# all written in a case other than the record's keys
+Masking_Excluded      = 'City'
+Masking_Custom_Fields = ['NAME', 'Network']
+
+# How many fields of the main record each masking gateway masks - the email, the city
+# and four IMEIs for the set alone, the email, four IMEIs, the name and the network
+# for the custom gateway, and the email alone for the gateway that also removes PII
+Masking_Count_Set    = 6
+Masking_Count_Custom = 7
+Masking_Count_PII    = 1
+
+# The hook services the fixture deploys
+Service_Hook_Request_Record   = 'crm.hook.request-record'
+Service_Hook_Response_Record  = 'crm.hook.response-record'
+Service_Hook_Request_Replace  = 'crm.hook.request-replace'
+Service_Hook_Request_Reject   = 'crm.hook.request-reject'
+Service_Hook_Response_Replace = 'crm.hook.response-replace'
+
+# The order id the replacing request hook substitutes and what the replacing response hook returns
+Hook_Replaced_Order_ID = 'ORD-HOOK-9001'
+Hook_Replaced_Result   = {'replaced_by': 'crm.hook.response-replace'}
+
+# The JSON-RPC error codes of a message and of a reply a hook service refused
+Error_Request_Rejected  = -32030
+Error_Response_Rejected = -32031
 
 # The name of the self.llm outconn the suite creates - no tests use it yet, it is the setup for them
 LLM_Outconn_Name = 'test.mcp.llm'

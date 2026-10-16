@@ -181,6 +181,8 @@ _object_order['mcp_gateway']   = ('name', 'is_active', 'url_path', 'services:lis
     'safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64', \
     'safeguards_pii_enabled', 'safeguards_pii_lands:list', 'safeguards_pii_detectors:list', \
     'safeguards_pii_exclude:list', 'safeguards_pii_validate', 'safeguards_pii_stable_replacements', \
+    'safeguards_masking_sets:list', 'safeguards_masking_excluded:list', 'safeguards_masking_custom_fields:list', \
+    'safeguards_masking_custom_enabled', 'request_hook_service', 'response_hook_service', \
     'safeguards_secrets_enabled', \
     'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', \
     'safeguards_markup_mode', 'safeguards_url_policy_enabled', 'safeguards_url_allow_list:list', \
