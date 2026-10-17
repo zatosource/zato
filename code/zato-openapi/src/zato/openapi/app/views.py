@@ -322,7 +322,7 @@ def spec_yaml_view(req:'any_') -> 'any_':
 # ################################################################################################################################
 
 @require_POST
-def relay_view(req:'any_', relay_path:'str') -> 'any_':
+def relay_view(req:'any_') -> 'any_':
     """ Relays a try-it invocation to the servers over Redis Streams and returns the response,
     so the browser only ever talks to the console. The target service is invoked with the signed-in
     user's own credentials and only if those credentials give access to the endpoint.
@@ -334,11 +334,10 @@ def relay_view(req:'any_', relay_path:'str') -> 'any_':
     # No error means the auth details are there, hence the cast
     auth = cast_('anydict', auth)
 
-    # The relay path arrives without its leading slash, which channels always have
-    url_path = '/' + relay_path
-
-    # The browser sends the request as one JSON document, the caller's own headers apart from those it adds itself ..
+    # The browser sends the request as one JSON document, with the path as typed and the caller's own headers
+    # apart from those it adds itself ..
     envelope = json_loads(req.body)
+    url_path = envelope['path']
 
     # .. and a request with no body has none in the document either.
     body = envelope['body']

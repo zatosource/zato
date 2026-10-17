@@ -309,9 +309,9 @@ def relay_invoke(page:'Page', console_url:'str', method:'str', url_path:'str', b
     """ Sends a try-it request through the console's relay inside the signed-in session
     and returns the raw response.
     """
-    url = console_url + Relay_Base_Path + url_path
+    url = console_url + Relay_Base_Path
 
-    # The console's own pages send the method, the query string, the caller's headers and the body
+    # The console's own pages send the method, the path, the query string, the caller's headers and the body
     # as one JSON document, with no body in it when there is none to send ..
     headers:'anydict' = {}
 
@@ -321,7 +321,7 @@ def relay_invoke(page:'Page', console_url:'str', method:'str', url_path:'str', b
     else:
         request_body = None
 
-    envelope = {'method': method, 'query': '', 'headers': headers, 'body': request_body}
+    envelope = {'method': method, 'path': url_path, 'query': '', 'headers': headers, 'body': request_body}
     data = json_dumps(envelope)
 
     # .. and the relay itself receives the document with the console's CSRF token.

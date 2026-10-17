@@ -68,7 +68,7 @@ class TestOpenAPIConsoleSecurityNoSession:
             data_paths = [
                 Spec_JSON_Path,
                 Spec_YAML_Path,
-                Relay_Base_Path + Path_Typed,
+                Relay_Base_Path,
             ]
 
             for data_path in data_paths:

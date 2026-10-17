@@ -56,9 +56,8 @@ _proto_http = f'http-request set-header {_proto_header} http if !{{ ssl_fc }}'
 _console_frontend = 'frontend console'
 
 # A try-it request as the relay receives it
-_relay_channel_path = 'api/orders'
-_relay_path = '/openapi/console/relay/' + _relay_channel_path
-_relay_body = '{"method":"POST","query":"","headers":{},"body":"{}"}'
+_relay_path = '/openapi/console/relay'
+_relay_body = '{"method":"POST","path":"/api/orders","query":"","headers":{},"body":"{}"}'
 _relay_content_type = 'text/plain'
 
 # Another port of the console's host
@@ -124,7 +123,7 @@ def _check_relay_csrf(origin:'str', has_token:'bool') -> 'intnone':
 
     middleware = CsrfViewMiddleware(_view)
     middleware.process_request(request)
-    response:'any_' = middleware.process_view(request, relay_view, (), {'relay_path': _relay_channel_path})
+    response:'any_' = middleware.process_view(request, relay_view, (), {})
 
     if response is None:
         return None

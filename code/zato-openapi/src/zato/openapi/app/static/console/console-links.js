@@ -8,18 +8,56 @@ zatoConsole.links.config = {
     requestKey: 'request',
     headerPrefix: 'header.',
     pathPrefix: 'path.',
+    pathEscapes: {
+        '%': '%25',
+        '?': '%3F',
+        '#': '%23',
+    },
 };
 
 zatoConsole.links.state = {
-    entryIdsByHash: {},
+    entryIdsByOperation: {},
     pendingEntryId: '',
     isUpdatePending: false,
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoConsole.links.getHash = function(entry) {
+zatoConsole.links.getOperation = function(entry) {
     var out = zatoConsole.links.config.hashPrefix + entry.method + entry.path;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.links.escapePath = function(path) {
+
+    var escapes = zatoConsole.links.config.pathEscapes;
+
+    // A path keeps its characters in a link apart from those that would end it or be read as an escape
+    var out = '';
+
+    for(var characterIndex = 0; characterIndex < path.length; characterIndex++) {
+        var character = path[characterIndex];
+
+        if(Object.hasOwn(escapes, character)) {
+            out += escapes[character];
+        }
+        else {
+            out += character;
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.links.getHash = function(entry) {
+
+    var path = zatoConsole.links.escapePath(entry.path);
+
+    var out = zatoConsole.links.config.hashPrefix + entry.method + path;
     return out;
 };
 
@@ -218,9 +256,9 @@ zatoConsole.links.init = function() {
 
     for(var entryIndex = 0; entryIndex < entryIds.length; entryIndex++) {
         var entryId = entryIds[entryIndex];
-        var hash = zatoConsole.links.getHash(entriesById[entryId]);
+        var operation = zatoConsole.links.getOperation(entriesById[entryId]);
 
-        zatoConsole.links.state.entryIdsByHash[hash] = entryId;
+        zatoConsole.links.state.entryIdsByOperation[operation] = entryId;
     }
 
     window.addEventListener('hashchange', zatoConsole.links.onHashChange);
@@ -242,7 +280,7 @@ zatoConsole.links.remember = function() {
 
 zatoConsole.links.getEntryId = function(hash) {
 
-    var entryIdsByHash = zatoConsole.links.state.entryIdsByHash;
+    var entryIdsByOperation = zatoConsole.links.state.entryIdsByOperation;
     var operation = zatoConsole.links.splitHash(hash).operation;
     var decoded = '';
 
@@ -254,8 +292,8 @@ zatoConsole.links.getEntryId = function(hash) {
         return '';
     }
 
-    if(decoded in entryIdsByHash) {
-        return entryIdsByHash[decoded];
+    if(Object.hasOwn(entryIdsByOperation, decoded)) {
+        return entryIdsByOperation[decoded];
     }
 
     return '';
@@ -335,11 +373,16 @@ zatoConsole.links.flushUpdate = function() {
         return;
     }
 
-    // Going to another operation is an entry in the browser's history, while the first operation shown
-    // and a change to the operation's own request replace the entry ..
-    var isSameOperation = zatoConsole.links.getEntryId(current) === entryId;
+    // Going to another operation is an entry in the browser's history, while the first operation shown,
+    // an address that names no operation and a change to the operation's own request replace the entry ..
+    var currentEntryId = zatoConsole.links.getEntryId(current);
 
-    if(current === '' || isSameOperation) {
+    if(currentEntryId === '') {
+        history.replaceState(null, '', hash);
+        return;
+    }
+
+    if(currentEntryId === entryId) {
         history.replaceState(null, '', hash);
         return;
     }

@@ -4,6 +4,7 @@ zatoConsole.keyValue.config = {
     objectMarker: '{',
     separator: '=',
     commentMarker: '#',
+    pairPattern: /^([A-Za-z_][\w.-]*)\s*=(?!=)\s*(\S.*)$/,
     linePattern: /\r?\n|;/,
     segmentPattern: /(\r?\n|;)/,
     numberPattern: /^-?\d+(?:\.\d+)?$/,
@@ -25,7 +26,8 @@ zatoConsole.keyValue.isKeyValue = function(text) {
     var config = zatoConsole.keyValue.config;
     var trimmed = text.trim();
 
-    // The text is a list of key=value lines when it is not an object and its first line assigns a value
+    // The text is a list of key=value lines when it is not an object and its first line assigns a value to a name,
+    // which XML attributes and the padding of base64 do not
     if(trimmed === '') {
         return false;
     }
@@ -36,7 +38,7 @@ zatoConsole.keyValue.isKeyValue = function(text) {
 
     var firstLine = trimmed.split(config.linePattern)[0];
 
-    var out = firstLine.includes(config.separator);
+    var out = config.pairPattern.test(firstLine.trim());
     return out;
 };
 
@@ -60,15 +62,15 @@ zatoConsole.keyValue.split = function(text) {
             continue;
         }
 
-        // .. and a line without a value makes the whole text something other than key=value lines.
-        var separatorIndex = line.indexOf(config.separator);
+        // .. and a line that does not assign a value to a name makes the whole text something other than key=value lines.
+        var match = config.pairPattern.exec(line);
 
-        if(separatorIndex === -1) {
+        if(match === null) {
             return null;
         }
 
-        var key = line.slice(0, separatorIndex).trim();
-        var value = line.slice(separatorIndex + 1).trim();
+        var key = match[1];
+        var value = match[2].trim();
 
         pairs.push({key: key, value: value});
     }

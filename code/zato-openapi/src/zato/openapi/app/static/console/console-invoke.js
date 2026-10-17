@@ -2,6 +2,9 @@ zatoConsole.invoke = {};
 
 zatoConsole.invoke.config = {
     contentType: 'application/json',
+    xmlContentType: 'application/xml',
+    textContentType: 'text/plain',
+    xmlMarker: '<',
     contentTypeHeader: 'Content-Type',
     acceptHeader: 'Accept',
     queryStringMethods: ['get', 'head', 'delete'],
@@ -405,7 +408,7 @@ zatoConsole.invoke.buildRequest = function(entry, text, pathValues) {
     var parsed = zatoConsole.invoke.parseRequest(text);
 
     // Our response to produce, with the path parameters from their own inputs
-    var out = {path: zatoConsole.invoke.fillPath(entry.path, pathValues), query: '', body: null};
+    var out = {path: zatoConsole.invoke.fillPath(entry.path, pathValues), query: '', body: null, contentType: null};
 
     // An empty editor sends neither a query string nor a body ..
     if(text.trim() === '') {
@@ -419,15 +422,34 @@ zatoConsole.invoke.buildRequest = function(entry, text, pathValues) {
         }
         else {
             out.body = JSON.stringify(parsed);
+            out.contentType = config.contentType;
         }
 
         return out;
     }
 
-    // .. while anything else is the body as it was typed, whatever the method.
+    // .. while anything else is the body as it was typed, whatever the method, in the content type its text has.
     out.body = text;
+    out.contentType = zatoConsole.invoke.getTextContentType(text, parsed);
 
     return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.invoke.getTextContentType = function(text, parsed) {
+
+    var config = zatoConsole.invoke.config;
+
+    if(parsed !== undefined) {
+        return config.contentType;
+    }
+
+    if(text.trim().startsWith(config.xmlMarker)) {
+        return config.xmlContentType;
+    }
+
+    return config.textContentType;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -460,10 +482,10 @@ zatoConsole.invoke.getRequestHeaders = function(operation, request, headers) {
     // Our response to produce
     var out = {};
 
-    // A body is JSON and a response is expected in the media type that the operation documents,
+    // A body is sent in the content type of its text and a response is expected in the media type that the operation documents,
     // unless the caller names a content type or an Accept value of their own ..
     if(request.body !== null) {
-        out[config.contentTypeHeader] = config.contentType;
+        out[config.contentTypeHeader] = request.contentType;
     }
 
     if(mediaType !== null) {
@@ -507,12 +529,12 @@ zatoConsole.invoke.onPlayClick = function(event) {
     var pathValues = zatoConsole.invoke.getPathValues(card);
     var request = zatoConsole.invoke.buildRequest(entry, requestText, pathValues);
 
-    var url = zatoConsole.state.relayBase + request.path;
-
-    // The method, the query string, the caller's own headers and the body travel to the endpoint as one JSON document,
-    // apart from the headers the browser adds on its own and clear of the size limits that proxies put on headers ..
+    // The method, the path, the query string, the caller's own headers and the body travel to the endpoint as one JSON document,
+    // apart from the headers the browser adds on its own, clear of the size limits that proxies put on headers
+    // and with the path exactly as typed, which a URL would have decoded ..
     var envelope = {
         method: entry.method.toUpperCase(),
+        path: request.path,
         query: request.query,
         headers: zatoConsole.invoke.getRequestHeaders(entry.operation, request, exchange.headers),
         body: request.body,
@@ -544,7 +566,7 @@ zatoConsole.invoke.onPlayClick = function(event) {
     var onResponse = zatoConsole.invoke.onResponse.bind(null, pending);
     var onNetworkError = zatoConsole.invoke.onNetworkError.bind(null, pending);
 
-    fetch(url, options).then(onResponse, onNetworkError);
+    fetch(zatoConsole.state.relayBase, options).then(onResponse, onNetworkError);
 };
 
 // ////////////////////////////////////////////////////////////////////////

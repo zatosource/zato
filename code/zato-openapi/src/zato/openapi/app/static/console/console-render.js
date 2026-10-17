@@ -610,7 +610,8 @@ zatoConsole.render.onFilterInput = function(event) {
         }
 
         // .. and a group with no matching operation is left out of the navigation.
-        var navigationSelector = '.console-navigation-group[' + config.groupAttribute + '="' + group.name + '"]';
+        var groupName = CSS.escape(group.name);
+        var navigationSelector = '.console-navigation-group[' + config.groupAttribute + '="' + groupName + '"]';
         var navigationGroup = document.querySelector(navigationSelector);
         var hasMatches = visibleCount > 0;
 
