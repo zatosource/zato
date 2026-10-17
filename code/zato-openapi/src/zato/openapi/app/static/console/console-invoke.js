@@ -7,7 +7,6 @@ zatoConsole.invoke.config = {
     xmlMarker: '<',
     contentTypeHeader: 'Content-Type',
     acceptHeader: 'Accept',
-    queryStringMethods: ['get', 'head', 'delete'],
     placeholderPattern: /\{([^}]+)\}/g,
     cardSelector: '.console-operation',
     relayMethod: 'POST',
@@ -378,53 +377,23 @@ zatoConsole.invoke.onPathInput = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoConsole.invoke.buildQueryString = function(values) {
-
-    var search = new URLSearchParams();
-    var names = Object.keys(values);
-
-    for(var nameIndex = 0; nameIndex < names.length; nameIndex++) {
-        var name = names[nameIndex];
-        var value = values[name];
-
-        // Nested values travel as JSON and everything else as its text
-        if(typeof value === 'object') {
-            value = JSON.stringify(value);
-        }
-
-        search.append(name, value);
-    }
-
-    var out = search.toString();
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 zatoConsole.invoke.buildRequest = function(entry, text, pathValues) {
 
     var config = zatoConsole.invoke.config;
-    var usesQueryString = config.queryStringMethods.includes(entry.method);
     var parsed = zatoConsole.invoke.parseRequest(text);
 
     // Our response to produce, with the path parameters from their own inputs
     var out = {path: zatoConsole.invoke.fillPath(entry.path, pathValues), query: '', body: null, contentType: null};
 
-    // An empty editor sends neither a query string nor a body ..
+    // An empty editor sends no body ..
     if(text.trim() === '') {
         return out;
     }
 
-    // .. an object of plain values is the query string of the methods that have one ..
+    // .. an object is sent as the JSON body it is in the editor, whatever the method ..
     if(zatoConsole.invoke.isObject(parsed)) {
-        if(usesQueryString && zatoConsole.invoke.hasPlainValues(parsed)) {
-            out.query = zatoConsole.invoke.buildQueryString(parsed);
-        }
-        else {
-            out.body = JSON.stringify(parsed);
-            out.contentType = config.contentType;
-        }
-
+        out.body = JSON.stringify(parsed);
+        out.contentType = config.contentType;
         return out;
     }
 
@@ -450,23 +419,6 @@ zatoConsole.invoke.getTextContentType = function(text, parsed) {
     }
 
     return config.textContentType;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-zatoConsole.invoke.hasPlainValues = function(values) {
-
-    var names = Object.keys(values);
-
-    for(var nameIndex = 0; nameIndex < names.length; nameIndex++) {
-        var value = values[names[nameIndex]];
-
-        if(typeof value === 'object' && value !== null) {
-            return false;
-        }
-    }
-
-    return true;
 };
 
 // ////////////////////////////////////////////////////////////////////////
