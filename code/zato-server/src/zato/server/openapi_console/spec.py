@@ -14,7 +14,9 @@ from inspect import isclass
 # Zato
 from zato.common.api import HTTP_SOAP, URL_TYPE
 from zato.common.typing_ import cast_
-from zato.openapi.generator.io_scanner import TypeMapper, extract_model_fields_recursive, get_element_info
+from zato.openapi.generator.annotation import get_io_container, is_model_class
+from zato.openapi.generator.io_scanner import TypeMapper, get_element_info
+from zato.openapi.generator.runtime_model import extract_model_fields_recursive, read_runtime_type
 from zato.openapi.generator.openapi_ import OpenAPIGenerator
 
 # ################################################################################################################################
@@ -93,21 +95,20 @@ def _io_definition(value:'any_', models:'stranydict') -> 'anydict':
     elif isinstance(value, (tuple, list)):
         out = _io_from_sequence(value)
 
-    # A dataclass-based model
+    # A dataclass-based model ..
     elif isclass(value):
-        extract_model_fields_recursive(value, models)
-        out = {'type': 'model', 'model_name': value.__name__}
 
-    # A generic alias such as list_[Model]
-    elif typing.get_origin(value) is list:
-        args = typing.get_args(value)
-        element = args[0]
-        extract_model_fields_recursive(element, models)
-        out = {
-            'type': 'container',
-            'container_type': 'list_',
-            'element_type': element.__name__,
-        }
+        # .. or any other class, which has no fields to document.
+        if not is_model_class(value):
+            out = {'type': 'any'}
+        else:
+            extract_model_fields_recursive(value, models)
+            out = {'type': 'model', 'model_name': value.__name__}
+
+    # A subscripted type such as list_[Model]
+    elif typing.get_origin(value) is not None:
+        io_type = read_runtime_type(value, models)
+        out = get_io_container(io_type)
 
     # .. anything else is documented as an untyped JSON object.
     else:

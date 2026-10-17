@@ -12,7 +12,7 @@
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
-	test-edifact test-soap \
+	test-edifact test-soap test-openapi test-openapi-console-live \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
@@ -919,6 +919,16 @@ test-audit-export: ## Audit log export to OpenTelemetry - the offline mapping an
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
+test-openapi: ## Offline OpenAPI tests - the type mapping of models and annotations, the generator, the console's document, client and relay.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-openapi/generator/ \
+		$(CURDIR)/code/tests/python/zato-openapi/console_client/ \
+		$(CURDIR)/code/tests/python/zato-server/openapi_console/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_openapi -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
 test-openapi-console-live: ## OpenAPI console tests against a live server - the document after a start, after a restart and per channel method.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1451,7 +1461,7 @@ Zato_Test_Static := test-lint
 Zato_Test_Offline := \
 	test-message-filters test-demo-seed test-truncate test-safeguards \
 	test-edifact test-alerting test-request-response test-destinations \
-	test-soap
+	test-soap test-openapi
 
 # Rust toolchain suites and the database matrices
 Zato_Test_Toolchain := \

@@ -8,22 +8,27 @@ This file is a proprietary product, not an open-source one.
 
 # stdlib
 import ast
-import dataclasses
 import importlib.util
 import logging
 import os
 import sys
-import typing
 
 # Zato
 from zato.input_output import IOProcessor, is_io_bool, is_io_int
+from zato.openapi.generator.annotation import Container_Kinds, get_io_container, NameResolver, parse_annotation
+from zato.openapi.generator.basic_types import Any_Type_Schema, Basic_Types
+from zato.openapi.generator.runtime_model import extract_model_fields_recursive
+from zato.openapi.generator.schemas import get_container_schema_builder, get_enum_schema, make_nullable
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, anydictnone, anylist, strlist
     anydict = anydict
+    anydictnone = anydictnone
+    anylist = anylist
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,6 +38,12 @@ logger = logging.getLogger(__name__)
 
 # Turns the strings of flat input and output declarations into typed elements, as the server does
 _io_processor = IOProcessor()
+
+# Resolves the names in the annotations of scanned source code, which is not imported
+_name_resolver = NameResolver()
+
+# The file path of models whose definitions do not name one
+_unknown_file_path = 'unknown_file'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,7 +102,7 @@ class IOVisitor(ast.NodeVisitor):
         self.model_fields = {}
         self.handle_method_exists = False
 
-    def visit_ClassDef(self, node):
+    def visit_ClassDef(self, node:'ast.ClassDef') -> 'None':
         """ Visit class definitions to identify services and models.
         """
         prev_class = self.current_class
@@ -141,7 +152,7 @@ class IOVisitor(ast.NodeVisitor):
         self.is_model = prev_is_model
         self.model_fields = prev_model_fields
 
-    def visit_AnnAssign(self, node):
+    def visit_AnnAssign(self, node:'ast.AnnAssign') -> 'None':
         """ Visit annotated assignments to find model field definitions.
         """
         if not self.current_class or not self.is_model:
@@ -150,7 +161,7 @@ class IOVisitor(ast.NodeVisitor):
         # Handle model field annotations
         if isinstance(node.target, ast.Name):
             field_name = node.target.id
-            field_type = self._parse_annotation(node.annotation)
+            field_type = parse_annotation(node.annotation, _name_resolver)
             field_default = None
 
             # Check if there's a default value
@@ -160,103 +171,21 @@ class IOVisitor(ast.NodeVisitor):
                 elif isinstance(node.value, ast.Name) and node.value.id == 'None':
                     field_default = None
 
+            # A field is required unless it has a default value or it accepts None
+            has_default = node.value is not None
+
+            if isinstance(field_type, dict):
+                is_optional = 'optional' in field_type
+            else:
+                is_optional = False
+
             self.model_fields[field_name] = {
                 'type': field_type,
                 'default': field_default,
-                'required': field_default is None and not isinstance(field_type, dict)
-                                      or (isinstance(field_type, dict) and field_type.get('optional') is False)
+                'required': not has_default and not is_optional,
             }
 
-    def _parse_annotation(self, annotation):
-        """ Parse type annotations for model fields.
-        """
-        # Handle simple types
-        if isinstance(annotation, ast.Name):
-            return annotation.id
-
-        # Handle subscripted types like list_[Type], union_[Type1, Type2], etc.
-        if isinstance(annotation, ast.Subscript):
-            container_type = self._get_name_from_node(annotation.value)
-
-            # Handle list_[Type] or List[Type]
-            if container_type in ('list_', 'List'):
-                element_type = self._get_name_from_node(annotation.slice)
-
-                return {
-                    'container': 'list',
-                    'element_type': element_type
-                }
-
-            # Handle Optional[Type] or optional[Type]
-            if container_type in ('optional', 'Optional'):
-                element_type = self._get_name_from_node(annotation.slice)
-
-                return {
-                    'type': element_type,
-                    'optional': True
-                }
-
-            # Handle Union types: union_[Type1, Type2]
-            if container_type in ('union_', 'Union'):
-                # Extract all union types
-                union_types = []
-
-                # Check if it's a slice with a tuple of types
-                if isinstance(annotation.slice, ast.Tuple):
-                    # Multiple types in the union
-                    for elt in annotation.slice.elts:
-                        type_name = self._get_name_from_node(elt)
-                        union_types.append(type_name)
-                else:
-                    # Single type in the union (unusual but possible)
-                    type_name = self._get_name_from_node(annotation.slice)
-                    union_types.append(type_name)
-
-                return {
-                    'type': 'union',
-                    'container': 'union',
-                    'union_types': union_types  # Store all possible types
-                }
-
-            # Handle other container types - map to generic object
-            return {
-                'container': container_type,
-                'element_type': 'object'
-            }
-
-        # Handle other AST node types by mapping them to basic types
-        if isinstance(annotation, ast.Attribute):
-            # Handle attribute access like module.Type
-            return 'object'
-
-        if isinstance(annotation, ast.Tuple):
-            # Handle tuple types
-            return {
-                'container': 'tuple',
-                'element_type': 'object'
-            }
-
-        # As a last resort, map to 'object' instead of raising an exception
-        # This ensures we don't stop processing due to one unknown type
-        logger.warning(f'Mapping unknown type annotation {annotation.__class__.__name__} to generic object')
-        return 'object'
-
-    def _get_name_from_node(self, node):
-        """ Extract name from an AST node.
-        """
-        if isinstance(node, ast.Name):
-            return node.id
-        elif isinstance(node, ast.Constant):
-            return node.value
-        elif isinstance(node, ast.Subscript):
-            # Handle nested subscripts
-            return {
-                'container': self._get_name_from_node(node.value),
-                'element_type': self._get_name_from_node(node.slice)
-            }
-        raise TypeConversionError(f'Unrecognized node type: {node.__class__.__name__}')
-
-    def visit_Assign(self, node):
+    def visit_Assign(self, node:'ast.Assign') -> 'None':
         """ Visit assignments to find service attributes like name, input, output.
         """
         if not self.current_class:
@@ -295,21 +224,24 @@ class IOVisitor(ast.NodeVisitor):
                             if elts:
                                 self.service_input = {'type': 'tuple', 'elements': elts}
                         elif isinstance(node.value, ast.Subscript):
-                            # Handle list_[ModelClass] or similar
-                            container_type = self._get_name_from_node(node.value.value)
-                            element_type = self._get_name_from_node(node.value.slice)
-
-                            self.service_input = {
-                                'type': 'container',
-                                'container_type': container_type,
-                                'element_type': element_type
-                            }
+                            # Input as a container, e.g. list_[ModelClass]
+                            io_type = parse_annotation(node.value, _name_resolver)
+                            self.service_input = get_io_container(io_type)
 
                     # Check for output attribute
                     elif target.id == 'output':
                         if isinstance(node.value, ast.Name):
                             # Output as a model class
                             self.service_output = {'type': 'model', 'model_name': node.value.id}
+                        elif isinstance(node.value, ast.Constant):
+                            # Output as a string
+                            element = get_element_info(node.value.value)
+                            self.service_output = {
+                                'type': 'string',
+                                'name': element['name'],
+                                'required': element['required'],
+                                'schema_type': element['schema_type'],
+                            }
                         elif isinstance(node.value, ast.Tuple):
                             # Output as a tuple of strings
                             elts = []
@@ -319,17 +251,11 @@ class IOVisitor(ast.NodeVisitor):
                             if elts:
                                 self.service_output = {'type': 'tuple', 'elements': elts}
                         elif isinstance(node.value, ast.Subscript):
-                            # Handle list_[ModelClass] or similar
-                            container_type = self._get_name_from_node(node.value.value)
-                            element_type = self._get_name_from_node(node.value.slice)
+                            # Output as a container, e.g. list_[ModelClass]
+                            io_type = parse_annotation(node.value, _name_resolver)
+                            self.service_output = get_io_container(io_type)
 
-                            self.service_output = {
-                                'type': 'container',
-                                'container_type': container_type,
-                                'element_type': element_type
-                            }
-
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node:'ast.FunctionDef') -> 'None':
         """ Visit function definitions to find handle() method.
         """
         if self.current_class and self.is_service and node.name == 'handle':
@@ -338,24 +264,13 @@ class IOVisitor(ast.NodeVisitor):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_nullable(schema:'anydict') -> 'anydict':
-    """ Returns a schema that also accepts null, expressed the OpenAPI 3.1 way - references
-    and composed schemas are wrapped in anyOf, plain schemas get null added to their type.
+def _get_model_file_path(model_def:'anydict') -> 'str':
+    """ Returns the path of the file that a model is defined in, or the default name if its definition has none.
     """
-    # References and composed schemas cannot carry a type of their own ..
-    if 'type' not in schema:
-        out = {'anyOf': [schema, {'type': 'null'}]}
-        return out
-
-    # .. plain schemas express nullability with a type list.
-    out = dict(schema)
-    type_value = out['type']
-
-    if isinstance(type_value, list):
-        if 'null' not in type_value:
-            out['type'] = type_value + ['null']
+    if file_path := model_def.get('file_path'):
+        out = file_path
     else:
-        out['type'] = [type_value, 'null']
+        out = _unknown_file_path
 
     return out
 
@@ -366,183 +281,123 @@ class TypeMapper:
     """ Maps Zato types to OpenAPI types. Nullability is expressed with type lists,
     e.g. ['string', 'null'], which is the OpenAPI 3.1 form the generator emits.
     """
-    # Basic type mappings
-    BASIC_TYPES = {
-
-        # Any type
-        'any_': {'description': 'Any type'},
-        'anynone': {'description': 'Any type, including null'},
-
-        # Strings
-        'str': {'type': 'string'},
-        'str_': {'type': 'string'},
-        'strnone': {'type': ['string', 'null']},
-        'path_': {'type': 'string'},
-
-        # Integers
-        'int': {'type': 'integer', 'format': 'int32'},
-        'intnone': {'type': ['integer', 'null'], 'format': 'int32'},
-
-        # Floating-point and decimal numbers
-        'float': {'type': 'number', 'format': 'float'},
-        'floatnone': {'type': ['number', 'null'], 'format': 'float'},
-        'decimal_': {'type': 'number'},
-        'decnone': {'type': ['number', 'null']},
-
-        # Booleans
-        'bool': {'type': 'boolean'},
-        'boolnone': {'type': ['boolean', 'null']},
-
-        # Bytes
-        'bytes': {'type': 'string', 'format': 'binary'},
-        'bytesnone': {'type': ['string', 'null'], 'format': 'binary'},
-        'strbytes': {'type': 'string'},
-
-        # Dates and times
-        'datetime': {'type': 'string', 'format': 'date-time'},
-        'datetime_': {'type': 'string', 'format': 'date-time'},
-        'datetimez': {'type': 'string', 'format': 'date-time'},
-        'isotimestamp': {'type': 'string', 'format': 'date-time'},
-        'dtnone': {'type': ['string', 'null'], 'format': 'date-time'},
-        'date': {'type': 'string', 'format': 'date'},
-        'date_': {'type': 'string', 'format': 'date'},
-
-        # Dicts
-        'dict': {'type': 'object'},
-        'dict_': {'type': 'object'},
-        'anydict': {'type': 'object'},
-        'anydictnone': {'type': ['object', 'null']},
-        'dictnone': {'type': ['object', 'null']},
-        'stranydict': {'type': 'object'},
-        'strdict': {'type': 'object'},
-        'strdictnone': {'type': ['object', 'null']},
-        'commondict': {'type': 'object'},
-        'object': {'type': 'object'},
-
-        # Dicts with typed values
-        'strstrdict': {'type': 'object', 'additionalProperties': {'type': 'string'}},
-        'strintdict': {'type': 'object', 'additionalProperties': {'type': 'integer'}},
-        'strbooldict': {'type': 'object', 'additionalProperties': {'type': 'boolean'}},
-        'strfloatdict': {'type': 'object', 'additionalProperties': {'type': 'number'}},
-        'strdictdict': {'type': 'object', 'additionalProperties': {'type': 'object'}},
-        'strlistdict': {'type': 'object', 'additionalProperties': {'type': 'array', 'items': {'type': 'object'}}},
-        'strcalldict': {'type': 'object'},
-
-        # Lists
-        'strlist': {'type': 'array', 'items': {'type': 'string'}},
-        'strlistnone': {'type': ['array', 'null'], 'items': {'type': 'string'}},
-        'strlistempty': {'type': 'array', 'items': {'type': ['string', 'null']}},
-        'intlist': {'type': 'array', 'items': {'type': 'integer'}},
-        'intlistnone': {'type': ['array', 'null'], 'items': {'type': 'integer'}},
-        'intlistempty': {'type': 'array', 'items': {'type': ['integer', 'null']}},
-        'byteslist': {'type': 'array', 'items': {'type': 'string', 'format': 'binary'}},
-        'pathlist': {'type': 'array', 'items': {'type': 'string'}},
-        'anylist': {'type': 'array', 'items': {'type': 'object'}},
-        'anylistnone': {'type': ['array', 'null'], 'items': {'type': 'object'}},
-        'listnone': {'type': ['array', 'null'], 'items': {'type': 'object'}},
-        'dictlist': {'type': 'array', 'items': {'type': 'object'}},
-        'strdictlist': {'type': 'array', 'items': {'type': 'object'}},
-        'strdictlistnone': {'type': ['array', 'null'], 'items': {'type': 'object'}},
-
-        # Tuples are documented as arrays
-        'tuple': {'type': 'array', 'items': {'type': 'object'}},
-        'strtuple': {'type': 'array', 'items': {'type': 'string'}},
-        'anytuple': {'type': 'array', 'items': {'type': 'object'}},
-        'tuplist': {'type': 'array', 'items': {'type': 'object'}},
-
-        # Sets are documented as arrays with unique items
-        'strset': {'type': 'array', 'items': {'type': 'string'}, 'uniqueItems': True},
-        'intset': {'type': 'array', 'items': {'type': 'integer'}, 'uniqueItems': True},
-        'anyset': {'type': 'array', 'items': {'type': 'object'}, 'uniqueItems': True},
-
-        # Unions of scalar types
-        'union': {'type': 'object'},
-        'strint': {'type': ['string', 'integer']},
-        'strintnone': {'type': ['string', 'integer', 'null']},
-        'strintbool': {'type': ['string', 'integer', 'boolean']},
-        'strorfloat': {'type': ['string', 'number']},
-        'strordict': {'type': ['string', 'object']},
-        'strordictnone': {'type': ['string', 'object', 'null']},
-        'strorlist': {'type': ['string', 'array'], 'items': {'type': 'object'}},
-        'listorstr': {'type': ['string', 'array'], 'items': {'type': 'object'}},
-        'strorlistnone': {'type': ['string', 'array', 'null'], 'items': {'type': 'object'}},
-        'dictorlist': {'type': ['object', 'array'], 'items': {'type': 'object'}},
-    }
+    # The schemas of the type names that the mapper knows
+    BASIC_TYPES = Basic_Types
 
     def __init__(self):
         self.schema_components = {}
         self.registered_models = set()
 
-    def map_type(self, zato_type, model_definitions=None):
+    def map_type(self, zato_type:'any_', model_definitions:'anydictnone'=None) -> 'anydict':
         """ Map a Zato type to an OpenAPI type.
         """
         model_definitions = model_definitions or {}
 
-        # Handle basic types - a copy is returned so that callers can never mutate the shared mapping
-        if isinstance(zato_type, str) and zato_type in self.BASIC_TYPES:
-            return dict(self.BASIC_TYPES[zato_type])
+        # Names are types that the mapper knows, models, or types defined elsewhere ..
+        if isinstance(zato_type, str):
+            out = self._map_name(zato_type, model_definitions)
 
-        # Handle model references
-        if isinstance(zato_type, str) and zato_type in model_definitions:
-            try:
-                self._register_model_schema(zato_type, model_definitions)
-                return {'$ref': f'#/components/schemas/{zato_type}'}
-            except TypeConversionError as e:
-                # Add more context about the model
-                file_path = 'unknown_file'
-                if isinstance(model_definitions.get(zato_type), dict) and 'file_path' in model_definitions.get(zato_type, {}):
-                    file_path = model_definitions[zato_type]['file_path']
-                raise TypeConversionError(f'Error with model {zato_type} from file {file_path}: {e}')
+        # .. enumerations and literals are one of the values that they list ..
+        elif 'enum' in zato_type:
+            out = get_enum_schema(zato_type['enum'])
 
-        # Handle container types like list_[Type] or List[Type]
-        if isinstance(zato_type, dict) and 'container' in zato_type:
-            container_type = zato_type['container']
-
-            # Handle union types with oneOf schema
-            if container_type == 'union' and 'union_types' in zato_type:
-                union_types = zato_type['union_types']
-                one_of_schemas = []
-
-                # Map each type in the union
-                for type_name in union_types:
-                    try:
-                        mapped_type = self.map_type(type_name, model_definitions)
-                        one_of_schemas.append(mapped_type)
-                    except TypeConversionError as e:
-                        logger.warning(f'Could not map union type {type_name}: {e}')
-
-                # Return oneOf schema if we have any valid types
-                if one_of_schemas:
-                    return {
-                        'oneOf': one_of_schemas
-                    }
-                else:
-                    return {
-                        'anyOf': [
-                            {'type': 'string'},
-                            {'type': 'number'},
-                            {'type': 'object'},
-                            {'type': 'array', 'items': {'type': 'object'}}
-                        ]
-                    }
-
-            # Handle list-like containers
-            element_type = zato_type.get('element_type', 'object')
-            if container_type in ('list', 'list_', 'List'):
-                return {
-                    'type': 'array',
-                    'items': self.map_type(element_type, model_definitions)
-                }
-
-        # Handle optional types
-        if isinstance(zato_type, dict) and 'optional' in zato_type and zato_type['optional']:
+        # .. optional types accept null too ..
+        elif zato_type.get('optional'):
             mapped_type = self.map_type(zato_type['type'], model_definitions)
-            return _make_nullable(mapped_type)
+            out = make_nullable(mapped_type)
 
-        # If we can't map the type, raise an exception
-        raise TypeConversionError(f'Cannot map Zato type \'{zato_type}\' to OpenAPI type. Add this type to BASIC_TYPES in TypeMapper class')
+        # .. unions accept a value of any of their types ..
+        elif zato_type.get('container') == 'union':
+            out = self._map_union(zato_type['union_types'], model_definitions)
 
-    def _register_model_schema(self, model_name, model_definitions):
+        # .. containers have elements of a type of their own ..
+        elif 'container' in zato_type:
+            out = self._map_container(zato_type, model_definitions)
+
+        # .. and anything else is a value of any type.
+        else:
+            out = dict(Any_Type_Schema)
+
+        return out
+
+# ################################################################################################################################
+
+    def _map_name(self, type_name:'str', model_definitions:'anydict') -> 'anydict':
+        """ Maps the name of a type that the mapper knows, of a model, or of a type defined elsewhere.
+        """
+        # Types that the mapper knows are copied, so that callers can never mutate the shared mapping ..
+        if type_name in self.BASIC_TYPES:
+            out = dict(self.BASIC_TYPES[type_name])
+
+        # .. models are registered as components and referred to ..
+        elif type_name in model_definitions:
+            try:
+                self._register_model_schema(type_name, model_definitions)
+            except TypeConversionError as e:
+                file_path = _get_model_file_path(model_definitions[type_name])
+                raise TypeConversionError(f'Error with model {type_name} from file {file_path}: {e}')
+
+            out = {'$ref': f'#/components/schemas/{type_name}'}
+
+        # .. and a name that is neither, e.g. that of a class from a library, is a value of any type.
+        else:
+            out = dict(Any_Type_Schema)
+
+        return out
+
+# ################################################################################################################################
+
+    def _map_union(self, union_types:'any_', model_definitions:'anydict') -> 'anydict':
+        """ Maps a union into a schema that accepts a value of any of the union's types.
+        """
+        one_of_schemas = []
+
+        for type_name in union_types:
+            try:
+                mapped_type = self.map_type(type_name, model_definitions)
+                one_of_schemas.append(mapped_type)
+            except TypeConversionError as e:
+                logger.warning(f'Could not map union type {type_name}: {e}')
+
+        # The union is made of the types that could be mapped ..
+        if one_of_schemas:
+            out = {'oneOf': one_of_schemas}
+
+        # .. or of the JSON types in general if none could be.
+        else:
+            out = {
+                'anyOf': [
+                    {'type': 'string'},
+                    {'type': 'number'},
+                    {'type': 'object'},
+                    {'type': 'array', 'items': {'type': 'object'}}
+                ]
+            }
+
+        return out
+
+# ################################################################################################################################
+
+    def _map_container(self, zato_type:'anydict', model_definitions:'anydict') -> 'anydict':
+        """ Maps a list, a set, a tuple or a dict, whose elements, or values in the case of dicts, have a type of their own.
+        """
+        container_name = zato_type['container']
+        kind = Container_Kinds.get(container_name)
+
+        # Containers of known kinds have schemas of their elements ..
+        if builder := get_container_schema_builder(kind):
+            element_schema = self.map_type(zato_type['element_type'], model_definitions)
+            out = builder(element_schema)
+
+        # .. while other containers are values of any type.
+        else:
+            out = dict(Any_Type_Schema)
+
+        return out
+
+# ################################################################################################################################
+
+    def _register_model_schema(self, model_name:'str', model_definitions:'anydict') -> 'None':
         """ Register a model schema in the components section.
         """
         if model_name in self.registered_models:
@@ -552,14 +407,32 @@ class TypeMapper:
         if not model_def:
             raise TypeConversionError(f'Model \'{model_name}\' not found in definitions')
 
+        # The model is registered before its fields are mapped, so that a model that refers to itself,
+        # directly or through other models, has a reference to its own schema.
+        self.registered_models.add(model_name)
+
+        try:
+            schema = self._get_model_schema(model_name, model_def, model_definitions)
+        except TypeConversionError:
+            self.registered_models.discard(model_name)
+            raise
+
+        self.schema_components[model_name] = schema
+
+# ################################################################################################################################
+
+    def _get_model_schema(self, model_name:'str', model_def:'any_', model_definitions:'anydict') -> 'anydict':
+        """ Returns the schema of a model from the definitions of its fields.
+        """
         properties = {}
         required = []
 
         # Extract file path information if available
-        file_path = 'unknown_file'
-        if isinstance(model_def, dict) and 'file_path' in model_def:
-            file_path = model_def['file_path']
-            fields = model_def.get('fields', {})
+        file_path = _get_model_file_path(model_def)
+
+        # Definitions of models with a file path have their fields under a key of their own
+        if 'file_path' in model_def:
+            fields = model_def['fields']
         else:
             fields = model_def
 
@@ -568,7 +441,7 @@ class TypeMapper:
             try:
                 properties[field_name] = self.map_type(field_type, model_definitions)
 
-                # Scalar defaults from the model definition are carried over into the schema
+                # Scalar defaults from the model definition are copied into the schema
                 default = field_info.get('default')
                 if isinstance(default, (str, int, float, bool)):
                     properties[field_name]['default'] = default
@@ -580,7 +453,7 @@ class TypeMapper:
                 # Re-raise with additional context
                 raise TypeConversionError(f'Error mapping field \'{field_name}\' in model \'{model_name}\' (from {file_path}): {str(e)}')
 
-        schema = {
+        schema:'anydict' = {
             'type': 'object',
             'properties': properties
         }
@@ -588,8 +461,9 @@ class TypeMapper:
         if required:
             schema['required'] = required
 
-        self.schema_components[model_name] = schema
-        self.registered_models.add(model_name)
+        return schema
+
+# ################################################################################################################################
 
     def get_schema_components(self):
         """ Get all registered schema components.
@@ -599,90 +473,7 @@ class TypeMapper:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def extract_model_fields_recursive(model_class, all_models, visited=None):
-    """ Extract fields from a model class using runtime inspection, recursively resolving nested models.
-    """
-    if visited is None:
-        visited = set()
-
-    model_name = model_class.__name__
-    if model_name in visited:
-        return
-    visited.add(model_name)
-
-    fields = {}
-
-    if dataclasses.is_dataclass(model_class):
-        for field in dataclasses.fields(model_class):
-            field_type_obj = field.type
-            field_type = _get_runtime_type_name(field_type_obj)
-            has_default = field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING
-            fields[field.name] = {
-                'type': field_type,
-                'default': field.default if field.default is not dataclasses.MISSING else None,
-                'required': not has_default
-            }
-            _extract_nested_models(field_type_obj, all_models, visited)
-    elif hasattr(model_class, '__annotations__'):
-        for field_name, field_type_obj in model_class.__annotations__.items():
-            fields[field_name] = {
-                'type': _get_runtime_type_name(field_type_obj),
-                'default': None,
-                'required': True
-            }
-            _extract_nested_models(field_type_obj, all_models, visited)
-
-    all_models[model_name] = {'fields': fields, 'file_path': 'runtime'}
-
-# ################################################################################################################################
-
-def _get_runtime_type_name(type_hint):
-    """ Convert a runtime type hint to a string representation.
-    """
-    if isinstance(type_hint, str):
-        return type_hint
-
-    origin = typing.get_origin(type_hint)
-    args = typing.get_args(type_hint)
-
-    if origin is list or (hasattr(origin, '__name__') and origin.__name__ == 'list_'):
-        element_type = _get_runtime_type_name(args[0]) if args else 'object'
-        return {'container': 'list', 'element_type': element_type}
-
-    if origin is typing.Union:
-        non_none = [a for a in args if a is not type(None)]
-        if len(non_none) == 1:
-            return {'type': _get_runtime_type_name(non_none[0]), 'optional': True}
-        return 'object'
-
-    if hasattr(type_hint, '__name__'):
-        return type_hint.__name__
-
-    return str(type_hint)
-
-# ################################################################################################################################
-
-def _extract_nested_models(type_hint, all_models, visited):
-    """ Recursively extract nested model classes from a type hint.
-    """
-    if isinstance(type_hint, str):
-        return
-
-    origin = typing.get_origin(type_hint)
-    args = typing.get_args(type_hint)
-
-    if origin is list or origin is typing.Union:
-        for arg in args:
-            _extract_nested_models(arg, all_models, visited)
-        return
-
-    if isinstance(type_hint, type) and hasattr(type_hint, '__annotations__'):
-        if type_hint.__name__ not in all_models and type_hint.__name__ not in visited:
-            extract_model_fields_recursive(type_hint, all_models, visited)
-
-# ################################################################################################################################
-
-def import_module_from_file(file_path):
+def import_module_from_file(file_path:'str') -> 'any_':
     """ Dynamically import a module from a file path.
     """
     module_name = os.path.splitext(os.path.basename(file_path))[0]
@@ -700,7 +491,7 @@ def import_module_from_file(file_path):
 
 # ################################################################################################################################
 
-def resolve_model_from_import(model_name, file_path):
+def resolve_model_from_import(model_name:'str', file_path:'str') -> 'any_':
     """ Try to resolve a model class by importing the service file's module.
     """
     file_dir = os.path.dirname(file_path)
@@ -731,15 +522,24 @@ class IOScanner:
     def __init__(self):
         self.type_mapper = TypeMapper()
 
-    def is_python_file(self, file_path):
+    def is_python_file(self, file_path:'str') -> 'bool':
         """ Check if a file is a Python file.
         """
         return file_path.endswith('.py')
 
-    def scan_file(self, file_path):
+    def _add_results(self, all_results:'anydict', results:'anydict') -> 'None':
+        """ Adds the services and models of one scan to the results of all the scans.
+        """
+        all_services:'anylist' = all_results['services']
+        all_models:'anydict' = all_results['models']
+
+        all_services.extend(results['services'])
+        all_models.update(results['models'])
+
+    def scan_file(self, file_path:'str') -> 'anydict':
         """ Scan a single Python file for services and models.
         """
-        result = {'services': [], 'models': {}}
+        result:'anydict' = {'services': [], 'models': {}}
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 tree = ast.parse(f.read(), filename=file_path)
@@ -776,11 +576,11 @@ class IOScanner:
 
         return result
 
-    def scan_directory(self, directory):
+    def scan_directory(self, directory:'str') -> 'anydict':
         """ Recursively scan a directory for services and models.
         """
-        all_results = {'services': [], 'models': {}}
-        py_files = []
+        all_results:'anydict' = {'services': [], 'models': {}}
+        py_files:'strlist' = []
 
         # Find all Python files in the directory
         for root, _, files in os.walk(directory):
@@ -790,38 +590,35 @@ class IOScanner:
 
         for file_path in py_files:
             file_results = self.scan_file(file_path)
-            all_results['services'].extend(file_results['services'])
-            all_results['models'].update(file_results['models'])
+            self._add_results(all_results, file_results)
 
         return all_results
 
-    def scan_files(self, file_paths):
+    def scan_files(self, file_paths:'strlist') -> 'anydict':
         """ Scan multiple files for services and models.
         """
-        all_results = {'services': [], 'models': {}}
+        all_results:'anydict' = {'services': [], 'models': {}}
         for file_path in file_paths:
             if self.is_python_file(file_path):
                 file_results = self.scan_file(file_path)
-                all_results['services'].extend(file_results['services'])
-                all_results['models'].update(file_results['models'])
+                self._add_results(all_results, file_results)
 
         return all_results
 
-    def scan_directories(self, directories):
+    def scan_directories(self, directories:'strlist') -> 'anydict':
         """ Scan multiple directories for services and models.
         """
-        all_results = {'services': [], 'models': {}}
+        all_results:'anydict' = {'services': [], 'models': {}}
         for directory in directories:
             results = self.scan_directory(directory)
-            all_results['services'].extend(results['services'])
-            all_results['models'].update(results['models'])
+            self._add_results(all_results, results)
 
         return all_results
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def scan_io(directories, output_file):
+def scan_io(directories:'strlist', output_file:'str') -> 'None':
     """ Scan directories for services and generate an OpenAPI specification with I/O information.
     """
     # Import here to avoid circular imports
