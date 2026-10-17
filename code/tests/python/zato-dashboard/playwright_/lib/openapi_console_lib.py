@@ -54,6 +54,10 @@ Relay_Method        = 'POST'
 Content_Type_Header = 'Content-Type'
 Content_Type_JSON   = 'application/json'
 
+# The relay accepts a POST only with the token from the console's CSRF cookie
+CSRF_Cookie_Name  = 'zato-openapi-console-csrf'
+CSRF_Token_Header = 'X-CSRFToken'
+
 # The console's admin is the Dashboard's own admin user, with the same username and password
 Admin_Username = 'admin'
 
@@ -283,6 +287,24 @@ def spec_schema_names(spec:'anydict') -> 'any_':
 
 # ################################################################################################################################
 
+def get_csrf_token(page:'Page', console_url:'str') -> 'str':
+    """ Returns the value of the console's CSRF cookie in the page's browser context.
+    """
+    cookies:'any_' = page.context.cookies(console_url)
+
+    for cookie in cookies:
+        if cookie['name'] == CSRF_Cookie_Name:
+            out = cookie['value']
+            break
+
+    # No such cookie means the console has not rendered a page in this context yet
+    else:
+        raise Exception(f'No cookie `{CSRF_Cookie_Name}` for `{console_url}`')
+
+    return out
+
+# ################################################################################################################################
+
 def relay_invoke(page:'Page', console_url:'str', method:'str', url_path:'str', body:'str'='') -> 'any_':
     """ Sends a try-it request through the console's relay inside the signed-in session
     and returns the raw response.
@@ -290,7 +312,7 @@ def relay_invoke(page:'Page', console_url:'str', method:'str', url_path:'str', b
     url = console_url + Relay_Base_Path + url_path
 
     # The console's own pages send the method, the query string, the caller's headers and the body
-    # as one JSON document, with no body in it when there is none to send
+    # as one JSON document, with no body in it when there is none to send ..
     headers:'anydict' = {}
 
     if body:
@@ -300,8 +322,13 @@ def relay_invoke(page:'Page', console_url:'str', method:'str', url_path:'str', b
         request_body = None
 
     envelope = {'method': method, 'query': '', 'headers': headers, 'body': request_body}
+    data = json_dumps(envelope)
 
-    out = page.request.fetch(url, method=Relay_Method, headers={Content_Type_Header: Content_Type_JSON}, data=json_dumps(envelope))
+    # .. and the relay itself receives the document with the console's CSRF token.
+    csrf_token = get_csrf_token(page, console_url)
+    relay_headers = {Content_Type_Header: Content_Type_JSON, CSRF_Token_Header: csrf_token}
+
+    out = page.request.fetch(url, method=Relay_Method, headers=relay_headers, data=data)
     return out
 
 # ################################################################################################################################

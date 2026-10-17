@@ -15,7 +15,6 @@ from urllib.parse import quote
 # Django
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 # PyYAML
@@ -317,7 +316,6 @@ def spec_yaml_view(req:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-@csrf_exempt
 @require_POST
 def relay_view(req:'any_', relay_path:'str') -> 'any_':
     """ Relays a try-it invocation to the servers over Redis Streams and returns the response,

@@ -30,6 +30,7 @@ if 0:
 
 from rest_channel import create_apikey_definition, create_channel, create_security_group, edit_channel, \
     find_channel_row, get_row_cell_texts, invoke_channel, invoke_until_status
+from security_edit import remove_security_group_members
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -260,6 +261,68 @@ class TestRESTChannelGroups:
         response = invoke_channel(server_port, url_path, data='{"member": "basic-auth"}', auth=auth)
         assert response.status_code == OK, \
             f'Expected OK for the Basic Auth member, got {response.status_code}: {response.text}'
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_Group_Log_Patterns, *_Group_Create_Log_Patterns)
+    def test_member_removed_from_one_of_two_groups(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Assigns two groups to a channel, one API key belonging to both, and verifies that removing
+        the key from one group leaves it working through the other, while removing it from the other one too
+        makes the channel reject it.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'two-groups'
+        first_group_name = _Test_Name_Prefix + 'group-first'
+        second_group_name = _Test_Name_Prefix + 'group-second'
+        url_path = '/test/rest/groups-two/' + rand_string()
+
+        # Create an API key that both groups hold, and a Basic Auth definition that only the first one holds ..
+        shared_apikey = create_apikey_definition(page, base_url, _Test_Name_Prefix + 'shared-key')
+        first_only = create_basic_auth(page, base_url, _Test_Name_Prefix, 'first-only')
+
+        # .. create both groups ..
+        create_security_group(page, base_url, first_group_name, [shared_apikey['name'], first_only['name']])
+        create_security_group(page, base_url, second_group_name, [shared_apikey['name']])
+
+        # .. create the channel with both groups checked ..
+        _ = create_channel(page, base_url, channel_name, _Echo_Service, url_path, {
+            'security_groups': [first_group_name, second_group_name],
+        })
+
+        shared_headers = {_API_Key_Header: shared_apikey['key']}
+        first_only_auth = (first_only['username'], first_only['password'])
+
+        # .. both members pass to begin with ..
+        response = invoke_until_status(server_port, url_path, OK, data='{"member": "shared"}', headers=shared_headers)
+        assert response.status_code == OK, f'Expected OK for the shared key, got {response.status_code}: {response.text}'
+
+        response = invoke_until_status(server_port, url_path, OK, data='{"member": "first-only"}', auth=first_only_auth)
+        assert response.status_code == OK, \
+            f'Expected OK for the first group\'s member, got {response.status_code}: {response.text}'
+
+        # .. remove both of them from the first group in one edit ..
+        remove_security_group_members(page, base_url, first_group_name, [shared_apikey['name'], first_only['name']])
+
+        # .. once the member of no other group is rejected, the edit has reached the server ..
+        response = invoke_until_status(server_port, url_path, FORBIDDEN, data='{"member": "first-only"}', auth=first_only_auth)
+        assert response.status_code == FORBIDDEN, \
+            f'Expected FORBIDDEN for a member of no group, got {response.status_code}: {response.text}'
+
+        # .. and the shared key still passes through the second group ..
+        response = invoke_channel(server_port, url_path, data='{"member": "shared"}', headers=shared_headers)
+        assert response.status_code == OK, \
+            f'Expected OK for the key the second group still holds, got {response.status_code}: {response.text}'
+
+        # .. until the second group lets go of it too.
+        remove_security_group_members(page, base_url, second_group_name, [shared_apikey['name']])
+
+        response = invoke_until_status(server_port, url_path, FORBIDDEN, data='{"member": "shared"}', headers=shared_headers)
+        assert response.status_code == FORBIDDEN, \
+            f'Expected FORBIDDEN for a key no group holds, got {response.status_code}: {response.text}'
 
 # ################################################################################################################################
 # ################################################################################################################################

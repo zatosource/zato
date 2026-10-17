@@ -84,6 +84,8 @@ _Module_Order = [
     'test_openapi_console_security_spec_optout',
     'test_openapi_console_security_default_posture',
     'test_openapi_console_deprecated',
+    'test_openapi_console_apikey_edit',
+    'test_openapi_console_typed_values',
 ]
 
 # Every process spawned by the fixture registers here so the atexit hook below can kill

@@ -33,3 +33,10 @@ channel_rest:
     data_format: json
     is_active: false
     should_include_in_openapi: true
+
+  - name: api.test.openapi.values.orders
+    service: api.test.openapi.values.orders
+    url_path: /api/test/openapi/values/orders
+    data_format: json
+    is_active: false
+    should_include_in_openapi: true

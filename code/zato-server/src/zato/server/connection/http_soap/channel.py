@@ -270,6 +270,66 @@ def client_json_error(cid:'str', details:'any_') -> 'str':
 
 # ################################################################################################################################
 
+def _serialize_payload(payload:'any_') -> 'any_':
+    """ Turns what a service assigned to its response into what goes on the wire.
+
+    What a service assigns is up to the service, so each kind it may be is recognised in turn
+    rather than one being assumed.
+    """
+    # A model renders itself, since only it knows the fields it was declared with ..
+    if isinstance(payload, Model):
+        out = payload.to_json()
+
+    # .. a SimpleIO payload is recognised by rendering itself rather than by its class, there
+    # .. being several unrelated ones, and what it renders to may still need serialising ..
+    elif hasattr(payload, 'getvalue'):
+        out = payload.getvalue()
+
+        if isinstance(out, (dict, list)):
+            out = dumps(out)
+
+    # .. a list of models is turned into dicts element by element, json knowing nothing
+    # .. about a model ..
+    elif isinstance(payload, list) and isinstance(payload[0], Model):
+        rows = []
+
+        for item in payload:
+            rows.append(item.to_dict())
+
+        out = dumps(rows)
+
+    # .. and anything else is left to json.
+    else:
+        out = dumps(payload)
+
+    return out
+
+# ################################################################################################################################
+
+def serialize_response_payload(payload:'any_', data_format:'str') -> 'any_':
+    """ Returns the body that a REST channel of the given data format responds with for what a service
+    assigned to its response. REST channels and the OpenAPI console relay both build response bodies
+    through this function, so that the two always produce the same body.
+    """
+    # Strings go on the wire as they are ..
+    if isinstance(payload, str):
+        out = payload
+
+    # .. a dict behind a channel whose data format is dict-like is serialised as it is ..
+    elif isinstance(payload, dict) and data_format in ModuleCtx.Dict_Like:
+        out = dumps(payload)
+
+    elif payload:
+        out = _serialize_payload(payload)
+
+    # .. and nothing to say is said as nothing rather than as the word null.
+    else:
+        out = ''
+
+    return out
+
+# ################################################################################################################################
+
 client_error_wrapper = {
     DATA_FORMAT.JSON: client_json_error,
 }
@@ -1676,57 +1736,7 @@ class RequestHandler:
                 response.payload = dumps(payload)
         else:
             # Read once here - the vivified-model check above may have replaced it already.
-            payload = response.payload
-
-            if not isinstance(payload, str):
-
-                # A dict behind a channel whose data format is dict-like is serialised as it is.
-                if isinstance(payload, dict) and data_format in ModuleCtx.Dict_Like:
-                    response.payload = dumps(payload)
-
-                elif payload:
-                    response.payload = self._serialize_payload(payload)
-
-                # Nothing to say is said as nothing rather than as the word null.
-                else:
-                    response.payload = ''
-
-# ################################################################################################################################
-
-    def _serialize_payload(self, payload:'any_') -> 'any_':
-        """ Turns what a service assigned to its response into what goes on the wire.
-
-        What a service assigns is up to the service, so each kind it may be is recognised in turn
-        rather than one being assumed. This used to be a five-level nested if inside set_payload,
-        which is what made the one duck-typed test in it read as a defensive check.
-        """
-        # A model renders itself, since only it knows the fields it was declared with ..
-        if isinstance(payload, Model):
-            out = payload.to_json()
-
-        # .. a SimpleIO payload is recognised by rendering itself rather than by its class, there
-        # .. being several unrelated ones, and what it renders to may still need serialising ..
-        elif hasattr(payload, 'getvalue'):
-            out = payload.getvalue()
-
-            if isinstance(out, (dict, list)):
-                out = dumps(out)
-
-        # .. a list of models is turned into dicts element by element, json knowing nothing
-        # .. about a model ..
-        elif isinstance(payload, list) and isinstance(payload[0], Model):
-            rows = []
-
-            for item in payload:
-                rows.append(item.to_dict())
-
-            out = dumps(rows)
-
-        # .. and anything else is left to json.
-        else:
-            out = dumps(payload)
-
-        return out
+            response.payload = serialize_response_payload(response.payload, data_format)
 
 # ################################################################################################################################
 

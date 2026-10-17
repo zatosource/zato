@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import os
+
 # Zato
 from zato.common.crypto.api import CryptoManager
 
@@ -66,6 +69,9 @@ def build_settings(
     installed_apps = _base_apps + extra_apps
     middleware = _base_middleware + extra_middleware
 
+    # Cookies are shared by every port of a host, so each application on it needs a CSRF cookie of its own
+    csrf_cookie_name = cookie_name + '-csrf'
+
     out = {
         'SECRET_KEY': secret_key,
         'DEBUG': False,
@@ -80,6 +86,8 @@ def build_settings(
         'SESSION_COOKIE_HTTPONLY': True,
         'SESSION_COOKIE_SAMESITE': 'Lax',
 
+        'CSRF_COOKIE_NAME': csrf_cookie_name,
+
         'STATIC_URL': static_url,
 
         'LANGUAGE_CODE': 'en-us',
@@ -87,6 +95,21 @@ def build_settings(
         'USE_I18N': True,
         'USE_TZ': True,
     }
+
+    return out
+
+# ################################################################################################################################
+
+def get_csrf_trusted_origins(env_key:'str') -> 'strlist':
+    """ Returns the origins, separated by commas, that the given environment variable lists,
+    which is an empty list if the variable is not set.
+    """
+    out:'strlist' = []
+
+    if origins := os.environ.get(env_key):
+        for origin in origins.split(','):
+            if origin := origin.strip():
+                out.append(origin)
 
     return out
 

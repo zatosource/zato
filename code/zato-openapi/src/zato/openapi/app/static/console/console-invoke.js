@@ -7,6 +7,8 @@ zatoConsole.invoke.config = {
     placeholderPattern: /\{([^}]+)\}/g,
     cardSelector: '.console-operation',
     relayMethod: 'POST',
+    csrfTokenSelector: 'meta[name="csrf-token"]',
+    csrfTokenHeader: 'X-CSRFToken',
     serverHeadersName: 'X-Zato-Console-Response-Headers',
     pathParameterLocation: 'path',
     pathInputSelector: '.console-path-input',
@@ -503,8 +505,11 @@ zatoConsole.invoke.onPlayClick = function(event) {
         body: request.body,
     };
 
+    var csrfToken = document.querySelector(config.csrfTokenSelector).content;
+
     var headers = {};
     headers[config.contentTypeHeader] = config.contentType;
+    headers[config.csrfTokenHeader] = csrfToken;
 
     var options = {method: config.relayMethod, headers: headers, body: JSON.stringify(envelope), cache: 'no-store'};
 

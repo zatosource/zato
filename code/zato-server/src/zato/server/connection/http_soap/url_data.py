@@ -422,6 +422,15 @@ class URLData(PyURLData):
                 sec_def_type, path_info, cid)
             raise Unauthorized(cid, '401 Unauthorized', None)
 
+        # An inactive definition authenticates no caller
+        if not sec_def['is_active']:
+            if enforce_auth:
+                logger.error('401 Unauthorized path_info:`%s`, cid:`%s` (Definition `%s` is not active)',
+                    path_info, cid, sec_def['name'])
+                raise Unauthorized(cid, '401 Unauthorized', None)
+            else:
+                return False
+
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
 
         auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, request_ctx, post_data, enforce_auth)
@@ -551,10 +560,14 @@ class URLData(PyURLData):
         """
         with self.url_sec_lock:
 
-            # The edit brings the whole definition with it, so it is stored under its new name
-            # whether or not the old one was there to be taken out.
-            _ = self._pop_old_sec_def(self.apikey_config, SEC_DEF_TYPE.APIKEY, msg.old_name)
+            # As with Basic Auth, an edit travels without the key, so the definition held until now
+            # is where the one to go on with comes from - and with none of it here there is nothing to edit either.
+            current_config = self._pop_old_sec_def(self.apikey_config, SEC_DEF_TYPE.APIKEY, msg.old_name)
 
+            if current_config is None:
+                return
+
+            msg.password = current_config.config.password
             self._update_apikey(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
 

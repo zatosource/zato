@@ -19,13 +19,13 @@ from zato.common.api import HTTP_SOAP, URL_TYPE
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.bearer_token_identity import Identity_Key
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, BadRequest, ClientHTTPError
-from zato.common.marshal_.api import Model, ModelValidationError
+from zato.common.marshal_.api import ModelValidationError
 from zato.common.rate_limiting.common import current_time_us
 from zato.common.rate_limiting.headers import build_rate_limit_headers, Header_Rate_Limit_Limit, Header_Rate_Limit_Remaining
 from zato.common.util.api import make_cid_public, new_cid_server
 from zato.common.util.auth import enrich_with_sec_data
 from zato.common.webapp.auth.auth_type import ConsoleAuthType
-from zato.server.connection.http_soap.channel import client_json_error, get_deprecation_headers
+from zato.server.connection.http_soap.channel import client_json_error, get_deprecation_headers, serialize_response_payload
 from zato.server.openapi_console.spec import is_channel_visible, resolve_caller
 
 # ################################################################################################################################
@@ -167,30 +167,15 @@ def _build_request_ctx(fields:'anydict') -> 'anydict':
 
 # ################################################################################################################################
 
-def _serialize_response(response:'any_') -> 'str':
-    """ Converts a service response to the string form carried on the reply stream.
+def _serialize_response(response:'any_', data_format:'str') -> 'str':
+    """ Converts a service response to the string form carried on the reply stream,
+    producing the same body that the service's REST channel responds with.
     """
-    # No response means an empty body ..
-    if response is None:
-        out = ''
-        return out
+    out = serialize_response_payload(response, data_format)
 
-    # .. bytes are decoded ..
-    if isinstance(response, bytes):
-        out = response.decode('utf8')
-        return out
-
-    # .. strings are passed through ..
-    if isinstance(response, str):
-        out = response
-        return out
-
-    # .. typed services reply with a dataclass model, which serializes through its own to_dict ..
-    if isinstance(response, Model):
-        response = response.to_dict()
-
-    # .. and anything else is serialized to JSON.
-    out = json_dumps(response)
+    # Models render themselves to bytes, while the reply stream carries strings only
+    if isinstance(out, bytes):
+        out = out.decode('utf8')
 
     return out
 
@@ -427,10 +412,11 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
     payload = _build_payload(fields, path_params)
     service_name = channel_item['service_name']
 
-    # .. a service that raises is reported the way its REST channel reports it ..
+    # .. a service that raises, or whose response cannot be serialized, is reported the way its REST channel reports it ..
     try:
         response = server.invoke(
             service_name, payload, request_ctx=request_ctx, cid=cid, zato_response_headers_container=service_headers)
+        data = _serialize_response(response, channel_item['data_format'])
     except Exception as e:
         logger.warning('OpenAPI console invocation of `%s` failed: %s', service_name, format_exc())
         http_status, message = _describe_error(server, e)
@@ -441,10 +427,7 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
         _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.Error)
         return out
 
-    # .. and relay the response back to the console.
-    data = _serialize_response(response)
-
-    # The reply goes onto a Redis stream, whose client library accepts plain ints only,
+    # The response is relayed back to the console on a Redis stream, whose client library accepts plain ints only,
     # so the enum member cannot be sent as it is.
     out['http_status'] = HTTPStatus.OK.value
 

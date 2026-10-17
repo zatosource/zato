@@ -619,8 +619,10 @@ class SecurityGroupsCtx(BearerTokenCtx):
         if group_id not in self.security_groups:
             return
 
-        # First, remove the security ID from the input group ..
-        self._after_auth_deleted(security_id)
+        # First, remove the security ID from the input group alone, the other groups keep it, ..
+        # .. and a group that is being unassigned from the channel has had its mapping removed already ..
+        if group_id in self.group_to_sec_map:
+            self.group_to_sec_map[group_id].discard(security_id)
 
         # .. now, check if the security definition belongs to other groups as well ..
         # .. and if not, delete the security definition altogether because ..
