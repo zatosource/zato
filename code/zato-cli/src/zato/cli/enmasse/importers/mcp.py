@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from copy import deepcopy
 
 # SQLAlchemy
 from sqlalchemy import and_, select
@@ -229,6 +230,9 @@ class GatewayMCPImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def create_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
+
+        # The group names of the YAML input stay as they are, so the same input can be imported again
+        connection_def = deepcopy(connection_def)
         self._prepare_definition(connection_def, session)
         instance = super().create_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
@@ -237,6 +241,9 @@ class GatewayMCPImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def update_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
+
+        # The group names of the YAML input stay as they are, so the same input can be imported again
+        connection_def = deepcopy(connection_def)
         self._prepare_definition(connection_def, session)
         instance = super().update_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
