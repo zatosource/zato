@@ -83,12 +83,12 @@ class TestEnmasseGroups(TestCase):
 # ################################################################################################################################
 
     def test_sync_groups(self):
-        """ Test the new sync_groups implementation that deletes and recreates groups.
+        """ A group imported again keeps its ID and receives the members from YAML.
         """
         self._setup_test_environment()
 
         # Process security definitions from YAML first
-        self.importer.sync_from_yaml(self.yaml_config, self.session)
+        _ = self.importer.sync_from_yaml(self.yaml_config, self.session)
 
         # Create a unique group name for this test to avoid conflicts
         unique_suffix = uuid.uuid4().hex[:8]
@@ -107,14 +107,18 @@ class TestEnmasseGroups(TestCase):
         db_groups = self.group_importer.get_groups_from_db(self.session)
         self.assertTrue(group_name in db_groups)
 
-        # Second sync - should delete and recreate the group
-        # This tests our new implementation
+        # Second sync - the existing group is updated in place
         processed_groups_2, _ = self.group_importer.sync_groups(group_defs, self.session)
 
-        # Verify group was processed and recreated successfully
+        # Verify the group kept its ID and has its members
         self.assertEqual(len(processed_groups_2), 1)
         self.assertEqual(processed_groups_2[0]['name'], group_name)
+        self.assertEqual(processed_groups_2[0]['id'], processed_groups[0]['id'])
         self.assertEqual(len(processed_groups_2[0]['members']), len(group_defs[0]['members']))
+
+        db_groups_2 = self.group_importer.get_groups_from_db(self.session)
+        self.assertEqual(db_groups_2[group_name]['id'], processed_groups[0]['id'])
+        self.assertEqual(len(db_groups_2[group_name]['members']), len(group_defs[0]['members']))
 
 # ################################################################################################################################
 # ################################################################################################################################
