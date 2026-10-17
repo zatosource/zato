@@ -213,7 +213,7 @@ body.console-resizing {
     box-shadow: var(--console-tooltip-shadow);
     white-space: nowrap;
     pointer-events: none;
-    animation: console-tooltip-fade 0.9s forwards;
+    animation: console-tooltip-fade 0.6s forwards;
 }
 
 /* The point under the tooltip is a square turned on its corner, framed on its two lower edges */

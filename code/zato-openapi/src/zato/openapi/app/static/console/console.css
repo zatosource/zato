@@ -32,6 +32,7 @@
     --console-accent-cyan: #06b6d4;
     --console-accent-soft: rgba(59, 130, 246, 0.08);
     --console-accent-soft-strong: rgba(96, 165, 250, 0.18);
+    --console-selection-text: #ffff55;
     --console-green: #6fae84;
     --console-red: #ef4444;
     --console-red-soft: rgba(239, 68, 68, 0.08);
@@ -132,7 +133,7 @@
 }
 
 ::selection {
-    color: var(--console-text);
+    color: var(--console-selection-text);
     background: var(--console-accent-soft-strong);
 }
 

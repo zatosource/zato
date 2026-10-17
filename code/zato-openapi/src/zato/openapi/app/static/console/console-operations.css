@@ -517,6 +517,7 @@
 }
 
 .console-editor-input::selection {
+    color: var(--console-selection-text);
     background: var(--console-accent-soft-strong);
 }
 
