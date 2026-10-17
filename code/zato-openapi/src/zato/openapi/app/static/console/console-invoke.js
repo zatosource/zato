@@ -6,7 +6,7 @@ zatoConsole.invoke.config = {
     queryStringMethods: ['get', 'head', 'delete'],
     placeholderPattern: /\{([^}]+)\}/g,
     cardSelector: '.console-operation',
-    relayHeadersName: 'X-Zato-Console-Headers',
+    relayMethod: 'POST',
     serverHeadersName: 'X-Zato-Console-Response-Headers',
     pathParameterLocation: 'path',
     pathInputSelector: '.console-path-input',
@@ -404,9 +404,14 @@ zatoConsole.invoke.buildRequest = function(entry, text, pathValues) {
     // Our response to produce, with the path parameters from their own inputs
     var out = {path: zatoConsole.invoke.fillPath(entry.path, pathValues), query: '', body: null};
 
-    // An object goes in the query string or in the body, depending on the method ..
+    // An empty editor sends neither a query string nor a body ..
+    if(text.trim() === '') {
+        return out;
+    }
+
+    // .. an object of plain values is the query string of the methods that have one ..
     if(zatoConsole.invoke.isObject(parsed)) {
-        if(usesQueryString) {
+        if(usesQueryString && zatoConsole.invoke.hasPlainValues(parsed)) {
             out.query = zatoConsole.invoke.buildQueryString(parsed);
         }
         else {
@@ -416,9 +421,56 @@ zatoConsole.invoke.buildRequest = function(entry, text, pathValues) {
         return out;
     }
 
-    // .. while anything else is the body as it was typed.
-    if(!usesQueryString) {
-        out.body = text;
+    // .. while anything else is the body as it was typed, whatever the method.
+    out.body = text;
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.invoke.hasPlainValues = function(values) {
+
+    var names = Object.keys(values);
+
+    for(var nameIndex = 0; nameIndex < names.length; nameIndex++) {
+        var value = values[names[nameIndex]];
+
+        if(typeof value === 'object' && value !== null) {
+            return false;
+        }
+    }
+
+    return true;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.invoke.getRequestHeaders = function(request, headers) {
+
+    var config = zatoConsole.invoke.config;
+    var callerHeaders = zatoConsole.raw.getHeaderObject(headers);
+    var contentTypeName = config.contentTypeHeader.toLowerCase();
+
+    // Our response to produce
+    var out = {};
+
+    // A body is JSON unless the caller names a content type of their own ..
+    if(request.body !== null) {
+        out[config.contentTypeHeader] = config.contentType;
+    }
+
+    var names = Object.keys(callerHeaders);
+
+    for(var nameIndex = 0; nameIndex < names.length; nameIndex++) {
+        var name = names[nameIndex];
+
+        // .. which replaces the default one, whatever the case its name is typed in.
+        if(name.toLowerCase() === contentTypeName) {
+            delete out[config.contentTypeHeader];
+        }
+
+        out[name] = callerHeaders[name];
     }
 
     return out;
@@ -442,23 +494,19 @@ zatoConsole.invoke.onPlayClick = function(event) {
 
     var url = zatoConsole.state.relayBase + request.path;
 
-    if(request.query !== '') {
-        url += '?' + request.query;
-    }
-
-    // The caller's own headers travel to the endpoint in a header of their own, apart from those the browser adds ..
-    var headerObject = zatoConsole.raw.getHeaderObject(exchange.headers);
-    var headerText = JSON.stringify(headerObject);
+    // The method, the query string, the caller's own headers and the body travel to the endpoint as one JSON document,
+    // apart from the headers the browser adds on its own and clear of the size limits that proxies put on headers ..
+    var envelope = {
+        method: entry.method.toUpperCase(),
+        query: request.query,
+        headers: zatoConsole.invoke.getRequestHeaders(request, exchange.headers),
+        body: request.body,
+    };
 
     var headers = {};
-    headers[config.relayHeadersName] = encodeURIComponent(headerText);
+    headers[config.contentTypeHeader] = config.contentType;
 
-    var options = {method: entry.method.toUpperCase(), headers: headers, cache: 'no-store'};
-
-    if(request.body !== null) {
-        headers[config.contentTypeHeader] = config.contentType;
-        options.body = request.body;
-    }
+    var options = {method: config.relayMethod, headers: headers, body: JSON.stringify(envelope), cache: 'no-store'};
 
     // .. the button stays disabled and the indicator next to it stays shown until the response arrives ..
     button.disabled = true;

@@ -15,17 +15,18 @@ import yaml
 
 # Zato
 from zato.openapi.generator.examples import get_integer_example, get_string_example
-from zato.openapi.generator.naming import get_operation_id, get_summary, get_tags
+from zato.openapi.generator.naming import get_operation_ids, get_summary, get_tags
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dictlist, strlist, strset
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, strlist, strset
     from zato.openapi.generator.io_scanner import TypeMapper
     TypeMapper = TypeMapper
     any_ = any_
     anydict = anydict
+    anylist = anylist
     dictlist = dictlist
     strlist = strlist
     strset = strset
@@ -488,13 +489,16 @@ class OpenAPIGenerator:
         # Endpoints are grouped by their URL paths, by section and, in large sections, by the resource
         # that follows the section, so the document never reveals which services are behind them.
         service_paths:'strlist' = []
+        service_operations:'anylist' = []
 
         for service in services:
             if service_name := service.get('name'):
                 service_path = _get_service_path(service_name, service)
                 service_paths.append(service_path)
+                service_operations.append((service.get('http_method', 'post').lower(), service_path))
 
         tags = get_tags(service_paths)
+        operation_ids = get_operation_ids(service_operations)
 
         # Create paths for each service
         for service in services:
@@ -530,7 +534,7 @@ class OpenAPIGenerator:
                     description_parts.append(f'Use `{deprecation_successor}` instead.')
 
             operation:'anydict' = {
-                'operationId': get_operation_id(http_method, path),
+                'operationId': operation_ids[http_method, path],
                 'tags': [tag],
                 'responses': {
                     '200': {

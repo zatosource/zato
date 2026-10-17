@@ -12,6 +12,7 @@ import logging
 import os
 import time
 from http.client import OK
+from json import dumps as json_dumps
 
 # PyYAML
 import yaml
@@ -48,9 +49,10 @@ Spec_JSON_Path      = '/openapi/console/openapi.json'
 Spec_YAML_Path      = '/openapi/console/openapi.yaml'
 Relay_Base_Path     = '/openapi/console/relay'
 
-# The relay's request header with the caller's own headers for the endpoint, as URL-encoded JSON
-Relay_Headers_Name = 'X-Zato-Console-Headers'
-Relay_No_Headers   = '%7B%7D'
+# The relay receives every try-it as a POST of one JSON document
+Relay_Method        = 'POST'
+Content_Type_Header = 'Content-Type'
+Content_Type_JSON   = 'application/json'
 
 # The console's admin is the Dashboard's own admin user, with the same username and password
 Admin_Username = 'admin'
@@ -287,14 +289,19 @@ def relay_invoke(page:'Page', console_url:'str', method:'str', url_path:'str', b
     """
     url = console_url + Relay_Base_Path + url_path
 
-    # The console's own pages always send the caller's request headers, even when there are none
-    headers = {Relay_Headers_Name: Relay_No_Headers}
+    # The console's own pages send the method, the query string, the caller's headers and the body
+    # as one JSON document, with no body in it when there is none to send
+    headers:'anydict' = {}
 
     if body:
-        out = page.request.fetch(url, method=method, headers=headers, data=body)
+        headers[Content_Type_Header] = Content_Type_JSON
+        request_body = body
     else:
-        out = page.request.fetch(url, method=method, headers=headers)
+        request_body = None
 
+    envelope = {'method': method, 'query': '', 'headers': headers, 'body': request_body}
+
+    out = page.request.fetch(url, method=Relay_Method, headers={Content_Type_Header: Content_Type_JSON}, data=json_dumps(envelope))
     return out
 
 # ################################################################################################################################

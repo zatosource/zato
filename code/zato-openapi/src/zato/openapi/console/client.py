@@ -172,9 +172,11 @@ class OpenAPIConsoleClient:
         query_string:'str',
         headers:'str',
         body:'str',
+        remote_addr:'str',
         ) -> 'anydictnone':
         """ Relays a try-it invocation to a server and returns the reply fields,
-        or None if no server replied in time. The headers are a JSON object of the caller's own request headers.
+        or None if no server replied in time. The headers are a JSON object of the caller's own request headers
+        and the remote address is that of the browser, which the server's rate limits are keyed by.
         """
         out = self._send({
             'command': 'invoke',
@@ -186,6 +188,7 @@ class OpenAPIConsoleClient:
             'query_string': query_string,
             'headers': headers,
             'body': body,
+            'remote_addr': remote_addr,
         })
 
         return out

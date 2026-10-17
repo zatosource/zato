@@ -11,11 +11,30 @@ zatoLogin.config = {
     showText: 'Show',
     hideText: 'Hide',
     linkStorageKey: 'zato.openapi.console.link',
+    historyKeyPrefix: 'zato.openapi.console.history.',
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoLogin.clearHistory = function() {
+
+    var keys = Object.keys(sessionStorage);
+
+    for(var keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+        var key = keys[keyIndex];
+
+        if(key.startsWith(zatoLogin.config.historyKeyPrefix)) {
+            sessionStorage.removeItem(key);
+        }
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 zatoLogin.init = function() {
+
+    // Whoever signs in next starts with no invocations of anyone signed in before in this tab
+    zatoLogin.clearHistory();
 
     // The redirect to this page keeps the link to an operation, which the console follows after signing in
     var hash = window.location.hash;

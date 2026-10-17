@@ -16,8 +16,9 @@ from zato.common.hot_deploy_ import pickup_order_patterns
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strdict, strintdict, strlist, strset
+    from zato.common.typing_ import anydict, anylist, strdict, strintdict, strlist, strset
     anydict = anydict
+    anylist = anylist
     strdict = strdict
     strintdict = strintdict
     strlist = strlist
@@ -75,9 +76,12 @@ class ModuleCtx:
     # A sentence ends with a period followed by whitespace and a capital letter, so abbreviations such as e.g. do not end it
     Sentence_End_Pattern = re.compile(r'(?<=\.)\s+(?=[A-Z])')
 
-    # Everything other than letters and digits separates the words of an operation ID
-    Operation_ID_Separator_Pattern = re.compile(r'[^A-Za-z0-9]+')
+    # Everything other than letters and digits, in any script, separates the words of an operation ID
+    Operation_ID_Separator_Pattern = re.compile(r'[\W_]+')
     Operation_ID_Separator = '_'
+
+    # Operations whose IDs would otherwise be the same are numbered from this suffix onwards
+    First_Duplicate_Suffix = 2
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -338,12 +342,43 @@ def get_summary(docstring:'str') -> 'str':
 # ################################################################################################################################
 
 def get_operation_id(http_method:'str', path:'str') -> 'str':
-    """ Returns a unique ID of an operation, made of its method and its URL path.
+    """ Returns the ID of an operation, made of its method and its URL path.
     """
     words = ModuleCtx.Operation_ID_Separator_Pattern.sub(ModuleCtx.Operation_ID_Separator, path)
     words = words.strip(ModuleCtx.Operation_ID_Separator)
 
     out = http_method + ModuleCtx.Operation_ID_Separator + words
+    return out
+
+# ################################################################################################################################
+
+def get_operation_ids(operations:'anylist') -> 'anydict':
+    """ Returns a unique ID of each operation, keyed by the operation's pair of an HTTP method and a URL path.
+    Paths that differ only in punctuation produce the same ID, so each such ID after the first one
+    receives a numeric suffix, assigned in the order of methods and paths, which keeps the IDs the same
+    each time the document is built.
+    """
+    # Our response to produce
+    out:'anydict' = {}
+
+    used:'strset' = set()
+
+    for operation in sorted(set(operations)):
+        http_method, path = operation
+
+        base_id = get_operation_id(http_method, path)
+        operation_id = base_id
+        suffix = ModuleCtx.First_Duplicate_Suffix
+
+        # An ID that is already taken receives the first suffix that is not ..
+        while operation_id in used:
+            operation_id = base_id + ModuleCtx.Operation_ID_Separator + str(suffix)
+            suffix += 1
+
+        # .. and the one assigned is no longer available to any operation that follows.
+        used.add(operation_id)
+        out[operation] = operation_id
+
     return out
 
 # ################################################################################################################################

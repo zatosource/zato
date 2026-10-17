@@ -16,18 +16,28 @@ from urllib.parse import parse_qsl
 
 # Zato
 from zato.common.api import HTTP_SOAP, URL_TYPE
-from zato.common.exception import BackendInvocationError, BadRequest, ClientHTTPError
+from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.bearer_token_identity import Identity_Key
+from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, BadRequest, ClientHTTPError
 from zato.common.marshal_.api import Model, ModelValidationError
+from zato.common.rate_limiting.common import current_time_us
+from zato.common.rate_limiting.headers import build_rate_limit_headers, Header_Rate_Limit_Limit, Header_Rate_Limit_Remaining
 from zato.common.util.api import make_cid_public, new_cid_server
-from zato.server.connection.http_soap.channel import get_deprecation_headers
+from zato.common.util.auth import enrich_with_sec_data
+from zato.common.webapp.auth.auth_type import ConsoleAuthType
+from zato.server.connection.http_soap.channel import client_json_error, get_deprecation_headers
 from zato.server.openapi_console.spec import is_channel_visible, resolve_caller
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.rate_limiting.cidr import SlottedCheckResult
     from zato.common.typing_ import any_, anydict, anylist, stranydict, tuple_
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.http_soap.channel import RequestDispatcher
+    RequestDispatcher = RequestDispatcher
+    SlottedCheckResult = SlottedCheckResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,8 +72,15 @@ _connection_keep_alive = 'keep-alive'
 # Request headers are WSGI keys with this prefix, e.g. HTTP_X_CORRELATION_ID for X-Correlation-ID
 _header_key_prefix = 'HTTP_'
 
+# The two request headers that WSGI names without the prefix
+_content_length_key = 'CONTENT_LENGTH'
+_unprefixed_header_keys = {'CONTENT_TYPE', _content_length_key}
+
 # What a bad request raised without a message to show is reported as
 _bad_request_message = 'Bad request'
+
+# What a caller over a limit is told, the same text the REST channel uses
+_too_many_requests_message = 'Too many requests'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,8 +151,17 @@ def _build_request_ctx(fields:'anydict') -> 'anydict':
     headers = json_loads(fields['headers'])
 
     for name, value in headers.items():
-        key = _header_key_prefix + name.upper().replace('-', '_')
+        key = name.upper().replace('-', '_')
+
+        # WSGI names every header with a prefix except the content type and the content length ..
+        if key not in _unprefixed_header_keys:
+            key = _header_key_prefix + key
+
         out[key] = value
+
+    # .. and the length is that of the body itself, as the HTTP layer reports it.
+    if body := fields['body']:
+        out[_content_length_key] = str(len(body.encode('utf8')))
 
     return out
 
@@ -241,6 +267,75 @@ def _describe_error(server:'ParallelServer', e:'Exception') -> 'tuple_[int, str]
 
 # ################################################################################################################################
 
+def _get_sec_def(server:'ParallelServer', auth_type:'str', security_id:'int') -> 'anydict':
+    """ Returns the configuration of the security definition that a console caller was resolved to.
+    """
+    url_data = server.url_data
+
+    if auth_type == ConsoleAuthType.API_Key:
+        out = url_data.apikey_get_by_id(security_id)
+
+    elif auth_type == ConsoleAuthType.Bearer_Token:
+        out = url_data.oauth_get_by_id(security_id)
+
+    # A username and a password are those of a Basic Auth definition or the client ID and secret of a Bearer token one
+    elif sec_def := url_data.basic_auth_get_by_id(security_id):
+        out = sec_def
+
+    else:
+        out = url_data.oauth_get_by_id(security_id)
+
+    return out
+
+# ################################################################################################################################
+
+def _fill_rate_limited_reply(
+    out:'anydict',
+    server:'ParallelServer',
+    cid:'str',
+    channel_item:'anydict',
+    rate_limit_result:'SlottedCheckResult',
+    needs_quota_headers:'bool',
+    ) -> 'None':
+    """ Fills in the reply with the 429 that the REST channel responds with to a caller over a limit,
+    the quota headers accompanying those of a security definition's limit only.
+    """
+    rate_limit_headers = build_rate_limit_headers(rate_limit_result, needs_quota_headers=needs_quota_headers)
+    data = client_json_error(cid, _too_many_requests_message)
+
+    out['http_status'] = HTTPStatus.TOO_MANY_REQUESTS.value
+    out['content_type'] = _content_type
+    out['data'] = data
+    out['headers'] = _build_response_headers(server, cid, channel_item, _content_type, rate_limit_headers.headers, data)
+
+# ################################################################################################################################
+
+def _audit_response(
+    dispatcher:'RequestDispatcher',
+    cid:'str',
+    channel_item:'anydict',
+    request_ctx:'stranydict',
+    reply:'anydict',
+    start_us:'int',
+    needs_audit:'bool',
+    outcome:'str',
+    ) -> 'None':
+    """ Records in the channel's audit log the response that a relayed request is leaving with.
+    """
+    if not needs_audit:
+        return
+
+    http_status = reply['http_status']
+    request_ctx['zato.http.response.status'] = f'{http_status} {HTTP_RESPONSES[http_status]}'
+
+    elapsed_us = current_time_us() - start_us
+    duration_ms = elapsed_us // 1000
+
+    dispatcher.insert_audit_event(
+        cid, channel_item, AuditEvent.Response_Sent, outcome, reply['data'], request_ctx, duration_ms=duration_ms)
+
+# ################################################################################################################################
+
 def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
     """ Builds a reply to an invoke command - a try-it request relayed by the console.
     The target service is invoked only if the caller is identified and has access to the matched channel.
@@ -275,17 +370,62 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
             out['data'] = ''
             return out
 
-    # .. build the payload and invoke the target service - the method travels in the request context
-    # so that services with per-verb handlers, e.g. handle_GET, dispatch the same way they do over HTTP ..
-    payload = _build_payload(fields, path_params)
+    # .. the method travels in the request context so that services with per-verb handlers, e.g. handle_GET,
+    # dispatch the same way they do over HTTP, and the caller's definition is what the service sees as its channel's security ..
     request_ctx = _build_request_ctx(fields)
-    service_name = channel_item['service_name']
+
+    if security_id:
+        sec_def = _get_sec_def(server, fields['auth_type'], security_id)
+        request_ctx[Identity_Key] = sec_def['name']
+        enrich_with_sec_data(request_ctx, sec_def, sec_def['sec_type'])
+
+    cid = new_cid_server()
+    now_us = current_time_us()
+    dispatcher = server.config_manager.request_dispatcher
+
+    # .. the request goes to the channel's audit log before any limit is checked, as it does over HTTP ..
+    needs_audit = channel_item['is_audit_log_active']
+
+    if needs_audit:
+        dispatcher.insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, fields['body'], request_ctx)
 
     out['status'] = 'ok'
 
-    # .. the service fills this in with the response headers of its own ..
-    cid = new_cid_server()
+    # .. the channel's own limit and the address rules are keyed by the browser's address ..
+    remote_addr = fields['remote_addr']
+    channel_id = channel_item['id']
+    channel_result = server.rate_limiting_manager.check(channel_id, remote_addr, now_us, f'rest{channel_id}:')
+
+    # .. the REST channel drops the connection of an address its rules disallow, which the relay reports
+    # as no server having replied, and an address over the limit receives the channel's 429 ..
+    if channel_result:
+        if channel_result.is_disallowed:
+            out['status'] = 'dropped'
+            out['data'] = ''
+            return out
+
+        if not channel_result.is_allowed:
+            _fill_rate_limited_reply(out, server, cid, channel_item, channel_result, False)
+            _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.OK)
+            return out
+
+    # .. the caller's definition has a limit and a quota of its own ..
     service_headers:'stranydict' = {}
+    sec_def_result = dispatcher.check_sec_def_rate_limiting(request_ctx, remote_addr, now_us)
+
+    if sec_def_result:
+        if not sec_def_result.is_allowed:
+            _fill_rate_limited_reply(out, server, cid, channel_item, sec_def_result, True)
+            _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.OK)
+            return out
+
+        # .. and an allowed request learns how much of that quota remains.
+        service_headers[Header_Rate_Limit_Limit] = str(sec_def_result.limit)
+        service_headers[Header_Rate_Limit_Remaining] = str(sec_def_result.remaining)
+
+    # The service fills the headers in with response headers of its own ..
+    payload = _build_payload(fields, path_params)
+    service_name = channel_item['service_name']
 
     # .. a service that raises is reported the way its REST channel reports it ..
     try:
@@ -298,6 +438,7 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
         out['content_type'] = _error_content_type
         out['data'] = message
         out['headers'] = _build_response_headers(server, cid, channel_item, _error_content_type, service_headers, message)
+        _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.Error)
         return out
 
     # .. and relay the response back to the console.
@@ -310,6 +451,8 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
     out['content_type'] = _content_type
     out['data'] = data
     out['headers'] = _build_response_headers(server, cid, channel_item, _content_type, service_headers, data)
+
+    _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.OK)
 
     return out
 

@@ -717,7 +717,7 @@ class RequestDispatcher:
 
         # .. a definition's own limit needs to know which definition authenticated the caller,
         # .. so this one can only run once authentication has succeeded ..
-        sec_def_rate_limit_result = self._check_sec_def_rate_limiting(request_ctx, remote_addr, now_us)
+        sec_def_rate_limit_result = self.check_sec_def_rate_limiting(request_ctx, remote_addr, now_us)
 
         if sec_def_rate_limit_result:
             if not sec_def_rate_limit_result.is_allowed:
@@ -1077,7 +1077,7 @@ class RequestDispatcher:
 
             # .. record the incoming request in the audit log ..
             if needs_audit:
-                self._insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload, request_ctx)
+                self.insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload, request_ctx)
 
             try:
 
@@ -1091,7 +1091,7 @@ class RequestDispatcher:
                 # .. record the successful response in the audit log ..
                 if needs_audit:
                     duration_ms = self._get_duration_ms(now_us)
-                    self._insert_audit_event(
+                    self.insert_audit_event(
                         cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out, request_ctx,
                         duration_ms=duration_ms)
 
@@ -1103,7 +1103,7 @@ class RequestDispatcher:
                 # .. record the error response in the audit log ..
                 if needs_audit:
                     duration_ms = self._get_duration_ms(now_us)
-                    self._insert_audit_event(
+                    self.insert_audit_event(
                         cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out, request_ctx,
                         duration_ms=duration_ms)
 
@@ -1160,7 +1160,7 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
-    def _insert_audit_event(
+    def insert_audit_event(
         self,
         cid:'str',
         channel_item:'anydict',
@@ -1257,7 +1257,7 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
-    def _check_sec_def_rate_limiting(
+    def check_sec_def_rate_limiting(
         self,
         request_ctx:'stranydict',
         remote_addr:'str',

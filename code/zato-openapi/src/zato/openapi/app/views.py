@@ -9,12 +9,14 @@ This file is a proprietary product, not an open-source one.
 # stdlib
 import logging
 from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
-from urllib.parse import quote, unquote
+from json import dumps as json_dumps, loads as json_loads
+from urllib.parse import quote
 
 # Django
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 # PyYAML
 import yaml
@@ -23,6 +25,7 @@ import yaml
 from zato.common.typing_ import cast_
 from zato.common.webapp.auth.auth_type import ConsoleAuthType
 from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, decrypt_credentials, encrypt_credentials
+from zato.common.webapp.request import client_address
 from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path, \
     get_logo_content_type, get_logo_file
 from zato.openapi.console.client import OpenAPIConsoleClient
@@ -72,10 +75,6 @@ _no_such_file_message = 'No such file'
 # entry points here, so the browser only ever talks to the console, never to the servers.
 _relay_url_base = '/openapi/console/relay'
 
-# The request header in which the browser sends the caller's own headers for the endpoint, as URL-encoded JSON,
-# so that none of the headers the browser adds on its own, e.g. the session cookie, ever reach a service.
-_relay_headers_key = 'HTTP_X_ZATO_CONSOLE_HEADERS'
-
 # The response header in which the browser receives the headers that the endpoint's REST channel would respond with,
 # as URL-encoded JSON, apart from the headers of the console's own response
 _relay_response_headers_name = 'X-Zato-Console-Response-Headers'
@@ -85,6 +84,7 @@ _relay_rejections = {
     'unauthorized': (UNAUTHORIZED, _unauthorized_message),
     'not_found': (NOT_FOUND, 'Not found'),
     'error': (INTERNAL_SERVER_ERROR, 'The invocation could not be completed'),
+    'dropped': (BAD_GATEWAY, _no_server_message),
 }
 
 # Created lazily so that the console starts even when Redis is briefly unavailable
@@ -318,6 +318,7 @@ def spec_yaml_view(req:'any_') -> 'any_':
 # ################################################################################################################################
 
 @csrf_exempt
+@require_POST
 def relay_view(req:'any_', relay_path:'str') -> 'any_':
     """ Relays a try-it invocation to the servers over Redis Streams and returns the response,
     so the browser only ever talks to the console. The target service is invoked with the signed-in
@@ -333,12 +334,20 @@ def relay_view(req:'any_', relay_path:'str') -> 'any_':
     # The relay path arrives without its leading slash, which channels always have
     url_path = '/' + relay_path
 
-    body = req.body.decode('utf-8')
-    query_string = req.META['QUERY_STRING']
-    headers = unquote(req.META[_relay_headers_key])
+    # The browser sends the request as one JSON document, the caller's own headers apart from those it adds itself ..
+    envelope = json_loads(req.body)
+
+    # .. and a request with no body has none in the document either.
+    body = envelope['body']
+
+    if body is None:
+        body = ''
+
+    headers = json_dumps(envelope['headers'])
+    remote_addr = client_address(req)
 
     client = _get_client()
-    reply = client.invoke(auth, req.method, url_path, query_string, headers, body)
+    reply = client.invoke(auth, envelope['method'], url_path, envelope['query'], headers, body, remote_addr)
 
     # No reply means no server was available in time
     if reply is None:

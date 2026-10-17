@@ -2,6 +2,7 @@ zatoConsole.history = {};
 
 zatoConsole.history.config = {
     storageKeyPrefix: 'zato.openapi.console.history.',
+    quotaErrorName: 'QuotaExceededError',
     maximumItems: 25,
     previewLength: 72,
     previewEllipsis: '...',
@@ -74,15 +75,34 @@ zatoConsole.history.save = function(card, items) {
     var entry = zatoConsole.state.entriesById[card.id];
     var key = zatoConsole.history.getStorageKey(entry);
 
-    // An operation with no invocations left has no history kept for it at all
+    // The oldest invocations go when the browser's storage has no room for all of them ..
+    while(items.length > 0 && !zatoConsole.history.store(key, items)) {
+        items.pop();
+    }
+
+    // .. and an operation with no invocations left has no history kept for it at all.
     if(items.length === 0) {
         sessionStorage.removeItem(key);
     }
-    else {
-        sessionStorage.setItem(key, JSON.stringify(items));
-    }
 
     zatoConsole.history.refresh(card);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.history.store = function(key, items) {
+
+    try {
+        sessionStorage.setItem(key, JSON.stringify(items));
+    }
+    catch(error) {
+        if(error.name !== zatoConsole.history.config.quotaErrorName) {
+            throw error;
+        }
+        return false;
+    }
+
+    return true;
 };
 
 // ////////////////////////////////////////////////////////////////////////
