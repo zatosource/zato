@@ -155,6 +155,13 @@ _body_too_large_reason = 'SOAP request is too large'
 # The SOAPAction header as the request context spells it.
 _soap_action_header_key = 'HTTP_{}'.format(SOAP_Action_Header.upper())
 
+# The socket of the connection a request arrived on, as the HTTP server stores it in the request context
+_socket_fd_key = 'zato.socket_fd'
+
+# Present in the request context of a request that the OpenAPI console relays, whose caller the console has identified.
+# Request headers always reach the request context under keys with the HTTP_ or CONTENT_ prefix, never under this one.
+Console_Caller_Key = 'zato.openapi_console.caller'
+
 # The statuses a SOAP fault does not override. A fault's status normally belongs to its fault code,
 # but these four carry HTTP-level meaning of their own that a client acts on before it looks at any
 # body: 401 is what makes a WWW-Authenticate challenge mean anything, 403 and 404 say the resource
@@ -480,6 +487,10 @@ class RequestDispatcher:
         """ Validates credentials via sec_def and security groups.
         Both check_security and check_security_via_groups may raise exceptions.
         """
+        # The OpenAPI console identifies its callers and checks their access to the channel before it relays a request
+        if Console_Caller_Key in request_ctx:
+            return
+
         match_target = channel_item['match_target']
         sec = self.url_data.url_sec[match_target]
 
@@ -1371,14 +1382,16 @@ class RequestDispatcher:
 
         channel_name = channel_item['name']
 
-        # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet ..
+        # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet,
+        # which a request relayed by the OpenAPI console has no connection of its own for ..
         if rate_limit_result.is_disallowed:
 
-            fd = request_ctx['zato.socket_fd']
-            raw_socket = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
-            raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
-            raw_socket.close()
-            os.close(fd)
+            if _socket_fd_key in request_ctx:
+                fd = request_ctx[_socket_fd_key]
+                raw_socket = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
+                raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
+                raw_socket.close()
+                os.close(fd)
 
             # Tell the caller to skip all response processing
             request_ctx['zato.http.rate_limit.dropped'] = True

@@ -62,7 +62,7 @@ zatoConsole.raw.buildRequest = function(entry, text, pathValues, headers) {
 
     var lines = [entry.method.toUpperCase() + ' ' + target + ' ' + config.protocol];
 
-    var headerObject = zatoConsole.invoke.getRequestHeaders(request, headers);
+    var headerObject = zatoConsole.invoke.getRequestHeaders(entry.operation, request, headers);
     var names = Object.keys(headerObject);
 
     for(var nameIndex = 0; nameIndex < names.length; nameIndex++) {

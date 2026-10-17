@@ -132,10 +132,13 @@ def _operation_fields(operation:'anydict', schemas:'anydict') -> 'anydict':
         request_schema = request_body['content'][_content_type]['schema']
         _flatten_fields(request_schema, schemas, '', out[_request_key], set())
 
+    # Responses are documented under JSON or under the one media type that the endpoint requires,
+    # and only an endpoint with output has a schema for them
     response_content = operation['responses']['200'].get('content')
     if response_content:
-        response_schema = response_content[_content_type]['schema']
-        _flatten_fields(response_schema, schemas, '', out[_response_key], set())
+        for media_type_content in response_content.values():
+            if response_schema := media_type_content.get('schema'):
+                _flatten_fields(response_schema, schemas, '', out[_response_key], set())
 
     return out
 

@@ -9,7 +9,7 @@ use pyo3::types::{PyBytes, PyDict};
 
 use super::headers::set_header;
 use super::io::{GeventLoop, fd_read, fd_write_all, header_value_eq, parse_content_length};
-use super::response::{ResponseParts, build_response, build_response_headers_only};
+use super::response::{KEEP_ALIVE_TOKEN, ResponseParts, build_response, build_response_headers_only};
 use super::{MAX_HEADERS, PyObject};
 
 /// Context for handling a single HTTP connection.
@@ -190,7 +190,7 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
                             }
                             has_authorization = true;
                         } else if header.name.eq_ignore_ascii_case("connection") {
-                            keep_alive_flag = header_value_eq(header.value, b"keep-alive");
+                            keep_alive_flag = header_value_eq(header.value, KEEP_ALIVE_TOKEN);
                         }
                     }
                     break (hlen, content_len, keep_alive_flag, ver, dict);

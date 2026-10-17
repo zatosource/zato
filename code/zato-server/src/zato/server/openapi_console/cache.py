@@ -17,13 +17,14 @@ from gevent.lock import RLock
 from zato.common.typing_ import cast_
 from zato.server.openapi_console.diff import report_breaking_changes
 from zato.server.openapi_console.rule_engine import merge_rule_engine_spec
-from zato.server.openapi_console.spec import build_full_spec, filter_spec, resolve_caller
+from zato.server.openapi_console.caller import resolve_session
+from zato.server.openapi_console.spec import build_full_spec, filter_spec, get_spec_inputs
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anydictnone, tuple_
+    from zato.common.typing_ import anydict, anydictnone, anylistnone, tuple_
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -37,25 +38,30 @@ logger = logging.getLogger(__name__)
 
 class SpecCache:
     """ Keeps the full OpenAPI document in memory so that per-request work is filtering only.
-    The document is rebuilt once per change - on hot-deployment, on channel configuration events and on
-    configuration reloads - and each rebuild reports breaking changes against the previous document.
+    The document is rebuilt on hot-deployment, on channel configuration events and on configuration reloads,
+    and each rebuild reports breaking changes against the previous document. Each read also compares
+    the channels and services the document was built out of with the current ones, and rebuilds it
+    when they differ, e.g. after a service or a security definition with channels of its own was deleted.
     """
     def __init__(self) -> 'None':
         self.lock = RLock()
         self.spec:'anydictnone' = None
         self.channel_map:'anydict' = {}
+        self.inputs:'anylistnone' = None
 
 # ################################################################################################################################
 
     def rebuild(self, server:'ParallelServer') -> 'None':
         """ Rebuilds the cached document, comparing it with the previous one to report breaking changes.
         """
+        inputs = get_spec_inputs(server)
         spec, channel_map = build_full_spec(server)
 
         with self.lock:
             previous = self.spec
             self.spec = spec
             self.channel_map = channel_map
+            self.inputs = inputs
 
         # The very first build has nothing to compare against
         if previous is not None:
@@ -64,10 +70,13 @@ class SpecCache:
 # ################################################################################################################################
 
     def get(self, server:'ParallelServer') -> 'tuple_[anydict, anydict]':
-        """ Returns the cached document and its channel map, building them first if no build has run yet.
+        """ Returns the cached document and its channel map, building them first if no build has run yet
+        or if what the document is built out of has changed since.
         """
         with self.lock:
-            if self.spec is None:
+            inputs = get_spec_inputs(server)
+
+            if inputs != self.inputs:
                 self.rebuild(server)
 
             # A rebuild always leaves a document behind, hence the cast
@@ -89,11 +98,10 @@ def get_spec(server:'ParallelServer', fields:'anydict') -> 'anydictnone':
     could not be identified at all. Admin callers receive the complete cached document.
     """
     # Reject the request outright if the caller cannot be identified ..
-    security_id, is_admin = resolve_caller(server, fields)
+    caller = resolve_session(server, fields['session_token'])
 
-    if not security_id:
-        if not is_admin:
-            return None
+    if caller is None:
+        return None
 
     # .. the channel part of the document comes from the cache, since it is derived from
     # scanning deployed services, which is expensive ..
@@ -104,13 +112,11 @@ def get_spec(server:'ParallelServer', fields:'anydict') -> 'anydictnone':
     spec, channel_map = merge_rule_engine_spec(server, spec, channel_map)
 
     # .. admin callers receive the complete document ..
-    if is_admin:
+    if caller.is_admin:
         return spec
 
-    # .. and other callers only what their identity can invoke - a non-admin caller
-    # got past the check above only with a security definition, hence the cast.
-    security_id = cast_('int', security_id)
-    out = filter_spec(server, spec, channel_map, security_id)
+    # .. and other callers only what their credentials can invoke.
+    out = filter_spec(server, spec, channel_map, caller.security_ids)
 
     return out
 

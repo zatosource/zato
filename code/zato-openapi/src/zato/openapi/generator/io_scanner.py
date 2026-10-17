@@ -15,11 +15,14 @@ import os
 import sys
 import typing
 
+# Zato
+from zato.input_output import IOProcessor, is_io_bool, is_io_int
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
     anydict = anydict
 
 # ################################################################################################################################
@@ -28,12 +31,47 @@ if 0:
 # Logger for this module
 logger = logging.getLogger(__name__)
 
+# Turns the strings of flat input and output declarations into typed elements, as the server does
+_io_processor = IOProcessor()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TypeConversionError(Exception):
     """ Raised when a type cannot be converted to an OpenAPI type.
     """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_element_info(declaration:'any_') -> 'anydict':
+    """ Returns the name, the required flag and the OpenAPI type of one element of a flat input or output declaration,
+    which is a string or a typed element, the way the server's I/O processor reads it.
+    """
+    # A string becomes a typed element the same way the server makes it one, with the type that its name implies ..
+    if isinstance(declaration, str):
+        is_required = not declaration.startswith('-')
+        element = _io_processor.convert_to_elem_instance(declaration, is_required)
+
+    # .. while a typed element is one already.
+    else:
+        element = declaration
+
+    # The server gives flat elements one of these three types
+    if is_io_int(element):
+        schema_type = 'integer'
+    elif is_io_bool(element):
+        schema_type = 'boolean'
+    else:
+        schema_type = 'string'
+
+    out = {
+        'name': element.name,
+        'required': element.is_required,
+        'schema_type': schema_type,
+    }
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -239,33 +277,20 @@ class IOVisitor(ast.NodeVisitor):
                             self.service_input = {'type': 'model', 'model_name': node.value.id}
                         elif isinstance(node.value, ast.Constant):
                             # Input as a string
-                            input_value = node.value.value
-                            self.service_input = {'type': 'string', 'name': input_value}
-
-                            # Check if input parameter is optional (starts with -)
-                            if input_value.startswith('-'):
-                                self.service_input['required'] = False
-                                self.service_input['name'] = input_value[1:]
-                            else:
-                                self.service_input['required'] = True
+                            element = get_element_info(node.value.value)
+                            self.service_input = {
+                                'type': 'string',
+                                'name': element['name'],
+                                'required': element['required'],
+                                'schema_type': element['schema_type'],
+                            }
 
                         elif isinstance(node.value, ast.Tuple):
                             # Input as a tuple of strings
                             elts = []
                             for elt in node.value.elts:
                                 if isinstance(elt, ast.Constant):
-                                    param_value = elt.value
-                                    param_info = {
-                                        'name': param_value,
-                                        'required': True
-                                    }
-
-                                    # Check if parameter is optional (starts with -)
-                                    if param_value.startswith('-'):
-                                        param_info['name'] = param_value[1:]
-                                        param_info['required'] = False
-
-                                    elts.append(param_info)
+                                    elts.append(get_element_info(elt.value))
 
                             if elts:
                                 self.service_input = {'type': 'tuple', 'elements': elts}
@@ -290,15 +315,7 @@ class IOVisitor(ast.NodeVisitor):
                             elts = []
                             for elt in node.value.elts:
                                 if isinstance(elt, ast.Constant):
-                                    param_value = elt.value
-                                    param_info = {
-                                        'name': param_value,
-                                        'required': True
-                                    }
-                                    if param_value.startswith('-'):
-                                        param_info['name'] = param_value[1:]
-                                        param_info['required'] = False
-                                    elts.append(param_info)
+                                    elts.append(get_element_info(elt.value))
                             if elts:
                                 self.service_output = {'type': 'tuple', 'elements': elts}
                         elif isinstance(node.value, ast.Subscript):

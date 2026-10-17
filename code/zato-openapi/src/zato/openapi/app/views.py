@@ -8,6 +8,7 @@ This file is a proprietary product, not an open-source one.
 
 # stdlib
 import logging
+from base64 import b64decode
 from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
 from json import dumps as json_dumps, loads as json_loads
 from urllib.parse import quote
@@ -142,13 +143,17 @@ def login_view(req:'any_') -> 'any_':
         if build_credentials := _credential_builders.get(auth_type):
             credentials = build_credentials(req.POST)
 
-            # .. a server validates them by building the caller's document ..
+            # .. a server verifies them and issues a session token for them ..
             client = _get_client()
-            spec = client.get_spec(credentials)
+            session_token = client.sign_in(credentials)
 
-            # .. and a document means the credentials are valid and the session can be established ..
-            if spec is not None:
-                req.session[Session_Credentials_Key] = encrypt_credentials(credentials)
+            # .. which the session keeps in place of the credentials, together with what the header shows ..
+            if session_token is not None:
+                req.session[Session_Credentials_Key] = encrypt_credentials({
+                    'auth_type': credentials['auth_type'],
+                    'username': credentials['username'],
+                    'session_token': session_token,
+                })
                 return redirect('console')
 
         # .. otherwise, show the sign-in page again with an error message.
@@ -245,7 +250,7 @@ def console_view(req:'any_') -> 'any_':
 
 def _get_auth_or_error(req:'any_') -> 'any_':
     """ Returns the signed-in caller's auth details and no error, or no details and an error response
-    when there is no valid session. The details are the credentials the person signed in with.
+    when there is no valid session. The details are the auth type, the username and the session token that a server issued.
     """
     # No session at all is unauthorized ..
     if not (token := req.session.get(Session_Credentials_Key)):
@@ -257,7 +262,7 @@ def _get_auth_or_error(req:'any_') -> 'any_':
         req.session.flush()
         return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
-    # .. and the session has what the person typed at the sign-in form.
+    # .. and the session has what the server issued at sign-in.
     return auth, None
 
 # ################################################################################################################################
@@ -274,7 +279,7 @@ def _get_spec_or_error(req:'any_') -> 'any_':
     auth = cast_('anydict', auth)
 
     client = _get_client()
-    spec = client.get_spec(auth)
+    spec = client.get_spec(auth['session_token'])
 
     if spec is None:
         return None, _text_response(_unauthorized_message, UNAUTHORIZED)
@@ -345,7 +350,7 @@ def relay_view(req:'any_', relay_path:'str') -> 'any_':
     remote_addr = client_address(req)
 
     client = _get_client()
-    reply = client.invoke(auth, envelope['method'], url_path, envelope['query'], headers, body, remote_addr)
+    reply = client.invoke(auth['session_token'], envelope['method'], url_path, envelope['query'], headers, body, remote_addr)
 
     # No reply means no server was available in time
     if reply is None:
@@ -356,7 +361,7 @@ def relay_view(req:'any_', relay_path:'str') -> 'any_':
     # A successful invocation passes the service's response through, with the headers its REST channel would send ..
     if status == 'ok':
         http_status = int(reply['http_status'])
-        content = reply['data'].encode('utf8')
+        content = b64decode(reply['data'])
         out = HttpResponse(content, status=http_status, content_type=reply['content_type'])
         out[_relay_response_headers_name] = quote(reply['headers'])
 

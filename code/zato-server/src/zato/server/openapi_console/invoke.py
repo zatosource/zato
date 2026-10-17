@@ -8,36 +8,28 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from http import HTTPStatus
-from http.client import INTERNAL_SERVER_ERROR
+from base64 import b64encode
 from json import dumps as json_dumps, loads as json_loads
-from traceback import format_exc
-from urllib.parse import parse_qsl
 
 # Zato
-from zato.common.api import HTTP_SOAP, URL_TYPE
-from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.bearer_token_identity import Identity_Key
-from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, BadRequest, ClientHTTPError
-from zato.common.marshal_.api import ModelValidationError
-from zato.common.rate_limiting.common import current_time_us
-from zato.common.rate_limiting.headers import build_rate_limit_headers, Header_Rate_Limit_Limit, Header_Rate_Limit_Remaining
-from zato.common.util.api import make_cid_public, new_cid_server
 from zato.common.util.auth import enrich_with_sec_data
+from zato.common.util.url_dispatcher import normalize_path_info, to_internal_accept
 from zato.common.webapp.auth.auth_type import ConsoleAuthType
-from zato.server.connection.http_soap.channel import client_json_error, get_deprecation_headers, serialize_response_payload
-from zato.server.openapi_console.spec import is_channel_visible, resolve_caller
+from zato.server.connection.http_soap.channel import Console_Caller_Key
+from zato.server.openapi_console.caller import resolve_session
+from zato.server.openapi_console.spec import get_accepted_security_id, is_channel_documented
+
+# Zato - Rust
+from zato_server_core.zato_server_core import build_response_head
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rate_limiting.cidr import SlottedCheckResult
-    from zato.common.typing_ import any_, anydict, anylist, stranydict, tuple_
+    from zato.common.typing_ import any_, anydict, anylist, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
-    from zato.server.connection.http_soap.channel import RequestDispatcher
-    RequestDispatcher = RequestDispatcher
-    SlottedCheckResult = SlottedCheckResult
+    from zato.server.openapi_console.caller import ConsoleCaller
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,28 +39,6 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The Accept value used for channel matching - the relay accepts any content type, and the value
-# is transformed the same way the HTTP channel dispatcher transforms incoming Accept headers.
-_http_accept = HTTP_SOAP.ACCEPT.ANY.replace('*', HTTP_SOAP.ACCEPT.ANY_INTERNAL)
-_http_accept = _http_accept.replace('/', 'HTTP_SEP')
-
-# Relayed responses are JSON documents and error messages are plain text
-_content_type = 'application/json'
-_error_content_type = 'text/plain'
-
-# The exceptions that services raise to reject a request, each with an HTTP status and a message of its own
-_client_error_types = (ClientHTTPError, ModelValidationError)
-
-# Of these, the ones whose message reaches the caller only when it was raised to be shown
-_bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
-
-# The response headers of REST channels, named the way the channels and the HTTP layer name them
-_header_cid            = 'X-Zato-CID'
-_header_content_type   = 'Content-Type'
-_header_content_length = 'content-length'
-_header_connection     = 'connection'
-_connection_keep_alive = 'keep-alive'
-
 # Request headers are WSGI keys with this prefix, e.g. HTTP_X_CORRELATION_ID for X-Correlation-ID
 _header_key_prefix = 'HTTP_'
 
@@ -76,77 +46,58 @@ _header_key_prefix = 'HTTP_'
 _content_length_key = 'CONTENT_LENGTH'
 _unprefixed_header_keys = {'CONTENT_TYPE', _content_length_key}
 
-# What a bad request raised without a message to show is reported as
-_bad_request_message = 'Bad request'
+# Request headers as the request context spells them
+_accept_key = 'HTTP_ACCEPT'
+_authorization_key = 'HTTP_AUTHORIZATION'
+_connection_key = 'HTTP_CONNECTION'
 
-# What a caller over a limit is told, the same text the REST channel uses
-_too_many_requests_message = 'Too many requests'
+# How the Authorization header introduces each kind of credentials
+_basic_auth_prefix = 'Basic '
+_bearer_token_prefix = 'Bearer '
+
+# What a relayed request reports as its protocol and as the port of the browser, which the console does not receive
+_server_protocol = 'HTTP/1.1'
+_remote_port = 0
+
+# Where the dispatcher records that the channel's rules disallow the caller's address
+_dropped_key = 'zato.http.rate_limit.dropped'
+
+# How the HTTP server writes the lines of a response's header block and each name and value in it
+_head_encoding = 'latin-1'
+_head_line_separator = '\r\n'
+_head_header_separator = ': '
+
+# The response header that names the content type, as the HTTP layer writes it
+_header_content_type = 'content-type'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _find_channel(server:'ParallelServer', http_method:'str', url_path:'str') -> 'any_':
-    """ Matches the method and path against REST channels, returning the path parameters and the channel,
-    or a pair of Nones if there is no match or the matched channel is not one the console documents.
+def _build_request_ctx(server:'ParallelServer', fields:'anydict') -> 'stranydict':
+    """ Builds the request context of a relayed request, with the same keys that the HTTP server
+    builds the request context of a request it receives with.
     """
-    url_data = server.url_data
-    path_params, channel_item = url_data.match(url_path, http_method, _http_accept)
+    url_path = fields['url_path']
+    query_string = fields['query_string']
+    remote_addr = fields['remote_addr']
+    body = fields['body'].encode('utf8')
 
-    # No channel responds at this path and method at all ..
-    if channel_item is None:
-        return None, None
-
-    # .. only the kinds of channels the spec documents can be invoked through the relay,
-    # which is the same eligibility the spec builder applies.
-    if channel_item['connection'] != 'channel':
-        return None, None
-
-    if channel_item['transport'] != URL_TYPE.PLAIN_HTTP:
-        return None, None
-
-    if not channel_item['is_active']:
-        return None, None
-
-    if channel_item['is_internal']:
-        return None, None
-
-    if not channel_item['service_name']:
-        return None, None
-
-    return path_params, channel_item
-
-# ################################################################################################################################
-
-def _build_payload(fields:'anydict', path_params:'anydict') -> 'any_':
-    """ Builds the payload for the target service out of the request body, the query string and the path parameters.
-    """
-    query_params = dict(parse_qsl(fields['query_string']))
-    body = fields['body']
-
-    # The body is JSON whenever possible, otherwise it is passed through as a string ..
-    if body:
-        try:
-            payload = json_loads(body)
-        except ValueError:
-            payload = body
+    if query_string:
+        raw_uri = f'{url_path}?{query_string}'
     else:
-        payload = {}
+        raw_uri = url_path
 
-    # .. query string and path parameters are merged into JSON object payloads.
-    if isinstance(payload, dict):
-        payload.update(query_params)
-        payload.update(path_params)
-
-    return payload
-
-# ################################################################################################################################
-
-def _build_request_ctx(fields:'anydict') -> 'anydict':
-    """ Builds the request context of the target service - the HTTP method and the caller's own headers,
-    under the WSGI keys that the service's request object reads them from.
-    """
     # Our response to produce
-    out = {'REQUEST_METHOD': fields['http_method']}
+    out:'stranydict' = {
+        'REQUEST_METHOD': fields['http_method'],
+        'PATH_INFO': url_path,
+        'QUERY_STRING': query_string,
+        'RAW_URI': raw_uri,
+        'SERVER_PROTOCOL': _server_protocol,
+        'REMOTE_ADDR': remote_addr,
+        'REMOTE_PORT': _remote_port,
+        'zato.http.raw_request': body,
+    }
 
     headers = json_loads(fields['headers'])
 
@@ -159,186 +110,139 @@ def _build_request_ctx(fields:'anydict') -> 'anydict':
 
         out[key] = value
 
-    # .. and the length is that of the body itself, as the HTTP layer reports it.
-    if body := fields['body']:
-        out[_content_length_key] = str(len(body.encode('utf8')))
+    # .. the length is that of the body itself, as the HTTP layer reports it ..
+    if body:
+        out[_content_length_key] = str(len(body))
+
+    # .. and the address that the channel's rate limits and address rules apply to is that of the browser,
+    # under each key that the server reads a client's address from.
+    for key in server.client_address_headers:
+        out[key] = remote_addr
 
     return out
 
 # ################################################################################################################################
 
-def _serialize_response(response:'any_', data_format:'str') -> 'str':
-    """ Converts a service response to the string form carried on the reply stream,
-    producing the same body that the service's REST channel responds with.
+def _find_channel(server:'ParallelServer', request_ctx:'stranydict') -> 'any_':
+    """ Returns the REST channel that the request reaches, matched the same way the HTTP dispatcher matches it,
+    or None if there is no such channel or the console does not document it.
     """
-    out = serialize_response_payload(response, data_format)
+    path_info = normalize_path_info(request_ctx['PATH_INFO'])
 
-    # Models render themselves to bytes, while the reply stream carries strings only
-    if isinstance(out, bytes):
-        out = out.decode('utf8')
+    # A request may carry no Accept header at all
+    http_accept = to_internal_accept(request_ctx.get(_accept_key))
+
+    _, channel_item = server.url_data.match(path_info, request_ctx['REQUEST_METHOD'], http_accept)
+
+    # No channel responds to this request at all ..
+    if channel_item is None:
+        return None
+
+    # .. and only the channels that documents describe can be invoked through the relay.
+    if not is_channel_documented(channel_item):
+        return None
+
+    return channel_item
+
+# ################################################################################################################################
+
+def _get_apikey_header_keys(server:'ParallelServer', channel_item:'anydict') -> 'strlist':
+    """ Returns the request context keys under which the channel's own API key definition and its security groups
+    read an API key, each one under its own header.
+    """
+    out:'strlist' = []
+
+    if channel_security_id := channel_item.get('security_id'):
+        sec_def = server.url_data.apikey_get_by_id(channel_security_id)
+        out.append(sec_def['header'])
+
+    # Groups name their header only when they have API key members
+    if security_groups_ctx := channel_item.get('security_groups_ctx'):
+        if security_groups_ctx.apikey_header:
+            out.append(security_groups_ctx.apikey_header)
 
     return out
 
 # ################################################################################################################################
 
-def _build_response_headers(
+def _set_caller_credentials(
     server:'ParallelServer',
-    cid:'str',
+    request_ctx:'stranydict',
     channel_item:'anydict',
-    content_type:'str',
-    service_headers:'stranydict',
-    data:'str',
-    ) -> 'str':
-    """ Returns, as a JSON list of name and value pairs, the response headers that the REST channel itself
-    would send for this response, in the same order.
+    caller:'ConsoleCaller',
+    security_id:'int',
+    ) -> 'None':
+    """ Gives a relayed request the credentials of the signed-in caller, in the form in which the channel reads them,
+    so that the channel's own security checks the request as it checks the request of a direct call.
     """
-    headers:'stranydict' = {}
+    url_data = server.url_data
 
-    # The correlation ID comes first, if the server is configured to return it ..
-    if server.needs_x_zato_cid:
-        headers[_header_cid] = make_cid_public(cid)
+    # An API key is sent in the header that the channel reads it from ..
+    if caller.auth_type == ConsoleAuthType.API_Key:
+        for key in _get_apikey_header_keys(server, channel_item):
+            request_ctx[key] = caller.secret
 
-    # .. deprecated channels announce their status on every response ..
-    if channel_item.get('is_deprecated'):
-        deprecation_headers = get_deprecation_headers(channel_item)
-        headers.update(deprecation_headers)
+    # .. a bearer token in the Authorization header ..
+    elif caller.auth_type == ConsoleAuthType.Bearer_Token:
+        request_ctx[_authorization_key] = _bearer_token_prefix + caller.secret
 
-    # .. followed by the content type and the service's own headers, which can replace it ..
-    headers[_header_content_type] = content_type
-    headers.update(service_headers)
+    # .. and so are the username and password of a Basic Auth definition ..
+    elif url_data.basic_auth_get_by_id(security_id):
+        credentials = f'{caller.username}:{caller.secret}'.encode('utf8')
+        request_ctx[_authorization_key] = _basic_auth_prefix + b64encode(credentials).decode('ascii')
 
-    # .. and the HTTP layer adds the length of the body and the connection's state if the service did not.
-    content_length = len(data.encode('utf8'))
+    # .. whereas the client ID and secret of a Bearer token definition are credentials that channels do not accept,
+    # so the console's own check stands in for the channel's, and the request context receives what the channel's
+    # security gives it - the definition, and its name as the identity when the channel's groups have members.
+    else:
+        sec_def = url_data.oauth_get_by_id(security_id)
+        request_ctx[Console_Caller_Key] = True
+
+        if security_groups_ctx := channel_item.get('security_groups_ctx'):
+            if security_groups_ctx.has_members():
+                request_ctx[Identity_Key] = sec_def['name']
+
+        enrich_with_sec_data(request_ctx, sec_def, sec_def['sec_type'])
+
+# ################################################################################################################################
+
+def _parse_response_head(head:'bytes') -> 'str':
+    """ Returns, as a JSON list of name and value pairs, the headers of a header block that the HTTP server writes,
+    without its status line.
+    """
     pairs:'anylist' = []
 
-    for name, value in headers.items():
-        pairs.append([name, value])
+    lines = head.decode(_head_encoding).split(_head_line_separator)
 
-    pairs.append([_header_content_length, str(content_length)])
-    pairs.append([_header_connection, _connection_keep_alive])
+    # The status line comes first and the blank line that ends the header block comes last
+    for line in lines[1:]:
+        if line:
+            name, value = line.split(_head_header_separator, 1)
+            pairs.append([name, value])
 
     out = json_dumps(pairs)
     return out
 
 # ################################################################################################################################
 
-def _describe_error(server:'ParallelServer', e:'Exception') -> 'tuple_[int, str]':
-    """ Returns the HTTP status and the message that the service's REST channel would respond with for this exception.
-    """
-    # Errors raised for the caller have a status and a message of their own ..
-    if isinstance(e, _client_error_types):
-        http_status = e.status
-        message = e.msg
-
-        # .. though a bad request reveals its message only when it was raised with one ..
-        if isinstance(e, _bad_request_types):
-            if not e.needs_msg:
-                message = _bad_request_message
-
-    # .. while any other error is a server error, described only if the server returns tracebacks.
-    else:
-        http_status = INTERNAL_SERVER_ERROR
-
-        if server.return_tracebacks:
-            message = str(e)
-        else:
-            message = server.default_error_message
-
-    # Statuses arrive as plain ints or as HTTPStatus members, e.g. from http.client,
-    # and the reply goes onto a Redis stream, whose client library accepts plain ints only.
-    status_code = HTTPStatus(http_status).value
-
-    return status_code, message
-
-# ################################################################################################################################
-
-def _get_sec_def(server:'ParallelServer', auth_type:'str', security_id:'int') -> 'anydict':
-    """ Returns the configuration of the security definition that a console caller was resolved to.
-    """
-    url_data = server.url_data
-
-    if auth_type == ConsoleAuthType.API_Key:
-        out = url_data.apikey_get_by_id(security_id)
-
-    elif auth_type == ConsoleAuthType.Bearer_Token:
-        out = url_data.oauth_get_by_id(security_id)
-
-    # A username and a password are those of a Basic Auth definition or the client ID and secret of a Bearer token one
-    elif sec_def := url_data.basic_auth_get_by_id(security_id):
-        out = sec_def
-
-    else:
-        out = url_data.oauth_get_by_id(security_id)
-
-    return out
-
-# ################################################################################################################################
-
-def _fill_rate_limited_reply(
-    out:'anydict',
-    server:'ParallelServer',
-    cid:'str',
-    channel_item:'anydict',
-    rate_limit_result:'SlottedCheckResult',
-    needs_quota_headers:'bool',
-    ) -> 'None':
-    """ Fills in the reply with the 429 that the REST channel responds with to a caller over a limit,
-    the quota headers accompanying those of a security definition's limit only.
-    """
-    rate_limit_headers = build_rate_limit_headers(rate_limit_result, needs_quota_headers=needs_quota_headers)
-    data = client_json_error(cid, _too_many_requests_message)
-
-    out['http_status'] = HTTPStatus.TOO_MANY_REQUESTS.value
-    out['content_type'] = _content_type
-    out['data'] = data
-    out['headers'] = _build_response_headers(server, cid, channel_item, _content_type, rate_limit_headers.headers, data)
-
-# ################################################################################################################################
-
-def _audit_response(
-    dispatcher:'RequestDispatcher',
-    cid:'str',
-    channel_item:'anydict',
-    request_ctx:'stranydict',
-    reply:'anydict',
-    start_us:'int',
-    needs_audit:'bool',
-    outcome:'str',
-    ) -> 'None':
-    """ Records in the channel's audit log the response that a relayed request is leaving with.
-    """
-    if not needs_audit:
-        return
-
-    http_status = reply['http_status']
-    request_ctx['zato.http.response.status'] = f'{http_status} {HTTP_RESPONSES[http_status]}'
-
-    elapsed_us = current_time_us() - start_us
-    duration_ms = elapsed_us // 1000
-
-    dispatcher.insert_audit_event(
-        cid, channel_item, AuditEvent.Response_Sent, outcome, reply['data'], request_ctx, duration_ms=duration_ms)
-
-# ################################################################################################################################
-
 def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
     """ Builds a reply to an invoke command - a try-it request relayed by the console.
-    The target service is invoked only if the caller is identified and has access to the matched channel.
+    The request goes through the server's HTTP request handler only if the caller is identified and has access to the channel.
     """
     # Our response to produce
     out = {'correlation_id': fields['correlation_id']}
 
     # Reject the request outright if the caller cannot be identified ..
-    security_id, is_admin = resolve_caller(server, fields)
+    caller = resolve_session(server, fields['session_token'])
 
-    if not security_id:
-        if not is_admin:
-            out['status'] = 'unauthorized'
-            out['data'] = ''
-            return out
+    if caller is None:
+        out['status'] = 'unauthorized'
+        out['data'] = ''
+        return out
 
-    # .. match the method and path against REST channels ..
-    path_params, channel_item = _find_channel(server, fields['http_method'], fields['url_path'])
+    # .. find the channel that the request reaches ..
+    request_ctx = _build_request_ctx(server, fields)
+    channel_item = _find_channel(server, request_ctx)
 
     # .. an unknown path is reported as not found ..
     if channel_item is None:
@@ -346,96 +250,58 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
         out['data'] = ''
         return out
 
-    # .. admin callers can invoke every endpoint, other callers only what their identity
-    # gives access to, and a channel the caller cannot see produces the same reply as an unknown path,
-    # so that callers cannot probe for endpoints that are not theirs ..
-    if not is_admin:
-        if not is_channel_visible(channel_item, security_id):
+    # .. admin callers can invoke every endpoint, which the channel's own security is not told about ..
+    if caller.is_admin:
+        request_ctx[Console_Caller_Key] = True
+
+    # .. other callers only what their credentials give access to, and a channel the caller cannot see
+    # produces the same reply as an unknown path, so that callers cannot probe for endpoints that are not theirs ..
+    else:
+        security_id = get_accepted_security_id(channel_item, caller.security_ids)
+
+        if security_id is None:
             out['status'] = 'not_found'
             out['data'] = ''
             return out
 
-    # .. the method travels in the request context so that services with per-verb handlers, e.g. handle_GET,
-    # dispatch the same way they do over HTTP, and the caller's definition is what the service sees as its channel's security ..
-    request_ctx = _build_request_ctx(fields)
+        _set_caller_credentials(server, request_ctx, channel_item, caller, security_id)
 
-    if security_id:
-        sec_def = _get_sec_def(server, fields['auth_type'], security_id)
-        request_ctx[Identity_Key] = sec_def['name']
-        enrich_with_sec_data(request_ctx, sec_def, sec_def['sec_type'])
+    # .. the request goes through the same handler as each request that the server receives over HTTP ..
+    status, headers, body = server.http_request_handler(request_ctx)
 
-    cid = new_cid_server()
-    now_us = current_time_us()
-    dispatcher = server.config_manager.request_dispatcher
-
-    # .. the request goes to the channel's audit log before any limit is checked, as it does over HTTP ..
-    needs_audit = channel_item['is_audit_log_active']
-
-    if needs_audit:
-        dispatcher.insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, fields['body'], request_ctx)
-
-    out['status'] = 'ok'
-
-    # .. the channel's own limit and the address rules are keyed by the browser's address ..
-    remote_addr = fields['remote_addr']
-    channel_id = channel_item['id']
-    channel_result = server.rate_limiting_manager.check(channel_id, remote_addr, now_us, f'rest{channel_id}:')
-
-    # .. the REST channel drops the connection of an address its rules disallow, which the relay reports
-    # as no server having replied, and an address over the limit receives the channel's 429 ..
-    if channel_result:
-        if channel_result.is_disallowed:
-            out['status'] = 'dropped'
-            out['data'] = ''
-            return out
-
-        if not channel_result.is_allowed:
-            _fill_rate_limited_reply(out, server, cid, channel_item, channel_result, False)
-            _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.OK)
-            return out
-
-    # .. the caller's definition has a limit and a quota of its own ..
-    service_headers:'stranydict' = {}
-    sec_def_result = dispatcher.check_sec_def_rate_limiting(request_ctx, remote_addr, now_us)
-
-    if sec_def_result:
-        if not sec_def_result.is_allowed:
-            _fill_rate_limited_reply(out, server, cid, channel_item, sec_def_result, True)
-            _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.OK)
-            return out
-
-        # .. and an allowed request learns how much of that quota remains.
-        service_headers[Header_Rate_Limit_Limit] = str(sec_def_result.limit)
-        service_headers[Header_Rate_Limit_Remaining] = str(sec_def_result.remaining)
-
-    # The service fills the headers in with response headers of its own ..
-    payload = _build_payload(fields, path_params)
-    service_name = channel_item['service_name']
-
-    # .. a service that raises, or whose response cannot be serialized, is reported the way its REST channel reports it ..
-    try:
-        response = server.invoke(
-            service_name, payload, request_ctx=request_ctx, cid=cid, zato_response_headers_container=service_headers)
-        data = _serialize_response(response, channel_item['data_format'])
-    except Exception as e:
-        logger.warning('OpenAPI console invocation of `%s` failed: %s', service_name, format_exc())
-        http_status, message = _describe_error(server, e)
-        out['http_status'] = http_status
-        out['content_type'] = _error_content_type
-        out['data'] = message
-        out['headers'] = _build_response_headers(server, cid, channel_item, _error_content_type, service_headers, message)
-        _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.Error)
+    # .. apart from a request from an address that the channel's rules disallow, which has no connection
+    # for the dispatcher to drop, so the console reports it as no server having replied ..
+    if _dropped_key in request_ctx:
+        out['status'] = 'dropped'
+        out['data'] = ''
         return out
 
-    # The response is relayed back to the console on a Redis stream, whose client library accepts plain ints only,
-    # so the enum member cannot be sent as it is.
-    out['http_status'] = HTTPStatus.OK.value
+    # .. a streaming response arrives in chunks, which the console receives as one body ..
+    is_streaming = not isinstance(body, bytes)
 
-    out['content_type'] = _content_type
-    out['data'] = data
-    out['headers'] = _build_response_headers(server, cid, channel_item, _content_type, service_headers, data)
+    if is_streaming:
+        body = b''.join(body)
 
-    _audit_response(dispatcher, cid, channel_item, request_ctx, out, now_us, needs_audit, AuditOutcome.OK)
+    # .. with the headers that the HTTP server writes for the response on a connection.
+    connection_header = request_ctx.get(_connection_key)
+    head = build_response_head(status, headers, body, is_streaming, connection_header)
+
+    status_code, _ = status.split(' ', 1)
+
+    # Responses to requests that match no channel, among others, have no content type
+    content_type = ''
+
+    for name, value in headers.items():
+        if name.lower() == _header_content_type:
+            content_type = value
+
+    out['status'] = 'ok'
+    out['http_status'] = int(status_code)
+    out['content_type'] = content_type
+
+    # The reply stream carries text, so the body travels in Base64, which keeps each of its bytes as it is
+    out['data'] = b64encode(body).decode('ascii')
+    out['headers'] = _parse_response_head(head)
 
     return out
 

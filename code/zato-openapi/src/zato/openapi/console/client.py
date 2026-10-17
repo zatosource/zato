@@ -23,7 +23,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anydictnone, anylist
+    from zato.common.typing_ import anydict, anydictnone, anylist, strnone
     anylist = anylist
 
 # ################################################################################################################################
@@ -39,13 +39,14 @@ logger = logging.getLogger(__name__)
 _stream_prefix = os.environ.get('Zato_OpenAPI_Stream_Prefix', 'zato:openapi')
 
 class ModuleCtx:
-    Request_Stream  = f'{_stream_prefix}:stream:request'
-    Reply_Stream    = f'{_stream_prefix}:stream:reply'
-    Stream_Start_ID = '0-0'
-    Max_Stream_Len  = 10_000
-    Read_Count      = 100
-    Read_Block_MS   = 1000
-    Reply_Timeout   = 10.0
+    Request_Stream       = f'{_stream_prefix}:stream:request'
+    Reply_Stream         = f'{_stream_prefix}:stream:reply'
+    Stream_Start_ID      = '0-0'
+    Max_Stream_Len       = 10_000
+    Read_Count           = 100
+    Read_Block_MS        = 1000
+    Reply_Timeout        = 10.0
+    Invoke_Reply_Timeout = 120.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,10 +93,11 @@ class OpenAPIConsoleClient:
 
 # ################################################################################################################################
 
-    def _wait_for_reply(self, correlation_id:'str', position:'str') -> 'anydictnone':
+    def _wait_for_reply(self, correlation_id:'str', position:'str', reply_timeout:'float') -> 'anydictnone':
         """ Blocks until the server's reply with our correlation ID arrives or the timeout passes.
         """
-        deadline = time.monotonic() + ModuleCtx.Reply_Timeout
+        now = time.monotonic()
+        deadline = now + reply_timeout
 
         while time.monotonic() < deadline:
             result = self.redis.xread(
@@ -113,49 +115,81 @@ class OpenAPIConsoleClient:
                     # The next read continues past this message ..
                     position = msg_id
 
-                    # .. and replies to other requests are left for the requests they belong to.
+                    # .. replies to other requests are left for the requests they belong to ..
                     if fields['correlation_id'] == correlation_id:
+
+                        # .. and our own is removed from the stream once it has been read.
+                        _ = self.redis.xdel(ModuleCtx.Reply_Stream, msg_id)
                         return fields
 
         logger.info('Timed out waiting for an OpenAPI console reply, correlation_id=%s', correlation_id)
 
 # ################################################################################################################################
 
-    def _send(self, fields:'anydict') -> 'anydictnone':
+    def _send(self, fields:'anydict', reply_timeout:'float') -> 'anydictnone':
         """ Sends one command to the servers and returns the fields of the reply, or None if no server replied in time.
         """
         correlation_id = CryptoManager.generate_hex_string()
         fields['correlation_id'] = correlation_id
 
-        # The position is taken before the request is sent, so the reply cannot arrive ahead of it ..
+        # Servers do not run a command whose reply arrives after the console has stopped waiting for it ..
+        now = time.time()
+        fields['expires_at'] = now + reply_timeout
+
+        # .. the position is taken before the request is sent, so the reply cannot arrive ahead of it ..
         position = self._get_reply_position()
 
         # .. the request goes out ..
-        _ = self.redis.xadd(ModuleCtx.Request_Stream, fields, maxlen=ModuleCtx.Max_Stream_Len)
+        request_id = self.redis.xadd(ModuleCtx.Request_Stream, fields, maxlen=ModuleCtx.Max_Stream_Len)
 
-        # .. and the reply is looked for past that position.
-        out = self._wait_for_reply(correlation_id, position)
+        # .. the reply is looked for past that position ..
+        out = self._wait_for_reply(correlation_id, position, reply_timeout)
+
+        # .. and a request that no server replied to is removed from the stream, since no server runs it any longer.
+        if out is None:
+            _ = self.redis.xdel(ModuleCtx.Request_Stream, request_id)
 
         return out
 
 # ################################################################################################################################
 
-    def get_spec(self, auth:'anydict') -> 'anydictnone':
-        """ Asks a server for the OpenAPI document filtered down to the given caller.
-        Returns the document as a dict, or None if the caller was rejected or no server replied.
+    def sign_in(self, credentials:'anydict') -> 'strnone':
+        """ Asks a server to verify the credentials that a user signs in with.
+        Returns the session token that the server issued for them, or None if the credentials were rejected or no server replied.
         """
         reply = self._send({
-            'command': 'get_spec',
-            'auth_type': auth['auth_type'],
-            'username': auth['username'],
-            'password': auth['password'],
-        })
+            'command': 'sign_in',
+            'auth_type': credentials['auth_type'],
+            'username': credentials['username'],
+            'password': credentials['password'],
+        }, ModuleCtx.Reply_Timeout)
 
         if not reply:
             return None
 
         if reply['status'] != 'ok':
-            logger.info('OpenAPI document request rejected, status=%s username=%s', reply['status'], auth['username'])
+            logger.info('OpenAPI console sign-in rejected, status=%s username=%s', reply['status'], credentials['username'])
+            return None
+
+        out = reply['data']
+        return out
+
+# ################################################################################################################################
+
+    def get_spec(self, session_token:'str') -> 'anydictnone':
+        """ Asks a server for the OpenAPI document filtered down to the caller that the session token was issued to.
+        Returns the document as a dict, or None if the session was rejected or no server replied.
+        """
+        reply = self._send({
+            'command': 'get_spec',
+            'session_token': session_token,
+        }, ModuleCtx.Reply_Timeout)
+
+        if not reply:
+            return None
+
+        if reply['status'] != 'ok':
+            logger.info('OpenAPI document request rejected, status=%s', reply['status'])
             return None
 
         out = json.loads(reply['data'])
@@ -166,7 +200,7 @@ class OpenAPIConsoleClient:
 
     def invoke(
         self,
-        auth:'anydict',
+        session_token:'str',
         http_method:'str',
         url_path:'str',
         query_string:'str',
@@ -180,16 +214,14 @@ class OpenAPIConsoleClient:
         """
         out = self._send({
             'command': 'invoke',
-            'auth_type': auth['auth_type'],
-            'username': auth['username'],
-            'password': auth['password'],
+            'session_token': session_token,
             'http_method': http_method,
             'url_path': url_path,
             'query_string': query_string,
             'headers': headers,
             'body': body,
             'remote_addr': remote_addr,
-        })
+        }, ModuleCtx.Invoke_Reply_Timeout)
 
         return out
 

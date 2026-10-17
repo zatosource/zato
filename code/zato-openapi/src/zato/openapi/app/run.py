@@ -36,6 +36,9 @@ _app_name = 'the OpenAPI console'
 # The module that configures Django and builds the WSGI application
 _wsgi_module = 'zato.openapi.app.wsgi'
 
+# Each try-it request waits for a server's reply in a thread of its own
+_thread_count = 32
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -54,7 +57,7 @@ def main() -> 'None':
     # .. the master one, before any worker forks off it.
     wsgi = import_module(_wsgi_module)
 
-    serve(wsgi.application, _app_name, Env_Host, Env_Port, Default_Host, Default_Port)
+    serve(wsgi.application, _app_name, Env_Host, Env_Port, Default_Host, Default_Port, thread_count=_thread_count)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -297,6 +297,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
         self.api_key_header_key = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
+
+        # The handler that every HTTP request goes through, assigned before the server process starts
+        self.http_request_handler = cast_('callable_', None)
+
         self._queue_bridge = cast_('QueueBridgeClient', None)
         self._queue_bridge_started = False
         self._channel_listeners = cast_('ChannelListeners', None)

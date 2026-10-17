@@ -188,10 +188,7 @@ class ZatoApplication:
 
         server = self.zato_server
 
-        # Initialize the server
-        ParallelServer.start_server_process(server)
-
-        # Build the request handler for the Rust HTTP server
+        # Build the request handler for the Rust HTTP server ..
         local_tz = get_localzone()
         utc_offset = local_tz.utcoffset(datetime.now(timezone.utc))
         utc_offset = cast_('timedelta', utc_offset)
@@ -199,6 +196,12 @@ class ZatoApplication:
 
         def request_handler(request_ctx:'dict') -> 'tuple':
             return handle_http_request(server, request_ctx, new_cid_server, local_tz_offset_secs)
+
+        # .. which the OpenAPI console relays its requests through as well, once the server process has started ..
+        server.http_request_handler = request_handler
+
+        # .. and initialize the server.
+        ParallelServer.start_server_process(server)
 
         # Build server software header
         server_software = server.fs_server_config.misc.get('http_server_header', 'Apache')

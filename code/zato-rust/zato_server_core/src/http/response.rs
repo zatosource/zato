@@ -2,7 +2,15 @@
 
 use http::StatusCode;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyBytes, PyDict};
+
+use super::io::header_value_eq;
+
+/// The `Connection` header value with which a client keeps its connection open.
+pub(super) const KEEP_ALIVE_TOKEN: &[u8] = b"keep-alive";
+
+/// The protocol version of the requests that the `OpenAPI` console relays, as `ResponseParts` encodes it.
+const RELAY_HTTP_VERSION: u8 = 1;
 
 /// Parses a status string like `"200 OK"` into an `http::StatusCode`.
 pub fn parse_status_code(status_str: &str) -> StatusCode {
@@ -161,6 +169,45 @@ pub(super) fn build_response_headers_only(parts: &ResponseParts<'_, '_>, buf: &m
     Ok(())
 }
 
+/// Serializes the status line and the headers that the HTTP server writes for a response.
+///
+/// The `OpenAPI` console relay receives responses from `handle_http_request` without a connection
+/// of its own and reports the headers that a client calling the channel directly receives.
+#[pyfunction]
+#[pyo3(signature = (status_str, headers, body, is_streaming, connection_header=None))]
+pub fn build_response_head<'py>(
+    status_str: &str,
+    headers: &Bound<'py, PyDict>,
+    body: &[u8],
+    is_streaming: bool,
+    connection_header: Option<&str>,
+) -> PyResult<Bound<'py, PyBytes>> {
+    // An HTTP/1.1 connection stays open unless the client's own Connection header names another option
+    let keep_alive = connection_header.is_none_or(|value| header_value_eq(value.as_bytes(), KEEP_ALIVE_TOKEN));
+
+    let parts = ResponseParts {
+        version: RELAY_HTTP_VERSION,
+        status_str,
+        py_headers: Some(headers),
+        body,
+        keep_alive,
+    };
+
+    let mut buf = Vec::new();
+
+    // A streaming response is written with the same header block as on a connection ..
+    if is_streaming {
+        build_response_headers_only(&parts, &mut buf)?;
+    } else {
+        // .. and a regular one is written in full, of which the body that follows the header block is not part of the result.
+        build_response(&parts, &mut buf)?;
+        let head_len = buf.len().saturating_sub(body.len());
+        buf.truncate(head_len);
+    }
+
+    Ok(PyBytes::new(headers.py(), &buf))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -287,6 +334,64 @@ mod tests {
 
             let output = String::from_utf8_lossy(&buf);
             assert!(output.contains("x-custom-header: test-value\r\n"), "must include custom header");
+        });
+    }
+
+    #[test]
+    fn relay_head_of_regular_response_has_length_and_no_body() {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|py| {
+            let headers = PyDict::new(py);
+            let head = build_response_head("200 OK", &headers, b"{\"id\":1}", false, None).expect("should serialize head");
+
+            let output = String::from_utf8_lossy(head.as_bytes());
+            assert!(output.contains("content-length: 8\r\n"), "must report the body length");
+            assert!(output.ends_with("\r\n\r\n"), "must end with the header block, without the body");
+        });
+    }
+
+    #[test]
+    fn relay_head_keeps_length_set_by_service() {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|py| {
+            let headers = PyDict::new(py);
+            headers.set_item("Content-Length", "8").expect("should set header");
+            let head = build_response_head("200 OK", &headers, b"{\"id\":1}", false, None).expect("should serialize head");
+
+            let output = String::from_utf8_lossy(head.as_bytes()).to_lowercase();
+            assert_eq!(output.matches("content-length").count(), 1, "must not repeat the length");
+        });
+    }
+
+    #[test]
+    fn relay_head_of_streaming_response_is_chunked() {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|py| {
+            let headers = PyDict::new(py);
+            let head = build_response_head("200 OK", &headers, b"chunk", true, None).expect("should serialize head");
+
+            let output = String::from_utf8_lossy(head.as_bytes());
+            assert!(output.contains("transfer-encoding: chunked\r\n"), "must be chunked");
+            assert!(!output.contains("content-length"), "must have no length");
+        });
+    }
+
+    #[test]
+    fn relay_head_follows_connection_header_of_request() {
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|py| {
+            let headers = PyDict::new(py);
+            let kept = build_response_head("200 OK", &headers, b"", false, None).expect("should serialize head");
+            let closed = build_response_head("200 OK", &headers, b"", false, Some("close")).expect("should serialize head");
+
+            assert!(
+                String::from_utf8_lossy(kept.as_bytes()).contains("connection: keep-alive\r\n"),
+                "must keep alive"
+            );
+            assert!(
+                String::from_utf8_lossy(closed.as_bytes()).contains("connection: close\r\n"),
+                "must close"
+            );
         });
     }
 }

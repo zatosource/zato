@@ -3,6 +3,7 @@ zatoConsole.invoke = {};
 zatoConsole.invoke.config = {
     contentType: 'application/json',
     contentTypeHeader: 'Content-Type',
+    acceptHeader: 'Accept',
     queryStringMethods: ['get', 'head', 'delete'],
     placeholderPattern: /\{([^}]+)\}/g,
     cardSelector: '.console-operation',
@@ -448,28 +449,40 @@ zatoConsole.invoke.hasPlainValues = function(values) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoConsole.invoke.getRequestHeaders = function(request, headers) {
+zatoConsole.invoke.getRequestHeaders = function(operation, request, headers) {
 
     var config = zatoConsole.invoke.config;
     var callerHeaders = zatoConsole.raw.getHeaderObject(headers);
     var contentTypeName = config.contentTypeHeader.toLowerCase();
+    var acceptName = config.acceptHeader.toLowerCase();
+    var mediaType = zatoConsole.fields.getResponseMediaType(operation);
 
     // Our response to produce
     var out = {};
 
-    // A body is JSON unless the caller names a content type of their own ..
+    // A body is JSON and a response is expected in the media type that the operation documents,
+    // unless the caller names a content type or an Accept value of their own ..
     if(request.body !== null) {
         out[config.contentTypeHeader] = config.contentType;
+    }
+
+    if(mediaType !== null) {
+        out[config.acceptHeader] = mediaType;
     }
 
     var names = Object.keys(callerHeaders);
 
     for(var nameIndex = 0; nameIndex < names.length; nameIndex++) {
         var name = names[nameIndex];
+        var lowerName = name.toLowerCase();
 
         // .. which replaces the default one, whatever the case its name is typed in.
-        if(name.toLowerCase() === contentTypeName) {
+        if(lowerName === contentTypeName) {
             delete out[config.contentTypeHeader];
+        }
+
+        if(lowerName === acceptName) {
+            delete out[config.acceptHeader];
         }
 
         out[name] = callerHeaders[name];
@@ -501,7 +514,7 @@ zatoConsole.invoke.onPlayClick = function(event) {
     var envelope = {
         method: entry.method.toUpperCase(),
         query: request.query,
-        headers: zatoConsole.invoke.getRequestHeaders(request, exchange.headers),
+        headers: zatoConsole.invoke.getRequestHeaders(entry.operation, request, exchange.headers),
         body: request.body,
     };
 
@@ -556,11 +569,14 @@ zatoConsole.invoke.getServerHeaders = function(response) {
 zatoConsole.invoke.onResponse = function(pending, response) {
 
     var config = zatoConsole.invoke.config;
+    var hasServerHeaders = response.headers.has(config.serverHeadersName);
 
-    // A session that has ended signs in again
+    // A session that has ended signs in again, which a 401 from the endpoint itself does not mean
     if(response.status === config.statusUnauthorized) {
-        zatoConsole.signOut();
-        return;
+        if(!hasServerHeaders) {
+            zatoConsole.signOut();
+            return;
+        }
     }
 
     var isOk = response.status >= config.statusOkMinimum;

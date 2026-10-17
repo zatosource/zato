@@ -70,6 +70,9 @@ _complete_example_key = 'x-complete-example'
 # The example of a string whose name says nothing about its values
 _default_string_example = 'string'
 
+# The media type of responses from endpoints that do not require one of their own
+_default_media_type = 'application/json'
+
 # Example values by schema type
 _example_by_type = {
     'string': _default_string_example,
@@ -126,7 +129,7 @@ class OpenAPIGenerator:
             properties = {}
             required = []
 
-            properties[service_input['name']] = {'type': 'string'}
+            properties[service_input['name']] = {'type': service_input['schema_type']}
             if service_input.get('required', True):
                 required.append(service_input['name'])
 
@@ -145,7 +148,7 @@ class OpenAPIGenerator:
             required = []
 
             for element in service_input['elements']:
-                properties[element['name']] = {'type': 'string'}
+                properties[element['name']] = {'type': element['schema_type']}
                 if element.get('required', True):
                     required.append(element['name'])
 
@@ -200,7 +203,7 @@ class OpenAPIGenerator:
             properties = {}
             required = []
 
-            properties[service_output['name']] = {'type': 'string'}
+            properties[service_output['name']] = {'type': service_output['schema_type']}
             if service_output.get('required', True):
                 required.append(service_output['name'])
 
@@ -219,7 +222,7 @@ class OpenAPIGenerator:
             required = []
 
             for element in service_output['elements']:
-                properties[element['name']] = {'type': 'string'}
+                properties[element['name']] = {'type': element['schema_type']}
                 if element.get('required', True):
                     required.append(element['name'])
 
@@ -602,7 +605,13 @@ class OpenAPIGenerator:
             if parameters:
                 operation['parameters'] = parameters
 
-            # Add response schema if output is defined
+            # Responses are JSON unless the endpoint is reached only by requests that accept a media type of its own ..
+            if response_media_type := service.get('response_media_type'):
+                operation['responses']['200']['content'] = {response_media_type: {}}
+            else:
+                response_media_type = _default_media_type
+
+            # .. and the response schema is added if output is defined.
             if service.get('output'):
                 try:
                     response_schema = self._create_response_schema(service['output'], models)
@@ -614,7 +623,7 @@ class OpenAPIGenerator:
                         response_content['example'] = response_example
 
                     operation['responses']['200']['content'] = {
-                        'application/json': response_content
+                        response_media_type: response_content
                     }
                 except TypeConversionError as e:
                     file_path = service.get('file_path', 'unknown_file')

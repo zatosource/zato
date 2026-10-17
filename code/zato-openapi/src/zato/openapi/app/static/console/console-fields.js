@@ -91,14 +91,37 @@ zatoConsole.fields.collectInput = function(operation) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+zatoConsole.fields.getResponseMediaType = function(operation) {
+
+    var response = operation.responses[zatoConsole.fields.config.successStatus];
+
+    // An operation without output that requires no media type of its own documents no response content ..
+    if(!('content' in response)) {
+        return null;
+    }
+
+    // .. otherwise, its responses have one media type, JSON or the one that the endpoint requires.
+    var out = Object.keys(response.content)[0];
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 zatoConsole.fields.collectOutput = function(operation) {
 
     var config = zatoConsole.fields.config;
     var rows = [];
-    var response = operation.responses[config.successStatus];
+    var mediaType = zatoConsole.fields.getResponseMediaType(operation);
 
-    if('content' in response) {
-        var content = response.content[config.contentType];
+    if(mediaType === null) {
+        return rows;
+    }
+
+    var response = operation.responses[config.successStatus];
+    var content = response.content[mediaType];
+
+    // A media type that the endpoint requires has a schema only if the service has output
+    if('schema' in content) {
         zatoConsole.fields.collectProperties(content.schema, rows, 0, {}, {});
     }
 

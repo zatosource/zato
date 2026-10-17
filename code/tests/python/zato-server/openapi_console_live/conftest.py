@@ -91,7 +91,14 @@ class ConsoleSuite:
         client = OpenAPIConsoleClient(redis_conn)
 
         for attempt in range(1, ModuleCtx.Document_Attempts + 1):
-            out = client.get_spec(self.auth)
+
+            # The listener replies to sign-in only once it is up
+            session_token = client.sign_in(self.auth)
+
+            if session_token is None:
+                out = None
+            else:
+                out = client.get_spec(session_token)
 
             if out is not None:
                 break
