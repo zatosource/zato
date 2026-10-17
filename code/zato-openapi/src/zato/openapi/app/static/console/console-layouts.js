@@ -30,6 +30,23 @@ zatoConsole.layouts.config = {
     widthMinimum: 240,
     widthMaximumShare: 0.6,
     primaryButton: 0,
+    masterTopClass: 'console-layout-master-top',
+    toggleClass: 'console-sidebar-toggle console-layout-toggle',
+    toggleSelector: '.console-layout-toggle',
+    contentId: 'console-content',
+    collapsedContentClass: 'console-content console-layout-master-collapsed',
+    expandedContentClass: 'console-content',
+    collapsedStorageKey: 'zato.openapi.console.master.collapsed',
+    collapsedValue: '1',
+    expandedValue: '0',
+    collapseLabel: 'Collapse',
+    expandLabel: 'Expand',
+    iconCollapseClass: 'console-sidebar-icon console-layout-icon-collapse',
+    iconExpandClass: 'console-sidebar-icon console-layout-icon-expand',
+};
+
+zatoConsole.layouts.collapse = {
+    isCollapsed: false,
 };
 
 zatoConsole.layouts.drag = {
@@ -52,6 +69,76 @@ zatoConsole.layouts.init = function() {
     if(stored !== null) {
         document.documentElement.style.setProperty(config.widthVariable, stored + config.widthUnit);
     }
+
+    // The list is collapsed or not in every group alike, as it was left on an earlier visit
+    var storedCollapsed = localStorage.getItem(config.collapsedStorageKey);
+    zatoConsole.layouts.collapse.isCollapsed = storedCollapsed === config.collapsedValue;
+
+    zatoConsole.layouts.applyCollapsed();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.layouts.applyCollapsed = function() {
+
+    var config = zatoConsole.layouts.config;
+    var isCollapsed = zatoConsole.layouts.collapse.isCollapsed;
+
+    var content = document.getElementById(config.contentId);
+    content.className = isCollapsed ? config.collapsedContentClass : config.expandedContentClass;
+
+    var toggles = document.querySelectorAll(config.toggleSelector);
+
+    for(var toggleIndex = 0; toggleIndex < toggles.length; toggleIndex++) {
+        zatoConsole.layouts.markToggle(toggles[toggleIndex]);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.layouts.markToggle = function(toggle) {
+
+    var config = zatoConsole.layouts.config;
+    var isCollapsed = zatoConsole.layouts.collapse.isCollapsed;
+    var label = isCollapsed ? config.expandLabel : config.collapseLabel;
+
+    toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    toggle.setAttribute('aria-label', label);
+    toggle.title = label;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.layouts.buildToggle = function() {
+
+    var config = zatoConsole.layouts.config;
+
+    var toggle = zatoConsole.render.createElement('button', config.toggleClass);
+    toggle.type = 'button';
+    toggle.addEventListener('click', zatoConsole.layouts.onToggleClick);
+
+    var collapseIcon = zatoConsole.sidebar.buildIcon(zatoConsole.sidebar.config.iconCollapseChevron, config.iconCollapseClass);
+    var expandIcon = zatoConsole.sidebar.buildIcon(zatoConsole.sidebar.config.iconExpandChevron, config.iconExpandClass);
+
+    toggle.appendChild(collapseIcon);
+    toggle.appendChild(expandIcon);
+
+    zatoConsole.layouts.markToggle(toggle);
+
+    return toggle;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.layouts.onToggleClick = function() {
+
+    var config = zatoConsole.layouts.config;
+    var collapse = zatoConsole.layouts.collapse;
+
+    collapse.isCollapsed = !collapse.isCollapsed;
+    localStorage.setItem(config.collapsedStorageKey, collapse.isCollapsed ? config.collapsedValue : config.expandedValue);
+
+    zatoConsole.layouts.applyCollapsed();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -110,7 +197,6 @@ zatoConsole.layouts.onGroupShown = function(section) {
 
 zatoConsole.layouts.onCardShown = function(entryId) {
     zatoConsole.links.update(entryId);
-    zatoConsole.specification.follow(entryId);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -166,11 +252,17 @@ zatoConsole.layouts.buildEntryButton = function(entry) {
 
 zatoConsole.layouts.buildEntryButtons = function(group) {
 
+    var config = zatoConsole.layouts.config;
     var container = zatoConsole.render.createElement('div', 'console-layout-master');
 
-    // The filter stays above the rows while they scroll
+    // The filter and the button that collapses the list stay above the rows while they scroll
+    var masterTop = zatoConsole.render.createElement('div', config.masterTopClass);
     var filter = zatoConsole.layouts.buildFilter();
+    var toggle = zatoConsole.layouts.buildToggle();
     var list = zatoConsole.render.createElement('div', 'console-layout-list');
+
+    masterTop.appendChild(filter);
+    masterTop.appendChild(toggle);
 
     for(var entryIndex = 0; entryIndex < group.entries.length; entryIndex++) {
         var entry = group.entries[entryIndex];
@@ -178,7 +270,7 @@ zatoConsole.layouts.buildEntryButtons = function(group) {
         list.appendChild(button);
     }
 
-    container.appendChild(filter);
+    container.appendChild(masterTop);
     container.appendChild(list);
 
     return container;
@@ -238,7 +330,7 @@ zatoConsole.layouts.onFilterInput = function(event) {
     var config = zatoConsole.layouts.config;
     var input = event.target;
     var box = input.parentNode;
-    var master = box.parentNode;
+    var master = input.closest(config.masterSelector);
 
     var query = input.value.trim().toLowerCase();
     var rows = master.querySelectorAll(config.rowSelector);

@@ -188,11 +188,13 @@ file-listener:
 openapi-console:
 	$(ZATO_PY) -m zato.openapi.app.run
 
+openapi-console-demo: export Zato_OpenAPI_Console_Header_Title = Demo console
 openapi-console-demo: ## Healthcare demo for the OpenAPI console - services, security definitions, groups and REST channels, then the console itself.
 	$(ZATO_PY) -m zato.openapi.console.demo.install --server-dir $(Zato_Server_Dir) --zato $(CURDIR)/code/bin/zato
 	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
 	$(MAKE) openapi-console
 
+openapi-console-tutorial: export Zato_OpenAPI_Console_Header_Title = Main tutorial
 openapi-console-tutorial: ## The main tutorial for the OpenAPI console - its service, connections, API key, REST channel and scheduler job, then the console itself.
 	$(ZATO_PY) -m zato.openapi.console.demo.tutorial --server-dir $(Zato_Server_Dir)
 	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"

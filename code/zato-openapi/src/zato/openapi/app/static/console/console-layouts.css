@@ -7,7 +7,7 @@
     flex-direction: column;
     min-width: 0;
     height: calc(100vh - var(--console-header-height));
-    padding: 1.75rem var(--console-page-padding) 0;
+    padding: 1rem var(--console-page-padding) 0;
     overflow: hidden;
 }
 
@@ -40,9 +40,44 @@
     min-height: 0;
 }
 
-.console-layout-filter {
+.console-layout-master-top {
+    display: flex;
     flex: none;
+    gap: 0.5rem;
+    align-items: center;
     margin-right: 0.5rem;
+}
+
+/* ------------------------------------------------------------ */
+/* Console layout - the list of operations collapsed             */
+/* ------------------------------------------------------------ */
+
+.console-layout-master-collapsed .console-layout-frame {
+    grid-template-columns: var(--console-layout-master-collapsed-width) var(--console-layout-resizer-width) minmax(0, 1fr);
+}
+
+.console-layout-master-collapsed .console-layout-master-top {
+    justify-content: center;
+    margin-right: 0;
+}
+
+.console-layout-master-collapsed .console-layout-filter,
+.console-layout-master-collapsed .console-layout-list {
+    display: none;
+}
+
+.console-layout-master-collapsed .console-layout-resizer {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.console-layout-icon-expand,
+.console-layout-master-collapsed .console-layout-icon-collapse {
+    display: none;
+}
+
+.console-layout-master-collapsed .console-layout-icon-expand {
+    display: block;
 }
 
 .console-layout-list,
@@ -116,10 +151,11 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Console layout - the handle between the list and the detail   */
+/* Console layout - the handles next to the sidebar and the list */
 /* ------------------------------------------------------------ */
 
-.console-layout-resizer {
+.console-layout-resizer,
+.console-sidebar-resizer {
     display: flex;
     position: relative;
     justify-content: center;
@@ -128,7 +164,17 @@
     touch-action: none;
 }
 
-.console-layout-resizer::before {
+.console-sidebar-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    z-index: 1;
+    width: var(--console-layout-resizer-width);
+}
+
+.console-layout-resizer::before,
+.console-sidebar-resizer::before {
     content: '';
     position: absolute;
     top: 0;
@@ -136,10 +182,12 @@
     left: 50%;
     width: 1px;
     background: var(--console-border);
+    transform: translateX(-50%);
     transition: background var(--console-hover-duration) ease;
 }
 
-.console-layout-grip {
+.console-layout-grip,
+.console-sidebar-grip {
     position: relative;
     width: var(--console-layout-grip-width);
     height: var(--console-layout-grip-height);
@@ -149,13 +197,17 @@
 }
 
 .console-layout-resizer:hover::before,
-.console-layout-resizer:hover .console-layout-grip {
+.console-layout-resizer:hover .console-layout-grip,
+.console-sidebar-resizer:hover::before,
+.console-sidebar-resizer:hover .console-sidebar-grip {
     background: var(--console-accent-light);
     transition-delay: var(--console-hover-delay);
 }
 
 .console-resizing-layout .console-layout-resizer:active::before,
-.console-resizing-layout .console-layout-resizer:active .console-layout-grip {
+.console-resizing-layout .console-layout-resizer:active .console-layout-grip,
+.console-resizing .console-sidebar-resizer::before,
+.console-resizing .console-sidebar-grip {
     background: var(--console-accent-light);
     transition-delay: 0s;
 }
@@ -194,13 +246,70 @@ body.console-resizing-layout {
 }
 
 .console-operation-request {
-    flex: 1 1 0;
+    flex: var(--console-request-share) 1 0;
     min-height: var(--console-request-minimum-height);
 }
 
 .console-operation-response {
-    flex: 1 1 0;
+    flex: var(--console-response-share) 1 0;
     min-height: var(--console-response-minimum-height);
+}
+
+/* ------------------------------------------------------------ */
+/* Console layout - resizer between the request and the response */
+/* ------------------------------------------------------------ */
+
+.console-exchange-resizer {
+    display: flex;
+    position: relative;
+    flex: none;
+    justify-content: center;
+    align-items: center;
+    height: var(--console-exchange-resizer-height);
+    cursor: row-resize;
+    touch-action: none;
+}
+
+.console-exchange-resizer:has(+ .console-operation-response[hidden]) {
+    display: none;
+}
+
+.console-exchange-resizer::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--console-border);
+    transform: translateY(-50%);
+    transition: background var(--console-hover-duration) ease;
+}
+
+.console-exchange-grip {
+    position: relative;
+    width: var(--console-layout-grip-height);
+    height: var(--console-layout-grip-width);
+    border-radius: var(--console-layout-grip-width);
+    background: var(--console-layout-grip-fill);
+    transition: background var(--console-hover-duration) ease;
+}
+
+.console-exchange-resizer:hover::before,
+.console-exchange-resizer:hover .console-exchange-grip {
+    background: var(--console-accent-light);
+    transition-delay: var(--console-hover-delay);
+}
+
+.console-resizing-exchange .console-exchange-resizer:active::before,
+.console-resizing-exchange .console-exchange-resizer:active .console-exchange-grip {
+    background: var(--console-accent-light);
+    transition-delay: 0s;
+}
+
+body.console-resizing-exchange {
+    cursor: row-resize;
+    user-select: none;
 }
 
 .console-operation-request .console-panel-bar,
@@ -227,12 +336,31 @@ body.console-resizing-layout {
         overflow: visible;
     }
 
-    .console-layout-frame {
+    .console-layout-frame,
+    .console-layout-master-collapsed .console-layout-frame {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .console-layout-toggle {
+        display: none;
+    }
+
+    .console-layout-master-collapsed .console-layout-filter,
+    .console-layout-master-collapsed .console-layout-list {
+        display: flex;
     }
 
     .console-layout-resizer {
         display: none;
+    }
+
+    .console-exchange-resizer {
+        cursor: auto;
+        pointer-events: none;
+    }
+
+    .console-exchange-grip {
+        visibility: hidden;
     }
 
     .console-layout-list,

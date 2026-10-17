@@ -127,48 +127,6 @@
     display: block;
 }
 
-.console-sidebar-resizer {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1;
-    width: 0;
-}
-
-.console-sidebar-resizer::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: calc(var(--console-resizer-hit-width) / -2);
-    width: var(--console-resizer-hit-width);
-    cursor: col-resize;
-}
-
-.console-sidebar-resizer::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: calc(var(--console-resizer-line-width) / -2);
-    width: var(--console-resizer-line-width);
-    background: var(--console-accent-light);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.1s ease;
-}
-
-.console-sidebar-resizer:hover::after {
-    opacity: 1;
-    transition-delay: 0.15s;
-}
-
-.console-resizing .console-sidebar-resizer::after {
-    opacity: 1;
-    transition-delay: 0s;
-}
-
 body.console-resizing {
     cursor: col-resize;
     user-select: none;
@@ -374,6 +332,58 @@ body.console-resizing {
 
 .console-raw-head {
     color: var(--console-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Console - raw request and response colors                     */
+/* ------------------------------------------------------------ */
+
+.console-raw-method-get {
+    color: var(--console-chip-blue-text);
+}
+
+.console-raw-method-post,
+.console-raw-status-ok {
+    color: var(--console-chip-green-text);
+}
+
+.console-raw-method-put {
+    color: var(--console-chip-yellow-text);
+}
+
+.console-raw-method-patch {
+    color: var(--console-chip-purple-text);
+}
+
+.console-raw-method-delete,
+.console-raw-status-error {
+    color: var(--console-chip-red-text);
+}
+
+.console-raw-method-head,
+.console-raw-method-options {
+    color: var(--console-chip-neutral-text);
+}
+
+.console-raw-target,
+.console-raw-reason {
+    color: var(--console-text);
+}
+
+.console-raw-protocol {
+    color: var(--console-text-muted);
+}
+
+.console-raw-header-name {
+    color: var(--console-code-key);
+}
+
+.console-raw-header-separator {
+    color: var(--console-code-punctuation);
+}
+
+.console-raw-header-value {
+    color: var(--console-code-string);
 }
 
 /* ------------------------------------------------------------ */

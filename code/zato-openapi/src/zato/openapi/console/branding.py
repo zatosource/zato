@@ -27,6 +27,9 @@ class ModuleCtx:
     # The text shown instead of the Zato logo, used when there is no logo file
     Env_Logo_Text = 'Zato_OpenAPI_Console_Logo_Text'
 
+    # The title shown after the logo once signed in
+    Env_Header_Title = 'Zato_OpenAPI_Console_Header_Title'
+
     # The directory with the favicon and the stylesheet that replace the built-in ones
     Env_Branding_Dir = 'Zato_OpenAPI_Console_Branding_Dir'
 
@@ -95,6 +98,7 @@ def get_branding_context() -> 'stranydict':
     out:'stranydict' = {
         'logo_url': '',
         'logo_text': '',
+        'header_title': '',
         'title': ModuleCtx.Default_Title,
     }
 
@@ -117,6 +121,10 @@ def get_branding_context() -> 'stranydict':
         out['favicon_url'] = ModuleCtx.Default_Favicon_URL
 
     out['has_custom_css'] = bool(get_branding_file_path('custom.css'))
+
+    # A title after the logo is shown only when the environment names one
+    if header_title := os.environ.get(ModuleCtx.Env_Header_Title):
+        out['header_title'] = header_title
 
     return out
 

@@ -252,27 +252,31 @@
 .console-group-header {
     display: flex;
     flex: none;
-    gap: 1rem;
-    align-items: baseline;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.875rem;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.625rem;
     border-bottom: 1px solid var(--console-border-strong);
 }
 
 .console-group-section {
-    font-family: ZatoMainFontMedium, sans-serif;
+    padding: 3px 10px;
+    border: 1px solid var(--console-chip-amber-border);
+    font-family: ZatoMainFont, sans-serif;
     font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--console-text-faint);
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    color: var(--console-chip-amber-text);
+    background: var(--console-chip-amber-fill);
 }
 
 .console-group-name {
     margin: 0;
-    font-family: ZatoMainFontLight, sans-serif;
-    font-size: 1.75rem;
+    font-family: ZatoMainFontMedium, sans-serif;
+    font-size: 0.75rem;
     font-weight: normal;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--console-text);
 }
 
@@ -397,10 +401,6 @@
     fill: currentColor;
 }
 
-.console-operation-response {
-    margin-top: 1rem;
-}
-
 .console-operation-response[hidden],
 .console-response-body[hidden],
 .console-editor[hidden],
@@ -483,6 +483,12 @@
 }
 
 .console-editor:focus-within {
+    border-color: var(--console-accent-light);
+}
+
+.console-response-body:focus,
+.console-raw-response:focus {
+    outline: none;
     border-color: var(--console-accent-light);
 }
 

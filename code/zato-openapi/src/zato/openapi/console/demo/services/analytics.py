@@ -44,13 +44,16 @@ _waiting_times = [
 
 # The indicators a value-based contract is monitored against, each with its target and the measured value
 _indicators = [
-    IndicatorRow('Median days to treatment',          28.0, 31.5, True),
-    IndicatorRow('Outcome measurement response rate', 0.7,  0.74, False),
-    IndicatorRow('Improvement in outcome scores',     0.5,  0.56, False),
-    IndicatorRow('Readmissions within 90 days',       0.1,  0.08, True),
+    IndicatorRow('Διάμεσος αριθμός ημερών έως τη θεραπεία', 28.0, 31.5, True),
+    IndicatorRow('Ποσοστό απόκρισης στις μετρήσεις έκβασης', 0.7,  0.74, False),
+    IndicatorRow('Βελτίωση των βαθμολογιών έκβασης',         0.5,  0.56, False),
+    IndicatorRow('Επανεισαγωγές εντός 90 ημερών',            0.1,  0.08, True),
 ]
 
 _default_period = '2026-Q3'
+
+# The finding reported for each patient that a care team query returns
+_no_recent_measurement_finding = 'Καμία μέτρηση έκβασης τις τελευταίες 12 εβδομάδες'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,9 +86,19 @@ class Indicator(Model):
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass
+class ContractPerformanceRequest(Model):
+    κωδικός_σύμβασης: str = 'ΣΥΜ-2026-01'
+    region:           str = 'Κεντρική Μακεδονία'
+    period:           str = '2026-Q3'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class ContractPerformance(Model):
     contract_code:  str
+    region:         str
     period:         str
     overall_status: str
     indicators:     list_[Indicator]
@@ -94,12 +107,20 @@ class ContractPerformance(Model):
 # ################################################################################################################################
 
 @dataclass
+class CareTeamQueryRequest(Model):
+    ομάδα:      str = 'ψυχική-υγεία-θεσσαλονίκης'
+    query_code: str = 'χωρίς-πρόσφατη-μέτρηση'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
 class DecisionSupportRequest(Model):
     patient_id:         str
-    episode_id:         str
-    primary_concern:    str
     latest_score:       int
     sessions_completed: int
+    επεισόδιο:          str = 'ΕΠ-100231-1'
+    primary_concern:    str = 'Γενικευμένη αγχώδης διαταραχή'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,6 +138,8 @@ class Recommendation(Model):
 @dataclass(init=False)
 class RecommendationResponse(Model):
     patient_id:      str
+    episode_id:      str
+    primary_concern: str
     recommendations: list_[Recommendation]
 
 # ################################################################################################################################
@@ -162,7 +185,7 @@ class GetContractPerformance(Service):
     """ Returns the indicators of a value-based care contract and whether each of them meets its target.
     """
     name   = 'healthcare.analytics.get-contract-performance'
-    input  = 'contract_code', '-period'
+    input  = ContractPerformanceRequest
     output = ContractPerformance
 
     def handle(self) -> 'None':
@@ -190,8 +213,9 @@ class GetContractPerformance(Service):
         all_met = met_count == len(indicators)
 
         out = ContractPerformance()
-        out.contract_code = self.request.input.contract_code
-        out.period = self.request.input.period or _default_period
+        out.contract_code = self.request.input.κωδικός_σύμβασης
+        out.region = self.request.input.region
+        out.period = self.request.input.period
         out.overall_status = 'on-track' if all_met else 'at-risk'
         out.indicators = indicators
 
@@ -203,21 +227,29 @@ class GetContractPerformance(Service):
 class RunCareTeamQuery(Service):
     """ Runs a predefined ad-hoc query for a care team, e.g. patients without a recent outcome measurement.
     """
-    name = 'healthcare.analytics.run-care-team-query'
+    name  = 'healthcare.analytics.run-care-team-query'
+    input = CareTeamQueryRequest
 
     def handle(self) -> 'None':
 
-        if not (query_code := self.request.input.get('query_code')):
-            query_code = 'no-recent-measurement'
-
         rows = [
-            {'patient_id': 'PT-100231', 'episode_id': 'EP-PT-100231-1', 'last_measured_on': '2026-04-01'},
-            {'patient_id': 'PT-100233', 'episode_id': 'EP-PT-100233-1', 'last_measured_on': '2026-05-12'},
+            {
+                'patient_id': 'PT-100231',
+                'episode_id': 'EP-PT-100231-1',
+                'last_measured_on': '2026-04-01',
+                'finding': _no_recent_measurement_finding,
+            },
+            {
+                'patient_id': 'PT-100233',
+                'episode_id': 'EP-PT-100233-1',
+                'last_measured_on': '2026-05-12',
+                'finding': _no_recent_measurement_finding,
+            },
         ]
 
         self.response.payload = {
-            'query_code': query_code,
-            'team_code': self.request.input.get('team_code'),
+            'query_code': self.request.input.query_code,
+            'team': self.request.input.ομάδα,
             'row_count': len(rows),
             'rows': rows,
         }
@@ -238,18 +270,20 @@ class GetRecommendations(Service):
 
         review = Recommendation()
         review.code = 'REVIEW-PLAN'
-        review.text = 'Review the treatment plan with the care team'
+        review.text = 'Επανεξέταση του θεραπευτικού πλάνου με την ομάδα φροντίδας'
         review.strength = 'strong' if latest_score >= 15 else 'conditional'
         review.evidence_level = 'B'
 
         measure = Recommendation()
         measure.code = 'REMEASURE'
-        measure.text = 'Repeat the outcome measurement within four weeks'
+        measure.text = 'Επανάληψη της μέτρησης έκβασης εντός τεσσάρων εβδομάδων'
         measure.strength = 'conditional'
         measure.evidence_level = 'C'
 
         out = RecommendationResponse()
         out.patient_id = self.request.input.patient_id
+        out.episode_id = self.request.input.επεισόδιο
+        out.primary_concern = self.request.input.primary_concern
         out.recommendations = [review, measure]
 
         self.response.payload = out

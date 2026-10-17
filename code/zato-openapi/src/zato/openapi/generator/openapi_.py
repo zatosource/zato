@@ -394,6 +394,20 @@ class OpenAPIGenerator:
 
         return out
 
+    def _apply_path_parameter_defaults(self, parameters:'dictlist', request_schema:'anydict') -> 'None':
+        """ Gives each path parameter whose input property has a default of its own that default as its sample value.
+        """
+        # Untyped and list-based input has no properties to take defaults from ..
+        resolved = self._resolve_schema(request_schema)
+        if not (properties := resolved.get('properties')):
+            return
+
+        # .. and a parameter with no property of the same name keeps the sample value its name gave it.
+        for parameter in parameters:
+            if property_schema := properties.get(parameter['name']):
+                if 'default' in property_schema:
+                    parameter['example'] = property_schema['default']
+
     def _build_query_parameters(self, request_schema:'anydict', path_parameter_names:'strlist') -> 'dictlist':
         """ Builds query string parameters out of the properties of an input schema,
         leaving out the properties that are already path parameters.
@@ -555,6 +569,7 @@ class OpenAPIGenerator:
             if service.get('input'):
                 try:
                     request_schema = self._create_request_schema(service['input'], models)
+                    self._apply_path_parameter_defaults(parameters, request_schema)
 
                     if http_method in _query_string_methods:
                         query_parameters = self._build_query_parameters(request_schema, path_parameter_names)

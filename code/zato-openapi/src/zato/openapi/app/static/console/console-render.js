@@ -27,6 +27,7 @@ zatoConsole.render.config = {
     collapsedClass: 'console-navigation-collapsed',
     entryAttribute: 'data-entry',
     selectedClass: 'console-selected',
+    responseEditableMode: 'plaintext-only',
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -204,7 +205,7 @@ zatoConsole.render.buildSection = function(group) {
     var count = zatoConsole.render.createElement('span', 'console-group-count', entryCount + ' ' + noun);
 
     if(group.section !== '') {
-        var sectionName = zatoConsole.render.createElement('span', 'console-group-section', group.section);
+        var sectionName = zatoConsole.render.createElement('span', 'console-chip console-group-section', group.section);
         header.appendChild(sectionName);
     }
 
@@ -306,9 +307,8 @@ zatoConsole.render.buildHeader = function(entry) {
 zatoConsole.render.getLinkCopyText = function(button) {
 
     var card = button.closest(zatoConsole.invoke.config.cardSelector);
-    var entry = zatoConsole.state.entriesById[card.id];
 
-    var out = zatoConsole.links.getUrl(entry);
+    var out = zatoConsole.links.getUrl(card);
     return out;
 };
 
@@ -321,6 +321,7 @@ zatoConsole.render.buildCard = function(entry) {
     var card = zatoConsole.render.createElement('article', 'console-operation');
     card.id = entry.id;
     card.addEventListener('keydown', zatoConsole.invoke.onCardKeyDown);
+    card.addEventListener('input', zatoConsole.links.onCardInput);
 
     zatoConsole.state.exchanges[entry.id] = {headers: [], result: null};
 
@@ -332,12 +333,14 @@ zatoConsole.render.buildCard = function(entry) {
         card.appendChild(description);
     }
 
-    // The request, with the button that sends it, and the response below it
+    // The request, with the button that sends it, and the response below it, the handle between them dividing their height
     var exchange = zatoConsole.render.createElement('div', 'console-operation-exchange');
     var request = zatoConsole.render.buildRequest(entry);
+    var resizer = zatoConsole.exchange.buildResizer();
     var response = zatoConsole.render.buildResponse();
 
     exchange.appendChild(request);
+    exchange.appendChild(resizer);
     exchange.appendChild(response);
     card.appendChild(exchange);
 
@@ -475,8 +478,14 @@ zatoConsole.render.buildResponse = function() {
     bar.appendChild(time);
     bar.appendChild(tools);
 
+    // The response can be edited in place, both as it is formatted and in its raw form
     var body = zatoConsole.render.createElement('pre', 'console-code console-response-body');
+    body.contentEditable = config.responseEditableMode;
+    body.spellcheck = false;
+
     var raw = zatoConsole.render.createElement('pre', 'console-code console-raw console-raw-response');
+    raw.contentEditable = config.responseEditableMode;
+    raw.spellcheck = false;
     raw.hidden = true;
 
     container.appendChild(bar);

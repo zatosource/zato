@@ -62,13 +62,12 @@
     --console-sidebar-width: 19rem;
     --console-sidebar-padding: 0.875rem;
     --console-sidebar-collapsed-width: 2.75rem;
-    --console-resizer-hit-width: 9px;
-    --console-resizer-line-width: 2px;
     --console-navigation-chevron-size: 0.75rem;
     --console-login-logo-height: 2rem;
     --console-header-logo-max-width: 16rem;
     --console-layout-master-width: 28rem;
     --console-layout-resizer-width: 1.5rem;
+    --console-layout-master-collapsed-width: 2.75rem;
     --console-layout-grip-height: 2.5rem;
     --console-layout-grip-width: 4px;
     --console-layout-grip-fill: rgba(255, 255, 255, 0.14);
@@ -76,6 +75,9 @@
     --console-exchange-minimum-height: 26rem;
     --console-request-minimum-height: 10rem;
     --console-response-minimum-height: 8rem;
+    --console-request-share: 1;
+    --console-response-share: 1;
+    --console-exchange-resizer-height: 1rem;
     --console-specification-minimum-width: 20rem;
     --console-specification-minimum-height: 12rem;
     --console-glass-fill: rgba(255, 255, 255, 0.08);
@@ -109,6 +111,9 @@
     --console-chip-purple-fill: rgba(207, 169, 234, 0.18);
     --console-chip-red-text: #ff8a80;
     --console-chip-red-fill: rgba(255, 138, 128, 0.18);
+    --console-chip-amber-text: #dcb98a;
+    --console-chip-amber-border: rgba(220, 175, 110, 0.22);
+    --console-chip-amber-fill: rgba(220, 175, 110, 0.08);
 
     --console-code-key: #93c5fd;
     --console-code-string: #a7d7a9;
@@ -203,6 +208,16 @@ body.console-login-body {
 
 .console-header-brand-text {
     font-size: 1.125rem;
+}
+
+.console-header-title {
+    min-width: 0;
+    overflow: hidden;
+    font-family: ZatoMainFont, sans-serif;
+    font-size: 0.9375rem;
+    color: var(--console-text-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .console-header-links {

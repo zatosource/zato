@@ -23,6 +23,7 @@
             <span class="console-brand-text console-header-brand-text">{{ logo_text }}</span>
             {% endif %}
         </a>
+        {% if header_title %}<span class="console-header-title">{{ header_title }}</span>{% endif %}
         <nav class="console-header-links">
             <a href="/openapi/console/openapi.json" class="console-header-link">openapi.json</a>
             <a href="/openapi/console/openapi.yaml" class="console-header-link">openapi.yaml</a>
@@ -65,7 +66,7 @@
             <div class="console-sidebar-scroll">
                 <nav class="console-navigation" id="console-navigation"></nav>
             </div>
-            <div class="console-sidebar-resizer" id="console-sidebar-resizer"></div>
+            <div class="console-sidebar-resizer" id="console-sidebar-resizer"><span class="console-sidebar-grip"></span></div>
         </aside>
         <main class="console-content" id="console-content"></main>
     </div>
@@ -80,6 +81,7 @@
     <script src="/static/console/console-panels.js"></script>
     <script src="/static/console/console-popover.js"></script>
     <script src="/static/console/console-layouts.js"></script>
+    <script src="/static/console/console-exchange.js"></script>
     <script src="/static/console/console-links.js"></script>
     <script src="/static/console/console-specification.js"></script>
     <script src="/static/console/console-render.js"></script>

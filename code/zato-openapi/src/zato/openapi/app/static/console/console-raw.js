@@ -16,6 +16,16 @@ zatoConsole.raw.config = {
     responseSwitchSelector: '.console-response-bar .console-switch-input',
     headClass: 'console-raw-head',
     bodyClass: 'console-raw-body',
+    startSeparator: ' ',
+    methodClassPrefix: 'console-raw-method console-raw-method-',
+    targetClass: 'console-raw-target',
+    protocolClass: 'console-raw-protocol',
+    statusOkClass: 'console-raw-status-ok',
+    statusErrorClass: 'console-raw-status-error',
+    reasonClass: 'console-raw-reason',
+    headerNameClass: 'console-raw-header-name',
+    headerSeparatorClass: 'console-raw-header-separator',
+    headerValueClass: 'console-raw-header-value',
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -70,7 +80,9 @@ zatoConsole.raw.buildRequest = function(entry, text, pathValues, headers) {
         body = '';
     }
 
-    var out = {head: lines.join(config.lineSeparator), body: body};
+    var startClasses = [config.methodClassPrefix + entry.method, config.targetClass, config.protocolClass];
+
+    var out = {head: lines.join(config.lineSeparator), body: body, startClasses: startClasses};
     return out;
 };
 
@@ -82,7 +94,7 @@ zatoConsole.raw.buildResponse = function(result) {
 
     // A request that never reached the console has no status line and no headers, only the reason
     if(result.status === zatoConsole.invoke.config.networkErrorStatusCode) {
-        var failure = {head: '', body: result.text};
+        var failure = {head: '', body: result.text, startClasses: []};
         return failure;
     }
 
@@ -94,7 +106,10 @@ zatoConsole.raw.buildResponse = function(result) {
         lines.push(header[0] + config.headerSeparator + header[1]);
     }
 
-    var out = {head: lines.join(config.lineSeparator), body: result.text};
+    var statusClass = result.isOk ? config.statusOkClass : config.statusErrorClass;
+    var startClasses = [config.protocolClass, statusClass, config.reasonClass];
+
+    var out = {head: lines.join(config.lineSeparator), body: result.text, startClasses: startClasses};
     return out;
 };
 
@@ -118,22 +133,80 @@ zatoConsole.raw.getText = function(raw) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+zatoConsole.raw.fillStartLine = function(head, line, startClasses) {
+
+    var config = zatoConsole.raw.config;
+    var rest = line;
+
+    // The start line has as many parts as it has classes, and the last part keeps any spaces of its own,
+    // as a reason phrase does
+    for(var partIndex = 0; partIndex < startClasses.length; partIndex++) {
+
+        var separatorIndex = rest.indexOf(config.startSeparator);
+        var isLast = partIndex === startClasses.length - 1;
+
+        if(isLast || separatorIndex === -1) {
+            head.appendChild(zatoConsole.panels.createElement('span', startClasses[partIndex], rest));
+            return;
+        }
+
+        head.appendChild(zatoConsole.panels.createElement('span', startClasses[partIndex], rest.slice(0, separatorIndex)));
+        head.appendChild(document.createTextNode(config.startSeparator));
+
+        rest = rest.slice(separatorIndex + config.startSeparator.length);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.raw.fillHeaderLine = function(head, line) {
+
+    var config = zatoConsole.raw.config;
+
+    // A value can hold the separator itself, so only the first one ends the name
+    var separatorIndex = line.indexOf(config.headerSeparator);
+    var name = line.slice(0, separatorIndex);
+    var value = line.slice(separatorIndex + config.headerSeparator.length);
+
+    head.appendChild(zatoConsole.panels.createElement('span', config.headerNameClass, name));
+    head.appendChild(zatoConsole.panels.createElement('span', config.headerSeparatorClass, config.headerSeparator));
+    head.appendChild(zatoConsole.panels.createElement('span', config.headerValueClass, value));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+zatoConsole.raw.fillHead = function(head, raw) {
+
+    var config = zatoConsole.raw.config;
+
+    if(raw.head === '') {
+        return;
+    }
+
+    var lines = raw.head.split(config.lineSeparator);
+
+    zatoConsole.raw.fillStartLine(head, lines[0], raw.startClasses);
+
+    for(var lineIndex = 1; lineIndex < lines.length; lineIndex++) {
+        head.appendChild(document.createTextNode(config.lineSeparator));
+        zatoConsole.raw.fillHeaderLine(head, lines[lineIndex]);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 zatoConsole.raw.fill = function(element, raw) {
 
     var config = zatoConsole.raw.config;
 
     element.textContent = '';
 
-    var head = zatoConsole.panels.createElement('span', config.headClass, raw.head);
+    var head = zatoConsole.panels.createElement('span', config.headClass);
     var body = zatoConsole.panels.createElement('span', config.bodyClass);
 
-    // A JSON body keeps its colors, as it was sent or received, and any other body is shown as it is
-    if(zatoConsole.invoke.parse(raw.body) === undefined) {
-        body.textContent = raw.body;
-    }
-    else {
-        zatoConsole.highlight.fill(body, raw.body);
-    }
+    // The head is colored part by part, and the body as the editor colors it, whether it is valid JSON or not
+    zatoConsole.raw.fillHead(head, raw);
+    zatoConsole.highlight.fill(body, raw.body);
 
     element.appendChild(head);
 
@@ -250,15 +323,16 @@ zatoConsole.raw.getRequestCopyText = function(button) {
 
 zatoConsole.raw.getResponseCopyText = function(button) {
 
-    var card = button.closest(zatoConsole.raw.config.cardSelector);
-    var result = zatoConsole.state.exchanges[card.id].result;
+    var config = zatoConsole.raw.config;
+    var card = button.closest(config.cardSelector);
+
+    // The response is copied as it is shown, with any edits made to it
+    var selector = config.responseBodySelector;
 
     if(zatoConsole.raw.isResponseRaw(card)) {
-        var raw = zatoConsole.raw.buildResponse(result);
-        var rawText = zatoConsole.raw.getText(raw);
-        return rawText;
+        selector = config.responseRawSelector;
     }
 
-    var out = zatoConsole.invoke.getDisplayText(result.text);
+    var out = card.querySelector(selector).innerText;
     return out;
 };

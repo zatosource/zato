@@ -20,11 +20,24 @@ zatoConsole.options.onButtonClick = function(event) {
 
     var button = event.currentTarget;
     var card = button.closest(zatoConsole.options.config.cardSelector);
+    var headers = zatoConsole.state.exchanges[card.id].headers;
+
+    // With no headers yet, the popover opens with an empty row ready for the first one ..
+    var isFirst = headers.length === 0;
+
+    if(isFirst) {
+        headers.push({name: '', value: ''});
+    }
 
     var content = zatoConsole.options.buildContent(card);
     var onClose = zatoConsole.options.onClose.bind(null, card);
 
     zatoConsole.popover.open(button, content, onClose);
+
+    // .. and its name is typed in at once, unless the click closed the popover instead.
+    if(isFirst && content.isConnected) {
+        content.querySelector('.console-options-input').focus();
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -110,12 +123,14 @@ zatoConsole.options.buildInput = function(placeholder, value) {
 
 zatoConsole.options.onNameInput = function(card, headerIndex, event) {
     zatoConsole.state.exchanges[card.id].headers[headerIndex].name = event.target.value;
+    zatoConsole.links.refresh(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 zatoConsole.options.onValueInput = function(card, headerIndex, event) {
     zatoConsole.state.exchanges[card.id].headers[headerIndex].value = event.target.value;
+    zatoConsole.links.refresh(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -147,6 +162,8 @@ zatoConsole.options.onRemoveClick = function(card, headerIndex, event) {
         var row = zatoConsole.options.buildRow(card, rowIndex);
         rows.appendChild(row);
     }
+
+    zatoConsole.links.refresh(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -180,4 +197,5 @@ zatoConsole.options.refresh = function(card) {
 
     zatoConsole.panels.setCount(button, headers.length);
     zatoConsole.raw.refreshRequest(card);
+    zatoConsole.links.refresh(card);
 };

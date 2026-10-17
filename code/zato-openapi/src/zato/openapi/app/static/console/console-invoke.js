@@ -135,6 +135,7 @@ zatoConsole.invoke.setRequestText = function(card, text) {
     zatoConsole.highlight.refreshEditor(input);
     zatoConsole.invoke.markInvalid(card, false);
     zatoConsole.raw.refreshRequest(card);
+    zatoConsole.links.refresh(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -206,15 +207,19 @@ zatoConsole.invoke.onCardKeyDown = function(event) {
 
     var config = zatoConsole.invoke.config;
 
+    // Only Enter sends a request ..
     if(event.key !== config.invokeKey) {
         return;
     }
 
-    if(!event.ctrlKey && !event.metaKey) {
+    // .. a path parameter is a single line, so Enter alone sends the request from it ..
+    var isPathInput = event.target.matches(config.pathInputSelector);
+
+    if(!isPathInput && !event.ctrlKey && !event.metaKey) {
         return;
     }
 
-    // The request is sent from wherever it is being edited, unless one is already under way
+    // .. and the request is sent from wherever it is being edited, unless one is already under way.
     event.preventDefault();
 
     var play = event.currentTarget.querySelector(config.playSelector);

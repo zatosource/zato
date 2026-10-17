@@ -326,7 +326,7 @@ channel_rest:
 
   - name: healthcare.analytics.get-contract-performance
     service: healthcare.analytics.get-contract-performance
-    url_path: /api/healthcare/analytics/2.0/contracts/{contract_code}/performance
+    url_path: /api/healthcare/analytics/2.0/συμβάσεις/{κωδικός_σύμβασης}/απόδοση
     method: GET
     data_format: json
     groups:
@@ -334,7 +334,7 @@ channel_rest:
 
   - name: healthcare.analytics.run-care-team-query
     service: healthcare.analytics.run-care-team-query
-    url_path: /api/healthcare/analytics/2.0/care-team-queries/run
+    url_path: /api/healthcare/analytics/2.0/ομάδες-φροντίδας/{ομάδα}/ερωτήματα/εκτέλεση
     method: POST
     data_format: json
     groups:
@@ -343,7 +343,7 @@ channel_rest:
 
   - name: healthcare.decision-support.get-recommendations
     service: healthcare.decision-support.get-recommendations
-    url_path: /api/healthcare/analytics/2.0/decision-support/recommendations
+    url_path: /api/healthcare/analytics/2.0/υποστήριξη-αποφάσεων/{επεισόδιο}/συστάσεις
     method: POST
     data_format: json
     groups:
