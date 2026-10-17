@@ -24,7 +24,7 @@ from zato.common.pubsub import server as pubsub_server
 from zato.common.webapp.settings import get_csrf_trusted_origins
 from zato.openapi.app.views import relay_view
 
-from conftest import Trusted_Origin_First, Trusted_Origin_Second, Trusted_Origins_Env_Key
+from console_tls_origins import Trusted_Origin_First, Trusted_Origin_Second, Trusted_Origins_Env_Key
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,6 +65,9 @@ _origin_same_host = 'http://' + _host_name + ':11223'
 
 _csrf_cookie_name = 'zato-openapi-console-csrf'
 
+# A CSRF secret is 32 characters, which is 128 bits in hex
+_csrf_secret_bits = 128
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -77,7 +80,7 @@ def _check_csrf(host:'str', origin:'str', proto:'str') -> 'intnone':
     """ Runs the console's CSRF check against a sign-in form submission with a valid token, as it arrives
     from HAProxy with the given scheme header, and returns the status of the rejection, or None if it is accepted.
     """
-    secret = CryptoManager.generate_hex_string(32)
+    secret = CryptoManager.generate_hex_string(_csrf_secret_bits)
 
     factory = RequestFactory()
     request:'any_' = factory.post(
@@ -105,7 +108,7 @@ def _check_relay_csrf(origin:'str', has_token:'bool') -> 'intnone':
     """ Runs the console's CSRF check against a relay request on the plain port, with or without the token header,
     and returns the status of the rejection, or None if it is accepted.
     """
-    secret = CryptoManager.generate_hex_string(32)
+    secret = CryptoManager.generate_hex_string(_csrf_secret_bits)
 
     factory = RequestFactory()
     request:'any_' = factory.post(

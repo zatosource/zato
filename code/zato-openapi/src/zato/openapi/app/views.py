@@ -14,9 +14,8 @@ from json import dumps as json_dumps, loads as json_loads
 from urllib.parse import quote
 
 # Django
-from django.http import FileResponse, HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_POST
 
 # PyYAML
 import yaml
@@ -74,6 +73,9 @@ _no_such_file_message = 'No such file'
 # The base URL under which try-it requests are relayed to the servers - the document's servers
 # entry points here, so the browser only ever talks to the console, never to the servers.
 _relay_url_base = '/openapi/console/relay'
+
+# The only method that the relay accepts from a signed-in caller
+_relay_method = 'POST'
 
 # The response header in which the browser receives the headers that the endpoint's REST channel would respond with,
 # as URL-encoded JSON, apart from the headers of the console's own response
@@ -321,7 +323,6 @@ def spec_yaml_view(req:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-@require_POST
 def relay_view(req:'any_') -> 'any_':
     """ Relays a try-it invocation to the servers over Redis Streams and returns the response,
     so the browser only ever talks to the console. The target service is invoked with the signed-in
@@ -330,6 +331,11 @@ def relay_view(req:'any_') -> 'any_':
     auth, error = _get_auth_or_error(req)
     if error:
         return error
+
+    # A caller without a session receives the same rejection whatever the method, and a signed-in one relays with POST only
+    if req.method != _relay_method:
+        out = HttpResponseNotAllowed([_relay_method])
+        return out
 
     # No error means the auth details are there, hence the cast
     auth = cast_('anydict', auth)

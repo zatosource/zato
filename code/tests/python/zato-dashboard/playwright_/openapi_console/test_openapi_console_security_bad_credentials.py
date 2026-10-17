@@ -25,7 +25,7 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # The one message the sign-in page shows for any rejected credentials
-_Invalid_Credentials_Message = 'Invalid username or password'
+_Invalid_Credentials_Message = 'Invalid credentials'
 
 # The one body every session failure returns
 _Unauthorized_Body = 'Unauthorized'
