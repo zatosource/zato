@@ -15,6 +15,7 @@ import yaml
 
 # Zato
 from zato.openapi.generator.examples import get_integer_example, get_string_example
+from zato.openapi.generator.io_scanner import TypeConversionError
 from zato.openapi.generator.naming import get_operation_ids, get_summary, get_tags
 
 # ################################################################################################################################
@@ -93,19 +94,27 @@ def _get_service_path(service_name:'str', service:'anydict') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TypeConversionError(Exception):
-    """ Raised when a type cannot be converted to an OpenAPI type.
-    """
-    pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class OpenAPIGenerator:
     """ Generates OpenAPI specifications from scan results.
     """
     def __init__(self, type_mapper:'TypeMapper') -> 'None':
         self.type_mapper = type_mapper
+
+    def _create_container_schema(self, service_io:'anydict', models:'anydict') -> 'anydict':
+        """ Create a schema for input or output that is a container, e.g. list_[Model], of any kind that the mapper knows.
+        """
+        container_type = {
+            'container': service_io['container_type'],
+            'element_type': service_io['element_type'],
+        }
+
+        try:
+            out = self.type_mapper.map_type(container_type, models)
+        except TypeConversionError as e:
+            logger.warning(f'Could not map container type: {e}')
+            raise
+
+        return out
 
     def _create_request_schema(self, service_input:'anydict', models:'anydict') -> 'anydict':
         """ Create a schema for the request body.
@@ -163,19 +172,8 @@ class OpenAPIGenerator:
 
         # Handle container input like list_[Model]
         elif service_input['type'] == 'container':
-            container_type = service_input['container_type']
-            element_type = service_input['element_type']
-
-            if container_type in ('list_', 'List'):
-                try:
-                    items_schema = self.type_mapper.map_type(element_type, models)
-                    return {
-                        'type': 'array',
-                        'items': items_schema
-                    }
-                except TypeConversionError as e:
-                    logger.warning(f'Could not map container type: {e}')
-                    raise
+            out = self._create_container_schema(service_input, models)
+            return out
 
         # If we can't map the input, raise an exception
         raise TypeConversionError(
@@ -237,19 +235,8 @@ class OpenAPIGenerator:
 
         # Handle container output like list_[Model]
         elif service_output['type'] == 'container':
-            container_type = service_output['container_type']
-            element_type = service_output['element_type']
-
-            if container_type in ('list_', 'List'):
-                try:
-                    items_schema = self.type_mapper.map_type(element_type, models)
-                    return {
-                        'type': 'array',
-                        'items': items_schema
-                    }
-                except TypeConversionError as e:
-                    logger.warning(f'Could not map container type: {e}')
-                    raise
+            out = self._create_container_schema(service_output, models)
+            return out
 
         # If we can't map the output, raise an exception
         raise TypeConversionError(
@@ -328,6 +315,11 @@ class OpenAPIGenerator:
         # .. a scalar default from the model definition wins over generic values ..
         if 'default' in schema:
             out = schema['default']
+            return out
+
+        # .. an enumeration accepts only the values that it lists ..
+        if enum_values := schema.get('enum'):
+            out = enum_values[0]
             return out
 
         # .. then the format, which is exact ..
