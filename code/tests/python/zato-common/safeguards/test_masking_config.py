@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from shutil import copy as shutil_copy
 
 # PyYAML
 from yaml import safe_load
@@ -24,6 +25,7 @@ from zato.common.util.safeguards.masking import get_masking_config, resolve_mask
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import anydict, strlist
 
 # ################################################################################################################################
@@ -111,6 +113,23 @@ class TestSetFiles:
 
     def test_the_files_are_read_once(self) -> 'None':
         assert get_masking_config() is get_masking_config()
+
+    def test_a_file_other_than_a_set_is_skipped(self, tmp_path:'Path', monkeypatch:'pytest.MonkeyPatch') -> 'None':
+
+        # A directory holding one set file and one file that is not a set ..
+        _ = shutil_copy(os.path.join(_sets_directory, 'banking.yaml'), tmp_path)
+        _ = (tmp_path / 'README.txt').write_text('Not a set')
+
+        # .. is read in place of the shipped one ..
+        monkeypatch.setattr(masking, '_sets_directory', str(tmp_path))
+        get_masking_config.cache_clear()
+
+        # .. and only the set file yields a set.
+        try:
+            names = [item['name'] for item in get_masking_config()]
+            assert names == ['banking']
+        finally:
+            get_masking_config.cache_clear()
 
 # ################################################################################################################################
 # ################################################################################################################################
