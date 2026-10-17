@@ -7,20 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import socket
-from datetime import datetime, timedelta, timezone
 from logging import getLogger
 from shutil import rmtree
 from tempfile import mkdtemp
 from threading import Thread
 from time import sleep
-
-# cryptography
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
 
 # pyftpdlib
 from pyftpdlib.authorizers import DummyAuthorizer
@@ -29,6 +21,7 @@ from pyftpdlib.ioloop import IOLoop
 from pyftpdlib.servers import ThreadedFTPServer
 
 # Zato
+from zato.common.demo.file_transfer_server import write_self_signed_certificate
 from zato.common.util.tcp import get_free_port
 
 # ################################################################################################################################
@@ -55,64 +48,6 @@ _default_password = 'Test.FTP.Password.1'
 # The permissions the test user has over the served directory - everything pyftpdlib knows
 _user_permissions = 'elradfmwMT'
 
-# How many days the test server's self-signed certificate stays valid for
-_certificate_validity_days = 3650
-
-# How many bits go into the certificate's private key
-_certificate_key_bits = 2048
-
-# The RSA public exponent for the certificate's private key
-_certificate_public_exponent = 65537
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _write_self_signed_certificate(directory:'str') -> 'str':
-    """ Writes a self-signed certificate with its private key into one PEM file and returns its path.
-    """
-
-    # A key for the certificate to sign ..
-    key = rsa.generate_private_key(public_exponent=_certificate_public_exponent, key_size=_certificate_key_bits)
-
-    # .. the certificate names this machine and nothing else ..
-    common_name = x509.NameAttribute(NameOID.COMMON_NAME, 'localhost')
-    subject = x509.Name([common_name])
-    now = datetime.now(timezone.utc)
-
-    builder = x509.CertificateBuilder()
-    builder = builder.subject_name(subject)
-    builder = builder.issuer_name(subject)
-
-    public_key = key.public_key()
-    builder = builder.public_key(public_key)
-
-    serial_number = x509.random_serial_number()
-    builder = builder.serial_number(serial_number)
-
-    expiry = now + timedelta(days=_certificate_validity_days)
-    builder = builder.not_valid_before(now)
-    builder = builder.not_valid_after(expiry)
-
-    algorithm = hashes.SHA256()
-    certificate = builder.sign(key, algorithm)
-
-    # .. and both the key and the certificate go into the one file pyftpdlib reads.
-    no_encryption = serialization.NoEncryption()
-    key_pem = key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=no_encryption,
-    )
-    certificate_pem = certificate.public_bytes(serialization.Encoding.PEM)
-
-    out = os.path.join(directory, 'ftp-server.pem')
-
-    with open(out, 'wb') as pem_file:
-        _ = pem_file.write(key_pem)
-        _ = pem_file.write(certificate_pem)
-
-    return out
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -135,7 +70,7 @@ class FTPTestServer:
         # The certificate lives outside the served directory.
         if use_ssl:
             self.certificate_dir = mkdtemp(prefix='zato-test-ftp-tls-')
-            self.certificate_path = _write_self_signed_certificate(self.certificate_dir)
+            self.certificate_path = write_self_signed_certificate(self.certificate_dir)
         else:
             self.certificate_dir = ''
             self.certificate_path = ''

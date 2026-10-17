@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import delete, insert, select
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.references import extract_references
 
 # Local
@@ -44,7 +43,6 @@ class ReferenceIndex:
         for document in documents.values():
             for usage in extract_references(document):
                 row = {
-                    'cluster_id':    default_cluster_id,
                     'definition_id': definition_id,
                     'rule_name':     document['full_name'],
                     'term':          usage['term'],
@@ -90,9 +88,7 @@ class ReferenceIndex:
 
         # .. ask the index by its promoted term column ..
         query = select(rule_reference_table)
-        cluster_condition = rule_reference_table.c.cluster_id == default_cluster_id
         term_condition = rule_reference_table.c.term == term
-        query = query.where(cluster_condition)
         query = query.where(term_condition)
         query = query.order_by(
             rule_reference_table.c.definition_id,

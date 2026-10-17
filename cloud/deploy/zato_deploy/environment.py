@@ -17,8 +17,9 @@ from logging import getLogger
 
 # Zato
 from zato_deploy.common import Container, Env_Repo_Layout, EnvRepoConfig, Line_Kind, Link_File, load_env_repo_config, \
-    Path, read_env_file, Stage_ID, StageFailed, strlist, strnone
+    parse_env_lines, Path, read_env_file, Stage_ID, StageFailed, strlist, strnone, strstrdict
 from zato_deploy.git import ensure_key, get_head_commit, read_public_key, run_git
+from zato_deploy.process import run_command
 from zato_deploy.state import Progress
 
 # ################################################################################################################################
@@ -174,14 +175,33 @@ def _find_env_dir(repo_dir:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _read_command_secrets() -> 'strstrdict':
+    """ Returns the key=value lines that the secrets command prints, which is how a secret store of the cloud
+    the machine runs in provides its secrets.
+    """
+    result = run_command([Path.Secrets_Command], is_stdout_logged=False)
+
+    if result.exit_code != 0:
+        raise StageFailed(f'Secrets could not be read: {_get_last_line(result.stderr)}')
+
+    out = parse_env_lines(result.stdout)
+    return out
+
+# ################################################################################################################################
+
 def _write_env_ini(env_dir:'str', env_name:'str') -> 'str':
-    """ Writes the file that enmasse reads secrets from, with the secrets from cloud-init and the root of the environment
-    as the container sees it.
+    """ Writes the file that enmasse reads secrets from, with the secrets from cloud-init, those that the secrets command
+    prints, and the root of the environment as the container sees it.
     """
     values = {}
 
     if os.path.exists(Path.Env_Secrets):
         values = read_env_file(Path.Env_Secrets)
+
+    # The secrets command takes precedence over cloud-init for the keys that both have.
+    if os.path.exists(Path.Secrets_Command):
+        command_secrets = _read_command_secrets()
+        values.update(command_secrets)
 
     values[_Project_Root_Key] = os.path.join(Container.Hot_Deploy_Dir, env_name)
 

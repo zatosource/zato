@@ -16,13 +16,14 @@ from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditLog
 from zato.common.hl7.audit import audit_ack_received, audit_message_sent, get_wire_attrs, ACKStatus
 from zato.common.hl7.mllp.ack import AckResult, get_ack_rejection
+from zato.common.hl7.mllp.circuit_breaker import CircuitBreaker, SendingStopped
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.fields import Outgoing_Bool_Names, Outgoing_Defaults, Outgoing_Int_Names
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.pubsub.outgoing import Attempts_None, Key_Data, OutgoingPublisher, OutgoingType, SendRejected
 from zato.common.util.api import asbool, hex_sequence_to_bytes, new_cid_server
-from zato.common.util.retry import get_next_sleep_time, RetryPolicy
+from zato.common.util.retry import get_first_sleep_time, get_next_sleep_time, RetryPolicy
 from zato.common.util.tcp import parse_address
 from zato.server.connection.queue import Wrapper
 
@@ -48,6 +49,10 @@ _ms_per_second = 1000
 _use_queue_field = HTTP_SOAP.Queue.Field_Use_Queue
 
 _retry = HTTP_SOAP.Retry
+
+# How many seconds a send or a ping waits for a pooled client when every one of them is in use
+# or the pool is still being built
+pool_block_timeout = 30
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,13 +93,16 @@ def to_message_text(data:'bytes | str | any_') -> 'str':
 class _HL7MLLPConnection:
     """ Wraps an HL7MLLPClient instance for use with the connection pool.
     """
-    def __init__(self, config:'Bunch', audit_log:'AuditLog | None' = None) -> 'None':
+    def __init__(self, config:'Bunch', audit_log:'AuditLog | None', breaker:'CircuitBreaker') -> 'None':
 
         # What the audit events are filed under and where they say the message went -
         # the name is only read when auditing is on, because offline tests build
         # minimal configs without one.
         self.audit_log = audit_log
         self.address = config.address
+
+        # The send limit of the connection, shared by every pooled connection to the same receiving system
+        self.breaker = breaker
 
         if audit_log:
             self.name = config.name
@@ -115,6 +123,9 @@ class _HL7MLLPConnection:
 
         # Config recv_timeout is in milliseconds, the client expects seconds
         receive_timeout = config.recv_timeout / _ms_per_second
+
+        # How long a test message from the Invoke screen waits for its acknowledgment, in seconds
+        self.max_wait_time = config.max_wait_time
 
         # TLS turns on when a CA bundle is configured - the client then always verifies
         # the server against it, and a cert/key pair, if also configured, enables mTLS.
@@ -148,20 +159,32 @@ class _HL7MLLPConnection:
         cid:'str'='',
         needs_audit:'bool'=True,
         needs_retry:'bool'=True,
+        is_test_message:'bool'=False,
         ) -> 'AckResult':
         """ Sends data and returns an AckResult, of whatever code the receiving system answered with. The input may
         be ER7 text, raw bytes or a parsed message object, e.g. when a service forwards the parsed input its channel
-        gave it. A send that no acknowledgment came back from is tried again under the connection's retry policy,
+        gave it. Bytes are sent as given, in whatever encoding they are in, and text is sent as UTF-8. A send that
+        no acknowledgment came back from is tried again under the connection's retry policy,
         unless the caller retries on its own, as the queue does. The audit pair is written under the caller's
-        correlation id, and a resubmit turns the pair off because it records its own events.
+        correlation id, and a resubmit turns the pair off because it records its own events. A test message from
+        the Invoke screen waits max_wait_time seconds for its acknowledgment instead of the connection's recv_timeout.
         """
+
+        # A test message from the Invoke screen is given the wait the form promises it, any other send the connection's
+        if is_test_message:
+            receive_timeout = self.max_wait_time
+        else:
+            receive_timeout = self.impl.receive_timeout
 
         # Everything is normalized to text first - it is what the audit trail stores
         # and what the control id is extracted from ..
         message_text = to_message_text(data)
 
-        # .. and the wire itself carries bytes.
-        data = message_text.encode('utf-8')
+        # .. and the wire carries the bytes given as they are, or the text as UTF-8 when none were.
+        if isinstance(data, bytes):
+            wire_data = data
+        else:
+            wire_data = message_text.encode('utf-8')
 
         # The control id correlates the ACK with the message - it also lets the client
         # validate that the ACK actually acknowledges what was sent.
@@ -179,10 +202,15 @@ class _HL7MLLPConnection:
                 cid=cid, msg_id=control_id, attrs=get_wire_attrs(msh_line), endpoint=self.address,
                 is_export_payload_active=self.is_export_payload_active)
 
+        # A connection whose share of failed sends reached its limit sends nothing until its reset time passes,
+        # and then one trial message decides whether it resumes
+        if not self.breaker.can_execute():
+            raise SendingStopped(f'Sending to `{self.address}` is stopped, the share of failed sends reached its limit')
+
         send_start = monotonic()
 
         def send() -> 'AckResult':
-            out = self.impl.send(data, control_id)
+            out = self.impl.send(wire_data, control_id, receive_timeout)
             return out
 
         # A send that raises means no acknowledgment ever arrived - a transient
@@ -190,6 +218,7 @@ class _HL7MLLPConnection:
         try:
             out = self._send_with_policy(cid, send, needs_retry)
         except Exception:
+            self.breaker.record_failure()
             if self.audit_log and needs_audit:
                 duration_ms = int((monotonic() - send_start) * _ms_per_second)
                 _ = audit_ack_received(
@@ -198,7 +227,14 @@ class _HL7MLLPConnection:
                     is_export_payload_active=self.is_export_payload_active)
             raise
 
-        # The acknowledgment arrived - its code decides the outcome on its own row
+        # The acknowledgment arrived - a rejection counts toward the send limit as a send that no acknowledgment
+        # came back from does, which is the test the queue applies to a failed send
+        if get_ack_rejection(out):
+            self.breaker.record_failure()
+        else:
+            self.breaker.record_success()
+
+        # The acknowledgment's code decides the outcome on its own row
         if self.audit_log and needs_audit:
             duration_ms = int((monotonic() - send_start) * _ms_per_second)
             _ = audit_ack_received(
@@ -231,7 +267,7 @@ class _HL7MLLPConnection:
 
         attempt = 0
         total_sleep_time = 0
-        current_sleep_time = policy.sleep_time
+        current_sleep_time = get_first_sleep_time(policy)
 
         while True:
 
@@ -276,6 +312,13 @@ class OutconnHL7MLLPWrapper(Wrapper):
         # Whether a send that did not go through waits in the connection's queue
         self.use_queue = self.config[_use_queue_field]
 
+        # The send limit of the connection, one for every pooled connection to the receiving system
+        self.breaker = CircuitBreaker(
+            self.config.circuit_breaker_threshold_percent,
+            self.config.circuit_breaker_window_seconds,
+            self.config.circuit_breaker_reset_seconds,
+        )
+
         # What a guaranteed delivery to this connection goes through. It is built from the connection's
         # id rather than its name because that is what a rename leaves alone.
         self.publisher = OutgoingPublisher(server, OutgoingType.MLLP, self.config.id)
@@ -284,7 +327,7 @@ class OutconnHL7MLLPWrapper(Wrapper):
 
     def add_client(self) -> 'None':
         try:
-            connection = _HL7MLLPConnection(self.config, self.audit_log)
+            connection = _HL7MLLPConnection(self.config, self.audit_log, self.breaker)
             _ = self.client.put_client(connection)
         except Exception:
             logger.warning('Error adding HL7 MLLP client (%s); e:`%s`', self.config.name, format_exc())
@@ -313,11 +356,13 @@ class OutconnHL7MLLPWrapper(Wrapper):
         """ Makes one attempt to deliver a message the queue holds, raising when the receiving system turned it down -
         the same test the direct attempt applies, so both agree on what a failure is.
         """
-        with self.client() as connection:
+        with self.client(should_block=True, block_timeout=pool_block_timeout) as connection:
             ack = connection.invoke(request[Key_Data], cid=cid, needs_retry=False)
 
+        # An AE is the receiving application saying the message itself is wrong, an AR that it could not take it now
         if rejection := get_ack_rejection(ack):
-            raise SendRejected(rejection, ack)
+            is_permanent = not ack.should_retry
+            raise SendRejected(rejection, ack, is_permanent=is_permanent)
 
         return ack
 

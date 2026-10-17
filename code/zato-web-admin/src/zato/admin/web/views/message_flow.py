@@ -19,7 +19,6 @@ from zato.admin.web.views.audit_log.columns import _event_type_label, _object_pa
     _source_event_label
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels
 from zato.common.audit_log.file_transfer_words import file_transfer_words
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,14 +50,12 @@ def index(req:'HttpRequest') -> 'TemplateResponse':
     resubmit_labels_json = json.dumps(resubmit_labels)
 
     return TemplateResponse(req, 'zato/message-flow/index.html', {
-        'cluster_id': default_cluster_id,
         'resubmit_labels_json': resubmit_labels_json,
         'source_labels_json': json.dumps(_source_event_label),
         'object_links_json': json.dumps(_object_page_url),
         'endpoint_labels_json': json.dumps(_source_endpoint_label),
         'event_labels_json': json.dumps(_event_type_label),
         'file_transfer_words_json': file_transfer_words_json,
-        'zato_clusters': True,
         'zato_template_name': 'zato/message-flow/index.html',
     })
 
@@ -70,8 +67,6 @@ def demo(req:'HttpRequest') -> 'TemplateResponse':
     everything on it coming from data in the browser. To be removed when no longer needed.
     """
     return TemplateResponse(req, 'zato/message-flow/demo.html', {
-        'cluster_id': default_cluster_id,
-        'zato_clusters': True,
         'zato_template_name': 'zato/message-flow/demo.html',
     })
 

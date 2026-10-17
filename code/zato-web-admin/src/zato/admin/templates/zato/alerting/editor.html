@@ -117,7 +117,7 @@ $(document).ready(function() {
         attachUsedTip: attachUsedTip,
         csrfToken: $.cookie('csrftoken'),
         navigateToRule: function(rulesetId, ruleKey) {
-            window.location.href = '{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&rule=' +
+            window.location.href = '{% url "alert-rules-editor" %}?rule=' +
                 encodeURIComponent(ruleKey);
         },
     });
@@ -173,7 +173,7 @@ $(document).ready(function() {
 
         <div class="alerting-editor-column">
         <h3 class="section-page-heading">
-            <a href="{% url "alert-rules" %}?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Rules</a>
+            <a href="{% url "alert-rules" %}" class="detail-component-pill menu-link">Rules</a>
             {% if new_rule_name %}{{ new_rule_name }}{% else %}<span id="rule-select-host"></span>{% endif %}
         </h3>
         <div class="dashboard-card alerting-editor-card">

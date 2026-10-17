@@ -28,7 +28,7 @@ if 0:
 # ################################################################################################################################
 
 # Where the gateway list lives - the wizard is reached through its links
-MCP_List_URL = '/zato/gateway/mcp/?cluster=1'
+MCP_List_URL = '/zato/gateway/mcp/'
 
 # Where a wizard save that went through lands - the gateway list, pointed at the saved row
 Saved_Redirect_Pattern = '**/zato/gateway/mcp/**highlight=*'
@@ -135,7 +135,7 @@ def open_wizard_edit(page:'Page', base_url:'str', gateway_name:'str') -> 'None':
     """
 
     # The query keeps the row on the first page of results, whatever other tests created ..
-    list_url = f'{MCP_List_URL}&query={gateway_name}'
+    list_url = f'{MCP_List_URL}?query={gateway_name}'
     navigate_to_page(page, base_url, list_url)
 
     # .. follow the row's Edit link to the wizard page ..
@@ -210,7 +210,7 @@ def go_to_list(page:'Page', base_url:'str', gateway_name:'str') -> 'any_':
     """
 
     # The query keeps the row on the first page of results ..
-    list_url = f'{MCP_List_URL}&query={gateway_name}'
+    list_url = f'{MCP_List_URL}?query={gateway_name}'
     navigate_to_page(page, base_url, list_url)
 
     # .. and the row must be there.
@@ -469,7 +469,7 @@ def set_compaction(
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# The PII and content safety cards of step 2
+# The hook services and content safety cards of step 2
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -488,10 +488,10 @@ def _open_option_card(page:'Page', card_name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def open_pii_card(page:'Page') -> 'None':
-    """ Unfolds the PII removal card, unless it is already open.
+def open_hooks_card(page:'Page') -> 'None':
+    """ Unfolds the hook services card, unless it is already open.
     """
-    _open_option_card(page, 'pii')
+    _open_option_card(page, 'hooks')
 
 # ################################################################################################################################
 

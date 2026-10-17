@@ -106,7 +106,7 @@ class TestSystemPerf:
         publisher = _get_publisher()
 
         # .. sanity - every subscription from the topology must exist ..
-        sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+        sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
         if isinstance(sub_list, list):
             items:'anylist' = sub_list
@@ -152,7 +152,7 @@ class TestSystemPerf:
             lambda: publisher.publish(Latency_Topic_Name, 'latency-probe'), _latency_iterations)
 
         topic_list_median = measure_median_seconds(
-            lambda: admin.invoke('zato.pubsub.topic.get-list', {'cluster_id': 1}), _latency_iterations)
+            lambda: admin.invoke('zato.pubsub.topic.get-list', {}), _latency_iterations)
 
         browse_median = measure_median_seconds(
             lambda: admin.invoke('zato.pubsub.subscription.browse-queue', {

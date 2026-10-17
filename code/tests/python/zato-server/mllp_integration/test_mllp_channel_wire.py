@@ -135,7 +135,6 @@ class TestMLLPChannelWire:
         """
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-wire-echo',
             type_=_connection_type_channel,
             is_active=True,
@@ -390,7 +389,6 @@ class TestMLLPChannelWire:
         # Create a channel that matches messages from the error sender application ..
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-wire-error',
             type_=_connection_type_channel,
             is_active=True,

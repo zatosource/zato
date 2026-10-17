@@ -17,7 +17,7 @@ from __future__ import annotations
 from sqlalchemy import and_, func, or_, select
 
 # Zato
-from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditClassification, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.resubmit import is_event_type_resubmittable
 
 # ################################################################################################################################
@@ -224,6 +224,22 @@ def is_outcome_row() -> 'any_':
         ))
 
     out = or_(*alternatives)
+    return out
+
+# ################################################################################################################################
+
+def is_unanswered_row() -> 'any_':
+    """ The predicate picking the rows of an outgoing MLLP connection that record no acknowledgment arriving at all -
+    the acknowledgment row of a send that raised, a transient failure with no code, as audit_ack_received writes it
+    from the timeout marker. Such a row carries how long the wait took, not how long a response did.
+    """
+    out = and_(
+        event_table.c.source == AuditSource.MLLP_Outgoing,
+        event_table.c.event_type == response_event_type_by_source[AuditSource.MLLP_Outgoing],
+        event_table.c.outcome == AuditOutcome.Error,
+        event_table.c.application_outcome == '',
+        event_table.c.classification == AuditClassification.Transient,
+    )
     return out
 
 # ################################################################################################################################

@@ -18,7 +18,7 @@ from logging import getLogger
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, get_audit_engine
 from zato.common.pubsub.sql.config import get_pubsub_engine
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import find_free_port, start_server_process
@@ -163,7 +163,7 @@ def read(client:'AdminClient', conn_name:'str') -> 'anydict':
 # ################################################################################################################################
 
 def get_pubsub_backend(client:'AdminClient') -> 'anydict':
-    """ The type and name of the database the server's own pub/sub backend runs on.
+    """ The type and path of the database the server's own pub/sub backend runs on.
     """
     response = client.invoke(_get_pubsub_backend_service, {})
 
@@ -336,6 +336,44 @@ def get_audit_events(cid:'str', event_type:'strnone'=None) -> 'anylist':
         for row in connection.execute(query):
             event = dict(row._mapping)
             out.append(event)
+
+    return out
+
+# ################################################################################################################################
+
+def get_audit_attrs(event_id:'int') -> 'strdict':
+    """ The attributes one audit event carries, by name.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_attr_table)
+    query = query.where(event_attr_table.c.event_id == event_id)
+
+    out:'strdict' = {}
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            attr = dict(row._mapping)
+            out[attr['name']] = attr['value']
+
+    return out
+
+# ################################################################################################################################
+
+def get_audit_bodies(event_id:'int') -> 'strdict':
+    """ The bodies one audit event carries, by their kind.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_body_table)
+    query = query.where(event_body_table.c.event_id == event_id)
+
+    out:'strdict' = {}
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            body = dict(row._mapping)
+            out[body['kind']] = body['data']
 
     return out
 

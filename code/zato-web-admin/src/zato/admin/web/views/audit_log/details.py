@@ -27,7 +27,6 @@ from zato.common.audit_log.config_audit import record_view_event
 from zato.common.audit_log.export.api import ModuleCtx as ExportCtx, start_audit_export, stop_audit_export
 from zato.common.crypto.api import CryptoManager
 from zato.common.version import get_version
-from zato.x12.render import render_document
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,7 +54,6 @@ _access_log = AuditLog(_dashboard_server_name)
 _ = start_audit_export(
     service_name=ExportCtx.Service_Dashboard,
     server_name=_dashboard_server_name,
-    cluster_name='',
     instance_id=CryptoManager.generate_hex_string(),
     version=get_version().replace('Zato ', '', 1),
 )
@@ -156,8 +154,8 @@ def details(req:'any_') -> 'HttpResponse':
         data = data[:_preview_length]
         parsed = ''
 
-    # .. and the whole message additionally gets its parsed view, from the source's own renderer
-    # with the EDI renderer as the shared default - an empty result means no parsed tab at all.
+    # .. and the whole message additionally gets its parsed view from the source's own renderer -
+    # a source with no renderer, or an empty result, means no parsed tab at all.
     # A log access view record resolves against the database - who viewed what and when -
     # so it renders here, where the engine is at hand, rather than through _source_parse.
     # The sources in _source_render_by_event_id resolve against the database the same way.
@@ -169,7 +167,7 @@ def details(req:'any_') -> 'HttpResponse':
         elif renderer := _source_parse.get(source):
             parsed = renderer(data)
         else:
-            parsed = render_document(data)
+            parsed = ''
 
     response_json = json.dumps({'data': data, 'parsed': parsed, 'total_len': total_len})
     response_bytes = response_json.encode('utf-8')

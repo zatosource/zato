@@ -13,7 +13,6 @@ $.fn.zato.data_table.KafkaOutgoing = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.kafka.config = {
-    clusterId: '1',
     noSecurityValue: 'ZATO_NONE',
     noSecurityCell: '<span class="form_hint">---</span>',
     securityHref: {
@@ -189,7 +188,7 @@ $.fn.zato.outgoing.kafka.securityCell = function(item) {
 
     var baseHref = config.securityHref[secType];
     var query = encodeURIComponent(securityName);
-    var href = baseHref + '?cluster=' + config.clusterId + '&query=' + query;
+    var href = baseHref + '?query=' + query;
 
     out.cell = String.format('<a href="{0}">{1}</a> ({2})', href, securityName, item.sasl_mechanism);
     out.securityId = item.security_id;
@@ -223,7 +222,7 @@ $.fn.zato.outgoing.kafka.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', security.cell);
 
     // 2
-    row += $.fn.zato.delivery_tab.link_cell(config.deliveryConnType, item, config.clusterId);
+    row += $.fn.zato.delivery_tab.link_cell(config.deliveryConnType, item);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.kafka.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.kafka.delete_('{0}');\">Delete</a>", item.id));
 
@@ -260,15 +259,13 @@ $.fn.zato.outgoing.kafka.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.outgoing.kafka.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing Kafka connection `{0}` deleted',
-        'Are you sure you want to delete outgoing Kafka connection `{0}`?',
-        true);
+        'Are you sure you want to delete outgoing Kafka connection `{0}`?');
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.kafka.import_demo_config = function() {
-    var cluster_id = $(document).getUrlParam('cluster') || '1';
-    var import_url = '/zato/outgoing/kafka/import-demo-config?cluster=' + cluster_id;
+    var import_url = '/zato/outgoing/kafka/import-demo-config';
 
     var spinner_html = '<div id="import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
     $('body').append(spinner_html);

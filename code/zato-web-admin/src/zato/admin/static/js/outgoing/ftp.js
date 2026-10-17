@@ -178,12 +178,12 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, includeTr) {
     row += String.format('<td>{0}</td>', port);
     row += String.format('<td>{0}</td>', username);
     row += String.format('<td>{0}</td>',
-        String.format('<a href="/zato/outgoing/file-transfer/schedules/ftp/{0}/cluster/{1}/{2}/?name={3}">{4}</a>',
-        item.id, item.cluster_id, data.name_slug, item.name,
+        String.format('<a href="/zato/outgoing/file-transfer/schedules/ftp/{0}/{1}/?name={2}">{3}</a>',
+        item.id, data.name_slug, item.name,
         $.fn.zato.count_text(data.scheduler_schedule_count, 'schedule', 'schedules')));
     row += String.format('<td class="action"><a href="{0}">Command shell</a></td>', data.command_shell_url);
-    row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}&cluster={1}">Audit log</a></td>',
-        encodeURIComponent(item.name), item.cluster_id);
+    row += String.format('<td><a href="/zato/audit-log/?source=file-outgoing&object_name={0}">Audit log</a></td>',
+        encodeURIComponent(item.name));
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.ftp.edit('{0}')\">Edit</a>", item.id));
@@ -217,6 +217,5 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, includeTr) {
 $.fn.zato.outgoing.ftp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing FTP connection `{0}` deleted',
-        'Are you sure you want to delete outgoing FTP connection `{0}`?',
-        true);
+        'Are you sure you want to delete outgoing FTP connection `{0}`?');
 }

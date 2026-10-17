@@ -50,12 +50,12 @@ class ChannelIBMMQExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'ibm_mq_def_list':
+    def export(self, session: 'SASession') -> 'ibm_mq_def_list':
         """ Exports IBM MQ channel definitions.
         """
         logger.info('Exporting IBM MQ channel definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ)
 
         if not db_items:
             logger.info('No IBM MQ channel definitions found in DB')
@@ -97,12 +97,12 @@ class OutgoingIBMMQExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'ibm_mq_def_list':
+    def export(self, session: 'SASession') -> 'ibm_mq_def_list':
         """ Exports IBM MQ outgoing definitions.
         """
         logger.info('Exporting IBM MQ outgoing definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ)
 
         if not db_items:
             logger.info('No IBM MQ outgoing definitions found in DB')

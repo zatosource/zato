@@ -25,7 +25,6 @@ def _create_subscription(admin:'any_', sec_base_id:'int') -> 'str':
     """ Creates a pull subscription for the subscriber and returns the sub_key.
     """
     result = admin.invoke('zato.pubsub.subscription.create', {
-        'cluster_id': 1,
         'topic_name_list': [_topic],
         'sec_base_id': sec_base_id,
         'delivery_type': 'pull',
@@ -40,7 +39,7 @@ def _create_subscription(admin:'any_', sec_base_id:'int') -> 'str':
 def _delete_subscription(admin:'any_', sub_key:'str') -> 'None':
     """ Deletes a subscription by looking up its ID from the sub_key.
     """
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list

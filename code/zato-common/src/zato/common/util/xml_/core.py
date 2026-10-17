@@ -12,7 +12,7 @@ from functools import lru_cache
 from uuid import UUID
 
 # lxml
-from lxml import etree
+from lxml.etree import fromstring as etree_fromstring, XMLParser, XMLSyntaxError
 
 # Zato
 from zato.common.crypto.api import CryptoManager
@@ -47,10 +47,10 @@ QName_Cache_Size = 4096
 # and libxml2's own depth, size and amplification limits stay in place. Callers must not build their
 # own parser.
 #
-# An lxml parser instance is not thread-safe. Zato runs one OS thread per worker and everything
+# An lxml parser instance is not thread-safe. The server runs one OS thread and everything
 # above it is greenlets, which are cooperatively scheduled and therefore never re-enter a parse,
 # so a single shared instance is safe here. It must never be handed to a real threadpool.
-xml_parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False)
+xml_parser = XMLParser(resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,8 +63,8 @@ def parse_xml(data:'strbytes') -> 'any_':
     type declaration. Both SOAP 1.1 and SOAP 1.2 forbid one in a message.
     """
     try:
-        out = etree.fromstring(data, xml_parser)
-    except etree.XMLSyntaxError as e:
+        out = etree_fromstring(data, xml_parser)
+    except XMLSyntaxError as e:
         raise XMLException(f'Malformed XML -> {e}') from e
 
     # An empty doctype is what a document without one reports, so anything else is a declaration.

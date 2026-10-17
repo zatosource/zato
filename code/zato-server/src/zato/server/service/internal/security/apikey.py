@@ -14,9 +14,10 @@ from uuid import uuid4
 # Zato
 from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
-from zato.common.odb.model import Cluster, APIKeySecurity
+from zato.common.odb.model import APIKeySecurity
 from zato.common.odb.query import apikey_security_list
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
@@ -34,11 +35,11 @@ class GetList(AdminService):
     """
     _filter_by = APIKeySecurity.name,
 
-    input = 'cluster_id', *query_parameters
+    input = query_parameters
     output = 'id', 'name', 'is_active', 'username', '-header'
 
     def get_data(self, session:'SASession') -> 'any_':
-        search_result = self._search(apikey_security_list, session, self.request.input.cluster_id, False)
+        search_result = self._search(apikey_security_list, session, False)
         return elems_with_opaque(search_result) # type: ignore
 
     def handle(self) -> 'None':
@@ -52,7 +53,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new API key.
     """
-    input = 'name', 'is_active', '-cluster_id', '-header'
+    input = 'name', 'is_active', '-header'
     output = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
@@ -62,22 +63,19 @@ class Create(AdminService):
         input.password = uuid4().hex
         input.password = self.server.encrypt(input.password)
         input.header = input.header or self.server.api_key_header
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(APIKeySecurity).\
-                    filter(Cluster.id==cluster_id).\
                     filter(APIKeySecurity.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('API key `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('API key `{}` already exists'.format(input.name))
 
-                auth = APIKeySecurity(None, input.name, input.is_active, input.username, input.password, cluster)
+                auth = APIKeySecurity(None, input.name, input.is_active, input.username, input.password)
                 set_instance_opaque_attrs(auth, input)
 
                 session.add(auth)
@@ -107,25 +105,23 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an API key.
     """
-    input = 'id', 'name', 'is_active', '-cluster_id', '-header'
+    input = Int('id'), 'name', 'is_active', '-header'
     output = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
 
         input = self.request.input
         input.header = input.header or self.server.api_key_header
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
             try:
                 existing_one = session.query(APIKeySecurity).\
-                    filter(Cluster.id==cluster_id).\
                     filter(APIKeySecurity.name==input.name).\
                     filter(APIKeySecurity.id!=input.id).\
                     first()
 
                 if existing_one:
-                    raise Exception('API key `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('API key `{}` already exists'.format(input.name))
 
                 definition = session.query(APIKeySecurity).filter_by(id=input.id).one()
 
@@ -177,7 +173,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an API key.
     """
-    input = 'id',
+    input = Int('id'),
 
     def handle(self) -> 'None':
         with closing(self.odb.session()) as session:

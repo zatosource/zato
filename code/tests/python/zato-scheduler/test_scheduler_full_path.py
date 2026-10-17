@@ -104,7 +104,6 @@ class TestSchedulerFullPath:
     def test_01_create_jobs(self, client:'any_'):
 
         resp = self._parse(client.create(f'{JOB_SERVICE}.create',
-            cluster_id=1,
             name=_FAST_OK_NAME,
             is_active=True,
             job_type='interval_based',
@@ -117,7 +116,6 @@ class TestSchedulerFullPath:
         self.__class__.created_ids.append(resp['id'])
 
         resp = self._parse(client.create(f'{JOB_SERVICE}.create',
-            cluster_id=1,
             name=_SLOW_TIMEOUT_NAME,
             is_active=True,
             job_type='interval_based',
@@ -131,7 +129,6 @@ class TestSchedulerFullPath:
         self.__class__.created_ids.append(resp['id'])
 
         resp = self._parse(client.create(f'{JOB_SERVICE}.create',
-            cluster_id=1,
             name=_ERROR_NAME,
             is_active=True,
             job_type='interval_based',

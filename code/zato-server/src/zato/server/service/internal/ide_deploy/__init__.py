@@ -35,7 +35,7 @@ class Create(Service):
             self.response.payload.msg = 'Both "payload" and "payload_name" fields are required.'
             return
 
-        new_payload = dict(self.request.payload, cluster_id=self.server.cluster_id)
+        new_payload = dict(self.request.payload)
         try:
             self.invoke('zato.service.upload-package', dumps(new_payload), data_format=DATA_FORMAT.JSON)
         except Exception as e:

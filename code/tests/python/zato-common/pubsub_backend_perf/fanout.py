@@ -16,9 +16,9 @@ from gevent import joinall, spawn
 from humanize import intcomma
 
 # Zato
-from common import get_min_publish_rate, is_ssl_enabled, set_progress_context
+from common import get_min_publish_rate, set_progress_context
 from load import consume_until_done
-from perf import Min_Fanout_Delivery_Rate_Per_Second, Min_Fanout_Delivery_Rate_Per_Second_SSL
+from perf import Min_Fanout_Delivery_Rate_Per_Second
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 
@@ -137,12 +137,8 @@ def run_fanout_scenario() -> 'None':
     publish_rate = _message_count / publish_elapsed
     delivery_rate = delivered / elapsed
 
-    min_publish_rate = get_min_publish_rate()
-
-    if is_ssl_enabled():
-        min_delivery_rate = Min_Fanout_Delivery_Rate_Per_Second_SSL
-    else:
-        min_delivery_rate = Min_Fanout_Delivery_Rate_Per_Second
+    min_publish_rate  = get_min_publish_rate()
+    min_delivery_rate = Min_Fanout_Delivery_Rate_Per_Second
 
     assert publish_rate >= min_publish_rate, f'Fan-out publish rate too low: {intcomma(int(publish_rate))}/s'
     assert delivery_rate >= min_delivery_rate, f'Fan-out delivery rate too low: {intcomma(int(delivery_rate))}/s'

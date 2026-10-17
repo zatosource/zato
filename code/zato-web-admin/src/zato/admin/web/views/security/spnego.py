@@ -24,7 +24,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name'
     output_optional = 'is_active', 'principal', 'keytab_path', 'target_spn', 'needs_delegation'
     output_repeated = True

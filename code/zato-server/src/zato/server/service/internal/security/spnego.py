@@ -13,7 +13,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
-from zato.common.odb.model import Cluster, SPNEGOSecurity
+from zato.common.odb.model import SPNEGOSecurity
 from zato.common.odb.query import spnego_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service.internal import AdminService
@@ -47,11 +47,11 @@ class GetList(AdminService):
     """
     _filter_by = SPNEGOSecurity.name,
 
-    input = 'cluster_id', *query_parameters
+    input = query_parameters
     output = 'id', 'name', 'is_active', *_spnego_fields
 
     def get_data(self, session): # type: ignore
-        out = elems_with_opaque(self._search(spnego_list, session, self.request.input.cluster_id, False))
+        out = elems_with_opaque(self._search(spnego_list, session, False))
         return out
 
     def handle(self):
@@ -64,28 +64,25 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Kerberos (SPNEGO) definition.
     """
-    input = 'name', 'is_active', '-cluster_id', *_spnego_fields
+    input = 'name', 'is_active', *_spnego_fields
     output = 'id', 'name'
 
     def handle(self):
 
         input = self.request.input
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(SPNEGOSecurity).\
-                    filter(Cluster.id==cluster_id).\
                     filter(SPNEGOSecurity.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('SPNEGO definition `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('SPNEGO definition `{}` already exists'.format(input.name))
 
-                auth = SPNEGOSecurity(None, input.name, input.is_active, input.name, cluster)
+                auth = SPNEGOSecurity(None, input.name, input.is_active, input.name)
                 set_instance_opaque_attrs(auth, input)
 
                 session.add(auth)
@@ -118,7 +115,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a Kerberos (SPNEGO) definition.
     """
-    input = 'name', 'is_active', '-id', '-cluster_id', *_spnego_fields
+    input = 'name', 'is_active', '-id', *_spnego_fields
     output = 'id', 'name'
 
     def handle(self):
@@ -126,12 +123,10 @@ class Edit(AdminService):
         # Local aliases
         input = self.request.input
         input_id = input.get('id')
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session: # type: ignore
             try:
                 existing_one = session.query(SPNEGOSecurity).\
-                    filter(Cluster.id==cluster_id).\
                     filter(SPNEGOSecurity.name==input.name)
 
                 if input_id:
@@ -139,7 +134,7 @@ class Edit(AdminService):
                     existing_one = existing_one.first()
 
                 if existing_one:
-                    raise Exception('SPNEGO definition `{}` already exists on this cluster'.format(input.name))
+                    raise Exception('SPNEGO definition `{}` already exists'.format(input.name))
 
                 definition = session.query(SPNEGOSecurity)
 

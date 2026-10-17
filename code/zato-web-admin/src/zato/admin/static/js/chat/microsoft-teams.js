@@ -122,8 +122,7 @@ $.fn.zato.chat.microsoft_teams.data_table.new_row = function(item, data, include
 $.fn.zato.chat.microsoft_teams.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Microsoft Teams connection `{0}` deleted',
-        'Are you sure you want to delete Microsoft Teams connection `{0}`?',
-        true);
+        'Are you sure you want to delete Microsoft Teams connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

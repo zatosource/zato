@@ -80,6 +80,11 @@ Default_Delivery_Mode = DeliveryMode.Same_Time
 # Whether a destination receives messages when its configuration does not say
 Default_Is_Active = True
 
+# Everything a channel declares about its fan-out, which is what the pipeline reads off the channel
+# item a service was invoked with - a channel standing in for another one, such as the REST channel
+# backing an HL7 MLLP one, has the same three fields so that both transports deliver to the same places
+Channel_Fan_Out_Fields = ('destinations', 'respond_from', 'delivery_mode')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -89,6 +94,16 @@ Default_Retry_Sleep_Seconds = 1.0
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The HTTP methods a REST or FHIR destination can be delivered with - the methods the Dashboard panel
+# offers, parse_entry accepts and the adapters make a call with
+Known_Methods = (
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+)
 
 # The HTTP method a REST or FHIR destination uses when its options do not name one
 Default_Method = 'POST'

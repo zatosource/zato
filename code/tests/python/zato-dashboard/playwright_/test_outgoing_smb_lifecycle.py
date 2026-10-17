@@ -24,7 +24,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/outgoing/smb/?cluster=1&type_=outconn-smb'
+_Page_Url_Pattern = '/zato/outgoing/smb/?type_=outconn-smb'
 
 _Test_Name_Prefix = 'test.smb.' + CryptoManager.generate_hex_string(32) + '.'
 

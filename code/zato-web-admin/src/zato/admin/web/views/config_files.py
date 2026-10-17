@@ -290,12 +290,10 @@ def build_index_response(req:'any_', definition:'Definition') -> 'TemplateRespon
         logger.error('%s: could not read the files: %s', definition.log_prefix, format_exc())
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'file_list_json': dumps(file_list),
         'default_directory': directory_list[0],
         'max_editable_size': max_editable_size,
         'error': error,
-        'zato_clusters': True,
         'zato_template_name': definition.template_name,
     }
 

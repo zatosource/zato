@@ -142,13 +142,9 @@
 
 {% block "content" %}
 
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
             <h2 class="zato">{% include "zato/include/header-brand.html" with badge="SOAP" %}Outgoing SOAP connections</h2>
@@ -260,7 +256,7 @@
                         <td>{{ item.soap_version }}</td>
                         <td>{% if item.security_name %}<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{{ item.sec_type_name }}<br/>{{ item.security_name }}</a>{% else %}<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="">Click to add</a>{% endif %}</td>
 
-                        <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-outgoing&amp;object_name={{ item.name|urlencode }}">Audit log</a>{% endif %}</td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.soap.invoke('{{ item.id }}')">Invoke</a></td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="soap" %}
@@ -484,7 +480,6 @@
                         </tr>
                     </table>
 
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -637,7 +632,6 @@
                         </tr>
                     </table>
 
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
@@ -648,9 +642,7 @@
             <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
             <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
         </form>
-    {% endif %}
 
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

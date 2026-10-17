@@ -12,7 +12,6 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.typing_ import cast_
 
 # Local
@@ -44,9 +43,7 @@ def get_config_row(session:'Session', definition_id:'int') -> 'RuleApprovalConfi
     """
     # Query the one promoted configuration identity ..
     query = select(rule_approval_config_table)
-    cluster_condition = rule_approval_config_table.c.cluster_id == default_cluster_id
     definition_condition = rule_approval_config_table.c.definition_id == definition_id
-    query = query.where(cluster_condition)
     query = query.where(definition_condition)
     result = session.execute(query)
     row = result.one_or_none()
@@ -66,10 +63,8 @@ def get_version_approval(session:'Session', definition_id:'int', version:'int') 
     """
     # Query the one promoted approval identity ..
     query = select(rule_approval_table)
-    cluster_condition = rule_approval_table.c.cluster_id == default_cluster_id
     definition_condition = rule_approval_table.c.definition_id == definition_id
     version_condition = rule_approval_table.c.version == version
-    query = query.where(cluster_condition)
     query = query.where(definition_condition)
     query = query.where(version_condition)
     result = session.execute(query)
@@ -185,7 +180,6 @@ class ApprovalStore:
 
                 # .. stage the immutable approval row ..
                 values = {
-                    'cluster_id':    default_cluster_id,
                     'definition_id': definition_id,
                     'version':       version,
                     'content_hash':  approved_hash,
@@ -213,7 +207,6 @@ class ApprovalStore:
                 # .. and build the detached record from the values just written, avoiding a redundant re-read.
                 out = RuleApprovalRecord(
                     id=approval_id,
-                    cluster_id=default_cluster_id,
                     definition_id=definition_id,
                     version=version,
                     content_hash=approved_hash,
@@ -388,7 +381,6 @@ class ApprovalStore:
                 # .. store the configuration in place or create its first row ..
                 if existing is None:
                     insert_values = {
-                        'cluster_id':          default_cluster_id,
                         'definition_id':       definition_id,
                         'gate_enabled':        current_values['gate_enabled'],
                         'allow_self_approval': current_values['allow_self_approval'],
@@ -432,7 +424,6 @@ class ApprovalStore:
                 # .. and build the detached record from the values just written.
                 out = RuleApprovalConfigRecord(
                     id=config_id,
-                    cluster_id=default_cluster_id,
                     definition_id=definition_id,
                     gate_enabled=current_values['gate_enabled'],
                     allow_self_approval=current_values['allow_self_approval'],

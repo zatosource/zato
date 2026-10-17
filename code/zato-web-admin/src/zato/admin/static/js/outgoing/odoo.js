@@ -110,6 +110,5 @@ $.fn.zato.outgoing.odoo.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.outgoing.odoo.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Odoo connection [{0}] deleted',
-        'Are you sure you want to delete the outgoing Odoo connection [{0}]?',
-        true);
+        'Are you sure you want to delete the outgoing Odoo connection [{0}]?');
 }

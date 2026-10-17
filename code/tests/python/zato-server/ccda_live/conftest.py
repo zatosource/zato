@@ -250,7 +250,6 @@ def zato_server() -> 'any_':
 
     quickstart_command = [
         _zato_bin, 'quickstart', 'create', _temp_directory,
-        '--servers', '1',
         '--password', _password,
         '--server-api-client-for-scheduler-password', _password,
         '--no-scheduler',

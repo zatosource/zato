@@ -29,7 +29,7 @@ class TestOutgoingOData:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-odata')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-odata')
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'any_'):
@@ -50,7 +50,7 @@ class TestOutgoingOData:
         self.__class__.created_ids.append(response['id'])
 
     def test_03_get_list_after_create(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-odata')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-odata')
         names = []
 
         for item in data:
@@ -80,7 +80,7 @@ class TestOutgoingOData:
         assert 'id' in response
         self.__class__.created_ids.append(response['id'])
 
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-odata')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-odata')
         found = None
 
         for item in data:
@@ -113,7 +113,7 @@ class TestOutgoingOData:
             self.__class__.created_ids.append(response['id'])
 
     def test_06_get_list_batch(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-odata')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-odata')
         test_items = []
 
         for item in data:
@@ -126,7 +126,6 @@ class TestOutgoingOData:
         item_id = self.__class__.created_ids[0]
         response = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-odata-1-edited',
             is_active=True,
             type_='outconn-odata',
@@ -140,7 +139,7 @@ class TestOutgoingOData:
         assert response['id'] == item_id
 
     def test_08_get_list_after_edit(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-odata')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-odata')
         names = []
 
         for item in data:
@@ -162,7 +161,7 @@ class TestOutgoingOData:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_11_get_list_after_delete(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-odata')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-odata')
         test_items = []
 
         for item in data:
@@ -177,7 +176,7 @@ class TestOutgoingOData:
             self.__class__.created_ids.remove(item_id)
 
     def test_13_get_list_final(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-odata')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-odata')
         test_items = []
 
         for item in data:

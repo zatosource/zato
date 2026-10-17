@@ -40,14 +40,7 @@ review.config = {
     auditLogOnLabel: 'audit log on',
     auditLogOffLabel: 'audit log off',
     compactionLabel: ' compaction',
-    piiOnLabel: 'PII on',
-    piiOffLabel: 'PII off',
     safetyChecksLabel: ' safety checks',
-    nothingSelectedLabel: 'On, nothing selected yet',
-    landsLabel: ' lands',
-    landLabel: ' land',
-    detectorsLabel: ' detectors',
-    detectorLabel: ' detector',
     hostsAllowedLabel: ' hosts allowed',
     hostAllowedLabel: ' host allowed',
     allUrlsLabel: 'all URLs checked',
@@ -82,7 +75,7 @@ review.config = {
 // ////////////////////////////////////////////////////////////////////////
 
 // The three badge picker cards of step 1 - each folds its picker away the
-// way the PII and content safety cards of step 2 fold their fields.
+// way the hook services and content safety cards of step 2 fold their fields.
 review.pickerCards = function() {
 
     var ownConfig = wizard.config_own;
@@ -148,10 +141,10 @@ review.initOptionCards = function() {
         wizard.forms.open('compaction', this);
     });
 
-    // .. the PII and content safety cards expand and collapse in place ..
-    $('#mcp-wizard-pii-header').on('click', function() {
-        $('#mcp-wizard-pii-body').toggleClass('wizard-option-body-open');
-        $('#mcp-wizard-pii-chevron').toggleClass('wizard-chevron-open');
+    // .. the hook services and content safety cards expand and collapse in place ..
+    $('#mcp-wizard-hooks-header').on('click', function() {
+        $('#mcp-wizard-hooks-body').toggleClass('wizard-option-body-open');
+        $('#mcp-wizard-hooks-chevron').toggleClass('wizard-chevron-open');
     });
 
     $('#mcp-wizard-safety-header').on('click', function() {
@@ -271,37 +264,6 @@ review._multiSelectLabels = function(fieldName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-review._piiSummary = function() {
-
-    var config = review.config;
-
-    if(!wizard.field('safeguards_pii_enabled').prop('checked')) {
-        return config.offLabel;
-    }
-
-    var landCount = review._multiSelectLabels('safeguards_pii_lands').length;
-    var detectorCount = review._multiSelectLabels('safeguards_pii_detectors').length;
-
-    if(!landCount && !detectorCount) {
-        return config.nothingSelectedLabel;
-    }
-
-    var parts = [];
-
-    if(landCount) {
-        parts.push(landCount + (landCount === 1 ? config.landLabel : config.landsLabel));
-    }
-
-    if(detectorCount) {
-        parts.push(detectorCount + (detectorCount === 1 ? config.detectorLabel : config.detectorsLabel));
-    }
-
-    var out = config.onLabel + ', ' + parts.join(', ');
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 // What one picker card's summary says - how many badges its assigned
 // zone holds.
 review._pickerSummary = function(pickerAction) {
@@ -330,7 +292,7 @@ review._safetySummary = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // What the one line above the folded options says - the shape of each of
-// the four, counted rather than listed.
+// the cards, counted rather than listed.
 review._optionsSummary = function() {
 
     var config = review.config;
@@ -340,7 +302,7 @@ review._optionsSummary = function() {
     parts.push(wizard.field('is_audit_log_active').prop('checked') ? config.auditLogOnLabel : config.auditLogOffLabel);
     parts.push(review._checkedCount(config.compactionFields) + config.ofLabel +
         config.compactionFields.length + config.compactionLabel);
-    parts.push(wizard.field('safeguards_pii_enabled').prop('checked') ? config.piiOnLabel : config.piiOffLabel);
+    parts.push(wizard.hooks.countLabel().toLowerCase());
     parts.push(review._checkedCount(config.safetyFields) + config.ofLabel +
         config.safetyFields.length + config.safetyChecksLabel);
 
@@ -362,7 +324,9 @@ review.refreshSummaries = function() {
     review.setSummary('mcp-wizard-summary-options', review._optionsSummary());
     review.setSummary('mcp-wizard-summary-gateway-options', review._gatewayOptionsSummary());
     review.setSummary('mcp-wizard-summary-compaction', review._compactionSummary());
-    review.setSummary('mcp-wizard-summary-pii', review._piiSummary());
+    review.setSummary('mcp-wizard-summary-hooks', wizard.hooks.summary());
+    wizard.dataMasking.refreshSummaries();
+    review.setSummary(wizard.pii.config.summaryId, wizard.pii.summary());
     review.setSummary('mcp-wizard-summary-safety', review._safetySummary());
 };
 
@@ -391,27 +355,33 @@ review._badgeListRows = function(pickerAction, rowKey) {
 // ////////////////////////////////////////////////////////////////////////
 
 // The PII rows for the review - the switch alone while it is off, the whole
-// of the selection once it is on.
+// of the selection once it is on, with the masked fields ahead of them either way.
 review._piiReviewRows = function() {
 
     var config = review.config;
 
-    if(!wizard.field('safeguards_pii_enabled').prop('checked')) {
-        return [['Enabled', config.noLabel]];
+    var out;
+
+    if(wizard.field('safeguards_pii_enabled').prop('checked')) {
+
+        var landLabels = review._multiSelectLabels('safeguards_pii_lands');
+        var detectorLabels = review._multiSelectLabels('safeguards_pii_detectors');
+        var excludeLabels = review._multiSelectLabels('safeguards_pii_exclude');
+
+        out = [
+            ['Enabled', config.yesLabel],
+            ['Lands', landLabels.length ? landLabels.join(', ') : config.noneLabel],
+            ['Detectors', detectorLabels.length ? detectorLabels.join(', ') : config.noneLabel],
+            ['Exclude', excludeLabels.length ? excludeLabels.join(', ') : config.noneLabel],
+            ['Validate checksums', wizard.field('safeguards_pii_validate').prop('checked') ? config.onLabel : config.offLabel],
+            ['Stable replacements', wizard.field('safeguards_pii_stable_replacements').prop('checked') ? config.onLabel : config.offLabel]
+        ];
+    }
+    else {
+        out = [['Enabled', config.noLabel]];
     }
 
-    var landLabels = review._multiSelectLabels('safeguards_pii_lands');
-    var detectorLabels = review._multiSelectLabels('safeguards_pii_detectors');
-    var excludeLabels = review._multiSelectLabels('safeguards_pii_exclude');
-
-    var out = [
-        ['Enabled', config.yesLabel],
-        ['Lands', landLabels.length ? landLabels.join(', ') : config.noneLabel],
-        ['Detectors', detectorLabels.length ? detectorLabels.join(', ') : config.noneLabel],
-        ['Exclude', excludeLabels.length ? excludeLabels.join(', ') : config.noneLabel],
-        ['Validate checksums', wizard.field('safeguards_pii_validate').prop('checked') ? config.onLabel : config.offLabel],
-        ['Stable replacements', wizard.field('safeguards_pii_stable_replacements').prop('checked') ? config.onLabel : config.offLabel]
-    ];
+    out.unshift(['Data masking', wizard.dataMasking.reviewValue()]);
 
     return out;
 };
@@ -512,7 +482,7 @@ review._editAlerts = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The four option cards are folded away behind the More options line, so
+// The option cards are folded away behind the More options line, so
 // that line goes first - a card inside a closed body has nothing to open on.
 review._openOptions = function() {
 
@@ -535,17 +505,6 @@ review._editCompaction = function() {
 
     review._openOptions();
     wizard.forms.open('compaction', document.getElementById('mcp-wizard-card-compaction'));
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-review._editPII = function() {
-
-    review._openOptions();
-
-    if(!$('#mcp-wizard-pii-body').hasClass('wizard-option-body-open')) {
-        $('#mcp-wizard-pii-header').trigger('click');
-    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -655,9 +614,10 @@ review.render = function() {
             edit: review._editSecurity},
         {label: groups.shaping,        step: 1, rows: shapingRows, edit: review._editSizeCaps},
         {label: groups.alerts,         step: 1, rows: wizard.alerts.reviewRows(), edit: review._editAlerts},
+        {label: groups.pii,            step: 1, rows: review._piiReviewRows(), edit: wizard.pii.edit},
         {label: groups.gatewayOptions, step: 1, rows: gatewayOptionsRows, edit: review._editGatewayOptions},
         {label: groups.compaction,     step: 1, rows: compactionRows, edit: review._editCompaction},
-        {label: groups.pii,            step: 1, rows: review._piiReviewRows(), edit: review._editPII},
+        {label: groups.hooks,          step: 1, rows: wizard.hooks.reviewRows(), edit: wizard.hooks.edit},
         {label: groups.contentSafety,  step: 1, rows: safetyRows, edit: review._editSafety}
     ]);
 };

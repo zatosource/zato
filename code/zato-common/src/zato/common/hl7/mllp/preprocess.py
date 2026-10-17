@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import re
 
 # Zato
 from zato.common.util.api import pluralize
@@ -16,9 +17,11 @@ from zato.common.util.api import pluralize
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import stranydict
     from zato.hl7v2 import HL7Message
     from zato.hl7v2_rs import ToleranceConfig
     HL7Message = HL7Message
+    stranydict = stranydict
     ToleranceConfig = ToleranceConfig
 
 # ################################################################################################################################
@@ -38,13 +41,12 @@ _Minimum_Encoding_Characters_Length = 4
 # MSH field separator position in MSH|...|
 _MSH_Prefix = 'MSH|'
 
-# What ends every segment of a message
-_Segment_Terminator = '\r'
-
-# Where a second message in one frame begins. Line endings have already been normalised to CR by
-# the time a payload is split, so a header that opens a message always follows a segment terminator
-# and one that appears mid-field never does.
-_Concatenated_Message_Prefix = _Segment_Terminator + _MSH_Prefix
+# Where a second message in one frame begins - a header that opens a message always follows the end
+# of a segment and one that appears mid-field never does. The split accepts any of the three line
+# endings, because the normalization of line endings is a toggle of its own and a payload is split
+# the same way whether or not that toggle is on. The ending is captured so that each message but the
+# last keeps the one it arrived with.
+_concatenated_message_pattern = re.compile('(\r\n|\r|\n)MSH\\|')
 
 # How many pipe-separated parts a whole MSH segment has. MSH-12, the version id, is the last
 # field the standard requires, and splitting a segment that carries it gives twelve parts -
@@ -53,6 +55,9 @@ _MSH_Whole_Length = 12
 
 # Batch/File header prefixes - used as a tuple for startswith matching
 _Batch_Prefixes = ('BHS|', 'FHS|')
+
+# Where the first segment ends, whichever of the line endings the sender used
+_first_line_pattern = re.compile('\r\n|\r|\n')
 
 # Encoding map from MSH-18 values to Python codec names - an empty or
 # unrecognized MSH-18 maps to the channel's default encoding instead.
@@ -173,27 +178,29 @@ def split_concatenated_messages(data:'str') -> 'list[str]':
         return []
 
     # A second message can only begin where a segment ended, so the split is anchored on a
-    # segment terminator followed by the header. An MSH| inside a free-text field is text ..
-    parts = data.split(_Concatenated_Message_Prefix)
+    # line ending followed by the header. An MSH| inside a free-text field is text ..
+    parts = _concatenated_message_pattern.split(data)
 
     # .. and a payload holding one message is that message, whatever its fields say ..
     if len(parts) == 1:
         return [data]
 
-    messages:'list[str]' = []
-    last_index = len(parts) - 1
+    # .. the pattern captures the line ending, so the parts alternate between the text of a message
+    # .. and the ending that closed it - the first part is the first message's text, every ending
+    # .. that follows belongs to the message before it, and every text that follows an ending lost
+    # .. the header the split consumed.
+    messages:'list[str]'  = []
+    message_text:'str' = parts[0]
 
-    for index, part in enumerate(parts):
+    for index in range(1, len(parts), 2):
 
-        # .. every part but the first lost the header the split consumed ..
-        if index:
-            part = _MSH_Prefix + part
+        line_ending = parts[index]
+        next_text = parts[index + 1]
 
-        # .. and every part but the last lost the terminator that ended it.
-        if index != last_index:
-            part = part + _Segment_Terminator
+        messages.append(message_text + line_ending)
+        message_text = _MSH_Prefix + next_text
 
-        messages.append(part)
+    messages.append(message_text)
 
     logger.warning('Split %d concatenated messages from a single MLLP frame', len(messages))
 
@@ -274,12 +281,9 @@ def decode_with_msh18(raw_bytes:'bytes', default_encoding:'str' = 'utf-8') -> 's
     # First, do a preliminary ASCII decode of just the MSH line to read MSH-18 ..
     preliminary = raw_bytes.decode('ascii', errors='replace')
 
-    first_cr = preliminary.find('\r')
-
-    if first_cr == -1:
-        msh_line = preliminary
-    else:
-        msh_line = preliminary[:first_cr]
+    # .. the line ends at whichever terminator the sender used, because the endings are normalized
+    # .. only after the bytes are decoded, so a frame with LF endings is still in them here ..
+    msh_line = _first_line_pattern.split(preliminary, 1)[0]
 
     # .. extract MSH-18 (character set).
     # When splitting MSH on '|', MSH-1 is the separator itself so
@@ -374,6 +378,28 @@ def build_tolerance_config(**toggles:'bool') -> 'ToleranceConfig':
     for name, value in toggles.items():
         setattr(out, name, value)
 
+    return out
+
+# ################################################################################################################################
+
+def build_channel_tolerance_config(config:'stranydict') -> 'ToleranceConfig':
+    """ Builds the parser's tolerance configuration from a channel's configuration, which has one
+    value per name in Tolerance_Names. Both the channel, which parses a message as it arrives, and
+    a reprocess of a stored message, which parses it again for the same channel, build the
+    configuration here, so that the service receives the same structured message in both cases.
+    """
+
+    # Imported here so that the field list, which reads the shared defaults, is not pulled in
+    # by every caller of this module
+    from zato.common.hl7.mllp.fields import Tolerance_Names
+    from zato.common.util.api import asbool
+
+    toggles = {}
+
+    for name in Tolerance_Names:
+        toggles[name] = asbool(config[name])
+
+    out = build_tolerance_config(**toggles)
     return out
 
 # ################################################################################################################################

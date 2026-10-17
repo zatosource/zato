@@ -29,12 +29,11 @@ class TestOutgoingSQL:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-out-sql-1',
             is_active=True,
             engine='postgresql+pg8000',
@@ -49,14 +48,13 @@ class TestOutgoingSQL:
         self.__class__.created_ids.append(resp['id'])
 
     def test_03_get_list_after_create(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-out-sql-1' in names
 
     def test_04_create_batch(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'test-out-sql-{i}',
                 is_active=True,
                 engine='postgresql+pg8000',
@@ -70,7 +68,7 @@ class TestOutgoingSQL:
             self.__class__.created_ids.append(resp['id'])
 
     def test_05_get_list_batch(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-out-sql-')]
         assert len(test_items) >= 5
 
@@ -78,7 +76,6 @@ class TestOutgoingSQL:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-out-sql-1-edited',
             is_active=True,
             engine='postgresql+pg8000',
@@ -91,7 +88,7 @@ class TestOutgoingSQL:
         assert resp['id'] == item_id
 
     def test_07_get_list_after_edit(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-out-sql-1-edited' in names
         assert 'test-out-sql-1' not in names
@@ -104,7 +101,6 @@ class TestOutgoingSQL:
         os.close(sqlite_fd)
         try:
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name='test-out-sql-ping-live',
                 is_active=True,
                 engine='sqlite',
@@ -128,7 +124,7 @@ class TestOutgoingSQL:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_10_get_list_after_delete(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-out-sql-')]
         assert len(test_items) >= 4
 
@@ -138,13 +134,12 @@ class TestOutgoingSQL:
             self.__class__.created_ids.remove(item_id)
 
     def test_12_get_list_final(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-out-sql-')]
         assert len(test_items) == 0
 
     def test_13_create_snowflake(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-out-sql-snowflake',
             is_active=True,
             engine='snowflake',
@@ -161,7 +156,6 @@ class TestOutgoingSQL:
 
     def test_14_create_redshift(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-out-sql-redshift',
             is_active=True,
             engine='redshift+redshift_connector',
@@ -177,7 +171,7 @@ class TestOutgoingSQL:
         self.__class__.created_ids.append(resp['id'])
 
     def test_15_get_list_cloud_engines(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         by_name = {item['name']: item for item in data}
 
         assert by_name['test-out-sql-snowflake']['engine'] == 'snowflake'
@@ -187,7 +181,6 @@ class TestOutgoingSQL:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-out-sql-snowflake-edited',
             is_active=True,
             engine='snowflake',
@@ -200,7 +193,7 @@ class TestOutgoingSQL:
         )
         assert resp['id'] == item_id
 
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-out-sql-snowflake-edited' in names
         assert 'test-out-sql-snowflake' not in names
@@ -210,6 +203,6 @@ class TestOutgoingSQL:
             client.delete(f'{SERVICE}.delete', id=item_id)
             self.__class__.created_ids.remove(item_id)
 
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('test-out-sql-')]
         assert len(test_items) == 0

@@ -18,7 +18,7 @@ if 0:
 
 def test_shot(logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
     page = logged_in_page
-    url = zato_dashboard['dashboard_url'] + '/zato/alerting/rules/config/?cluster=1'
+    url = zato_dashboard['dashboard_url'] + '/zato/alerting/rules/config/'
 
     for _ in range(10):
         _ = page.goto(url)

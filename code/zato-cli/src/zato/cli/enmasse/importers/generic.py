@@ -76,11 +76,11 @@ class GenericConnectionImporter:
 
 # ################################################################################################################################
 
-    def get_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
         logger.info('Retrieving connection definitions from database (%s)', self.connection_type)
-        connections = connection_list(session, cluster_id, self.connection_type, False)
+        connections = connection_list(session, self.connection_type, False)
 
         self._process_defs(connections, out)
         logger.info('Total connection definitions from DB: %d (%s)', len(out), self.connection_type)
@@ -94,13 +94,6 @@ class GenericConnectionImporter:
 
     def validate_definition(self, connection_def:'anydict') -> 'None':
         """ May be overridden by subclasses to reject a YAML definition before anything is written.
-        """
-
-# ################################################################################################################################
-
-    def sync_linked_jobs(self, session:'SASession', merged_def:'anydict', connection:'any_') -> 'None':
-        """ May be overridden by subclasses to create or update the scheduler jobs a connection of this type
-        links to besides its health check, each storing its job ID back in the definition.
         """
 
 # ################################################################################################################################
@@ -234,12 +227,8 @@ class GenericConnectionImporter:
         # after the connection exists, so they must not land in the opaque attributes as-is.
         schedules = connection_def.pop('schedules', None) if self.supports_schedules else None
 
-        # Get the cluster instance from the importer
-        cluster = self.importer.get_cluster(session)
-
         # Create a new generic connection
         connection = GenericConn()
-        connection.cluster = cluster
 
         # Apply defaults unless overridden in YAML
         for key, default_value in self.connection_defaults.items():
@@ -282,7 +271,6 @@ class GenericConnectionImporter:
         # .. and so can its health check job, whose ID is then stored with the connection
         if self.health_check_conn_type:
             sync_health_check_job(self.importer, session, merged_def, connection, self.health_check_conn_type)
-            self.sync_linked_jobs(session, merged_def, connection)
             set_instance_opaque_attrs(connection, merged_def)
 
         return connection
@@ -335,7 +323,6 @@ class GenericConnectionImporter:
         # its ID landing in the opaque attributes with everything else
         if self.health_check_conn_type:
             sync_health_check_job(self.importer, session, merged_def, connection, self.health_check_conn_type)
-            self.sync_linked_jobs(session, merged_def, connection)
 
         # Each secret lands in one place only - encrypted in the opaque attributes if a wrapper reads it there,
         # otherwise nowhere but the secret column
@@ -426,7 +413,7 @@ class GenericConnectionImporter:
                 job_def['start_date'] = entry['start_date']
 
             # The job may already exist from a previous import, in which case it is updated in place
-            existing_job = session.query(Job).filter_by(name=job_name, cluster_id=self.importer.cluster_id).first()
+            existing_job = session.query(Job).filter_by(name=job_name).first()
 
             if existing_job:
                 job_def['id'] = existing_job.id
@@ -445,7 +432,7 @@ class GenericConnectionImporter:
         # by the naming convention that ties a job to its connection.
         prefix = get_job_name(connection.type_, connection.name, '')
         job_query = session.query(Job).filter(Job.name.startswith(prefix)) # type: ignore
-        existing_jobs = job_query.filter(Job.cluster_id==self.importer.cluster_id).all() # type: ignore
+        existing_jobs = job_query.all() # type: ignore
 
         for job in existing_jobs:
             if job.name not in wanted_job_names:
@@ -462,7 +449,7 @@ class GenericConnectionImporter:
     def sync_definitions(self, conn_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d connection definitions from YAML (%s)', len(conn_list), self.connection_type)
 
-        db_defs = self.get_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_defs_from_db(session)
         to_create, to_update = self.compare_defs(conn_list, db_defs)
 
         out_created = []

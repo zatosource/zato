@@ -28,8 +28,8 @@ if 0:
 
 _Test_Name_Prefix = 'test.amqp.password.' + CryptoManager.generate_hex_string(32) + '.'
 
-_Outgoing_AMQP_Page_Url = '/zato/outgoing/amqp/?cluster=1'
-_Channel_AMQP_Page_Url = '/zato/channel/amqp/?cluster=1'
+_Outgoing_AMQP_Page_Url = '/zato/outgoing/amqp/'
+_Channel_AMQP_Page_Url = '/zato/channel/amqp/'
 
 # The JS namespaces the edit dialogs of both pages are opened through
 _Outgoing_AMQP_Namespace = 'outgoing.amqp'

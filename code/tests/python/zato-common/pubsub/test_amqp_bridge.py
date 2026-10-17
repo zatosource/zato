@@ -12,7 +12,16 @@ from unittest.mock import MagicMock, patch
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.pubsub.outgoing import get_outgoing_sub_config, get_outgoing_sub_key, get_outgoing_topic_name
 from zato.server.base.config_manager import ConfigManager
+from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_conn_type = 'hl7-mllp'
+_conn_id = 7
+_conn_name = 'orders'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,6 +38,7 @@ class _ConfigManagerStub:
         self.server = MagicMock()
         self._push_subs = {}
         self._topic_backends = {}
+        self.outgoing_queue_depth = OutgoingQueueDepth()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,7 +54,6 @@ class TestBridgeChannelToTopicMapping(unittest.TestCase):
             'amqp_exchange': 'my.exchange',
             'amqp_routing_key': 'topic.amqp',
             'amqp_channel_name': 'channel.1',
-            'original_service_name': 'original.service',
         }
 
 # ################################################################################################################################
@@ -150,6 +159,30 @@ class TestBridgeDelivery(unittest.TestCase):
 
             with self.assertRaises(Exception):
                 self.stub.pubsub_deliver_amqp_message('topic.amqp', 'message body', 'test-cid-001')
+
+# ################################################################################################################################
+
+    def test_a_concluded_outgoing_message_leaves_the_depth(self) -> 'None':
+        """ A message of an outgoing connection's queue that its delivery service concluded has left the broker,
+        so the depth gating the connection's direct attempts is lowered by one, while one the service raised on stays.
+        """
+        sub_key = get_outgoing_sub_key(_conn_type, _conn_id)
+        topic_name = get_outgoing_topic_name(_conn_type, _conn_name)
+
+        self.stub._push_subs = {sub_key: [get_outgoing_sub_config(sub_key, topic_name)]}
+        self.stub.outgoing_queue_depth.set_counts({sub_key: 2})
+
+        self.stub.pubsub_deliver_amqp_message(topic_name, 'message body', 'test-cid-001')
+
+        self.stub.server.invoke.assert_called_once_with(PubSub.Outgoing.Delivery_Service, 'message body')
+        self.assertEqual(self.stub.outgoing_queue_depth.get(sub_key), 1)
+
+        self.stub.server.invoke.side_effect = Exception('The endpoint is down')
+
+        with self.assertRaises(Exception):
+            self.stub.pubsub_deliver_amqp_message(topic_name, 'message body', 'test-cid-002')
+
+        self.assertEqual(self.stub.outgoing_queue_depth.get(sub_key), 1)
 
 # ################################################################################################################################
 # ################################################################################################################################

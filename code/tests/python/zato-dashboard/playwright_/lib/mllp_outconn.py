@@ -19,7 +19,7 @@ if 0:
 # ################################################################################################################################
 
 # The list page these helpers start from
-Outgoing_Page_Url = '/zato/outgoing/hl7/mllp/?cluster=1&type_=outconn-hl7-mllp'
+Outgoing_Page_Url = '/zato/outgoing/hl7/mllp/?type_=outconn-hl7-mllp'
 
 # The wizard creating and editing a connection - every element on the page derives its id
 # from this one, so the selectors below are built out of it rather than spelled out

@@ -26,14 +26,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Basic_Auth_Page_Url = '/zato/security/basic-auth/?cluster=1'
-_Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
-_Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
-_Subscription_Page_Url = '/zato/pubsub/subscription/?cluster=1'
-_Outgoing_REST_Page_Url = '/zato/http-soap/?cluster=1&connection=outgoing&transport=plain_http'
-_Channel_REST_Page_Url = '/zato/http-soap/?cluster=1&connection=channel&transport=plain_http'
-_Outgoing_AMQP_Page_Url = '/zato/outgoing/amqp/?cluster=1'
-_Channel_AMQP_Page_Url = '/zato/channel/amqp/?cluster=1'
+_Basic_Auth_Page_Url = '/zato/security/basic-auth/'
+_Topic_Page_Url = '/zato/pubsub/topic/'
+_Permission_Page_Url = '/zato/pubsub/permission/'
+_Subscription_Page_Url = '/zato/pubsub/subscription/'
+_Outgoing_REST_Page_Url = '/zato/http-soap/?connection=outgoing&transport=plain_http'
+_Channel_REST_Page_Url = '/zato/http-soap/?connection=channel&transport=plain_http'
+_Outgoing_AMQP_Page_Url = '/zato/outgoing/amqp/'
+_Channel_AMQP_Page_Url = '/zato/channel/amqp/'
 
 # ################################################################################################################################
 # ################################################################################################################################

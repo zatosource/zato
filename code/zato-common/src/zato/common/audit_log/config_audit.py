@@ -197,32 +197,40 @@ def record_view_event(
     audit_log:'AuditLog',
     *,
     actor:'str',
-    viewed_event_id:'int',
+    viewed_event_id:'intnone',
     screen:'str',
     cid:'str' = '',
     viewed_source:'str' = '',
     viewed_object_name:'str' = '',
+    viewed_msg_id:'str' = '',
     ) -> 'intnone':
-    """ Writes one view-access event - who opened which event's message body
-    and from which screen. This is access logging, not access control -
-    the view already happened, this records it. Returns the event id.
+    """ Writes one view-access event - who opened which message body and from which screen.
+    A body read off an audit event names the event's id, a body read off a message that is
+    not an audit event, e.g. one waiting in a delivery queue, names no event id and carries the
+    message id instead. This is access logging, not access control - the view already happened,
+    this records it. Returns the event id.
     """
 
     # The viewer and the viewed event are searchable attributes -
     # "who looked at this message" and "everything this person viewed" are one query each.
-    attrs = {
+    attrs:'stranydict' = {
         'actor': actor,
-        'viewed_event_id': viewed_event_id,
         'screen': screen,
     }
 
-    # Which source and object the viewed event belongs to, when the caller knows them -
+    if viewed_event_id is not None:
+        attrs['viewed_event_id'] = viewed_event_id
+
+    # Which source and object the viewed message belongs to, when the caller knows them -
     # an auditor reads "who viewed the messages of this channel" straight off these.
     if viewed_source:
         attrs['viewed_source'] = viewed_source
 
     if viewed_object_name:
         attrs['viewed_object_name'] = viewed_object_name
+
+    if viewed_msg_id:
+        attrs['viewed_msg_id'] = viewed_msg_id
 
     # The payload itself says who viewed what - an auditor reading this one record
     # alone, with no attr table in front of them, still has the whole answer
@@ -232,6 +240,7 @@ def record_view_event(
         'screen': screen,
         'viewed_source': viewed_source,
         'viewed_object_name': viewed_object_name,
+        'viewed_msg_id': viewed_msg_id,
     })
 
     insert_options = {

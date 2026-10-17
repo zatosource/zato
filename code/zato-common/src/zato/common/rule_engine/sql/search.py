@@ -13,7 +13,6 @@ import re
 from sqlalchemy import func, select
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.render import render_document
 
 # Local
@@ -56,10 +55,8 @@ class ContentSearch:
             rule_definition_table.c.name,
             rule_definition_table.c.document,
         )
-        cluster_condition = rule_definition_table.c.cluster_id == default_cluster_id
         type_condition = rule_definition_table.c.object_type == Definition_Type_Ruleset
         active_condition = rule_definition_table.c.is_active.is_(True)
-        query = query.where(cluster_condition)
         query = query.where(type_condition)
         query = query.where(active_condition)
 

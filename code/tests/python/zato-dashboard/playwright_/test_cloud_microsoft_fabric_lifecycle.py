@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/cloud/microsoft-fabric/?cluster=1&type_=cloud-microsoft-fabric'
+_Page_Url_Pattern = '/zato/cloud/microsoft-fabric/?type_=cloud-microsoft-fabric'
 
 _Test_Name_Prefix = 'test.microsoft.fabric.' + CryptoManager.generate_hex_string(32) + '.'
 

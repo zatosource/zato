@@ -1,0 +1,33 @@
+label: IT operations
+position: 18
+fields:
+  - email
+  - name
+  - description
+  - phone
+  - caller_id
+  - comments
+  - work_notes
+  - close_notes
+  - short_description
+  - mobile_phone
+  - user_name
+  - first_name
+  - last_name
+  - emailaddress
+  - displayname
+  - profilefullname
+  - alternatecontactemail
+  - owneremail
+  - ownerteamemail
+  - symptom
+  - resolution
+  - loginid
+  - handle
+  - ip_addresses
+  - mac_address
+  - realname
+  - password
+  - http_cal_url
+  - web_cal_url
+  - avatar_url

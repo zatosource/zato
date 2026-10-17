@@ -53,6 +53,16 @@ mcp_gateway:
     url_path: /mcp/enmasse-export-2
 """
 
+# The keys of data masking and of the hook services.
+_masking_and_hook_keys = [
+    'safeguards_masking_sets',
+    'safeguards_masking_excluded',
+    'safeguards_masking_custom_fields',
+    'safeguards_masking_custom_enabled',
+    'request_hook_service',
+    'response_hook_service',
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -105,14 +115,12 @@ class TestEnmasseMCPGatewayExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file_path)
 
-        _ = self.importer.get_cluster(self.session)
-
         # .. import the gateways ..
         gateway_definitions = self.yaml_config['mcp_gateway']
         _, _ = self.gateway_importer.sync_definitions(gateway_definitions, self.session)
 
         # .. and export them back.
-        all_exported = self.gateway_exporter.export(self.session, self.importer.cluster_id)
+        all_exported = self.gateway_exporter.export(self.session)
 
         out = {}
 
@@ -151,6 +159,18 @@ class TestEnmasseMCPGatewayExporter(TestCase):
         item = exported_by_name['enmasse.mcp.export.2']
 
         for key in MCP.Connection_List_Keys:
+            self.assertNotIn(key, item, f'`{key}` should not be in the export')
+
+# ################################################################################################################################
+
+    def test_a_gateway_without_masking_or_hooks_exports_none(self:'any_') -> 'None':
+
+        exported_by_name = self._import_and_export()
+
+        # A gateway with data masking and the hook services at their defaults exports none of their keys.
+        item = exported_by_name['enmasse.mcp.export.2']
+
+        for key in _masking_and_hook_keys:
             self.assertNotIn(key, item, f'`{key}` should not be in the export')
 
 # ################################################################################################################################

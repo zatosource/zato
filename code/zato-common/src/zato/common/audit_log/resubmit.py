@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The source-agnostic core of every resubmit - loading a stored event back, the registry
 # of per-source handlers, the per-hop resend over outgoing events, and bulk resubmit.
 # Each source contributes its own resend and reprocess semantics on top of this module,
-# the way zato.common.as2.resubmit and zato.common.hl7.resubmit do.
+# the way zato.common.hl7.resubmit and zato.common.email.resubmit do.
 
 from __future__ import annotations
 
@@ -74,15 +74,6 @@ Resend_Hop_Service = 'zato.audit-log.resend-hop'
 # its per-row actions out of this catalog and the alerting collectors read it to say whether
 # an alert's newest failing event can be sent again, which is what turns the alert's link
 # into a deep link at that event.
-_as2_actions = {
-    AuditEvent.Message_Sent:     {'label': Resubmit_Label, 'service': 'zato.audit-log.as2.resend'},
-    AuditEvent.Message_Received: {'label': Resubmit_Label, 'service': 'zato.audit-log.as2.reprocess'},
-}
-
-_as4_actions = {
-    AuditEvent.Message_Sent:     {'label': Resubmit_Label, 'service': 'zato.audit-log.as4.resend'},
-    AuditEvent.Message_Received: {'label': Resubmit_Label, 'service': 'zato.audit-log.as4.reprocess'},
-}
 
 # What a channel received is re-run through the channel's own machinery
 _mllp_channel_actions = {
@@ -141,8 +132,6 @@ _http_channel_actions = {
 
 # The sources whose events carry resubmit actions at all, each with its own catalog
 source_resubmit_actions = {
-    AuditSource.AS2: _as2_actions,
-    AuditSource.AS4: _as4_actions,
     AuditSource.MLLP_Channel: _mllp_channel_actions,
     AuditSource.MLLP_Outgoing: _mllp_outgoing_actions,
     AuditSource.FHIR: _hop_actions,
@@ -586,12 +575,21 @@ def bulk_resubmit(
         row:'stranydict' = {'event_id': event_id, 'result': '', 'detail': ''}
         out.rows.append(row)
 
-        event = load_event(event_id)
-        payload = get_stored_payload(event)
+        # A row whose event cannot be loaded, or carries nothing to send, is an error row of its own and
+        # the rest of the operation goes on - there is no key to release, as none was claimed for it yet
+        try:
+            event = load_event(event_id)
+            payload = get_stored_payload(event)
 
-        # The optional transform happens before anything is sent or reported
-        if transform:
-            payload = transform(payload)
+            # The optional transform happens before anything is sent or reported
+            if transform:
+                payload = transform(payload)
+
+        except Exception:
+            row['result'] = Row_Error
+            row['detail'] = format_exc()
+            out.error_count += 1
+            continue
 
         # A dry run stops here - the row reports what would happen
         if dry_run:

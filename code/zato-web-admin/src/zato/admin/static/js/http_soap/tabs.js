@@ -29,10 +29,12 @@ $.fn.zato.http_soap.tabs.init = function() {
         $.fn.zato.http_soap.attach_datetimepicker(['#id_deprecation_sunset', '#id_edit-deprecation_sunset']);
     }
 
-    if($.fn.zato.http_soap.is_rest_outgoing()) {
-
-        // The Delivery tab's popover is set up once for both popups
+    // The Delivery tab's popover is set up once for both popups
+    if($.fn.zato.http_soap.has_delivery_tab()) {
         $.fn.zato.delivery_tab.init();
+    }
+
+    if($.fn.zato.http_soap.is_rest_outgoing()) {
 
         // Attach date-time pickers to the scheduler start date fields in both popups ..
         $.fn.zato.http_soap.attach_datetimepicker(['#id_scheduler_start_date', '#id_edit-scheduler_start_date']);
@@ -66,6 +68,14 @@ $.fn.zato.http_soap.is_rest_channel = function() {
 // the Django side decides, the page carries its answer in the tab's config element
 $.fn.zato.http_soap.has_alerts_tab = function() {
     var configElement = document.getElementById('http-soap-alerts-tab-config');
+    var out = configElement !== null;
+    return out;
+}
+
+// An outgoing REST connection and a channel of either transport carry the Delivery tab -
+// the Django side decides, the page carries its answer in the tab's config element
+$.fn.zato.http_soap.has_delivery_tab = function() {
+    var configElement = document.getElementById('delivery-tab-config');
     var out = configElement !== null;
     return out;
 }
@@ -111,6 +121,11 @@ $.fn.zato.http_soap.channelTabLabels = function() {
         main:   'Main',
         alerts: $.fn.zato.alerts_tab.tab_label()
     };
+
+    if($.fn.zato.http_soap.has_delivery_tab()) {
+        out.delivery = 'Delivery';
+    }
+
     return out;
 }
 

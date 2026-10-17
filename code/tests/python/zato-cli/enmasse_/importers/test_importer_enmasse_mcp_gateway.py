@@ -155,6 +155,29 @@ class TestEnmasseMCPGatewayImporter(TestCase):
 
 # ################################################################################################################################
 
+    def test_a_gateway_without_masking_or_hooks_defaults_them(self:'any_') -> 'None':
+
+        self._setup_test_environment()
+
+        # Import the definitions ..
+        gateway_definitions = self.yaml_config['mcp_gateway']
+        created, _ = self.gateway_importer.sync_definitions(gateway_definitions, self.session)
+
+        gateways_by_name = self._get_gateways_by_name(created)
+
+        # .. the gateway that states neither data masking nor hook services holds their defaults.
+        gateway = gateways_by_name['enmasse.mcp.import.2']
+        opaque = json.loads(gateway.opaque1)
+
+        self.assertEqual(opaque['safeguards_masking_sets'], [])
+        self.assertEqual(opaque['safeguards_masking_excluded'], [])
+        self.assertEqual(opaque['safeguards_masking_custom_fields'], [])
+        self.assertIs(opaque['safeguards_masking_custom_enabled'], True)
+        self.assertEqual(opaque['request_hook_service'], '')
+        self.assertEqual(opaque['response_hook_service'], '')
+
+# ################################################################################################################################
+
     def test_a_security_group_existing_only_in_the_database_resolves(self:'any_') -> 'None':
 
         self._setup_test_environment()
@@ -181,7 +204,6 @@ class TestEnmasseMCPGatewayImporter(TestCase):
         channel = self.session.query(HTTPSOAP).filter(
             HTTPSOAP.name == gateway_name,
             HTTPSOAP.connection == CONNECTION.CHANNEL,
-            HTTPSOAP.cluster_id == self.importer.cluster_id,
         ).one()
 
         opaque = parse_instance_opaque_attr(channel)

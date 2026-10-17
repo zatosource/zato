@@ -86,7 +86,6 @@ $.fn.zato.outgoing.amqp.edit = function(id) {
 
 $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
     var row = '';
-    let cluster_id = $(document).getUrlParam('cluster');
 
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
@@ -107,8 +106,8 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
 
     // Action buttons
     var config = $.fn.zato.outgoing.amqp.config;
-    row += String.format('<td><a href="/zato/outgoing/' + config.path_segment + '/invoke/{0}/{1}/{2}/?cluster={3}">Publish</a></td>',
-        item.id, item.name, $.fn.zato.slugify(item.name), cluster_id);
+    row += String.format('<td><a href="/zato/outgoing/' + config.path_segment + '/invoke/{0}/{1}/{2}/">Publish</a></td>',
+        item.id, item.name, $.fn.zato.slugify(item.name));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.amqp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.amqp.delete_('{0}');\">Delete</a>", item.id));
 
@@ -135,6 +134,5 @@ $.fn.zato.outgoing.amqp.delete_ = function(id) {
     var config = $.fn.zato.outgoing.amqp.config;
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing ' + config.label + ' connection `{0}` deleted',
-        'Are you sure you want to delete outgoing ' + config.label + ' connection `{0}`?',
-        true);
+        'Are you sure you want to delete outgoing ' + config.label + ' connection `{0}`?');
 }

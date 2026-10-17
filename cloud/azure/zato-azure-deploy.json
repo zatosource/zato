@@ -85,7 +85,18 @@
       "type": "securestring",
       "defaultValue": "",
       "metadata": {
-        "description": "Secrets for the environment, one key=value per line, which enmasse reads from env.ini."
+        "description": "Secrets for the environment, one key=value per line, which enmasse reads from env.ini. Secrets of the same name in the Key Vault take precedence."
+      }
+    },
+    "useKeyVault": {
+      "type": "string",
+      "defaultValue": "False",
+      "allowedValues": [
+        "True",
+        "False"
+      ],
+      "metadata": {
+        "description": "Whether to create a Key Vault that the virtual machine reads the secrets of the environment from on each start. A secret named My-API-Password in the vault becomes My_API_Password in env.ini."
       }
     },
     "allowedSourceAddresses": {
@@ -158,13 +169,21 @@
     "servingMarker": "/run/zato-deploy/serving",
     "deployFilesUrl": "https://raw.githubusercontent.com/zatosource/zato/refs/heads/main/cloud/deploy",
     "bootstrapPath": "/usr/local/bin/zato-deploy-bootstrap.sh",
+    "useKeyVault": "[equals(parameters('useKeyVault'), 'True')]",
+    "keyVaultName": "[concat('zato-', substring(replace(parameters('dnsSuffix'), '-', ''), 0, 16))]",
+    "keyVaultSecretsUserRole": "4633458b-17de-408a-b874-0445c86b69e6",
+    "keyVaultSecretsOfficerRole": "b86a8fe4-44ce-4948-aee5-eccb2c155cd7",
+    "azureFilesUrl": "https://raw.githubusercontent.com/zatosource/zato/refs/heads/main/cloud/azure",
+    "keyVaultScriptPath": "/usr/local/lib/zato-azure/key_vault_secrets.py",
+    "cloudInitSecretsCommand": "[if(variables('useKeyVault'), concat('  - path: /etc/zato-deploy/secrets-command\n    permissions: \"0700\"\n    content: |\n      #!/bin/sh\n      exec /usr/bin/python3 ', variables('keyVaultScriptPath'), ' ', variables('keyVaultName'), '\n'), '')]",
+    "cloudInitKeyVaultScript": "[if(variables('useKeyVault'), concat('  - curl -fsSL --retry 10 --retry-all-errors --create-dirs -o ', variables('keyVaultScriptPath'), ' ', variables('azureFilesUrl'), '/key_vault_secrets.py\n'), '')]",
     "cloudInitDeployEnv": "[concat('  - path: /etc/zato-deploy/deploy.env\n    permissions: \"0600\"\n    content: |\n      fqdn=', variables('fqdn'), '\n      admin_username=', parameters('adminUsername'), '\n      image=', variables('image'), '\n')]",
     "cloudInitContainerEnv": "[concat('  - path: /etc/zato-deploy/container.env\n    permissions: \"0600\"\n    content: |\n      Zato_Password=', parameters('zatoPassword'), '\n      Zato_Use_Lets_Encrypt=True\n      Zato_Install_Updates=', parameters('installUpdates'), '\n      Zato_SSL_Subject_Alt_Name=subjectAltName=DNS:', variables('fqdn'), '\n      Zato_Dashboard_CSRF_Trusted_Origins=https://', variables('fqdn'), ':8184\n')]",
     "cloudInitEnvRepo": "[concat('  - path: /etc/zato-deploy/env-repo.env\n    permissions: \"0600\"\n    content: |\n      env_repo_url=', parameters('envRepoUrl'), '\n      env_repo_branch=', parameters('envRepoBranch'), '\n')]",
     "cloudInitEnvSecrets": "[concat('  - path: /etc/zato-deploy/env-secrets.env\n    permissions: \"0600\"\n    encoding: b64\n    content: ', base64(concat(parameters('envSecrets'), '\n')), '\n')]",
     "cloudInitEnvRepoKey": "[if(empty(parameters('envRepoDeployKey')), '', concat('  - path: /etc/zato-deploy/env-repo-key\n    permissions: \"0600\"\n    encoding: b64\n    content: ', base64(concat(parameters('envRepoDeployKey'), '\n')), '\n'))]",
-    "cloudInitRuncmd": "[concat('runcmd:\n  - echo \"Zato - downloading the deployment program\" > /dev/ttyS0\n  - curl -fsSL --retry 10 --retry-all-errors -o ', variables('bootstrapPath'), ' ', variables('deployFilesUrl'), '/bootstrap.sh\n  - chmod 0755 ', variables('bootstrapPath'), '\n  - ', variables('bootstrapPath'), ' ', variables('deployFilesUrl'), '\n')]",
-    "cloudInit": "[concat('#cloud-config\nwrite_files:\n', variables('cloudInitDeployEnv'), variables('cloudInitContainerEnv'), variables('cloudInitEnvRepo'), variables('cloudInitEnvSecrets'), variables('cloudInitEnvRepoKey'), variables('cloudInitRuncmd'))]"
+    "cloudInitRuncmd": "[concat('runcmd:\n  - echo \"Zato - downloading the deployment program\" > /dev/ttyS0\n', variables('cloudInitKeyVaultScript'), '  - curl -fsSL --retry 10 --retry-all-errors -o ', variables('bootstrapPath'), ' ', variables('deployFilesUrl'), '/bootstrap.sh\n  - chmod 0755 ', variables('bootstrapPath'), '\n  - ', variables('bootstrapPath'), ' ', variables('deployFilesUrl'), '\n')]",
+    "cloudInit": "[concat('#cloud-config\nwrite_files:\n', variables('cloudInitDeployEnv'), variables('cloudInitContainerEnv'), variables('cloudInitEnvRepo'), variables('cloudInitEnvSecrets'), variables('cloudInitSecretsCommand'), variables('cloudInitEnvRepoKey'), variables('cloudInitRuncmd'))]"
   },
   "resources": [
     {
@@ -279,6 +298,9 @@
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
       ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "properties": {
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
@@ -336,6 +358,51 @@
           "commandToExecute": "[concat('timeout 900 sh -c ''until [ -e ', variables('servingMarker'), ' ]; do sleep 1; done''')]"
         }
       }
+    },
+    {
+      "condition": "[variables('useKeyVault')]",
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "enableRbacAuthorization": true
+      }
+    },
+    {
+      "condition": "[variables('useKeyVault')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('vmName'), variables('keyVaultSecretsUserRole'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRole'))]",
+        "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines', parameters('vmName')), '2024-07-01', 'Full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "condition": "[variables('useKeyVault')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), deployer().objectId, variables('keyVaultSecretsOfficerRole'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsOfficerRole'))]",
+        "principalId": "[deployer().objectId]"
+      }
     }
   ],
   "outputs": {
@@ -350,6 +417,11 @@
     "publicIpAddress": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).ipAddress]"
+    },
+    "keyVaultName": {
+      "condition": "[variables('useKeyVault')]",
+      "type": "string",
+      "value": "[variables('keyVaultName')]"
     }
   }
 }

@@ -175,17 +175,39 @@ class ToolRegistryBuild(TestCase):
 
 # ################################################################################################################################
 
-    def test_unknown_service_raises(self) -> 'None':
-        """ Verifies that a service not in the store causes rebuild to raise.
+    def test_pubsub_internal_service_excluded(self) -> 'None':
+        """ Verifies that services with the pub.zato. prefix are excluded.
+        """
+
+        store = _MockServiceStore()
+        store.add_service('pub.zato.pubsub.publish', _ServiceWithDoc)
+        store.add_service('crm.get-customer', _ServiceWithDoc)
+
+        registry = ToolRegistry(store, ['pub.zato.pubsub.publish', 'crm.get-customer']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+        tools = registry.get_tools()
+
+        self.assertEqual(len(tools), 1)
+        self.assertEqual(tools[0]['name'], 'crm.get-customer')
+        self.assertFalse(registry.is_tool_allowed('pub.zato.pubsub.publish'))
+
+# ################################################################################################################################
+
+    def test_unknown_service_omitted(self) -> 'None':
+        """ Verifies that a service not in the store is left out of the tools and the others are kept.
         """
 
         store = _MockServiceStore()
         store.add_service('crm.get-customer', _ServiceWithDoc)
 
         registry = ToolRegistry(store, ['crm.get-customer', 'nonexistent.service']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+        tools = registry.get_tools()
 
-        with self.assertRaises(ValueError):
-            registry.rebuild()
+        self.assertEqual(len(tools), 1)
+
+        first_tool = tools[0]
+        self.assertEqual(first_tool['name'], 'crm.get-customer')
 
 # ################################################################################################################################
 
@@ -287,7 +309,7 @@ class ToolRegistryCache(TestCase):
 # ################################################################################################################################
 
     def test_rebuild_after_service_removed_from_store(self) -> 'None':
-        """ Verifies that rebuild raises when a previously deployed service is removed.
+        """ Verifies that rebuild leaves out a previously deployed service that has been removed.
         """
 
         store = _MockServiceStore()
@@ -304,8 +326,13 @@ class ToolRegistryCache(TestCase):
         impl_name = store.name_to_impl_name.pop('billing.create-invoice')
         del store.services[impl_name]
 
-        with self.assertRaises(ValueError):
-            registry.rebuild()
+        registry.rebuild()
+        tools_after = registry.get_tools()
+
+        self.assertEqual(len(tools_after), 1)
+
+        first_tool = tools_after[0]
+        self.assertEqual(first_tool['name'], 'crm.get-customer')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -459,13 +486,27 @@ class ToolRegistryAllowlistCheck(TestCase):
 # ################################################################################################################################
 
     def test_allowed_service(self) -> 'None':
-        """ Verifies that an allowed service passes the check.
+        """ Verifies that an allowed service that is deployed passes the check.
+        """
+
+        store = _MockServiceStore()
+        store.add_service('crm.get-customer', _ServiceWithDoc)
+        registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
+
+        self.assertTrue(registry.is_tool_allowed('crm.get-customer'))
+
+# ################################################################################################################################
+
+    def test_allowed_service_not_deployed(self) -> 'None':
+        """ Verifies that an allowed service that is not deployed fails the check, as it is not among the tools.
         """
 
         store = _MockServiceStore()
         registry = ToolRegistry(store, ['crm.get-customer']) # pyright: ignore[reportArgumentType]
+        registry.rebuild()
 
-        self.assertTrue(registry.is_tool_allowed('crm.get-customer'))
+        self.assertFalse(registry.is_tool_allowed('crm.get-customer'))
 
 # ################################################################################################################################
 

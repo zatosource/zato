@@ -1,0 +1,32 @@
+label: Telecom
+position: 6
+fields:
+  - phonenumber
+  - birthdate
+  - emailaddress
+  - givenname
+  - familyname
+  - contactmedium
+  - msisdn
+  - email
+  - phone
+  - accountnumber
+  - firstname
+  - lastname
+  - companyname
+  - address
+  - iccid
+  - imsi
+  - imei
+  - request_source_ip
+  - preferredgivenname
+  - placeofbirth
+  - nationality
+  - customername
+  - street
+  - streetsecondary
+  - postalcode
+  - city
+  - phone_number
+  - email_address
+  - target_api_key

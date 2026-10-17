@@ -2,7 +2,6 @@
     <div class="search-bar" style="overflow:hidden">
     <div class="prompt" style="float:left; width:60%">
     <form novalidate action="." method="get" id="main_page_form">
-        <input type="hidden" id="id_cluster" name="cluster" value="1" />
 
         {% if meta or show_search_form %} {% comment %} Statistics and other pages will not need the search box {% endcomment %}
         {{ search_form.query }}
@@ -28,4 +27,3 @@
 
     {% include "zato/paginate/action-panel.html" %}
     </div>
-    {% include "zato/auto-submit.html" %}

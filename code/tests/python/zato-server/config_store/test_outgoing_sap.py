@@ -29,7 +29,7 @@ class TestOutgoingSAP:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-sap')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-sap')
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'any_'):
@@ -50,7 +50,7 @@ class TestOutgoingSAP:
         self.__class__.created_ids.append(response['id'])
 
     def test_03_get_list_after_create(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-sap')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-sap')
         names = []
 
         for item in data:
@@ -59,7 +59,7 @@ class TestOutgoingSAP:
         assert 'test-sap-1' in names
 
     def test_04_sap_does_not_appear_in_odata_list(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-odata')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-odata')
         names = []
 
         for item in data:
@@ -88,7 +88,7 @@ class TestOutgoingSAP:
         assert 'id' in response
         self.__class__.created_ids.append(response['id'])
 
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-sap')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-sap')
         found = None
 
         for item in data:
@@ -120,7 +120,7 @@ class TestOutgoingSAP:
             self.__class__.created_ids.append(response['id'])
 
     def test_07_get_list_batch(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-sap')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-sap')
         test_items = []
 
         for item in data:
@@ -133,7 +133,6 @@ class TestOutgoingSAP:
         item_id = self.__class__.created_ids[0]
         response = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-sap-1-edited',
             is_active=True,
             type_='outconn-sap',
@@ -147,7 +146,7 @@ class TestOutgoingSAP:
         assert response['id'] == item_id
 
     def test_09_get_list_after_edit(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-sap')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-sap')
         names = []
 
         for item in data:
@@ -169,7 +168,7 @@ class TestOutgoingSAP:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_12_get_list_after_delete(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-sap')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-sap')
         test_items = []
 
         for item in data:
@@ -184,7 +183,7 @@ class TestOutgoingSAP:
             self.__class__.created_ids.remove(item_id)
 
     def test_14_get_list_final(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_='outconn-sap')
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_='outconn-sap')
         test_items = []
 
         for item in data:

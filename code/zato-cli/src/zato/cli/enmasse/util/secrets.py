@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import AS2, AS4, EnvVariable, OAuth
+from zato.common.api import EnvVariable, OAuth
 from zato.common.const import SECRETS
 from zato.common.json_internal import dumps, loads
 
@@ -15,6 +15,7 @@ from zato.common.json_internal import dumps, loads
 # ################################################################################################################################
 
 if 0:
+    from typing import TypeGuard
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.typing_ import any_, anydict, strnone, strtuple
@@ -39,7 +40,7 @@ Common_Secret_Keys = ('password', 'secret')
 # Every name any enmasse object type keeps a secret under - for log lines that do not know the type of what they log.
 Known_Secret_Keys = Common_Secret_Keys + (
     'api_token', 'token', 'api_key', 'client_secret', 'secret_value', 'consumer_key', 'consumer_secret', 'static_token',
-) + AS2.Secret_Fields + AS4.Secret_Fields + OAuth.Secret_Fields
+) + OAuth.Secret_Fields
 
 # The keys the session carries the importer's crypto context under.
 Session_Key_Crypto_Manager = 'crypto_manager'
@@ -72,7 +73,7 @@ def is_encrypted(value:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def is_usable_secret(value:'any_') -> 'bool':
+def is_usable_secret(value:'any_') -> 'TypeGuard[str]':
     """ Returns True for a non-empty string that is not a placeholder standing in for an environment variable
     that was not set - only such a value is a secret the YAML actually gives.
     """
@@ -208,7 +209,7 @@ def encrypt_opaque_secrets(
         # written back encrypted if it is still in clear text ..
         stored_value = stored.get(name)
         if is_usable_secret(stored_value):
-            definition[name] = ensure_encrypted(session, cast_('str', stored_value))
+            definition[name] = ensure_encrypted(session, stored_value)
             continue
 
         # .. an empty default is not a secret and stays, so a wrapper finds the key it expects ..
@@ -233,8 +234,6 @@ def encrypt_kept_opaque_secrets(session:'SASession', row:'any_', keys:'strtuple'
 
         if not is_usable_secret(value):
             continue
-
-        value = cast_('str', value)
 
         if is_encrypted(value):
             continue

@@ -58,7 +58,6 @@ def ensure_rule_engine_api_channel(
     session:'SASession',
     channel_name:'str',
     url_path:'str',
-    cluster_id:'int',
     is_active:'bool' = True,
     security_groups:'anylist | None' = None,
     old_name:'strnone' = None,
@@ -67,7 +66,7 @@ def ensure_rule_engine_api_channel(
     Called from the enmasse importer, which works on the database directly.
     Does NOT commit - the caller is responsible for committing the session.
     """
-    from zato.common.odb.model import Cluster, HTTPSOAP, Service
+    from zato.common.odb.model import HTTPSOAP, Service
     from zato.common.util.sql import set_instance_opaque_attrs
 
     if security_groups is None:
@@ -87,7 +86,6 @@ def ensure_rule_engine_api_channel(
     if old_name and old_name != channel_name:
         old_http = session.query(HTTPSOAP).filter(
             HTTPSOAP.name == old_name,
-            HTTPSOAP.cluster_id == cluster_id,
             HTTPSOAP.connection == CONNECTION.CHANNEL,
         ).first()
         if old_http:
@@ -96,7 +94,6 @@ def ensure_rule_engine_api_channel(
     # .. check if the REST channel already exists ..
     existing_http = session.query(HTTPSOAP).filter(
         HTTPSOAP.name == channel_name,
-        HTTPSOAP.cluster_id == cluster_id,
         HTTPSOAP.connection == CONNECTION.CHANNEL,
     ).first()
 
@@ -108,25 +105,23 @@ def ensure_rule_engine_api_channel(
 
     # .. otherwise, create a new one.
     else:
-        cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
 
         target_service = session.query(Service).filter(
             Service.name == rule_engine_api_service_name,
-            Service.cluster_id == cluster_id,
         ).first()
 
         # The service row matches what the server itself creates when it deploys the service,
         # so an import against a fresh database and a later server startup converge on one row.
         if not target_service:
             target_service = Service(
-                None, rule_engine_api_service_name, True, rule_engine_api_service_impl_name, True, cluster)
+                None, rule_engine_api_service_name, True, rule_engine_api_service_impl_name, True)
             session.add(target_service)
             session.flush()
 
         http_channel = HTTPSOAP(
             None, channel_name, is_active, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, channel_url_path, None, '', None, DATA_FORMAT.JSON,
-            service=target_service, cluster=cluster, security=None)
+            service=target_service, security=None)
         set_instance_opaque_attrs(http_channel, opaque_attrs)
         session.add(http_channel)
 
@@ -142,20 +137,18 @@ def on_rule_engine_api_create_edit(service:'any_', data:'stranydict', model:'any
     object_name = data['name']
     url_path = data.get('url_path') or default_rule_engine_api_url_path
     is_active = data.get('is_active', True)
-    cluster_id = model.cluster_id
 
     channel_url_path = get_rule_engine_api_channel_url_path(url_path)
 
     with closing(service.server.odb.session()) as session:
 
         security_groups = data.get('security_groups', [])
-        security_groups = _resolve_security_group_names_to_ids(session, security_groups, cluster_id)
+        security_groups = _resolve_security_group_names_to_ids(session, security_groups)
 
         # Check if the HTTPSOAP channel already exists (use old_name for renames) ..
         lookup_name = old_name if (old_name and old_name != object_name) else object_name
         existing = session.query(HTTPSOAP).filter(
             HTTPSOAP.name == lookup_name,
-            HTTPSOAP.cluster_id == cluster_id,
             HTTPSOAP.connection == CONNECTION.CHANNEL,
         ).first()
 
@@ -173,7 +166,6 @@ def on_rule_engine_api_create_edit(service:'any_', data:'stranydict', model:'any
         'should_include_in_openapi': False,
         'service': rule_engine_api_service_name,
         'security_groups': security_groups,
-        'cluster_id': cluster_id,
     }
 
     if existing:

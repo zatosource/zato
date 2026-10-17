@@ -12,17 +12,17 @@
 {% block "extra_js" %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/b2b_reports.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/reports.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    $.fn.zato.b2b.reports.init();
-    $.fn.zato.b2b.reports.init_filter_tabs('report-filter-form', 'report-filter-range');
+    $.fn.zato.reports.init();
+    $.fn.zato.reports.init_filter_tabs('report-filter-form', 'report-filter-range');
 
     var filterOptions = {{ filter_options_json|safe }};
     var pickedSources = '{{ sources|escapejs }}' ? '{{ sources|escapejs }}'.split(',') : [];
     var pickedObjects = '{{ objects|escapejs }}' ? '{{ objects|escapejs }}'.split(',') : [];
 
-    $.fn.zato.b2b.reports.init_filter_selects('report-filter-form', filterOptions, pickedSources, pickedObjects);
+    $.fn.zato.reports.init_filter_selects('report-filter-form', filterOptions, pickedSources, pickedObjects);
 });
 </script>
 {% endblock %}
@@ -32,7 +32,6 @@ $(document).ready(function() {
 <div id="markup">
 
     <form method="get" action="{% url "channel-usage" %}" class="report-filter-form" id="report-filter-form">
-        <input type="hidden" name="cluster" value="{{ cluster_id }}">
         <input type="hidden" name="range" value="{{ time_range }}" id="report-filter-range">
         <input type="hidden" name="sources" value="{{ sources }}" id="report-filter-sources">
         <input type="hidden" name="objects" value="{{ objects }}" id="report-filter-objects">
@@ -43,7 +42,7 @@ $(document).ready(function() {
                 <span class="report-filter-select" id="report-filter-object"></span>
             </div>
 
-            <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;sources={{ sources|urlencode }}&amp;objects={{ objects|urlencode }}&amp;cluster={{ cluster_id }}">Export to CSV</a>
+            <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;sources={{ sources|urlencode }}&amp;objects={{ objects|urlencode }}">Export to CSV</a>
         </div>
 
         <div class="dashboard-tabs" role="tablist" aria-label="Time range">
@@ -59,16 +58,16 @@ $(document).ready(function() {
         </div>
     </form>
 
-    <div class="b2b-report-section">
-        <table class="zato-table b2b-report-table" id="channel-usage-table">
+    <div class="report-section">
+        <table class="zato-table report-table" id="channel-usage-table">
             <thead>
                 <tr>
-                    <th class="b2b-report-sortable" data-sort-type="text">Name</th>
-                    <th class="b2b-report-sortable" data-sort-type="text">Type</th>
-                    <th class="b2b-report-sortable" data-sort-type="text">Caller</th>
-                    <th class="b2b-report-sortable report-count-centered" data-sort-type="number">Calls</th>
-                    <th class="b2b-report-sortable" data-sort-type="text">First call</th>
-                    <th class="b2b-report-sortable" data-sort-type="text">Last call</th>
+                    <th class="report-sortable" data-sort-type="text">Name</th>
+                    <th class="report-sortable" data-sort-type="text">Type</th>
+                    <th class="report-sortable" data-sort-type="text">Caller</th>
+                    <th class="report-sortable report-count-centered" data-sort-type="number">Calls</th>
+                    <th class="report-sortable" data-sort-type="text">First call</th>
+                    <th class="report-sortable" data-sort-type="text">Last call</th>
                 </tr>
             </thead>
             <tbody>

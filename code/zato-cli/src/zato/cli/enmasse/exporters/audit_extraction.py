@@ -38,12 +38,12 @@ class AuditExtractionExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'extraction_def_list':
+    def export(self, session:'SASession') -> 'extraction_def_list':
         """ Exports attribute-extraction rule set definitions.
         """
         logger.info('Exporting extraction rule set definitions')
 
-        wrapper = GenericObjectWrapper(session, cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Audit_Config.Type.Extraction_Rules
 
         rows = wrapper.get_list()

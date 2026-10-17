@@ -273,6 +273,35 @@ panel.showLoaded = function($panel, entry) {
 // kind, which view, and whether the whole of it. A body read one way once is read from what
 // it left behind rather than from the server again, because the payload of an event does
 // not change.
+// The key under which one way of reading a body is kept - its view, its kind and whether the whole of it
+panel.loadedKey = function($body) {
+    var kind = $body.attr('data-kind');
+    var view = $body.attr('data-view');
+    var isWhole = $body.attr('data-whole') === '1';
+
+    var out = view + '|' + kind + '|' + isWhole;
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The entry of the body the panel is set to show, undefined while that body has not arrived yet
+panel.loadedEntry = function($panel) {
+    var loaded = $panel.data('flow_body_loaded');
+
+    if (loaded === undefined) {
+        return undefined;
+    }
+
+    var loadedKey = panel.loadedKey($panel.find('.audit-log-flow-body'));
+    var out = loaded[loadedKey];
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 panel.loadBody = function($panel) {
     var listingConfig = listing.config;
     var eventId = $panel.attr('data-step');
@@ -289,7 +318,7 @@ panel.loadBody = function($panel) {
         $panel.data('flow_body_loaded', loaded);
     }
 
-    var loadedKey = view + '|' + kind + '|' + isWhole;
+    var loadedKey = panel.loadedKey($body);
 
     if (loaded[loadedKey] !== undefined) {
         panel.showLoaded($panel, loaded[loadedKey]);
@@ -360,9 +389,13 @@ panel.loadBody = function($panel) {
             shown = panel.cutToLines(text);
         }
 
+        // The text kept with the entry is what Copy puts on the clipboard. A raw preview is
+        // only the top of the message, so the whole of it is fetched when it is copied.
         loaded[loadedKey] = {
             html: kit.syntax_highlight(shown),
-            caption: panel.captionText(shown.length, totalLength)
+            caption: panel.captionText(shown.length, totalLength),
+            text: text,
+            isComplete: text.length >= totalLength
         };
 
         panel.showLoaded($panel, loaded[loadedKey]);
@@ -673,10 +706,26 @@ panel.init = function() {
     });
 
     $(document).on('click', '.audit-log-flow-copy-body', function() {
-        var $panel = $(this).closest(panelSelector);
-        var text = $panel.find('.audit-log-flow-body-text').text();
+        var button = this;
+        var $panel = $(button).closest(panelSelector);
+        var entry = panel.loadedEntry($panel);
 
-        kit.copy_to_clipboard(this, text);
+        // A body still on its way has nothing to copy yet.
+        if (entry === undefined) {
+            return;
+        }
+
+        if (entry.isComplete) {
+            kit.copy_to_clipboard(button, entry.text);
+            return;
+        }
+
+        var eventId = $panel.attr('data-step');
+        var kind = $panel.find('.audit-log-flow-body').attr('data-kind');
+
+        listing.fetchDetails(eventId, kind, false, function(details) {
+            kit.copy_to_clipboard(button, details.data);
+        });
     });
 };
 

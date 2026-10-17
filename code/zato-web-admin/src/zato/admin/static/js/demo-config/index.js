@@ -21,7 +21,6 @@ $(document).ready(function() {
 var config = {};
 
 config.saveUrl = '/zato/demo-config/save';
-config.cluster_id = '1';
 
 // What a request that never reached its endpoint reports
 config.applyErrorText = 'The change could not be applied';
@@ -40,14 +39,13 @@ config.okRemovedLabel = 'OK, removed';
 config.okVisibleMs = 1000;
 
 // One card per demo config set, in the order they are rendered
-config.sets = ['tutorial', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq'];
+config.sets = ['tutorial', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq', 'file_transfer'];
 
 // What the page-wide help badge explains, anchored at the Everything slider
 config.howItWorksText = 'Slide "Everything" to import or remove all demo config, ' +
     'or pick cards with demo config individually.';
 
-// How each kind of object is called on a pill and where the pill points to -
-// the cluster query parameter is appended when the link is built.
+// How each kind of object is called on a pill and where the pill points to
 config.kinds = {
     'job':                 {one: 'job', many: 'jobs', url: '/zato/scheduler/', params: ''},
     'channel-rest':        {one: 'REST channel', many: 'REST channels', url: '/zato/http-soap/', params: '&connection=channel&transport=plain_http'},
@@ -62,7 +60,10 @@ config.kinds = {
     'outconn-kafka':       {one: 'outgoing connection', many: 'outgoing connections', url: '/zato/outgoing/kafka/', params: '&type_=outconn-kafka'},
     'channel-hl7-mllp':    {one: 'MLLP channel', many: 'MLLP channels', url: '/zato/channel/hl7/mllp/', params: '&type_=channel-hl7-mllp'},
     'outconn-hl7-mllp':    {one: 'MLLP outgoing connection', many: 'MLLP outgoing connections', url: '/zato/outgoing/hl7/mllp/', params: '&type_=outconn-hl7-mllp'},
-    'outconn-hl7-fhir':    {one: 'FHIR connection', many: 'FHIR connections', url: '/zato/outgoing/hl7/fhir/', params: ''}
+    'outconn-hl7-fhir':    {one: 'FHIR connection', many: 'FHIR connections', url: '/zato/outgoing/hl7/fhir/', params: ''},
+    'outconn-sftp':        {one: 'SFTP connection', many: 'SFTP connections', url: '/zato/outgoing/sftp/', params: '&type_=outconn-sftp'},
+    'outconn-ftp':         {one: 'FTP or FTPS connection', many: 'FTP and FTPS connections', url: '/zato/outgoing/ftp/', params: '&type_=outconn-ftp'},
+    'outconn-smb':         {one: 'SMB connection', many: 'SMB connections', url: '/zato/outgoing/smb/', params: '&type_=outconn-smb'}
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -136,7 +137,7 @@ var renderCard = function(setName, setInfo) {
             shownCount = group.items.length;
         }
 
-        pill.href = kindInfo.url + '?cluster=' + config.cluster_id + kindInfo.params;
+        pill.href = kindInfo.url + kindInfo.params;
 
         var kindLabel = shownCount === 1 ? kindInfo.one : kindInfo.many;
         pill.textContent = shownCount + ' ' + kindLabel;
@@ -401,7 +402,7 @@ var apply = function(desiredStates, changedSets, isFromMaster) {
             errorElement.textContent = errorTextFromResponse(xhr, config.applyErrorText);
 
             // Only this change's sliders go back to what is actually
-            // in the cluster - the others are none of its business
+            // in the environment - the others are none of its business
             for(var setIdx = 0; setIdx < changedSets.length; setIdx++) {
                 var changedName = changedSets[setIdx];
                 if(changedName in lastData) {

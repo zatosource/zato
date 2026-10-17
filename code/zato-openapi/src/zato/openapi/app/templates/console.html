@@ -3,26 +3,94 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{{ title }}</title>
     <link rel="icon" href="{{ favicon_url }}">
     <link rel="stylesheet" href="/static/console/console.css">
+    <link rel="stylesheet" href="/static/console/console-operations.css">
+    <link rel="stylesheet" href="/static/console/console-tools.css">
+    <link rel="stylesheet" href="/static/console/console-layouts.css">
+    <link rel="stylesheet" href="/static/console/console-specification.css">
     {% if has_custom_css %}<link rel="stylesheet" href="/openapi/console/branding/custom.css">{% endif %}
 </head>
 <body class="console-body">
 
     <header class="console-header">
-        <img src="{{ logo_url }}" alt="Logo" class="console-header-logo">
-        <span class="console-header-title">{{ title }}</span>
+        <a class="console-header-brand" href="/openapi/console">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Logo" class="console-header-logo">
+            {% else %}
+            <span class="console-brand-text console-header-brand-text">{{ logo_text }}</span>
+            {% endif %}
+        </a>
+        {% if header_title %}<span class="console-header-title">{{ header_title }}</span>{% endif %}
         <nav class="console-header-links">
             <a href="/openapi/console/openapi.json" class="console-header-link">openapi.json</a>
             <a href="/openapi/console/openapi.yaml" class="console-header-link">openapi.yaml</a>
         </nav>
-        <a href="/openapi/console/logout" class="console-header-logout">Sign out</a>
+        <span class="console-header-user">{{ identity }}</span>
+        <a href="/openapi/console/logout" class="console-header-logout" id="console-logout">Sign out</a>
     </header>
 
-    <div id="console-reference"></div>
+    <div class="console-status console-loading" id="console-loading">
+        <div class="console-backdrop"></div>
+        <svg class="console-spinner" viewBox="0 0 50 50">
+            <circle class="console-spinner-track" cx="25" cy="25" r="20"></circle>
+            <circle class="console-spinner-arc" cx="25" cy="25" r="20"></circle>
+        </svg>
+    </div>
 
-    <script src="/static/scalar/scalar.standalone.js"></script>
+    <div class="console-status" id="console-status" hidden>
+        <div class="console-backdrop"></div>
+        <div class="console-status-text" id="console-status-text"></div>
+    </div>
+
+    <div class="console-workspace" id="console-workspace" hidden>
+        <aside class="console-sidebar" id="console-sidebar">
+            <div class="console-sidebar-top">
+                <div class="console-filter-box">
+                    <svg class="console-filter-icon" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="m20 20-3.5-3.5"></path>
+                    </svg>
+                    <input class="console-filter" id="console-filter" type="text" placeholder="Filter" autocomplete="off" spellcheck="false">
+                    <button class="console-filter-clear" id="console-filter-clear" type="button" aria-label="Clear" hidden>
+                        <svg class="console-filter-clear-icon" viewBox="0 0 24 24">
+                            <path d="M18 6 6 18"></path>
+                            <path d="m6 6 12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button class="console-sidebar-toggle" id="console-sidebar-toggle" type="button"></button>
+            </div>
+            <div class="console-sidebar-scroll">
+                <nav class="console-navigation" id="console-navigation"></nav>
+            </div>
+            <div class="console-sidebar-resizer" id="console-sidebar-resizer"><span class="console-sidebar-grip"></span></div>
+        </aside>
+        <main class="console-content" id="console-content"></main>
+    </div>
+
+    <div class="console-popover" id="console-popover" hidden></div>
+
+    <script src="/static/webapp/vendor/popper.min.js"></script>
+    <script src="/static/webapp/vendor/tippy-bundle.umd.min.js"></script>
+    <script src="/static/console/console-highlight.js"></script>
+    <script src="/static/console/console-key-value.js"></script>
+    <script src="/static/console/console-sidebar.js"></script>
+    <script src="/static/console/console-panels.js"></script>
+    <script src="/static/console/console-popover.js"></script>
+    <script src="/static/console/console-layouts.js"></script>
+    <script src="/static/console/console-exchange.js"></script>
+    <script src="/static/console/console-links.js"></script>
+    <script src="/static/console/console-specification.js"></script>
+    <script src="/static/console/console-render.js"></script>
+    <script src="/static/console/console-fields.js"></script>
+    <script src="/static/console/console-raw.js"></script>
+    <script src="/static/console/console-options.js"></script>
+    <script src="/static/console/console-history.js"></script>
+    <script src="/static/console/console-invoke.js"></script>
     <script src="/static/console/console.js"></script>
 
 </body>

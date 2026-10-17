@@ -73,7 +73,6 @@ class PubSubPermissionImporter:
                 'pattern': permission_obj.pattern,
                 'access_type': permission_obj.access_type,
                 'is_active': permission_obj.is_active,
-                'cluster_id': permission_obj.cluster_id
             }
 
             # Add additional fields from the query
@@ -87,11 +86,11 @@ class PubSubPermissionImporter:
 
 # ################################################################################################################################
 
-    def get_pubsub_permission_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_pubsub_permission_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
-        logger.info('Retrieving pub/sub permission definitions from database for cluster_id=%s', cluster_id)
-        permissions = pubsub_permission_list(session, cluster_id)
+        logger.info('Retrieving pub/sub permission definitions from database')
+        permissions = pubsub_permission_list(session)
 
         self._process_pubsub_permission_defs(permissions, out)
         logger.info('Total pub/sub permission definitions from DB: %d', len(out))
@@ -109,7 +108,6 @@ class PubSubPermissionImporter:
         logger.info('Creating pub/sub permission definition: %s', definition)
 
         instance = PubSubPermission()
-        instance.cluster_id = definition.get('cluster_id', 1)
         instance.sec_base_id = definition['sec_base_id']
         instance.pattern = definition['pattern']
         instance.access_type = definition['access_type']
@@ -161,7 +159,7 @@ class PubSubPermissionImporter:
     def get_security_base_id_by_name(self, security_name:'str', session:'SASession') -> 'int':
         """ Gets the security base ID by name.
         """
-        sec_base = session.query(SecurityBase).filter_by(name=security_name, cluster_id=self.importer.cluster_id).one()
+        sec_base = session.query(SecurityBase).filter_by(name=security_name).one()
         return sec_base.id
 
 # ################################################################################################################################
@@ -172,7 +170,7 @@ class PubSubPermissionImporter:
         logger.info('Processing %d pub/sub permission definitions from YAML', len(permission_list))
 
         # Get existing definitions from database
-        db_defs = self.get_pubsub_permission_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_pubsub_permission_defs_from_db(session)
 
         created = []
         updated = []
@@ -206,7 +204,6 @@ class PubSubPermissionImporter:
                     'pattern': combined_pattern,
                     'access_type': PubSub.API_Client.Publisher_Subscriber,
                     'is_active': yaml_def.get('is_active', True),
-                    'cluster_id': 1
                 }
 
                 key = f"{sec_base_id}_{combined_pattern}_{PubSub.API_Client.Publisher_Subscriber}"
@@ -225,7 +222,6 @@ class PubSubPermissionImporter:
                         'pattern': instance.pattern,
                         'access_type': instance.access_type,
                         'is_active': instance.is_active,
-                        'cluster_id': instance.cluster_id
                     }
                 else:
                     permission_def['id'] = db_defs[key]['id']
@@ -237,7 +233,6 @@ class PubSubPermissionImporter:
                         'pattern': instance.pattern,
                         'access_type': instance.access_type,
                         'is_active': instance.is_active,
-                        'cluster_id': instance.cluster_id
                     }
 
         logger.info('pub/sub permission definitions sync completed: created=%d, updated=%d', len(created), len(updated))

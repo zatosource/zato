@@ -24,6 +24,7 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 # gevent
 from gevent import sleep, spawn
+from gevent.lock import RLock
 
 # Kombu
 from kombu import Connection, Consumer as KombuConsumer, pools, Queue
@@ -31,10 +32,14 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport,
 
 # Zato
 from zato.common.api import AMQP, CHANNEL, PubSub, SECRET_SHADOW
+from zato.common.json_ import dumps
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, new_cid_queue_consumer, utcnow, wait_for_predicate
 from zato.common.version import get_version
 from zato.server.connection.connector import Connector, Inactive
+
+# Zato
+from zato.input_output import ServiceInput
 
 # ################################################################################################################################
 
@@ -84,6 +89,14 @@ _default_out_keys=('app_id', 'content_encoding', 'content_type', 'delivery_mode'
 
 # ################################################################################################################################
 
+# The delivery states of a message taken off a queue, the same names as kombu's
+_Message_State_Received = 'RECEIVED'
+_Message_State_Ack      = 'ACK'
+_Message_State_Rejected = 'REJECTED'
+_Message_State_Requeued = 'REQUEUED'
+
+# ################################################################################################################################
+
 no_ack = {
     AMQP.ACK_MODE.ACK.id: False,
     AMQP.ACK_MODE.REJECT.id: True,
@@ -96,14 +109,42 @@ def _is_tls_config(config:'Bunch') -> 'bool':
 
 # ################################################################################################################################
 
+def _add_auth_placeholders(address:'str') -> 'str':
+
+    if '://' in address:
+        protocol_part, server_part = address.split('://', 1)
+        return f'{protocol_part}://' + '{username}:{password}@' + server_part
+    else:
+        return '{username}:{password}@' + address
+
+# ################################################################################################################################
+
+def get_conn_url(address:'str', username:'str', password:'str') -> 'str':
+    """ The URL a connection to a broker is opened with - the address of a definition with its credentials in it.
+    """
+    conn_url = _add_auth_placeholders(address)
+    out = conn_url.format(username=username, password=password)
+    return out
+
+# ################################################################################################################################
+
 def _is_azure_service_bus(address:'str') -> 'bool':
     return 'servicebus.windows.net' in address
 
 # ################################################################################################################################
 
+# The scheme Azure Service Bus is reached over, used to complete an address given without one
+_azure_scheme = 'amqps'
+
 def _build_azure_conn_string(address:'str', username:'str', password:'str') -> 'str':
+
+    # An address is given as host:port, the way the Dashboard and enmasse document it, or as a full amqps:// URL -
+    # urlparse reads the host of a scheme-less address as its scheme, so such an address receives one first.
+    if '://' not in address:
+        address = f'{_azure_scheme}://{address}'
+
     parsed = urlparse(address)
-    host = parsed.hostname or ''
+    host = cast_('str', parsed.hostname)
     password_decoded = unquote(password)
     result = f'Endpoint=sb://{host}/;SharedAccessKeyName={username};SharedAccessKey={password_decoded}'
     return result
@@ -259,33 +300,76 @@ class Producer:
 # ################################################################################################################################
 
 class AzureServiceBusProducer:
+    """ Publishes messages to Azure Service Bus queues through one outgoing connection. The queue a message goes to
+    is named by the routing key of each publication, and the client along with a sender per queue are built
+    on first use, the way AMQP producers connect when a message is published.
+    """
     def __init__(self, config:'Bunch') -> 'None':
         self.config = config
         self.name = config.name
-        self.client = ServiceBusClient.from_connection_string(config.azure_conn_str)
-        self.sender = self.client.get_queue_sender(config.queue)
+        self.client:'ServiceBusClient | None' = None
+        self.senders:'dict[str, any_]' = {}
+        self.lock = RLock()
 
-    def publish(self, msg:'str', **kwargs:'any_') -> 'None':
+    def _get_sender(self, queue:'str') -> 'any_':
+        """ Returns the sender for a queue, building the client and the sender when they are needed for the first time.
+        """
+        with self.lock:
+
+            if self.client is None:
+                self.client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
+
+            if queue not in self.senders:
+                self.senders[queue] = self.client.get_queue_sender(queue)
+
+            out = self.senders[queue]
+
+        return out
+
+    def publish(self, msg:'str', queue:'str') -> 'None':
+        sender = self._get_sender(queue)
         service_bus_msg = ServiceBusMessage(msg)
-        self.sender.send_messages(service_bus_msg)
+        sender.send_messages(service_bus_msg)
 
     def stop(self) -> 'None':
-        self.sender.close()
-        self.client.close()
+        with self.lock:
+            for sender in self.senders.values():
+                sender.close()
+            self.senders.clear()
+
+            if self.client is not None:
+                self.client.close()
+                self.client = None
 
 # ################################################################################################################################
 
 class _AzureMessageWrapper:
+    """ An Azure Service Bus message under the same ack, reject and requeue interface, and with the same
+    delivery state names, as a kombu message, so that a channel's acknowledgment mode applies to both alike.
+    """
 
-    def __init__(self, msg, receiver):
+    def __init__(self, msg:'any_', receiver:'any_') -> 'None':
         self._msg = msg
         self._receiver = receiver
+        self._state = _Message_State_Received
 
-    def ack(self):
+# ################################################################################################################################
+
+    def ack(self) -> 'None':
         self._receiver.complete_message(self._msg)
+        self._state = _Message_State_Ack
 
-    def reject(self):
+# ################################################################################################################################
+
+    def reject(self) -> 'None':
         self._receiver.abandon_message(self._msg)
+        self._state = _Message_State_Rejected
+
+# ################################################################################################################################
+
+    def requeue(self) -> 'None':
+        self._receiver.abandon_message(self._msg)
+        self._state = _Message_State_Requeued
 
 # ################################################################################################################################
 
@@ -673,13 +757,12 @@ class ConnectorAMQP(Connector):
             self._start_amqp()
 
     def _start_azure(self):
-        try:
-            client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
-            client.close()
-            self.is_connected = True
-        except Exception:
-            logger.warning(f'Azure Service Bus connection test failed: {format_exc()}')
-            self.is_connected = False
+
+        # The connection string is validated here - an invalid one raises and the connector's loop retries after a pause.
+        # Nothing is sent to the namespace yet, the producers and consumers connect on their own when they are used.
+        client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
+        client.close()
+        self.is_connected = True
 
     def _start_amqp(self):
 
@@ -712,8 +795,18 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
+    def request_stop(self) -> 'None':
+        """ Tells every consumer to stop without waiting for any of them, so that the consumers of many channels wind down
+        in parallel and the subsequent stop finds them already finished.
+        """
+        for consumers in self._consumers.values():
+            for consumer in consumers:
+                consumer.keep_running = False
+
+# ################################################################################################################################
+
     def on_amqp_message(self, body, msg, channel_name, channel_config, _AMQPMessage=_AMQPMessage, _CHANNEL_AMQP=CHANNEL.AMQP,
-        _RECEIVED='RECEIVED', _ZATO_ACK_MODE_ACK=AMQP.ACK_MODE.ACK.id):
+        _RECEIVED=_Message_State_Received, _ZATO_ACK_MODE_ACK=AMQP.ACK_MODE.ACK.id):
         """ Invoked each time a message is taken off an AMQP queue.
         """
         try:
@@ -743,26 +836,15 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _add_auth_placeholders(self, address:'str') -> 'str':
-
-        if '://' in address:
-            protocol_part, server_part = address.split('://', 1)
-            return f'{protocol_part}://' + '{username}:{password}@' + server_part
-        else:
-            return '{username}:{password}@' + address
-
-# ################################################################################################################################
-
     def _get_conn_string(self, needs_password:'bool'=True) -> 'str':
 
-        conn_string = self.config.address
-        conn_string = self._add_auth_placeholders(conn_string) # type: ignore
-        conn_string = conn_string.format(
-            username=self.config.username, # type: ignore
-            password=self.config.password if needs_password else SECRET_SHADOW
-        )
+        if needs_password:
+            password = self.config.password
+        else:
+            password = SECRET_SHADOW
 
-        return conn_string
+        out = get_conn_url(self.config.address, self.config.username, password)
+        return out
 
 # ################################################################################################################################
 
@@ -926,8 +1008,13 @@ class ConnectorAMQP(Connector):
     def _delete_outconn(self, config:'Bunch') -> 'None':
         """ Deletes an outgoing connection. Must be called with self.lock held.
         """
-        self._producers[config.name].stop()
-        del self._producers[config.name]
+
+        # The producer is absent if it could not be created, in which case only the configuration is left to remove
+        producer = self._producers.pop(config.name, None)
+
+        if producer is not None:
+            producer.stop()
+
         del self.outconns[config.name]
 
 # ################################################################################################################################
@@ -944,7 +1031,7 @@ class ConnectorAMQP(Connector):
 
     def invoke(
         self,
-        msg:'str',
+        msg:'any_',
         exchange:'str'='/',
         routing_key:'str | None'=None,
         properties:'strdictnone'=None,
@@ -952,7 +1039,8 @@ class ConnectorAMQP(Connector):
         _default_out_keys:'strtuple'=_default_out_keys,
         **kwargs:'any_',
     ):
-        """ Synchronously publishes a message to an AMQP broker.
+        """ Synchronously publishes a message to an AMQP broker. The message is text, bytes, a dict, a list
+        or a service's input, the last three of which are serialized to JSON by kombu or, for Azure Service Bus, here.
         """
         out_name = self.config['name']
         with self.lock:
@@ -964,9 +1052,17 @@ class ConnectorAMQP(Connector):
 
         producer = self._producers[out_name]
 
-        # Azure Service Bus uses a simpler interface
+        # A service's input is published as the dict of the fields it holds
+        if isinstance(msg, ServiceInput):
+            msg = msg.to_dict()
+
+        # Azure Service Bus uses a simpler interface, its messages are text and the routing key names the queue
         if outconn_config.is_azure:
-            return producer.publish(msg)
+            if not routing_key:
+                raise Exception(f'Publishing to Azure Service Bus through `{out_name}` requires a routing key naming the queue')
+            if isinstance(msg, (dict, list)):
+                msg = dumps(msg)
+            return producer.publish(msg, routing_key)
 
         acquire_block = kwargs.pop('acquire_block', True)
         acquire_timeout = kwargs.pop('acquire_block', None)

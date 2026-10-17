@@ -62,14 +62,13 @@ class TestSecurityWSS:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert isinstance(data, list)
 
 # ################################################################################################################################
 
     def test_02_create_username_token(self, client:'ZatoClient') -> 'None':
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-wss-username-token',
             is_active=True,
             username='testwssuser1',
@@ -83,7 +82,7 @@ class TestSecurityWSS:
 # ################################################################################################################################
 
     def test_03_username_token_round_trip(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         item = _find_by_name(data, 'test-wss-username-token')
 
         assert item is not None
@@ -96,7 +95,6 @@ class TestSecurityWSS:
 
     def test_04_create_x509(self, client:'ZatoClient') -> 'None':
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-wss-x509',
             is_active=True,
             username='testwssuser2',
@@ -115,7 +113,7 @@ class TestSecurityWSS:
 # ################################################################################################################################
 
     def test_05_x509_round_trip(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         item = _find_by_name(data, 'test-wss-x509')
 
         assert item is not None
@@ -132,7 +130,6 @@ class TestSecurityWSS:
 
     def test_06_create_saml(self, client:'ZatoClient') -> 'None':
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-wss-saml',
             is_active=True,
             username='testwssuser3',
@@ -150,7 +147,7 @@ class TestSecurityWSS:
 # ################################################################################################################################
 
     def test_07_saml_round_trip(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         item = _find_by_name(data, 'test-wss-saml')
 
         assert item is not None
@@ -166,7 +163,6 @@ class TestSecurityWSS:
 
     def test_08_create_inactive(self, client:'ZatoClient') -> 'None':
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-wss-inactive',
             is_active=False,
             username='testwssuser4',
@@ -176,7 +172,7 @@ class TestSecurityWSS:
         assert 'id' in resp
         self.__class__.created_ids.append(resp['id'])
 
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         item = _find_by_name(data, 'test-wss-inactive')
 
         assert item is not None
@@ -189,7 +185,6 @@ class TestSecurityWSS:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-wss-username-token-edited',
             is_active=True,
             username='testwssuser1-edited',
@@ -201,7 +196,7 @@ class TestSecurityWSS:
 # ################################################################################################################################
 
     def test_10_get_list_after_edit(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         item = _find_by_name(data, 'test-wss-username-token-edited')
 
         assert item is not None
@@ -220,7 +215,7 @@ class TestSecurityWSS:
 # ################################################################################################################################
 
     def test_12_get_list_final(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
 
         remaining = []
         for item in data:

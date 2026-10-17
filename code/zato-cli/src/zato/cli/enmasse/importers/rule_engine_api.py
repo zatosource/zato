@@ -79,7 +79,6 @@ class RuleEngineAPIImporter(GenericConnectionImporter):
             session=session,
             channel_name=channel_name,
             url_path=connection_def.get('url_path', default_rule_engine_api_url_path),
-            cluster_id=self.importer.cluster_id,
             is_active=connection_def.get('is_active', True),
             security_groups=security_groups,
         )

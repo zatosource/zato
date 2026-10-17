@@ -59,14 +59,14 @@ class ChannelAMQPImporter:
 
 # ################################################################################################################################
 
-    def get_channels_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_channels_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
         label = self.subtype['label']
-        logger.info('Retrieving %s channel definitions from database for cluster_id=%s', label, cluster_id)
+        logger.info('Retrieving %s channel definitions from database', label)
 
         # Only channels of this importer's subtype are taken into account
-        query_result = channel_amqp_list(session, cluster_id, self.subtype_key, False)
+        query_result = channel_amqp_list(session, self.subtype_key, False)
         definitions = to_json(query_result, return_as_dict=True)
 
         for item in definitions:
@@ -137,10 +137,10 @@ class ChannelAMQPImporter:
         channel.frame_max = _default_frame_max
         channel.heartbeat = _default_heartbeat
 
-        # Set the password if provided, otherwise generate one, and store it encrypted either way
-        if 'password' in channel_def:
-            password = channel_def['password']
-        else:
+        # A definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted
+        password = channel_def.get('password')
+        if not is_usable_secret(password):
             password = CryptoManager.generate_password(to_str=True)
 
         channel.password = encrypt_secret(session, password)
@@ -196,7 +196,7 @@ class ChannelAMQPImporter:
         label = self.subtype['label']
         logger.info('Processing %d %s channel definitions from YAML', len(channel_list), label)
 
-        db_defs = self.get_channels_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_channels_from_db(session)
         to_create, to_update = self.compare_channels(channel_list, db_defs)
 
         out_created = []
@@ -237,14 +237,14 @@ class OutgoingAMQPImporter:
 
 # ################################################################################################################################
 
-    def get_connections_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_connections_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
         label = self.subtype['label']
-        logger.info('Retrieving outgoing %s connection definitions from database for cluster_id=%s', label, cluster_id)
+        logger.info('Retrieving outgoing %s connection definitions from database', label)
 
         # Only connections of this importer's subtype are taken into account
-        query_result = out_amqp_list(session, cluster_id, self.subtype_key, False)
+        query_result = out_amqp_list(session, self.subtype_key, False)
         definitions = to_json(query_result, return_as_dict=True)
 
         for item in definitions:
@@ -314,10 +314,10 @@ class OutgoingAMQPImporter:
         connection.frame_max = _default_frame_max
         connection.heartbeat = _default_heartbeat
 
-        # Set the password if provided, otherwise generate one, and store it encrypted either way
-        if 'password' in connection_def:
-            password = connection_def['password']
-        else:
+        # A definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted
+        password = connection_def.get('password')
+        if not is_usable_secret(password):
             password = CryptoManager.generate_password(to_str=True)
 
         connection.password = encrypt_secret(session, password)
@@ -373,7 +373,7 @@ class OutgoingAMQPImporter:
         label = self.subtype['label']
         logger.info('Processing %d outgoing %s connection definitions from YAML', len(connection_list), label)
 
-        db_defs = self.get_connections_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_connections_from_db(session)
         to_create, to_update = self.compare_connections(connection_list, db_defs)
 
         out_created = []

@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.typing_ import any_, stranydict, strlist
 from zato.common.util.safeguards.common import SafeguardConfig
+from zato.common.util.safeguards.masking import Default_Masking_Custom_Enabled, resolve_masked_fields
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,6 +41,15 @@ def build_safeguard_config(config:'stranydict') -> 'SafeguardConfig':
     out.strip_nulls         = _get(config, 'safeguards_strip_nulls', SafeguardConfig.strip_nulls)
     out.collapse_whitespace = _get(config, 'safeguards_collapse_whitespace', SafeguardConfig.collapse_whitespace)
     out.strip_base64        = _get(config, 'safeguards_strip_base64', SafeguardConfig.strip_base64)
+
+    # Data masking - the sets, exclusions and custom fields resolve into one set of field names.
+    out.masked_fields = resolve_masked_fields(
+        _get(config, 'safeguards_masking_sets', []),
+        _get(config, 'safeguards_masking_excluded', []),
+        _get(config, 'safeguards_masking_custom_fields', []),
+        _get(config, 'safeguards_masking_custom_enabled', Default_Masking_Custom_Enabled),
+    )
+    out.masking_enabled = bool(out.masked_fields)
 
     # PII removal - the list fields carry no dataclass defaults, so they are always assigned here.
     out.pii_enabled             = _get(config, 'safeguards_pii_enabled', SafeguardConfig.pii_enabled)
@@ -87,6 +97,7 @@ def is_safeguards_active(config:'SafeguardConfig') -> 'bool':
         config.strip_nulls,
         config.collapse_whitespace,
         config.strip_base64,
+        config.masking_enabled,
         config.pii_enabled,
         config.secrets_enabled,
         config.normalize_unicode,

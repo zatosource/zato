@@ -89,14 +89,13 @@ def read_notification_config(extra:'any_') -> 'stranydict':
 
 # ################################################################################################################################
 
-def set_notification_config(session:'any_', cluster_id:'int', values:'stranydict') -> 'bool':
+def set_notification_config(session:'any_', values:'stranydict') -> 'bool':
     """ Writes the given notification values into the sweep job's extra, merging
     with whatever other keys the extra already carries - the commit stays with
     the caller. Returns whether the row actually changed.
     """
     job = session.query(Job).\
         filter(Job.name==Alerting.Job_Name).\
-        filter(Job.cluster_id==cluster_id).\
         one()
 
     parsed = parse_extra(job.extra)

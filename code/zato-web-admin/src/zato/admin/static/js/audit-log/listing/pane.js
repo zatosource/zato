@@ -118,11 +118,13 @@ listing.lineageFacts = function(rowModel) {
     var out = [];
 
     for (var parentIndex = 0; parentIndex < rowModel.parents.length; parentIndex++) {
-        out.push(listing.lineageFact(config.lineageParentLabel, rowModel.parents[parentIndex].id));
+        var parent = rowModel.parents[parentIndex];
+        out.push(listing.lineageFact(config.lineageParentLabels[parent.link_type], parent.id));
     }
 
     for (var childIndex = 0; childIndex < rowModel.children.length; childIndex++) {
-        out.push(listing.lineageFact(config.lineageChildLabel, rowModel.children[childIndex].id));
+        var child = rowModel.children[childIndex];
+        out.push(listing.lineageFact(config.lineageChildLabels[child.link_type], child.id));
     }
 
     return out;
@@ -547,6 +549,12 @@ listing.paneUpdate = function(rowModel, $pane) {
     $pane.find('.audit-log-pane-head').html(listing.paneHeadHTML(rowModel));
     $pane.find('.audit-log-pane-tabs').html(listing.paneTabsHTML(rowModel));
     $pane.find('.audit-log-pane-summary').html(listing.paneSummaryHTML(rowModel));
+
+    // The flow link stands outside the tab strip, so it is brought to the new event here.
+    var $openFlow = $pane.find('.audit-log-open-flow');
+
+    $openFlow.attr('data-event-id', rowModel.id);
+    $openFlow.attr('href', $.fn.zato.audit_log.flowPageURL(rowModel.id));
 };
 
 // /////////////////////////////////////////////////////////////////////////////

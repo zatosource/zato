@@ -152,8 +152,15 @@ listing.config = {
     outcomeLabel: 'Outcome',
     statusLabel: 'Status',
 
-    lineageParentLabel: 'Repeat of',
-    lineageChildLabel: 'Repeated as',
+    // What a lineage link is called at each of its two ends, by the type of the link
+    lineageParentLabels: {
+        'resubmit-of': 'Repeat of',
+        'batch-item-of': 'Item of',
+    },
+    lineageChildLabels: {
+        'resubmit-of': 'Repeated as',
+        'batch-item-of': 'Contains',
+    },
 
     // What each kind of message body a source stores is called
     bodyKindLabels: {
@@ -258,10 +265,6 @@ listing.roles = {
     'response-sent': 'response',
     'ack-received': 'response',
     'ack-sent': 'response',
-    'mdn-received': 'response',
-    'mdn-sent': 'response',
-    'receipt-received': 'response',
-    'receipt-sent': 'response',
     'job-executed': 'job',
     'service-request': 'service-request',
     'service-response': 'service-response',

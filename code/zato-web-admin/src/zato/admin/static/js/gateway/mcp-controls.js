@@ -42,7 +42,7 @@ $.fn.zato.gateway.mcp.badge_picker_config = {
     },
 
     inject_hidden_input: function(form, badge) {
-        var service_name = badge.data('name');
+        var service_name = badge.attr('data-id');
         form.append($('<input/>', {
             type: 'hidden',
             name: 'mcp_service_' + service_name,
@@ -147,7 +147,7 @@ $.fn.zato.gateway.mcp.skills_badge_picker_config = {
     },
 
     inject_hidden_input: function(form, badge) {
-        var skill_name = badge.data('name');
+        var skill_name = badge.attr('data-id');
         form.append($('<input/>', {
             type: 'hidden',
             name: 'mcp_skill_' + skill_name,

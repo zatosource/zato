@@ -15,7 +15,7 @@ from threading import RLock
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.dlq import is_dlq_sub_key
+from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, parse_outgoing_sub_key
 from zato.server.base.config_manager.common import ConfigManagerImpl
@@ -88,6 +88,8 @@ class OutgoingQueues(ConfigManagerImpl):
     rename_outgoing_dlq: 'callable_'
     delete_outgoing_dlq: 'callable_'
     restore_outgoing_dlqs: 'callable_'
+    get_pubsub_topic_backend: 'callable_'
+    amqp_get_channel_queue_depth: 'callable_'
 
     def init_outgoing_queues(self) -> 'None':
         """ Sets up what the queues of outgoing connections are tracked with.
@@ -259,6 +261,9 @@ class OutgoingQueues(ConfigManagerImpl):
         sub_key_list = self.server.pubsub_backend.get_sub_keys_by_prefix(PubSub.Outgoing.Sub_Key_Prefix)
         restored_count = 0
 
+        # The topic of each queue brought back, by sub key
+        restored_topics = {}
+
         # The DLQs share the prefix and are brought back on their own
         self.restore_outgoing_dlqs(sub_key_list)
 
@@ -278,17 +283,26 @@ class OutgoingQueues(ConfigManagerImpl):
             conn_name, _ = found
             topic_name = get_outgoing_topic_name(conn_type, conn_name)
 
-            # A rename a crash interrupted is finished here
+            # A rename a crash interrupted is finished here, the DLQ's as well, which is renamed after the queue
             for subscribed_topic in self.server.pubsub_backend.get_subscribed_topics(sub_key):
                 if subscribed_topic != topic_name:
                     logger.info('Finishing the move of outgoing topic `%s` to `%s`', subscribed_topic, topic_name)
                     self.server.pubsub_backend.rename_topic(subscribed_topic, topic_name)
+
+            dlq_sub_key = get_dlq_sub_key(conn_type, conn_id)
+            dlq_topic_name = get_dlq_topic_name(conn_type, conn_name)
+
+            for subscribed_topic in self.server.pubsub_backend.get_subscribed_topics(dlq_sub_key):
+                if subscribed_topic != dlq_topic_name:
+                    logger.info('Finishing the move of outgoing DLQ topic `%s` to `%s`', subscribed_topic, dlq_topic_name)
+                    self.server.pubsub_backend.rename_topic(subscribed_topic, dlq_topic_name)
 
             self._set_outgoing_topic_audit_flag(conn_type, topic_name)
 
             sub_config = get_outgoing_sub_config(sub_key, topic_name)
             self._push_subs[sub_key] = [sub_config]
             self._outgoing_sub_key_cache.add(sub_key)
+            restored_topics[sub_key] = topic_name
 
             restored_count += 1
 
@@ -300,11 +314,37 @@ class OutgoingQueues(ConfigManagerImpl):
             if is_dlq_sub_key(sub_key):
                 del pending_counts[sub_key]
 
+        # A queue that lives in a broker keeps its messages there, so the broker is the one that knows its depth
+        pending_counts.update(self._get_broker_pending_counts(restored_topics))
+
         self.outgoing_queue_depth.set_counts(pending_counts)
 
         suffix = 'queue' if restored_count == 1 else 'queues'
 
         logger.info('Restored %d outgoing connection %s, messages waiting: %s', restored_count, suffix, pending_counts)
+
+# ################################################################################################################################
+
+    def _get_broker_pending_counts(self, restored_topics:'anydict') -> 'anydict':
+        """ How many messages wait in each queue whose topic lives in a broker, by sub key - the broker is asked through
+        the channel the topic reads its messages back with, before that channel's consumers start. A broker that cannot
+        be reached stops the server from starting, as a queue whose depth is not known would let a direct send overtake
+        the messages the broker holds.
+        """
+        out = {}
+
+        for sub_key, topic_name in restored_topics.items():
+
+            backend_config = self.get_pubsub_topic_backend(topic_name)
+
+            # A topic without a backend of its own keeps its messages in the pub/sub database, whose counts are in already
+            if not backend_config:
+                continue
+
+            channel_name = backend_config['amqp_channel_name']
+            out[sub_key] = self.amqp_get_channel_queue_depth(channel_name)
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

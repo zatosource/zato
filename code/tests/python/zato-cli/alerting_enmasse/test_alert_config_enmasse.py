@@ -34,7 +34,7 @@ from zato.common.alerting.config_store import get_type_definition
 from zato.common.alerting.notification_config import parse_extra, read_notification_config
 from zato.common.alerting.sweep import load_alert_rules
 from zato.common.api import Alerting, GENERIC
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, IntervalBasedJob, Job, Service
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, IntervalBasedJob, Job, Service
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
@@ -56,9 +56,6 @@ engine_generator:TypeAlias = Generator[Engine, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The cluster the test job belongs to
-_cluster_id = 1
 
 # The LLM connection the notifications name as the deployment's default for explanations
 _llm_name = 'enmasse.alerts.default.llm'
@@ -161,12 +158,11 @@ def backend(rule_database_engine:'Engine') -> 'RuleSQLBackend':
 @pytest.fixture
 def odb_session() -> 'any_':
     """ A real ODB session over an in-memory SQLite database holding
-    the scheduler tables, one cluster and the alerting sweep job.
+    the scheduler tables and the alerting sweep job.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         Service.__table__,
         Job.__table__,
         IntervalBasedJob.__table__,
@@ -178,9 +174,6 @@ def odb_session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
     llm = cast_('any_', GenericConn())
     llm.name = _llm_name
     llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
@@ -188,12 +181,11 @@ def odb_session() -> 'any_':
     llm.is_internal = False
     llm.is_channel = False
     llm.is_outconn = True
-    llm.cluster = cluster
     session.add(llm)
 
     session.commit()
 
-    _ = ensure_alerting_job_exists(session, _cluster_id)
+    _ = ensure_alerting_job_exists(session)
     session.commit()
 
     yield session
@@ -337,7 +329,6 @@ class TestAlertNotificationsImport:
 
         job = odb_session.query(Job).\
             filter(Job.name==Alerting.Job_Name).\
-            filter(Job.cluster_id==_cluster_id).\
             one()
 
         parsed = parse_extra(job.extra)
@@ -479,7 +470,7 @@ class TestAlertConfigExport:
             assert exported_by_type[entry['type']] == entry, entry['type']
 
         # And the notification targets travel back under the YAML's own names
-        exported_notifications = alert_config_exporter.export_notifications(odb_session, _cluster_id)
+        exported_notifications = alert_config_exporter.export_notifications(odb_session)
         assert exported_notifications == yaml_config['alert_notifications']
 
 # ################################################################################################################################

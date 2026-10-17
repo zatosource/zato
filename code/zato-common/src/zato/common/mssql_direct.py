@@ -186,8 +186,8 @@ class MSSQLDirectAPI:
 # ################################################################################################################################
 
     def execute(self, query:'str', params:'strdictnone'=None) -> 'anylist':
-        """ Runs one statement. Rows come back as a list of dicts, a statement that produced
-        no rows is committed and an empty list is returned.
+        """ Runs and commits one statement. Rows come back as a list of dicts, a statement that produced
+        no rows returns an empty list.
         """
         _validate_params(query, params)
 
@@ -208,10 +208,12 @@ class MSSQLDirectAPI:
                 if cursor.description:
                     out = cursor.fetchall()
 
-                # .. and one that produced none was a write, so it is committed.
+                # .. one that produced none, such as an UPDATE, returns an empty list ..
                 else:
-                    conn.commit()
                     out = []
+
+                # .. and what it wrote is committed, a write with an OUTPUT clause included.
+                conn.commit()
 
         finally:
             if conn:

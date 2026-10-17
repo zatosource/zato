@@ -12,7 +12,7 @@ import logging
 from sqlalchemy import and_, select
 
 # Zato
-from zato.cli.enmasse.util import get_non_default_response_cache
+from zato.cli.enmasse.util import export_channel_delivery_fields, get_non_default_response_cache
 from zato.cli.enmasse.util.alerts import group_alerts
 from zato.common.alerting.object_config import Alerts_Key, alert_type_channels
 from zato.common.api import CONNECTION, Groups, MISC, URL_TYPE
@@ -44,7 +44,7 @@ class ChannelSOAPExporter:
         self.exporter = exporter
         self.group_id_to_name = {}
 
-    def _load_security_groups(self, session:'SASession', cluster_id:'int') -> 'None':
+    def _load_security_groups(self, session:'SASession') -> 'None':
         """ Load security groups from the database and build an ID to name mapping.
         """
         # Clear existing mapping
@@ -58,7 +58,6 @@ class ChannelSOAPExporter:
         ]).where(and_(
             GenericObject.type_ == Groups.Type.Group_Parent,
             GenericObject.subtype == Groups.Type.API_Clients,
-            GenericObject.cluster_id == cluster_id,
         ))
 
         # Execute the query and get results
@@ -70,18 +69,17 @@ class ChannelSOAPExporter:
 
         logger.info('Loaded %d security groups', len(self.group_id_to_name))
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'channel_soap_def_list':
+    def export(self, session: 'SASession') -> 'channel_soap_def_list':
         """ Exports SOAP channel definitions.
         """
         logger.info('Exporting SOAP channel definitions')
 
         # Load security groups for ID to name conversion
-        self._load_security_groups(session, cluster_id)
+        self._load_security_groups(session)
 
         # Get channels from database
         db_channels = http_soap_list(
             session,
-            cluster_id,
             connection=CONNECTION.CHANNEL,
             transport=URL_TYPE.SOAP,
             return_internal=False,
@@ -161,6 +159,9 @@ class ChannelSOAPExporter:
             # Payloads leave with the audit export only when the flag is on, so only the on state is exported
             if channel_row.get('is_audit_export_payload_active') is True:
                 exported_channel['is_audit_export_payload_active'] = True
+
+            # The queue switch, the retry and DLQ settings and the static queue response, only what differs from the defaults
+            export_channel_delivery_fields(exported_channel, channel_row)
 
             # Alert settings moved away from their defaults travel as one nested mapping
             alerts = group_alerts(channel_row, alert_type_channels)

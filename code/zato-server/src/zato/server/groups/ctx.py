@@ -564,26 +564,52 @@ class SecurityGroupsCtx(BearerTokenCtx):
 
 # ################################################################################################################################
 
+    def _on_member_added_to_group(self, group_id:'int', security_id:'int') -> 'None':
+
+        # Continue only if this group has been previously assigned to our context object ..
+        if group_id not in self.security_groups:
+            return
+
+        sec_def = self._get_sec_def_by_id(security_id)
+        sec_def_type = sec_def['sec_type']
+
+        # .. an inactive definition authenticates no one ..
+        if not sec_def['is_active']:
+            return
+
+        # If we are here, we know we have everything to populate all the runtime containers
+        if sec_def_type == Sec_Def_Type.BASIC_AUTH:
+            if self._has_secret(sec_def):
+                self._on_basic_auth_created(group_id, security_id, sec_def['username'], sec_def['password'])
+        elif sec_def_type == Sec_Def_Type.OAUTH:
+            self._on_bearer_token_created(group_id, security_id, sec_def)
+        else:
+            if self._has_secret(sec_def):
+                self._on_apikey_created(group_id, security_id, sec_def['header'], sec_def['password'])
+
+# ################################################################################################################################
+
     def on_member_added_to_group(self, group_id:'int', security_id:'int') -> 'None':
 
         with self._lock:
+            self._on_member_added_to_group(group_id, security_id)
 
-            # Continue only if this group has been previously assigned to our context object ..
-            if group_id not in self.security_groups:
-                return
+# ################################################################################################################################
 
-            sec_def = self._get_sec_def_by_id(security_id)
-            sec_def_type = sec_def['sec_type']
+    def on_security_definition_edited(self, security_id:'int', group_id_list:'intlist') -> 'None':
+        """ Builds one definition anew from its current configuration in each of this channel's groups
+        that holds it, which leaves out a definition that is no longer active.
+        """
+        with self._lock:
 
-            # If we are here, we know we have everything to populate all the runtime containers
-            if sec_def_type == Sec_Def_Type.BASIC_AUTH:
-                if self._has_secret(sec_def):
-                    self._on_basic_auth_created(group_id, security_id, sec_def['username'], sec_def['password'])
-            elif sec_def_type == Sec_Def_Type.OAUTH:
-                self._on_bearer_token_created(group_id, security_id, sec_def)
-            else:
-                if self._has_secret(sec_def):
-                    self._on_apikey_created(group_id, security_id, sec_def['header'], sec_def['password'])
+            # The definition is first removed from wherever it was held ..
+            _ = self._delete_basic_auth(security_id)
+            _ = self._delete_apikey(security_id)
+            _ = self._delete_bearer_token(security_id)
+
+            # .. and then added to each group that holds it.
+            for group_id in group_id_list:
+                self._on_member_added_to_group(group_id, security_id)
 
 # ################################################################################################################################
 
@@ -593,8 +619,10 @@ class SecurityGroupsCtx(BearerTokenCtx):
         if group_id not in self.security_groups:
             return
 
-        # First, remove the security ID from the input group ..
-        self._after_auth_deleted(security_id)
+        # First, remove the security ID from the input group alone, the other groups keep it, ..
+        # .. and a group that is being unassigned from the channel has had its mapping removed already ..
+        if group_id in self.group_to_sec_map:
+            self.group_to_sec_map[group_id].discard(security_id)
 
         # .. now, check if the security definition belongs to other groups as well ..
         # .. and if not, delete the security definition altogether because ..
@@ -642,26 +670,29 @@ class SecurityGroupsCtx(BearerTokenCtx):
                 # .. get the member's security definition ..
                 sec_def = self.server.config_manager.basic_auth_get_by_id(member.security_id)
 
-                # .. populate the correct container ..
-                if self._has_secret(sec_def):
-                    self.on_basic_auth_created(group_id, sec_def['id'], sec_def['username'], sec_def['password'])
+                # .. populate the correct container, unless the definition is inactive ..
+                if sec_def['is_active']:
+                    if self._has_secret(sec_def):
+                        self.on_basic_auth_created(group_id, sec_def['id'], sec_def['username'], sec_def['password'])
 
             elif member.sec_type == Sec_Def_Type.APIKEY:
 
                 # .. get the member's security definition ..
                 sec_def = self.server.config_manager.apikey_get_by_id(member.security_id)
 
-                # .. populate the correct container ..
-                if self._has_secret(sec_def):
-                    self.on_apikey_created(group_id, sec_def['id'], sec_def['header'], sec_def['password'])
+                # .. populate the correct container, unless the definition is inactive ..
+                if sec_def['is_active']:
+                    if self._has_secret(sec_def):
+                        self.on_apikey_created(group_id, sec_def['id'], sec_def['header'], sec_def['password'])
 
             elif member.sec_type == Sec_Def_Type.OAUTH:
 
                 # .. get the member's security definition ..
                 sec_def = self.server.config_manager.oauth_get_by_id(member.security_id)
 
-                # .. populate the correct container ..
-                self.on_bearer_token_created(group_id, sec_def['id'], sec_def)
+                # .. populate the correct container, unless the definition is inactive ..
+                if sec_def['is_active']:
+                    self.on_bearer_token_created(group_id, sec_def['id'], sec_def)
 
 # ################################################################################################################################
 

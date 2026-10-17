@@ -27,9 +27,6 @@ try:
 except ImportError:
     pass
 
-# SQLAlchemy
-from sqlalchemy import func
-
 # Zato
 from zato.common.util.api import get_current_user, make_repr # pylint: disable=no-name-in-module
 from zato.common.util.time_ import utcnow
@@ -100,7 +97,6 @@ class Lock:
     def __init__(
         self,
         os_user_name,
-        session,
         namespace,
         name,
         ttl,
@@ -111,7 +107,6 @@ class Lock:
         _transient=LOCK_TYPE.TRANSIENT
     ) -> 'None':
         self.os_user_name = os_user_name
-        self.session = session() if session else None
         self.namespace = namespace
         self.name = name
         self.ttl = ttl
@@ -131,7 +126,6 @@ class Lock:
 
     def __enter__(self, pub_hash_func=sha256, _permanent=LOCK_TYPE.PERMANENT):
 
-        # Compute lock_id in PostgreSQL's internal format which is a 64-bit integer (bigint)
         self.priv_id = hash('{}{}'.format(self.namespace, self.name))
         self.pub_id = pub_hash_func(str(self.priv_id).encode('utf8')).hexdigest()
 
@@ -222,55 +216,6 @@ class Lock:
 
 # ################################################################################################################################
 
-class SQLLock(Lock):
-    """ Base class for all SQL-backed locks.
-    """
-
-    def release(self, _has_debug=has_debug):
-        """ Releases the lock if it has not been released already assuming we managed to acquire the lock at all.
-        """
-        if self.acquired and not self.released:
-
-            self.session.execute(self._release_func(self.priv_id))
-            self.released = True
-
-            if _has_debug:
-                logger.debug('Released %s', self.priv_id)
-
-        self.session.close()
-
-# ################################################################################################################################
-
-    def _release_func(self, *ignored_args, **ignored_kwargs):
-        raise NotImplementedError()
-
-# ################################################################################################################################
-
-class OracleLock(SQLLock):
-    pass
-
-# ################################################################################################################################
-
-class MySQLLock(SQLLock):
-    _acquire_func = func.get_lock
-    _release_func = func.release_lock
-
-    def _acquire_impl(self):
-        return self.session.execute(self._acquire_func(self.priv_id, 0)).scalar()
-
-# ################################################################################################################################
-
-class PostgresSQLLock(SQLLock):
-    """ Distributed locks based on PostgreSQL.
-    """
-    _acquire_func = func.pg_try_advisory_lock
-    _release_func = func.pg_advisory_unlock
-
-    def _acquire_impl(self):
-        return self.session.execute(self._acquire_func(self.priv_id)).scalar()
-
-# ################################################################################################################################
-
 class FCNTLLock(Lock):
     """ IPC-only lock based on Linux fcntl system calls.
     """
@@ -351,7 +296,6 @@ class PassThrough(Lock):
     def __init__(self, *ignored_args, **ignored_kwargs) -> 'None':
         super().__init__(
             os_user_name=None,
-            session=None,
             namespace=None,
             name=None,
             ttl=None,
@@ -370,20 +314,16 @@ class PassThrough(Lock):
 
 # pylint: disable-next=unused-variable
 class LockManager:
-    """ A distributed lock manager based on SQL or, if only IPC is needed, on fcntl.
+    """ A lock manager for processes on one host, based on fcntl.
     """
     _lock_impl = {
-        'postgresql+pg8000': PostgresSQLLock,
-        'oracle': OracleLock,
-        'mysql+pymysql': MySQLLock,
         'fcntl': FCNTLLock,
         'zato-pass-through': PassThrough,
         }
 
-    def __init__(self, backend_type, default_namespace, session=None):
+    def __init__(self, backend_type, default_namespace):
         self.backend_type = backend_type
         self.default_namespace = default_namespace
-        self.session = session
         self._lock_class = self._lock_impl[backend_type]
         self.user_name = get_current_user()
 
@@ -436,12 +376,11 @@ class LockManager:
 
             namespace = namespace or self.default_namespace
 
-            logger.debug('Acquiring lock class:`%s` -> ns:%s, n:%s, t:%s, b:%s, bi:%s, s:%s',
-                self._lock_class, namespace, name, ttl, block, block_interval, self.session)
+            logger.debug('Acquiring lock class:`%s` -> ns:%s, n:%s, t:%s, b:%s, bi:%s',
+                self._lock_class, namespace, name, ttl, block, block_interval)
 
             return self._lock_class(
                 self.user_name,
-                self.session,
                 namespace,
                 name,
                 ttl,

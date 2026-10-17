@@ -58,7 +58,7 @@ class FTPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'ftp_def_list':
+    def export(self, session:'SASession') -> 'ftp_def_list':
         """ Exports FTP connection definitions.
         """
         logger.info('Exporting FTP connection definitions')
@@ -67,7 +67,7 @@ class FTPExporter:
         out:'ftp_def_list' = []
 
         # Get FTP connections from database using the generic connection query.
-        db_ftp = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_FTP)
+        db_ftp = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_FTP)
 
         if not db_ftp:
             logger.info('No FTP connection definitions found in DB')

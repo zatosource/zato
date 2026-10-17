@@ -76,7 +76,7 @@ def count_text(count:'int', singular:'str', plural:'str') -> 'str':
 # ################################################################################################################################
 
 class ServiceContextFilter(logging.Filter):
-    def filter(self, record):
+    def filter(self, record:'logging.LogRecord') -> 'bool':
         _cid = current_cid.get()
         _service_name = current_service_name.get()
         if _cid:
@@ -214,14 +214,7 @@ version: 1
 def get_logging_conf_contents() -> 'str':
     # type: (str) -> str
 
-    # We import it here to make CLI work faster
-    from zato.common.util.platform_ import is_linux
-
-    linux_log_handler_class     = 'logging.handlers.RotatingFileHandler' # Previously = ConcurrentRotatingFileHandler
-    non_linux_log_handler_class = 'logging.handlers.RotatingFileHandler'
-
-    # Under Windows, we cannot have multiple processes access the same log file
-    log_handler_class = linux_log_handler_class if is_linux else non_linux_log_handler_class
+    log_handler_class = 'logging.handlers.RotatingFileHandler'
 
     # This can be overridden by users
     if server_log_max_size := os.environ.get('Zato_Server_Log_Max_Size'):
@@ -562,7 +555,7 @@ def attach_service_context_filter() -> 'None':
     # .. and the handlers of every named logger too. The manager's dict may hold
     # .. placeholder objects which have no handlers of their own, hence the check.
     for logger_obj in logging.Logger.manager.loggerDict.values():
-        if hasattr(logger_obj, 'handlers'):
+        if isinstance(logger_obj, logging.Logger):
             for handler in logger_obj.handlers:
                 handler.addFilter(context_filter)
 

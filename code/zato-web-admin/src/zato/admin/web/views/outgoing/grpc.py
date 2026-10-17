@@ -38,7 +38,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'address'
     output_optional = ('is_tls', 'tls_ca_certs_file', 'proto_path', 'stub_module', 'stub_class', 'ping_timeout',
         'max_send_message_size', 'max_recv_message_size', 'security_id', 'security_name', 'auth_type') + generic_attrs
@@ -59,7 +59,6 @@ class Index(_Index):
 
         security_list = SecurityList.from_service(
             self.req.zato.client,
-            self.cluster_id,
             security_type_list=[SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH, SEC_DEF_TYPE.APIKEY],
             needs_definition_type_name_label=True
         )
@@ -124,7 +123,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'gRPC connection')
 
 # ################################################################################################################################

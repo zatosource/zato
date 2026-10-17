@@ -49,7 +49,7 @@ class AuditExtractionImporter:
         # Our response to produce
         out = {}
 
-        wrapper = GenericObjectWrapper(session, self.importer.cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Audit_Config.Type.Extraction_Rules
 
         rows = wrapper.get_list()
@@ -77,7 +77,7 @@ class AuditExtractionImporter:
 
         db_extraction = self.get_extraction_from_db(session)
 
-        wrapper = GenericObjectWrapper(session, self.importer.cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Audit_Config.Type.Extraction_Rules
 
         for extraction in extraction_list:

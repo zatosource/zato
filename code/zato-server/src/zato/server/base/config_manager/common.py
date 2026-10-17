@@ -20,6 +20,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The service that an AMQP channel hands its messages to when an AMQP-backed topic reads them back through that channel
+_pubsub_amqp_bridge_service = 'zato.pubsub.topic.on-amqp-message'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ConfigManagerImpl:
     """ Base class for objects that implement config manager functionality. Does not implement anything itself,
     instead serving as a common marker for all derived subclasses.

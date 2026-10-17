@@ -80,7 +80,6 @@ class TestEnmasseEmailSMTPExporter(TestCase):
         smtp_list_from_yaml = self.yaml_config.get('email_smtp', [])
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_smtp, _ = self.smtp_importer.sync_smtp_definitions(smtp_list_from_yaml, self.session)
         self.session.commit()
 

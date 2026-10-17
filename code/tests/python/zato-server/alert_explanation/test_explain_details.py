@@ -27,7 +27,7 @@ from zato.common.odb.model import GenericConn
 from zato.common.typing_ import cast_
 
 # Test helpers
-from explain_helpers import _cluster_id, _conn_name, _error_data, _explanation_text, _llm_conn_name, _server_name, _LLMFacade, \
+from explain_helpers import _conn_name, _error_data, _explanation_text, _llm_conn_name, _server_name, _LLMFacade, \
     LLMTestHandler, new_payload as _new_payload, new_service as _new_service, new_session as _new_session, \
     object_section as _object_section, seed_error_events as _seed_error_events, stored_explanation as _stored_explanation
 
@@ -94,7 +94,6 @@ def _seed_sftp_connection(session_maker:'any_', *, test_transfers:'bool'=False) 
     row.address = 'sftp.acme.example.com:22'
     row.username = 'zato'
     row.secret = 'never-shown'
-    row.cluster_id = _cluster_id
     row.opaque1 = json.dumps(opaque)
 
     session = session_maker()

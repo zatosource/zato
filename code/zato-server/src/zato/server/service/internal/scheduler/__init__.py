@@ -25,9 +25,8 @@ except ImportError:
 from zato.common.api import EMAIL, FileTransfer, SCHEDULER, SchedulerLink, ZATO_NONE
 from zato.common.audit_log.scheduler_query import get_chart_data, get_history_page, get_history_since, get_job_aggregates, \
     get_log_entries, get_run_detail, get_timeline_events_since
-from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
-from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
+from zato.common.odb.model import IntervalBasedJob, Job, Service as ServiceModel
 from zato.common.util.file_transfer_scheduler import delete_schedule_entry, update_schedule_job_fields
 from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, update_imap_scheduler_fields
 from zato.common.util.interval import unit_from_interval
@@ -68,7 +67,7 @@ _imap_extra_service = EMAIL.IMAP.Scheduler.Extra_Service
 _imap_extra_invoke_with = EMAIL.IMAP.Scheduler.Extra_Invoke_With
 
 _opaque_stale_keys = frozenset(_ib_params + (
-    'repeats', 'service', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'id', 'cluster_id',
+    'repeats', 'service', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'id',
 ))
 
 # What an optional input carries when the caller did not send it at all - none of these
@@ -110,9 +109,15 @@ def _keep_unsent_job_fields(self:'any_', input:'any_') -> 'None':
         existing_is_active = job_row.is_active
         existing_opaque = parse_instance_opaque_attr(job_row)
 
+    # A timezone that the caller sent empty is being removed, which is different from not being sent at all
+    payload = self.request.payload
+    sent_params = payload if isinstance(payload, dict) else {}
+
     # The optional fields - run timeouts, jitter, timezone and the four hooks
     for param in _new_params:
         if input.get(param) in _not_sent:
+            if param == 'timezone' and param in sent_params:
+                continue
             existing_value = existing_opaque.get(param)
             if existing_value:
                 input[param] = existing_value
@@ -244,7 +249,6 @@ def _create_edit(self, action):
     from contextlib import closing
 
     input = self.request.input
-    input.cluster_id = default_cluster_id
 
     self.logger.info('_create_edit: action=%s input=%s', action, input)
 
@@ -268,7 +272,7 @@ def _create_edit(self, action):
         raise ZatoException(cid, msg)
 
     with closing(self.odb.session()) as session:
-        job_rows = session.query(Job.id, Job.name).filter_by(cluster_id=default_cluster_id).all()
+        job_rows = session.query(Job.id, Job.name).all()
         jobs = [{'id': row.id, 'name': row.name} for row in job_rows]
 
     def _other_same_name(jid):
@@ -355,7 +359,7 @@ def _create_edit(self, action):
 
     try:
         with closing(self.odb.session()) as session:
-            service_row = session.query(ServiceModel).filter_by(name=service_name, cluster_id=input.cluster_id).first()
+            service_row = session.query(ServiceModel).filter_by(name=service_name).first()
             if not service_row:
                 raise ZatoException(cid, f'Service `{service_name}` not found in ODB')
 
@@ -370,14 +374,12 @@ def _create_edit(self, action):
                 job_row.service = service_row
                 job_row.extra = extra if extra else None
             else:
-                cluster_row = session.query(Cluster).filter_by(id=input.cluster_id).first()
                 job_row = Job()
                 job_row.name = name
                 job_row.is_active = is_active
                 job_row.job_type = job_type
                 job_row.start_date = start_date
                 job_row.service = service_row
-                job_row.cluster = cluster_row
                 job_row.extra = extra if extra else None
                 session.add(job_row)
                 session.flush()
@@ -417,6 +419,8 @@ def _create_edit(self, action):
                 opaque = json_loads(job_row.opaque1)
                 for stale_key in _opaque_stale_keys:
                     opaque.pop(stale_key, None)
+                if not opaque.get('timezone'):
+                    opaque.pop('timezone', None)
                 job_row.opaque1 = json_dumps(opaque)
 
             session.add(job_row)
@@ -501,7 +505,7 @@ def _create_edit(self, action):
 class _CreateEdit(_SchedulerAdmin):
     """ A base class for both creating and editing scheduler jobs.
     """
-    input = 'cluster_id', 'name', '-is_active', 'job_type', 'service', 'start_date', \
+    input = 'name', '-is_active', 'job_type', 'service', 'start_date', \
         Int('-id'), '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
         '-cron_definition', '-should_ignore_existing', \
         '-jitter_ms', '-timezone', '-max_execution_time_ms', \
@@ -533,18 +537,17 @@ class GetList(_Get):
     name = _service_name_prefix + 'get-list'
     _filter_by = Job.name,
 
-    input = '-cluster_id', Int('-cur_page'), Bool('-paginate'), '-query', '-service_name'
+    input = Int('-cur_page'), Bool('-paginate'), '-query', '-service_name'
 
     def handle(self):
         from contextlib import closing
         from zato.common.odb.query import job_list
 
         input = self.request.input
-        input.cluster_id = default_cluster_id
 
         with closing(self.odb.session()) as session:
 
-            search_result = self._search(job_list, session, input.cluster_id, input.get('service_name'), False)
+            search_result = self._search(job_list, session, input.get('service_name'), False)
 
             data = elems_with_opaque(search_result)
 
@@ -584,7 +587,7 @@ class GetByID(_Get):
     """
     name = _service_name_prefix + 'get-by-id'
 
-    input = Int('cluster_id'), Int('id')
+    input = Int('id')
 
     def handle(self) -> 'None':
         from contextlib import closing
@@ -648,14 +651,14 @@ class GetByName(_Get):
     """
     name = _service_name_prefix + 'get-by-name'
 
-    input = 'cluster_id', 'name'
+    input = 'name'
 
     def handle(self):
         from contextlib import closing
         from zato.common.odb.model import Job, IntervalBasedJob
         item = None
         with closing(self.odb.session()) as session:
-            job = session.query(Job).filter_by(name=self.request.input.name, cluster_id=default_cluster_id).first()
+            job = session.query(Job).filter_by(name=self.request.input.name).first()
             if job:
                 item = {'id': job.id, 'name': job.name, 'is_active': job.is_active, 'job_type': job.job_type,
                         'start_date': job.start_date.isoformat(), 'service': job.service.name,
@@ -863,7 +866,7 @@ class GetLastRunList(_SchedulerAdmin):
         # .. if their IDs changed, e.g. after a redeployment ..
         name_by_id = {}
         with closing(self.odb.session()) as session:
-            job_rows = session.query(Job).filter_by(cluster_id=default_cluster_id).all()
+            job_rows = session.query(Job).all()
             for job in job_rows:
                 if job.id in id_list:
                     name_by_id[job.id] = job.name
@@ -937,7 +940,7 @@ class GetCurrentState(_SchedulerAdmin):
             recent_limit = self.request.input.recent_limit or 100
 
             with closing(self.odb.session()) as session:
-                job_rows = session.query(Job).filter_by(cluster_id=default_cluster_id).all()
+                job_rows = session.query(Job).all()
                 store_jobs = []
                 for job in job_rows:
                     store_jobs.append({

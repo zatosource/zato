@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, NOT_FOUND, REQUEST_TIMEOUT, \
-    SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
+from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, INTERNAL_SERVER_ERROR, NOT_FOUND, \
+    REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
 
 # requests
 from requests.exceptions import ConnectionError as RequestsConnectionError, SSLError as RequestsSSLError, \
@@ -31,16 +31,11 @@ Audit_DB_File_Name = 'audit.db'
 Env_Retention_Days = 'Zato_Audit_Log_Retention_Days'
 
 # What one source's own retention variable is prefixed with - the source name in upper case
-# with dashes turned into underscores completes it, e.g. Zato_Audit_Log_Retention_Days_AS2.
+# with dashes turned into underscores completes it, e.g. Zato_Audit_Log_Retention_Days_MLLP_CHANNEL.
 Env_Retention_Days_Prefix = 'Zato_Audit_Log_Retention_Days_'
 
 # How many days of events are kept when the environment does not say otherwise
 _default_retention_days = 30
-
-# How many days the B2B sources are kept for. What a partner sent and what it signed for is the
-# evidence a trade dispute is settled with, and disputes surface years after the exchange,
-# so the sources that carry non-repudiation evidence outlive the debug events by default.
-_default_evidence_retention_days = 7 * 365
 
 # How many days a health check's own events are kept for. A check running every ten seconds writes
 # more rows in a day than most connections carry in a month, and a ping that answered a week ago
@@ -72,16 +67,12 @@ class AuditSource:
     Email_SMTP    = 'email-smtp'
     File_Outgoing = 'file-outgoing'
     SQL_Outgoing  = 'sql-outgoing'
-    AS2           = 'as2'
-    AS4           = 'as4'
-    X12           = 'x12'
     MCP           = 'mcp'
     MLLP_Channel  = 'mllp-channel'
     MLLP_Outgoing = 'mllp-outgoing'
     Kafka_Channel  = 'kafka-channel'
     Kafka_Outgoing = 'kafka-outgoing'
     FHIR          = 'fhir'
-    FHIR_Bulk_Export = 'fhir-bulk-export'
     CCDA          = 'ccda'
     Config        = 'config'
     Scheduler     = 'scheduler'
@@ -139,16 +130,12 @@ _source_label = {
     AuditSource.Email_SMTP_Health: 'SMTP check',
     AuditSource.File_Outgoing: 'File transfer',
     AuditSource.SQL_Outgoing: 'SQL',
-    AuditSource.AS2: 'AS2',
-    AuditSource.AS4: 'AS4',
-    AuditSource.X12: 'X12',
     AuditSource.MCP: 'MCP',
     AuditSource.MLLP_Channel: 'MLLP channel',
     AuditSource.MLLP_Outgoing: 'MLLP outgoing',
     AuditSource.Kafka_Channel: 'Kafka channel',
     AuditSource.Kafka_Outgoing: 'Kafka outgoing',
     AuditSource.FHIR: 'FHIR outgoing',
-    AuditSource.FHIR_Bulk_Export: 'FHIR bulk export',
     AuditSource.CCDA: 'C-CDA',
     AuditSource.Config: 'Log access',
     AuditSource.Scheduler: 'Scheduler',
@@ -219,7 +206,6 @@ source_attr_names = {
     AuditSource.MLLP_Channel: ('msg_type', 'mrn', 'facility', 'ack_status'),
     AuditSource.MLLP_Outgoing: ('msg_type', 'mrn', 'facility', 'ack_status'),
     AuditSource.FHIR: ('resource_type', 'method'),
-    AuditSource.FHIR_Bulk_Export: ('job_id', 'phase', 'resource_type', 'file_name', 'count'),
     AuditSource.CCDA: ('root_template', 'resource_count', 'document_size', 'reason'),
     AuditSource.Scheduler: ('current_run', 'delay_ms', 'job_id'),
     AuditSource.File_Outgoing: ('operation', 'schedule', 'file_name', 'service', 'checksum', 'current_run'),
@@ -246,9 +232,6 @@ source_attr_names = {
 
 # The sources kept for something other than the usual span, with how long each is kept for.
 _source_retention_days = {
-    AuditSource.AS2: _default_evidence_retention_days,
-    AuditSource.AS4: _default_evidence_retention_days,
-    AuditSource.X12: _default_evidence_retention_days,
     AuditSource.REST_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.SOAP_Outgoing_Health: _default_health_check_retention_days,
     AuditSource.FHIR_Health: _default_health_check_retention_days,
@@ -271,9 +254,9 @@ def get_retention_days(source:'str' = '') -> 'int':
     process-wide - the latter is also the widest window the reports run over.
 
     A source's own environment variable comes first, then the source's own default, and only then
-    the process-wide setting. The order is deliberate: an operator shortening retention across the
-    board is asking for less diagnostic history, not for the evidence of what a partner signed for
-    to be deleted, and that decision has to be made for the source it concerns by name.
+    the process-wide setting. The order is deliberate: an operator lengthening retention across the
+    board is asking for more traffic history, not for months of health check pings to be kept,
+    and that decision has to be made for the source it concerns by name.
     """
     if source:
 
@@ -315,10 +298,6 @@ class AuditEvent:
     Ack_Sent             = 'ack-sent'
     Ack_Received         = 'ack-received'
     Message_Sent         = 'message-sent'
-    MDN_Sent             = 'mdn-sent'
-    MDN_Received         = 'mdn-received'
-    Receipt_Sent         = 'receipt-sent'
-    Receipt_Received     = 'receipt-received'
     Alert_Raised         = 'alert-raised'
     Alert_Explained      = 'alert-explained'
     DLQ                  = 'dlq'
@@ -525,7 +504,7 @@ _event_columns = [
     # question of the four with no index of its own behind it.
     Index('idx_event_correl_id', 'correl_id', 'id'),
 
-    # The reconciliation queries ask for the open events of one source before a moment in time -
+    # The outstanding queries ask for the open events of one source before a moment in time -
     # every message whose receipt has not arrived - and the msg_id index above covers only the
     # lookup of the closing event, leaving the outer half of that question a full scan.
     Index('idx_event_source_type_time', 'source', 'event_type', 'event_time_iso'),
@@ -632,33 +611,6 @@ _alert_columns = [
 alert_table = Table('alert', metadata, *_alert_columns)
 
 # ################################################################################################################################
-
-# The AS4 message partition channels - the messages a partner is to pull rather than be sent,
-# each waiting on the channel it was queued on until a pull request asks for it. A row claimed by
-# a pull stays in flight until the receipt for it arrives, and one whose receipt never arrives goes
-# back to waiting, so a pull that was answered but never acknowledged is not a message lost.
-_as4_pull_queue_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('mpc', _endpoint_column),
-    Column('from_party', _short_column),
-    Column('to_party', _short_column),
-    Column('message_id', _short_column),
-    Column('conversation_id', _short_column),
-    Column('service', _short_column),
-    Column('action', _short_column),
-    Column('state', _short_column),
-    Column('pull_count', Integer),
-    Column('queued_iso', _short_column),
-    Column('claimed_iso', _short_column),
-    Column('data', Text),
-    Index('idx_as4_pull_queue_mpc_state', 'mpc', 'state', 'id'),
-    Index('idx_as4_pull_queue_message_id', 'message_id', unique=True),
-    Index('idx_as4_pull_queue_state_claimed', 'state', 'claimed_iso'),
-]
-
-as4_pull_queue_table = Table('as4_pull_queue', metadata, *_as4_pull_queue_columns)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 # Markers meaning a failure is transient - resubmitting the message as-is can work
@@ -707,6 +659,36 @@ def derive_classification(outcome:'str', status:'str' = '', application_outcome:
         # .. and anything unmatched stays unclassified.
         else:
             out = ''
+
+    return out
+
+# ################################################################################################################################
+
+# The client errors that say the server could not take the request right now rather than that the request is wrong
+_transient_client_errors = (REQUEST_TIMEOUT, TOO_MANY_REQUESTS)
+
+# ################################################################################################################################
+
+def derive_http_classification(status_code:'int') -> 'str':
+    """ Classifies a rejection by the HTTP status it came with - a client error is permanent, except for the ones
+    saying the server could not take the request right now, and a server error is transient.
+    """
+
+    # A server error is something the same request can get past later ..
+    if status_code >= INTERNAL_SERVER_ERROR:
+        out = AuditClassification.Transient
+
+    # .. so is a client error that only says the server was busy or slow ..
+    elif status_code in _transient_client_errors:
+        out = AuditClassification.Transient
+
+    # .. any other client error needs the request to change first ..
+    elif status_code >= BAD_REQUEST:
+        out = AuditClassification.Permanent
+
+    # .. and anything below that is not a rejection at all.
+    else:
+        out = ''
 
     return out
 

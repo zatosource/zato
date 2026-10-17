@@ -15,7 +15,7 @@ import os
 
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
-from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
+from gevent.monkey import patch_builtins, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
      patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
 
 # Note that the order of patching matters, just like in patch_all
@@ -31,15 +31,6 @@ patch_subprocess()
 patch_builtins()
 patch_signal()
 patch_queue()
-patch_contextvars()
-
-# ConcurrentLogHandler - updates stdlib's logging config on import so this needs to stay after gevent patches
-try:
-    import cloghandler # type: ignore
-except ImportError:
-    pass
-else:
-    cloghandler = cloghandler # For pyflakes
 
 # stdlib
 import logging
@@ -59,9 +50,9 @@ import yaml
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
-from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
+from zato.common.typing_ import cast_
 from zato.common.ext.bunch import Bunch
 from zato.common.defaults import default_env_base_dir, secret_fields_exact, secret_fields_prefix, secret_fields_suffix
 from zato.common.util.api import asbool, get_config, is_encrypted, new_cid_server, parse_cmd_line_options, \
@@ -74,15 +65,17 @@ from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
 
 # Rust core
-from zato_server_core import HTTPServer, handle_http_request, init_rest_log, init_access_log
+from zato_server_core.zato_server_core import HTTPServer, handle_http_request, init_rest_log, init_access_log
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from datetime import timedelta
     from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
     callable_ = callable_
+    timedelta = timedelta
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,16 +89,13 @@ warnings.filterwarnings('ignore',  category=sa_exc.SAWarning, message='.*')
 
 class ModuleCtx:
 
-    num_threads     = 'num_threads'
-    bind_host       = 'bind_host'
-    bind_port       = 'bind_port'
+    bind_host     = 'bind_host'
+    bind_port     = 'bind_port'
 
-    Env_Num_Threads = 'Zato_Config_Num_Threads'
-    Env_Bind_Host   = 'Zato_Config_Bind_Host'
-    Env_Bind_Port   = 'Zato_Config_Bind_Port'
+    Env_Bind_Host = 'Zato_Config_Bind_Host'
+    Env_Bind_Port = 'Zato_Config_Bind_Port'
 
     Env_Map = {
-        num_threads: Env_Num_Threads,
         bind_host:   Env_Bind_Host,
         bind_port:   Env_Bind_Port,
     }
@@ -138,7 +128,6 @@ class ZatoApplication:
         self.zato_host = ''
         self.zato_port = -1
         self.zato_config = {}
-        self._http_server:'HTTPServer | None' = None
         self._init_config()
 
 # ################################################################################################################################
@@ -177,8 +166,8 @@ class ZatoApplication:
                 self.zato_config[k] = v
 
         # .. what interface to bind to ..
-        if bind_host := self._get_config_value('bind_host'): # type: ignore
-            self.zato_host = bind_host
+        if bind_host := self._get_config_value('bind_host'):
+            self.zato_host = str(bind_host)
 
         # .. what is our main TCP port ..
         if bind_port := self._get_config_value('bind_port'): # type: ignore
@@ -187,32 +176,32 @@ class ZatoApplication:
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_server, name, self.zato_config[name])
 
-        self.zato_server.has_gevent = True
-
 # ################################################################################################################################
 
     def run(self) -> 'None':
+
+        # stdlib
+        from datetime import datetime, timezone
 
         # tzlocal
         from tzlocal import get_localzone
 
         server = self.zato_server
 
-        # Generate the deployment key
-        from uuid import uuid4
-        from datetime import datetime, timezone
-        deployment_key = '{}.{}'.format(datetime.now(timezone.utc).isoformat(), uuid4().hex)
-
-        # Initialize the server
-        ParallelServer.start_server_process(server, deployment_key)
-
-        # Build the request handler for the Rust HTTP server
+        # Build the request handler for the Rust HTTP server ..
         local_tz = get_localzone()
         utc_offset = local_tz.utcoffset(datetime.now(timezone.utc))
+        utc_offset = cast_('timedelta', utc_offset)
         local_tz_offset_secs = int(utc_offset.total_seconds())
 
         def request_handler(request_ctx:'dict') -> 'tuple':
             return handle_http_request(server, request_ctx, new_cid_server, local_tz_offset_secs)
+
+        # .. which the OpenAPI console relays its requests through as well, once the server process has started ..
+        server.http_request_handler = request_handler
+
+        # .. and initialize the server.
+        ParallelServer.start_server_process(server)
 
         # Build server software header
         server_software = server.fs_server_config.misc.get('http_server_header', 'Apache')
@@ -229,10 +218,10 @@ class ZatoApplication:
         # .. which we convert to bytes for the HTTP server.
         max_msg_size = max_msg_size * _megabyte
 
-        self._http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
+        http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
 
         try:
-            self._http_server.serve_forever()
+            http_server.serve_forever()
         except KeyboardInterrupt:
             pass
         finally:
@@ -283,9 +272,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
 
     # Zato
     from zato.common.util.cli import read_stdin_data
-
-    # Type hints
-    preferred_address: 'str'
 
     options = options or {}
 
@@ -363,7 +349,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
 
     with open_r(logging_conf_path) as f:
         _logging_config:'str' = f.read()
-        _logging_config = _logging_config.replace('ConcurrentRotatingFileHandler', 'RotatingFileHandler')
 
         logging_config = yaml.safe_load(_logging_config)
         logging_config = apply_logging_env_overrides(logging_config)
@@ -385,17 +370,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     io_config.secret.suffix = secret_fields_suffix
 
     server_config.main.token = server_config.main.token.encode('utf8')
-
-    # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
-    preferred_address = server_config.preferred_address.get('address') or ''
-
-    if not preferred_address:
-        preferred_address = get_preferred_ip(server_config.main.bind, server_config.preferred_address)
-
-    if not preferred_address and not server_config.server_to_server.boot_if_preferred_not_found:
-        msg = 'Unable to start the server. Could not obtain a preferred address, please configure [bind_options] in server.conf'
-        logger.warning(msg)
-        raise Exception(msg)
 
     # Create the startup callable tool as soon as practical
     startup_callable_tool = StartupCallableTool(server_config)
@@ -466,13 +440,10 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
     server.fs_server_config = server_config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
-    server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
     server.io_config = io_config
     server.user_config.update(server_config.user_config_items)
-    server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
-    server.with_test_data = asbool(options.get('with_test_data'))
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore

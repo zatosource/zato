@@ -63,7 +63,7 @@ class _Connection:
         self.should_block = should_block
         self.block_timeout = block_timeout
 
-    def __enter__(self) -> 'None':
+    def __enter__(self) -> 'any_':
         try:
             self.client = self.queue.get(self.should_block, self.block_timeout)
         except Empty:

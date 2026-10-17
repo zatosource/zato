@@ -8,14 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import ExitStack
+from json import dumps
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 # Zato
-from zato.common.api import HL7
+from zato.common.api import GENERIC, HL7
 from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
+from zato.common.ext.bunch import Bunch
 from zato.common.typing_ import cast_
-from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper, _shared_state
+from zato.server.base.config_manager.generic import Generic
+from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper, delete_rest_channel, _shared_state
+from zato.server.service.internal.generic import connection as conn_module
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,6 +35,7 @@ if 0:
 
 # The port the listener is taken to have settled on, which nothing here depends on the value of
 _test_internal_port = 19000
+_test_channel_id = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,8 +124,12 @@ def _make_config(**overrides:'object') -> 'MagicMock':
     defaults.update(overrides)
     config = MagicMock()
 
+    # The wrapper reads its configuration both as attributes and, for the tolerance toggles,
+    # by key, the way a Bunch supports both
     for key, value in defaults.items():
         setattr(config, key, value)
+
+    config.__getitem__.side_effect = defaults.__getitem__
 
     return config
 
@@ -131,7 +140,7 @@ def _reset_shared_state() -> 'None':
     """
     _shared_state.server = None
     _shared_state.router._routes = []
-    _shared_state.listener_channel_count = 0
+    _shared_state.listener_channels = set()
     _shared_state.internal_port = 0
 
 # ################################################################################################################################
@@ -284,6 +293,26 @@ class TestRouteSettingsWiring(_WiringTestCase):
 
 # ################################################################################################################################
 
+    def test_the_tolerance_toggles_reach_the_parser_configuration(self) -> 'None':
+        """ Each tolerance toggle reaches the route's parser configuration as the channel has it, so
+        a channel whose toggles differ from the parser's defaults parses under its own.
+        """
+        wrapper = self.make_wrapper(
+            normalize_obx2_value_type=False,
+            fix_off_by_one_field_index=True,
+        )
+
+        wrapper._init_impl()
+
+        tolerance_config = self.get_only_route_settings().tolerance_config
+
+        self.assertFalse(tolerance_config.normalize_obx2_value_type)
+        self.assertTrue(tolerance_config.fix_off_by_one_field_index)
+        self.assertTrue(tolerance_config.replace_invalid_obx2_value_type)
+        self.assertTrue(tolerance_config.allow_short_encoding_characters)
+
+# ################################################################################################################################
+
     def test_should_return_errors_passed(self) -> 'None':
         """ Config should_return_errors=True reaches the route.
         """
@@ -412,6 +441,140 @@ class TestListenerWiring(_WiringTestCase):
         self.assertIsNone(_shared_state.server, 'The listener outlived its last channel')
 
         listener.stop.assert_called_once()
+
+# ################################################################################################################################
+
+    def test_an_edit_of_the_only_channel_keeps_the_listener(self) -> 'None':
+        """ An edit is a delete followed by a create of the same channel, and the listener that channel
+        alone uses stays up through both, so the connections senders have open on it are kept.
+        """
+
+        wrapper = self.make_wrapper(name='only')
+        wrapper._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+
+        wrapper.delete(is_edit=True)
+
+        edited = self.make_wrapper(name='only')
+        edited._init_impl()
+
+        listener.stop.assert_not_called()
+        self.assertIs(_shared_state.server, listener, 'The edit replaced the listener')
+        self.assertEqual(_shared_state.listener_channels, {'only'})
+
+# ################################################################################################################################
+
+    def test_an_edit_that_makes_the_only_channel_rest_only_stops_the_listener(self) -> 'None':
+        """ A channel edited to receive over REST only leaves the listener, and when it was the
+        listener's only user the listener stops with the edit rather than running for nobody.
+        """
+
+        wrapper = self.make_wrapper(name='only')
+        wrapper._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+
+        wrapper.delete(is_edit=True)
+
+        edited = self.make_wrapper(name='only', rest_only=True)
+        edited._init_impl()
+
+        listener.stop.assert_called_once()
+        self.assertIsNone(_shared_state.server, 'The listener outlived its last channel')
+        self.assertEqual(_shared_state.listener_channels, set())
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAChannelBuiltAgainIsCountedOnce(_WiringTestCase):
+    """ A configuration reload builds a new wrapper for every channel without deleting the one it had,
+    so a channel is among the listener's users once however many times it is built.
+    """
+
+# ################################################################################################################################
+
+    def test_an_inactive_channel_built_again_is_one_user(self) -> 'None':
+
+        first_build = self.make_wrapper(name='inactive', is_active=False)
+        first_build._init_impl()
+
+        reload_build = self.make_wrapper(name='inactive', is_active=False)
+        reload_build._init_impl()
+
+        self.assertEqual(_shared_state.listener_channels, {'inactive'})
+
+# ################################################################################################################################
+
+    def test_the_listener_stops_with_a_channel_that_was_built_again(self) -> 'None':
+
+        first_build = self.make_wrapper(name='inactive', is_active=False)
+        first_build._init_impl()
+
+        reload_build = self.make_wrapper(name='inactive', is_active=False)
+        reload_build._init_impl()
+
+        reload_build._delete()
+
+        self.assertIsNone(_shared_state.server, 'The listener outlived its last channel')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestTheConfigManagerTellsTheChannelAboutAnEdit(_WiringTestCase):
+    """ The config manager edits a connection by deleting and creating it, and the MLLP channel is told
+    which of the two a delete is, since the listener it shares stays up through an edit.
+    """
+
+# ################################################################################################################################
+
+    def _make_manager(self, wrapper:'ChannelHL7MLLPWrapper') -> 'Generic':
+        """ A config manager that knows one MLLP channel, without the rest of the server.
+        """
+        manager = Generic.__new__(Generic)
+
+        conn_dict = Bunch()
+        conn_dict.id = _test_channel_id
+        conn_dict.name = wrapper.config.name
+        conn_dict.type_ = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+        conn_dict.conn = wrapper
+
+        manager.generic_conn_api = {
+            GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: {wrapper.config.name: conn_dict},
+        }
+        manager.delete_outgoing_dlq = MagicMock()
+
+        return manager
+
+# ################################################################################################################################
+
+    def test_the_delete_half_of_an_edit_keeps_the_listener(self) -> 'None':
+
+        wrapper = self.make_wrapper(name='only')
+        wrapper._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+        manager = self._make_manager(wrapper)
+
+        manager._delete_generic_connection({'id': _test_channel_id, 'name': 'only'}, needs_queue_delete=False, is_edit=True)
+
+        listener.stop.assert_not_called()
+        self.assertIs(_shared_state.server, listener)
+
+# ################################################################################################################################
+
+    def test_a_delete_that_is_not_an_edit_stops_the_listener(self) -> 'None':
+
+        wrapper = self.make_wrapper(name='only')
+        wrapper._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+        manager = self._make_manager(wrapper)
+
+        manager._delete_generic_connection({'id': _test_channel_id, 'name': 'only'})
+
+        listener.stop.assert_called_once()
+        self.assertIsNone(_shared_state.server)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -591,65 +754,110 @@ class TestRestOnlyMode(_WiringTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestRestChannelCleanup(_WiringTestCase):
-    """ Tests for the backing REST channel cleanup on MLLP channel delete.
+class TestTheBackingRestChannelIsNotDeletedByTheWrapper(_WiringTestCase):
+    """ The wrapper's teardown runs on every delete and on every edit, an edit being a delete followed
+    by a create, so it does not delete the REST channel backing the MLLP one - that channel is deleted
+    once, by the service that deletes the MLLP channel.
     """
 
 # ################################################################################################################################
 
-    def test_delete_invokes_http_soap_delete(self) -> 'None':
-        """ Deleting an MLLP channel with rest_channel_id invokes zato.http-soap.delete.
-        """
-        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
+    def test_tearing_the_wrapper_down_leaves_the_rest_channel_in_place(self) -> 'None':
 
-        # .. init first so the channel is counted ..
+        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
         wrapper._init_impl()
 
-        # .. now delete ..
-        wrapper._delete()
+        # What the config manager does for an edit as well as for a delete
+        wrapper.delete()
 
-        # .. verify the server's invoke was called to delete the REST channel ..
-        self.get_invoker(wrapper).invoke.assert_called_with('zato.http-soap.delete', {
+        invoked_services = [one.args[0] for one in self.get_invoker(wrapper).invoke.call_args_list]
+        self.assertNotIn('zato.http-soap.delete', invoked_services)
+
+# ################################################################################################################################
+
+    def test_an_edit_keeps_the_rest_channel_the_channel_was_saved_with(self) -> 'None':
+
+        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
+        wrapper._init_impl()
+
+        # An edit is the teardown followed by a build with the new config, which keeps the same id
+        wrapper.delete()
+
+        edited = self.make_wrapper(use_rest=True, rest_channel_id=42, name='test-mllp-channel')
+        edited._init_impl()
+
+        for one in (wrapper, edited):
+            invoked_services = [call.args[0] for call in self.get_invoker(one).invoke.call_args_list]
+            self.assertNotIn('zato.http-soap.delete', invoked_services)
+
+        self.assertEqual(edited.config.rest_channel_id, 42)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDeletingTheChannelDeletesItsRestChannel(TestCase):
+    """ The service that deletes an MLLP channel removes the REST channel it was saved with, and only that one.
+    """
+
+# ################################################################################################################################
+
+    def test_the_rest_channel_the_channel_was_saved_with_is_deleted(self) -> 'None':
+
+        service = MagicMock()
+        delete_rest_channel(service, 42)
+
+        service.invoke.assert_called_once_with('zato.http-soap.delete', {
             'id': 42,
-            'cluster_id': 1,
+            'should_raise_if_missing': False,
         })
 
 # ################################################################################################################################
 
-    def test_delete_no_rest_channel_no_invoke(self) -> 'None':
-        """ Deleting an MLLP channel without rest_channel_id does not invoke zato.http-soap.delete.
-        """
-        wrapper = self.make_wrapper(use_rest=False, rest_channel_id=0)
+    def test_a_channel_saved_without_a_rest_channel_deletes_none(self) -> 'None':
 
-        wrapper._init_impl()
-        wrapper._delete()
-
-        # .. invoke was only called from _invoke_service context, not for REST cleanup ..
-        self.get_invoker(wrapper).invoke.assert_not_called()
+        for rest_channel_id in (0, None):
+            service = MagicMock()
+            delete_rest_channel(service, rest_channel_id)
+            service.invoke.assert_not_called()
 
 # ################################################################################################################################
 
-    def test_delete_leaves_alone_a_rest_channel_already_gone(self) -> 'None':
-        """ Every worker holding the channel runs this, so whoever finds the REST channel
-        already deleted must not try to delete it a second time.
-        """
+    def test_the_delete_service_removes_the_rest_channel_of_an_mllp_channel(self) -> 'None':
 
-        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
-        wrapper._init_impl()
+        instance = MagicMock()
+        instance.type_ = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+        instance.name = 'adt-feed'
+        instance.opaque1 = dumps({'rest_channel_id': 42, 'use_rest': True})
 
-        # Asking after a channel that is no longer there is what raises
-        def _invoke(service_name:'str', request:'object') -> 'object':
-            if service_name == 'zato.http-soap.get':
-                raise Exception('No such channel')
-            return None
+        service = MagicMock()
 
-        invoker = self.get_invoker(wrapper)
-        invoker.invoke.side_effect = _invoke
+        with ExitStack() as stack:
+            _ = stack.enter_context(patch.object(conn_module, 'get_model_snapshot'))
+            _ = stack.enter_context(patch.object(conn_module, 'record_service_config_change'))
+            conn_module.delete_hook(service, Bunch(), instance, MagicMock())
 
-        wrapper._delete()
+        service.invoke.assert_called_once_with('zato.http-soap.delete', {
+            'id': 42,
+            'should_raise_if_missing': False,
+        })
 
-        invoked_services = [one.args[0] for one in invoker.invoke.call_args_list]
-        self.assertNotIn('zato.http-soap.delete', invoked_services)
+# ################################################################################################################################
+
+    def test_the_delete_service_leaves_other_channels_alone(self) -> 'None':
+
+        instance = MagicMock()
+        instance.type_ = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+        instance.name = 'adt-feed'
+        instance.opaque1 = dumps({'rest_channel_id': 0, 'use_rest': False})
+
+        service = MagicMock()
+
+        with ExitStack() as stack:
+            _ = stack.enter_context(patch.object(conn_module, 'get_model_snapshot'))
+            _ = stack.enter_context(patch.object(conn_module, 'record_service_config_change'))
+            conn_module.delete_hook(service, Bunch(), instance, MagicMock())
+
+        service.invoke.assert_not_called()
 
 # ################################################################################################################################
 # ################################################################################################################################

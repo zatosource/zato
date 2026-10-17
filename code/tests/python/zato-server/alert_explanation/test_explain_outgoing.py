@@ -20,10 +20,10 @@ from zato.common.alerting.model import AlertAction
 from zato.common.alerting.object_config import storage_name
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import TransportStatus
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP
+from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
 
 # Test helpers
-from explain_helpers import _cluster_id, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
+from explain_helpers import _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
     new_payload as _new_payload, new_service as _new_service, new_session as _new_session, \
     object_section as _object_section, stored_explanation as _stored_explanation
 
@@ -91,10 +91,9 @@ def _seed_connection(
             opaque[storage_name('fault_codes')] = _own_fault_codes
 
     session = session_maker()
-    cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
     if with_security:
-        security = HTTPBasicAuth(None, _security_name, True, 'crm', 'Zato', 'never-shown', cluster)
+        security = HTTPBasicAuth(None, _security_name, True, 'crm', 'Zato', 'never-shown')
         session.add(security)
     else:
         security = None
@@ -121,7 +120,6 @@ def _seed_connection(
     row.pool_size = 20
     row.data_format = 'json'
     row.security = security
-    row.cluster = cluster
     row.opaque1 = json.dumps(opaque)
 
     session.add(row)

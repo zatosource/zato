@@ -59,7 +59,6 @@ def req() -> 'any_':
     out = Bunch()
     out.zato = Bunch()
     out.zato.client = _FakeClient()
-    out.zato.cluster_id = 1
     return out
 
 # ################################################################################################################################

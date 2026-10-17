@@ -90,7 +90,7 @@ def _get_gateway_from_odb(zato_dashboard:'anydict', gateway_name:'str') -> 'anyd
     api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.get-list'
     api_auth = ('admin.invoke', zato_dashboard['password'])
     api_headers = {'Content-Type': 'application/json'}
-    api_payload = json.dumps({'cluster_id': 1, 'type_': 'gateway-mcp'})
+    api_payload = json.dumps({'type_': 'gateway-mcp'})
 
     response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
     assert response.status_code == 200, f'API call failed: {response.status_code} {response.text}'

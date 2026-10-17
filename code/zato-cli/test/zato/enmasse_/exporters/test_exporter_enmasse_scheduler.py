@@ -84,7 +84,6 @@ class TestEnmasseSchedulerExporter(TestCase):
         scheduler_list_from_yaml = self.yaml_config.get('scheduler', [])
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_scheduler_jobs, _ = self.scheduler_importer.sync_job_definitions(scheduler_list_from_yaml, self.session)
         self.session.commit()
 
@@ -128,7 +127,6 @@ class TestEnmasseSchedulerExporter(TestCase):
         or the IMAP-specific one - are not exported on their own, while regular jobs are.
         """
         self._setup_test_environment()
-        _ = self.importer.get_cluster(self.session)
 
         # A job linked to a connection through the generic link attributes ..
         linked_job_def = {
@@ -168,7 +166,7 @@ class TestEnmasseSchedulerExporter(TestCase):
 
         # Export the jobs and index them by name
         scheduler_exporter = SchedulerExporter(EnmasseYAMLExporter())
-        exported_jobs = scheduler_exporter.export(self.session, self.importer.cluster_id)
+        exported_jobs = scheduler_exporter.export(self.session)
         exported_names = {item['name'] for item in exported_jobs}
 
         # Both connection-linked jobs are skipped, the regular one is exported

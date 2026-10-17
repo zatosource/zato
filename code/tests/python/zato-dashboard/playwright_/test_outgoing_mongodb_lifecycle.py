@@ -40,7 +40,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/mongodb/?cluster=1&type_=outconn-mongodb'
+_Page_Url_Pattern = '/zato/mongodb/?type_=outconn-mongodb'
 
 _Test_Name_Prefix = 'test.mongodb.' + CryptoManager.generate_hex_string(32) + '.'
 

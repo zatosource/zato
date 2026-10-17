@@ -20,11 +20,11 @@ from zato.common.alerting.object_config import storage_name
 from zato.common.api import GENERIC
 from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.hl7.audit import audit_ack_sent, audit_message_received
-from zato.common.odb.model import Cluster, GenericConn
+from zato.common.odb.model import GenericConn
 from zato.common.typing_ import cast_
 
 # Test helpers
-from explain_helpers import _cluster_id, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
+from explain_helpers import _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
     new_payload as _new_payload, new_service as _new_service, new_session as _new_session, \
     object_section as _object_section, stored_explanation as _stored_explanation
 
@@ -70,7 +70,6 @@ def _seed_channel(session_maker:'any_') -> 'None':
     """ One MLLP channel matching one sending application, with a service, a destination and alert settings of its own.
     """
     session = session_maker()
-    cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
     destinations = [{
         'name': _destination_name,
@@ -100,7 +99,6 @@ def _seed_channel(session_maker:'any_') -> 'None':
     row.is_channel = True
     row.is_outconn = False
     row.pool_size = 1
-    row.cluster = cluster
     row.opaque1 = json.dumps(opaque)
 
     session.add(row)

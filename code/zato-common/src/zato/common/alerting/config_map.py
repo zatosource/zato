@@ -26,7 +26,8 @@ from zato.common.alerting.config_map_fields import _call_measures as _call_measu
     Outcome_Codes_Default as Outcome_Codes_Default, Outcome_Codes_Field_Name as Outcome_Codes_Field_Name, \
     Silence_Slots_Field_Name as Silence_Slots_Field_Name, Silence_Window_Field_Name as Silence_Window_Field_Name, \
     Status_Codes_Default as Status_Codes_Default, Status_Codes_Field_Name as Status_Codes_Field_Name, \
-    type_fields as type_fields, Window_Field_Name as Window_Field_Name, Window_Seconds_Default as Window_Seconds_Default
+    type_fields as type_fields, Window_Field_Name as Window_Field_Name, Window_Seconds_Default as Window_Seconds_Default, \
+    Consecutive_Failures_Default as Consecutive_Failures_Default
 from zato.common.audit_log.common import AuditSource
 
 # ################################################################################################################################

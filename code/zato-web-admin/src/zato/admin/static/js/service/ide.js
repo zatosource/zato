@@ -687,6 +687,9 @@ $.fn.zato.ide.config = {
     // localStorage key prefix for the per-service payload format
     "payload_format_key_prefix": "zato.ide.payload-format.",
 
+    // localStorage scope of the request history, the full history and the source code keys
+    "storage_key_scope": "environment",
+
     // localStorage key prefix for the per-service tree/pretty/raw choice of each pane
     "pane_view_key_prefix": "zato.ide.pane-view.",
 
@@ -2268,7 +2271,7 @@ $.fn.zato.ide.populate_document_title = function(name) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.push_url_path = function(object_type, name, name_url_safe) {
-    let new_url_path = `/zato/service/ide/${object_type}/${name_url_safe}/?cluster=1`;
+    let new_url_path = `/zato/service/ide/${object_type}/${name_url_safe}/`;
     history.pushState({"object_type":object_type, "name": name_url_safe}, null, new_url_path);
     $.fn.zato.ide.populate_document_title(name);
 }
@@ -2565,8 +2568,8 @@ $.fn.zato.ide.load_source_object = function(
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.get_cluster_name = function() {
-    return $("#cluster_name").val();
+$.fn.zato.ide.get_storage_key_scope = function() {
+    return $.fn.zato.ide.config.storage_key_scope;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -2604,7 +2607,7 @@ $.fn.zato.ide.set_root_directory_count = function(value) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.get_current_source_code_key = function() {
-    return $.fn.zato.ide.get_cluster_name() + "." + $.fn.zato.ide.get_current_fs_location();
+    return $.fn.zato.ide.get_storage_key_scope() + "." + $.fn.zato.ide.get_current_fs_location();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -3452,8 +3455,8 @@ $.fn.zato.ide.on_toggle_object_select = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.get_request_history_key = function() {
-    let cluster_name = $.fn.zato.ide.get_cluster_name();
-    let key = window.zato_local_storage_key.zato_request_history + "." + cluster_name;
+    let storage_key_scope = $.fn.zato.ide.get_storage_key_scope();
+    let key = window.zato_local_storage_key.zato_request_history + "." + storage_key_scope;
     return key;
 }
 
@@ -3509,8 +3512,8 @@ $.fn.zato.ide.update_request_history_buttons = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.get_full_history_key = function() {
-    let cluster_name = $.fn.zato.ide.get_cluster_name();
-    let key = window.zato_local_storage_key.zato_full_history + "." + cluster_name;
+    let storage_key_scope = $.fn.zato.ide.get_storage_key_scope();
+    let key = window.zato_local_storage_key.zato_full_history + "." + storage_key_scope;
     return key;
 }
 

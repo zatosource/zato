@@ -315,6 +315,7 @@ def _deploy(status:'Status', repo_dir:'str', files:'strlist', is_full:'bool') ->
     services_updated = response.get('services_updated') or 0
     objects_created  = response.get('objects_created') or 0
     objects_updated  = response.get('objects_updated') or 0
+    objects_deleted  = response.get('objects_deleted') or 0
     errors           = response.get('errors') or []
 
     parts:'strlist' = []
@@ -330,6 +331,9 @@ def _deploy(status:'Status', repo_dir:'str', files:'strlist', is_full:'bool') ->
 
     if objects_updated:
         parts.append(count_text(objects_updated, 'enmasse object updated', 'enmasse objects updated'))
+
+    if objects_deleted:
+        parts.append(count_text(objects_deleted, 'enmasse object deleted', 'enmasse objects deleted'))
 
     if parts:
         status.add_lines('Deployed ' + ', '.join(parts))

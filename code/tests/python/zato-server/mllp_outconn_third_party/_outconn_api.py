@@ -61,6 +61,10 @@ _Ready_Poll_Interval = 0.25
 # The message a readiness check sends, whose only job is to reach the far end at all
 _Ready_Control_Id = 'READINESS'
 
+# A failure share no run of sends can reach, so the circuit breaker never stops a connection of this suite.
+# The breaker is tested on its own, and a single failed send would otherwise stop every send after it.
+_Breaker_Threshold_Percent_Never_Reached = 101
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -117,10 +121,16 @@ def _build_definition(name:'str', address:'str', config:'anydict') -> 'str':
 # ################################################################################################################################
 
 def create_outconn(environment:'any_', label:'str', address:'str', **config:'any_') -> 'str':
-    """ Creates one MLLP outgoing connection and returns its name. Anything not named here is left
-    at the default the connection type carries, which is what a connection created any other way
-    gets. The connection stays for the rest of the run, the whole environment being a throwaway one.
+    """ Creates one MLLP outgoing connection and returns its name. Anything not named here, apart from
+    the circuit breaker's threshold, is left at the default the connection type carries, which is what
+    a connection created any other way gets. The connection stays for the rest of the run, the whole
+    environment being a throwaway one.
     """
+    config = {
+        'circuit_breaker_threshold_percent': _Breaker_Threshold_Percent_Never_Reached,
+        **config,
+    }
+
     name = _build_name(label)
     definition = _build_definition(name, address, config)
 

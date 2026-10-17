@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # SQLAlchemy
 from sqlalchemy import BigInteger, Boolean, Column, Identity, Index, Integer, MetaData, String, Table, Text
-from sqlalchemy.dialects.mysql import LONGTEXT
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
@@ -36,26 +35,15 @@ _retry = HTTP_SOAP.Retry
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Message identifiers are 64-bit, except under SQLite where the autoincrement
-# primary key must be a plain INTEGER to become an alias of the built-in rowid.
-_id_column_type = BigInteger().with_variant(Integer(), 'sqlite')
-
-# How the identifiers are generated - an identity column, which is what Oracle DB needs spelled out
-# to number rows at all, and what PostgreSQL renders in place of a serial. MySQL renders its
-# auto-increment and SQLite its rowid alias, both as they always did.
+# SQLite requires INTEGER for an autoincrementing primary key to alias its built-in rowid.
 def _new_id_column() -> 'Column':
-    out = Column('id', _id_column_type, Identity(), primary_key=True)
+    out = Column('id', Integer, Identity(), primary_key=True)
     return out
 
-# MySQL's plain TEXT caps at 64 kB, so payloads need LONGTEXT there.
-_payload_column_type = Text().with_variant(LONGTEXT(), 'mysql')
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-# All the pub/sub queue tables, portable across SQLite, MySQL, PostgreSQL and Oracle DB.
-# Short columns are VARCHAR so MySQL can index them, and optional values are NULL,
-# never '', because Oracle DB stores empty strings as NULLs.
+# All pub/sub queue tables in the SQLite store.
 metadata = MetaData()
 
 # ################################################################################################################################
@@ -67,7 +55,7 @@ message_table = Table('pubsub_message', metadata,
     _new_id_column(),
     Column('msg_id', String(_short_column_len), nullable=False),
     Column('topic_name', String(_short_column_len), nullable=False),
-    Column('payload', _payload_column_type, nullable=True),
+    Column('payload', Text, nullable=True),
     Column('payload_encrypted', Boolean, nullable=False),
     Column('data_class', String(_data_class_column_len), nullable=True),
     Column('data_size', Integer, nullable=False),

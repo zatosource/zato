@@ -79,9 +79,6 @@ class TestEnmasseChannelRESTExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Import security definitions first, as channels may depend on them
         security_defs_from_yaml = self.yaml_config.get('security', [])
         if security_defs_from_yaml:
@@ -118,12 +115,11 @@ class TestEnmasseChannelRESTExporter(TestCase):
                 self.importer.group_defs = self.group_importer.group_defs
 
             # Import the channel definitions
-            self.channel_importer.importer.cluster_id = self.importer.cluster_id
             created, updated = self.channel_importer.sync_channel_rest(rest_channels, self.session)
             logger.info('Imported %d REST channels (created=%d, updated=%d)', len(created) + len(updated), len(created), len(updated))
 
             # Test that the imported channels can be exported correctly
-            all_exported_channels = self.channel_exporter.export(self.session, self.importer.cluster_id)
+            all_exported_channels = self.channel_exporter.export(self.session)
 
             # Filter exported channels to only include those with names starting with "enmasse"
             exported_channels = [channel for channel in all_exported_channels if channel['name'].startswith('enmasse')]

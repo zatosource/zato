@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # and the retries a direct save makes with the switch off.
 
 # stdlib
-from http.client import CREATED, TOO_MANY_REQUESTS, UNPROCESSABLE_ENTITY
+from http.client import CREATED, SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNPROCESSABLE_ENTITY
 
 # Zato
 from zato.common.api import HTTP_SOAP
@@ -99,7 +99,8 @@ def test_a_read_is_a_get_of_the_resource() -> 'None':
 # ################################################################################################################################
 
 def test_an_operation_outcome_is_a_rejection_and_the_resource_arrives_later() -> 'None':
-    """ The endpoint answers with an OperationOutcome, the save says what it said, and the same resource arrives from the queue.
+    """ The endpoint answers with an OperationOutcome under a 503, the save says what it said, and the same resource
+    arrives from the queue.
     """
     client = get_client()
     receiver = get_receiver(Conn_Orders)
@@ -110,7 +111,8 @@ def test_an_operation_outcome_is_a_rejection_and_the_resource_arrives_later() ->
     result = send(client, _orders_conn, data)
 
     assert result['is_in_queue'] is True
-    assert result['error'] == f'HTTP {UNPROCESSABLE_ENTITY} {Outcome_Diagnostics}'
+    assert result['is_rejected'] is False
+    assert result['error'] == f'HTTP {SERVICE_UNAVAILABLE} {Outcome_Diagnostics}'
     assert result['response'][Resource_Type_Key] == _operation_outcome_type
 
     accepted = receiver.wait_for_accepted(1)
@@ -118,10 +120,40 @@ def test_an_operation_outcome_is_a_rejection_and_the_resource_arrives_later() ->
     assert accepted[0].path == '/' + Request_Path
     assert fhir_type.body_of(accepted[0]) == data
 
-    assert receiver.outcomes() == [UNPROCESSABLE_ENTITY, CREATED]
+    assert receiver.outcomes() == [SERVICE_UNAVAILABLE, CREATED]
 
     queue = wait_for_queue_empty(client, _orders_conn)
     assert queue['depth'] == 0
+
+# ################################################################################################################################
+
+def test_a_permanent_operation_outcome_is_answered_and_never_queued() -> 'None':
+    """ An OperationOutcome under a 422 says the resource itself is wrong, so the save comes back with that answer,
+    nothing is queued and no further attempt is made.
+    """
+    client = get_client()
+    receiver = get_receiver(Conn_Orders)
+
+    receiver.answer_next([UNPROCESSABLE_ENTITY, CREATED])
+
+    result = send(client, _orders_conn, {'order_id': 'unprocessable-once'})
+
+    assert result['is_send_result'] is True
+    assert result['is_ok'] is False
+    assert result['is_in_queue'] is False
+    assert result['is_rejected'] is True
+    assert result['msg_id'] == ''
+    assert result['error'] == f'HTTP {UNPROCESSABLE_ENTITY} {Outcome_Diagnostics}'
+    assert result['response'][Resource_Type_Key] == _operation_outcome_type
+
+    requests = receiver.wait_for_requests(1)
+    assert len(requests) == 1
+
+    assert receiver.outcomes() == [UNPROCESSABLE_ENTITY]
+
+    queue = get_queue(client, _orders_conn)
+    assert queue['depth'] == 0
+    assert queue['messages'] == []
 
 # ################################################################################################################################
 
@@ -210,7 +242,7 @@ def test_the_audit_log_records_the_status_and_the_issue_code_of_each_attempt() -
     client = get_client()
     receiver = get_receiver(Conn_Orders)
 
-    receiver.answer_next([UNPROCESSABLE_ENTITY, UNPROCESSABLE_ENTITY])
+    receiver.answer_next([SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE])
 
     result = send(client, _orders_conn, {'order_id': 'audit-1'})
     assert result['is_in_queue'] is True
@@ -221,7 +253,7 @@ def test_the_audit_log_records_the_status_and_the_issue_code_of_each_attempt() -
     assert len(received_events) == 3
 
     received_statuses = [event['status'].split(' ')[0] for event in received_events]
-    assert received_statuses == [str(UNPROCESSABLE_ENTITY), str(UNPROCESSABLE_ENTITY), str(CREATED)]
+    assert received_statuses == [str(SERVICE_UNAVAILABLE), str(SERVICE_UNAVAILABLE), str(CREATED)]
 
     received_outcomes = [event['application_outcome'] for event in received_events]
     assert received_outcomes == [Outcome_Code, Outcome_Code, '']

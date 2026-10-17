@@ -38,12 +38,12 @@ class QuotaTierExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'tier_def_list':
+    def export(self, session:'SASession') -> 'tier_def_list':
         """ Exports quota tier definitions.
         """
         logger.info('Exporting quota tier definitions')
 
-        wrapper = GenericObjectWrapper(session, cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
         rows = wrapper.get_list()

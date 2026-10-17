@@ -58,14 +58,14 @@ class ChannelAMQPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'amqp_def_list':
+    def export(self, session:'SASession') -> 'amqp_def_list':
         """ Exports channel definitions of this exporter's subtype.
         """
         label = self.subtype['label']
         logger.info('Exporting %s channel definitions', label)
 
         # Only channels of this exporter's subtype are taken into account
-        db_items = channel_amqp_list(session, cluster_id, self.subtype_key, False)
+        db_items = channel_amqp_list(session, self.subtype_key, False)
         channels = to_json(db_items, return_as_dict=True)
 
         exported = []
@@ -114,14 +114,14 @@ class OutgoingAMQPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'amqp_def_list':
+    def export(self, session:'SASession') -> 'amqp_def_list':
         """ Exports outgoing connection definitions of this exporter's subtype.
         """
         label = self.subtype['label']
         logger.info('Exporting outgoing %s connection definitions', label)
 
         # Only connections of this exporter's subtype are taken into account
-        db_items = out_amqp_list(session, cluster_id, self.subtype_key, False)
+        db_items = out_amqp_list(session, self.subtype_key, False)
         connections = to_json(db_items, return_as_dict=True)
 
         exported = []

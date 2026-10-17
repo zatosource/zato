@@ -45,7 +45,7 @@ def find_channel_item(server:'any_', channel_name:'str') -> 'stranydict':
     """ Returns the runtime item of the REST or SOAP channel of the given name, the one live requests
     are dispatched through.
     """
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
 
     for channel_item in url_data.channel_data:
 

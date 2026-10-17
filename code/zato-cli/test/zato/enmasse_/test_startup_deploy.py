@@ -133,7 +133,6 @@ def _create_quickstart(tmpdir, password):
 
     qs_cmd = [
         _ZATO_BIN, 'quickstart', 'create', qs_dir,
-        '--servers', '1',
         '--server-api-client-for-scheduler-password', password,
         '--no-scheduler',
     ]

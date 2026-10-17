@@ -20,7 +20,6 @@ from time import monotonic, sleep
 # Zato
 from zato.common.api import HL7
 from zato.common.audit_log.api import get_audit_engine
-from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Channel_Clinic, Channel_Lab, \
     Channel_Main, Facilities_By_Channel, Outconn_FHIR, Outconn_Forward, Route_Clinic, Route_Lab, Route_Main, SeedConfig
 from zato.common.destination.constants import DestinationType
@@ -119,7 +118,7 @@ class DemoHL7Ack(Service):
 
     def handle(self):
 
-        message = self.request.raw_request
+        message = self.request.input
         control_id = message.get('msh.message_control_id')
 
         self.logger.info('Received message `%s`', control_id)
@@ -133,7 +132,7 @@ class DemoHL7Archive(Service):
 
     def handle(self):
 
-        message = self.request.raw_request
+        message = self.request.input
         self.logger.info('Archived message `%s`', message)
 
 # ################################################################################################################################
@@ -241,7 +240,6 @@ def _build_connection_request(connection_def:'stranydict') -> 'stranydict':
     out = dict(_type_defaults[connection_def['type_']])
 
     out.update({
-        'cluster_id': default_cluster_id,
         'is_active': True,
         'is_internal': False,
         'pool_size': 1,
@@ -335,7 +333,6 @@ def _build_archive_outconn_request(archive_host:'str') -> 'stranydict':
     the audit log is on so the usage page sees what goes out through it.
     """
     out = {
-        'cluster_id': default_cluster_id,
         'name': _archive_outconn,
         'is_active': True,
         'is_internal': False,
@@ -356,7 +353,6 @@ def _build_archive_channel_request() -> 'stranydict':
     sees what it receives.
     """
     out = {
-        'cluster_id': default_cluster_id,
         'name': _archive_intake_channel,
         'is_active': True,
         'is_internal': False,
@@ -610,7 +606,7 @@ def remove_demo_data(server:'ParallelServer') -> 'stranydict':
     deleted_connections:'strlist' = []
 
     for connection_id, connection_name in rows:
-        _ = server.invoke('zato.generic.connection.delete', {'id': connection_id, 'cluster_id': default_cluster_id})
+        _ = server.invoke('zato.generic.connection.delete', {'id': connection_id})
         deleted_connections.append(connection_name)
 
     # The archive's REST pieces go the same way
@@ -621,7 +617,7 @@ def remove_demo_data(server:'ParallelServer') -> 'stranydict':
             rest_name_column.in_([_archive_outconn, _archive_intake_channel])).all()
 
     for rest_id, rest_name in rest_rows:
-        _ = server.invoke('zato.http-soap.delete', {'id': rest_id, 'cluster_id': default_cluster_id})
+        _ = server.invoke('zato.http-soap.delete', {'id': rest_id})
         deleted_connections.append(rest_name)
 
     # The audit rows go next

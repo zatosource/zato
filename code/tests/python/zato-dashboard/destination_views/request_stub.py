@@ -35,12 +35,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The one cluster everything in the Dashboard belongs to
-Cluster_Id = 1
-
 # What a channel's three destination fields are given in the tests that do not vary them
 Destination_Connection = 'test.rest.billing'
 Destination_Type = 'rest'
+
+# What the server reports as the bounds of its HL7 MLLP listener, above anything the channel forms post
+Listener_Bounds_Service = 'zato.server.invoker'
+Listener_Max_Message_Size = 16_777_216
+Listener_Idle_Timeout = 60.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,10 +134,14 @@ def new_request(post_data:'stranydict | None'=None, method:'str'='POST') -> 'any
 
     out.zato = Bunch()
     out.zato.args = {}
-    out.zato.cluster_id = Cluster_Id
-    out.zato.cluster = Bunch()
-    out.zato.cluster.id = Cluster_Id
     out.zato.client = ClientRecorder()
+
+    # A channel being saved is judged against the bounds of the listener it is to run on
+    listener_bounds = {
+        'max_message_size': Listener_Max_Message_Size,
+        'idle_timeout': Listener_Idle_Timeout,
+    }
+    out.zato.client.set_response(Listener_Bounds_Service, listener_bounds)
 
     return out
 

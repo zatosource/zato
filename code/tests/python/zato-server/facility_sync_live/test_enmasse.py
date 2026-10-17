@@ -16,9 +16,6 @@ import pytest
 # PyYAML
 import yaml
 
-# Zato
-from zato.common.defaults import default_cluster_id
-
 # Project
 from model.facility import Source_Consult_Notes, Source_Treatments
 
@@ -77,7 +74,7 @@ def definitions() -> 'anydict':
 
 def test_both_connections_read_back_as_imported(client:'AdminClient', definitions:'anydict') -> 'None':
 
-    connections, _ = client.get_list(SQL_List_Service, cluster_id=default_cluster_id)
+    connections, _ = client.get_list(SQL_List_Service)
 
     for expected in definitions['sql']:
 
@@ -102,7 +99,7 @@ def test_both_jobs_read_back_as_imported(client:'AdminClient', definitions:'anyd
 
     for expected in definitions['scheduler']:
 
-        request = {'cluster_id': default_cluster_id, 'name': expected['name']}
+        request = {'name': expected['name']}
         actual = client.invoke(Job_Service, request)
 
         assert actual['name'] == expected['name']

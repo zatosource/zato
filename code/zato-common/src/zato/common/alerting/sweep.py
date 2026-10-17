@@ -27,20 +27,20 @@ from gevent import sleep
 
 # Zato
 from zato.common.alerting.ack_codes import apply_ack_codes
-from zato.common.alerting.collectors import collect_facts
+from zato.common.alerting.collectors import collect_facts, Default_Consecutive_Depth
 from zato.common.alerting.config_map import read_window_seconds_by_measure, type_sources, type_to_ruleset, \
     Explain_With_LLM_Key
 from zato.common.alerting.engine import process_findings
 from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
 from zato.common.alerting.object_config import Email_Connection_Config_Key, LLM_Connection_Config_Key
-from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_email_connection, \
-    get_llm_connection, get_muted_rule_names, get_silence_expected_names, is_object_active
+from zato.common.alerting.object_settings import build_rule_values, build_window_seconds_by_object, get_consecutive_depth, \
+    get_email_connection, get_inactive_keys, get_llm_connection, get_muted_rule_names, get_silence_expected_names, \
+    is_object_active
 from zato.common.alerting.fact_message import build_fact_message as build_fact_message
 from zato.common.alerting.fault_codes import apply_fault_codes
 from zato.common.alerting.outcome_codes import apply_outcome_codes
 from zato.common.alerting.status_codes import apply_status_codes
 from zato.common.api import Alerting
-from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.document import resolve_defaults
 from zato.common.rule_engine.loading import documents_from_version, load_documents
 from zato.common.rule_engine.references import referenced_terms
@@ -239,7 +239,7 @@ def build_finding_link(fact:'stranydict') -> 'str':
     source = quote(fact['source'])
     object_name = quote(fact['object_name'])
 
-    out = f'{Audit_Log_Path}?source={source}&object_name={object_name}&cluster={default_cluster_id}'
+    out = f'{Audit_Log_Path}?source={source}&object_name={object_name}'
 
     # A failure the audit log page can send again deep-links at the event itself
     if fact['is_resubmittable'] and fact['last_error_event_id']:
@@ -333,7 +333,7 @@ def build_dispatch(
     action_name = outcome.pop('action', None)
 
     if action_name not in _action_by_outcome:
-        logger.warning('Alert rule `%s` fired with no usable outcome.action (%r) - nothing to dispatch',
+        logger.debug('Alert rule `%s` fired with no usable outcome.action (%r) - nothing to dispatch',
             rule.name, action_name)
         return None
 
@@ -445,10 +445,24 @@ def run_sweep(
     # The channels whose settings say traffic is expected at this time of day are the ones measured for silence
     silence_expected_names = get_silence_expected_names(object_settings, now)
 
+    # The streak collector reads as many of each object's newest calls as the highest threshold in force asks for
+    consecutive_depth = get_consecutive_depth(object_settings, Default_Consecutive_Depth)
+
     facts = collect_facts(engine, metrics_by_name, metrics_source, now, window_seconds_by_source=window_seconds_by_source,
         window_seconds_by_object=window_seconds_by_object, job_intervals=job_intervals, arrival_windows=arrival_windows,
         schedule_expectations=schedule_expectations, silence_expected_names=silence_expected_names, tool_counts=tool_counts,
-        queue_rows=queue_rows)
+        queue_rows=queue_rows, consecutive_depth=consecutive_depth)
+
+    # An object switched off is not measured - its facts leave before any rule reads them
+    inactive_keys = get_inactive_keys(object_settings)
+    measured_facts:'dictlist' = []
+
+    for fact in facts:
+        if (fact['source'], fact['object_name']) in inactive_keys:
+            continue
+        measured_facts.append(fact)
+
+    facts = measured_facts
     out.fact_count = len(facts)
 
     for rule in rules:

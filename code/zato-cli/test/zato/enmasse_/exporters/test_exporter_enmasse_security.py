@@ -81,7 +81,6 @@ class TestEnmasseSecurityExporter(TestCase):
         security_list_from_yaml = self.yaml_config.get('security', [])
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_security, _ = self.security_importer.sync_security_definitions(security_list_from_yaml, self.session)
         self.session.commit()
 

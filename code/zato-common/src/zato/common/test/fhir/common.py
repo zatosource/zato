@@ -22,10 +22,8 @@ from zato.common.api import HL7, OAuth
 # ################################################################################################################################
 
 if 0:
-    from zato.common.test.fhir.bulk import BulkExportState
     from zato.common.test.fhir.store import FHIRStore
     from zato.common.typing_ import anytuple, strnone, strset
-    BulkExportState = BulkExportState
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -199,8 +197,7 @@ class FHIRHTTPServer(ThreadingHTTPServer):
         base_address:'str',
         auth_type:'str',
         auth_header:'strnone',
-        token_issuer:'OAuthTokenIssuer | None',
-        bulk:'BulkExportState',
+        token_issuer:'OAuthTokenIssuer | None'
         ) -> 'None':
         super().__init__(address, handler)
         self.store = store
@@ -208,7 +205,6 @@ class FHIRHTTPServer(ThreadingHTTPServer):
         self.auth_type = auth_type
         self.auth_header = auth_header
         self.token_issuer = token_issuer
-        self.bulk = bulk
 
 # ################################################################################################################################
 # ################################################################################################################################

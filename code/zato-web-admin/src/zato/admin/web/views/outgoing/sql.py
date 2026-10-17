@@ -31,7 +31,6 @@ def _get_edit_create_message(params, prefix=''):
     """
     return {
         'id': params.get('id'),
-        'cluster_id': params['cluster_id'],
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
         'engine': params[prefix + 'engine'],
@@ -44,13 +43,12 @@ def _get_edit_create_message(params, prefix=''):
         'extra': params.get(prefix + 'extra'),
     }
 
-def _edit_create_response(verb, id, name, engine_display_name, cluster_id):
+def _edit_create_response(verb, id, name, engine_display_name):
     """ A common function for producing return data for create and edit actions.
     """
     return_data = {'id': id,
                    'message': 'Successfully {} outgoing SQL connection `{}`'.format(verb, name),
                    'engine_display_name': engine_display_name,
-                   'cluster_id': cluster_id,
                 }
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
@@ -65,10 +63,9 @@ def index(req):
     change_password_form = ChangePasswordForm()
     meta = None
 
-    if req.zato.cluster_id and req.method == 'GET':
+    if req.method == 'GET':
 
         request = {
-            'cluster_id': req.zato.cluster_id,
             'paginate': True,
             'cur_page': req.GET.get('cur_page', 1)
         }
@@ -88,9 +85,7 @@ def index(req):
             _item.extra = item.extra or ''
             items.append(_item)
 
-    return_data = {'zato_clusters':req.zato.clusters,
-        'cluster_id':req.zato.cluster_id,
-        'search_form':req.zato.search_form,
+    return_data = {'search_form':req.zato.search_form,
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
@@ -112,7 +107,7 @@ def create(req):
         response = req.zato.client.invoke('zato.outgoing.sql.create', request)
 
         return _edit_create_response(
-            'created', response.data.id, req.POST['name'], response.data.display_name, req.zato.cluster.id)
+            'created', response.data.id, req.POST['name'], response.data.display_name)
 
     except Exception:
         msg = 'Could not create an outgoing SQL connection, e:`{}`'.format(format_exc())
@@ -129,7 +124,7 @@ def edit(req):
         response = req.zato.client.invoke('zato.outgoing.sql.edit', request)
 
         return _edit_create_response(
-            'updated', req.POST['id'], req.POST['edit-name'], response.data.display_name, req.zato.cluster.id)
+            'updated', req.POST['id'], req.POST['edit-name'], response.data.display_name)
 
     except Exception:
         msg = 'Could not update the outgoing SQL connection, e:`{}`'.format(format_exc())
@@ -142,7 +137,7 @@ class Delete(_Delete):
     service_name = 'zato.outgoing.sql.delete'
 
 @method_allowed('POST')
-def ping(req, cluster_id, id):
+def ping(req, id):
     """ Pings a database and returns the time it took, in milliseconds.
     """
     try:

@@ -143,6 +143,5 @@ $.fn.zato.outgoing.mongodb.data_table.new_row = function(item, data, include_tr)
 $.fn.zato.outgoing.mongodb.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing MongoDB connection `{0}` deleted',
-        'Are you sure you want to delete outgoing MongoDB connection `{0}`?',
-        true);
+        'Are you sure you want to delete outgoing MongoDB connection `{0}`?');
 }

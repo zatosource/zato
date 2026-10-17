@@ -143,7 +143,7 @@ $.fn.zato.channel.openapi.data_table.new_row = function(item, data, include_tr) 
     row += String.format("<td style='text-align:center'>{0}</td>", is_public ? 'Yes' : 'No');
     row += String.format("<td style='text-align:center'>{0}</td>", channel_count);
     row += String.format("<td style='text-align:center'>{0}</td>", item.url_path || '');
-    row += String.format('<td><a href="/zato/channel/openapi/generate/?cluster_id={0}&channel_id={1}">Download OpenAPI</a></td>', $('#cluster_id').val(), item.id);
+    row += String.format('<td><a href="/zato/channel/openapi/generate/?channel_id={0}">Download OpenAPI</a></td>', item.id);
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.openapi.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.openapi.delete_('{0}');\">Delete</a>", item.id));
@@ -172,8 +172,7 @@ $.fn.zato.channel.openapi.data_table.new_row = function(item, data, include_tr) 
 $.fn.zato.channel.openapi.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'OpenAPI channel `{0}` deleted',
-        'Are you sure you want to delete OpenAPI channel `{0}`?',
-        true);
+        'Are you sure you want to delete OpenAPI channel `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -217,15 +216,11 @@ $.fn.zato.channel.openapi.updateSlug = function(nameInputId, hiddenInputId, disp
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates) {
-    var cluster_id = $('#cluster_id').val();
     channelStates = channelStates || {};
 
     $.ajax({
         url: '/zato/channel/openapi/get-rest-channels/',
         type: 'GET',
-        data: {
-            cluster_id: cluster_id
-        },
         success: function(response) {
             if (response.rest_channels && response.rest_channels.length > 0) {
                 var items = [];
@@ -241,7 +236,7 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates
                     items.push({
                         id: channel.id,
                         state: state,
-                        link: '/zato/http-soap/?cluster=' + cluster_id + '&connection=channel&transport=plain_http&query=' + encodeURIComponent(channel.name),
+                        link: '/zato/http-soap/?connection=channel&transport=plain_http&query=' + encodeURIComponent(channel.name),
                         linkText: channel.name,
                         description: channel.url_path
                     });

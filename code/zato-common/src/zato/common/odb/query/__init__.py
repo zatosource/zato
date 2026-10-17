@@ -21,7 +21,7 @@ from sqlalchemy.sql.expression import case
 from zato.common.api import AMQP_Subtype_Plain, GENERIC, MISC, \
      PARAMS_PRIORITY, PubSub, URL_PARAMS_PRIORITY
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
+from zato.common.odb.model import APIKeySecurity, ChannelAMQP, \
     DeployedService, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     MTLSSecurity, NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, PubSubPermission, PubSubSubscription, \
     PubSubSubscriptionTopic, PubSubTopic, SecurityBase, Server, Service, SMTP, SPNEGOSecurity, SQLConnectionPool, WSSecurity
@@ -175,20 +175,17 @@ def bunch_maker(func):
 
 # ################################################################################################################################
 
-def internal_channel_list(session, cluster_id):
+def internal_channel_list(session):
     """ All the HTTP/SOAP channels that point to internal services.
     """
     return session.query(
         HTTPSOAP.soap_action, Service.name).\
-        filter(HTTPSOAP.cluster_id==Cluster.id).\
         filter(HTTPSOAP.service_id==Service.id).\
-        filter(Service.is_internal==True).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==HTTPSOAP.cluster_id) # noqa: E712
+        filter(Service.is_internal==True) # noqa: E712
 
 # ################################################################################################################################
 
-def _job(session, cluster_id):
+def _job(session):
     return session.query(
         Job.id,
         Job.name,
@@ -208,15 +205,13 @@ def _job(session, cluster_id):
         IntervalBasedJob.repeats,
         ).\
         outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
-        filter(Job.cluster_id==Cluster.id).\
-        filter(Job.service_id==Service.id).\
-        filter(Cluster.id==cluster_id)
+        filter(Job.service_id==Service.id)
 
 @query_wrapper
-def job_list(session, cluster_id, service_name=None, needs_columns=False):
+def job_list(session, service_name=None, needs_columns=False):
     """ All the scheduler's jobs defined in the ODB.
     """
-    q = _job(session, cluster_id)
+    q = _job(session)
 
     if service_name:
         q = q.filter(Service.name==service_name)
@@ -224,34 +219,32 @@ def job_list(session, cluster_id, service_name=None, needs_columns=False):
     return q.\
         order_by(Job.name)
 
-def job_by_id(session, cluster_id, job_id):
+def job_by_id(session, job_id):
     """ A scheduler's job fetched by its ID.
     """
-    return _job(session, cluster_id).\
+    return _job(session).\
         filter(Job.id==job_id).\
         one()
 
-def job_by_name(session, cluster_id, name):
+def job_by_name(session, name):
     """ A scheduler's job fetched by its name.
     """
-    return _job(session, cluster_id).\
+    return _job(session).\
         filter(Job.name==name).\
         first()
 
 # ################################################################################################################################
 
-def _sec_base(session, cluster_id):
+def _sec_base(session):
     return session.query(
         SecurityBase.id,
         SecurityBase.is_active,
         SecurityBase.sec_type,
         SecurityBase.name,
-        SecurityBase.username).\
-        filter(SecurityBase.cluster_id==Cluster.id).\
-        filter(Cluster.id==cluster_id)
+        SecurityBase.username)
 
-def sec_base(session, cluster_id, sec_base_id, use_one=True):
-    q = _sec_base(session, cluster_id).\
+def sec_base(session, sec_base_id, use_one=True):
+    q = _sec_base(session).\
         filter(SecurityBase.id==sec_base_id)
 
     if use_one:
@@ -262,7 +255,7 @@ def sec_base(session, cluster_id, sec_base_id, use_one=True):
     return result
 
 @query_wrapper
-def apikey_security_list(session, cluster_id, needs_columns=False):
+def apikey_security_list(session, needs_columns=False):
     """ All the API keys.
     """
     return session.query(
@@ -274,13 +267,11 @@ def apikey_security_list(session, cluster_id, needs_columns=False):
         APIKeySecurity.sec_type,
         APIKeySecurity.opaque1,
         ).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==APIKeySecurity.cluster_id).\
         filter(SecurityBase.id==APIKeySecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
-def basic_auth_list(session, cluster_id, cluster_name=None, needs_columns=False):
+def basic_auth_list(session, needs_columns=False):
     """ All the HTTP Basic Auth definitions.
     """
     q = session.query(
@@ -292,14 +283,7 @@ def basic_auth_list(session, cluster_id, cluster_name=None, needs_columns=False)
         HTTPBasicAuth.password,
         HTTPBasicAuth.sec_type,
         HTTPBasicAuth.password_type,
-        HTTPBasicAuth.opaque1,
-        Cluster.id.label('cluster_id'), Cluster.name.label('cluster_name')).\
-        filter(Cluster.id==HTTPBasicAuth.cluster_id)
-
-    if cluster_id:
-        q = q.filter(Cluster.id==cluster_id)
-    else:
-        q = q.filter(Cluster.name==cluster_name)
+        HTTPBasicAuth.opaque1)
 
     q = q.filter(SecurityBase.id==HTTPBasicAuth.id).\
         order_by(SecurityBase.name)
@@ -307,7 +291,7 @@ def basic_auth_list(session, cluster_id, cluster_name=None, needs_columns=False)
     return q
 
 @query_wrapper
-def ntlm_list(session, cluster_id, needs_columns=False):
+def ntlm_list(session, needs_columns=False):
     """ All the NTLM definitions.
     """
     return session.query(
@@ -316,13 +300,11 @@ def ntlm_list(session, cluster_id, needs_columns=False):
         NTLM.username,
         NTLM.password, NTLM.sec_type,
         NTLM.password_type).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==NTLM.cluster_id).\
         filter(SecurityBase.id==NTLM.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
-def mtls_list(session, cluster_id, needs_columns=False):
+def mtls_list(session, needs_columns=False):
     """ All the mTLS definitions.
     """
     return session.query(
@@ -330,13 +312,11 @@ def mtls_list(session, cluster_id, needs_columns=False):
         MTLSSecurity.is_active,
         MTLSSecurity.sec_type,
         MTLSSecurity.opaque1).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==MTLSSecurity.cluster_id).\
         filter(SecurityBase.id==MTLSSecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
-def spnego_list(session, cluster_id, needs_columns=False):
+def spnego_list(session, needs_columns=False):
     """ All the Kerberos (SPNEGO) definitions.
     """
     return session.query(
@@ -344,13 +324,11 @@ def spnego_list(session, cluster_id, needs_columns=False):
         SPNEGOSecurity.is_active,
         SPNEGOSecurity.sec_type,
         SPNEGOSecurity.opaque1).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==SPNEGOSecurity.cluster_id).\
         filter(SecurityBase.id==SPNEGOSecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
-def wss_list(session, cluster_id, needs_columns=False):
+def wss_list(session, needs_columns=False):
     """ All the WS-Security definitions.
     """
     return session.query(
@@ -360,13 +338,11 @@ def wss_list(session, cluster_id, needs_columns=False):
         WSSecurity.password, WSSecurity.sec_type,
         WSSecurity.password_type,
         WSSecurity.opaque1).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==WSSecurity.cluster_id).\
         filter(SecurityBase.id==WSSecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
-def oauth_list(session, cluster_id, needs_columns=False):
+def oauth_list(session, needs_columns=False):
     """ All the OAuth definitions.
     """
     out = session.query(
@@ -381,8 +357,6 @@ def oauth_list(session, cluster_id, needs_columns=False):
         OAuth.sec_type,
         OAuth.opaque1,
         ).\
-    filter(Cluster.id==cluster_id).\
-    filter(Cluster.id==OAuth.cluster_id).\
     filter(SecurityBase.id==OAuth.id).\
     order_by(SecurityBase.name)
 
@@ -438,9 +412,7 @@ def _amqp_subtype_filter(query:'any_', column:'any_', subtype:'str') -> 'any_':
 
 # ################################################################################################################################
 
-def _out_amqp(session, cluster_id):
-    # Note that out_amqp has no cluster_id column - there is always one cluster only,
-    # which is why the cluster_id parameter is not used in the query.
+def _out_amqp(session):
     return session.query(
         OutgoingAMQP.id,
         OutgoingAMQP.name,
@@ -459,18 +431,18 @@ def _out_amqp(session, cluster_id):
         ).\
         order_by(OutgoingAMQP.name)
 
-def out_amqp(session, cluster_id, id):
+def out_amqp(session, id):
     """ An outgoing AMQP connection.
     """
-    return _out_amqp(session, cluster_id).\
+    return _out_amqp(session).\
         filter(OutgoingAMQP.id==id).\
         one()
 
 @query_wrapper
-def out_amqp_list(session, cluster_id, subtype:'strnone'=None, needs_columns=False):
+def out_amqp_list(session, subtype:'strnone'=None, needs_columns=False):
     """ Outgoing AMQP connections, optionally of a single subtype only.
     """
-    query = _out_amqp(session, cluster_id)
+    query = _out_amqp(session)
 
     # Without a subtype on input, all the connections are returned, e.g. for the server to start all the connectors
     if subtype:
@@ -480,9 +452,7 @@ def out_amqp_list(session, cluster_id, subtype:'strnone'=None, needs_columns=Fal
 
 # ################################################################################################################################
 
-def _channel_amqp(session, cluster_id):
-    # Note that channel_amqp has no cluster_id column - there is always one cluster only,
-    # which is why the cluster_id parameter is not used in the query.
+def _channel_amqp(session):
     return session.query(
         ChannelAMQP.id,
         ChannelAMQP.name,
@@ -501,18 +471,18 @@ def _channel_amqp(session, cluster_id):
         filter(ChannelAMQP.service_id==Service.id).\
         order_by(ChannelAMQP.name)
 
-def channel_amqp(session, cluster_id, id):
+def channel_amqp(session, id):
     """ A particular AMQP channel.
     """
-    return _channel_amqp(session, cluster_id).\
+    return _channel_amqp(session).\
         filter(ChannelAMQP.id==id).\
         one()
 
 @query_wrapper
-def channel_amqp_list(session, cluster_id, subtype:'strnone'=None, needs_columns=False):
+def channel_amqp_list(session, subtype:'strnone'=None, needs_columns=False):
     """ AMQP channels, optionally of a single subtype only.
     """
-    query = _channel_amqp(session, cluster_id)
+    query = _channel_amqp(session)
 
     # Without a subtype on input, all the channels are returned, e.g. for the server to start all the connectors
     if subtype:
@@ -522,7 +492,7 @@ def channel_amqp_list(session, cluster_id, subtype:'strnone'=None, needs_columns
 
 # ################################################################################################################################
 
-def _http_soap(session, cluster_id):
+def _http_soap(session):
     return session.query(
         HTTPSOAP.id,
         HTTPSOAP.name,
@@ -555,24 +525,22 @@ def _http_soap(session, cluster_id):
         SecurityBase.password_type.label('password_type'),).\
         outerjoin(Service, Service.id==HTTPSOAP.service_id).\
         outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
-        filter(Cluster.id==HTTPSOAP.cluster_id).\
-        filter(Cluster.id==cluster_id).\
         order_by(HTTPSOAP.name)
 
-def http_soap_security_list(session, cluster_id, connection=None):
+def http_soap_security_list(session, connection=None):
     """ HTTP/SOAP security definitions.
     """
-    q = _http_soap(session, cluster_id)
+    q = _http_soap(session)
 
     if connection:
         q = q.filter(HTTPSOAP.connection==connection)
 
     return q
 
-def http_soap(session, cluster_id, item_id=None, name=None):
+def http_soap(session, item_id=None, name=None):
     """ An HTTP/SOAP connection.
     """
-    q = _http_soap(session, cluster_id)
+    q = _http_soap(session)
 
     if item_id:
         q = q.filter(HTTPSOAP.id==item_id)
@@ -584,11 +552,11 @@ def http_soap(session, cluster_id, item_id=None, name=None):
     return q.one()
 
 @query_wrapper
-def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, data_format=None,
+def http_soap_list(session, connection=None, transport=None, return_internal=True, data_format=None,
     needs_columns=False, *args, **kwargs):
     """ HTTP/SOAP connections, both channels and outgoing ones.
     """
-    q = _http_soap(session, cluster_id)
+    q = _http_soap(session)
 
     if connection:
         q = q.filter(HTTPSOAP.connection==connection)
@@ -612,28 +580,26 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
 
 # ################################################################################################################################
 
-def _out_sql(session, cluster_id):
+def _out_sql(session):
     return session.query(SQLConnectionPool).\
-        filter(Cluster.id==SQLConnectionPool.cluster_id).\
-        filter(Cluster.id==cluster_id).\
         order_by(SQLConnectionPool.name)
 
-def out_sql(session, cluster_id, id):
+def out_sql(session, id):
     """ An outgoing SQL connection.
     """
-    return _out_sql(session, cluster_id).\
+    return _out_sql(session).\
         filter(SQLConnectionPool.id==id).\
         one()
 
 @query_wrapper
-def out_sql_list(session, cluster_id, needs_columns=False):
+def out_sql_list(session, needs_columns=False):
     """ Outgoing SQL connections.
     """
-    return _out_sql(session, cluster_id)
+    return _out_sql(session)
 
 # ################################################################################################################################
 
-def _service(session, cluster_id):
+def _service(session):
     return session.query(
         Service.id,
         Service.name,
@@ -643,14 +609,12 @@ def _service(session, cluster_id):
         Service.slow_threshold,
         Service.opaque1,
         ).\
-        filter(Cluster.id==Service.cluster_id).\
-        filter(Cluster.id==cluster_id).\
         order_by(Service.name)
 
-def service(session, cluster_id, id=None, name=None):
+def service(session, id=None, name=None):
     """ A service.
     """
-    q = _service(session, cluster_id)
+    q = _service(session)
 
     if name:
         q = q.filter(Service.name==name)
@@ -660,10 +624,10 @@ def service(session, cluster_id, id=None, name=None):
     return q.one()
 
 @query_wrapper
-def service_list(session, cluster_id, return_internal=True, include_list=None, needs_columns=False):
+def service_list(session, return_internal=True, include_list=None, needs_columns=False):
     """ All services.
     """
-    q = _service(session, cluster_id)
+    q = _service(session)
 
     if include_list:
         q = q.filter(or_(Service.name.in_(include_list)))
@@ -681,16 +645,14 @@ def service_list(session, cluster_id, return_internal=True, include_list=None, n
     return q
 
 @query_wrapper
-def service_list_with_include(session, cluster_id, include_list, needs_columns=False):
-    q = _service(session, cluster_id)
+def service_list_with_include(session, include_list, needs_columns=False):
+    q = _service(session)
     return q.filter(Service.name.in_(include_list))
 
-def service_id_list(session, cluster_id, name_list=None):
+def service_id_list(session, name_list=None):
     return session.query(
         Service.id,
         Service.impl_name).\
-        filter(Cluster.id==Service.cluster_id).\
-        filter(Cluster.id==cluster_id).\
         filter(Service.name.in_(name_list))
 
 # ################################################################################################################################
@@ -728,122 +690,76 @@ def service_deployment_list(session, service_id=None, include_internal=None):
 
 # ################################################################################################################################
 
-def _server(session, cluster_id, cluster_name):
-    q = session.query(
-        Server.id, Server.name, Server.bind_host, Server.bind_port, Server.last_join_status, Server.last_join_mod_date,
-        Server.last_join_mod_by, Server.up_status, Server.up_mod_date, Server.preferred_address,
-        Server.crypto_use_tls,
-        Cluster.id.label('cluster_id'), Cluster.name.label('cluster_name')).\
-        filter(Cluster.id==Server.cluster_id)
-
-    if cluster_id:
-        q = q.filter(Cluster.id==cluster_id)
-    else:
-        q = q.filter(Cluster.name==cluster_name)
-
-    q = q.order_by(Server.name)
-
-    return q
-
-@query_wrapper
-def server_list(session, cluster_id, cluster_name, up_status=None, needs_columns=False):
-    """ All the servers defined on a cluster.
-    """
-    q = _server(session, cluster_id, cluster_name)
-    if up_status:
-        q = q.filter(Server.up_status==up_status)
-    return q
-
-def server_by_name(session, cluster_id, cluster_name, server_name):
-    return _server(session, cluster_id, cluster_name).\
-        filter(Server.name==server_name).\
-        all()
-
-def server_by_id(session, cluster_id, server_id):
-    return _server(session, cluster_id, None).\
-        filter(Server.id==server_id).\
-        one()
-
-# ################################################################################################################################
-
-def _email_smtp(session, cluster_id):
+def _email_smtp(session):
     return session.query(SMTP).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==SMTP.cluster_id).\
         order_by(SMTP.name)
 
-def email_smtp(session, cluster_id, id):
+def email_smtp(session, id):
     """ An SMTP connection.
     """
-    return _email_smtp(session, cluster_id).\
+    return _email_smtp(session).\
         filter(SMTP.id==id).\
         one()
 
 @query_wrapper
-def email_smtp_list(session, cluster_id, needs_columns=False):
+def email_smtp_list(session, needs_columns=False):
     """ A list of SMTP connections.
     """
-    return _email_smtp(session, cluster_id)
+    return _email_smtp(session)
 
 # ################################################################################################################################
 
-def _email_imap(session, cluster_id):
+def _email_imap(session):
     return session.query(IMAP).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==IMAP.cluster_id).\
         order_by(IMAP.name)
 
-def email_imap(session, cluster_id, id):
+def email_imap(session, id):
     """ An IMAP connection.
     """
-    return _email_imap(session, cluster_id).\
+    return _email_imap(session).\
         filter(IMAP.id==id).\
         one()
 
 @query_wrapper
-def email_imap_list(session, cluster_id, needs_columns=False):
+def email_imap_list(session, needs_columns=False):
     """ A list of IMAP connections.
     """
-    return _email_imap(session, cluster_id)
+    return _email_imap(session)
 
 # ################################################################################################################################
 
-def _out_odoo(session, cluster_id):
+def _out_odoo(session):
     return session.query(OutgoingOdoo).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==OutgoingOdoo.cluster_id).\
         order_by(OutgoingOdoo.name)
 
-def out_odoo(session, cluster_id, id):
+def out_odoo(session, id):
     """ An individual Odoo connection.
     """
-    return _out_odoo(session, cluster_id).\
+    return _out_odoo(session).\
         filter(OutgoingOdoo.id==id).\
         one()
 
 @query_wrapper
-def out_odoo_list(session, cluster_id, needs_columns=False):
+def out_odoo_list(session, needs_columns=False):
     """ A list of Odoo connections.
     """
-    return _out_odoo(session, cluster_id)
+    return _out_odoo(session)
 
 # ################################################################################################################################
 
-def _pubsub_topic(session, cluster_id):
+def _pubsub_topic(session):
     return session.query(PubSubTopic).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==PubSubTopic.cluster_id).\
         order_by(PubSubTopic.name)
 
-def pubsub_topic(session, cluster_id, id):
+def pubsub_topic(session, id):
     """ An individual Pub/Sub topic.
     """
-    return _pubsub_topic(session, cluster_id).\
+    return _pubsub_topic(session).\
         filter(PubSubTopic.id==id).\
         one()
 
 @query_wrapper
-def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
+def pubsub_topic_list(session, filter_by=None, needs_columns=False):
     """ A list of Pub/Sub topics with publisher and subscriber counts.
     """
     # Subquery to count publishers
@@ -851,7 +767,6 @@ def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
         PubSubPermission.pattern,
         func.count(PubSubPermission.id).label('publisher_count')
     ).filter(
-        PubSubPermission.cluster_id == cluster_id,
         PubSubPermission.access_type.in_([pubsub_publisher, pubsub_publisher_subscriber])
     ).group_by(PubSubPermission.pattern).subquery()
 
@@ -860,7 +775,6 @@ def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
         PubSubPermission.pattern,
         func.count(PubSubPermission.id).label('subscriber_count')
     ).filter(
-        PubSubPermission.cluster_id == cluster_id,
         PubSubPermission.access_type.in_([pubsub_subscriber, pubsub_publisher_subscriber])
     ).group_by(PubSubPermission.pattern).subquery()
 
@@ -869,9 +783,6 @@ def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
         PubSubTopic,
         func.coalesce(publisher_count.c.publisher_count, 0).label('publisher_count'),
         func.coalesce(subscriber_count.c.subscriber_count, 0).label('subscriber_count')
-    ).filter(
-        Cluster.id == cluster_id,
-        Cluster.id == PubSubTopic.cluster_id
     ).outerjoin(
         publisher_count, PubSubTopic.name == publisher_count.c.pattern
     ).outerjoin(
@@ -882,24 +793,22 @@ def pubsub_topic_list(session, cluster_id, filter_by=None, needs_columns=False):
 
 # ################################################################################################################################
 
-def _pubsub_permission(session, cluster_id, id):
+def _pubsub_permission(session, id):
     return session.query(PubSubPermission, SecurityBase).\
         join(SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id).\
-        filter(PubSubPermission.cluster_id==cluster_id).\
         filter(PubSubPermission.id==id)
 
-def pubsub_permission(session, cluster_id, id):
-    return _pubsub_permission(session, cluster_id, id).one()
+def pubsub_permission(session, id):
+    return _pubsub_permission(session, id).one()
 
 @query_wrapper
-def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=False, **config):
+def pubsub_permission_list(session, filter_by=None, needs_columns=False, **config):
 
     # Subquery to count subscriptions per security definition
     subscription_count = session.query(
         PubSubSubscription.sec_base_id,
         func.count(PubSubSubscription.id).label('subscription_count')
     ).filter(
-        PubSubSubscription.cluster_id == cluster_id,
         PubSubSubscription.is_delivery_active == True # noqa: E712
     ).group_by(PubSubSubscription.sec_base_id).subquery()
 
@@ -912,8 +821,6 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
         SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
     ).outerjoin(
         subscription_count, PubSubPermission.sec_base_id == subscription_count.c.sec_base_id
-    ).filter(
-        PubSubPermission.cluster_id == cluster_id
     )
 
     # Handle search filtering
@@ -941,7 +848,7 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
 
 # ################################################################################################################################
 
-def _pubsub_subscription(session, cluster_id):
+def _pubsub_subscription(session):
 
     return session.query(
         PubSubSubscription.id,
@@ -967,22 +874,20 @@ def _pubsub_subscription(session, cluster_id):
         join(PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id).\
         join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
         outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
-        filter(PubSubSubscription.cluster_id == cluster_id).\
-        filter(PubSubSubscriptionTopic.cluster_id == cluster_id).\
         order_by(PubSubTopic.name)
 
-def pubsub_subscription(session, cluster_id, id):
+def pubsub_subscription(session, id):
     """ An individual Pub/Sub subscription.
     """
-    return _pubsub_subscription(session, cluster_id).\
+    return _pubsub_subscription(session).\
         filter(PubSubSubscription.id == id).\
         one()
 
 @query_wrapper
-def pubsub_subscription_list(session, cluster_id, filter_by=None, needs_columns=False):
+def pubsub_subscription_list(session, filter_by=None, needs_columns=False):
     """ A list of Pub/Sub subscriptions.
     """
-    query = _pubsub_subscription(session, cluster_id)
+    query = _pubsub_subscription(session)
 
     # Apply any additional filtering if provided
     if filter_by:
@@ -998,12 +903,11 @@ def pubsub_subscription_list(session, cluster_id, filter_by=None, needs_columns=
 
 # ################################################################################################################################
 
-def pubsub_subscriptions_by_sec_base(session:'SASession', sec_base_id:'int', cluster_id:'int') -> 'list_[PubSubSubscription]':
+def pubsub_subscriptions_by_sec_base(session:'SASession', sec_base_id:'int') -> 'list_[PubSubSubscription]':
     """ Returns all PubSubSubscription rows for a given security definition.
     """
     out = session.query(PubSubSubscription).\
         filter(PubSubSubscription.sec_base_id == sec_base_id).\
-        filter(PubSubSubscription.cluster_id == cluster_id).\
         all()
     return out
 
@@ -1012,13 +916,11 @@ def pubsub_subscriptions_by_sec_base(session:'SASession', sec_base_id:'int', clu
 def pubsub_subscriptions_by_rest_endpoint(
     session:'SASession',
     rest_endpoint_id:'int',
-    cluster_id:'int',
 ) -> 'list_[PubSubSubscription]':
     """ Returns all PubSubSubscription rows whose push endpoint is the given HTTPSOAP connection.
     """
     out = session.query(PubSubSubscription).\
         filter(PubSubSubscription.rest_push_endpoint_id == rest_endpoint_id).\
-        filter(PubSubSubscription.cluster_id == cluster_id).\
         all()
     return out
 

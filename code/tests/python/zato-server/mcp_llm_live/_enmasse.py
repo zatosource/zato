@@ -398,6 +398,49 @@ def build_gateway_list() -> 'dictlist':
                 _constants.Service_Order_Status,
             ],
             invoke_timeout=_constants.Invoke_Timeout_Seconds),
+
+        # Data masking - one industry set, the set with an exclusion and custom fields,
+        # the custom fields switched off, and masking ahead of PII removal
+        _gateway(_constants.Gateway_Masking, _constants.Path_Masking,
+            safeguards_masking_sets=[_constants.Masking_Set]),
+
+        _gateway(_constants.Gateway_Masking_Custom, _constants.Path_Masking_Custom,
+            safeguards_masking_sets=[_constants.Masking_Set],
+            safeguards_masking_excluded=[_constants.Masking_Excluded],
+            safeguards_masking_custom_fields=list(_constants.Masking_Custom_Fields)),
+
+        _gateway(_constants.Gateway_Masking_Custom_Off, _constants.Path_Masking_Custom_Off,
+            safeguards_masking_sets=[_constants.Masking_Set],
+            safeguards_masking_custom_fields=list(_constants.Masking_Custom_Fields),
+            safeguards_masking_custom_enabled=False),
+
+        _gateway(_constants.Gateway_Masking_PII, _constants.Path_Masking_PII,
+            safeguards_masking_custom_fields=['email'],
+            safeguards_pii_enabled=True,
+            safeguards_pii_lands=[_constants.PII_Land_Main],
+            safeguards_pii_validate=True,
+            safeguards_pii_stable_replacements=True),
+
+        # Hook services - each gateway carries the hooks of one behavior
+        _gateway(_constants.Gateway_Hook_Record, _constants.Path_Hook_Record,
+            request_hook_service=_constants.Service_Hook_Request_Record,
+            response_hook_service=_constants.Service_Hook_Response_Record),
+
+        _gateway(_constants.Gateway_Hook_Replace, _constants.Path_Hook_Replace,
+            request_hook_service=_constants.Service_Hook_Request_Replace),
+
+        _gateway(_constants.Gateway_Hook_Reject, _constants.Path_Hook_Reject,
+            request_hook_service=_constants.Service_Hook_Request_Reject),
+
+        _gateway(_constants.Gateway_Hook_Response, _constants.Path_Hook_Response,
+            response_hook_service=_constants.Service_Hook_Response_Replace),
+
+        _gateway(_constants.Gateway_Hook_Stateless, _constants.Path_Hook_Stateless,
+            request_hook_service=_constants.Service_Hook_Request_Record,
+            response_hook_service=_constants.Service_Hook_Response_Record),
+
+        # The runtime hook gateway starts without hooks - the tests switch them on by re-import
+        _gateway(_constants.Gateway_Hook_Runtime, _constants.Path_Hook_Runtime),
     ]
 
     return out

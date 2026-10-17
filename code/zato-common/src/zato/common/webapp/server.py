@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 # How many worker processes answer requests
 _worker_count = 3
 
+# How many threads each worker process answers requests in, unless the application asks for more
+_default_thread_count = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -69,8 +72,11 @@ def serve(
     env_port:'str',
     default_host:'str',
     default_port:'str',
+    thread_count:'int' = _default_thread_count,
     ) -> 'None':
     """ Serves a WSGI application under gunicorn, on the address the environment names.
+    With more than one thread, gunicorn uses threaded workers, whose requests can take longer
+    than the worker timeout.
     """
     if host := os.environ.get(env_host):
         pass
@@ -89,6 +95,7 @@ def serve(
     options = {
         'bind': f'{host}:{port}',
         'workers': _worker_count,
+        'threads': thread_count,
         'preload_app': True,
         'errorlog': '-',
         'loglevel': 'info',

@@ -93,7 +93,6 @@ def req() -> 'any_':
     out = Bunch()
     out.zato = Bunch()
     out.zato.client = _FakeClient()
-    out.zato.cluster_id = 1
     return out
 
 # ################################################################################################################################
@@ -317,7 +316,7 @@ class TestAlertsTabForm:
         for service, request in req.zato.client.calls:
             services.append(service)
             if service != 'zato.generic.connection.get-list':
-                assert request == {'cluster_id': 1}
+                assert request == {}
 
         assert sorted(services) == ['zato.email.imap.get-list', 'zato.email.smtp.get-list', 'zato.generic.connection.get-list']
 
@@ -333,7 +332,7 @@ class TestAlertsTabForm:
 
         for service, request in req.zato.client.calls:
             if service == 'zato.generic.connection.get-list':
-                assert request == {'cluster_id': 1, 'type_': GENERIC.CONNECTION.TYPE.OUTCONN_LLM, 'paginate': False}
+                assert request == {'type_': GENERIC.CONNECTION.TYPE.OUTCONN_LLM, 'paginate': False}
 
 # ################################################################################################################################
 
@@ -355,7 +354,7 @@ class TestAlertsTabForm:
         assert _option_values(form, 'alert_llm_connection') == []
         assert picks['llm']['has_options'] is False
         assert picks['llm']['empty_html'] == \
-            'No LLM connections found. Click to <a href="/zato/outgoing/llm/?cluster=1&amp;create=1" target="_blank">create one</a>.'
+            'No LLM connections found. Click to <a href="/zato/outgoing/llm/?create=1" target="_blank">create one</a>.'
 
         assert picks['email']['has_options'] is True
 
@@ -379,8 +378,8 @@ class TestAlertsTabForm:
         assert _option_values(form, 'alert_email_connection') == []
         assert picks['email']['has_options'] is False
         assert picks['email']['empty_html'] == 'No email connections found. Click to create an ' + \
-            '<a href="/zato/email/smtp/?cluster=1&amp;create=1" target="_blank">SMTP</a> or a ' + \
-            '<a href="/zato/email/imap/?cluster=1&amp;create=1" target="_blank">Microsoft 365</a> one.'
+            '<a href="/zato/email/smtp/?create=1" target="_blank">SMTP</a> or a ' + \
+            '<a href="/zato/email/imap/?create=1" target="_blank">Microsoft 365</a> one.'
 
 # ################################################################################################################################
 

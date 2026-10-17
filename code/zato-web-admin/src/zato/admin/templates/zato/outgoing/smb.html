@@ -103,13 +103,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
         <div id="markup">
             <h2 class="zato">{% include "zato/include/header-brand.html" with badge="SMB" %}Outgoing SMB connections</h2>
 
@@ -177,8 +173,8 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.port|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
-                        <td><a href="{% url "out-file-transfer-schedules" 'smb' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">{{ item.scheduler_schedule_count }} schedule{{ item.scheduler_schedule_count|pluralize }}</a></td>
-                        <td><a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
+                        <td><a href="{% url "out-file-transfer-schedules" 'smb' item.id item.name|slugify %}?name={{ item.name|urlencode:"" }}">{{ item.scheduler_schedule_count }} schedule{{ item.scheduler_schedule_count|pluralize }}</a></td>
+                        <td><a href="/zato/audit-log/?source=file-outgoing&amp;object_name={{ item.name|urlencode }}">Audit log</a></td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.smb.edit('{{ item.id }}')">Edit</a></td>
@@ -310,7 +306,6 @@
                         </tr>
                     </table>
 
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
@@ -410,14 +405,11 @@
                         </tr>
                     </table>
 
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
 
-    {% endif %}
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

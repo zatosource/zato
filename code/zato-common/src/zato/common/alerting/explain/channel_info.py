@@ -45,13 +45,12 @@ _transport_label_by_source = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def describe_channel(session:'SASession', cluster_id:'int', source:'str', name:'str') -> 'anylist | None':
+def describe_channel(session:'SASession', source:'str', name:'str') -> 'anylist | None':
     """ The label and value pairs describing one REST or SOAP channel - its transport, path, method, service,
     security, data format, whether its audit log is on and the alert thresholds it sets of its own, and for a
-    SOAP channel its SOAP action and version. None when no channel of the source goes by the name in the cluster.
+    SOAP channel its SOAP action and version. None when no channel of the source goes by the name.
     """
     row = session.query(HTTPSOAP).\
-        filter(HTTPSOAP.cluster_id==cluster_id).\
         filter(HTTPSOAP.connection==Alert_Channel_Connection).\
         filter(HTTPSOAP.transport==transport_by_channel_source[source]).\
         filter(HTTPSOAP.name==name).\

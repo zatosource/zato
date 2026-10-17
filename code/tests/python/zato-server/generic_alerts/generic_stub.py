@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 from zato.common.api import GENERIC, HL7, SCHEDULER
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import loads
-from zato.common.odb.model import Cluster, GenericConn, Job, Service
+from zato.common.odb.model import GenericConn, Job, Service
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.service.internal.generic.connection import Create
 from zato.server.service.internal.generic.get_list import GetList
@@ -37,7 +37,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-Cluster_Id = 1
 Service_Name = 'zato.connection.health-check.run'
 FHIR_Type = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR
 FHIR_Name = 'ehr.fhir'
@@ -96,10 +95,6 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
         out = value
         return out
 
-    def get_config_session(**kwargs:'any_') -> 'any_':
-        out = session_factory()
-        return out
-
     def identity(value:'any_') -> 'any_':
         out = value
         return out
@@ -120,9 +115,7 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
 
     server = SimpleNamespace(
         name='test-server',
-        cluster_id=Cluster_Id,
         odb=service.odb,
-        get_config_session=get_config_session,
         encrypt=identity,
         decrypt=identity,
         config_manager=SimpleNamespace(sdk_connector_types={}),
@@ -155,7 +148,6 @@ def fhir_input(**overrides:'any_') -> 'stranydict':
         'security_id': 0,
         'auth_type': HL7.Const.FHIR_Auth_Type.No_Auth.id,
         'is_audit_log_active': True,
-        'cluster_id': Cluster_Id,
     }
     out.update(overrides)
 
@@ -176,7 +168,6 @@ def mllp_input(**overrides:'any_') -> 'stranydict':
         'pool_size': 1,
         'service': MLLP_Service,
         'is_audit_log_active': True,
-        'cluster_id': Cluster_Id,
     }
     out.update(overrides)
 
@@ -197,7 +188,6 @@ def mllp_outgoing_input(**overrides:'any_') -> 'stranydict':
         'address': MLLP_Outgoing_Address,
         'pool_size': HL7.Default.pool_size,
         'is_audit_log_active': True,
-        'cluster_id': Cluster_Id,
     }
     out.update(overrides)
 
@@ -222,7 +212,6 @@ def llm_input(**overrides:'any_') -> 'stranydict':
         'max_tokens': 4096,
         'max_history_turns': 20,
         'chat_expiry': 86400,
-        'cluster_id': Cluster_Id,
     }
     out.update(overrides)
 
@@ -246,7 +235,6 @@ def mcp_input(**overrides:'any_') -> 'stranydict':
         'security_groups': [],
         'is_audit_log_active': True,
         'validate_input': True,
-        'cluster_id': Cluster_Id,
     }
     out.update(overrides)
 
@@ -337,9 +325,8 @@ def add_job(session_factory:'any_', job_id:'int', name:'str') -> 'None':
     """ Puts the job the scheduler stand-in reported into the database, the way the real scheduler would have.
     """
     session = session_factory()
-    cluster = session.query(Cluster).filter(Cluster.id==Cluster_Id).one()
     service = session.query(Service).filter(Service.name==Service_Name).one()
-    job = Job(job_id, name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, datetime(2026, 1, 1), '', cluster, service=service)
+    job = Job(job_id, name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, datetime(2026, 1, 1), '', service=service)
     session.add(job)
     session.commit()
     session.close()
@@ -350,7 +337,6 @@ def get_list(session_factory:'any_', type_:'str'=FHIR_Type) -> 'anylist':
     """ What GetList returns for the connections of one type, outgoing FHIR ones unless told otherwise.
     """
     input_data = {
-        'cluster_id': Cluster_Id,
         'type_': type_,
         'paginate': False,
     }

@@ -36,7 +36,6 @@ def _event(event_type:'str', payload:'anydict | None') -> 'RuleEventRecord':
 
     out = RuleEventRecord(
         id=1,
-        cluster_id=1,
         definition_id=1,
         version=1,
         event_type=event_type,

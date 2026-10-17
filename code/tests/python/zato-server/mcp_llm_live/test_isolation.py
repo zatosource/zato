@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import time
 from concurrent.futures import ThreadPoolExecutor
-from http.client import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK
+from http.client import FORBIDDEN, NOT_FOUND, OK
 
 # local
 import _agent
@@ -505,7 +505,7 @@ class TestSessionIsolation:
 
         # A's session opens nothing on B ..
         response = client_b.jsonrpc('tools/list', session_id=session_a)
-        assert response.status_code == BAD_REQUEST, response.text
+        assert response.status_code == NOT_FOUND, response.text
 
         # .. deleting A's session leaves B's sessions untouched ..
         response = client_a.delete_session(session_a)
@@ -536,10 +536,10 @@ class TestSessionIsolation:
 
         # .. neither caller can use the other's session ..
         response = client_main.jsonrpc('tools/list', session_id=session_shared)
-        assert response.status_code == BAD_REQUEST, response.text
+        assert response.status_code == NOT_FOUND, response.text
 
         response = client_shared.jsonrpc('tools/list', session_id=session_main)
-        assert response.status_code == BAD_REQUEST, response.text
+        assert response.status_code == NOT_FOUND, response.text
 
         # .. each caller keeps working within its own session ..
         tools = _helpers.list_tools(client_shared, session_shared)

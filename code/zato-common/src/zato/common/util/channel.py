@@ -29,8 +29,6 @@ openapi_channel_name = 'zato.channel.openapi.get'
 openapi_channel_url_path = '/openapi/{name}'
 openapi_service_name = 'zato.server.service.internal.helpers.OpenAPIHandler'
 
-as2_mdn_service_name = 'zato.server.service.internal.channel.as2.AS2MDNEndpoint'
-
 # The longest URL path a channel may have, which is the width of the database column it is stored in.
 Channel_URL_Path_Max_Length = 200
 
@@ -51,7 +49,7 @@ _url_path_probe = '\x00probe'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def create_openapi_channel(session, cluster, service):
+def create_openapi_channel(session, service):
     """ Creates the OpenAPI handler channel.
     """
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
@@ -60,7 +58,7 @@ def create_openapi_channel(session, cluster, service):
     channel = HTTPSOAP(
         None, openapi_channel_name, True, True, CONNECTION.CHANNEL,
         URL_TYPE.PLAIN_HTTP, None, openapi_channel_url_path, None, '', None, DATA_FORMAT.JSON,
-        service=service, cluster=cluster)
+        service=service)
     session.add(channel)
 
     return channel
@@ -68,69 +66,34 @@ def create_openapi_channel(session, cluster, service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_openapi_channel_exists(session, cluster_id):
+def ensure_openapi_channel_exists(session):
     """ Checks if OpenAPI channel exists, creates it if not.
     Returns True if created, False if already existed.
     """
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
-    from zato.common.odb.model import Cluster, HTTPSOAP, Service
+    from zato.common.odb.model import HTTPSOAP, Service
 
     existing = session.query(HTTPSOAP).filter(
         HTTPSOAP.name == openapi_channel_name,
-        HTTPSOAP.cluster_id == cluster_id,
         HTTPSOAP.connection == CONNECTION.CHANNEL,
     ).first()
 
     if existing:
         return False
 
-    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
-
     service = session.query(Service).filter(
         Service.name == openapi_service_name,
-        Service.cluster_id == cluster_id,
     ).first()
 
     if not service:
-        service = Service(None, openapi_service_name, True, openapi_service_name, True, cluster)
+        service = Service(None, openapi_service_name, True, openapi_service_name, True)
         session.add(service)
         session.flush()
 
     channel = HTTPSOAP(
         None, openapi_channel_name, True, True, CONNECTION.CHANNEL,
         URL_TYPE.PLAIN_HTTP, None, openapi_channel_url_path, None, '', None, DATA_FORMAT.JSON,
-        service=service, cluster=cluster)
-    session.add(channel)
-
-    return True
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_as2_channel_exists(session, cluster_id):
-    """ Checks if the AS2 inbound channel exists, creates it if not.
-    Returns True if created, False if already existed.
-    """
-    from zato.common.api import AS2, CONNECTION, URL_TYPE
-    from zato.common.odb.model import Cluster, HTTPSOAP
-
-    existing = session.query(HTTPSOAP).filter(
-        HTTPSOAP.name == AS2.Default.Channel_Name,
-        HTTPSOAP.cluster_id == cluster_id,
-        HTTPSOAP.connection == CONNECTION.CHANNEL,
-    ).first()
-
-    if existing:
-        return False
-
-    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
-
-    # The dispatcher handles AS2 channels itself, so there is no service to point to,
-    # and the data format is None so the raw MIME body arrives untouched.
-    channel = HTTPSOAP(
-        None, AS2.Default.Channel_Name, True, True, CONNECTION.CHANNEL,
-        URL_TYPE.AS2, None, AS2.Default.Channel_URL_Path, None, '', None, None,
-        cluster=cluster)
+        service=service)
     session.add(channel)
 
     return True
@@ -209,16 +172,19 @@ def validate_channel_url_path(url_path:'str') -> 'None':
 # ################################################################################################################################
 
 def find_channel_collision(
-    url_path,       # type: str
-    http_accept,    # type: strnone
-    http_method,    # type: strnone
-    existing_items, # type: anylist
-    skip_id         # type: intnone
+    url_path,                # type: str
+    http_accept,             # type: strnone
+    http_method,             # type: strnone
+    existing_items,          # type: anylist
+    skip_id,                 # type: intnone
+    claims_whole_path=False, # type: bool
 ) -> 'strnone':
     """ The one collision rule for HTTP channels - a candidate collides with an existing channel
     when both sit at the same URL path and their HTTP method and Accept header are equal too.
-    Each existing item carries id, name, url_path, method and http_accept, and the item whose id
-    is skip_id is the candidate itself, which an edit compares against everything but itself.
+    A channel that claims its whole path, i.e. the channel of an MCP gateway, which answers every
+    HTTP method there, collides with any other channel at that path.
+    Each existing item carries id, name, url_path, method, http_accept and claims_whole_path, and the item
+    whose id is skip_id is the candidate itself, which an edit compares against everything but itself.
     Returns the name of the colliding channel or None. Callers differ only in how they load
     the existing items - zato.http-soap.create with its per-candidate query, enmasse with
     its one SELECT for everything.
@@ -233,7 +199,11 @@ def find_channel_collision(
         if item['id'] == skip_id:
             continue
 
-        # .. it takes both the same method and the same Accept header to collide.
+        # .. a path claimed as a whole is shared with no other channel ..
+        if claims_whole_path or item['claims_whole_path']:
+            return item['name']
+
+        # .. otherwise, it takes both the same method and the same Accept header to collide.
         if item['method'] == http_method:
             if item['http_accept'] == http_accept:
                 return item['name']
@@ -477,28 +447,30 @@ def find_channel_conflict(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_channel_collision_items(session:'any_', cluster_id:'int') -> 'anylist':
-    """ Returns every channel in the cluster with the fields the collision and conflict rules compare.
+def get_channel_collision_items(session:'any_') -> 'anylist':
+    """ Returns every channel with the fields the collision and conflict rules compare.
     """
     from zato.common.api import CONNECTION
-    from zato.common.odb.model import HTTPSOAP
+    from zato.common.odb.model import HTTPSOAP, Service
+    from zato.common.util.gateway import mcp_service_name
     from zato.common.util.sql import parse_instance_opaque_attr
     from zato.common.util.url_dispatcher import resolve_match_slash
 
-    existing_ones = session.query(HTTPSOAP).\
-        filter(HTTPSOAP.cluster_id==cluster_id).\
+    existing_ones = session.query(HTTPSOAP, Service.name).\
+        join(Service, HTTPSOAP.service_id == Service.id).\
         filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
         all()
 
     out = []
 
-    for item in existing_ones:
+    for item, service_name in existing_ones:
         opaque = parse_instance_opaque_attr(item)
         out.append({
             'id': item.id,
             'name': item.name,
             'url_path': item.url_path,
             'method': item.method,
+            'claims_whole_path': service_name == mcp_service_name,
             'http_accept': opaque.get('http_accept'),
             'match_slash': resolve_match_slash(opaque.get('match_slash')),
             'security': channel_security_key(item.security_id, opaque.get('security_groups')),
@@ -509,11 +481,11 @@ def get_channel_collision_items(session:'any_', cluster_id:'int') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_channel_definitions_are_unique(session:'any_', cluster_id:'int', channel_defs:'anylist') -> 'None':
-    """ Checks a batch of channel definitions against the channels already in the cluster and
+def ensure_channel_definitions_are_unique(session:'any_', channel_defs:'anylist') -> 'None':
+    """ Checks a batch of channel definitions against the existing channels and
     against each other, the same way the create and edit services check a single one.
     """
-    existing_items = get_channel_collision_items(session, cluster_id)
+    existing_items = get_channel_collision_items(session)
 
     # What the batch itself has already claimed, so that one batch cannot define
     # two channels that resolve to the same match target.
@@ -549,46 +521,6 @@ def ensure_channel_definitions_are_unique(session:'any_', cluster_id:'int', chan
             raise Exception(f'{both_part} method and Accept header: `{url_path}`')
 
         claimed[target] = name
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def ensure_as2_mdn_channel_exists(session, cluster_id):
-    """ Checks if the channel for incoming asynchronous AS2 MDNs exists, creates it if not.
-    Returns True if created, False if already existed.
-    """
-    from zato.common.api import AS2, CONNECTION, URL_TYPE
-    from zato.common.odb.model import Cluster, HTTPSOAP, Service
-
-    existing = session.query(HTTPSOAP).filter(
-        HTTPSOAP.name == AS2.Default.MDN_Channel_Name,
-        HTTPSOAP.cluster_id == cluster_id,
-        HTTPSOAP.connection == CONNECTION.CHANNEL,
-    ).first()
-
-    if existing:
-        return False
-
-    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
-
-    service = session.query(Service).filter(
-        Service.name == as2_mdn_service_name,
-        Service.cluster_id == cluster_id,
-    ).first()
-
-    if not service:
-        service = Service(None, as2_mdn_service_name, True, as2_mdn_service_name, True, cluster)
-        session.add(service)
-        session.flush()
-
-    # The data format is None so the raw MDN body arrives untouched.
-    channel = HTTPSOAP(
-        None, AS2.Default.MDN_Channel_Name, True, True, CONNECTION.CHANNEL,
-        URL_TYPE.PLAIN_HTTP, None, AS2.Default.MDN_Channel_URL_Path, None, '', None, None,
-        service=service, cluster=cluster)
-    session.add(channel)
-
-    return True
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -12,7 +12,6 @@ from json import loads
 
 # Zato
 from zato.common.api import FileTransfer, GENERIC, LDAP, SCHEDULER
-from zato.common.defaults import default_cluster_id
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -127,7 +126,6 @@ class ScheduleClient:
         for a connection that is not quite the one the adapter would build.
         """
         request:'anydict' = {
-            'cluster_id': default_cluster_id,
             'name': name,
             'type_': self.adapter.conn_type,
             'is_active': True,
@@ -153,7 +151,6 @@ class ScheduleClient:
         """ Edits a connection, which is how tests rename one or change what it points at.
         """
         request:'anydict' = {
-            'cluster_id': default_cluster_id,
             'id': conn_id,
             'name': name,
             'type_': self.adapter.conn_type,
@@ -177,7 +174,6 @@ class ScheduleClient:
         """ Creates a generic connection that is not a file transfer one, returning its ID.
         """
         request:'anydict' = {
-            'cluster_id': default_cluster_id,
             'name': name,
             'type_': Foreign_Conn_Type,
             'is_active': True,
@@ -202,7 +198,7 @@ class ScheduleClient:
 
     def get_conn_names(self) -> 'strlist':
         data, _meta = self.client.get_list(f'{Service_Conn}.get-list',
-            cluster_id=default_cluster_id, type_=self.adapter.conn_type, paginate=True, cur_page=1)
+            type_=self.adapter.conn_type, paginate=True, cur_page=1)
 
         out:'strlist' = []
 
@@ -224,7 +220,7 @@ class ScheduleClient:
 # ################################################################################################################################
 
     def get_job_names(self) -> 'strlist':
-        data, _meta = self.client.get_list(f'{Service_Job}.get-list', cluster_id=default_cluster_id)
+        data, _meta = self.client.get_list(f'{Service_Job}.get-list')
 
         out:'strlist' = []
 
@@ -236,7 +232,7 @@ class ScheduleClient:
 # ################################################################################################################################
 
     def get_job(self, name:'str') -> 'anydict':
-        request = {'cluster_id': default_cluster_id, 'name': name}
+        request = {'name': name}
 
         out = unwrap(self.client.invoke(f'{Service_Job}.get-by-name', request))
         return out
@@ -247,7 +243,6 @@ class ScheduleClient:
         """ Edits a job the way the scheduler's own UI does, without going through the schedule.
         """
         request:'anydict' = {
-            'cluster_id': default_cluster_id,
             'id': job_id,
             'name': name,
             'is_active': True,
@@ -265,7 +260,6 @@ class ScheduleClient:
         """ Creates a scheduler job directly, which is how a test puts one in the way of a schedule.
         """
         request:'anydict' = {
-            'cluster_id': default_cluster_id,
             'name': name,
             'is_active': True,
             'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
@@ -457,14 +451,14 @@ class ScheduleClient:
         for conn_type in conn_types:
 
             data, _meta = self.client.get_list(f'{Service_Conn}.get-list',
-                cluster_id=default_cluster_id, type_=conn_type, paginate=True, cur_page=1)
+                type_=conn_type, paginate=True, cur_page=1)
 
             for item in data:
                 if item['name'].startswith(conn_prefix):
                     _ = self.client.delete(f'{Service_Conn}.delete', id=item['id'])
 
         # .. and jobs whose connection is already gone are deleted directly.
-        data, _meta = self.client.get_list(f'{Service_Job}.get-list', cluster_id=default_cluster_id)
+        data, _meta = self.client.get_list(f'{Service_Job}.get-list')
 
         for item in data:
             if item['name'].startswith(job_prefix):

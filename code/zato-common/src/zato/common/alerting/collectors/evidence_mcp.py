@@ -48,13 +48,19 @@ _invalid_call_error_codes = (Error_Code_Method_Not_Found, Error_Code_Invalid_Par
 # What the was_truncated attribute reads as when the cap cut a response
 _was_truncated_value = str(True)
 
-# What a row says when its data document names no error - the response was refused or cut rather than failed
+# What a row says when its data document names no error - the response was refused or cut rather than failed,
+# or the caller was turned away before the request was read
 _text_rejected  = 'Response rejected'
 _text_truncated = 'Response truncated'
 _text_throttled = 'Caller rate-limited'
+_text_refused   = 'Caller refused'
 
 # The keys of the data document that go into the row's line after its error text, in this order
 _detail_keys = ('error_code', 'reject_kind', 'was_truncated', 'tokens_before', 'tokens_after', 'retry_after_seconds')
+
+# The key of the auth document that says why a caller was turned away - a token that ran out and a token
+# of someone outside the group are two different refusals, so the line names the reason and groups by it
+_auth_reason_key = 'reason'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,7 +68,7 @@ _detail_keys = ('error_code', 'reject_kind', 'was_truncated', 'tokens_before', '
 def describe_mcp_row(data:'stranydict', event_type:'str') -> 'str':
     """ One line saying what a gateway's row was about - the error text when the call failed, what happened
     to the response otherwise, then the details the collectors counted by - `Unknown tool: get_orderz
-    (error_code=-32601)`, `Response rejected (reject_kind=size, tokens_before=9000)`.
+    (error_code=-32601)`, `Response rejected (reject_kind=size, tokens_before=9000)`, `Caller refused (reason=expired)`.
     """
     if 'error_message' in data:
         out = data['error_message']
@@ -72,6 +78,8 @@ def describe_mcp_row(data:'stranydict', event_type:'str') -> 'str':
         out = _text_truncated
     elif event_type == AuditEvent.Rate_Limited:
         out = _text_throttled
+    elif event_type == AuditEvent.Auth_Failed:
+        out = _text_refused
     else:
         out = event_type
 
@@ -80,6 +88,12 @@ def describe_mcp_row(data:'stranydict', event_type:'str') -> 'str':
     for key in _detail_keys:
         if key in data:
             parts.append(f'{key}={data[key]}')
+
+    # A refused caller's row says why in its auth document rather than in the document itself
+    if 'auth' in data:
+        auth = data['auth']
+        if _auth_reason_key in auth:
+            parts.append(f'{_auth_reason_key}={auth[_auth_reason_key]}')
 
     if parts:
         out = f'{out} ({", ".join(parts)})'

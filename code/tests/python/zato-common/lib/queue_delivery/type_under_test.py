@@ -102,6 +102,9 @@ class TypeUnderTest:
     # The connection names of the type's template, by the keys of Connection_Keys
     connections:'strdict' = {}
 
+    # The keys of the connections that have no queue, so no topic in a broker either
+    keys_without_queue = (Conn_Without_Queue,)
+
     # The type's enmasse template with the port placeholders of its receivers
     template_path = ''
 

@@ -38,12 +38,12 @@ class AuditRetentionExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'policy_def_list':
+    def export(self, session:'SASession') -> 'policy_def_list':
         """ Exports audit retention policy definitions.
         """
         logger.info('Exporting audit retention policy definitions')
 
-        wrapper = GenericObjectWrapper(session, cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Audit_Config.Type.Retention_Policy
 
         rows = wrapper.get_list()

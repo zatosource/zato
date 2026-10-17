@@ -15,7 +15,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from argparse import ArgumentParser
-    from zato.common.typing_ import any_, callnone, dictlist, strlist, tuple_
+    from zato.common.typing_ import any_, callnone, dictlist, tuple_
     callnone = callnone
 
 # ################################################################################################################################
@@ -108,7 +108,6 @@ class CommandStore:
              analytics           as analytics_mod,           \
              check_config        as check_config_mod,        \
              component_version   as component_version_mod,   \
-             create_cluster      as create_cluster_mod,      \
              create_odb          as create_odb_mod,          \
              create_server       as create_server_mod,       \
              create_web_admin    as create_web_admin_mod,    \
@@ -195,11 +194,6 @@ class CommandStore:
             'basic-auth', description=sec_basic_auth_mod.CreateDefinition.__doc__, parents=[base_parser])
         create_basic_auth.set_defaults(command='create_basic_auth')
         self.add_opts(create_basic_auth, sec_basic_auth_mod.CreateDefinition.opts)
-
-        create_cluster = create_subs.add_parser(
-            'cluster', description=create_cluster_mod.Create.__doc__, parents=[base_parser])
-        create_cluster.set_defaults(command='create_cluster')
-        self.add_opts(create_cluster, create_cluster_mod.Create.opts)
 
         create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
         create_odb.set_defaults(command='create_odb')
@@ -345,11 +339,11 @@ class CommandStore:
         #
         # quickstart
         #
-        quickstart = subs.add_parser('quickstart', description='Quickly set up and manage Zato clusters', parents=[base_parser])
+        quickstart = subs.add_parser('quickstart', description='Quickly set up and manage Zato environments', parents=[base_parser])
         quickstart_subs = quickstart.add_subparsers()
 
         quickstart_create = quickstart_subs.add_parser('create', description=quickstart_mod.Create.__doc__, parents=[base_parser])
-        quickstart_create.add_argument('path', help='Path to an empty directory for the quickstart cluster')
+        quickstart_create.add_argument('path', help='Path to an empty directory for the quickstart environment')
         quickstart_create.set_defaults(command='quickstart_create')
         self.add_opts(quickstart_create, quickstart_mod.Create.opts)
 
@@ -466,88 +460,6 @@ command_store = CommandStore()
 
 # ################################################################################################################################
 
-def pre_process_quickstart(sys_argv:'strlist', opts_idx:'int') -> 'None':
-
-    # We know that it exists so we can skip the try/except ValueError: block
-    create_idx = sys_argv.index('create')
-
-    # We are looking for the idx of the path element but it is still possible
-    # that we have an incomplete command 'zato quickstart create' alone on input.
-    # In such a case, 'create' will be our last element among args and we can return immediately.
-    if len(sys_argv) == create_idx:
-        return
-
-    # If we are here, we have 'zato quickstart create' followed by a path, ODB and Redis options.
-    path_idx = create_idx + 1
-
-    # ODB + Redis options start here .
-    original_odb_type_idx   = path_idx + 1
-    opts = sys_argv[path_idx+1:opts_idx]
-
-    # No options = we can return
-    if not opts:
-        return
-
-    # Extract the options ..
-    odb_type   = opts[0]
-
-    # .. remove them from their pre-3.2 non-optional positions,
-    # .. note that we need to do it once for each of odb_type, redis_host and redis_port
-    # .. using the same index because .pop will modify the list in place ..
-    _ = sys_argv.pop(original_odb_type_idx)
-    _ = sys_argv.pop(original_odb_type_idx)
-    _ = sys_argv.pop(original_odb_type_idx)
-
-    # .. now, add the options back as '--' ones.
-    sys_argv.append('--odb_type')
-    sys_argv.append(odb_type)
-
-# ################################################################################################################################
-
-def pre_process_server(sys_argv, opts_idx, opts):
-    # type: (list, int, list) -> None
-
-    #
-    # This is pre-3.2
-    # 'zato0', 'create1', 'server2', '/path/to/server3', 'sqlite4', 'redis_host5', 'redis_port6', 'cluster_name7', 'server_name8'
-    #
-    len_pre_32 = 9
-
-    #
-    # This is 3.2
-    # 'zato0', 'create1', 'server2', '/path/to/server3', 'cluster_name7', 'server_name8'
-    #
-
-    # We are turning pre-3.2 options into 3.2 ones.
-    if len(sys_argv[:opts_idx]) == len_pre_32:
-
-        # New arguments to produce
-        new_argv = []
-
-        new_argv.append(sys_argv[0]) # zato0
-        new_argv.append(sys_argv[1]) # create1
-        new_argv.append(sys_argv[2]) # server2
-        new_argv.append(sys_argv[3]) # /path/to/server3
-
-        new_argv.append(sys_argv[7]) # cluster_name7
-        new_argv.append(sys_argv[8]) # server_name8
-
-        new_argv.append('--odb_type') # sqlite4
-        new_argv.append(sys_argv[4])
-
-        new_argv.append('--redis_host') # redis_host5
-        new_argv.append(sys_argv[5])
-
-        new_argv.append('--redis_port') # redis_port6
-        new_argv.append(sys_argv[6])
-
-        new_argv.extend(opts)
-
-        # We are ready to replace sys.argv now
-        sys_argv[:] = new_argv
-
-# ################################################################################################################################
-
 def pre_process_sys_argv(sys_argv):
     # type: (list) -> None
 
@@ -558,8 +470,7 @@ def pre_process_sys_argv(sys_argv):
     opts_idx = sys.maxsize
 
     #
-    # We need to find out where flags begin because they are constant
-    # and did not change between versions. Only what is before flags was changed.
+    # Flags are what follows the command and its positional arguments.
     #
     # zato command --flag1 --flag2
     #
@@ -574,44 +485,14 @@ def pre_process_sys_argv(sys_argv):
     except ValueError:
         qs_idx = 0
 
-    # We enter here if it is a quickstart command
+    #
+    # Turn a) into b)
+    # a) zato quickstart /path [--flags]
+    # b) zato quickstart create /path [--flags]
+    #
     if qs_idx:
-
-        #
-        # Quickstart commands
-        #
-
-        #
-        # Turn a) into b)
-        # a) zato quickstart /path [--flags]
-        # b) zato quickstart create /path [--flags]
-        #
-
-        # This is 3.2
         if 'create' not in sys_argv:
             sys_argv.insert(qs_idx+1, 'create')
-            return
-
-        # An earlier version so we need to turn Redis options into what 3.2 expects
-        else:
-            pre_process_quickstart(sys_argv, opts_idx)
-            return
-
-    # Otherwise, it could be a 'zato create <component>' command
-    else:
-        if 'create' in sys_argv:
-
-            # We want to find the last non-optional element and if opts_idx is the max size,
-            # it means that we do not have any such.
-            if opts_idx == sys.maxsize:
-                opts_idx = len(sys_argv)
-
-            # This is for later use, when we construct a new sys_argv
-            opts = sys_argv[opts_idx:]
-
-            if 'server' in sys_argv:
-                pre_process_server(sys_argv, opts_idx, opts)
-                return
 
 # ################################################################################################################################
 
@@ -647,7 +528,7 @@ def main() -> 'any_':
     # All the other commands
     else:
 
-        # Take into account changes introduced between versions
+        # Expand the quickstart shorthand
         pre_process_sys_argv(sys.argv)
 
         # This may change what os.getcwd returns
@@ -669,49 +550,6 @@ def main() -> 'any_':
 
     # .. otherwise, try to run the command now ..
     else:
-
-        # Populate ODB args from environment variables if not provided via CLI
-        _odb_env_map = {
-            'odb_host': 'Zato_Database_Host',
-            'odb_port': 'Zato_Database_Port',
-            'odb_user': 'Zato_Database_Username',
-            'odb_db_name': 'Zato_Database_Name',
-            'odb_password': 'Zato_Database_Password',
-            'odb_ssl': 'Zato_ODB_SSL',
-            'odb_ssl_ca_file': 'Zato_ODB_SSL_CA_File',
-            'odb_ssl_cert_file': 'Zato_ODB_SSL_Cert_File',
-            'odb_ssl_key_file': 'Zato_ODB_SSL_Key_File',
-            'odb_ssl_verify': 'Zato_ODB_SSL_Verify',
-        }
-        for _attr, _env in _odb_env_map.items():
-            if not getattr(args, _attr, None):
-                _env_value = os.environ.get(_env)
-                if _env_value:
-                    setattr(args, _attr, _env_value)
-
-        odb_type = getattr(args, 'odb_type', None)
-        if odb_type and odb_type != 'sqlite':
-            missing = []
-            for name in 'odb_db_name', 'odb_host', 'odb_port', 'odb_user':
-                if not getattr(args, name, None):
-                    missing.append(name)
-
-            if missing:
-                missing_noun = 'Option ' if len(missing) == 1 else 'Options '
-                missing_verb = ' is '    if len(missing) == 1 else ' are '
-                missing.sort()
-
-                _ = sys.stdout.write(
-                    missing_noun                  + \
-                    '`'                           + \
-                    ', '.join(missing)            + \
-                    '`'                           + \
-                    missing_verb                  + \
-                    'required if odb_type is '    + \
-                    '`{}`.'.format(args.odb_type) + \
-                    '\n'
-                )
-                sys.exit(1)
 
         # Zato
         from zato.cli import run_command

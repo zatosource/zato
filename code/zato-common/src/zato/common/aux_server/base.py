@@ -88,17 +88,6 @@ class AuxServerConfig:
         odb = ODBManager()
         sql_pool_store = PoolStore()
 
-        if config.main.odb.engine != 'sqlite':
-
-            config.main.odb.host = config.main.odb.host
-            config.main.odb.username = config.main.odb.username
-            config.main.odb.pool_size = config.main.odb.pool_size
-
-            odb_password:'str' = config.main.odb.password or ''
-
-            if odb_password and odb_password.startswith('gA'):
-                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
-
         sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
 
         odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool

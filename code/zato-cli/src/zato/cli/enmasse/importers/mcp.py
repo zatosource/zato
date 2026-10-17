@@ -8,16 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from copy import deepcopy
 
 # SQLAlchemy
 from sqlalchemy import and_, select
 
 # Zato
 from zato.common.alerting.object_config import conn_type_to_alert_type
-from zato.common.api import CONNECTION, GENERIC, Groups, MCP
-from zato.common.odb.model import GenericConn, GenericObject, HTTPSOAP
+from zato.common.api import GENERIC, Groups, MCP
+from zato.common.odb.model import GenericObject
 from zato.common.util.gateway import ensure_mcp_rest_channel, validate_oauth_security
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
+from zato.common.util.safeguards.masking import Default_Masking_Custom_Enabled
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
@@ -26,7 +28,7 @@ from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anydict, anylist, listtuple, strlist
+    from zato.common.typing_ import any_, anydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,6 +108,16 @@ class GatewayMCPImporter(GenericConnectionImporter):
         'safeguards_pii_validate': True,
         'safeguards_pii_stable_replacements': False,
 
+        # Data masking - the industry sets, the fields excluded from them and the custom fields
+        'safeguards_masking_sets': [],
+        'safeguards_masking_excluded': [],
+        'safeguards_masking_custom_fields': [],
+        'safeguards_masking_custom_enabled': Default_Masking_Custom_Enabled,
+
+        # Hook services - an empty name leaves the hook off
+        'request_hook_service': '',
+        'response_hook_service': '',
+
         # Secrets removal
         'safeguards_secrets_enabled': False,
 
@@ -159,7 +171,6 @@ class GatewayMCPImporter(GenericConnectionImporter):
             GenericObject.name == group_name,
             GenericObject.type_ == Groups.Type.Group_Parent,
             GenericObject.subtype == Groups.Type.API_Clients,
-            GenericObject.cluster_id == self.importer.cluster_id,
         ))
 
         row = session.execute(query).fetchone()
@@ -195,31 +206,34 @@ class GatewayMCPImporter(GenericConnectionImporter):
 
     def _ensure_rest_channel(self, connection_def:'anydict', session:'SASession') -> 'None':
 
-        channel_name = connection_def['name']
-        security_groups = self._resolve_security_groups(connection_def, session)
-
         ensure_mcp_rest_channel(
             session=session,
-            channel_name=channel_name,
+            channel_name=connection_def['name'],
             url_path=connection_def.get('url_path', '/mcp'),
-            cluster_id=self.importer.cluster_id,
             is_active=connection_def.get('is_active', True),
-            security_groups=security_groups,
+            security_groups=connection_def['security_groups'],
         )
 
 # ################################################################################################################################
 
-    def _validate_oauth(self, connection_def:'anydict', session:'SASession') -> 'None':
-        """ A gateway with OAuth on is imported only with a bearer definition that can verify tokens.
+    def _prepare_definition(self, connection_def:'anydict', session:'SASession') -> 'None':
+        """ Brings a gateway's definition to the form it is stored in - its security groups as ids,
+        which is what the dashboard stores too, and validated for OAuth.
         """
-        security_groups = self._resolve_security_groups(connection_def, session)
-        validate_oauth_security(session, connection_def, security_groups, self.importer.cluster_id)
+        self._normalize_services(connection_def)
+
+        connection_def['security_groups'] = self._resolve_security_groups(connection_def, session)
+
+        # A gateway with OAuth on is imported only with a bearer definition that can verify tokens
+        validate_oauth_security(session, connection_def, connection_def['security_groups'])
 
 # ################################################################################################################################
 
     def create_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
-        self._normalize_services(connection_def)
-        self._validate_oauth(connection_def, session)
+
+        # The group names of the YAML input stay as they are, so the same input can be imported again
+        connection_def = deepcopy(connection_def)
+        self._prepare_definition(connection_def, session)
         instance = super().create_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
         return instance
@@ -227,62 +241,13 @@ class GatewayMCPImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def update_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
-        self._normalize_services(connection_def)
-        self._validate_oauth(connection_def, session)
+
+        # The group names of the YAML input stay as they are, so the same input can be imported again
+        connection_def = deepcopy(connection_def)
+        self._prepare_definition(connection_def, session)
         instance = super().update_definition(connection_def, session)
         self._ensure_rest_channel(connection_def, session)
         return instance
-
-# ################################################################################################################################
-
-    def _delete_gateway(self, gateway_name:'str', session:'SASession') -> 'None':
-        """ Deletes one MCP gateway - both its generic connection and the REST channel that
-        made it reachable. The config reload that follows an import drops the wrapper
-        and the URL routing of the deleted rows.
-        """
-
-        connection = session.query(GenericConn).filter(
-            GenericConn.name == gateway_name,
-            GenericConn.type_ == self.connection_type,
-            GenericConn.cluster_id == self.importer.cluster_id,
-        ).first()
-
-        if connection is not None:
-            session.delete(connection)
-            logger.info('Deleted MCP gateway connection: %s', gateway_name)
-
-        channel = session.query(HTTPSOAP).filter(
-            HTTPSOAP.name == gateway_name,
-            HTTPSOAP.connection == CONNECTION.CHANNEL,
-            HTTPSOAP.cluster_id == self.importer.cluster_id,
-        ).first()
-
-        if channel is not None:
-            session.delete(channel)
-            logger.info('Deleted MCP gateway REST channel: %s', gateway_name)
-
-# ################################################################################################################################
-
-    def sync_definitions(self, conn_list:'anylist', session:'SASession') -> 'listtuple':
-        """ An mcp_gateway entry marked should_delete is removed instead of created or updated -
-        everything else syncs the way any generic connection does.
-        """
-
-        remaining:'anylist' = []
-
-        for item in conn_list:
-
-            if item.get('should_delete'):
-                self._delete_gateway(item['name'], session)
-            else:
-                remaining.append(item)
-
-        # The deletions land on their own, so a failure in the create-update pass
-        # can never roll a requested deletion back.
-        session.commit()
-
-        out = super().sync_definitions(remaining, session)
-        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.cli.enmasse.util.delivery import Delivery_Fields
+from zato.cli.enmasse.util.delivery import Channel_Delivery_Fields, Delivery_Fields
 from zato.cli.enmasse.util.invocation import Health_Check_Fields, Invocation_Order_Fields_REST, Invocation_Order_Fields_SOAP, \
     Retry_Fields
 from zato.common.api import MCP
@@ -35,7 +35,6 @@ _top_level_order = [
     'groups',
     'channel_rest',
     'channel_soap',
-    'channel_as4',
     'outgoing_rest',
     'scheduler',
     'ldap',
@@ -45,13 +44,12 @@ _top_level_order = [
     'sql',
     'mongodb',
     'outgoing_soap',
-    'outgoing_as2',
-    'outgoing_as4',
     'microsoft_cloud',
     'microsoft_fabric',
     'microsoft_power_automate',
     'microsoft_teams',
     'slack',
+    'discord',
     'confluence',
     'jira',
     'salesforce',
@@ -107,15 +105,15 @@ _object_order['on_prem_gateway'] = 'name', 'is_active', 'hosts:list',
 _object_order['quota_tier'] = 'name', 'description', 'rules:list',
 _object_order['groups']     = 'name', 'quota_tier', 'members:list',
 
-_object_order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'method', \
+_object_order['channel_rest'] = ('name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'method', \
     'content_type', 'timeout', 'is_audit_log_active', 'is_audit_export_payload_active', 'should_include_in_openapi', \
     'gateway_service_list:list', \
     'groups:list', \
-    'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor', \
-    'alerts:dict',
-_object_order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
+    'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor') + \
+    Channel_Delivery_Fields + ('alerts:dict',)
+_object_order['channel_soap'] = ('name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', \
     'use_mtom', 'method', 'content_type', 'timeout', 'is_audit_log_active', 'is_audit_export_payload_active', \
-    'groups:list', 'rate_limiting:list', 'response_cache:dict', 'alerts:dict',
+    'groups:list', 'rate_limiting:list', 'response_cache:dict') + Channel_Delivery_Fields + ('alerts:dict',)
 
 _object_order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'content_type', \
     'timeout', 'ping_method', 'tls_verify', 'is_audit_log_active', 'is_audit_export_payload_active') + Retry_Fields + Delivery_Fields + \
@@ -141,31 +139,6 @@ _object_order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', '
     'timeout', 'audit_log', 'is_audit_export_payload_active', 'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', \
     'ssl_verify',
 
-_object_order['outgoing_as2'] = 'name', 'is_active', 'as2_from', 'as2_to', 'endpoint_url', 'isa_qualifier', 'isa_id', \
-    'gs_id', 'unb_id', 'sign', 'sign_algorithm', 'encrypt', 'encryption_algorithm', 'compress', \
-    'compress_before_signing', 'mdn_mode', 'mdn_signed', 'async_mdn_url', 'subject', 'content_type', \
-    'as2_version', 'content_transfer_encoding', 'http_transfer_mode', 'http_timeout_seconds', \
-    'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries', 'ship_notice_window_hours', \
-    'alerting_opt_out', 'preserve_filename', \
-    'warn_on_duplicate_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', \
-    'inbound_topic', 'inbound_service', 'as2_partner_cert', 'as2_partner_next_cert', \
-    'as2_partner_next_cert_from', 'as2_signing_cert_chain', 'as2_next_decryption_cert', \
-    'as2_peer_signing_cert', 'as2_peer_encryption_cert', 'as2_trust_anchors', \
-    'is_audit_log_active', 'is_audit_export_payload_active',
-_object_order['channel_as4'] = 'name', 'is_active', 'url_path', 'service', 'security', 'as4_profile', 'as4_from_party', \
-    'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', 'as4_final_recipient', \
-    'as4_extra_pmodes', 'as4_serviced_participants', 'as4_inbound_topic', 'as4_token_type', 'as4_username', \
-    'as4_password', 'as4_signing_key', 'as4_signing_cert_chain', 'as4_decryption_key', 'as4_saml_assertion', \
-    'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors', \
-    'is_audit_log_active', 'is_audit_export_payload_active',
-_object_order['outgoing_as4'] = 'name', 'is_active', 'host', 'url_path', 'timeout', 'validate_tls', 'as4_profile', \
-    'as4_from_party', 'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', \
-    'as4_final_recipient', 'as4_extra_pmodes', 'as4_use_discovery', 'as4_sml_domain', 'as4_retry_max_attempts', \
-    'as4_retry_interval', 'as4_missing_receipt_after', 'as4_token_type', 'as4_username', 'as4_password', \
-    'as4_signing_key', 'as4_signing_cert_chain', 'as4_decryption_key', 'as4_saml_assertion', \
-    'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors', \
-    'is_audit_log_active', 'is_audit_export_payload_active',
-
 # The scopes field carries no :list marker because it is a string when the definition
 # has one line of scopes and a list when it has more, so the writer picks the shape itself.
 _object_order['microsoft_cloud']          = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes',
@@ -176,6 +149,7 @@ _object_order['microsoft_power_automate'] = 'name', 'is_active', 'address', 'cli
 _object_order['microsoft_teams'] = _object_order['microsoft_cloud']
 
 _object_order['slack']      = 'name', 'is_active',
+_object_order['discord']    = 'name', 'is_active', 'address', 'timeout', 'default_channel_id',
 _object_order['confluence'] = 'name', 'is_active', 'address', 'username',
 _object_order['jira']       = 'name', 'is_active', 'address', 'username',
 _object_order['salesforce'] = 'name', 'is_active', 'address', 'username', 'api_version',
@@ -207,6 +181,8 @@ _object_order['mcp_gateway']   = ('name', 'is_active', 'url_path', 'services:lis
     'safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64', \
     'safeguards_pii_enabled', 'safeguards_pii_lands:list', 'safeguards_pii_detectors:list', \
     'safeguards_pii_exclude:list', 'safeguards_pii_validate', 'safeguards_pii_stable_replacements', \
+    'safeguards_masking_sets:list', 'safeguards_masking_excluded:list', 'safeguards_masking_custom_fields:list', \
+    'safeguards_masking_custom_enabled', 'request_hook_service', 'response_hook_service', \
     'safeguards_secrets_enabled', \
     'safeguards_normalize_unicode', 'safeguards_unicode_mode', 'safeguards_sanitize_markup', \
     'safeguards_markup_mode', 'safeguards_url_policy_enabled', 'safeguards_url_allow_list:list', \
@@ -222,8 +198,7 @@ _object_order['outgoing_kafka']   = ('name', 'is_active', 'address', 'topic', 's
 
 _object_order['channel_mllp']  = ('name',) + Channel_Enmasse_Names + ('alerts:dict',)
 _object_order['outgoing_mllp'] = ('name', 'address') + Outgoing_Names + ('alerts:dict',)
-_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + \
-    ('bulk_export:dict', 'alerts:dict')
+_object_order['outgoing_fhir'] = ('name', 'address') + Outgoing_FHIR_Enmasse_Names + Health_Check_Fields + ('alerts:dict',)
 
 _object_order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
     'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with', \

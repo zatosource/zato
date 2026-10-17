@@ -14,8 +14,8 @@ import pytest
 
 # Zato
 from zato.common.destination.constants import DeliveryMode, DestinationType, Respond_From_Service
-from zato.common.destination.model import count_entries, describe_entries, dump_entries, get_entry, get_option, \
-    has_active_entries, parse_config, parse_entries, select_entries, DestinationException
+from zato.common.destination.model import count_active_entries, count_entries, describe_entries, dump_entries, get_entry, \
+    get_option, has_active_entries, parse_config, parse_entries, select_entries, DestinationException
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -110,6 +110,43 @@ class TestParsing:
 
 # ################################################################################################################################
 
+    def test_a_method_nothing_can_be_delivered_with_is_refused_when_the_destination_is_saved(self) -> 'None':
+
+        # A REST destination ..
+        with pytest.raises(DestinationException) as raised:
+            _ = parse_entries([{'type': DestinationType.REST, 'connection': _rest_connection, 'options': {'method': 'TRACE'}}])
+
+        assert 'with method `TRACE`' in str(raised.value)
+
+        # .. and a FHIR destination as well, each refused at save time ..
+        with pytest.raises(DestinationException) as raised:
+            _ = parse_entries([{'type': DestinationType.FHIR, 'connection': _fhir_connection, 'options': {'method': 'trace'}}])
+
+        assert 'with method `trace`' in str(raised.value)
+
+        # .. while every method the panel offers is accepted.
+        for method in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
+            entries = parse_entries([{'type': DestinationType.REST, 'connection': _rest_connection, 'options': {'method': method}}])
+            assert get_option(entries[0], 'method', '') == method
+
+# ################################################################################################################################
+
+    def test_a_fhir_destination_names_its_search_parameters_as_a_query_string(self) -> 'None':
+
+        entries = parse_entries([{'type': DestinationType.FHIR, 'connection': _fhir_connection,
+            'options': {'method': 'GET', 'path': '/Observation', 'params': 'patient=1&_count=10'}}])
+
+        assert get_option(entries[0], 'params', None) == 'patient=1&_count=10'
+
+        # A mapping is not the form the panel stores, so it is refused
+        with pytest.raises(DestinationException) as raised:
+            _ = parse_entries([{'type': DestinationType.FHIR, 'connection': _fhir_connection,
+                'options': {'method': 'GET', 'path': '/Observation', 'params': {'patient': '1'}}}])
+
+        assert 'as a query string' in str(raised.value)
+
+# ################################################################################################################################
+
     def test_a_destination_with_no_connection_is_refused(self) -> 'None':
         with pytest.raises(DestinationException):
             _ = parse_entries([{'type': DestinationType.REST}])
@@ -187,6 +224,29 @@ class TestConfiguration:
         assert config.delivery_mode == DeliveryMode.Same_Time
 
 # ################################################################################################################################
+
+    def test_two_destinations_of_one_name_cannot_both_be_there(self) -> 'None':
+        """ A destination is addressed by its name alone - by a resend, by a reply producer, by a
+        reprocess naming the ones to catch up - so a second one of the same name is one nothing
+        could ever reach on its own.
+        """
+        entries = loads(_get_stored_list())
+
+        # A REST connection of the very same name as the MLLP one
+        entries.append({
+            'name': _mllp_connection,
+            'type': DestinationType.REST,
+            'connection': _mllp_connection,
+            'is_active': True,
+            'options': {'method': 'POST'},
+        })
+
+        with pytest.raises(DestinationException) as raised:
+            _ = parse_config(_channel_name, dumps(entries))
+
+        assert f'two destinations named `{_mllp_connection}`' in str(raised.value)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestLookups:
@@ -237,6 +297,28 @@ class TestLookups:
 
     def test_a_list_that_cannot_be_read_counts_as_no_destinations(self) -> 'None':
         assert count_entries('this is not a destination list') == 0
+        assert count_active_entries('this is not a destination list') == 0
+
+# ################################################################################################################################
+
+    def test_a_paused_destination_is_not_somewhere_a_message_can_reach(self) -> 'None':
+
+        # Two destinations, one of them paused - a channel declares two and a message reaches one ..
+        entries = [
+            {'name': _mllp_connection, 'type': DestinationType.MLLP, 'connection': _mllp_connection, 'is_active': True,
+                'options': {}},
+            {'name': _rest_connection, 'type': DestinationType.REST, 'connection': _rest_connection, 'is_active': False,
+                'options': {}},
+        ]
+        assert count_entries(dumps(entries)) == 2
+        assert count_active_entries(dumps(entries)) == 1
+
+        # .. and a channel whose every destination is paused has nowhere to send, which is what get_config
+        # delivers for it, so the count the save is judged by has to be zero as well.
+        entries[0]['is_active'] = False
+        assert count_entries(dumps(entries)) == 2
+        assert count_active_entries(dumps(entries)) == 0
+        assert count_active_entries('') == 0
 
 # ################################################################################################################################
 # ################################################################################################################################

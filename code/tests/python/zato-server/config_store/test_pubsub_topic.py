@@ -23,12 +23,11 @@ class TestPubSubTopic:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'ZatoClient') -> 'None':
         response = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='/test/topic/1',
             is_active=True,
         )
@@ -37,14 +36,13 @@ class TestPubSubTopic:
         self.__class__.created_ids.append(response['id'])
 
     def test_03_get_list_after_create(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert '/test/topic/1' in names
 
     def test_04_create_batch(self, client:'ZatoClient') -> 'None':
         for i in range(2, 6):
             response = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'/test/topic/{i}',
                 is_active=True,
             )
@@ -52,7 +50,7 @@ class TestPubSubTopic:
             self.__class__.created_ids.append(response['id'])
 
     def test_05_get_list_batch(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('/test/topic/')]
         assert len(test_items) >= 5
 
@@ -60,7 +58,6 @@ class TestPubSubTopic:
         item_id = self.__class__.created_ids[0]
         response = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             old_name='/test/topic/1',
             name='/test/topic/1-edited',
             is_active=True,
@@ -69,7 +66,7 @@ class TestPubSubTopic:
         self.__class__.created_ids[0] = response['id']
 
     def test_07_get_list_after_edit(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert '/test/topic/1-edited' in names
         assert '/test/topic/1' not in names
@@ -85,7 +82,7 @@ class TestPubSubTopic:
         _ = client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_10_get_list_after_delete(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('/test/topic/')]
         assert len(test_items) >= 4
 
@@ -95,6 +92,6 @@ class TestPubSubTopic:
             self.__class__.created_ids.remove(item_id)
 
     def test_12_get_list_final(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list')
         test_items = [item for item in data if item['name'].startswith('/test/topic/')]
         assert len(test_items) == 0

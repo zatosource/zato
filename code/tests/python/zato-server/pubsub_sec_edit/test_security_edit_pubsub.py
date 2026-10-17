@@ -72,7 +72,6 @@ def _edit_subscriber_username(admin:'any_') -> 'None':
         'is_active': True,
         'username': _new_username,
         'realm': 'testrealm',
-        'cluster_id': 1,
     })
 
 # ################################################################################################################################
@@ -88,7 +87,6 @@ def _edit_subscriber_sec_name(admin:'any_') -> 'None':
         'is_active': True,
         'username': _new_username,
         'realm': 'testrealm',
-        'cluster_id': 1,
     })
 
 # ################################################################################################################################

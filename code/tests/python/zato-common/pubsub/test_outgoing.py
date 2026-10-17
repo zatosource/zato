@@ -434,14 +434,15 @@ class OutgoingPublisherTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_publish_options_reach_the_backend(self) -> 'None':
-        """ Expiration, priority and everything else a publication may carry go through untouched.
+        """ Expiration and everything else a publication may carry go through untouched, except for the priority -
+        the queue is fetched by priority first, so every message it stores has the queue's own.
         """
         _ = self.publisher.publish('Order 1234', priority=7, expiration=60)
 
         call_args = self.server.pubsub_backend.publish.call_args
         keyword = call_args[1]
 
-        self.assertEqual(keyword['priority'], 7)
+        self.assertEqual(keyword['priority'], PubSub.Message.Priority_Default)
         self.assertEqual(keyword['expiration'], 60)
 
 # ################################################################################################################################

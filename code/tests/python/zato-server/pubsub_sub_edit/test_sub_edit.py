@@ -56,7 +56,7 @@ def _get_puller() -> 'any_':
 def _get_subscriptions(admin:'any_') -> 'anylist':
     """ Returns all subscriptions for the test subscriber.
     """
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list
@@ -110,7 +110,6 @@ def _edit_subscription_topics(admin:'any_', topic_names:'list[str]') -> 'any_':
 
     out = admin.invoke('zato.pubsub.subscription.edit', {
         'sub_key': subscription['sub_key'],
-        'cluster_id': 1,
         'topic_name_list': topic_name_list,
         'sec_base_id': TestConfig.subscriber_sec_base_id,
         'delivery_type': subscription['delivery_type'],
@@ -134,7 +133,6 @@ def _get_outgoing_rest_id(admin:'any_', connection_name:'str') -> 'int':
     """ Looks up an outgoing REST connection ID by name.
     """
     result = admin.invoke('zato.http-soap.get-list', {
-        'cluster_id': 1,
         'connection': 'outgoing',
         'transport': 'plain_http',
     })
@@ -363,7 +361,6 @@ class TestSubEdit:
         # .. edit to push delivery ..
         _ = admin.invoke('zato.pubsub.subscription.edit', {
             'sub_key': subscription['sub_key'],
-            'cluster_id': 1,
             'topic_name_list': topic_name_list,
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'push',
@@ -415,7 +412,6 @@ class TestSubEdit:
         # .. edit back to pull ..
         _ = admin.invoke('zato.pubsub.subscription.edit', {
             'sub_key': subscription['sub_key'],
-            'cluster_id': 1,
             'topic_name_list': topic_name_list,
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'pull',

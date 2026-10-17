@@ -26,7 +26,7 @@ from zato.server.base.parallel.delivery import PushDelivery
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strlist
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,7 +74,7 @@ class _StubServer:
         self.config_manager = _StubConfigManager()
         self.invoked_count = 0
 
-    def invoke(self, service_name:'str', payload:'any_') -> 'None':
+    def invoke(self, service_name:'str', payload:'any_', data_format:'strnone'=None) -> 'None':
         self.invoked_count += 1
 
         # A real invocation switches greenlets on its network I/O - without this yield

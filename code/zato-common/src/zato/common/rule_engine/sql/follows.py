@@ -11,7 +11,6 @@ from sqlalchemy import and_, delete, insert, or_, select, update
 from sqlalchemy.engine import CursorResult
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.typing_ import cast_
 
 # Local
@@ -40,10 +39,8 @@ def _get_follow(session:'Session', actor:'str', definition_id:'int') -> 'RuleFol
     """
     # Query the one promoted follow identity ..
     query = select(rule_follow_table)
-    cluster_condition = rule_follow_table.c.cluster_id == default_cluster_id
     actor_condition = rule_follow_table.c.actor == actor
     definition_condition = rule_follow_table.c.definition_id == definition_id
-    query = query.where(cluster_condition)
     query = query.where(actor_condition)
     query = query.where(definition_condition)
     result = session.execute(query)
@@ -95,7 +92,6 @@ class FollowStore:
                     # .. store the follow with its clock starting now ..
                     now = utc_now()
                     values = {
-                        'cluster_id':    default_cluster_id,
                         'definition_id': definition_id,
                         'actor':         actor,
                         'created_at':    now,
@@ -121,7 +117,6 @@ class FollowStore:
                     # .. and build the detached record from the values just written.
                     out = RuleFollowRecord(
                         id=follow_id,
-                        cluster_id=default_cluster_id,
                         definition_id=definition_id,
                         actor=actor,
                         created_at=now,
@@ -199,9 +194,7 @@ class FollowStore:
 
         # .. ask for the actor's complete follow list ..
         query = select(rule_follow_table)
-        cluster_condition = rule_follow_table.c.cluster_id == default_cluster_id
         actor_condition = rule_follow_table.c.actor == actor
-        query = query.where(cluster_condition)
         query = query.where(actor_condition)
         query = query.order_by(rule_follow_table.c.definition_id)
         session = self._session_factory()
@@ -236,10 +229,8 @@ class FollowStore:
                 # Move the clock on the one promoted follow identity ..
                 now = utc_now()
                 statement = update(rule_follow_table)
-                cluster_condition = rule_follow_table.c.cluster_id == default_cluster_id
                 actor_condition = rule_follow_table.c.actor == actor
                 definition_condition = rule_follow_table.c.definition_id == definition_id
-                statement = statement.where(cluster_condition)
                 statement = statement.where(actor_condition)
                 statement = statement.where(definition_condition)
                 statement = statement.values(last_seen_at=now)
@@ -282,8 +273,6 @@ class FollowStore:
             follow_conditions.append(and_(definition_condition, seen_condition))
 
         query = select(rule_event_table)
-        cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
-        query = query.where(cluster_condition)
         query = query.where(or_(*follow_conditions))
 
         # .. the newest events across every follow make up the one page ..

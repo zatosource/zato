@@ -1,5 +1,5 @@
 
-.PHONY: ruff
+.PHONY: ruff test
 
 Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-distlock

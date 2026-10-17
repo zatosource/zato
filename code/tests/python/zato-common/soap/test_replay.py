@@ -374,7 +374,7 @@ class TestReplayCache:
 
     def test_the_cache_is_bounded(self):
         # Without a ceiling an unauthenticated caller sending distinct nonces is a way to exhaust
-        # the worker's memory, one request at a time.
+        # the server's memory, one request at a time.
         cache = ReplayCache(max_size=10)
 
         for i in range(50):

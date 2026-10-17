@@ -37,7 +37,7 @@ if 0:
 # ################################################################################################################################
 
 # The volume proof is opt-in - it runs for minutes under sustained load,
-# so it only starts when the environment asks for it, like test-as2-live does.
+# so it only starts when the environment asks for it.
 _is_volume_enabled = bool(os.environ.get('Zato_Test_HL7_Volume'))
 
 # Per-message trace diagnostics - opt-in through the environment
@@ -246,7 +246,6 @@ class TestHL7Volume:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-hl7-volume-accept',
             type_=_connection_type_channel,
             is_active=True,
@@ -267,7 +266,6 @@ class TestHL7Volume:
 
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-hl7-volume-error',
             type_=_connection_type_channel,
             is_active=True,

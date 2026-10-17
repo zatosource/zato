@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from base64 import b64decode, b64encode
 from dataclasses import dataclass
 from json import dumps
 from logging import getLogger
@@ -15,7 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub, URL_TYPE
 from zato.common.facade import PubSubFacade
-from zato.common.pubsub.delivery import deliver_with_policy
+from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, SendRejected
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
 from zato.common.util.retry import RetryPolicy
@@ -41,22 +42,26 @@ _sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
 _retry = HTTP_SOAP.Retry
 
+# The queue delivers by priority first, so every message it stores has the same one
+_queue_priority = PubSub.Message.Priority_Default
+
 Direction_In  = PubSub.Direction.In
 Direction_Out = PubSub.Direction.Out
 
 # The keys of the envelope a queue stores
-Key_Conn_Type  = 'conn_type'
-Key_Conn_ID    = 'conn_id'
-Key_Conn_Name  = 'conn_name'
-Key_CID        = 'cid'
-Key_Msg_ID     = 'msg_id'
-Key_Pub_Time   = 'pub_time_iso'
-Key_Attempts   = 'attempts'
-Key_DLQ_Rounds = 'dlq_rounds'
-Key_Request    = 'request'
+Key_Conn_Type       = 'conn_type'
+Key_Conn_ID         = 'conn_id'
+Key_Conn_Name       = 'conn_name'
+Key_CID             = 'cid'
+Key_Msg_ID          = 'msg_id'
+Key_Pub_Time        = 'pub_time_iso'
+Key_Attempts        = 'attempts'
+Key_DLQ_Rounds      = 'dlq_rounds'
+Key_DLQ_Rule_Rounds = 'dlq_rule_rounds'
+Key_Request         = 'request'
 
 # The keys of the request part - an HTTP type stores a method, a SOAP type an operation, a FHIR type a method and a path,
-# a Kafka type a key and a partition, a Kafka channel a service
+# a Kafka type a key and a partition, a Kafka channel a service, an HTTP channel a service with the request it received
 Key_Method    = 'method'
 Key_Operation = 'operation'
 Key_Path      = 'path'
@@ -67,6 +72,9 @@ Key_Key          = 'key'
 Key_Partition    = 'partition'
 Key_Is_Tombstone = 'is_tombstone'
 Key_Service      = 'service'
+Key_Data_Format  = 'data_format'
+Key_Path_Params  = 'path_params'
+Key_Transport    = 'transport'
 
 # Whether the data is base64 text
 Key_Is_Base64 = 'is_base64'
@@ -96,6 +104,9 @@ audit_disabled_conn_types:'strset' = set()
 
 # The direction of each connection type
 conn_directions:'strdict' = {}
+
+# Connection types that have a DLQ but no queue of their own
+queue_less_conn_types:'strset' = set()
 
 # The Ace modes a message's body is shown in
 Body_Mode_JSON = 'json'
@@ -128,11 +139,19 @@ class InboundType:
     """ The kinds of channel whose failed messages have a DLQ.
     """
     KAFKA = 'kafka-channel'
+    REST  = 'rest-channel'
+    SOAP  = 'soap-channel'
 
 # Which kind of outgoing connection an HTTP/SOAP connection is, by its transport
 http_soap_outgoing_types = {
     URL_TYPE.PLAIN_HTTP: OutgoingType.REST,
     URL_TYPE.SOAP: OutgoingType.SOAP,
+}
+
+# Which kind of channel an HTTP/SOAP channel is, by its transport
+http_soap_inbound_types = {
+    URL_TYPE.PLAIN_HTTP: InboundType.REST,
+    URL_TYPE.SOAP: InboundType.SOAP,
 }
 
 # ################################################################################################################################
@@ -273,6 +292,7 @@ def register_outgoing_conn_type(
     dlq_settings:'callable_ | None'=None,
     page:'OutgoingPage | None'=None,
     direction:'str'=Direction_Out,
+    has_queue:'bool'=True,
     ) -> 'None':
     """ Registers one type of connection with its locator, handler, retry policy, DLQ settings and what
     the delivery page shows of its messages.
@@ -280,6 +300,9 @@ def register_outgoing_conn_type(
     conn_locators[conn_type] = locator
     delivery_handlers[conn_type] = handler
     conn_directions[conn_type] = direction
+
+    if not has_queue:
+        queue_less_conn_types.add(conn_type)
 
     if retry_policy:
         retry_policy_builders[conn_type] = retry_policy
@@ -307,6 +330,40 @@ def is_inbound(conn_type:'str') -> 'bool':
     """ Whether one connection type is a channel.
     """
     out = get_direction(conn_type) == Direction_In
+    return out
+
+# ################################################################################################################################
+
+def has_queue(conn_type:'str') -> 'bool':
+    """ Whether one connection type has a queue of its own in front of its deliveries.
+    """
+    out = conn_type not in queue_less_conn_types
+    return out
+
+# ################################################################################################################################
+
+def decode_payload(payload:'bytes') -> 'anytuple':
+    """ A message's payload as the text an envelope stores and whether that text is base64.
+    """
+    try:
+        out = (payload.decode('utf8'), False)
+    except UnicodeDecodeError:
+        out = (b64encode(payload).decode('ascii'), True)
+
+    return out
+
+# ################################################################################################################################
+
+def encode_payload(request:'stranydict') -> 'bytes':
+    """ The bytes a service is invoked with, out of what an envelope stores.
+    """
+    data = request[Key_Data]
+
+    if request[Key_Is_Base64]:
+        out = b64decode(data)
+    else:
+        out = data.encode('utf8')
+
     return out
 
 # ################################################################################################################################
@@ -428,7 +485,10 @@ class SendResult:
     # The message is in the queue
     is_in_queue: 'bool' = False
 
-    # The message's id in the queue
+    # The message is in the connection's DLQ
+    is_in_dlq: 'bool' = False
+
+    # The message's id in the queue or in the DLQ
     msg_id: 'str' = ''
 
     # The endpoint's response, if there was one
@@ -437,17 +497,8 @@ class SendResult:
     # Why the message is not delivered
     error: 'str' = ''
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SendRejected(Exception):
-    """ Raised by a direct attempt when the endpoint turned the message down.
-    """
-
-    def __init__(self, error:'str', response:'any_'=None) -> 'None':
-        super().__init__(error)
-        self.error = error
-        self.response = response
+    # The endpoint said the message itself is wrong, so it was not queued and the response is its answer
+    is_rejected: 'bool' = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -461,6 +512,7 @@ def build_envelope(
     request:'stranydict',
     *,
     dlq_rounds:'int'=DLQ_Rounds_None,
+    dlq_rule_rounds:'int'=DLQ_Rounds_None,
 ) -> 'stranydict':
     """ The envelope the queue stores for one message.
     """
@@ -473,6 +525,7 @@ def build_envelope(
         Key_Pub_Time: utcnow().isoformat(),
         Key_Attempts: attempts,
         Key_DLQ_Rounds: dlq_rounds,
+        Key_DLQ_Rule_Rounds: dlq_rule_rounds,
         Key_Request: request,
     }
 
@@ -525,6 +578,7 @@ class OutgoingPublisher:
         request:'stranydict',
         *,
         dlq_rounds:'int'=DLQ_Rounds_None,
+        dlq_rule_rounds:'int'=DLQ_Rounds_None,
         **kwargs:'any_',
         ) -> 'PublishResult':
         """ Queues one request for delivery to the connection.
@@ -535,12 +589,14 @@ class OutgoingPublisher:
         with config_manager.get_outgoing_publish_lock(self.conn_type, self.conn_id):
 
             topic_name, conn_name = config_manager.ensure_outgoing_subscription(self.conn_type, self.conn_id)
-            envelope = build_envelope(self.conn_type, self.conn_id, conn_name, cid, attempts, request, dlq_rounds=dlq_rounds)
+            envelope = build_envelope(self.conn_type, self.conn_id, conn_name, cid, attempts, request,
+                dlq_rounds=dlq_rounds, dlq_rule_rounds=dlq_rule_rounds)
 
             # The queue stores the message under the id and the time the envelope carries
             msg_id = envelope[Key_Msg_ID]
             kwargs['msg_id'] = msg_id
             kwargs['pub_time'] = envelope[Key_Pub_Time]
+            kwargs['priority'] = _queue_priority
 
             envelope = dumps(envelope)
 
@@ -567,7 +623,22 @@ class OutgoingPublisher:
 # ################################################################################################################################
 
     def send_or_queue(self, cid:'str', request:'stranydict', attempt:'callable_') -> 'SendResult':
-        """ Makes the direct attempt if the queue is empty, otherwise or on a rejection queues the message. Never raises.
+        """ Makes the direct attempt if the queue is empty, otherwise or on a rejection queues the message, unless
+        the connection has no retries. Never raises.
+        """
+        config_manager = self.server.config_manager
+
+        # Under the connection's publish lock, one direct attempt at a time reads the depth and either completes
+        # or queues its message before the next send reads it
+        with config_manager.get_outgoing_publish_lock(self.conn_type, self.conn_id):
+            out = self._send_or_queue(cid, request, attempt)
+
+        return out
+
+# ################################################################################################################################
+
+    def _send_or_queue(self, cid:'str', request:'stranydict', attempt:'callable_') -> 'SendResult':
+        """ The body of send_or_queue, run under the connection's publish lock.
         """
         out = SendResult()
 
@@ -582,14 +653,30 @@ class OutgoingPublisher:
             except SendRejected as e:
                 out.error = e.error
                 out.response = e.response
+                error_class = e.__class__.__name__
+
+                # The endpoint said the message itself is wrong, so the queue would only hand it the same answer again
+                if e.is_permanent:
+                    out.is_rejected = True
+                    return out
 
             except Exception as e:
                 out.error = str(e)
+                error_class = e.__class__.__name__
 
             else:
                 out.is_ok = True
                 out.response = response
 
+                return out
+
+            conn_name, wrapper = locate_outgoing_conn(self.server, self.conn_type, self.conn_id)
+            policy = get_retry_policy(self.conn_type, wrapper)
+
+            # .. with no retries the direct attempt was the only one, so the message is not queued,
+            # it moves to the DLQ if the connection's DLQ switch is on and is returned to the caller otherwise ..
+            if policy.max_retries == 0:
+                self._move_to_dlq(cid, conn_name, request, out, error_class)
                 return out
 
             attempts = Attempts_Direct
@@ -611,6 +698,18 @@ class OutgoingPublisher:
         out.msg_id = result.msg_id
 
         return out
+
+# ################################################################################################################################
+
+    def _move_to_dlq(self, cid:'str', conn_name:'str', request:'stranydict', result:'SendResult', error_class:'str') -> 'None':
+        """ Moves a message whose one attempt failed to the connection's DLQ if the connection's DLQ switch is on.
+        """
+        envelope = build_envelope(self.conn_type, self.conn_id, conn_name, cid, Attempts_Direct, request)
+        exhausted = DeliveryExhausted(result.error, Attempts_Direct, error_class)
+
+        if msg_id := self.server.config_manager.move_to_outgoing_dlq(cid, envelope, exhausted):
+            result.is_in_dlq = True
+            result.msg_id = msg_id
 
 # ################################################################################################################################
 # ################################################################################################################################

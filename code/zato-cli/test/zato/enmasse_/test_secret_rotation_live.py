@@ -281,7 +281,7 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
 # ################################################################################################################################
 
     def _assert_security_listing_hides(self, *secrets:'str') -> 'None':
-        request = {'cluster_id': self.client.cluster_id}
+        request = {}
         self._assert_listing_hides(ModuleCtx.Security_List_Services, request, Listing_Secret_Keys, *secrets)
 
 # ################################################################################################################################
@@ -290,7 +290,7 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
         """ A generic connection's private_key is the path of a key file, which the edit form needs,
         so its listing is held to the keys the generic listing itself never returns.
         """
-        request = {'cluster_id': self.client.cluster_id, 'type_': type_}
+        request = {'type_': type_}
         self._assert_listing_hides(('zato.generic.connection.get-list',), request, never_returned_keys, *secrets)
 
 # ################################################################################################################################
@@ -620,7 +620,7 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
         passwords:'strlist' = []
         self._import(self._listing_yaml(passwords))
 
-        request = {'cluster_id': self.client.cluster_id}
+        request = {}
 
         for service_name in ModuleCtx.Listing_Services:
             response = self.client.invoke(service_name, request)

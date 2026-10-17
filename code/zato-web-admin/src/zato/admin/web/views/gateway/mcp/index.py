@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from http.client import OK
+
 # Zato
 from zato.admin.web import alerts_tab
 from zato.admin.web.forms.gateway.mcp import CreateForm
@@ -13,7 +16,8 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.admin.web.views.gateway.mcp.common import _alert_field_names, _alert_type, _choice_field_defaults, \
     _numeric_shaping_fields, _row_edit_prefix, _security_input_prefix, _service_input_prefix, _shaping_checkbox_fields, \
     _shaping_choice_fields, _shaping_display_defaults, _shaping_fields, _shaping_int_fields, _shaping_list_fields, \
-    _skill_input_prefix, get_size_cap_label, numeric_from_bool, save_security_group
+    _skill_input_prefix, _wizard_kept_field_names, add_group_id, get_group_id_list, get_size_cap_label, \
+    get_stored_group_list, numeric_from_bool, read_gateway, read_masking_input, SecurityGroupChange, size_cap_for_display
 from zato.admin.web.views.gateway.mcp_tool_sources import Connection_Source_List
 from zato.common.alerting.object_config import Field_Prefix
 from zato.common.api import GENERIC, Groups
@@ -43,7 +47,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active'
     output_optional = ('url_path', 'services', 'security_groups') + _shaping_fields
     output_repeated = True
@@ -56,17 +59,19 @@ class Index(_Index):
 
     def on_before_append_item(self, item:'any_') -> 'any_':
 
-        # Resolve the security member count from the auto-created group ..
-        security_groups = getattr(item, 'security_groups', None) or []
-        if security_groups:
-            group_id = security_groups[0]
-            member_response = self.req.zato.client.invoke('zato.groups.get-member-list', {
+        # The security member count is the sum of the members of all the gateway's groups ..
+        item.security_member_count = 0
+
+        if group_id_list := get_group_id_list(self.req, get_stored_group_list(item)):
+            member_response = self.req.zato.client.invoke('zato.groups.get-member-count', {
                 'group_type': Groups.Type.API_Clients,
-                'group_id': group_id,
             })
-            item.security_member_count = len(member_response.data) if member_response.ok and member_response.data else 0
-        else:
-            item.security_member_count = 0
+
+            # .. the counts are keyed by group id, which may arrive as text ..
+            for group_id in group_id_list:
+                for count_group_id, count in member_response.data.items():
+                    if str(count_group_id) == str(group_id):
+                        item.security_member_count += count
 
         # Response shaping fields absent from the item - because the gateway predates them
         # or because a falsy value was filtered out on the way - render as their defaults,
@@ -84,6 +89,9 @@ class Index(_Index):
 
         # What the size caps cell of this row says before it is clicked
         item.size_cap_label = get_size_cap_label(item.max_response_size, item.size_cap_mode)
+
+        for name in _shaping_int_fields:
+            item[name] = size_cap_for_display(item[name])
 
         return item
 
@@ -106,6 +114,22 @@ class _CreateEdit(CreateEdit):
     input_required = 'name',
     input_optional = ('is_active', 'url_path') + _shaping_fields + _alert_field_names
     output_required = 'id', 'name'
+
+    def __call__(self, req:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
+
+        # The gateway's group is changed before the gateway is saved, so a save the server refuses
+        # returns the group to the members it had before ..
+        self.security_group_change:'SecurityGroupChange | None' = None
+
+        out = super().__call__(req, *args, **kwargs)
+
+        if out.status_code != OK:
+            if self.security_group_change:
+                self.security_group_change.revert()
+
+        return out
+
+# ################################################################################################################################
 
     def populate_initial_input_dict(self, initial_input_dict:'strdict') -> 'None':
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.GATEWAY_MCP
@@ -221,6 +245,9 @@ class _CreateEdit(CreateEdit):
         # .. and store them so they end up in opaque data too.
         input_dict['skills'] = skill_names
 
+        # The data masking answers and the hook services travel in hidden inputs of their own.
+        read_masking_input(self.req.POST, input_dict)
+
         # Collect security definitions from the security badge picker ..
         member_id_list:'strlist' = []
 
@@ -228,10 +255,28 @@ class _CreateEdit(CreateEdit):
             if key.startswith(_security_input_prefix):
                 member_id_list.append(self.req.POST[key])
 
+        # An edit starts from the gateway as it is stored, whose group is named after its stored name ..
+        if 'id' in input_dict:
+            stored = read_gateway(self.req, input_dict['id'])
+            gateway_name = stored['name']
+            is_create = False
+            group_id_list = get_group_id_list(self.req, get_stored_group_list(stored))
+
+            # .. the fields the wizard does not edit keep their stored values ..
+            for name in _wizard_kept_field_names:
+                if name in stored:
+                    input_dict[name] = stored[name]
+
+        else:
+            gateway_name = input_dict['name']
+            is_create = True
+            group_id_list = []
+
         # .. auto-create or update the gateway's own security group with the picked members
-        # and store the group ID so the hook can assign it to the HTTPSOAP channel.
-        group_id = save_security_group(self.req, input_dict['name'], member_id_list)
-        input_dict['security_groups'] = [group_id]
+        # and store the group ID, along with the other groups of the gateway, so the hook can assign them to the HTTPSOAP channel.
+        self.security_group_change = SecurityGroupChange(self.req, gateway_name, is_create)
+        group_id = self.security_group_change.apply(member_id_list)
+        input_dict['security_groups'] = add_group_id(group_id_list, group_id)
 
 # ################################################################################################################################
 
@@ -286,6 +331,11 @@ class Delete(_Delete):
     url_name = 'gateway-mcp-delete'
     error_message = 'Could not delete MCP gateway'
     service_name = 'zato.generic.connection.delete'
+
+    def get_input_dict(self) -> 'strdict':
+        out = super().get_input_dict()
+        _ = read_gateway(self.req, out[self.id_elem])
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

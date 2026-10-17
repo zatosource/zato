@@ -163,7 +163,6 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
 
     command = [
         _zato_bin, 'quickstart', 'create', base_dir,
-        '--servers', '1',
         '--no-scheduler',
         '--server-api-client-for-scheduler-password', password,
     ]

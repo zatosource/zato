@@ -39,10 +39,12 @@ _fragment_chunk_size             = 10
 _fragment_delay_seconds          = 0.01
 _oversized_server_max_msg_size   = 100
 _oversized_message_byte_count    = 500
+_unterminated_frame_recv_timeout_seconds = 1.0
 _slow_callback_delay_seconds     = 5
 _client_receive_timeout_seconds  = 1.0
 _circuit_breaker_reset_seconds   = 0.1
 _outconn_recv_timeout_ms         = 5000
+_outconn_max_wait_time           = 5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -461,6 +463,39 @@ class TestFramingEdgeCases:
 
                 except socket.timeout:
                     pass
+
+            finally:
+                raw_socket.close()
+
+        finally:
+            stop_server(process)
+
+# ################################################################################################################################
+
+    def test_an_unterminated_frame_is_rejected_and_the_connection_closed(self) -> 'None':
+        """ A frame whose end sequence never arrives is answered with a reject once the receive
+        timeout passes, and the connection is closed behind it.
+        """
+        process, port = start_server(recv_timeout=_unterminated_frame_recv_timeout_seconds)
+
+        try:
+
+            raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            raw_socket.connect(('127.0.0.1', port))
+            raw_socket.settimeout(_socket_timeout)
+
+            try:
+                raw_socket.sendall(start_sequence + sample_adt_a01('OPEN001'))
+
+                response = b''
+                while True:
+                    chunk = raw_socket.recv(_recv_buffer_size)
+                    if not chunk:
+                        break
+                    response += chunk
+
+                assert b'MSA|AE|OPEN001' in response
+                assert response.endswith(end_sequence)
 
             finally:
                 raw_socket.close()
@@ -925,6 +960,7 @@ class TestTlsAndMtls:
         config.start_seq = '0b'
         config.end_seq = '1c 0d'
         config.recv_timeout = _outconn_recv_timeout_ms
+        config.max_wait_time = _outconn_max_wait_time
         config.max_msg_size = _max_message_size
         config.read_buffer_size = _recv_buffer_size
         config.should_log_messages = False
@@ -932,7 +968,7 @@ class TestTlsAndMtls:
         config.tls_cert_path = tls_certs['client_cert']
         config.tls_key_path = tls_certs['client_key']
 
-        connection = _HL7MLLPConnection(config)
+        connection = _HL7MLLPConnection(config, None, CircuitBreaker())
         result = connection.invoke(sample_adt_a01('OUTTLS01'))
 
         assert isinstance(result, AckResult)
@@ -955,6 +991,7 @@ class TestTlsAndMtls:
         config.start_seq = '0b'
         config.end_seq = '1c 0d'
         config.recv_timeout = _outconn_recv_timeout_ms
+        config.max_wait_time = _outconn_max_wait_time
         config.max_msg_size = _max_message_size
         config.read_buffer_size = _recv_buffer_size
         config.should_log_messages = False
@@ -962,7 +999,7 @@ class TestTlsAndMtls:
         config.tls_cert_path = ''
         config.tls_key_path = ''
 
-        connection = _HL7MLLPConnection(config)
+        connection = _HL7MLLPConnection(config, None, CircuitBreaker())
         result = connection.invoke(sample_adt_a01('OUTPLAIN1'))
 
         assert isinstance(result, AckResult)

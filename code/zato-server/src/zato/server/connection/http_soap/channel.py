@@ -19,7 +19,7 @@ from traceback import format_exc
 from typing import NamedTuple
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, MISC, SEC_DEF_TYPE, IO, \
+from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, SEC_DEF_TYPE, IO, \
     TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.hl7.audit import get_wire_attrs, get_wire_msa_control_id
@@ -45,12 +45,11 @@ from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDic
 from zato.common.util.logging_ import current_cid, current_service_name
 from zato.common.util.url_dispatcher import normalize_path_info, to_internal_accept
 from zato.server.reqresp.payload import IOPayload
-from zato.server.connection.as2 import AS2ChannelRuntime
-from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.connection.ccda import CCDAFacade
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.connection.http_soap import response_cache
 from zato.server.connection.http_soap.cors import add_cors_response_headers, handle_preflight_request, is_allowed_origin
+from zato.server.connection.http_soap.channel_queue import QueuedChannelHandler
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
     parse_soap_request, resolve_soap_payload
 from zato.server.groups.ctx import SecurityGroupsCtx
@@ -97,8 +96,6 @@ _content_type_json = CONTENT_TYPE['JSON']
 _content_type_sse = 'text/event-stream'
 _transport_plain_http = URL_TYPE.PLAIN_HTTP
 _transport_soap = URL_TYPE.SOAP
-_transport_as2 = URL_TYPE.AS2
-_transport_as4 = URL_TYPE.AS4
 _data_format_hl7_v2 = HL7.Const.Version.v2.id
 _data_format_ccda = HL7.CCDA.Data_Format
 _ccda_reason_not_cda = HL7.CCDA.Reason.Not_CDA
@@ -106,6 +103,7 @@ _default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
 _http_options = 'OPTIONS'
+_queue = HTTP_SOAP.Queue
 
 # ################################################################################################################################
 
@@ -157,6 +155,13 @@ _body_too_large_reason = 'SOAP request is too large'
 # The SOAPAction header as the request context spells it.
 _soap_action_header_key = 'HTTP_{}'.format(SOAP_Action_Header.upper())
 
+# The socket of the connection a request arrived on, as the HTTP server stores it in the request context
+_socket_fd_key = 'zato.socket_fd'
+
+# Present in the request context of a request that the OpenAPI console relays, whose caller the console has identified.
+# Request headers always reach the request context under keys with the HTTP_ or CONTENT_ prefix, never under this one.
+Console_Caller_Key = 'zato.openapi_console.caller'
+
 # The statuses a SOAP fault does not override. A fault's status normally belongs to its fault code,
 # but these four carry HTTP-level meaning of their own that a client acts on before it looks at any
 # body: 401 is what makes a WWW-Authenticate challenge mean anything, 403 and 404 say the resource
@@ -171,7 +176,7 @@ _soap_transport_status_codes = {
 
 # ################################################################################################################################
 
-def _get_deprecation_headers(channel_item:'anydict') -> 'stranydict':
+def get_deprecation_headers(channel_item:'anydict') -> 'stranydict':
     """ Returns the response headers a deprecated channel adds to every response.
     The headers are built once per channel configuration and memoized on the channel item,
     so the date conversions below run at config time, not per request.
@@ -269,6 +274,66 @@ def client_json_error(cid:'str', details:'any_') -> 'str':
         message['details'] = exc_details
 
     return dumps(message)
+
+# ################################################################################################################################
+
+def _serialize_payload(payload:'any_') -> 'any_':
+    """ Turns what a service assigned to its response into what goes on the wire.
+
+    What a service assigns is up to the service, so each kind it may be is recognised in turn
+    rather than one being assumed.
+    """
+    # A model renders itself, since only it knows the fields it was declared with ..
+    if isinstance(payload, Model):
+        out = payload.to_json()
+
+    # .. a SimpleIO payload is recognised by rendering itself rather than by its class, there
+    # .. being several unrelated ones, and what it renders to may still need serialising ..
+    elif hasattr(payload, 'getvalue'):
+        out = payload.getvalue()
+
+        if isinstance(out, (dict, list)):
+            out = dumps(out)
+
+    # .. a list of models is turned into dicts element by element, json knowing nothing
+    # .. about a model ..
+    elif isinstance(payload, list) and isinstance(payload[0], Model):
+        rows = []
+
+        for item in payload:
+            rows.append(item.to_dict())
+
+        out = dumps(rows)
+
+    # .. and anything else is left to json.
+    else:
+        out = dumps(payload)
+
+    return out
+
+# ################################################################################################################################
+
+def serialize_response_payload(payload:'any_', data_format:'str') -> 'any_':
+    """ Returns the body that a REST channel of the given data format responds with for what a service
+    assigned to its response. REST channels and the OpenAPI console relay both build response bodies
+    through this function, so that the two always produce the same body.
+    """
+    # Strings go on the wire as they are ..
+    if isinstance(payload, str):
+        out = payload
+
+    # .. a dict behind a channel whose data format is dict-like is serialised as it is ..
+    elif isinstance(payload, dict) and data_format in ModuleCtx.Dict_Like:
+        out = dumps(payload)
+
+    elif payload:
+        out = _serialize_payload(payload)
+
+    # .. and nothing to say is said as nothing rather than as the word null.
+    else:
+        out = ''
+
+    return out
 
 # ################################################################################################################################
 
@@ -422,6 +487,10 @@ class RequestDispatcher:
         """ Validates credentials via sec_def and security groups.
         Both check_security and check_security_via_groups may raise exceptions.
         """
+        # The OpenAPI console identifies its callers and checks their access to the channel before it relays a request
+        if Console_Caller_Key in request_ctx:
+            return
+
         match_target = channel_item['match_target']
         sec = self.url_data.url_sec[match_target]
 
@@ -719,7 +788,7 @@ class RequestDispatcher:
 
         # .. a definition's own limit needs to know which definition authenticated the caller,
         # .. so this one can only run once authentication has succeeded ..
-        sec_def_rate_limit_result = self._check_sec_def_rate_limiting(request_ctx, remote_addr, now_us)
+        sec_def_rate_limit_result = self.check_sec_def_rate_limiting(request_ctx, remote_addr, now_us)
 
         if sec_def_rate_limit_result:
             if not sec_def_rate_limit_result.is_allowed:
@@ -738,17 +807,6 @@ class RequestDispatcher:
                 response_headers = request_ctx['zato.http.response.headers']
                 response_headers[Header_Rate_Limit_Limit] = str(sec_def_rate_limit_result.limit)
                 response_headers[Header_Rate_Limit_Remaining] = str(sec_def_rate_limit_result.remaining)
-
-        # .. AS4 channels run the AS4 inbound pipeline instead of invoking a service directly -
-        # the pipeline itself routes accepted payloads to the channel's topic or service ..
-        if channel_item['transport'] == _transport_as4:
-            out = self._handle_as4_channel(cid, channel_item, request_ctx, payload)
-            return out
-
-        # .. and so do AS2 channels with the AS2 inbound pipeline ..
-        if channel_item['transport'] == _transport_as2:
-            out = self._handle_as2_channel(cid, channel_item, request_ctx, payload)
-            return out
 
         # .. a channel with response caching may have the response ready ..
         cache_ctx = response_cache.get_context(config_manager.cache_api, channel_item, request_ctx, payload)
@@ -775,96 +833,6 @@ class RequestDispatcher:
         # .. invoke the service ..
         out = self._invoke_and_format(*invoke_args)
 
-        return out
-
-# ################################################################################################################################
-
-    def _handle_as4_channel(
-        self,
-        cid:'str',
-        channel_item:'anydict',
-        request_ctx:'stranydict',
-        payload:'bytes',
-    ) -> 'bytes':
-        """ Runs one incoming request through the AS4 inbound pipeline of the matched channel,
-        returning the signed receipt, an ebMS error signal, or - for a pull request - the message
-        waiting on the partition channel it asked about.
-        """
-
-        # The runtime lives as long as this channel_item does -
-        # a configuration change rebuilds the item, which rebuilds the runtime.
-        runtime = channel_item.get('as4_runtime')
-
-        if runtime is None:
-            runtime = AS4ChannelRuntime(self.server, channel_item)
-            channel_item['as4_runtime'] = runtime
-
-        # The pipeline works with the raw wire bytes.
-        if isinstance(payload, str):
-            payload = payload.encode('utf8')
-
-        content_type = request_ctx.get('CONTENT_TYPE')
-        if content_type is None:
-            content_type = ''
-
-        result = runtime.handle(cid, payload, content_type)
-
-        # What goes back is a signal for a delivery and a whole user message with its attachments
-        # for a pull request, so the pipeline is what says how the response is packaged.
-        request_ctx['zato.http.response.headers']['Content-Type'] = result.content_type
-        request_ctx['zato.http.response.status'] = status_response[result.status_code]
-
-        out = result.body
-        return out
-
-# ################################################################################################################################
-
-    def _handle_as2_channel(
-        self,
-        cid:'str',
-        channel_item:'anydict',
-        request_ctx:'stranydict',
-        payload:'bytes',
-    ) -> 'bytes':
-        """ Runs one incoming request through the AS2 inbound pipeline of the matched channel,
-        returning the MDN the sender asked for - a positive one or one with an error disposition.
-        """
-
-        # The runtime lives as long as this channel_item does -
-        # a configuration change rebuilds the item, which rebuilds the runtime.
-        runtime = channel_item.get('as2_runtime')
-
-        if runtime is None:
-            runtime = AS2ChannelRuntime(self.server, channel_item)
-            channel_item['as2_runtime'] = runtime
-
-        # The pipeline works with the raw wire bytes.
-        if isinstance(payload, str):
-            payload = payload.encode('utf8')
-
-        # The AS2 identities and the MIME headers of the top-level entity
-        # all travel as HTTP headers, which the request context spells with the HTTP_ prefix ..
-        headers:'stranydict' = {}
-
-        for key, value in request_ctx.items():
-            if key.startswith('HTTP_'):
-                header_name = key[5:].replace('_', '-').lower()
-                headers[header_name] = value
-
-        # .. except for Content-Type, which the request context keeps under its own key.
-        if content_type := request_ctx.get('CONTENT_TYPE'):
-            headers['content-type'] = content_type
-
-        result = runtime.handle(cid, payload, headers)
-
-        # What goes back is the MDN's own headers and body - or an empty response
-        # when no MDN was requested or an asynchronous one is to follow.
-        for name, value in result.headers.items():
-            request_ctx['zato.http.response.headers'][name] = value
-
-        request_ctx['zato.http.response.status'] = status_response[result.status_code]
-
-        out = result.body
         return out
 
 # ################################################################################################################################
@@ -1175,12 +1143,12 @@ class RequestDispatcher:
             # .. deprecated channels announce their status on every response,
             # including error and rate-limited ones ..
             if channel_item.get('is_deprecated'):
-                deprecation_headers = _get_deprecation_headers(channel_item)
+                deprecation_headers = get_deprecation_headers(channel_item)
                 request_ctx['zato.http.response.headers'].update(deprecation_headers)
 
             # .. record the incoming request in the audit log ..
             if needs_audit:
-                self._insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload, request_ctx)
+                self.insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload, request_ctx)
 
             try:
 
@@ -1194,7 +1162,7 @@ class RequestDispatcher:
                 # .. record the successful response in the audit log ..
                 if needs_audit:
                     duration_ms = self._get_duration_ms(now_us)
-                    self._insert_audit_event(
+                    self.insert_audit_event(
                         cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out, request_ctx,
                         duration_ms=duration_ms)
 
@@ -1206,7 +1174,7 @@ class RequestDispatcher:
                 # .. record the error response in the audit log ..
                 if needs_audit:
                     duration_ms = self._get_duration_ms(now_us)
-                    self._insert_audit_event(
+                    self.insert_audit_event(
                         cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out, request_ctx,
                         duration_ms=duration_ms)
 
@@ -1263,7 +1231,7 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
-    def _insert_audit_event(
+    def insert_audit_event(
         self,
         cid:'str',
         channel_item:'anydict',
@@ -1360,7 +1328,7 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
-    def _check_sec_def_rate_limiting(
+    def check_sec_def_rate_limiting(
         self,
         request_ctx:'stranydict',
         remote_addr:'str',
@@ -1414,14 +1382,16 @@ class RequestDispatcher:
 
         channel_name = channel_item['name']
 
-        # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet ..
+        # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet,
+        # which a request relayed by the OpenAPI console has no connection of its own for ..
         if rate_limit_result.is_disallowed:
 
-            fd = request_ctx['zato.socket_fd']
-            raw_socket = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
-            raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
-            raw_socket.close()
-            os.close(fd)
+            if _socket_fd_key in request_ctx:
+                fd = request_ctx[_socket_fd_key]
+                raw_socket = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
+                raw_socket.setsockopt(_socket_SOL_SOCKET, _socket_SO_LINGER, _so_linger_on)
+                raw_socket.close()
+                os.close(fd)
 
             # Tell the caller to skip all response processing
             request_ctx['zato.http.rate_limit.dropped'] = True
@@ -1561,6 +1531,7 @@ class RequestHandler:
     """
     def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
+        self.queued_handler = QueuedChannelHandler(server, self._set_response_data, self._get_flattened)
 
 # ################################################################################################################################
 
@@ -1649,11 +1620,8 @@ class RequestHandler:
     ) -> 'any_':
         """ Create a new instance of a service and invoke it.
         """
-        service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
-        if not is_active:
-            logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
-            raise NotFound(cid, response_404.format(
-                path_info, request_ctx.get('REQUEST_METHOD'), request_ctx.get('HTTP_ACCEPT'), cid))
+        service_store = self.server.service_store
+        impl_name = channel_item.service_impl_name
 
         # Add any path params matched to the request context so it can be easily accessible later on
         request_ctx['zato.http.path_params'] = url_match
@@ -1683,7 +1651,24 @@ class RequestHandler:
                 else:
                     raise
 
-        # Invoke the service ..
+        # A channel whose queue is on stores the request and acknowledges it instead of invoking the service now -
+        # the service is not even instantiated here unless it has the hook that shapes the response ..
+        if channel_item[_queue.Field_Use_Queue]:
+            service_data = service_store.service_data(impl_name)
+            service_class = service_data['service_class']
+
+            if not service_data['is_active']:
+                self._raise_inactive(cid, service_class.get_name(), path_info, request_ctx)
+
+            out = self.queued_handler.handle(cid, service_class, payload, raw_request, url_match, channel_item, request_ctx,
+                config_manager, channel_params, zato_response_headers_container)
+            return out
+
+        service, is_active = service_store.new_instance(impl_name)
+        if not is_active:
+            self._raise_inactive(cid, service.get_name(), path_info, request_ctx)
+
+        # .. otherwise, invoke the service ..
         response = service.update_handle(self._set_response_data, service, payload,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
             cast_('ConfigDispatcher', config_manager.config_dispatcher),
@@ -1695,6 +1680,15 @@ class RequestHandler:
 
         # .. and return it to the caller.
         return response
+
+# ################################################################################################################################
+
+    def _raise_inactive(self, cid:'str', service_name:'str', path_info:'str', request_ctx:'stranydict') -> 'None':
+        """ An inactive service is not there as far as the caller is concerned.
+        """
+        logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service_name, cid)
+        raise NotFound(cid, response_404.format(
+            path_info, request_ctx.get('REQUEST_METHOD'), request_ctx.get('HTTP_ACCEPT'), cid))
 
 # ################################################################################################################################
 
@@ -1755,57 +1749,7 @@ class RequestHandler:
                 response.payload = dumps(payload)
         else:
             # Read once here - the vivified-model check above may have replaced it already.
-            payload = response.payload
-
-            if not isinstance(payload, str):
-
-                # A dict behind a channel whose data format is dict-like is serialised as it is.
-                if isinstance(payload, dict) and data_format in ModuleCtx.Dict_Like:
-                    response.payload = dumps(payload)
-
-                elif payload:
-                    response.payload = self._serialize_payload(payload)
-
-                # Nothing to say is said as nothing rather than as the word null.
-                else:
-                    response.payload = ''
-
-# ################################################################################################################################
-
-    def _serialize_payload(self, payload:'any_') -> 'any_':
-        """ Turns what a service assigned to its response into what goes on the wire.
-
-        What a service assigns is up to the service, so each kind it may be is recognised in turn
-        rather than one being assumed. This used to be a five-level nested if inside set_payload,
-        which is what made the one duck-typed test in it read as a defensive check.
-        """
-        # A model renders itself, since only it knows the fields it was declared with ..
-        if isinstance(payload, Model):
-            out = payload.to_json()
-
-        # .. a SimpleIO payload is recognised by rendering itself rather than by its class, there
-        # .. being several unrelated ones, and what it renders to may still need serialising ..
-        elif hasattr(payload, 'getvalue'):
-            out = payload.getvalue()
-
-            if isinstance(out, (dict, list)):
-                out = dumps(out)
-
-        # .. a list of models is turned into dicts element by element, json knowing nothing
-        # .. about a model ..
-        elif isinstance(payload, list) and isinstance(payload[0], Model):
-            rows = []
-
-            for item in payload:
-                rows.append(item.to_dict())
-
-            out = dumps(rows)
-
-        # .. and anything else is left to json.
-        else:
-            out = dumps(payload)
-
-        return out
+            response.payload = serialize_response_payload(response.payload, data_format)
 
 # ################################################################################################################################
 

@@ -30,7 +30,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'username', 'proto_version', 'sig_method', 'max_nonce_log'
     output_repeated = True
 

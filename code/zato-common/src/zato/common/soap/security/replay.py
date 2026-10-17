@@ -28,7 +28,7 @@ logger = getLogger('zato')
 Default_TTL_Seconds = 300
 
 # The most values remembered at once. An unauthenticated caller decides how many values arrive,
-# so the cache has to have a ceiling or it becomes a way to exhaust the worker's memory. At this
+# so the cache has to have a ceiling or it becomes a way to exhaust the server's memory. At this
 # size the cache holds several minutes of traffic at a high request rate, and the effect of the
 # ceiling being reached is that the oldest value is forgotten, which is the same outcome as its
 # time-to-live expiring a moment later.
@@ -41,12 +41,8 @@ class ReplayCache:
     """ Remembers the one-shot values of messages already accepted - the wsse:Nonce of a
     UsernameToken and the ID of a SAML assertion - so a captured message cannot be replayed.
 
-    The cache is per worker process, and deliberately so: a shared cache would mean a round trip
-    to Redis on the authentication path of every signed message, and a lock to make the check and
-    the insert atomic. The cost of that is paid on every request, while the benefit only applies
-    to an attacker who replays into a different worker from the one that saw the original. With
-    several workers behind the load balancer, a per-worker cache narrows the replay window from
-    unlimited to one accepted replay per worker rather than closing it outright. The timestamp
+    The cache is held in the memory of the server process, so the authentication path of a signed
+    message needs no round trip to Redis and no lock to make the check and the insert atomic. The timestamp
     and expiry checks are what bound the window in absolute time - this cache is what stops the
     same message being accepted repeatedly inside that window.
     """

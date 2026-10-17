@@ -118,7 +118,7 @@ class _RateLimitingSaveBase(AdminService):
             # .. persist the reference ..
             self._save_opaque(sec_def_id, 'quota_tier', tier_id, 'rate_limiting')
 
-            # .. and let all workers re-resolve tier assignments.
+            # .. and let the server re-resolve tier assignments.
             params = {
                 'action': SECURITY.QUOTA_TIER_EDIT.value,
                 'id': tier_id,
@@ -143,7 +143,7 @@ class _RateLimitingSaveBase(AdminService):
 
         self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, ODB committed', sec_def_id)
 
-        # .. and notify all workers via the config dispatcher.
+        # .. and notify the server via the config dispatcher.
         params = {
             'action': self._broker_message_type.value,
             'id': sec_def_id,

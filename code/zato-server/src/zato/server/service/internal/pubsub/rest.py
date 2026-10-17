@@ -95,7 +95,7 @@ class PubSubRESTService(Service):
         """ Returns the security definition the given username belongs to, out of the pub/sub clients
         the server knows of - a definition that pub/sub was never told about is not a caller here.
         """
-        # The pub/sub client store is filled from the permissions and subscriptions of the cluster,
+        # The pub/sub client store is filled from the permissions and subscriptions of the environment,
         # so this is both the lookup by username and what says the definition may be used here ..
         sec_name = self.server.pubsub_subscriptions.get_sec_name_by_username(username)
 
@@ -104,7 +104,7 @@ class PubSubRESTService(Service):
             return None
 
         # .. and the name it answers with is what the definitions themselves are held under.
-        basic_auth_config = self.server.config_manager.request_dispatcher.url_data.basic_auth_config
+        basic_auth_config = self.server.url_data.basic_auth_config
         sec_def = basic_auth_config.get(sec_name)
 
         # A pub/sub client of another definition type has no Basic Auth credentials to be reached with

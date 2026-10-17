@@ -1,0 +1,33 @@
+label: Marketing
+position: 15
+fields:
+  - email
+  - phone
+  - city
+  - firstname
+  - lastname
+  - mobilephone
+  - address
+  - emailaddress
+  - sms_phone_number
+  - zip
+  - fax
+  - postalcode
+  - address1
+  - address2
+  - first_name
+  - last_name
+  - contactkey
+  - subscriberkey
+  - mobilenumber
+  - mainphone
+  - dateofbirth
+  - businessphone
+  - email_address
+  - fname
+  - lname
+  - birthday
+  - phone_number
+  - ip
+  - dob
+  - home_city

@@ -28,7 +28,7 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.util import FileWriter
 from zato.common.api import HTTP_SOAP
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,7 +47,6 @@ if 0:
 _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
 
-_cluster_id = 1
 
 # One connection moves every delivery setting away from its default, the other carries none of them
 _conn_name_1 = 'enmasse.delivery.soap.conn.1'
@@ -88,12 +87,11 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster.
+    """ A real ODB session over an in-memory SQLite database.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -107,8 +105,6 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
     session.commit()
 
     yield session
@@ -341,7 +337,7 @@ class TestOutgoingSOAPDeliveryExport:
     ) -> 'None':
         _, _ = soap_importer.sync_outgoing_soap(yaml_config['outgoing_soap'], session)
 
-        exported = soap_exporter.export(session, _cluster_id)
+        exported = soap_exporter.export(session)
         item = _by_name(exported)[_conn_name_1]
 
         assert item[_queue.Field_Use_Queue] is True
@@ -369,7 +365,7 @@ class TestOutgoingSOAPDeliveryExport:
         tmp_path:'Path',
     ) -> 'None':
         _, _ = soap_importer.sync_outgoing_soap(yaml_config['outgoing_soap'], session)
-        exported = soap_exporter.export(session, _cluster_id)
+        exported = soap_exporter.export(session)
 
         path = tmp_path / 'enmasse.yaml'
         FileWriter(str(path)).write({'outgoing_soap': exported})

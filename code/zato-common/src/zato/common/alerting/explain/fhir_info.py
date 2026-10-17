@@ -39,7 +39,7 @@ _none = 'None'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _security_line(session:'SASession', cluster_id:'int', security_id:'int') -> 'str':
+def _security_line(session:'SASession', security_id:'int') -> 'str':
     """ The name and type of the security definition the connection authenticates with - `Basic Auth`
     or `Bearer token` - or that it has none, a definition deleted since the connection was saved reading as none too.
     """
@@ -47,7 +47,6 @@ def _security_line(session:'SASession', cluster_id:'int', security_id:'int') -> 
         return _none
 
     sec_def = session.query(SecurityBase).\
-        filter(SecurityBase.cluster_id==cluster_id).\
         filter(SecurityBase.id==security_id).\
         first()
 
@@ -59,13 +58,12 @@ def _security_line(session:'SASession', cluster_id:'int', security_id:'int') -> 
 
 # ################################################################################################################################
 
-def describe_outgoing_fhir(session:'SASession', cluster_id:'int', name:'str') -> 'anylist | None':
+def describe_outgoing_fhir(session:'SASession', name:'str') -> 'anylist | None':
     """ The label and value pairs describing one outgoing FHIR connection - its address, pool size, its security
     definition, whether its audit log is on, how often its health check runs and the alert thresholds it sets
-    of its own. None when no outgoing FHIR connection goes by the name in the cluster.
+    of its own. None when no outgoing FHIR connection goes by the name.
     """
     row = session.query(GenericConn).\
-        filter(GenericConn.cluster_id==cluster_id).\
         filter(GenericConn.type_==GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR).\
         filter(GenericConn.name==name).\
         first()
@@ -92,7 +90,7 @@ def describe_outgoing_fhir(session:'SASession', cluster_id:'int', name:'str') ->
         if isinstance(opaque['security_id'], int):
             security_id = opaque['security_id']
 
-    out.append(('Security', _security_line(session, cluster_id, security_id)))
+    out.append(('Security', _security_line(session, security_id)))
 
     # A save the server did not take waits in the connection's queue, and one the queue gave up on goes to its DLQ
     out.extend(queue_lines(opaque))

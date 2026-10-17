@@ -8,7 +8,6 @@ parameters open in small popover micro-forms. The generic machinery and
 look come from the wizard kit. One set of code serves both connection
 types - the view says which one through transfer_label. The view provides:
 
-* cluster_id     - the current cluster
 * conn_id        - the connection the schedule belongs to
 * conn_name      - its name, shown in the context badge
 * name_slug      - its name slugified, for links back to the list
@@ -62,7 +61,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.outgoing.file_transfer.wizard.init({
-        list_url: '{% url "out-file-transfer-schedules" transfer_type conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}',
+        list_url: '{% url "out-file-transfer-schedules" transfer_type conn_id name_slug %}?name={{ conn_name|urlencode:"" }}',
         is_edit: {% if is_edit %}true{% else %}false{% endif %},
         conn_id: '{{ conn_id }}',
         schedule_id: '{{ schedule_id }}',
@@ -244,7 +243,6 @@ $(document).ready(function() {
                     {{ form.expected_days }}
                 </div>
 
-                <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 <input type="hidden" id="id_conn_id" name="conn_id" value="{{ conn_id }}" />
                 {% if is_edit %}
                 <input type="hidden" id="id_id" name="id" value="{{ schedule_id }}" />

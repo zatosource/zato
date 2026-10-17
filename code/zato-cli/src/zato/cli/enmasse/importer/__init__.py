@@ -14,7 +14,6 @@ import sys
 from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
-from zato.cli.enmasse.importers.channel_as4 import ChannelAS4Importer
 from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.on_prem_gateway import OnPremGatewayImporter
@@ -42,7 +41,6 @@ from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMM
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.importers.rule_engine_api import RuleEngineAPIImporter
-from zato.cli.enmasse.importers.as2 import AS2Importer
 from zato.cli.enmasse.importers.custom import CustomConnectorImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.llm import LLMImporter
@@ -51,11 +49,11 @@ from zato.cli.enmasse.importers.microsoft_fabric import MicrosoftFabricImporter
 from zato.cli.enmasse.importers.microsoft_power_automate import MicrosoftPowerAutomateImporter
 from zato.cli.enmasse.importers.microsoft_teams import MicrosoftTeamsImporter
 from zato.cli.enmasse.importers.slack import SlackImporter
+from zato.cli.enmasse.importers.discord import DiscordImporter
 from zato.cli.enmasse.importers.mongodb import MongoDBImporter
 from zato.cli.enmasse.importers.odata import ODataImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
-from zato.cli.enmasse.importers.outgoing_as4 import OutgoingAS4Importer
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
@@ -63,16 +61,15 @@ from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporte
 from zato.cli.enmasse.importers.pubsub_subscription import PubSubSubscriptionImporter
 from zato.cli.enmasse.importers.channel_openapi import ChannelOpenAPIImporter
 from zato.cli.enmasse.importer.config import ConfigSync
+from zato.cli.enmasse.importer.delete import DeleteSync
 from zato.cli.enmasse.importer.outgoing import OutgoingSync
 from zato.cli.enmasse.util.secrets import Known_Secret_Keys, redact_secrets
-from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,7 +84,6 @@ handler.setFormatter(formatter)
 
 for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse.importers.channel_rest',
                         'zato.cli.enmasse.importers.channel_soap',
-                        'zato.cli.enmasse.importers.channel_as4', 'zato.cli.enmasse.importers.outgoing_as4',
                         'zato.cli.enmasse.importers.group',
                         'zato.cli.enmasse.importers.email_smtp', 'zato.cli.enmasse.importers.email_imap',
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
@@ -102,13 +98,13 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.amqp',
                         'zato.cli.enmasse.importers.ibm_mq',
                         'zato.cli.enmasse.importers.kafka',
-                        'zato.cli.enmasse.importers.as2',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.llm',
                         'zato.cli.enmasse.importers.microsoft_cloud',
                         'zato.cli.enmasse.importers.microsoft_fabric',
                         'zato.cli.enmasse.importers.microsoft_power_automate',
                         'zato.cli.enmasse.importers.microsoft_teams',
                         'zato.cli.enmasse.importers.slack',
+                        'zato.cli.enmasse.importers.discord',
                         'zato.cli.enmasse.importers.mongodb',
                         'zato.cli.enmasse.importers.odata',
                         'zato.cli.enmasse.importers.ftp',
@@ -123,13 +119,13 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
 # ################################################################################################################################
 # ################################################################################################################################
 
-class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
+class EnmasseYAMLImporter(ConfigSync, DeleteSync, OutgoingSync):
     """ Imports enmasse YAML configuration files and builds an in-memory representation.
     """
     def __init__(self) -> 'None':
 
-        # This is always the same
-        self.cluster_id = ModuleCtx.Cluster_ID
+        # Nothing is marked for deletion until a config is read
+        self.init_deletions()
 
         self.object_type = ModuleCtx.ObjectType
         self.object_alias = ModuleCtx.ObjectAlias
@@ -173,16 +169,14 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         self.microsoft_power_automate_defs = {}
         self.microsoft_teams_defs = {}
         self.slack_defs = {}
+        self.discord_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
-        self.outgoing_as2_defs = {}
-        self.outgoing_as4_defs = {}
         self.pubsub_topic_defs = {}
         self.pubsub_permission_defs = {}
         self.pubsub_subscription_defs = {}
         self.channel_openapi_defs = {}
         self.objects = {}
-        self.cluster = None
 
         # Track created and updated objects for reporting
         self.created_objects = {}
@@ -192,7 +186,6 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         self.security_importer = SecurityImporter(self)
         self.channel_importer = ChannelImporter(self)
         self.channel_soap_importer = ChannelSOAPImporter(self)
-        self.channel_as4_importer = ChannelAS4Importer(self)
         self.group_importer = GroupImporter(self)
         self.quota_tier_importer = QuotaTierImporter(self)
         self.on_prem_gateway_importer = OnPremGatewayImporter(self)
@@ -236,10 +229,9 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         self.microsoft_power_automate_importer = MicrosoftPowerAutomateImporter(self)
         self.microsoft_teams_importer = MicrosoftTeamsImporter(self)
         self.slack_importer = SlackImporter(self)
+        self.discord_importer = DiscordImporter(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
-        self.as2_importer = AS2Importer(self)
-        self.outgoing_as4_importer = OutgoingAS4Importer(self)
         self.pubsub_topic_importer = PubSubTopicImporter(self)
         self.pubsub_permission_importer = PubSubPermissionImporter(self)
         self.pubsub_subscription_importer = PubSubSubscriptionImporter(self)
@@ -247,16 +239,6 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
 
         # Importers for custom connector types are built on demand, one per top-level custom_ key.
         self.custom_importers = {}
-
-# ################################################################################################################################
-
-    def get_cluster(self, session:'SASession') -> 'any_':
-        """ Returns the cluster instance, retrieving it from the database if needed.
-        """
-        if not self.cluster:
-            logger.info('Getting cluster by id=%s', self.cluster_id)
-            self.cluster = session.query(Cluster).filter_by(id=self.cluster_id).one()
-        return self.cluster
 
 # ################################################################################################################################
 
@@ -464,24 +446,6 @@ class EnmasseYAMLImporter(ConfigSync, OutgoingSync):
         created_count = len(channels_created)
         updated_count = len(channels_updated)
         logger.info(f'Processed SOAP channels: created={created_count} updated={updated_count}')
-
-        return channels_created, channels_updated
-
-# ################################################################################################################################
-
-    def sync_channel_as4(self, channel_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes AS4 channels from a YAML configuration with the database.
-        """
-        if not channel_list:
-            return [], []
-
-        count = len(channel_list)
-        noun = 'channel' if count == 1 else 'channels'
-        logger.info(f'Processing {count} AS4 {noun}')
-        channels_created, channels_updated = self.channel_as4_importer.sync_channel_as4(channel_list, session)
-        created_count = len(channels_created)
-        updated_count = len(channels_updated)
-        logger.info(f'Processed AS4 channels: created={created_count} updated={updated_count}')
 
         return channels_created, channels_updated
 

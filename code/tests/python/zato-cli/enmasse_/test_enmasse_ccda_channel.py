@@ -23,7 +23,7 @@ from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.common.api import DATA_FORMAT, HL7
-from zato.common.odb.model import Base, Cluster, GenericObject, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import Base, GenericObject, HTTPSOAP, SecurityBase, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,7 +36,6 @@ if 0:
 
 _ccda = HL7.CCDA
 
-_cluster_id = 1
 _service_name = 'enmasse.ccda.service'
 
 # The two channels of the file - one converting C-CDA documents, one taking HL7 v2 messages
@@ -66,12 +65,11 @@ _definitions:'anylist' = [
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster and the service the channels invoke.
+    """ A real ODB session over an in-memory SQLite database holding the service the channels invoke.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericObject.__table__,
         Service.__table__,
         SecurityBase.__table__,
@@ -82,9 +80,7 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-    session.add(Service(None, _service_name, True, 'enmasse.ccda.Service', False, cluster))
+    session.add(Service(None, _service_name, True, 'enmasse.ccda.Service', False))
     session.commit()
 
     yield session
@@ -120,7 +116,7 @@ def _exported(session:'any_') -> 'anydict':
     exporter = ChannelExporter(EnmasseYAMLExporter())
 
     out = {}
-    for item in exporter.export(session, _cluster_id):
+    for item in exporter.export(session):
         out[item['name']] = item
 
     return out

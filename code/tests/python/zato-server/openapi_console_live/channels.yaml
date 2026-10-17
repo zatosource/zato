@@ -1,0 +1,21 @@
+channel_rest:
+
+  - name: api.cases.create
+    service: api.cases.create
+    url_path: /api/cases
+    method: POST
+    data_format: json
+    should_include_in_openapi: true
+
+  - name: api.cases.update
+    service: api.cases.update
+    url_path: /api/cases
+    method: PATCH
+    data_format: json
+    should_include_in_openapi: true
+
+  - name: api.cases.get
+    service: api.cases.get
+    url_path: /api/cases/{case_id}
+    data_format: json
+    should_include_in_openapi: true

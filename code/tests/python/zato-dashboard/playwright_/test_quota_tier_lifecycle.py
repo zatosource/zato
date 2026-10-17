@@ -23,9 +23,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Tier_List_Url = '/zato/security/tier/?cluster=1'
-_Tier_Create_Url = '/zato/security/tier/create/?cluster=1'
-_APIKey_List_Url = '/zato/security/apikey/?cluster=1'
+_Tier_List_Url = '/zato/security/tier/'
+_Tier_Create_Url = '/zato/security/tier/create/'
+_APIKey_List_Url = '/zato/security/apikey/'
 
 _Test_Name_Prefix = 'test.quota.tier.' + CryptoManager.generate_hex_string(16) + '.'
 
@@ -150,7 +150,7 @@ class TestQuotaTierLifecycle:
             assert '1000/minute' in row_text, f'Expected "1000/minute" in the tier row, got: "{row_text}"'
 
             # .. open the definition's rate limiting page ..
-            rate_limiting_url = f'{base_url}/zato/security/apikey/rate-limiting/{apikey_id}/?cluster=1&name={apikey_name}'
+            rate_limiting_url = f'{base_url}/zato/security/apikey/rate-limiting/{apikey_id}/?name={apikey_name}'
             _ = page.goto(rate_limiting_url)
             _ = page.wait_for_selector('.dashboard-tab[data-mode="tier"]', state='visible')
 

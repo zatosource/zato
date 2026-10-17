@@ -72,10 +72,8 @@ class ModuleCtx:
     Audit_DB_Variable = 'Zato_Audit_Log_DB_Name'
 
     # The pub/sub database the server's queues and DLQs live in
-    PubSub_DB_Type_Variable = 'Zato_PubSub_DB_Type'
-    PubSub_DB_Name_Variable = 'Zato_PubSub_DB_Name'
-    PubSub_DB_Type = 'sqlite'
-    PubSub_DB_File_Name = 'pubsub.db'
+    PubSub_DB_Path_Variable = 'Zato_PubSub_DB_Path'
+    PubSub_DB_File_Name     = 'pubsub.db'
 
 # ################################################################################################################################
 # ################################################################################################################################

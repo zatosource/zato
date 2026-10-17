@@ -248,6 +248,7 @@ class TestRESTChannelFreeFormPayload(unittest.TestCase):
             'transport': 'plain_http',
             'merge_url_params_req': True,
             'params_pri': 'channel-params-over-msg',
+            'use_queue': False,
         })
 
         request_ctx = {

@@ -4,8 +4,11 @@
 // machinery - the step strip, the name badge, the footer and the save -
 // comes from the wizard kit, configured here. This file holds only what
 // is MCP's own: the required fields, the help texts, the wizard-wide
-// overview and the badge picker inputs written on save. The micro-forms
-// live in forms.js and the summaries plus the review step in review.js.
+// overview and the hidden inputs written on save. The micro-forms
+// live in forms.js, the hook services in hooks.js, the PII and data masking
+// section in pii.js, data masking in data-masking.js, masking-sets.js,
+// masking-popover.js and masking-filters.js, and the summaries plus the
+// review step in review.js.
 
 (function($) {
 
@@ -33,9 +36,10 @@ wizard.config_own = {
         security: 'Security',
         shaping: 'Response shaping',
         alerts: 'Alerts',
+        hooks: 'Hook services',
         gatewayOptions: 'Gateway options',
         compaction: 'Compaction',
-        pii: 'PII removal',
+        pii: 'PII and data masking',
         contentSafety: 'Content safety'
     },
 
@@ -52,7 +56,18 @@ wizard.config_own = {
 
     // What the edit endpoint reads its input under - the edit page's Django
     // form is built with the same prefix and the kit's fieldPrefix follows it
-    editFieldPrefix: 'edit-'
+    editFieldPrefix: 'edit-',
+
+    // The names of the hidden inputs the data masking answers and the hook
+    // services travel under, which both endpoints read
+    maskingInputs: {
+        sets: 'mcp_masking_set',
+        excluded: 'mcp_masking_excluded',
+        customFields: 'mcp_masking_custom_field',
+        isCustomEnabled: 'mcp_masking_custom_enabled',
+        requestHook: 'mcp_request_hook_service',
+        responseHook: 'mcp_response_hook_service'
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -129,10 +144,15 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         var action = wizard.state.isEdit ? 'edit' : 'create';
         var itemId = wizard.state.isEdit ? wizard.state.itemId : null;
 
-        // The size caps line, the Alerts line and the option cards of step 2 ..
+        // The size caps line, the Alerts line, the hook services, the option cards of step 2
+        // and the PII and data masking section with its industry sets and its data masking line ..
         wizard.forms.initRows();
         wizard.alerts.init();
+        wizard.hooks.init();
         wizard.review.initOptionCards();
+        wizard.maskingSets.init();
+        wizard.dataMasking.init();
+        wizard.pii.init();
 
         // .. the PII multi-selects, the URL allow list chips and the master
         // toggles enabling the safeguard fields under them - the same wiring
@@ -149,13 +169,13 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, itemId);
         $.fn.zato.gateway.mcp.skills_badge_picker.load(ownConfig.pickerAction, itemId);
 
-        // .. the OAuth scopes as chips and the toggle they are only editable under ..
+        // .. the OAuth scopes as chips, on the second tab of the Security card ..
         $.fn.zato.gateway.mcp._init_scope_list(action);
-        wizard._initOAuthToggle();
+        wizard._initSecurityTabs();
 
         // .. a live uniqueness indicator for the URL path - the name
         // has its own check through the kit config above ..
-        $.fn.zato.validate_unique(wizard.fieldSelector('url_path'), 'http_soap', 'url_path');
+        $.fn.zato.validate_unique(wizard.fieldSelector('url_path'), 'channel', 'url_path');
 
         // .. and the email and LLM connections the Alerts popup picks from stay fresh
         // while the page is open - no reloading to pick up new ones.
@@ -170,8 +190,11 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     beforeSave: function(form) {
 
         // The badge picks travel as the repeated hidden inputs the create
-        // endpoint reads its services and security definitions from
+        // endpoint reads its services and security definitions from ..
         wizard._writeBadgeInputs(form);
+
+        // .. and the data masking answers and the hook services travel the same way.
+        wizard._writeMaskingInputs(form);
     }
 });
 
@@ -213,22 +236,27 @@ wizard._rememberOwnValue = function(fieldName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The scopes line follows the OAuth toggle - enabled while OAuth is on,
-// disabled and left as it was otherwise.
-wizard._initOAuthToggle = function() {
+// The tabs of the Security card show one pane at a time - the definitions
+// it authenticates with, or OAuth with its scopes.
+wizard._initSecurityTabs = function() {
 
-    var toggle = wizard.field('oauth');
-    var scopes = wizard.field('oauth_scopes');
+    var tabs = $('#mcp-wizard-security-tabs > .dashboard-tab');
+    var panes = $('#mcp-wizard-security-body .mcp-wizard-security-pane');
 
-    var syncScopes = function() {
-        var isOn = toggle.prop('checked');
-        scopes.prop('disabled', !isOn);
-        scopes.trigger('chip-list:updated');
-        $('#mcp-wizard-line-oauth-scopes').toggleClass('mcp-wizard-line-disabled', !isOn);
-    };
+    tabs.on('click', function() {
 
-    toggle.on('change', syncScopes);
-    syncScopes();
+        var paneName = this.getAttribute('data-pane');
+
+        tabs.each(function() {
+            var isActive = this.getAttribute('data-pane') === paneName;
+            this.classList.toggle('dashboard-tab-active', isActive);
+            this.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        panes.each(function() {
+            this.classList.toggle('mcp-wizard-security-pane-active', this.getAttribute('data-pane') === paneName);
+        });
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -284,6 +312,48 @@ wizard._writeBadgeInputs = function(form) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The data masking answers and the hook services become hidden inputs - each
+// list one input per item under one name, the switch and each hook one input.
+wizard._writeMaskingInputs = function(form) {
+
+    var inputNames = wizard.config_own.maskingInputs;
+    var masking = wizard.dataMasking.state;
+    var hooks = wizard.hooks.state;
+
+    form.find('input.mcp-wizard-masking-input').remove();
+
+    var append = function(name, value) {
+        form.append($('<input/>', {
+            type: 'hidden',
+            name: name,
+            value: value,
+            'class': 'mcp-wizard-masking-input'
+        }));
+    };
+
+    var lists = [
+        [inputNames.sets, masking.sets],
+        [inputNames.excluded, masking.excluded],
+        [inputNames.customFields, masking.customFields]
+    ];
+
+    for(var listIdx = 0; listIdx < lists.length; listIdx++) {
+
+        var inputName = lists[listIdx][0];
+        var values = lists[listIdx][1];
+
+        for(var valueIdx = 0; valueIdx < values.length; valueIdx++) {
+            append(inputName, values[valueIdx]);
+        }
+    }
+
+    append(inputNames.isCustomEnabled, masking.isCustomEnabled ? 'true' : 'false');
+    append(inputNames.requestHook, hooks.request);
+    append(inputNames.responseHook, hooks.response);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // The help texts behind every "How does it work?" badge on the page - the
 // map keyed by field name, re-keyed for the popover inputs, plus entries
 // for the controls that are not fields at all.
@@ -308,8 +378,7 @@ wizard.helpDescriptions = function() {
         'Skills are authored on the AI - Skills screen. With none assigned, ' +
         'the gateway serves tools only.';
     out['badge-filter-text-sec-wizard'] = 'Security definitions used to authenticate incoming MCP requests. ' +
-        'More than one can be assigned. With none assigned, the gateway accepts ' +
-        'requests from anyone who knows its address.';
+        'More than one can be assigned. With none assigned, the gateway refuses every caller.';
 
     // .. the size caps line of step 2 ..
     out['mcp-wizard-edit-size-caps'] = 'How large a tool response may grow and what happens to one over the cap. ' +
@@ -325,9 +394,19 @@ wizard.helpDescriptions = function() {
 
     $.extend(out, wizard.alerts.descriptions());
 
-    // .. and the options folded away under it.
+    // .. the two hooks ..
+    out['mcp-wizard-slot-request-hook-chip'] = 'The service invoked each time the gateway receives an MCP request, ' +
+        'before the request is processed. It is independent of the services exposed as tools.';
+    out['mcp-wizard-slot-response-hook-chip'] = 'The service invoked each time the gateway is about to return ' +
+        'an MCP response. It is independent of the services exposed as tools.';
+
+    // .. the options folded away under the More options line ..
     out['mcp-wizard-edit-options'] = 'Input validation and the audit log, the compaction of responses, ' +
-        'PII removal and content safety. The line says what is currently set.';
+        'the hook services and content safety. The line says what is currently set.';
+
+    // .. and the fields the PII and data masking section masks in every response.
+    out[wizard.dataMasking.config.editLinkId] = 'Fields masked in every tool response, whatever the PII detectors find.';
+    out[wizard.forms.inputId(wizard.maskingPopover.config.customInputField)] = 'Field names masked in addition to the ones selected, one per line.';
 
     return out;
 };

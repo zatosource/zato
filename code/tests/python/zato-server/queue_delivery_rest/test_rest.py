@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # What is outgoing REST connections' own on top of the shared scenarios - HTTP statuses, headers, paths and query strings.
 
 # stdlib
-from http.client import INTERNAL_SERVER_ERROR, OK, UNAUTHORIZED
+from http.client import INTERNAL_SERVER_ERROR, OK, TOO_MANY_REQUESTS, UNAUTHORIZED
 from urllib.parse import urlencode
 
 # Zato
@@ -137,8 +137,36 @@ def test_the_switch_off_answers_with_the_status() -> 'None':
 
 # ################################################################################################################################
 
-def test_every_failure_counts_whatever_its_status() -> 'None':
-    """ An endpoint that answers 401 is one failed attempt like any other.
+def test_a_transient_client_error_counts_as_a_failed_attempt() -> 'None':
+    """ An endpoint that answers 429 was busy rather than saying the message is wrong, so the send is one failed
+    attempt like a 500 and the message arrives from the queue after the connection's sleep time.
+    """
+    client = get_client()
+    receiver = get_receiver(Conn_Orders)
+
+    receiver.answer_next([TOO_MANY_REQUESTS, OK])
+
+    result = send(client, _orders_conn, {'order_id': 'busy-once'})
+    assert result['is_in_queue'] is True
+    assert result['is_rejected'] is False
+    assert result['error'].startswith(f'HTTP {TOO_MANY_REQUESTS}')
+
+    accepted = receiver.wait_for_accepted(1)
+    assert len(accepted) == 1
+
+    assert receiver.outcomes() == [TOO_MANY_REQUESTS, OK]
+
+    gaps = get_gaps(receiver)
+    assert gaps[0] >= Orders_Sleep_Time - _slack, gaps
+
+    queue = wait_for_queue_depth(client, _orders_conn, 0)
+    assert queue['depth'] == 0
+
+# ################################################################################################################################
+
+def test_a_permanent_rejection_is_answered_and_never_queued() -> 'None':
+    """ An endpoint that answers 401 says the message itself is wrong, so the send comes back with that answer,
+    nothing is queued and no further attempt is made.
     """
     client = get_client()
     receiver = get_receiver(Conn_Orders)
@@ -146,19 +174,22 @@ def test_every_failure_counts_whatever_its_status() -> 'None':
     receiver.answer_next([UNAUTHORIZED, OK])
 
     result = send(client, _orders_conn, {'order_id': 'unauthorized-once'})
-    assert result['is_in_queue'] is True
+    assert result['is_send_result'] is True
+    assert result['is_ok'] is False
+    assert result['is_in_queue'] is False
+    assert result['is_rejected'] is True
+    assert result['msg_id'] == ''
     assert result['error'].startswith(f'HTTP {UNAUTHORIZED}')
+    assert result['response']['status_code'] == UNAUTHORIZED
 
-    accepted = receiver.wait_for_accepted(1)
-    assert len(accepted) == 1
+    requests = receiver.wait_for_requests(1)
+    assert len(requests) == 1
 
-    assert receiver.outcomes() == [UNAUTHORIZED, OK]
+    assert receiver.outcomes() == [UNAUTHORIZED]
 
-    gaps = get_gaps(receiver)
-    assert gaps[0] >= Orders_Sleep_Time - _slack, gaps
-
-    queue = wait_for_queue_depth(client, _orders_conn, 0)
+    queue = get_queue(client, _orders_conn)
     assert queue['depth'] == 0
+    assert queue['messages'] == []
 
 # ################################################################################################################################
 

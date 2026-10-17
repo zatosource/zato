@@ -17,7 +17,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var is_audit_log_active = item.is_audit_log_active == true;
     var merge_url_params_req = item.merge_url_params_req == true;
 
-    var cluster_id = $(document).getUrlParam('cluster');
     var connection = $(document).getUrlParam('connection');
     var is_channel = connection == 'channel';
     var is_outgoing = connection == 'outgoing';
@@ -202,24 +201,26 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
 
     if(is_channel) {
-        row += String.format('<td><a href="/zato/http-soap/rate-limiting/{0}/?cluster={1}">Rate limiting</a></td>', item.id, cluster_id);
-        row += String.format('<td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{0}/?cluster={1}">Cache</a></td>', item.id, cluster_id);
+        row += String.format('<td><a href="/zato/http-soap/rate-limiting/{0}/">Rate limiting</a></td>', item.id);
+        row += String.format('<td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{0}/">Cache</a></td>', item.id);
     }
 
-    /* Audit log (REST and SOAP channels, REST outgoing connections) */
+    /* Audit log (REST and SOAP channels, REST outgoing connections) and the Delivery queue link */
     if(is_channel && !is_soap) {
-        row += String.format('<td><a href="/zato/audit-log/?source=rest-channel&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
-        row += String.format('<td><a href="/zato/channel-usage/?sources=rest-channel&objects={0}&cluster={1}">Usage</a></td>', encodeURIComponent(item.name), cluster_id);
+        row += String.format('<td><a href="/zato/audit-log/?source=rest-channel&object_name={0}">Audit log</a></td>', encodeURIComponent(item.name));
+        row += String.format('<td><a href="/zato/channel-usage/?sources=rest-channel&objects={0}">Usage</a></td>', encodeURIComponent(item.name));
+        row += $.fn.zato.delivery_tab.link_cell('rest-channel', item);
     }
 
     if(is_channel && is_soap) {
-        row += String.format('<td><a href="/zato/audit-log/?source=soap-channel&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
+        row += String.format('<td><a href="/zato/audit-log/?source=soap-channel&object_name={0}">Audit log</a></td>', encodeURIComponent(item.name));
+        row += $.fn.zato.delivery_tab.link_cell('soap-channel', item);
     }
 
     if(is_outgoing && !is_soap) {
-        row += String.format('<td><a href="/zato/audit-log/?source=rest-outgoing&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
-        row += String.format('<td><a href="/zato/channel-usage/?sources=rest-outgoing&objects={0}&cluster={1}">Usage</a></td>', encodeURIComponent(item.name), cluster_id);
-        row += $.fn.zato.delivery_tab.link_cell('rest', item, cluster_id);
+        row += String.format('<td><a href="/zato/audit-log/?source=rest-outgoing&object_name={0}">Audit log</a></td>', encodeURIComponent(item.name));
+        row += String.format('<td><a href="/zato/channel-usage/?sources=rest-outgoing&objects={0}">Usage</a></td>', encodeURIComponent(item.name));
+        row += $.fn.zato.delivery_tab.link_cell('rest', item);
     }
 
     /* 31, 32 */
@@ -264,8 +265,10 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         $.each(invocation_fields, function(ignored, name) {
             row += String.format("<td class='ignore'>{0}</td>", item[name] ? item[name] : '');
         });
+    }
 
-        /* 41 - the Delivery tab */
+    /* 41 - the Delivery tab of REST outgoing connections and of REST and SOAP channels */
+    if($.fn.zato.http_soap.has_delivery_tab()) {
         row += $.fn.zato.delivery_tab.row_cells(item);
     }
 

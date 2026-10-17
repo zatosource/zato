@@ -281,9 +281,9 @@ def _get_watermark(connection:'Connection') -> 'int':
 
     row_id, last_event_id = row
 
-    # .. later runs write it back unchanged first - the no-op update takes a write lock
-    # on every database engine, so a second rollup started by an overlapping cron run
-    # waits here until this one commits, then reads the already advanced watermark.
+    # .. later runs write it back unchanged first - the no-op update acquires the SQLite
+    # write lock, so a second rollup started by an overlapping cron run waits here
+    # within the busy timeout until this one commits, then reads the advanced watermark.
     update_statement = update(watermark_table)
     update_statement = update_statement.where(watermark_table.c.id == row_id)
     update_statement = update_statement.values(last_event_id=last_event_id)

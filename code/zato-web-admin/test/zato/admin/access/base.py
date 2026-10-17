@@ -67,9 +67,6 @@ class BaseTestCase(TestCase):
 
     def _set_up_django(self):
 
-        import pymysql
-        pymysql.install_as_MySQLdb()
-
         config_path = os.path.join(Config.web_admin_location, 'config', 'repo', 'web-admin.conf')
         with open(config_path, 'r') as f:
             config = json.loads(f.read())

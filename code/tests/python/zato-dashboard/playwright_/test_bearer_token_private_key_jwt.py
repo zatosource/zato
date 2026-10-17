@@ -335,7 +335,7 @@ class TestBearerTokenPrivateKeyJWT:
         open_edit_dialog(page, definition_id)
 
         href = cast_('any_', page.query_selector('#edit-public-key-link')).get_attribute('href')
-        assert f'/public-key/{definition_id}/cluster/1/' in href, f'Unexpected public key link: {href}'
+        assert href.endswith(f'/public-key/{definition_id}/'), f'Unexpected public key link: {href}'
 
         # The link is fetched with the browser's own session, so it is the dashboard that serves it
         response = page.request.get(f'{base_url}{href}')

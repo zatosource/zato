@@ -62,6 +62,21 @@ class DataClassIO:
 # ################################################################################################################################
 
     @property
+    def input_model_class(self) -> 'any_':
+        """ The model class declared as input, if any - the declaration is genuinely optional
+        because output-only services are commonplace.
+        """
+        return getattr(self.user_declaration, 'input', None)
+
+# ################################################################################################################################
+
+    @property
+    def has_input_declared(self) -> 'bool':
+        return self.input_model_class is not None
+
+# ################################################################################################################################
+
+    @property
     def output_model_class(self) -> 'any_':
         """ The model class declared as output, if any - the declaration is genuinely optional
         because input-only services are commonplace.
@@ -77,7 +92,7 @@ class DataClassIO:
 # ################################################################################################################################
 
     @staticmethod
-    def attach_io(server, class_):
+    def attach_io(server:'ParallelServer', class_:'any_') -> 'None':
         """ Given a service class, the method extracts its user-defined I/O definition
         and attaches the I/O processor to the class's _io attribute.
         """

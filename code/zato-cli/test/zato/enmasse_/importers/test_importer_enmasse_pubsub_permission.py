@@ -244,10 +244,6 @@ class TestEnmassePubSubPermissionFromYAML(TestCase):
         for perm in permission_created:
             self.assertTrue(perm.is_active)
 
-        # Verify cluster_id is set correctly
-        for perm in permission_created:
-            self.assertEqual(perm.cluster_id, self.importer.cluster_id)
-
 # ################################################################################################################################
 # ################################################################################################################################
 

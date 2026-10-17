@@ -68,8 +68,7 @@ def kafka_suite() -> 'iterator_':
 
         # The server gets a pub/sub database of its own, so nothing of an earlier session's DLQs is restored into it
         environment = dict(bridge.server_environment)
-        environment[ModuleCtx.PubSub_DB_Type_Variable] = ModuleCtx.PubSub_DB_Type
-        environment[ModuleCtx.PubSub_DB_Name_Variable] = os.path.join(directory, ModuleCtx.PubSub_DB_File_Name)
+        environment[ModuleCtx.PubSub_DB_Path_Variable] = os.path.join(directory, ModuleCtx.PubSub_DB_File_Name)
 
         zato.start(environment)
 

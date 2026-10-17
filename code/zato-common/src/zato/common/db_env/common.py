@@ -6,11 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Environment-configured SQLAlchemy engines - the audit log and the analytics store
-# both live in their own database selected through a family of environment variables,
-# e.g. Zato_Audit_Log_DB_* or Zato_Analytics_DB_*, defaulting to an SQLite file.
-# This package builds and caches such engines so each store only declares its
-# environment prefix, its default SQLite file name and its schema.
+# Environment-configured SQLAlchemy engines for the audit log. This package builds
+# and caches an engine selected through the Zato_Audit_Log_DB_* variables.
 
 # stdlib
 import os

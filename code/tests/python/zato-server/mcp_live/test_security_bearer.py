@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from collections.abc import Iterator
-from http.client import BAD_REQUEST, FORBIDDEN, OK
+from http.client import FORBIDDEN, NOT_FOUND, OK
 from json import loads
 
 # pytest
@@ -215,7 +215,7 @@ class TestBearerSessionIdentity:
         basic_auth_client = MCPClient(zato_server['mcp_url'], auth=zato_server['mcp_auth'])
 
         response = basic_auth_client.jsonrpc('ping', session_id=accounting_session)
-        assert response.status_code == BAD_REQUEST, response.text
+        assert response.status_code == NOT_FOUND, response.text
 
 # ################################################################################################################################
 
@@ -230,7 +230,7 @@ class TestBearerSessionIdentity:
         # filters resolve them to two different definitions - so the Sales identity
         # cannot use a session created by the Accounting one
         response = sales_client.jsonrpc_bearer('ping', session_id=accounting_session)
-        assert response.status_code == BAD_REQUEST, response.text
+        assert response.status_code == NOT_FOUND, response.text
 
         # The Accounting identity itself keeps working
         response = accounting_client.jsonrpc_bearer('ping', session_id=accounting_session)

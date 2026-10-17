@@ -31,8 +31,8 @@ from orjson import dumps
 # Zato
 from zato.common.ext.bunch import Bunch
 from zato.common import broker_message
-from zato.common.api import API_Key, AS4 as COMMON_AS4, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     HTTP_SOAP, PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
+     HTTP_SOAP, PARAMS_PRIORITY, PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
@@ -46,9 +46,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
-from zato.server.base.config_manager.common import ConfigManagerImpl
+from zato.server.base.config_manager.common import _pubsub_amqp_bridge_service, ConfigManagerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
-from zato.server.connection.as4 import AS4Wrapper
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.connector import ConnectorStore, Connector_Type
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -58,6 +57,7 @@ from zato.server.connection.http_soap.response_cache import purge_channel as pur
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
+from zato.server.generic.api.chat_discord import ChatDiscordWrapper
 from zato.server.generic.api.chat_microsoft_teams import ChatMicrosoftTeamsWrapper
 from zato.server.generic.api.chat_slack import ChatSlackWrapper
 from zato.server.generic.api.cloud_aws import CloudAWSWrapper
@@ -72,7 +72,6 @@ from zato.server.generic.api.gateway_rule_engine import GatewayRuleEngineWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
-from zato.server.generic.api.outconn_as2 import OutconnAS2Wrapper
 from zato.server.generic.api.outconn_es import OutconnESWrapper
 from zato.server.generic.api.outconn_ftp import OutconnFTPWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
@@ -104,6 +103,7 @@ if 0:
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
+    from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
     from zato.server.service import Service
     from zato.server.store import BaseAPI
     ConfigStore    = ConfigStore
@@ -121,11 +121,13 @@ _needs_details = asbool(os.environ.get('Zato_Needs_Details'))
 
 _pubsub_max_retry_time = 20 # PubSub.Max_Retry_Time
 
-# The service that AMQP channels dispatch to while they are referenced by an AMQP-backed topic
-_pubsub_amqp_bridge_service = 'zato.pubsub.topic.on-amqp-message'
+# Re-exported for the tests and the harnesses that import it from here
+_pubsub_amqp_bridge_service = _pubsub_amqp_bridge_service
 
 # Connection config keys that are not sent to the queue bridge.
 _queue_bridge_skipped_keys = ('conn', 'parent')
+
+_outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -194,6 +196,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - Channel - OpenAPI
         self.channel_openapi = {}
 
+        # Generic connections - Chat - Discord
+        self.chat_discord = {}
+
         # Generic connections - Chat - Microsoft Teams
         self.chat_microsoft_teams = {}
 
@@ -229,14 +234,6 @@ class ConfigManager(_ConfigManagerBase):
 
         # Generic connections - Rule engine API
         self.gateway_rule_engine = {}
-
-        # Generic connections - AS2 outconns
-        self.outconn_as2 = {}
-
-        # How many times the AS2 outgoing connections changed. An AS2 channel turns these configs
-        # into partnerships, which means parsing an X.509 certificate per configured partner, and
-        # it needs to do that again only when one of them is created, edited or deleted.
-        self.as2_config_generation = 0
 
         # Generic connections - GraphQL outconns
         self.outconn_graphql = {}
@@ -315,7 +312,7 @@ class ConfigManager(_ConfigManagerBase):
         # Pub/sub topic manager for topic-level lookups
         from zato.common.pubsub.topic_manager import TopicManager
         session = server.odb.session()
-        self.pubsub_topic_manager = TopicManager(session, server.cluster_id)
+        self.pubsub_topic_manager = TopicManager(session)
 
 # ################################################################################################################################
 
@@ -335,6 +332,7 @@ class ConfigManager(_ConfigManagerBase):
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: self.channel_openapi,
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD: self.chat_discord,
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: self.chat_microsoft_teams,
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK: self.chat_slack,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: self.cloud_aws,
@@ -347,7 +345,6 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: self.gateway_mcp,
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: self.gateway_rule_engine,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: self.outconn_as2,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: self.outconn_es,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: self.outconn_graphql,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: self.outconn_grpc,
@@ -369,6 +366,7 @@ class ConfigManager(_ConfigManagerBase):
 
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: ChannelOpenAPIWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD: ChatDiscordWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: ChatMicrosoftTeamsWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK: ChatSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: CloudAWSWrapper,
@@ -381,7 +379,6 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: GatewayMCPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: GatewayRuleEngineWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: OutconnAS2Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: OutconnESWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: OutconnGRPCWrapper,
@@ -453,6 +450,9 @@ class ConfigManager(_ConfigManagerBase):
         self.init_sql()
         self.init_http_soap()
 
+        # Which topics live in a broker, and which AMQP channels read them back, has to be known before the channels start
+        self._load_pubsub_topic_backends()
+
         # AMQP
         self.init_amqp()
 
@@ -485,7 +485,7 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def _get_channel_url_sec(self) -> 'any_':
-        out:'any_' = self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0]
+        out:'any_' = self.server.odb.get_url_security('channel')[0]
         return out
 
 # ################################################################################################################################
@@ -515,56 +515,9 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _as4_wrapper_from_config(self, config:'bunch_') -> 'AS4Wrapper':
-        """ Creates a new AS4 connection wrapper out of a configuration dictionary.
-        The private keys stay encrypted here - the wrapper decrypts them on first use.
-        """
-        # The ODB columns are an integer and a boolean but a config event published
-        # by an edit in the Dashboard carries the raw form values, which are strings.
-        timeout = config['timeout']
-        if isinstance(timeout, str):
-            timeout = int(timeout)
-
-        validate_tls = config['validate_tls']
-        if isinstance(validate_tls, str):
-            validate_tls = validate_tls == 'True'
-
-        wrapper_config = {
-            'id':config['id'],
-            'name':config['name'],
-            'is_active':config['is_active'],
-            'transport':config['transport'],
-            'address_host':config['host'],
-            'address_url_path':config['url_path'],
-            'timeout':timeout,
-            'validate_tls':validate_tls,
-
-            # Whether this connection's exchanges go to the audit log - it arrives as an opaque attribute
-            'is_audit_log_active':config.get('is_audit_log_active'),
-
-            # Whether its payloads leave with the audit export - an opaque attribute too, off unless set
-            'is_audit_export_payload_active':config.get('is_audit_export_payload_active'),
-        }
-
-        # The AS4 fields arrive as opaque attributes, which hold only what the connection was saved
-        # with - a connection saved without one of them carries no key for it at all.
-        for name in COMMON_AS4.Common_Fields + COMMON_AS4.Outgoing_Fields:
-            wrapper_config[name] = config.get(name)
-
-        out = AS4Wrapper(self.server, wrapper_config)
-        return out
-
-# ################################################################################################################################
-
-    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'any_':
+    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
-
-        # AS4 connections have their own wrapper class - everything they need
-        # is in their own configuration fields, not in security definitions.
-        if config['transport'] == URL_TYPE.AS4:
-            out = self._as4_wrapper_from_config(config)
-            return out
 
         # Populate it upfront
         conn_name = config['name']
@@ -730,7 +683,7 @@ class ConfigManager(_ConfigManagerBase):
 
         out:'any_' = []
 
-        for transport in('soap', 'plain_http', 'as4'):
+        for transport in('soap', 'plain_http'):
             config_dict = getattr(self.config_store, 'out_' + transport)
             for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
                 config_data = config_dict[name]
@@ -806,27 +759,50 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _create_amqp_channel(self, item:'any_') -> 'None':
+        """ Creates one AMQP channel along with its connector.
+        """
+        name = item['name']
+        try:
+            self.amqp_connection_create(item)
+            self.amqp_api.create_channel(name, item)
+        except Exception:
+            logger.warning('Could not create AMQP channel `%s`, e:`%s`', name, format_exc())
+
+# ################################################################################################################################
+
     def init_amqp(self) -> 'None':
-        """ Initializes all AMQP connections.
+        """ Initializes all AMQP connections, except for the channels that pub/sub topics read their messages back through -
+        the broker hands a waiting message over the moment a consumer connects, so those wait for pub/sub to be up.
         """
         channels = self.config_store.channel_amqp.get_config_list()
         outconns = self.config_store.out_amqp.get_config_list()
 
         for item in channels:
-            name = item['name']
-            try:
-                self.amqp_connection_create(item)
-                self.amqp_api.create_channel(name, item)
-            except Exception:
-                logger.warning('Could not create AMQP channel `%s`, e:`%s`', name, format_exc())
+            if not self.is_pubsub_amqp_channel(item['name']):
+                self._create_amqp_channel(item)
 
         for item in outconns:
             name = item['name']
             try:
+                # The same registration an outgoing connection created at runtime receives - a delete removes it
+                self.amqp_out_name_to_def[name] = name
                 self.amqp_connection_create(item)
                 self.amqp_api.create_outconn(name, item)
             except Exception:
                 logger.warning('Could not create AMQP outconn `%s`, e:`%s`', name, format_exc())
+
+# ################################################################################################################################
+
+    def init_pubsub_amqp_channels(self) -> 'None':
+        """ Creates the AMQP channels that pub/sub topics read their messages back through. This runs once pub/sub is up,
+        so the first message a consumer receives already has somewhere to go.
+        """
+        channels = self.config_store.channel_amqp.get_config_list()
+
+        for item in channels:
+            if self.is_pubsub_amqp_channel(item['name']):
+                self._create_amqp_channel(item)
 
 # ################################################################################################################################
 
@@ -877,7 +853,7 @@ class ConfigManager(_ConfigManagerBase):
         """
 
         # First, load up all the definitions from the database ..
-        self.server.set_up_security(self.server.cluster_id)
+        self.server.set_up_security()
 
         # .. update in-RAM config values ..
         url_sec = self._get_channel_url_sec()
@@ -1018,6 +994,7 @@ class ConfigManager(_ConfigManagerBase):
         channel_ibm_mq_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ, {})
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
+        chat_discord_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD, {})
         chat_microsoft_teams_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS, {})
         chat_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK, {})
@@ -1033,7 +1010,6 @@ class ConfigManager(_ConfigManagerBase):
         gateway_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP, {})
         gateway_rule_engine_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE, {})
-        outconn_as2_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2, {})
         outconn_es_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES, {})
         outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
         outconn_grpc_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC, {})
@@ -1056,6 +1032,7 @@ class ConfigManager(_ConfigManagerBase):
             channel_ibm_mq_map,
             channel_kafka_map,
             channel_openapi_map,
+            chat_discord_map,
             chat_microsoft_teams_map,
             chat_slack_map,
             cloud_aws_map,
@@ -1067,7 +1044,6 @@ class ConfigManager(_ConfigManagerBase):
             cloud_salesforce_map,
             gateway_mcp_map,
             gateway_rule_engine_map,
-            outconn_as2_map,
             outconn_es_map,
             outconn_graphql_map,
             outconn_grpc_map,
@@ -1086,6 +1062,7 @@ class ConfigManager(_ConfigManagerBase):
         ]
 
         password_maps = [
+            chat_discord_map,
             chat_microsoft_teams_map,
             chat_slack_map,
             cloud_aws_map,
@@ -1383,7 +1360,7 @@ class ConfigManager(_ConfigManagerBase):
 
         with closing(self.server.odb.session()) as session:
 
-            rows = pubsub_subscription_topic_pairs(session, self.server.cluster_id)
+            rows = pubsub_subscription_topic_pairs(session)
 
             for row in rows:
                 topic_name = row.name
@@ -1460,7 +1437,7 @@ class ConfigManager(_ConfigManagerBase):
 
         with closing(self.server.odb.session()) as session:
 
-            rows = pubsub_subscription_topic_pairs(session, self.server.cluster_id)
+            rows = pubsub_subscription_topic_pairs(session)
 
             synced = 0
             push_subs = {} # type: dict[str, list]
@@ -1486,109 +1463,75 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _sync_pubsub_topics(self) -> 'None':
-        """ Loads AMQP-backed topics from ODB into the in-memory backend registry,
-        applies channel overrides for topics that reference an AMQP channel
-        and registers topics whose audit log was turned off.
+    def _read_pubsub_topics(self) -> 'anylist':
+        """ Returns the name and the opaque attributes of each topic.
         """
         from contextlib import closing
         from zato.common.odb.model import PubSubTopic
         from zato.common.util.sql import parse_instance_opaque_attr
 
-        _amqp = PubSub.Backend_Type.AMQP
+        out = []
 
         with closing(self.server.odb.session()) as session:
 
-            rows = session.query(PubSubTopic).filter(
-                PubSubTopic.cluster_id == self.server.cluster_id).all()
-
-            topic_backends = {} # type: dict[str, dict]
+            rows = session.query(PubSubTopic).all()
 
             for row in rows:
-
                 opaque = parse_instance_opaque_attr(row)
+                out.append((row.name, opaque))
 
-                # A topic whose audit log was turned off explicitly writes no audit events
-                if opaque.get('is_audit_log_active') is False:
-                    self.server.pubsub_backend.set_topic_audit_flag(row.name, False)
+        return out
 
-                # A topic's message payloads leave with the audit export only if the topic says so
-                if opaque.get('is_audit_export_payload_active') is True:
-                    self.server.pubsub_backend.set_topic_payload_flag(row.name, True)
+# ################################################################################################################################
 
-                # Topics without opaque attributes predate backend types and are built-in,
-                # and built-in topics never have registry entries.
-                if 'backend_type' not in opaque:
-                    continue
+    def _load_pubsub_topic_backends(self) -> 'None':
+        """ Loads the AMQP-backed topics from the ODB into the in-memory backend registry. This runs before any connector
+        is built, so the AMQP channels that such topics read their messages back through dispatch to pub/sub from the first
+        message they receive.
+        """
+        _amqp = PubSub.Backend_Type.AMQP
 
-                if opaque['backend_type'] != _amqp:
-                    continue
+        topic_backends = {} # type: dict[str, dict]
 
-                topic_backends[row.name] = {
-                    'backend_type': _amqp,
-                    'amqp_outconn_name': opaque['amqp_outconn_name'],
-                    'amqp_exchange': opaque['amqp_exchange'],
-                    'amqp_routing_key': opaque['amqp_routing_key'],
-                    'amqp_channel_name': opaque['amqp_channel_name'],
-                    'original_service_name': '',
-                }
+        for topic_name, opaque in self._read_pubsub_topics():
+
+            # Topics without opaque attributes predate backend types and are built-in,
+            # and built-in topics never have registry entries.
+            if 'backend_type' not in opaque:
+                continue
+
+            if opaque['backend_type'] != _amqp:
+                continue
+
+            topic_backends[topic_name] = {
+                'backend_type': _amqp,
+                'amqp_outconn_name': opaque['amqp_outconn_name'],
+                'amqp_exchange': opaque['amqp_exchange'],
+                'amqp_routing_key': opaque['amqp_routing_key'],
+                'amqp_channel_name': opaque['amqp_channel_name'],
+            }
 
         self._topic_backends = topic_backends
 
-        # Each topic that points to an AMQP channel needs that channel's consumers
-        # to dispatch to the bridge service instead of the channel's own service.
-        for backend_config in self._topic_backends.values():
-            if backend_config['amqp_channel_name']:
-                self._apply_amqp_channel_override(backend_config)
-
         topic_count = len(self._topic_backends)
         suffix = 'topic' if topic_count == 1 else 'topics'
-        logger.info('Synced %d AMQP-backed pub/sub %s to the backend registry', topic_count, suffix)
+        logger.info('Loaded %d AMQP-backed pub/sub %s into the backend registry', topic_count, suffix)
 
 # ################################################################################################################################
 
-    def _apply_amqp_channel_override(self, backend_config:'strdict') -> 'None':
-        """ Points an AMQP channel's in-memory service at the pub/sub bridge, remembering the original
-        service name so it can be restored later. The channel's database row is never touched.
+    def _sync_pubsub_topics(self) -> 'None':
+        """ Registers with the pub/sub backend the topics whose audit log was turned off and the ones whose payloads
+        leave with the audit export.
         """
-        channel_name = backend_config['amqp_channel_name']
+        for topic_name, opaque in self._read_pubsub_topics():
 
-        # The channel may not exist, e.g. the topic was configured before the channel was created.
-        connector = self.amqp_api.connectors.get(channel_name)
-        if not connector:
-            logger.warning('AMQP channel `%s` not found, pub/sub bridge override not applied', channel_name)
-            return
+            # A topic whose audit log was turned off explicitly writes no audit events
+            if opaque.get('is_audit_log_active') is False:
+                self.server.pubsub_backend.set_topic_audit_flag(topic_name, False)
 
-        channel_config = connector.channels[channel_name]
-
-        # Remember the original service so it can be restored when the topic no longer uses this channel.
-        backend_config['original_service_name'] = channel_config['service_name']
-
-        # Consumers read the service name from this shared config object for each message,
-        # so mutating it here takes effect immediately for all of them.
-        channel_config['service_name'] = _pubsub_amqp_bridge_service
-
-        logger.info('Applied pub/sub bridge override to AMQP channel `%s` (was `%s`)',
-            channel_name, backend_config['original_service_name'])
-
-# ################################################################################################################################
-
-    def _remove_amqp_channel_override(self, backend_config:'strdict') -> 'None':
-        """ Restores an AMQP channel's original in-memory service name after the topic
-        that referenced the channel was edited or deleted.
-        """
-        channel_name = backend_config['amqp_channel_name']
-
-        # The channel itself may have been deleted in the meantime.
-        connector = self.amqp_api.connectors.get(channel_name)
-        if not connector:
-            return
-
-        channel_config = connector.channels[channel_name]
-        channel_config['service_name'] = backend_config['original_service_name']
-
-        logger.info('Removed pub/sub bridge override from AMQP channel `%s` (restored `%s`)',
-            channel_name, backend_config['original_service_name'])
+            # A topic's message payloads leave with the audit export only if the topic says so
+            if opaque.get('is_audit_export_payload_active') is True:
+                self.server.pubsub_backend.set_topic_payload_flag(topic_name, True)
 
 # ################################################################################################################################
 
@@ -1599,7 +1542,25 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def pubsub_publish_to_amqp(self, backend_config:'strdict', data:'any_', topic_name:'str', cid:'str') -> 'PublishResult':
+    def is_pubsub_amqp_channel(self, channel_name:'str') -> 'bool':
+        """ Whether an AMQP-backed topic reads its messages back through this channel.
+        """
+        for backend_config in self._topic_backends.values():
+            if backend_config['amqp_channel_name'] == channel_name:
+                return True
+
+        return False
+
+# ################################################################################################################################
+
+    def pubsub_publish_to_amqp(
+        self,
+        backend_config:'strdict',
+        data:'any_',
+        topic_name:'str',
+        cid:'str',
+        msg_id:'str'='',
+        ) -> 'PublishResult':
         """ Publishes a message to the AMQP broker configured for a topic. Returns the same
         result shape as the built-in Redis backend so the caller-facing API is identical.
         """
@@ -1610,9 +1571,13 @@ class ConfigManager(_ConfigManagerBase):
             routing_key=backend_config['amqp_routing_key'],
         )
 
-        # The broker does not return any identifier so a new one is generated here.
+        # The broker does not return any identifier, so the message keeps the id its publisher gave it,
+        # which is what the audit log has to carry too, and one is generated only if the publisher gave none.
+        if not msg_id:
+            msg_id = new_msg_id()
+
         result = PublishResult()
-        result.msg_id = new_msg_id()
+        result.msg_id = msg_id
 
         # The audit log stores payloads as text so free-text search covers them.
         if isinstance(data, str):
@@ -1726,6 +1691,11 @@ class ConfigManager(_ConfigManagerBase):
                         data=audit_data,
                     )
 
+                    # A message of an outgoing connection's queue that its delivery service concluded has left the
+                    # broker, so it leaves the depth that gates the connection's direct attempts as well
+                    if sub_config['sub_key'].startswith(_outgoing_sub_key_prefix):
+                        self.outgoing_queue_depth.lower(sub_config['sub_key'], 1)
+
 # ################################################################################################################################
 
     def _get_generic_impl_func(self, msg:'bunch_', *args:'any_', **kwargs:'any_') -> 'any_':
@@ -1815,12 +1785,8 @@ class ConfigManager(_ConfigManagerBase):
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
             self._visit_wrapper_edit, keys=('username', 'name'))
 
-        # .. extract the newest information  ..
-        sec_def = self.basic_auth_get_by_id(msg.id)
-
-        # .. update security groups ..
-        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-            security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+        # .. update security groups with the newest information ..
+        self.update_security_definition_in_groups(msg.id)
 
         # .. update pub/sub in-memory state if username or sec def name changed ..
         self._update_pubsub_security_rename(msg)
@@ -1906,12 +1872,8 @@ class ConfigManager(_ConfigManagerBase):
         # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_edit, keys=('username', 'name'))
 
-        # .. the call above already updated URL data, so the definition's header is the current one ..
-        sec_def = self.apikey_get_by_id(msg.id)
-
-        # .. and now security groups can be updated with the possibly new header.
-        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-            security_groups_ctx.set_current_apikey_header(msg.id, sec_def['header'])
+        # .. the call above already updated URL data, so security groups can be updated with the possibly new header.
+        self.update_security_definition_in_groups(msg.id)
 
 # ################################################################################################################################
 
@@ -2162,12 +2124,8 @@ class ConfigManager(_ConfigManagerBase):
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
 
-        # .. extract the newest information  ..
-        sec_def = self.oauth_get_by_id(msg.id)
-
-        # .. update security groups ..
-        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-            security_groups_ctx.set_current_bearer_token(msg.id, sec_def)
+        # .. update security groups with the newest information ..
+        self.update_security_definition_in_groups(msg.id)
 
         # .. and Kafka connections that authenticate with this definition.
         self._update_queue_bridge_security(msg.id)
@@ -2229,6 +2187,7 @@ class ConfigManager(_ConfigManagerBase):
             'channel': channel,
             'payload': payload,
             'data_format': kwargs.get('data_format'),
+            'transport': kwargs.get('transport'),
             'service': service,
             'cid': cid,
             'is_async': kwargs.get('is_async'),
@@ -2236,6 +2195,9 @@ class ConfigManager(_ConfigManagerBase):
             'zato_ctx': kwargs.get('zato_ctx'),
             'request_ctx': kwargs.get('request_ctx'),
             'channel_item': kwargs.get('channel_item'),
+            'channel_params': kwargs.get('channel_params'),
+            'url_match': kwargs.get('url_match'),
+            'zato_response_headers_container': kwargs.get('zato_response_headers_container'),
         }, channel, '', needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
 
 # ################################################################################################################################
@@ -2268,6 +2230,21 @@ class ConfigManager(_ConfigManagerBase):
         if extra_request_ctx:
             request_ctx.update(extra_request_ctx)
 
+        # A caller that invokes on behalf of a channel, e.g. the queue of an HTTP channel, hands over the channel's
+        # item and the parameters its request carried, so the service reads them as it would in a direct invocation
+        channel_item = msg.get('channel_item')
+        if channel_item is not None:
+            request_ctx['zato.channel_item'] = channel_item
+            merge_channel_params = channel_item['merge_url_params_req']
+            params_priority = channel_item['params_pri']
+        else:
+            merge_channel_params = True
+            params_priority = PARAMS_PRIORITY.DEFAULT
+
+        channel_params = msg.get('channel_params')
+        if channel_params is None:
+            channel_params = {}
+
         data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')
 
@@ -2288,7 +2265,10 @@ class ConfigManager(_ConfigManagerBase):
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.config_dispatcher, self, cid,
             job_type=msg.get('job_type'), request_ctx=request_ctx,
-            environ=msg.get('environ'))
+            environ=msg.get('environ'),
+            url_match=msg.get('url_match'), channel_params=channel_params,
+            merge_channel_params=merge_channel_params, params_priority=params_priority,
+            zato_response_headers_container=msg.get('zato_response_headers_container'))
 
         if skip_response_elem:
             response = dumps(response)
@@ -2472,7 +2452,14 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an HTTP/SOAP channel.
         """
-        item = self.get_channel_rest(msg.name) or {}
+        item = self._get_channel_rest(CONNECTION.CHANNEL, msg.name)
+
+        # A channel this server never loaded, such as one inserted into the database without a config reload,
+        # has no runtime entries to remove - the database row is gone already, so there is nothing more to do.
+        if item is None:
+            logger.info('Channel `%s` is not loaded, skipping its runtime deletion', msg.name)
+            return
+
         channel_id = item['id']
         with self.server.gateway_services_allowed_lock:
             _ = self.server.gateway_services_allowed.pop(channel_id, None)
@@ -2532,19 +2519,16 @@ class ConfigManager(_ConfigManagerBase):
         is_plain_http = msg['transport'] == URL_TYPE.PLAIN_HTTP
         is_rename = bool(old_name) and old_name != msg['name']
 
-        # Only REST and SOAP connections have a queue and a DLQ - an AS4 one has neither
-        has_queue = msg['transport'] in http_soap_outgoing_types
-        is_queue_rename = has_queue and is_rename
+        # Which kind of outgoing connection this is, for its queue and its DLQ
+        outgoing_type = http_soap_outgoing_types[msg['transport']]
 
         # A renamed connection has its topic moved to the new name, and both that and the config
         # this method replaces happen with the queue held still - nothing is published to the connection
         # and no round of its delivery is in flight in between, because both resolve their topics from
         # what the config says the connection is called.
-        if is_queue_rename:
-            outgoing_type = http_soap_outgoing_types[msg['transport']]
+        if is_rename:
             hold = self.hold_outgoing_queue(outgoing_type, msg['id'])
         else:
-            outgoing_type = ''
             hold = nullcontext()
 
         with hold:
@@ -2569,7 +2553,7 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. and whatever was queued for this connection now waits under its new topic,
             # .. which is a move from the name the old configuration was deleted under.
-            if is_queue_rename:
+            if is_rename:
                 self.rename_outgoing_subscription(outgoing_type, msg['id'], del_name, msg['name'])
 
         # An MCP gateway that exposes this connection as a tool rebuilds its registry now
@@ -2582,11 +2566,9 @@ class ConfigManager(_ConfigManagerBase):
         """
         self._delete_config_close_wrapper_http_soap(msg['name'], msg['transport'], logger.error)
 
-        # A deleted connection takes its queue with it, along with whatever that queue still held,
-        # which an AS4 connection never has.
-        if msg['transport'] in http_soap_outgoing_types:
-            outgoing_type = http_soap_outgoing_types[msg['transport']]
-            self.delete_outgoing_subscription(outgoing_type, msg['id'], msg['name'])
+        # A deleted connection takes its queue with it, along with whatever that queue still held
+        outgoing_type = http_soap_outgoing_types[msg['transport']]
+        self.delete_outgoing_subscription(outgoing_type, msg['id'], msg['name'])
 
         # An MCP gateway that exposed this connection as a tool rebuilds its registry now
         mcp_group = 'rest' if msg['transport'] == URL_TYPE.PLAIN_HTTP else 'soap'
@@ -2614,6 +2596,29 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _rebuild_mcp_tool_registries_without(self, service_name:'str') -> 'None':
+        """ Rebuilds the tool registry of each MCP gateway whose allow list contains a service that has just been deleted.
+        """
+        for gateway_name, gateway_config in self.gateway_mcp.items():
+
+            registry = gateway_config.conn.tool_registry
+
+            # A gateway whose wrapper is not built yet has nothing to rebuild
+            if registry is None:
+                continue
+
+            if service_name not in registry.allowed_services:
+                continue
+
+            # One gateway that cannot rebuild does not stop the others
+            try:
+                registry.rebuild()
+            except Exception:
+                logger.warning('MCP gateway `%s` could not rebuild after the deletion of service `%s`:\n%s',
+                    gateway_name, service_name, format_exc())
+
+# ################################################################################################################################
+
     def on_config_event_SERVICE_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
@@ -2627,8 +2632,11 @@ class ConfigManager(_ConfigManagerBase):
 
         fs_location = deployment_info['fs_location']
 
-        # Delete it from the service store
+        # Delete it from the service store ..
         self.server.service_store.delete_service_data(msg.name)
+
+        # .. MCP gateways stop listing it as a tool ..
+        self._rebuild_mcp_tool_registries_without(msg.name)
 
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore
@@ -3008,7 +3016,7 @@ class ConfigManager(_ConfigManagerBase):
         from zato.common.odb.query import pubsub_subscriptions_by_sec_base
 
         # .. find all subscriptions for this security definition ..
-        subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id, self.server.cluster_id)
+        subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id)
 
         # .. clean up each subscription's in-memory and Redis state ..
         for sub in subscriptions:
@@ -3028,7 +3036,7 @@ class ConfigManager(_ConfigManagerBase):
         from zato.common.odb.query import pubsub_subscriptions_by_rest_endpoint
 
         # .. find all subscriptions pointing at this REST endpoint ..
-        subscriptions = pubsub_subscriptions_by_rest_endpoint(session, rest_endpoint_id, self.server.cluster_id)
+        subscriptions = pubsub_subscriptions_by_rest_endpoint(session, rest_endpoint_id)
 
         # .. clean up each subscription's in-memory and Redis state ..
         for sub in subscriptions:
@@ -3054,8 +3062,7 @@ class ConfigManager(_ConfigManagerBase):
         self.server.pubsub_backend.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
         self.server.pubsub_backend.set_topic_payload_flag(msg.topic_name, msg.get('is_audit_export_payload_active', False))
 
-        # .. and AMQP-backed topics additionally get a registry entry
-        # .. along with the channel override if one is needed.
+        # .. and AMQP-backed topics additionally get a registry entry.
         if msg.backend_type == PubSub.Backend_Type.AMQP:
 
             backend_config = {
@@ -3064,12 +3071,8 @@ class ConfigManager(_ConfigManagerBase):
                 'amqp_exchange': msg.amqp_exchange,
                 'amqp_routing_key': msg.amqp_routing_key,
                 'amqp_channel_name': msg.amqp_channel_name,
-                'original_service_name': '',
             }
             self._topic_backends[msg.topic_name] = backend_config
-
-            if backend_config['amqp_channel_name']:
-                self._apply_amqp_channel_override(backend_config)
 
 # ################################################################################################################################
 
@@ -3124,16 +3127,14 @@ class ConfigManager(_ConfigManagerBase):
             self._resync_topic_subscriptions(new_name)
 
         # Handle backend changes - the entry is rebuilt from scratch, which also covers renames
-        # and moving the override from one channel to another ..
+        # and a topic moving from one channel to another ..
         backend_type = getattr(msg, 'backend_type', None)
 
         # .. messages without backend fields come from paths that do not manage backends ..
         if backend_type is not None:
 
-            # .. drop the previous entry, restoring the previously overridden channel, if any ..
-            old_entry = self._topic_backends.pop(old_name, None)
-            if old_entry and old_entry['amqp_channel_name']:
-                self._remove_amqp_channel_override(old_entry)
+            # .. drop the previous entry ..
+            _ = self._topic_backends.pop(old_name, None)
 
             # .. and re-register under the new name if the topic is still AMQP-backed.
             if backend_type == PubSub.Backend_Type.AMQP:
@@ -3144,12 +3145,8 @@ class ConfigManager(_ConfigManagerBase):
                     'amqp_exchange': msg.amqp_exchange,
                     'amqp_routing_key': msg.amqp_routing_key,
                     'amqp_channel_name': msg.amqp_channel_name,
-                    'original_service_name': '',
                 }
                 self._topic_backends[new_name] = backend_config
-
-                if backend_config['amqp_channel_name']:
-                    self._apply_amqp_channel_override(backend_config)
 
 # ################################################################################################################################
 
@@ -3175,7 +3172,6 @@ class ConfigManager(_ConfigManagerBase):
             ).filter(
                 PubSubTopic.name == topic_name,
                 PubSubTopic.is_active == True, # noqa: E712
-                PubSubSubscription.cluster_id == self.server.cluster_id,
             ).all()
 
             for row in rows:
@@ -3223,11 +3219,8 @@ class ConfigManager(_ConfigManagerBase):
         # .. remove in-memory subscription and push delivery configs for this topic ..
         self._remove_topic_sub_configs(topic_name)
 
-        # .. and if the topic was AMQP-backed, drop its registry entry
-        # .. and restore the channel it overrode, if any.
-        old_entry = self._topic_backends.pop(topic_name, None)
-        if old_entry and old_entry['amqp_channel_name']:
-            self._remove_amqp_channel_override(old_entry)
+        # .. and if the topic was AMQP-backed, drop its registry entry.
+        _ = self._topic_backends.pop(topic_name, None)
 
 # ################################################################################################################################
 

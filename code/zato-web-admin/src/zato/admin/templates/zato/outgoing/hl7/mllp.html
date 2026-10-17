@@ -58,13 +58,9 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
         <div id="markup">
             <h2 class="zato">{% include "zato/include/header-brand.html" with badge="HL7" %}HL7 MLLP outgoing connections</h2>
 
@@ -73,7 +69,7 @@
 {% endwith %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="{% url "outgoing-hl7-mllp-wizard-create" %}?cluster={{ cluster_id }}">Create a new connection</a>
+            <a href="{% url "outgoing-hl7-mllp-wizard-create" %}">Create a new connection</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -114,10 +110,10 @@
 
                         <td>{{ item.pool_size }}</td>
 
-                        <td><a href="/zato/audit-log/?source=mllp-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
-                        <td><a href="/zato/channel-usage/?sources=mllp-outgoing&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a></td>
+                        <td><a href="/zato/audit-log/?source=mllp-outgoing&amp;object_name={{ item.name|urlencode }}">Audit log</a></td>
+                        <td><a href="/zato/channel-usage/?sources=mllp-outgoing&amp;objects={{ item.name|urlencode }}">Usage</a></td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="mllp" %}
-                        <td><a href="{% url "outgoing-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
+                        <td><a href="{% url "outgoing-hl7-mllp-wizard-edit" item.id %}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -135,9 +131,7 @@
 
 {% include "zato/paginate/action-panel.html" %}
         </div>
-    {% endif %}
 
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

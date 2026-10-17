@@ -35,15 +35,13 @@ class _Base(forms.Form):
         """
         job_choices = [('', '------')]
 
-        if req.zato.cluster_id:
-            response = req.zato.client.invoke('zato.scheduler.job.get-list', {
-                'cluster_id': req.zato.cluster_id,
-                'paginate': False,
-                'query': '',
-            })
+        response = req.zato.client.invoke('zato.scheduler.job.get-list', {
+            'paginate': False,
+            'query': '',
+        })
 
-            for job_elem in response.data:
-                job_choices.append([job_elem.name, job_elem.name])
+        for job_elem in response.data:
+            job_choices.append([job_elem.name, job_elem.name])
 
         self.fields['on_success_job'].choices = job_choices
         self.fields['on_error_job'].choices = job_choices
@@ -51,7 +49,7 @@ class _Base(forms.Form):
 class OneTimeSchedulerJobForm(_Base):
     pass
 
-_tz_choices = [('', '--- Same as server ---')] + [(tz, tz) for tz in tz_names]
+_tz_choices = [('', '--- Same as in My settings ---')] + [(tz, tz) for tz in tz_names]
 
 class IntervalBasedSchedulerJobForm(_Base):
     weeks = forms.CharField(widget=forms.NumberInput(attrs={'class':'validate-digits', 'style':'width:10.4%', 'min':'0'}))

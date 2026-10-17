@@ -41,7 +41,6 @@ def _create_sec_def(client:'ZatoClient', name:'str', username:'str') -> 'int':
     """ Creates a basic auth security definition and returns its ID.
     """
     response = client.create('zato.security.basic-auth.create',
-        cluster_id=1,
         name=name,
         is_active=True,
         username=username,
@@ -55,7 +54,6 @@ def _create_topic(client:'ZatoClient', name:'str') -> 'None':
     """ Creates a pub/sub topic.
     """
     _ = client.create('zato.pubsub.topic.create',
-        cluster_id=1,
         name=name,
         is_active=True,
     )
@@ -66,7 +64,6 @@ def _create_permission(client:'ZatoClient', sec_base_id:'int', pattern:'str') ->
     """ Creates a pub/sub permission and returns its ID.
     """
     response = client.create('zato.pubsub.permission.create',
-        cluster_id=1,
         sec_base_id=sec_base_id,
         pattern=pattern,
         access_type='publisher-subscriber',
@@ -79,7 +76,6 @@ def _create_subscription(client:'ZatoClient', sec_base_id:'int', topic_names:'an
     """ Creates a pull subscription and returns its sub_key.
     """
     response = client.create('zato.pubsub.subscription.create',
-        cluster_id=1,
         topic_name_list=topic_names,
         sec_base_id=sec_base_id,
         delivery_type='pull',
@@ -93,7 +89,7 @@ def _create_subscription(client:'ZatoClient', sec_base_id:'int', topic_names:'an
 def _get_subscriptions_for_sec(client:'ZatoClient', sec_base_id:'int') -> 'anylist':
     """ Returns subscription dicts for a given sec_base_id.
     """
-    data, _ = client.get_list('zato.pubsub.subscription.get-list', cluster_id=1)
+    data, _ = client.get_list('zato.pubsub.subscription.get-list')
 
     out:'anylist' = []
     for item in data:

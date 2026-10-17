@@ -34,7 +34,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-Cluster_Id = 1
 Service_Name = 'orders.get'
 Channel_Name = 'orders.api'
 Outgoing_Name = 'crm.api'
@@ -72,10 +71,6 @@ def full_input(class_:'any_', input_data:'stranydict') -> 'Bunch':
 def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') -> 'any_':
     """ A service with its collaborators standing in - the sessions are real, the server is not.
     """
-    def get_config_session(**kwargs:'any_') -> 'any_':
-        out = session_factory()
-        return out
-
     def encrypt(value:'any_') -> 'any_':
         out = value
         return out
@@ -91,8 +86,6 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
     service.invoke = MagicMock(return_value={})
 
     server = SimpleNamespace(
-        cluster_id=Cluster_Id,
-        get_config_session=get_config_session,
         encrypt=encrypt,
         fs_server_config=SimpleNamespace(misc=SimpleNamespace(return_internal_objects='True')),
     )
@@ -130,7 +123,6 @@ def base_input(**overrides:'any_') -> 'stranydict':
         'http_accept': None,
         'is_active': True,
         'is_internal': False,
-        'cluster_id': Cluster_Id,
         'is_wrapper': False,
         'wrapper_type': None,
         'username': None,
@@ -200,7 +192,6 @@ def get_list(session_factory:'any_', connection:'str', transport:'str') -> 'list
     """ What GetList returns for one connection and transport pair.
     """
     input_data = {
-        'cluster_id': Cluster_Id,
         'connection': connection,
         'transport': transport,
         'paginate': False,
@@ -221,7 +212,7 @@ def get(session_factory:'any_', item_id:'int') -> 'anydict':
     def require_any(*names:'str') -> 'None':
         pass
 
-    service = new_service(Get, session_factory, {'cluster_id': Cluster_Id, 'id': item_id, 'name': None})
+    service = new_service(Get, session_factory, {'id': item_id, 'name': None})
     service.request.input.require_any = require_any
     service.handle()
 

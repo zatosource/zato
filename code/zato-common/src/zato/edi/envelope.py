@@ -7,10 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Envelope reading - extracting the routing identifiers of an EDI payload without a full parse.
-# For X12 that is the ISA sender and receiver, the GS application ids and the ST01 document type,
-# for EDIFACT the UNB sender and recipient and the UNH message type. This is what lets an AS2
-# channel route on the partner plus the document type, and what the reports and reconciliation
-# key on, since AS2 itself is payload-agnostic.
+# For EDIFACT that is the UNB sender and recipient and the UNH message type. This is what lets a channel
+# route on the partner plus the document type, since the transport an interchange arrives over is payload-agnostic.
 
 from __future__ import annotations
 
@@ -20,7 +18,6 @@ from dataclasses import asdict, dataclass
 # Zato
 from zato.edifact.syntax import EDISyntaxError
 from zato.edifact.syntax import parse_segment as parse_edifact_segment, parse_una, split_segments as split_edifact_segments
-from zato.x12.syntax import X12SyntaxError, parse_isa, split_segments as split_x12_segments
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,14 +32,9 @@ if 0:
 # ################################################################################################################################
 
 # The recognized envelope formats.
-Format_X12     = 'x12'
 Format_EDIFACT = 'edifact'
 
 # The segment tags envelope reading looks at.
-X12_Interchange_Tag = 'ISA'
-X12_Group_Tag       = 'GS'
-X12_Set_Tag         = 'ST'
-
 EDIFACT_Advice_Tag      = 'UNA'
 EDIFACT_Interchange_Tag = 'UNB'
 EDIFACT_Message_Tag     = 'UNH'
@@ -57,29 +49,21 @@ class EnvelopeInfo:
     that is not EDI at all yields a result whose format is empty.
     """
 
-    # Which envelope format the payload carries - Format_X12, Format_EDIFACT or empty.
+    # Which envelope format the payload carries - Format_EDIFACT or empty.
     format: str = ''
 
-    # The interchange-level sender and receiver - ISA05/ISA06 and ISA07/ISA08 for X12,
-    # UNB02 for the sender and UNB03 for the recipient for EDIFACT, whose qualifiers
-    # ride in the second component of each composite.
+    # The interchange-level sender and receiver - UNB02 for the sender and UNB03 for the recipient,
+    # whose qualifiers ride in the second component of each composite.
     sender_qualifier:   str = ''
     sender_id:          str = ''
     receiver_qualifier: str = ''
     receiver_id:        str = ''
 
-    # The X12 functional group identifiers - GS02, GS03 and the GS01 functional code.
-    group_sender_id:   str = ''
-    group_receiver_id: str = ''
-    functional_id:     str = ''
-
-    # The document type routing keys on - ST01 for X12 (an 850, an 810), UNH02.1 for EDIFACT (ORDERS, INVOIC).
+    # The document type routing keys on - UNH02.1, e.g. ORDERS or INVOIC.
     document_type: str = ''
 
-    # The control numbers of each envelope level - ISA13, GS06 and ST02 for X12,
-    # UNB05 and UNH01 for EDIFACT, whose group level stays empty.
+    # The control numbers of each envelope level - UNB05 and UNH01.
     interchange_control_number: str = ''
-    group_control_number:       str = ''
     set_control_number:         str = ''
 
 # ################################################################################################################################
@@ -107,57 +91,6 @@ def _element(parts:'strlist', index:'int') -> 'str':
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _read_x12(text:'str') -> 'EnvelopeInfo':
-    """ Reads the ISA, the first GS and the first ST of an X12 interchange.
-    Everything works off the separators the fixed-width ISA declares.
-    """
-
-    # Our response to produce
-    out = EnvelopeInfo()
-    out.format = Format_X12
-
-    # The fixed-width ISA declares the syntax characters everything else splits on.
-    separators = parse_isa(text)
-    segments = split_x12_segments(text, separators)
-
-    for segment_text in segments:
-        without_terminator = segment_text.rstrip(separators.terminator)
-        parts = without_terminator.split(separators.element)
-        tag = parts[0]
-
-        # The ISA carries the interchange-level sender, receiver and control number ..
-        if tag == X12_Interchange_Tag:
-            sender_qualifier = _element(parts, 5)
-            sender_id = _element(parts, 6)
-            receiver_qualifier = _element(parts, 7)
-            receiver_id = _element(parts, 8)
-            interchange_control_number = _element(parts, 13)
-
-            # The fixed-width ISA pads its fields with spaces
-            out.sender_qualifier = sender_qualifier.strip()
-            out.sender_id = sender_id.strip()
-            out.receiver_qualifier = receiver_qualifier.strip()
-            out.receiver_id = receiver_id.strip()
-            out.interchange_control_number = interchange_control_number.strip()
-
-        # .. the first GS carries the application ids and the functional code ..
-        elif tag == X12_Group_Tag:
-            if not out.group_sender_id:
-                out.functional_id = _element(parts, 1)
-                out.group_sender_id = _element(parts, 2)
-                out.group_receiver_id = _element(parts, 3)
-                out.group_control_number = _element(parts, 6)
-
-        # .. and the first ST names the document type - after that, routing has everything it needs.
-        elif tag == X12_Set_Tag:
-            out.document_type = _element(parts, 1)
-            out.set_control_number = _element(parts, 2)
-            break
-
-    return out
-
 # ################################################################################################################################
 
 def _read_edifact(text:'str') -> 'EnvelopeInfo':
@@ -235,15 +168,7 @@ def read_envelope(data:'strbytes') -> 'EnvelopeInfo':
     # Leading whitespace is decorative.
     text = text.lstrip()
 
-    # X12 always opens with the fixed-width ISA ..
-    if text.startswith(X12_Interchange_Tag):
-        try:
-            out = _read_x12(text)
-        except X12SyntaxError:
-            out = EnvelopeInfo()
-        return out
-
-    # .. EDIFACT opens with either the UNA service advice or the UNB itself ..
+    # EDIFACT opens with either the UNA service advice or the UNB itself ..
     is_una = text.startswith(EDIFACT_Advice_Tag)
     is_unb = text.startswith(EDIFACT_Interchange_Tag)
 

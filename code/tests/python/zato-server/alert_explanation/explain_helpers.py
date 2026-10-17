@@ -37,7 +37,7 @@ from zato.common.alerting.model import Default_Dedup_Window_Seconds
 from zato.common.api import SMTPMessage
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.crypto.api import CryptoManager
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import Base, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
 from zato.server.service.internal.alerting import Explain
 
 # Test helpers
@@ -55,8 +55,7 @@ if 0:
 # The Teams simulator serves TLS with a self-signed certificate, so its warnings say nothing
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# The cluster and server the tests run under
-_cluster_id = 1
+# The server the tests run under
 _server_name = 'test-explanation-server'
 
 # The correlation id the explanation runs under
@@ -275,7 +274,6 @@ def new_session() -> 'any_':
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         Service.__table__,
         SecurityBase.__table__,
         HTTPBasicAuth.__table__,
@@ -286,13 +284,6 @@ def new_session() -> 'any_':
     Base.metadata.create_all(engine, tables=tables)
 
     out = sessionmaker(bind=engine)
-
-    # A REST channel's row points to its cluster, so the cluster is there for the channel tests
-    session = out()
-    session.add(Cluster(_cluster_id, 'test-cluster', '', 'sqlite'))
-    session.commit()
-    session.close()
-
     return out
 
 # ################################################################################################################################
@@ -412,7 +403,7 @@ def new_service(
     service.logger = logging.getLogger('test-alert-explanation')
     service.request = SimpleNamespace(payload=payload)
     service.odb = SimpleNamespace(session=session)
-    service.server = SimpleNamespace(cluster_id=_cluster_id, name=_server_name, repo_location=repo_dir,
+    service.server = SimpleNamespace(name=_server_name, repo_location=repo_dir,
         invoke=None, pubsub_backend=None)
     service.out = SimpleNamespace(rest={_conn_name: SimpleNamespace(config=rest_config)})
     service.llm = llm
@@ -425,7 +416,7 @@ def new_service(
 # ################################################################################################################################
 
 def stored_explanation(session_maker:'any_') -> 'anydict':
-    store = ExplanationStore(session_maker, _cluster_id)
+    store = ExplanationStore(session_maker)
     out = store.get(f'explanation.{_alert_id}')
 
     assert out is not None

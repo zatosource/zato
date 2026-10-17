@@ -31,7 +31,7 @@ from zato.common.test.playwright_pubsub import create_basic_auth
 _analytics_state_dir = tempfile.mkdtemp(prefix='zato_analytics_test_')
 
 os.environ['Zato_Audit_Log_DB_Name'] = os.path.join(_analytics_state_dir, 'audit.db')
-os.environ['Zato_Analytics_DB_Name'] = os.path.join(_analytics_state_dir, 'analytics.db')
+os.environ['Zato_Analytics_DB_Path'] = os.path.join(_analytics_state_dir, 'analytics.db')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,7 +58,7 @@ _Test_Name_Prefix = 'test.analytics.' + rand_string() + '.'
 _Echo_Service = 'demo.echo'
 
 # The screens under test
-_Overview_Url = '/zato/analytics/?cluster=1&range=day'
+_Overview_Url = '/zato/analytics/?range=day'
 _Channel_Url  = '/zato/analytics/channel/'
 _Consumer_Url = '/zato/analytics/consumer/'
 
@@ -255,7 +255,7 @@ class TestTrafficAnalyticsUI:
 
         # Screen three - the consumer page shows what the credential does ..
         encoded_consumer = quote(definition['name'])
-        _ = page.goto(f'{base_url}{_Consumer_Url}?cluster=1&name={encoded_consumer}&range=day')
+        _ = page.goto(f'{base_url}{_Consumer_Url}?name={encoded_consumer}&range=day')
         _wait_for_dashboard(page)
 
         # .. only its own, authenticated requests count here ..

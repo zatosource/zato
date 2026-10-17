@@ -7,17 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from contextlib import contextmanager
 
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
-from live_sql.asserts import assert_mysql_connection_encrypted as assert_mysql_engine_encrypted, \
-    assert_postgresql_connection_encrypted as assert_postgresql_engine_encrypted
 from live_sql.env import database_env
 from zato.common.analytics.api import get_analytics_engine, get_latency_bucket_index, usage_table, watermark_table, \
-    Latency_Bucket_Count, Latency_Buckets_Ms
+    Latency_Bucket_Count, Latency_Buckets_Ms, ModuleCtx as AnalyticsCtx
 from zato.common.analytics.query import get_percentile
 from zato.common.analytics.rollup import run_rollup
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -37,9 +36,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The prefixes both stores' environment variables share
-_audit_env_prefix     = 'Zato_Audit_Log_DB_'
-_analytics_env_prefix = 'Zato_Analytics_DB_'
+# The prefix of the audit log's environment variables
+_audit_env_prefix = 'Zato_Audit_Log_DB_'
 
 # The server name all the test events are written under
 _server_name = 'test-analytics-server'
@@ -62,12 +60,35 @@ _period_two = '2026-07-14T11'
 # ################################################################################################################################
 
 @contextmanager
-def analytics_test_env(details:'stranydict') -> 'envgen':
-    """ Points both the audit log and the analytics store at one backend for the duration
-    of a test - the two schemas share the database without any table name clashes.
+def analytics_path_env(analytics_db_path:'str') -> 'envgen':
+    """ Points the analytics store at a given SQLite file for the duration of a block.
+    """
+
+    # Save what is set now so it can be restored later ..
+    saved = os.environ.pop(AnalyticsCtx.Env_Path, None)
+
+    # .. apply the file under test ..
+    os.environ[AnalyticsCtx.Env_Path] = analytics_db_path
+
+    try:
+        yield
+
+    # .. and restore the previous environment afterwards.
+    finally:
+        _ = os.environ.pop(AnalyticsCtx.Env_Path, None)
+
+        if saved is not None:
+            os.environ[AnalyticsCtx.Env_Path] = saved
+
+# ################################################################################################################################
+
+@contextmanager
+def analytics_test_env(details:'stranydict', analytics_db_path:'str') -> 'envgen':
+    """ Points the audit log at a given backend and the analytics store at a given SQLite file
+    for the duration of a test.
     """
     with database_env(_audit_env_prefix, details):
-        with database_env(_analytics_env_prefix, details):
+        with analytics_path_env(analytics_db_path):
             yield
 
 # ################################################################################################################################
@@ -380,22 +401,6 @@ def run_rollup_scenario() -> 'None':
     assert carol['duration_sum_ms'] == 42
     assert carol['size_sum'] == 7
     assert carol['latency_buckets'] == _expected_buckets(42)
-
-# ################################################################################################################################
-
-def assert_mysql_connection_encrypted() -> 'None':
-    """ Confirms the current MySQL session of the analytics store really is encrypted.
-    """
-    engine = get_analytics_engine()
-    assert_mysql_engine_encrypted(engine)
-
-# ################################################################################################################################
-
-def assert_postgresql_connection_encrypted() -> 'None':
-    """ Confirms the current PostgreSQL session of the analytics store really is encrypted.
-    """
-    engine = get_analytics_engine()
-    assert_postgresql_engine_encrypted(engine)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -19,7 +19,7 @@ from requests_toolbelt import MultipartEncoder
 
 # Zato
 from zato.common.api import HTTP_SOAP, SEC_DEF_TYPE
-from zato.common.audit_log.common import TransportStatus
+from zato.common.audit_log.common import AuditClassification, derive_http_classification, TransportStatus
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,6 +132,16 @@ def get_rest_rejection_error(response:'_RequestsResponse') -> 'str':
     """ The error a rejected REST request is reported with.
     """
     out = f'HTTP {response.status_code} {response.text}'
+    return out
+
+# ################################################################################################################################
+
+def is_rest_rejection_permanent(response:'_RequestsResponse') -> 'bool':
+    """ Whether the status an endpoint turned a request down with says the request itself is wrong.
+    """
+    classification = derive_http_classification(response.status_code)
+
+    out = classification == AuditClassification.Permanent
     return out
 
 # ################################################################################################################################

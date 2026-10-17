@@ -109,7 +109,7 @@ class _Updater(Service):
 # ################################################################################################################################
 
 class UpdateStatic(_Updater):
-    """ Picks up static files and distributes them to all server processes.
+    """ Picks up static files and distributes them to the server.
     """
     pickup_action = HOT_DEPLOY.CREATE_STATIC
 
@@ -117,7 +117,7 @@ class UpdateStatic(_Updater):
 # ################################################################################################################################
 
 class UpdateUserConf(_Updater):
-    """ Picks up user-defined config files and distributes them to all server processes.
+    """ Picks up user-defined config files and distributes them to the server.
     """
     pickup_action = HOT_DEPLOY.CREATE_USER_CONF
 
@@ -159,7 +159,7 @@ class _OnUpdate(Service):
 
         #
         # First, we need to combine relative_dir with our own server's root directory.
-        # This is needed because other servers may be in different root directories
+        # This is needed because a server may be installed in any root directory
         # yet the relative_dir to the file will be the same.
         #
         # For instance, we can have server directories as such

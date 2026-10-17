@@ -27,7 +27,7 @@
 <!-- screenshot: response-caching-clear.webp - The clear cache action on the response caching subpage -->
 
 <div id="markup">
-<h2 class="zato">Response caching | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&connection=channel&transport={{ transport }}">{% if transport == 'soap' %}SOAP channels{% else %}REST channels{% endif %}</a> | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&query={{ channel_name }}&connection=channel&transport={{ transport }}">{{ channel_name }}</a> | {{ channel_url_path }}</h2>
+<h2 class="zato">Response caching | <a href="{% url 'http-soap' %}?connection=channel&transport={{ transport }}">{% if transport == 'soap' %}SOAP channels{% else %}REST channels{% endif %}</a> | <a href="{% url 'http-soap' %}?query={{ channel_name }}&connection=channel&transport={{ transport }}">{{ channel_name }}</a> | {{ channel_url_path }}</h2>
 
 <div class="response-caching-container" id="response-caching">
     <div class="response-caching-card">

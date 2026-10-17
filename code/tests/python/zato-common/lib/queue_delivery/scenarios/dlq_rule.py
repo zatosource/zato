@@ -13,7 +13,6 @@ import time
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub, SCHEDULER
-from zato.common.defaults import default_cluster_id
 from zato.common.pubsub.dlq import Header_Rounds, Key_DLQ
 from zato.common.pubsub.outgoing import Key_DLQ_Rounds
 
@@ -84,7 +83,7 @@ class DLQRuleScenarios(ScenarioBase):
         """
         client = get_client()
 
-        job = invoke(client, Get_Job_By_Name, {'cluster_id': default_cluster_id, 'name': PubSub.Outgoing.DLQ_Job_Name})
+        job = invoke(client, Get_Job_By_Name, {'name': PubSub.Outgoing.DLQ_Job_Name})
 
         assert job['service_name'] == DLQ_Run
         assert job['job_type'] == SCHEDULER.JOB_TYPE.INTERVAL_BASED

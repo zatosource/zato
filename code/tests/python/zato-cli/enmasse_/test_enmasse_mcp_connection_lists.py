@@ -18,7 +18,7 @@ from unittest import TestCase, main
 import yaml
 
 # Zato
-from zato.cli.enmasse.exporters.mcp import GATEWAY_OPTIONAL_FIELDS
+from zato.cli.enmasse.exporters.mcp import Gateway_Optional_Fields
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.util import FileWriter, get_object_order
 from zato.common.api import MCP
@@ -55,7 +55,7 @@ class TestConnectionListCatalogs(TestCase):
     def test_every_key_is_an_exporter_field(self:'any_') -> 'None':
 
         for key in MCP.Connection_List_Keys:
-            self.assertIn(key, GATEWAY_OPTIONAL_FIELDS, f'`{key}` not in the exporter fields')
+            self.assertIn(key, Gateway_Optional_Fields, f'`{key}` not in the exporter fields')
 
 # ################################################################################################################################
 

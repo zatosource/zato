@@ -16,8 +16,6 @@ web_admin_port = 8182
 
 http_plain_server_port = 17010
 
-default_cluster_id = 1
-
 default_env_base_dir    = os.path.expanduser('~/env/qs-1')
 default_server_base_dir = os.path.join(default_env_base_dir, 'server1')
 

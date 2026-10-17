@@ -69,7 +69,7 @@
     --mapper-type-background-union: rgba(108, 117, 125, 0.10);
 
     /* Vertical room taken by the Dashboard chrome above the mapper -
-       the top menu bar and the cluster color strip. */
+       the top menu bar and the environment color strip. */
     --mapper-page-top-offset: 81px;
 
     /* Spacing scale */

@@ -32,7 +32,7 @@ from zato.cli.enmasse.util import FileWriter
 from zato.cli.enmasse.util.secrets import decrypt_secret, Session_Key_Crypto_Manager
 from zato.common.api import HTTP_SOAP, KAFKA, SEC_DEF_TYPE
 from zato.common.crypto.api import ServerCryptoManager
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, SecurityBase, Service, SMTP
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, SecurityBase, Service, SMTP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,7 +51,6 @@ _retry = HTTP_SOAP.Retry
 _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
 
-_cluster_id = 1
 
 # The security definition the SASL connections name, known to the importer as a Basic Auth one
 _security_name = 'enmasse.kafka.basic'
@@ -165,13 +164,12 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster, carrying the crypto manager
+    """ A real ODB session over an in-memory SQLite database carrying the crypto manager
     the generic importer encrypts secrets with.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -186,8 +184,6 @@ def session() -> 'any_':
 
     session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
     session.commit()
 
     yield session
@@ -696,7 +692,7 @@ class TestKafkaExport:
     ) -> 'None':
         _, _ = channel_importer.sync_definitions(yaml_config['channel_kafka'], session)
 
-        exported = channel_exporter.export(session, _cluster_id)
+        exported = channel_exporter.export(session)
         item = _by_name(exported)[_channel_name_1]
 
         assert item['address'] == 'kafka1:9092,kafka2:9092'
@@ -769,7 +765,7 @@ class TestKafkaExport:
     ) -> 'None':
         _, _ = outgoing_importer.sync_definitions(yaml_config['outgoing_kafka'], session)
 
-        exported = outgoing_exporter.export(session, _cluster_id)
+        exported = outgoing_exporter.export(session)
         item = _by_name(exported)[_outgoing_name_1]
 
         assert item['address'] == 'kafka1:9092,kafka2:9092'
@@ -818,8 +814,8 @@ class TestKafkaExport:
         _, _ = channel_importer.sync_definitions(yaml_config['channel_kafka'], session)
         _, _ = outgoing_importer.sync_definitions(yaml_config['outgoing_kafka'], session)
 
-        exported_channels = channel_exporter.export(session, _cluster_id)
-        exported_outgoing = outgoing_exporter.export(session, _cluster_id)
+        exported_channels = channel_exporter.export(session)
+        exported_outgoing = outgoing_exporter.export(session)
 
         path = tmp_path / 'enmasse.yaml'
         FileWriter(str(path)).write({'channel_kafka': exported_channels, 'outgoing_kafka': exported_outgoing})
@@ -851,8 +847,8 @@ class TestKafkaExport:
         assert len(created) == 0
 
         # A second export is the same as the first
-        assert channel_exporter.export(session, _cluster_id) == exported_channels
-        assert outgoing_exporter.export(session, _cluster_id) == exported_outgoing
+        assert channel_exporter.export(session) == exported_channels
+        assert outgoing_exporter.export(session) == exported_outgoing
 
 # ################################################################################################################################
 # ################################################################################################################################

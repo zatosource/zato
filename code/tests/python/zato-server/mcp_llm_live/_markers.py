@@ -42,6 +42,25 @@ def count_invocations(marker_path:'str', service_name:'str') -> 'int':
 
 # ################################################################################################################################
 
+def read_hook_lines(hook_path:'str', gateway_name:'str') -> 'strlist':
+    """ Every line the hook services recorded for the given gateway so far, in order,
+    each without the gateway's name - the kind of record, then what the hook saw.
+    """
+
+    with open(hook_path) as hook_file:
+        lines = hook_file.read().splitlines()
+
+    out:'strlist' = []
+
+    for line in lines:
+        kind, line_gateway, rest = line.split(' ', 2)
+        if line_gateway == gateway_name:
+            out.append(f'{kind} {rest}'.rstrip())
+
+    return out
+
+# ################################################################################################################################
+
 def read_payload_text(payload_path:'str', offset:'int') -> 'str':
     """ The payloads services recorded since the given offset, as one text.
     """

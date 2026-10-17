@@ -40,13 +40,13 @@ class SalesforceExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'salesforce_def_list':
+    def export(self, session:'SASession') -> 'salesforce_def_list':
         """ Exports Salesforce connection definitions.
         """
         logger.info('Exporting Salesforce connection definitions')
 
         # Get Salesforce connections from database using the generic connection query
-        db_salesforce = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE)
+        db_salesforce = connection_list(session, GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE)
 
         if not db_salesforce:
             logger.info('No Salesforce connection definitions found in DB')

@@ -319,7 +319,6 @@ class TestMLLPAudit:
         # The audited default route - parsing is on, so the events carry parsed attributes
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-audit-accept',
             type_=_connection_type_channel,
             is_active=True,
@@ -338,7 +337,6 @@ class TestMLLPAudit:
         # The audited error route - its service always raises
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-audit-error',
             type_=_connection_type_channel,
             is_active=True,
@@ -358,7 +356,6 @@ class TestMLLPAudit:
         # which is on by default, is turned off explicitly
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-audit-quiet',
             type_=_connection_type_channel,
             is_active=True,
@@ -532,7 +529,6 @@ class TestMLLPAudit:
         # The audited outconn pointing at the standalone backend ..
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_forward_outconn_name,
             type_=_connection_type_outconn,
             is_active=True,
@@ -550,7 +546,6 @@ class TestMLLPAudit:
         # .. an unaudited channel forwarding through it, so the outconn's own rows stand alone ..
         response = zato_client.create( # type: ignore[union-attr]
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name='test-mllp-audit-forward',
             type_=_connection_type_channel,
             is_active=True,
@@ -608,7 +603,6 @@ class TestMLLPAudit:
         # An audited REST channel whose data format marks it as HL7 ..
         response = zato_client.create( # type: ignore[union-attr]
             f'{_http_soap_service_name}.create',
-            cluster_id=1,
             name=self.__class__.rest_channel_name,
             is_active=True,
             is_internal=False,
@@ -680,7 +674,6 @@ class TestMLLPAudit:
             # .. the audited FHIR outconn pointing at it ..
             response = zato_client.create( # type: ignore[union-attr]
                 f'{_generic_service_name}.create',
-                cluster_id=1,
                 name=_fhir_outconn_name,
                 type_=_connection_type_fhir,
                 is_active=True,

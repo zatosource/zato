@@ -244,67 +244,43 @@
                         <ul class="first-level left">
                             {% if 0 %}
                             <li class="first-level" style="padding-left: 0.3rem">
-                                <a class="menu-link" href="{% url "mapping" %}?cluster={{ cluster_id|default:"1" }}">Mappings</a>
+                                <a class="menu-link" href="{% url "mapping" %}">Mappings</a>
                             </li>
                             {% endif %}
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">Services &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "service-ide" "service" "demo.my-service" %}?cluster={{ cluster_id|default:"1" }}">IDE</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "service" %}?cluster={{ cluster_id|default:"1" }}">List services</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "service-ide" "service" "demo.my-service" %}">IDE</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "service" %}">List services</a></li>
                                     {% if 0 %}
-                                    <li class="child"><a class="menu-link" href="{% url "rule-engine-api" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=gateway-rule-engine">Rule engine API</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "rule-engine-api" %}?type_=gateway-rule-engine">Rule engine API</a></li>
                                     {% endif %}
-                                    <li class="child"><a class="menu-link" href="{% url "service-config-tables" %}?cluster={{ cluster_id|default:"1" }}">Config tables</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "service-config-tables" %}">Config tables</a></li>
                                 </ul>
                             </li>
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">AI &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "ai-skills" %}?cluster={{ cluster_id|default:"1" }}">Agent skills</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "gateway-mcp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=gateway-mcp">MCP gateways</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "out-llm" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-llm">LLM connections</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "ai-skills" %}">Agent skills</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "gateway-mcp" %}?type_=gateway-mcp">MCP gateways</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "out-llm" %}?type_=outconn-llm">LLM connections</a></li>
                                 </ul>
                             </li>
-                            {% if 0 %}
-                            <li class="first-level" >
-                                <a class="menu-link"  style="padding-left: 0.3rem" href="#">EDI &darr;</a>
-                                <ul>
-                                    <li class="child">
-                                        <a class="menu-link" href="#">AS2 &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "out-as2" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-as2">Connections</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "as2-keystore" %}?cluster={{ cluster_id|default:"1" }}">Keystore</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "b2b-control-numbers" %}?cluster={{ cluster_id|default:"1" }}">Control numbers</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "b2b-reports" %}?cluster={{ cluster_id|default:"1" }}">Reports</a></li>
-                                        </ul>
-                                    </li>
-                                    <li class="child">
-                                        <a class="menu-link" href="#">AS4 &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-as4" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-as4" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
-                                        </ul>
-                                    </li>
-
-                                </ul>
-                            </li>
-                            {% endif %}
                             <li class="first-level" style="padding-left: 0.3rem">
                                 <a class="menu-link" href="#">Security &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "security-apikey" %}?cluster={{ cluster_id|default:"1" }}">API keys</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:"1" }}">Basic Auth</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-oauth-outconn-client-credentials" %}?cluster={{ cluster_id|default:"1" }}">Bearer tokens</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "groups" "zato-api-creds" %}?cluster={{ cluster_id|default:"1" }}">Groups</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-spnego" %}?cluster={{ cluster_id|default:"1" }}">Kerberos</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-mtls" %}?cluster={{ cluster_id|default:"1" }}">mTLS</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:"1" }}">NTLM</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-apikey" %}">API keys</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-basic-auth" %}">Basic Auth</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-oauth-outconn-client-credentials" %}">Bearer tokens</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "groups" "zato-api-creds" %}">Groups</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-spnego" %}">Kerberos</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-mtls" %}">mTLS</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}">NTLM</a></li>
                                     {% if 0 %}<li class="child"><a class="menu-link" href="/zato/ssl-config/">Let's Encrypt</a></li>{% endif %}
-                                    <li class="child"><a class="menu-link" href="{% url "security-wss" %}?cluster={{ cluster_id|default:"1" }}">WS-Security</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-tier" %}?cluster={{ cluster_id|default:"1" }}">Quota tiers</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-wss" %}">WS-Security</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-tier" %}">Quota tiers</a></li>
                                     {% if 0 %}
-                                    <li class="child"><a class="menu-link" href="{% url "security-posture" %}?cluster={{ cluster_id|default:"1" }}&tab=authentication">Security posture</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-posture" %}?tab=authentication">Security posture</a></li>
                                     {% endif %}
                                 </ul>
                             </li>
@@ -317,14 +293,14 @@
                                             <li class="child">
                                                 <a class="menu-link" href="#">HL7 &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?type_=channel-hl7-mllp">MLLP</a></li>
                                                 </ul>
                                             </li>
                                             {% if 0 %}
-                                            <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-openapi">OpenAPI</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?type_=channel-openapi">OpenAPI</a></li>
                                             {% endif %}
-                                            <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "http-soap" %}?connection=channel&amp;transport=plain_http">REST</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "http-soap" %}?connection=channel&amp;transport=soap">SOAP</a></li>
                                         </ul>
                                     </li>
                                     <li class="menu-wide">
@@ -333,19 +309,19 @@
                                             <li class="child">
                                                 <a class="menu-link" href="#">HL7 &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-fhir" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-fhir">FHIR</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-fhir" %}?type_=outconn-hl7-fhir">FHIR</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-mllp" %}?type_=outconn-hl7-mllp">MLLP</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-graphql" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-graphql">GraphQL</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-grpc" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-grpc">gRPC</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-odata" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-odata">OData</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-odoo" %}?cluster={{ cluster_id|default:"1" }}">Odoo</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sap">SAP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-soap" %}?cluster={{ cluster_id|default:"1" }}">SOAP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-graphql" %}?type_=outconn-graphql">GraphQL</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-grpc" %}?type_=outconn-grpc">gRPC</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?type_=outconn-ldap">LDAP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-odata" %}?type_=outconn-odata">OData</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-odoo" %}">Odoo</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "http-soap" %}?connection=outgoing&amp;transport=plain_http">REST</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-sap" %}?type_=outconn-sap">SAP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-soap" %}">SOAP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-sql" %}">SQL</a></li>
                                         </ul>
                                     </li>
                                     <li class="child menu-wide">
@@ -354,29 +330,29 @@
                                             <li class="child menu-wide">
                                                 <a class="menu-link" href="#">AMQP &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "out-amqp" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-amqp" %}">Outgoing</a></li>
                                                 </ul>
                                             </li>
                                             <li class="child menu-wide">
                                                 <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}">Outgoing</a></li>
                                                 </ul>
                                             </li>
                                             <li class="child menu-wide">
                                                 <a class="menu-link" href="#">IBM MQ &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-ibm-mq">Channels</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "out-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ibm-mq">Outgoing</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-ibm-mq" %}?type_=channel-ibm-mq">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-ibm-mq" %}?type_=outconn-ibm-mq">Outgoing</a></li>
                                                 </ul>
                                             </li>
                                             <li class="child menu-wide">
                                                 <a class="menu-link" href="#">Kafka &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-kafka">Channels</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "out-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-kafka">Outgoing</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-kafka" %}?type_=channel-kafka">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-kafka" %}?type_=outconn-kafka">Outgoing</a></li>
                                                 </ul>
                                             </li>
                                         </ul>
@@ -384,36 +360,37 @@
                                     <li class="child menu-wide">
                                         <a class="menu-link" href="#">NoSQL &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?type_=outconn-mongodb">MongoDB</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "redis" %}">Redis</a></li>
                                         </ul>
                                     </li>
                                     <li class="child menu-wide">
                                         <a class="menu-link" href="#"><span>File transfer &rarr;</span></a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ftp">FTP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-sftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sftp">SFTP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-smb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-smb">SMB</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?type_=outconn-ftp">FTP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-sftp" %}?type_=outconn-sftp">SFTP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-smb" %}?type_=outconn-smb">SMB</a></li>
                                         </ul>
                                     </li>
                                     <li class="child menu-wide">
                                         <a class="menu-link" href="#">E-mail &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "email-imap" %}?cluster={{ cluster_id|default:"1" }}">IMAP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:"1" }}">SMTP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "email-imap" %}">IMAP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "email-smtp" %}">SMTP</a></li>
                                         </ul>
                                     </li>
                                     <li class="child menu-wide">
                                         <a class="menu-link" href="#">Chat &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "chat-slack" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-slack">Slack</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Teams</a></li>
+                                            {% comment "discord_disabled" %}<li class="child"><a class="menu-link" href="{% url "chat-discord" %}?type_=chat-discord">Discord</a></li>{% endcomment %}
+                                            <li class="child"><a class="menu-link" href="{% url "chat-slack" %}?type_=chat-slack">Slack</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?type_=chat-microsoft-teams">Teams</a></li>
                                         </ul>
                                     </li>
                                     <li class="child menu-wide">
                                         <a class="menu-link" href="#">Search &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "out-es" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-es">ElasticSearch</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-es" %}?type_=outconn-es">ElasticSearch</a></li>
                                         </ul>
                                     </li>
                                 </ul>
@@ -421,15 +398,15 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">Cloud &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-aws" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">AWS</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "cloud-aws" %}?type_=cloud-aws">AWS</a></li>
                                     <li class="child">
                                         <a class="menu-link" href="#">Atlassian &rarr;</a>
                                         <ul>
                                             <li class="child">
-                                                <a class="menu-link" href="{% url "cloud-confluence" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-confluence">Confluence</a>
+                                                <a class="menu-link" href="{% url "cloud-confluence" %}?type_=cloud-confluence">Confluence</a>
                                             </li>
                                             <li class="child">
-                                                <a class="menu-link" href="{% url "cloud-jira" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-jira">Jira</a>
+                                                <a class="menu-link" href="{% url "cloud-jira" %}?type_=cloud-jira">Jira</a>
                                             </li>
                                         </ul>
                                     </li>
@@ -439,17 +416,17 @@
                                             <li class="child menu-wide">
                                                 <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}">Outgoing</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Cloud 365</a></li>
-                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Fabric</a></li>
-                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Power Automate</a></li>
-                                            <li class="child menu-wide"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Teams</a></li>
+                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?type_=cloud-microsoft-365">Cloud 365</a></li>
+                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?type_=cloud-microsoft-fabric">Fabric</a></li>
+                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?type_=cloud-microsoft-power-automate">Power Automate</a></li>
+                                            <li class="child menu-wide"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?type_=chat-microsoft-teams">Teams</a></li>
                                         </ul>
                                     </li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?type_=cloud-salesforce">Salesforce</a></li>
                                 </ul>
                             </li>
                             <li class="first-level">
@@ -459,22 +436,22 @@
                                         <a class="menu-link" href="#">Amazon &rarr;</a>
                                         <ul>
                                             <li class="child">
-                                                <a class="menu-link" href="{% url "cloud-aws" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">AWS</a>
+                                                <a class="menu-link" href="{% url "cloud-aws" %}?type_=cloud-aws">AWS</a>
                                             </li>
                                         </ul>
                                     </li>
                                     <li class="child">
                                         <a class="menu-link" href="#">Atlassian &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "cloud-confluence" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-confluence">Confluence</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "cloud-jira" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-jira">Jira</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "cloud-confluence" %}?type_=cloud-confluence">Confluence</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "cloud-jira" %}?type_=cloud-jira">Jira</a></li>
                                         </ul>
                                     </li>
                                     <li class="child">
                                         <a class="menu-link" href="#">Keysight &rarr;</a>
                                         <ul>
                                             {% if False %}<li class="child"><a class="menu-link" href="#">Hawkeye</a></li>{% endif %}
-                                            <li class="child"><a class="menu-link" href="{% url "vendors-keysight-vision" %}?cluster={{ cluster_id|default:"1" }}">Vision Series</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "vendors-keysight-vision" %}">Vision Series</a></li>
                                         </ul>
                                     </li>
                                     <li class="child">
@@ -484,45 +461,45 @@
                                                 <a class="menu-link" href="#">365 &rarr;</a>
                                                 <ul>
                                                     <li class="child">
-                                                        <a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Cloud</a>
+                                                        <a class="menu-link" href="{% url "cloud-microsoft-365" %}?type_=cloud-microsoft-365">Cloud</a>
                                                     </li>
                                                     <li class="child">
-                                                        <a class="menu-link" href="{% url "email-imap" %}?cluster={{ cluster_id|default:"1" }}">IMAP</a>
+                                                        <a class="menu-link" href="{% url "email-imap" %}">IMAP</a>
                                                     </li>
                                                 </ul>
                                             </li>
                                             <li class="child menu-wide">
                                                 <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
                                                 <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}">Outgoing</a></li>
                                                 </ul>
                                             </li>
                                             <li class="child menu-wide">
-                                                <a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Fabric</a>
+                                                <a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?type_=cloud-microsoft-fabric">Fabric</a>
                                             </li>
                                             <li class="child menu-wide">
-                                                <a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP (AD)</a>
+                                                <a class="menu-link" href="{% url "out-ldap" %}?type_=outconn-ldap">LDAP (AD)</a>
                                             </li>
                                             <li class="child menu-wide">
-                                                <a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Power Automate</a>
+                                                <a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?type_=cloud-microsoft-power-automate">Power Automate</a>
                                             </li>
                                             <li class="child menu-wide">
-                                                <a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Teams</a>
+                                                <a class="menu-link" href="{% url "chat-microsoft-teams" %}?type_=chat-microsoft-teams">Teams</a>
                                             </li>
                                         </ul>
                                     </li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sap">SAP</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?type_=cloud-salesforce">Salesforce</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "out-sap" %}?type_=outconn-sap">SAP</a></li>
                                 </ul>
                             </li>
                             <li class="first-level">
                                 <a class="menu-link" href="#">Pub/sub &darr;</a>
                                 <ul>
                                     <!-- <li class="child"><a class="menu-link" href="{% url "pubsub-dashboard" %}">Dashboard</a></li> -->
-                                    <li class="child"><a class="menu-link" href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:"1" }}">Topics</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "pubsub-permission" %}?cluster={{ cluster_id|default:"1" }}">Permissions</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:"1" }}">Subscriptions</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "pubsub-topic" %}">Topics</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "pubsub-permission" %}">Permissions</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "pubsub-subscription" %}">Subscriptions</a></li>
 
 
                                     {% if 0 %}
@@ -534,18 +511,18 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">Scheduler &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Config</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "scheduler-dashboard" %}?cluster={{ cluster_id|default:"1" }}&range=0">Dashboard</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler" %}">Config</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler-dashboard" %}?range=0">Dashboard</a></li>
                                 </ul>
                             </li>
 
                             <li class="first-level">
                                 <a class="menu-link" href="#">Monitoring &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "audit-log" %}?cluster={{ cluster_id|default:"1" }}">Audit log</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "audit-log" %}">Audit log</a></li>
                                     {% if 0 %}
-                                    <li class="child"><a class="menu-link" href="{% url "alert-templates" %}?cluster={{ cluster_id|default:"1" }}">Alert templates</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "alert-rules-config" %}?cluster={{ cluster_id|default:"1" }}">Alert rules</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "alert-templates" %}">Alert templates</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "alert-rules-config" %}">Alert rules</a></li>
                                     {% endif %}
                                 </ul>
                             </li>
@@ -554,7 +531,7 @@
                             <li class="first-level">
                                 <a class="menu-link">Analytics &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "analytics" %}?cluster={{ cluster_id|default:"1" }}">REST channels</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "analytics" %}">REST channels</a></li>
                                 </ul>
                             </li>
                             {% endif %}
@@ -563,8 +540,8 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">Monitoring &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "monitoring-datadog" %}?cluster={{ cluster_id|default:"1" }}">Datadog</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "monitoring-grafana-cloud" %}?cluster={{ cluster_id|default:"1" }}">Grafana Cloud</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "monitoring-datadog" %}">Datadog</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "monitoring-grafana-cloud" %}">Grafana Cloud</a></li>
                                 </ul>
                             </li>
                             {% endif %}
@@ -595,10 +572,10 @@
                                         </ul>
                                     </li>
                                     <li class="child"><a class="menu-link" href="/zato/updates/">Install updates</a></li>
-                                    <li class="child"><a class="menu-link" href="/zato/env-repo/">GitHub repository</a></li>
+                                    {% if 0 %}<li class="child"><a class="menu-link" href="/zato/env-repo/">GitHub repository</a></li>{% endif %}
                                     <li class="child"><a class="menu-link" href="/zato/python-packages/">Python packages</a></li>
                                     <li class="child"><a class="menu-link" href="/zato/env-variables/">Env. variables</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "on-prem-gateway" %}?cluster={{ cluster_id|default:"1" }}">On-prem gateways</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "on-prem-gateway" %}">On-prem gateways</a></li>
                                     <li class="child"><a class="menu-link" href="/zato/sbom/">SBOM</a></li>
                                     {% if 0 %}
                                     <li class="child">
@@ -625,9 +602,9 @@
                     </div>
                 </nav>
             </div>
-            <div id="cluster_color_div"
-                {% if cluster_color %}
-                    style="background-color:#{{ cluster_color }}"
+            <div id="environment_color_div"
+                {% if environment_color %}
+                    style="background-color:#{{ environment_color }}"
                 {% else %}
                     class="hidden"
                 {% endif %}

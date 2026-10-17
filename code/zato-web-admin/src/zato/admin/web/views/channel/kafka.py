@@ -56,7 +56,7 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'address', 'group_id', 'service'
     output_optional = ('topic', 'security_name', 'auth_type') + _ssl_field_names + _security_field_names + \
         _consumer.FieldList + _retry_field_names + _delivery_field_names
@@ -89,7 +89,6 @@ class Index(_Index):
 
         security_list = SecurityList.from_service(
             self.req.zato.client,
-            self.cluster_id,
             security_type_list=_security_type_list,
             needs_definition_type_name_label=True
         )

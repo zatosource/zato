@@ -150,7 +150,6 @@ class TestEnmasseElasticSearchExporter(TestCase):
         es_list_from_yaml = self.get_definitions()
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_es_connections, _ = self.es_importer.sync_definitions(es_list_from_yaml, self.session)
 
         self.assertEqual(len(created_es_connections), 2, 'Not all Elasticsearch connections were created.')

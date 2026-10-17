@@ -47,10 +47,10 @@ class GroupExporter:
 
 # ################################################################################################################################
 
-    def _load_tier_names(self, session:'SASession', cluster_id:'int') -> 'None':
+    def _load_tier_names(self, session:'SASession') -> 'None':
         """ Builds a map of quota tier ids to their names for reference resolution during export.
         """
-        wrapper = GenericObjectWrapper(session, cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
         rows = wrapper.get_list()
@@ -60,16 +60,16 @@ class GroupExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'group_def_list':
+    def export(self, session:'SASession') -> 'group_def_list':
         """ Exports security group definitions.
         """
 
         logger.info('Exporting security group definitions')
 
         # Load tier names so quota tier references can be exported by name
-        self._load_tier_names(session, cluster_id)
+        self._load_tier_names(session)
 
-        # Get all groups for this cluster
+        # Get all groups
         query = select([
             GenericObject.id,
             GenericObject.name,
@@ -77,7 +77,6 @@ class GroupExporter:
             ]).where(and_(
                 GenericObject.type_ == Groups.Type.Group_Parent,
                 GenericObject.subtype == Groups.Type.API_Clients,
-                GenericObject.cluster_id == cluster_id,
             ))
 
         groups = session.execute(query).fetchall()
@@ -104,7 +103,6 @@ class GroupExporter:
                     GenericObject.type_ == Groups.Type.Group_Member,
                     GenericObject.subtype == Groups.Type.API_Clients,
                     GenericObject.parent_object_id == group_id,
-                    GenericObject.cluster_id == cluster_id,
                 ))
 
             members = session.execute(member_query).fetchall()
@@ -131,7 +129,7 @@ class GroupExporter:
                     continue
 
                 try:
-                    sec_name = self._get_security_name_from_reference(session, security_reference, cluster_id)
+                    sec_name = self._get_security_name_from_reference(session, security_reference)
                     if sec_name:
                         member_names.append(sec_name)
                 except ValueError as e:
@@ -163,7 +161,7 @@ class GroupExporter:
 
 # ################################################################################################################################
 
-    def _get_security_name_from_reference(self, session:'SASession', reference:'str', cluster_id:'int') -> 'str':
+    def _get_security_name_from_reference(self, session:'SASession', reference:'str') -> 'str':
         """ Resolves a security reference to a security definition name.
             The reference is typically stored in the format 'type-id'.
         """
@@ -196,7 +194,6 @@ class GroupExporter:
                 SecurityBase.name
                 ]).where(and_(
                     SecurityBase.id == sec_id, # sec_id is already an int
-                    SecurityBase.cluster_id == cluster_id,
                 ))
 
             result = session.execute(query).fetchone()

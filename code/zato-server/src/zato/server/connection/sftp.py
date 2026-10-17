@@ -26,7 +26,8 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
     Operation_Store
 from zato.common.util.logging_ import file_transfer_logger_name
-from zato.server.connection.file_transfer_base import ExchangeNotes
+from zato.server.connection.file_transfer_base import ExchangeNotes, Key_Remote_Path, Key_Spool_Path, spool_file_payload, \
+    to_file_bytes
 from zato.server.connection.sftp_verify import record_sftp_store
 
 # ################################################################################################################################
@@ -482,7 +483,7 @@ class SFTPConnection(ExchangeNotes):
         log_level:'int'=0,
         needs_dot_entries:'bool'=True,
         raise_on_error:'bool'=True
-        ) -> 'sftp_info_list | None':
+        ) -> 'sftp_info_list':
 
         if needs_dot_entries:
             options = '-la'
@@ -491,9 +492,13 @@ class SFTPConnection(ExchangeNotes):
 
         result = self.execute('ls {} {}'.format(options, quote_path(remote_path)), log_level, raise_on_error)
 
+        # The echoed prompt is stripped from the output, so an empty directory leaves no output at all
+        out:'sftp_info_list' = []
+
         if result.stdout:
             out = self._parse_ls_output(result.stdout)
-            return out
+
+        return out
 
 # ################################################################################################################################
 
@@ -694,7 +699,7 @@ class SFTPConnection(ExchangeNotes):
 
 # ################################################################################################################################
 
-    def list(self, remote_path:'str', log_level:'int'=0) -> 'sftp_info_list | None':
+    def list(self, remote_path:'str', log_level:'int'=0) -> 'sftp_info_list':
 
         out = self._get_info(remote_path, log_level, needs_dot_entries=False)
         return out
@@ -906,8 +911,7 @@ class SFTPConnection(ExchangeNotes):
         self._overwrite_if_needed(remote_path, overwrite, log_level)
 
         # Data to be written out must be always bytes
-        if not isinstance(data, bytes):
-            data = data.encode(encoding)
+        data = to_file_bytes(data, encoding)
 
         # A temporary file to write data to ..
         with NamedTemporaryFile(mode, suffix='zato-sftp-write.txt') as local_path:
@@ -933,12 +937,8 @@ class SFTPConnection(ExchangeNotes):
         of any size is delivered with retries, backoff and an audit event per attempt.
         """
 
-        # Imported here to avoid circular imports
-        from zato.server.connection.file_transfer_base import spool_file_payload, Key_Remote_Path, Key_Spool_Path
-
         # Data to be written out must be always bytes
-        if not isinstance(data, bytes):
-            data = data.encode(encoding)
+        data = to_file_bytes(data, encoding)
 
         spool_path = spool_file_payload(data)
 

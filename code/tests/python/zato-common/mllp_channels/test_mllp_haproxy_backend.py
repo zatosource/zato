@@ -35,7 +35,7 @@ class TestResolveInternalPort(TestCase):
 # ################################################################################################################################
 
     def test_first_server_gets_the_base_port(self) -> 'None':
-        """ The first server in a cluster sits at the base of the range.
+        """ The server listening on the base HTTP port sits at the base of the range.
         """
         self.assertEqual(resolve_internal_port(http_plain_server_port), Internal_Port_Base)
 

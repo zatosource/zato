@@ -67,7 +67,7 @@ class TestOpenAPIConsoleSecurityDefaultPosture:
         server_port = zato_dashboard['server_port']
 
         # The channel arrives here inactive - strip its security so it matches
-        # the boot state of a fresh auto-created channel: inactive, no security ..
+        # the state it was imported in: inactive, no security ..
         _ = edit_channel_by_name(page, base_url, Service_Untyped, {
             'security_value': ZATO_NONE,
         })

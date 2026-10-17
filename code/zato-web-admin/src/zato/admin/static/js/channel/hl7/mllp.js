@@ -26,14 +26,12 @@ $(document).ready(function() {
 $.fn.zato.channel.hl7.mllp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'HL7 MLLP channel `{0}` deleted',
-        'Are you sure you want to delete HL7 MLLP channel `{0}`?',
-        true);
+        'Are you sure you want to delete HL7 MLLP channel `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.hl7.mllp.config = {
-    cluster_id: '1',
     import_demo_url: '/zato/channel/hl7/mllp/import-demo-config',
 
     // The ports feeds connect on, written in by the page from what the environment has
@@ -58,7 +56,7 @@ $.fn.zato.channel.hl7.mllp.config = {
     inline_edit_url: '/zato/channel/hl7/mllp/inline-edit/',
 
     // Where a service is opened, and what a cell with nothing in it says instead
-    service_ide_url: '/zato/service/ide/service/{name}/?cluster=1',
+    service_ide_url: '/zato/service/ide/service/{name}/',
     empty_cell_label: 'Click to add',
 
     // The two things a service can be done with, offered in the popup the cell opens
@@ -760,7 +758,7 @@ $.fn.zato.micro_forms.setup($.fn.zato.channel.hl7.mllp.match, {
 
 $.fn.zato.channel.hl7.mllp.import_demo_config = function() {
     var config = $.fn.zato.channel.hl7.mllp.config;
-    var import_url = config.import_demo_url + '?cluster=' + config.cluster_id;
+    var import_url = config.import_demo_url;
 
     var spinner_html = '<div id="import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
     $('body').append(spinner_html);

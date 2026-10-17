@@ -35,7 +35,7 @@ from audit_log_ui import attach_diagnostics, format_diagnostics, get_pane_cid, g
 
 _Test_Name_Prefix = 'test.audit.' + rand_string() + '.'
 
-_Topic_Page_URL = '/zato/pubsub/topic/?cluster=1'
+_Topic_Page_URL = '/zato/pubsub/topic/'
 _Audit_Log_URL_Prefix = '/zato/audit-log/'
 
 _Source = 'pubsub'

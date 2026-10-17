@@ -105,7 +105,6 @@ class AlertingRun(AdminService):
                 IntervalBasedJob.minutes,
                 IntervalBasedJob.seconds,
             ).outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
-                filter(Job.cluster_id==self.server.cluster_id).\
                 all()
 
         for row in rows:
@@ -151,7 +150,6 @@ class AlertingRun(AdminService):
         with closing(self.odb.session()) as session:
             rows = session.query(GenericConn.id).\
                 filter(GenericConn.type_.in_(FileTransfer.ConnTypeList)).\
-                filter(GenericConn.cluster_id==self.server.cluster_id).\
                 all()
 
             for row in rows:
@@ -182,7 +180,6 @@ class AlertingRun(AdminService):
         with closing(self.odb.session()) as session:
             rows = session.query(GenericConn.id).\
                 filter(GenericConn.type_.in_(FileTransfer.ConnTypeList)).\
-                filter(GenericConn.cluster_id==self.server.cluster_id).\
                 all()
 
             for row in rows:
@@ -319,7 +316,7 @@ class AlertingRun(AdminService):
 
         # What each object's own Alerts tab says - its thresholds, toggles, window and email connection.
         with closing(self.odb.session()) as session:
-            object_settings = load_object_settings(session, self.server.cluster_id)
+            object_settings = load_object_settings(session)
 
         result = run_sweep(engine, rules, metrics_by_name, AuditSource.MLLP_Channel, transports, audit_log, self.cid, now,
             defaults=defaults, dashboard_url=dashboard_url, template_dir=template_dir, job_intervals=job_intervals,
@@ -504,7 +501,7 @@ class AlertingTestTransfer(AdminService):
 
         # Which connections opted in - the test transfer writes to the remote system, so each object says so itself.
         with closing(self.odb.session()) as session:
-            object_settings = load_object_settings(session, self.server.cluster_id)
+            object_settings = load_object_settings(session)
 
         settings_by_object = object_settings[alert_type_file_transfer]
 
@@ -606,7 +603,7 @@ def _push_job_to_scheduler(service:'AdminService', job_name:'str') -> 'None':
     """ Sends one job to the scheduler as ODB holds it now - the scheduler runs off the jobs it was handed at its
     start and at each edit, so a change written to ODB alone would wait for its next restart.
     """
-    adapter = SchedulerODBAdapter(service.odb, service.server.cluster_id)
+    adapter = SchedulerODBAdapter(service.odb)
 
     for job_id, job_data in adapter.get_scheduler_jobs().items():
         if job_data['name'] == job_name:
@@ -628,7 +625,6 @@ class AlertingGetNotificationConfig(AdminService):
         with closing(self.odb.session()) as session:
             job = session.query(Job).\
                 filter(Job.name==Alerting.Job_Name).\
-                filter(Job.cluster_id==self.server.cluster_id).\
                 one()
             extra = job.extra
 
@@ -651,7 +647,7 @@ class AlertingSetNotificationConfig(AdminService):
         values = self.request.payload
 
         with closing(self.odb.session()) as session:
-            changed = set_notification_config(session, self.server.cluster_id, values)
+            changed = set_notification_config(session, values)
             session.commit()
 
         # The scheduler hands each run the extra it holds of its own, so the new values go over to it now
@@ -675,7 +671,7 @@ class AlertingSetTestTransferState(AdminService):
         is_active = self.request.payload['is_active']
 
         with closing(self.odb.session()) as session:
-            changed = set_job_active(session, self.server.cluster_id, Alerting.Test_Transfer_Job_Name, is_active)
+            changed = set_job_active(session, Alerting.Test_Transfer_Job_Name, is_active)
             session.commit()
 
         # The scheduler fires off the jobs it holds of its own, so the flag goes over to it now

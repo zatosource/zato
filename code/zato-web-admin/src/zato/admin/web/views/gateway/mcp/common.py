@@ -14,16 +14,26 @@ import re
 # Zato
 from zato.admin.web import alerts_tab
 from zato.common.alerting.object_config import alert_type_mcp
-from zato.common.api import API_Key, Groups, SEC_DEF_TYPE
+from zato.common.api import API_Key, CONNECTION, GENERIC, Groups, SEC_DEF_TYPE
+from zato.common.util.api import asbool
+from zato.common.util.gateway import get_mcp_group_name
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
+from zato.common.util.safeguards.masking import Default_Masking_Custom_Enabled
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist, intlist, intnone, strdict, strdictlist, strlist, strlistnone, strnone
     any_ = any_
+    anylist = anylist
+    intlist = intlist
+    intnone = intnone
+    strdictlist = strdictlist
+    strlist = strlist
+    strlistnone = strlistnone
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +43,13 @@ logger = logging.getLogger(__name__)
 _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
 _skill_input_prefix = 'mcp_skill_'
-_mcp_group_name_prefix = 'mcp.'
+
+# Security definitions the security picker does not list - a save keeps them in the gateway's group as they are.
+_hidden_security_names = {'ide_publisher', 'pubapi'}
+_hidden_security_name_part = 'zato.'
+
+# Fields the wizard does not edit, which a save of the wizard keeps as they are stored.
+_wizard_kept_field_names = ('session_ttl', 'invoke_timeout')
 
 # The multi-step wizard template, serving both the create and the edit page.
 _wizard_template = 'zato/gateway/mcp-wizard.html'
@@ -131,8 +147,8 @@ _shaping_display_defaults = {
     'safeguards_url_policy_enabled':       False,
     'oauth':                               False,
     'oauth_scopes':                        '',
-    'max_response_size':                   '',
-    'min_size_threshold':                  '',
+    'max_response_size':                   0,
+    'min_size_threshold':                  0,
     'characters_per_token':                Default_Characters_Per_Token,
     'size_cap_mode':                       Size_Cap_Mode_Truncate,
     'safeguards_pii_lands':                '',
@@ -185,15 +201,73 @@ _sec_type_to_export_header = {
     },
 }
 
+# The hidden inputs the wizard writes the data masking answers and the hook services into on save -
+# each list travels as one input per item, all of them under the same name.
+_masking_sets_input           = 'mcp_masking_set'
+_masking_excluded_input       = 'mcp_masking_excluded'
+_masking_custom_fields_input  = 'mcp_masking_custom_field'
+_masking_custom_enabled_input = 'mcp_masking_custom_enabled'
+_request_hook_input           = 'mcp_request_hook_service'
+_response_hook_input          = 'mcp_response_hook_service'
+
+# What a gateway that predates data masking or the hook services is opened with.
+_masking_state_defaults = {
+    'safeguards_masking_sets': [],
+    'safeguards_masking_excluded': [],
+    'safeguards_masking_custom_fields': [],
+    'safeguards_masking_custom_enabled': Default_Masking_Custom_Enabled,
+    'request_hook_service': '',
+    'response_hook_service': '',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_masking_state(item_dict:'strdict') -> 'strdict':
+    """ The data masking answers and the hook services of one gateway, in the shape the wizard's
+    scripts seed their state from - a key the gateway predates takes its default.
+    """
+    values:'strdict' = {}
+
+    for name, default_value in _masking_state_defaults.items():
+        if (value := item_dict.get(name)) is None:
+            value = default_value
+        values[name] = value
+
+    out = {
+        'sets': values['safeguards_masking_sets'],
+        'excluded': values['safeguards_masking_excluded'],
+        'customFields': values['safeguards_masking_custom_fields'],
+        'isCustomEnabled': values['safeguards_masking_custom_enabled'],
+        'requestHook': values['request_hook_service'],
+        'responseHook': values['response_hook_service'],
+    }
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def read_masking_input(post:'any_', input_dict:'strdict') -> 'None':
+    """ Moves the data masking answers and the hook services the wizard wrote into its hidden inputs
+    over to the keys the gateway's opaque configuration stores them under.
+    """
+    input_dict['safeguards_masking_sets'] = post.getlist(_masking_sets_input)
+    input_dict['safeguards_masking_excluded'] = post.getlist(_masking_excluded_input)
+    input_dict['safeguards_masking_custom_fields'] = post.getlist(_masking_custom_fields_input)
+    input_dict['safeguards_masking_custom_enabled'] = asbool(post[_masking_custom_enabled_input])
+    input_dict['request_hook_service'] = post[_request_hook_input]
+    input_dict['response_hook_service'] = post[_response_hook_input]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 def numeric_from_bool(value:'any_') -> 'any_':
     """ The opaque storage stores 0 as False and 1 as True, so a numeric field read back
-    from it turns these two values into numbers again - False means no value at all.
+    from it turns these two values into numbers again.
     """
     if value is False:
-        out = ''
+        out = 0
     elif value is True:
         out = 1
     else:
@@ -219,43 +293,255 @@ def get_size_cap_label(max_response_size:'any_', size_cap_mode:'str') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def save_security_group(req:'any_', gateway_name:'str', member_id_list:'list') -> 'int':
-    """ Wraps the security definitions picked for a gateway in one group of the gateway's
-    own, named after it, creating or updating the group, and returns the group's id.
+def size_cap_for_display(value:'any_') -> 'any_':
+    """ A token count as an input renders it - a zero means no cap or no threshold and shows as an empty input.
     """
-    group_name = _mcp_group_name_prefix + gateway_name
+    if value:
+        out = value
+    else:
+        out = ''
 
-    # A gateway saved before already has a group of that name, so the picks carried
-    # now replace the ones the group was left with the last time around ..
-    existing_groups = req.zato.client.invoke('zato.groups.get-list', {
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_hidden_security_name(name:'str') -> 'bool':
+    """ Whether the security picker leaves out the definition of that name.
+    """
+    out = name in _hidden_security_names or _hidden_security_name_part in name
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def read_gateway(req:'any_', id:'any_') -> 'strdict':
+    """ One MCP gateway as it is stored, refusing an id of a connection of any other type.
+    """
+    response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
+
+    if not response.ok:
+        raise Exception(f'MCP gateway with id `{id}` could not be read')
+
+    out = response.data
+
+    if out['type_'] != GENERIC.CONNECTION.TYPE.GATEWAY_MCP:
+        raise Exception(f'Connection with id `{id}` is not an MCP gateway')
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_stored_group_list(item_dict:'strdict') -> 'anylist':
+    """ The security groups a stored gateway lists, by id, or by name if an earlier import stored them so.
+    """
+    if 'security_groups' in item_dict:
+        out = item_dict['security_groups']
+        if out is None:
+            out = []
+    else:
+        out = []
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def add_group_id(stored_group_list:'anylist', group_id:'int') -> 'anylist':
+    """ The stored security groups of a gateway with the gateway's own group among them.
+    """
+    out = list(stored_group_list)
+
+    if group_id not in out:
+        out.append(group_id)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def find_group_id(req:'any_', group_name:'str') -> 'intnone':
+    """ Returns the id of the API clients group of that name, or None if there is no such group.
+    """
+    response = req.zato.client.invoke('zato.groups.get-list', {
         'group_type': Groups.Type.API_Clients,
     })
 
-    group_id = None
-    for group in existing_groups.data:
+    out:'intnone' = None
+
+    for group in response.data:
         if group['name'] == group_name:
-            group_id = group['id']
+            out = group['id']
             break
 
-    if group_id:
-        # .. update the existing group with the new member list ..
-        req.zato.client.invoke('zato.groups.edit', {
-            'id': group_id,
-            'group_type': Groups.Type.API_Clients,
-            'name': group_name,
-            'member_id_list': member_id_list,
-        })
-    else:
-        # .. or create a new group if one does not exist yet.
-        response = req.zato.client.invoke('zato.groups.create', {
-            'group_type': Groups.Type.API_Clients,
-            'name': group_name,
-            'member_id_list': member_id_list,
-        })
-        group_id = response.data['id']
-
-    out = group_id
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_group_id_list(req:'any_', stored_group_list:'anylist') -> 'intlist':
+    """ The ids of the security groups a gateway lists, with the groups listed by name resolved to their ids.
+    """
+    group_name_to_id:'strdict' = {}
+    has_names = False
+
+    for item in stored_group_list:
+        if isinstance(item, str):
+            has_names = True
+            break
+
+    if has_names:
+        response = req.zato.client.invoke('zato.groups.get-list', {
+            'group_type': Groups.Type.API_Clients,
+        })
+        for group in response.data:
+            group_name_to_id[group['name']] = group['id']
+
+    out:'intlist' = []
+
+    for item in stored_group_list:
+        if isinstance(item, str):
+            if item in group_name_to_id:
+                out.append(group_name_to_id[item])
+        else:
+            out.append(item)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_group_member_list(req:'any_', group_id:'int') -> 'strdictlist':
+    """ The members of one API clients group.
+    """
+    response = req.zato.client.invoke('zato.groups.get-member-list', {
+        'group_type': Groups.Type.API_Clients,
+        'group_id': group_id,
+    })
+
+    out = response.data
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SecurityGroupChange:
+    """ The security group of a gateway's own, named after the gateway, brought in line with the security
+    definitions picked for it. The members the group held before the change are kept, so that a save
+    of the gateway that the server refuses returns the group to them.
+    """
+
+    def __init__(self, req:'any_', gateway_name:'str', is_create:'bool') -> 'None':
+        self.req = req
+        self.gateway_name = gateway_name
+        self.is_create = is_create
+        self.group_name = get_mcp_group_name(gateway_name)
+        self.group_id:'intnone' = None
+
+        # None means that the group did not exist before the change
+        self.previous_member_id_list:'strlistnone' = None
+
+        # Whether the group has been created or its members replaced, which is what a revert undoes
+        self.is_applied = False
+
+    def _find_channel_using_group(self, group_id:'int') -> 'strnone':
+        """ Returns the name of an HTTP channel that the group secures, or None if no channel uses it.
+        """
+        response = self.req.zato.client.invoke('zato.http-soap.get-list', {
+            'connection': CONNECTION.CHANNEL,
+            'paginate': False,
+        })
+
+        out:'strnone' = None
+
+        for channel in response.data:
+            if 'security_groups' in channel:
+                if security_groups := channel['security_groups']:
+                    if group_id in security_groups:
+                        out = channel['name']
+                        break
+
+        return out
+
+    def _raise_if_not_ok(self, response:'any_') -> 'None':
+        """ Stops the save of the gateway when the groups service refused the change of its group.
+        """
+        if not response.ok:
+            raise Exception(response.details)
+
+    def _set_members(self, member_id_list:'strlist') -> 'None':
+        """ Replaces the members of the existing group with the given ones.
+        """
+        response = self.req.zato.client.invoke('zato.groups.edit', {
+            'id': self.group_id,
+            'group_type': Groups.Type.API_Clients,
+            'name': self.group_name,
+            'member_id_list': member_id_list,
+            'skip_gateway_name': self.gateway_name,
+        })
+        self._raise_if_not_ok(response)
+
+    def apply(self, member_id_list:'strlist') -> 'int':
+        """ Creates the group with the given members, or replaces the members of the existing one,
+        and returns the group's id.
+        """
+        group_id = find_group_id(self.req, self.group_name)
+
+        # A gateway saved before already has its group, whose current members are kept before they are replaced ..
+        if group_id:
+
+            # .. a new gateway takes over a group of its name only if no channel uses it ..
+            if self.is_create:
+                if channel_name := self._find_channel_using_group(group_id):
+                    raise Exception(f'Security group `{self.group_name}` is already in use by channel `{channel_name}`')
+
+            self.group_id = group_id
+
+            previous_member_id_list:'strlist' = []
+            new_member_id_list = list(member_id_list)
+
+            for member in get_group_member_list(self.req, group_id):
+                member_id = f'{member["sec_type"]}-{member["security_id"]}'
+                previous_member_id_list.append(member_id)
+
+                # .. the members the picker does not list stay in the group ..
+                if is_hidden_security_name(member['name']):
+                    if member_id not in new_member_id_list:
+                        new_member_id_list.append(member_id)
+
+            self.previous_member_id_list = previous_member_id_list
+            self._set_members(new_member_id_list)
+            self.is_applied = True
+
+        # .. while a gateway saved for the first time receives a new one.
+        else:
+            response = self.req.zato.client.invoke('zato.groups.create', {
+                'group_type': Groups.Type.API_Clients,
+                'name': self.group_name,
+                'member_id_list': member_id_list,
+            })
+            self._raise_if_not_ok(response)
+            group_id = response.data['id']
+            self.group_id = group_id
+            self.is_applied = True
+
+        out = group_id
+        return out
+
+    def revert(self) -> 'None':
+        """ Returns the group to the state it was in before the change - a group created by the change is deleted
+        and an existing one receives its previous members back.
+        """
+        if not self.is_applied:
+            return
+
+        if self.previous_member_id_list is None:
+            _ = self.req.zato.client.invoke('zato.groups.delete', {'id': self.group_id})
+        else:
+            self._set_members(self.previous_member_id_list)
+
+        logger.info('Security group `%s` of an MCP gateway returned to its state before the refused save', self.group_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

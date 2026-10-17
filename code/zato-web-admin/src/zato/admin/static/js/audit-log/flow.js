@@ -252,7 +252,6 @@ flow.eventURL = function(rowModel) {
 
     params.set('source', rowModel.source);
     params.set('object_name', rowModel.objectName);
-    params.set('cluster', config.clusterId);
     params.set('event', rowModel.id);
 
     var out = flow.config.eventPagePath + '?' + params.toString();

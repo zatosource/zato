@@ -38,6 +38,9 @@ _content_type = 'application/json'
 # Header name for the MCP session ID
 _session_header = 'Mcp-Session-Id'
 
+# What a client opening a server-sent events stream accepts
+_accept_event_stream = 'text/event-stream'
+
 # Timeout in seconds for all HTTP requests
 _request_timeout = 30
 
@@ -140,6 +143,18 @@ class MCPClient:
         headers = self._build_headers(session_id)
 
         out = requests.post(self.mcp_url, data=raw_bytes, headers=headers, auth=self.auth, timeout=_request_timeout)
+        return out
+
+# ################################################################################################################################
+
+    def get_stream(self, session_id:'strnone' = None) -> 'requests.Response':
+        """ Sends the GET request a client opens a server-sent events stream with.
+        """
+
+        headers = self._build_headers(session_id)
+        headers['Accept'] = _accept_event_stream
+
+        out = requests.get(self.mcp_url, headers=headers, auth=self.auth, timeout=_request_timeout)
         return out
 
 # ################################################################################################################################

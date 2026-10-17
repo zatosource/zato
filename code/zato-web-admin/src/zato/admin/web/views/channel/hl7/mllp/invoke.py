@@ -19,6 +19,7 @@ from django.http import JsonResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.channel.hl7.mllp.common import logger
+from zato.common.util.api import hex_sequence_to_bytes
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,10 +30,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# .. MLLP framing bytes ..
-_MLLP_Start_Byte = b'\x0b'
-_MLLP_End_Bytes  = b'\x1c\x0d'
 
 # .. TCP recv buffer size ..
 _Recv_Buffer_Size = 65536
@@ -55,6 +52,23 @@ def _resolve_mllp_listener_address(req:'any_') -> 'tuple[str, int]':
     return host, port
 
 # ################################################################################################################################
+
+def _resolve_channel_framing(req:'any_', id:'str') -> 'tuple[bytes, bytes]':
+    """ Resolves the start and end sequences of the channel the message is sent on behalf of -
+    the listener reads a frame under the sequences of the channel its MSH line selects and
+    answers with them, so the message is framed and the reply read the way that channel is.
+    """
+    response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
+
+    if not response.ok:
+        raise Exception(f'HL7 MLLP channel with id `{id}` could not be read')
+
+    start_bytes = hex_sequence_to_bytes(response.data['start_seq'])
+    end_bytes = hex_sequence_to_bytes(response.data['end_seq'])
+
+    return start_bytes, end_bytes
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
@@ -75,8 +89,9 @@ def invoke_channel(req:'any_', id:'str') -> 'JsonResponse':
                 'content_type': 'text/plain',
             }, status=HTTPStatus.BAD_REQUEST)
 
-        # .. wrap in MLLP framing ..
-        mllp_message = _MLLP_Start_Byte + payload_bytes + _MLLP_End_Bytes
+        # .. wrap in the framing of the channel the overlay was opened from ..
+        start_bytes, end_bytes = _resolve_channel_framing(req, id)
+        mllp_message = start_bytes + payload_bytes + end_bytes
 
         start = time()
 
@@ -96,8 +111,8 @@ def invoke_channel(req:'any_', id:'str') -> 'JsonResponse':
                     break
                 response_data += chunk
 
-                # .. stop once we see the MLLP end bytes ..
-                if _MLLP_End_Bytes in response_data:
+                # .. stop once we see the channel's end bytes ..
+                if end_bytes in response_data:
                     break
 
         finally:
@@ -107,9 +122,9 @@ def invoke_channel(req:'any_', id:'str') -> 'JsonResponse':
 
         # .. strip MLLP framing from the response ..
         response_text = response_data
-        if response_text.startswith(_MLLP_Start_Byte):
-            response_text = response_text[1:]
-        end_idx = response_text.find(_MLLP_End_Bytes)
+        if response_text.startswith(start_bytes):
+            response_text = response_text[len(start_bytes):]
+        end_idx = response_text.find(end_bytes)
         if end_idx != -1:
             response_text = response_text[:end_idx]
 

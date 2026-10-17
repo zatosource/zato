@@ -82,7 +82,6 @@ class TestConfigAuditLive:
 
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_channel_name,
             type_=_connection_type_channel,
             is_active=True,
@@ -132,7 +131,6 @@ class TestConfigAuditLive:
         _ = zato_client.edit(
             f'{_generic_service_name}.edit',
             id=self.__class__.channel_id,
-            cluster_id=1,
             name=_channel_name,
             type_=_connection_type_channel,
             is_active=True,

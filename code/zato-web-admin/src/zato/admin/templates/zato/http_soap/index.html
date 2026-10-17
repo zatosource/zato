@@ -100,7 +100,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/alerts-tab.js"></script>
     {{ alerts_tab_config|json_script:"http-soap-alerts-tab-config" }}
     {% endif %}
-    {% if connection == 'outgoing' and transport == 'plain_http' %}
+    {% if has_delivery_tab %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/delivery-tab.js"></script>
     {{ delivery_tab_config|json_script:"delivery-tab-config" }}
     {% endif %}
@@ -224,8 +224,8 @@
                 '_usage',
             {% endif %}
 
-            // Delivery queue link (REST outgoing connections)
-            {% if transport == 'plain_http' and connection == 'outgoing' %}
+            // Delivery queue link (REST outgoing connections, REST and SOAP channels)
+            {% if has_delivery_tab %}
                 '_delivery',
             {% endif %}
 
@@ -272,20 +272,16 @@
                 'health_check_job_id',
             {% endif %}
 
-        ]{% if connection == 'outgoing' and transport == 'plain_http' %}.concat($.fn.zato.delivery_tab.columns()){% endif %}{% if has_alerts_tab %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
+        ]{% if has_delivery_tab %}.concat($.fn.zato.delivery_tab.columns()){% endif %}{% if has_alerts_tab %}.concat($.fn.zato.alerts_tab.columns()){% endif %}
     }
     </script>
 
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with badge=transport_label %}{{ transport_label }} {{ connection_label_plural }}</h2>
@@ -302,7 +298,7 @@
             {% endif %}
             {% if connection == 'channel' and transport == 'plain_http' %}
             |
-            <a href="{% url "analytics" %}?cluster={{ cluster_id|default:"1" }}" class="common">Go to analytics</a>
+            <a href="{% url "analytics" %}" class="common">Go to analytics</a>
             {% endif %}
         </div>
 
@@ -409,7 +405,7 @@
                         <th>&nbsp;</th> {% comment %} _usage {% endcomment %}
                         {% endif %}
 
-                        {% if transport == 'plain_http' and connection == 'outgoing' %}
+                        {% if has_delivery_tab %}
                         <th>&nbsp;</th> {% comment %} _delivery {% endcomment %}
                         {% endif %}
 
@@ -457,8 +453,8 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_job_id {% endcomment %}
                         {% endif %}
 
-                        <!-- 41 - the Delivery tab of REST outgoing connections -->
-                        {% if connection == 'outgoing' and transport == 'plain_http' %}
+                        <!-- 41 - the Delivery tab of REST outgoing connections and of REST and SOAP channels -->
+                        {% if has_delivery_tab %}
                             {% include "zato/include/delivery-tab-headers.html" %}
                         {% endif %}
 
@@ -552,25 +548,27 @@
                         {% endif %}
 
                         {% if connection == 'channel' %}
-                        <td><a href="/zato/http-soap/rate-limiting/{{ item.id }}/?cluster={{ cluster_id }}">Rate limiting</a></td>
+                        <td><a href="/zato/http-soap/rate-limiting/{{ item.id }}/">Rate limiting</a></td>
                         {% endif %}
 
                         {% if connection == 'channel' %}
-                        <td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{{ item.id }}/?cluster={{ cluster_id }}">Cache</a></td>
+                        <td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{{ item.id }}/">Cache</a></td>
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-channel&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-channel&amp;objects={{ item.name|urlencode }}">Usage</a>{% endif %}</td>
+                        {% include "zato/include/delivery-queue-link.html" with conn_type="rest-channel" %}
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'soap' %}
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-channel&amp;object_name={{ item.name|urlencode }}">Audit log</a>{% endif %}</td>
+                        {% include "zato/include/delivery-queue-link.html" with conn_type="soap-channel" %}
                         {% endif %}
 
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-outgoing&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-outgoing&amp;objects={{ item.name|urlencode }}">Usage</a>{% endif %}</td>
                         {% include "zato/include/delivery-queue-link.html" with conn_type="rest" %}
                         {% endif %}
 
@@ -617,8 +615,8 @@
                             <td class='ignore'>{{ item.health_check_job_id|default_if_none:"" }}</td>
                         {% endif %}
 
-                        <!-- 41 - the Delivery tab of REST outgoing connections -->
-                        {% if connection == 'outgoing' and transport == 'plain_http' %}
+                        <!-- 41 - the Delivery tab of REST outgoing connections and of REST and SOAP channels -->
+                        {% if has_delivery_tab %}
                             {% include "zato/include/delivery-tab-cells.html" %}
                         {% endif %}
 
@@ -665,6 +663,9 @@
                     <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
+                        {% if has_delivery_tab %}
+                        {% include "zato/include/delivery-tab-button.html" %}
+                        {% endif %}
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-main" role="tabpanel">
@@ -930,6 +931,10 @@
 
                     {% include "zato/include/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 
+                    {% if has_delivery_tab %}
+                    {% include "zato/include/delivery-tab.html" with panel_id="http-soap-create-tab-panel-delivery" form=create_form %}
+                    {% endif %}
+
                     <table class="form-data">
                         <tr>
                             <td colspan="2" class="form-actions">
@@ -982,7 +987,6 @@
                     </table>
                     {% endif %}
 
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
@@ -1018,6 +1022,9 @@
                     <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ edit_alerts_tab.tab_label }}</button>
+                        {% if has_delivery_tab %}
+                        {% include "zato/include/delivery-tab-button.html" %}
+                        {% endif %}
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-main" role="tabpanel">
@@ -1280,6 +1287,10 @@
 
                     {% include "zato/include/alerts-tab.html" with panel_id="http-soap-edit-tab-panel-alerts" alerts_tab=edit_alerts_tab %}
 
+                    {% if has_delivery_tab %}
+                    {% include "zato/include/delivery-tab.html" with panel_id="http-soap-edit-tab-panel-delivery" form=edit_form %}
+                    {% endif %}
+
                     <table class="form-data">
                         <tr>
                             <td colspan="2" class="form-actions">
@@ -1332,7 +1343,6 @@
                     </table>
                     {% endif %}
 
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
@@ -1355,9 +1365,7 @@
         </form>
         {% endif %}
 
-    {% endif %}
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% if connection == 'outgoing' and transport == 'plain_http' %}
 <div id="openapi-copy-paste-overlay" class="openapi-overlay hidden">

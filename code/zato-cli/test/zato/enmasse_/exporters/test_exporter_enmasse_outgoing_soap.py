@@ -79,9 +79,6 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Clear existing data before importing
         cleanup_enmasse(self.server_path)
         _ = self.session.commit()
@@ -127,8 +124,7 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
             len(created) + len(updated), len(created), len(updated))
 
         # Export outgoing SOAP connections from database
-        cluster_id = self.importer.cluster_id
-        exported_connections = self.outgoing_soap_exporter.export(self.session, cluster_id)
+        exported_connections = self.outgoing_soap_exporter.export(self.session)
         logger.info('Successfully exported %d outgoing SOAP connections', len(exported_connections))
 
         # Verify the number of exported connections matches the number imported
@@ -208,8 +204,7 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
         _ = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_list, self.session)
         _ = self.session.commit()
 
-        cluster_id = self.importer.cluster_id
-        exported_connections = self.outgoing_soap_exporter.export(self.session, cluster_id)
+        exported_connections = self.outgoing_soap_exporter.export(self.session)
 
         exported_by_name = {}
         for conn in exported_connections:
@@ -261,8 +256,7 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
         _ = self.session.commit()
 
         # Export everything and find the connection just created
-        cluster_id = self.importer.cluster_id
-        exported_connections = self.outgoing_soap_exporter.export(self.session, cluster_id)
+        exported_connections = self.outgoing_soap_exporter.export(self.session)
 
         exported = cast_('stranydict', None)
         for conn in exported_connections:

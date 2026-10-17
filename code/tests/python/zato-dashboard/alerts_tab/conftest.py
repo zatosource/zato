@@ -27,7 +27,7 @@ from zato.common.typing_ import any_, cast_
 _settings:'any_' = cast_('any_', zato_settings)
 
 _settings.db_type = 'sqlite'
-_settings.DATABASES = {'default': {'NAME': _db_path, 'USER': '', 'PASSWORD': '', 'HOST': '', 'PORT': ''}}
+_settings.DATABASES = {'default': {'NAME': _db_path}}
 _settings.config_dir = _work_dir
 _settings.log_config = ''
 _settings.ADMIN_INVOKE_NAME = 'admin.invoke'

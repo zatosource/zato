@@ -51,13 +51,13 @@ class ConfluenceExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'confluence_def_list':
+    def export(self, session: 'SASession') -> 'confluence_def_list':
         """ Exports Confluence connection definitions.
         """
         logger.info('Exporting Confluence connection definitions')
 
         # Get Confluence connections from database using the generic connection query
-        db_confluence = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE)
+        db_confluence = connection_list(session, GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE)
 
         if not db_confluence:
             logger.info('No Confluence connection definitions found in DB')

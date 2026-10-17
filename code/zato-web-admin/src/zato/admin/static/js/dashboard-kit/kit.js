@@ -1110,14 +1110,14 @@
         return parts.join('');
     };
 
-    /* A message written as delimited segments - HL7 v2 and X12 are both read this way,
+    /* A message written as delimited segments - HL7 v2 is read this way,
        one segment to a line with its name in front of its fields. The name is what the eye
        looks for going down a message, so that is what is coloured, and the separators are
        given the quietest colour the theme has because they are read past rather than read. */
-    kit._segment_line_pattern = /^[A-Z][A-Z0-9]{2}[|*]/;
+    kit._segment_line_pattern = /^[A-Z][A-Z0-9]{2}\|/;
     // The subcomponent separator is an ampersand, which by the time this runs is already
     // written as the entity that stands for one, so that is what is looked for here
-    kit._segment_separators_pattern = /(\||\^|~|\*|&amp;)/g;
+    kit._segment_separators_pattern = /(\||\^|~|&amp;)/g;
 
     // A message of this kind ends its segments with a carriage return of its own rather
     // than with a newline, so a line of it is whichever of the three a sender chose
@@ -1474,12 +1474,10 @@
 
     /* config:
          base_url:     e.g. '/zato/scheduler/dashboard/'
-         cluster_id:   numeric cluster id
          object_path:  template with {id}, e.g. 'job/{id}/'
          run_path:     template with {id} and {run_id}, e.g. 'job/{id}/run/{run_id}/' */
     kit.urls.init = function(config) {
         kit.urls._base = config.base_url;
-        kit.urls._cluster_id = config.cluster_id;
         kit.urls._object_path = config.object_path || '';
         kit.urls._run_path = config.run_path || '';
         kit.urls._range_minutes = config.range_minutes;
@@ -1490,12 +1488,12 @@
     };
 
     kit.urls.dashboard = function() {
-        return kit.urls._base + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
+        return kit.urls._base + '?range=' + kit.urls._range_minutes;
     };
 
     kit.urls.object_detail = function(object_id, params) {
         var path = kit.urls._object_path.replace('{id}', encodeURIComponent(object_id));
-        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
+        var url = kit.urls._base + path + '?range=' + kit.urls._range_minutes;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
@@ -1508,7 +1506,7 @@
         var path = kit.urls._run_path
             .replace('{id}', encodeURIComponent(object_id))
             .replace('{run_id}', encodeURIComponent(run_id));
-        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id + '&range=' + kit.urls._range_minutes;
+        var url = kit.urls._base + path + '?range=' + kit.urls._range_minutes;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);

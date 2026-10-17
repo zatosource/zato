@@ -25,7 +25,6 @@ from zato.admin.web.views import method_allowed
 from zato.common.analytics.csv_export import channel_csv, consumer_csv, overview_csv
 from zato.common.analytics.query import get_channel, get_consumer, get_overview, Default_Range, Range_Day, Range_Hours, \
     Range_Label, Range_Month, Range_Quarter, Range_Week
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,13 +144,11 @@ def index(req:'any_') -> 'TemplateResponse':
     _diag_log_screen('overview', '', time_range, data, diag_start, diag_query, diag_dumps, dashboard_data)
 
     return_data = {
-        'cluster_id': default_cluster_id,
         'time_range': time_range,
         'ranges': ranges,
         'poll_url': _overview_poll_url,
         'csv_url': _overview_csv_url,
         'dashboard_data': dashboard_data,
-        'zato_clusters': True,
         'zato_template_name': 'zato/analytics/overview.html',
     }
 
@@ -227,14 +224,12 @@ def channel(req:'any_') -> 'TemplateResponse':
     _diag_log_screen('channel', name, time_range, data, diag_start, diag_query, diag_dumps, dashboard_data)
 
     return_data = {
-        'cluster_id': default_cluster_id,
         'name': name,
         'time_range': time_range,
         'ranges': ranges,
         'poll_url': _channel_poll_url,
         'csv_url': _channel_csv_url,
         'dashboard_data': dashboard_data,
-        'zato_clusters': True,
         'zato_template_name': 'zato/analytics/channel.html',
     }
 
@@ -312,14 +307,12 @@ def consumer(req:'any_') -> 'TemplateResponse':
     _diag_log_screen('consumer', name, time_range, data, diag_start, diag_query, diag_dumps, dashboard_data)
 
     return_data = {
-        'cluster_id': default_cluster_id,
         'name': name,
         'time_range': time_range,
         'ranges': ranges,
         'poll_url': _consumer_poll_url,
         'csv_url': _consumer_csv_url,
         'dashboard_data': dashboard_data,
-        'zato_clusters': True,
         'zato_template_name': 'zato/analytics/consumer.html',
     }
 

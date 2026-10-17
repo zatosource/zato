@@ -77,7 +77,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = ('cluster_id',)
     output_required = 'id', 'name', 'is_active', 'is_key_reset_required'
     output_optional = 'hosts', 'host_count', 'is_connected', 'has_key', 'connected_since', 'remote_address', \
         'gateway_version', 'platform'
@@ -155,7 +154,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def enrollment_token(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
+def enrollment_token(req:'HttpRequest', id:'str') -> 'any_':
     """ Issues a single-use enrollment token for one gateway.
     """
     initial = {'dashboard_host': req.get_host()}
@@ -176,7 +175,7 @@ def enrollment_token(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def reset_key(req:'HttpRequest', id:'str', cluster_id:'str') -> 'any_':
+def reset_key(req:'HttpRequest', id:'str') -> 'any_':
     """ Revokes the key of a gateway, which requires the gateway to enroll again.
     """
     response = id_only_service(req, _service_prefix + 'reset-key', id, 'Could not reset the key, e:`{}`')

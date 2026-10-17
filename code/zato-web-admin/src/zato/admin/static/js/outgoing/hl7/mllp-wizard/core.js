@@ -304,7 +304,8 @@ wizard.helpDescriptions = function() {
 
     // The summary links of step 1, each standing for the popover behind it ..
     out['mllp-outconn-wizard-edit-framing'] = 'How each message is wrapped on the wire - the bytes that mark ' +
-        'where a message begins and ends, and how large a reply may be. The defaults follow the MLLP standard.';
+        'where a message begins and ends, and how large a message or a reply may be. ' +
+        'The defaults follow the MLLP standard.';
     out['mllp-outconn-wizard-edit-timing'] = 'How long to wait for the acknowledgment the receiving system ' +
         'sends back. A message with no answer within that time counts as a failed send.';
     out['mllp-outconn-wizard-toggle-tls'] = 'When on, the connection is encrypted with TLS and the receiving ' +

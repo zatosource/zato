@@ -14,7 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.destination.payload import new_overrides
-from zato.common.util.api import new_cid_server
+from zato.common.util.api import asbool, new_cid_server
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import FHIRFacade, KafkaFacade, MLLPFacade, RESTFacade, SFTPFacade
 from zato.server.destination.hook import build_transports, get_config, run_destinations
@@ -106,6 +106,7 @@ def new_channel_item(config:'any_') -> 'stranydict':
         'destinations': config.destinations,
         'respond_from': config.respond_from,
         'delivery_mode': config.delivery_mode,
+        'is_audit_export_payload_active': asbool(config.is_audit_export_payload_active),
     }
 
     return out

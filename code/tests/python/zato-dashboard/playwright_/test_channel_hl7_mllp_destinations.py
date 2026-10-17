@@ -18,8 +18,8 @@ from hl7_client.mllp_receiver import MLLPReceiver
 from hl7_client.rest_receiver import RESTReceiver
 from hl7_client.smtp_receiver import SMTPReceiver
 from mllp_channel import create_channel, create_outgoing_connection, delete_channel, delete_outgoing_connection, \
-    get_item_id, save_channel, send_python, send_with_both_clients, wait_for_item, wait_for_port, \
-    wait_until_accepted, wait_until_routed, Host
+    get_item_id, navigate_to_channels, save_channel, send_python, send_with_both_clients, wait_for_item, wait_for_port, \
+    wait_until_accepted, wait_until_routed, wait_until_saved, Host
 from rest_outconn import create_outconn as create_rest_outconn, delete_outconn as delete_rest_outconn, \
     get_outconn_id, open_outconn_page
 from zato.common.crypto.api import CryptoManager
@@ -54,6 +54,10 @@ _Populate_App  = 'POPULATE_SENDER'
 _Same_Time_App = 'SAME_TIME_SENDER'
 _In_Order_App  = 'IN_ORDER_SENDER'
 _Respond_App   = 'RESPOND_SENDER'
+_Params_App    = 'PARAMS_SENDER'
+
+# The query string the FHIR search destination is configured with
+_Search_Params = 'patient=1&_count=10'
 
 # What the fan-out e-mail destination is configured with and asserted on
 _Smtp_To      = 'care-team@example.com'
@@ -78,10 +82,14 @@ _Mode_Timeout = 30
 _Absence_Wait = 3.0
 
 # The FHIR dashboard page the FHIR outgoing connection is created through
-_Fhir_Page_Url = '/zato/outgoing/hl7/fhir/?cluster=1&type_=outconn-hl7-fhir'
+_Fhir_Page_Url = '/zato/outgoing/hl7/fhir/?type_=outconn-hl7-fhir'
 
 # The SMTP dashboard page the e-mail connection is created through
-_Smtp_Page_Url = '/zato/email/smtp/?cluster=1'
+_Smtp_Page_Url = '/zato/email/smtp/'
+
+# The badge picker the wizard's destinations panel runs on, and the decision lines panel it opens in
+_Picker_Action = 'mllp-wizard-destinations'
+_Pick_Panel = '#decision-pick-panel'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -640,6 +648,144 @@ class TestChannelHL7MLLPDestinations:
             assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
             assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
             assert result.msa_3 == _Respond_Note, f'Expected the receiver to answer, got: {result}'
+
+# ################################################################################################################################
+
+    def test_two_connections_of_one_name_make_one_destination(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        ) -> 'None':
+        """ A destination is addressed by its connection's name alone, so an MLLP connection and a
+        REST connection of one name, both picked in the wizard, come out as one destination - the
+        one picked first - rather than as two nothing could ever tell apart.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        shared_name  = _Test_Name_Prefix + 'twins'
+        channel_name = _Test_Name_Prefix + 'twins-channel'
+
+        try:
+            # Two connections of different kinds under the very same name ..
+            create_outgoing_connection(page, base_url, shared_name, f'{Host}:1')
+            _ = create_rest_outconn(page, base_url, shared_name, f'http://{Host}:1', {'url_path': '/deliver'})
+
+            # .. the wizard opens on a new channel and reaches the step the destinations are picked on ..
+            navigate_to_channels(page, base_url)
+
+            page.click('#markup .page_prompt a:has-text("Create a new channel")')
+            _ = page.wait_for_selector('#mllp-wizard', state='visible')
+
+            page.fill('#id_name', channel_name)
+            page.click('#mllp-wizard-next')
+            time.sleep(0.2)
+
+            _ = page.wait_for_function('$.fn.zato.channel.hl7.mllp.wizard.destinations._connectionData !== null')
+
+            page.click('#mllp-wizard-slot-destinations-chip')
+            _ = page.wait_for_selector(_Pick_Panel, state='visible')
+
+            # .. both badges of that name are picked, the MLLP one first ..
+            available_zone = f'#badge-zone-available-{_Picker_Action}'
+            assigned_zone = f'#badge-zone-assigned-{_Picker_Action}'
+
+            for type_id in ('hl7-mllp', 'rest'):
+                available_badge = f'{available_zone} .security-badge[data-type="{type_id}"][data-connection="{shared_name}"]'
+                assigned_badge = f'{assigned_zone} .security-badge[data-type="{type_id}"][data-connection="{shared_name}"]'
+
+                page.click(f'{available_badge} .security-badge-name')
+                _ = page.wait_for_selector(assigned_badge, state='visible', timeout=5000)
+
+            # .. closing the panel is what reads the zone back into the wizard's state ..
+            page.click('#mllp-wizard-slot-destinations-chip')
+            _ = page.wait_for_selector(_Pick_Panel, state='detached')
+
+            # .. and the state holds one destination, of the kind picked first.
+            chip_text = page.inner_text('#mllp-wizard-slot-destinations-chip')
+            assert '1 destination' in chip_text, f'Expected "1 destination" on the chip, got: "{chip_text}"'
+
+            destination_list = page.evaluate('$.fn.zato.channel.hl7.mllp.wizard.state.destinationList')
+
+            assert len(destination_list) == 1, destination_list
+            assert destination_list[0]['connection'] == shared_name, destination_list
+            assert destination_list[0]['type'] == 'hl7-mllp', destination_list
+
+        finally:
+            delete_outgoing_connection(page, base_url, shared_name)
+            _delete_rest_connection(page, base_url, shared_name)
+
+# ################################################################################################################################
+
+    def test_a_fhir_destination_keeps_its_search_parameters_when_the_panel_is_reopened(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        ) -> 'None':
+        """ The panel of a FHIR destination offers its search parameters as a query string, so a channel
+        opened for editing, its destinations panel opened and closed, and saved again, still has them -
+        the panel reads back every option the delivery reads.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        channel_name = _Test_Name_Prefix + 'params-channel'
+        fhir_conn    = _Test_Name_Prefix + 'params-fhir'
+
+        fhir_receiver = FHIRReceiver()
+        fhir_receiver.start()
+
+        try:
+            _create_fhir_connection(page, base_url, fhir_conn, f'http://{Host}:{fhir_receiver.port}')
+
+            # A search destination - the method, the path and the parameters the search is made with ..
+            destination = {'connection': fhir_conn, 'type': 'hl7-fhir', 'is_active': True,
+                'options': {'method': 'GET', 'path': '/Observation', 'params': _Search_Params}}
+
+            create_channel(page, base_url, channel_name,
+                criteria={'msh3_sending_app': _Params_App}, destinations=[destination])
+
+            # .. the channel is opened for editing and the wizard reaches the step the destinations are on ..
+            navigate_to_channels(page, base_url)
+
+            page.click(f'#data-table tbody tr:has(td:text-is("{channel_name}")) a:text-is("Edit")')
+            _ = page.wait_for_selector('#mllp-wizard', state='visible')
+
+            # .. an edit opens every step as a tab ..
+            page.click('#mllp-wizard-steps .wizard-step[data-step="1"]')
+            time.sleep(0.2)
+
+            _ = page.wait_for_function('$.fn.zato.channel.hl7.mllp.wizard.destinations._connectionData !== null')
+
+            # .. the panel opens with the parameters in their own input ..
+            page.click('#mllp-wizard-slot-destinations-chip')
+            _ = page.wait_for_selector(_Pick_Panel, state='visible')
+
+            params_input = f'#badge-zone-assigned-{_Picker_Action} .security-badge[data-connection="{fhir_conn}"] ' + \
+                '[data-option="params"]'
+            assert page.input_value(params_input) == _Search_Params
+
+            # .. closing the panel reads the inputs back into the wizard's state ..
+            page.click('#mllp-wizard-slot-destinations-chip')
+            _ = page.wait_for_selector(_Pick_Panel, state='detached')
+
+            destination_list = page.evaluate('$.fn.zato.channel.hl7.mllp.wizard.state.destinationList')
+            assert destination_list[0]['options']['params'] == _Search_Params, destination_list
+
+            # .. and the channel saved from that state still stores them.
+            page.click('#mllp-wizard-save')
+            wait_until_saved(page)
+
+            page.click(f'#data-table tbody tr:has(td:text-is("{channel_name}")) a:text-is("Edit")')
+            _ = page.wait_for_selector('#mllp-wizard', state='visible')
+
+            destination_list = page.evaluate('$.fn.zato.channel.hl7.mllp.wizard.state.destinationList')
+            assert destination_list[0]['options']['params'] == _Search_Params, destination_list
+
+        finally:
+            delete_channel(page, base_url, channel_name)
+            _delete_fhir_connection(page, base_url, fhir_conn)
+            fhir_receiver.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -84,7 +84,6 @@ def req() -> 'any_':
     out = Bunch()
     out.zato = Bunch()
     out.zato.client = _FakeClient()
-    out.zato.cluster_id = 1
     return out
 
 # ################################################################################################################################
@@ -97,7 +96,6 @@ def _channel_params(connection:'str', transport:'str', prefix:'str'='') -> 'anyd
     out = {
         'connection': connection,
         'transport': transport,
-        'cluster_id': '1',
         prefix + 'name': 'orders.api',
         prefix + 'is_active': 'on',
         prefix + 'security': ZATO_NONE,

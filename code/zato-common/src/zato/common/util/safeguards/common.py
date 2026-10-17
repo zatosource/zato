@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from re import compile as re_compile
 
 # Zato
-from zato.common.typing_ import any_, strintdict, strlist
+from zato.common.typing_ import any_, strintdict, strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,6 +76,10 @@ class SafeguardConfig:
     collapse_whitespace: bool = False
     strip_base64:        bool = False
 
+    # Data masking - the lowercase names of the fields whose values are replaced whatever they hold
+    masking_enabled: bool = False
+    masked_fields:   strset
+
     # PII removal - lands select detector groups, explicit detector names win over lands,
     # exclusions are removed from whatever the other two selected.
     pii_enabled:             bool = False
@@ -139,6 +143,7 @@ class SafeguardResult:
     unicode_chars_removed:    int = 0
     markup_items_removed:     int = 0
     urls_flagged:             int = 0
+    fields_masked:            int = 0
 
     # PII matches by detector name
     pii_removed: strintdict

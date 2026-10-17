@@ -113,7 +113,6 @@ class TestInternalServices:
         # The audited default route - what the reprocess re-routes into
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_channel_name,
             type_=_connection_type_channel,
             is_active=True,
@@ -132,7 +131,6 @@ class TestInternalServices:
         # The audited outconn pointing at the standalone backend - what the resend goes through
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_outconn_name,
             type_=_connection_type_outconn,
             is_active=True,
@@ -150,7 +148,6 @@ class TestInternalServices:
         # The unaudited forward channel - it seeds the outconn's sent events
         response = zato_client.create(
             f'{_generic_service_name}.create',
-            cluster_id=1,
             name=_forward_channel_name,
             type_=_connection_type_channel,
             is_active=True,
@@ -339,7 +336,7 @@ class TestInternalServices:
 
         # The channel list needs the service's id first ..
         response = zato_client.invoke(
-            'zato.service.get-by-name', {'cluster_id': 1, 'name': _channel_service_name})
+            'zato.service.get-by-name', {'name': _channel_service_name})
 
         service_id = response['id']
 
@@ -380,7 +377,6 @@ class TestInternalServices:
             # .. the audited FHIR outconn pointing at it ..
             response = zato_client.create(
                 f'{_generic_service_name}.create',
-                cluster_id=1,
                 name=_fhir_outconn_name,
                 type_=_connection_type_fhir,
                 is_active=True,

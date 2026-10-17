@@ -52,7 +52,7 @@ def _get_publisher() -> 'any_':
 # ################################################################################################################################
 
 def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
-    topic_list = admin.invoke('zato.pubsub.topic.get-list', {'cluster_id': 1})
+    topic_list = admin.invoke('zato.pubsub.topic.get-list', {})
 
     if isinstance(topic_list, list):
         items:'anylist' = topic_list
@@ -70,7 +70,7 @@ def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
 def _get_sub_key(admin:'any_', topic_name:'str') -> 'str':
     from zato.common.test.config_pubsub_topic_delete_atomic import TestConfig
 
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list
@@ -112,7 +112,6 @@ def _recreate_topic_and_subscribe(admin:'any_', topic_name:'str') -> 'None':
     time.sleep(_settle_time)
 
     _ = admin.invoke('zato.pubsub.subscription.create', {
-        'cluster_id': 1,
         'topic_name_list': [topic_name],
         'sec_base_id': TestConfig.subscriber_sec_base_id,
         'delivery_type': 'pull',
@@ -196,7 +195,6 @@ class TestNoDanglingSubReferenceAfterConcurrentSubscribeAndDelete:
         def _subscribe_loop() -> 'None':
             try:
                 _ = admin.invoke('zato.pubsub.subscription.create', {
-                    'cluster_id': 1,
                     'topic_name_list': [_topic_target],
                     'sec_base_id': TestConfig.subscriber_sec_base_id,
                     'delivery_type': 'pull',
@@ -245,7 +243,6 @@ class TestNoPartialSubscriptionAfterConcurrentSubscribeAndDelete:
         def _subscribe_loop() -> 'None':
             try:
                 _ = admin.invoke('zato.pubsub.subscription.create', {
-                    'cluster_id': 1,
                     'topic_name_list': [_topic_target],
                     'sec_base_id': TestConfig.subscriber_sec_base_id,
                     'delivery_type': 'pull',

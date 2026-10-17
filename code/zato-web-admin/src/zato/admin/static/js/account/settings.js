@@ -18,7 +18,7 @@ $(document).ready(function() {
             },
             onChange: function(hsb, hex, rgb) {
                 _.each(['color', 'backgroundColor'], function(attr_name) {
-                    _.each([input, '#cluster_color_div'], function(elem) {
+                    _.each([input, '#environment_color_div'], function(elem) {
                         $(elem).css(attr_name, '#' + hex);
                         $(elem).val(hex); // Works on the 'input' element only
                     });
@@ -43,7 +43,7 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.account.basic_settings.preview = function(id) {
-    var div = $('#cluster_color_div');
+    var div = $('#environment_color_div');
     div.removeClass('hidden').addClass('visible');
     div.css('backgroundColor', $('#color_'+id).css('backgroundColor'));
 };

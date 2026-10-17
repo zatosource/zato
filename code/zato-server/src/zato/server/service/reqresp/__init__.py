@@ -18,7 +18,6 @@ from lxml.objectify import ObjectifiedElement
 
 # Zato
 from zato.common.api import IMAPAttachment, IMAPMessage, simple_types
-from zato.common.hl7.fhir.bulk_export.file import BulkExportFile
 from zato.common.marshal_.api import Model
 from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.json_internal import loads
@@ -27,6 +26,7 @@ from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 from zato.edifact import parse_edifact, wire_text_from
 from zato.fhir.r4_0_1.resources import Bundle
+from zato.hl7v2.base import HL7Message
 from zato.server.generic.api.outconn_sdk import ConnectorContainer, type_prefix as sdk_type_prefix
 
 # Zato
@@ -48,10 +48,11 @@ if 0:
 
     # Zato
     from zato.common.odb.api import PoolStore
-    from zato.common.typing_ import any_, anylistnone, callable_, stranydict, strnone
+    from zato.common.typing_ import any_, anydictnone, anylistnone, callable_, stranydict, strnone
     from zato.edifact import EDIInterchange
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict, ConfigStore
+    from zato.server.connection.chat.discord import DiscordClient
     from zato.server.connection.chat.slack import SlackClient
     from zato.server.connection.cloud.aws import AWSClient
     from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
@@ -74,6 +75,7 @@ if 0:
     Microsoft365Client = Microsoft365Client
     MicrosoftPowerAutomateClient = MicrosoftPowerAutomateClient
     MicrosoftTeamsClient = MicrosoftTeamsClient
+    DiscordClient = DiscordClient
     SlackClient = SlackClient
     ConfigDict = ConfigDict
     ConfigManager = ConfigManager
@@ -165,6 +167,19 @@ class AMQPRequestData:
 
 # ################################################################################################################################
 
+class QueueRequestData:
+    """ What a service's get_queue_response hook knows about the message a channel with the queue on has just stored.
+    """
+    __slots__ = ('msg_id',)
+
+    def __init__(self) -> 'None':
+        self.msg_id = ''
+
+    def __repr__(self) -> 'str':
+        return make_repr(self)
+
+# ################################################################################################################################
+
 class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
@@ -173,7 +188,7 @@ class Request:
 
     __slots__ = ('service', 'logger', 'payload', 'raw', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_request_ctx', 'channel_params',
-        'merge_channel_params', 'http', 'amqp', 'soap', 'enforce_string_encoding', 'headers', '_edifact')
+        'merge_channel_params', 'http', 'amqp', 'soap', 'queue', 'enforce_string_encoding', 'headers', '_edifact')
 
     def __init__(
         self,
@@ -195,6 +210,9 @@ class Request:
         self.merge_channel_params = True
         self.amqp = cast_('AMQPRequestData', None)
         self.soap = None # type: any_
+
+        # The message a channel with the queue on stored, empty in every other invocation
+        self.queue = QueueRequestData()
 
         # Message headers from queue bridge channels (e.g. IBM MQ MQMD and MQRFH2 fields)
         self.headers = {} # type: stranydict
@@ -222,10 +240,15 @@ class Request:
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
-        # A bulk export file is the input as it is, whatever the service declares - the service reads it lazily,
-        # and so are the bundle a C-CDA channel made of the document it received and the messages, attachments
-        # and files that the IMAP and file transfer schedulers hand over
-        if isinstance(self.payload, (BulkExportFile, Bundle, FileTransferItem, IMAPAttachment, IMAPMessage)):
+        # A service that forwards its own input to another one hands over a ServiceInput,
+        # which is read as the dict of the fields it holds.
+        if isinstance(self.payload, ServiceInput):
+            self.payload = self.payload.to_dict()
+
+        # The bundle a C-CDA channel made of the document it received, the messages, attachments and files
+        # that the IMAP and file transfer schedulers hand over, a model instance a publisher sent to a topic
+        # and an HL7 v2 message an MLLP channel parsed on input are each the input as it is, whatever the service declares
+        if isinstance(self.payload, (Bundle, FileTransferItem, HL7Message, IMAPAttachment, IMAPMessage, Model)):
             self.input = self.payload
 
         elif is_io:
@@ -334,17 +357,12 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's config manager.
     """
-    __slots__ = ('amqp', 'as2', 'as4', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap',
-        '_config_manager')
+    __slots__ = ('amqp', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap', '_config_manager')
 
     def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
-            ldap=None, as2=None, as4=None, config_manager=None):
+            ldap=None, config_manager=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
-
-        self.as2 = cast_('stranydict', as2)
-
-        self.as4 = cast_('ConfigDict', as4)
 
         self.graphql = cast_('GraphQLFacade', graphql)
 
@@ -621,6 +639,59 @@ class SlackFacade:
         client = self[name]
 
         out = client.send(channel, text, blocks)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DiscordFacade:
+    """ The API through which Discord connections are accessed by their names,
+    e.g. self.discord.send('My Discord', 'Hello', channel_id='1234567890123456789').
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'DiscordClient':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back the client that its wrapper maintains.
+        out = item.conn.shared_client
+        return out
+
+    def send(
+        self,
+        name:'str',
+        content:'str',
+        channel_id:'str'='',
+        embeds:'anylistnone'=None,
+        files:'anylistnone'=None,
+        allowed_mentions:'anydictnone'=None,
+        ) -> 'stranydict':
+        """ Sends a message through the named connection to a channel, or to the connection's default channel
+        if none is given. Embeds, if given, are Discord embed objects and files are (file name, content) tuples.
+        Mentions in the content notify no one unless allowed_mentions says otherwise.
+        """
+        client = self[name]
+
+        out = client.send(content, channel_id, embeds, files, allowed_mentions)
+        return out
+
+    def send_direct(
+        self,
+        name:'str',
+        user_id:'str',
+        content:'str',
+        embeds:'anylistnone'=None,
+        files:'anylistnone'=None,
+        ) -> 'stranydict':
+        """ Sends a direct message through the named connection to a person identified by their user ID.
+        """
+        client = self[name]
+
+        out = client.send_direct(user_id, content, embeds, files)
         return out
 
 # ################################################################################################################################

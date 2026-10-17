@@ -14,7 +14,7 @@ from logging import getLogger
 from zato.common.api import PubSub
 from zato.common.pubsub.delivery import DeliveryExhausted, wait_between_rounds
 from zato.common.pubsub.dlq import move_to_dlq
-from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, Key_Conn_ID, Key_Conn_Type
+from zato.common.pubsub.outgoing import deliver_envelope
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -43,7 +43,7 @@ class Deliver(Service):
         # A message whose attempts ran out moves to the DLQ ..
         except DeliveryExhausted as e:
 
-            # .. one that does not move waits before it is offered again ..
+            # .. and one that does not move waits before it is offered again.
             if not move_to_dlq(self.server, self.cid, envelope, e):
                 wait_between_rounds()
                 raise
@@ -51,10 +51,6 @@ class Deliver(Service):
         except Exception:
             wait_between_rounds()
             raise
-
-        # .. and either way it is one fewer in the queue.
-        sub_key = get_outgoing_sub_key(envelope[Key_Conn_Type], envelope[Key_Conn_ID])
-        self.server.config_manager.outgoing_queue_depth.lower(sub_key, 1)
 
 # ################################################################################################################################
 # ################################################################################################################################

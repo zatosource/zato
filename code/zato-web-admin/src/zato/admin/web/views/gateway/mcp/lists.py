@@ -16,8 +16,10 @@ from django.http import HttpResponse
 # Zato
 from zato.admin.web.util import get_server_directory
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.gateway.mcp.common import logger
-from zato.common.api import GENERIC, Groups, Sec_Def_Type_Name
+from zato.admin.web.views.gateway.mcp.common import find_group_id, get_group_member_list, is_hidden_security_name, logger, \
+    read_gateway
+from zato.common.api import GENERIC, MCP, SEC_DEF_TYPE, Sec_Def_Type_Name
+from zato.common.util.gateway import get_mcp_group_name
 from zato.common.skills.api import get_skill_name_list
 
 # ################################################################################################################################
@@ -42,7 +44,6 @@ def get_service_list(req:'any_') -> 'HttpResponse':
 
     # .. get all deployed services ..
     response = req.zato.client.invoke('zato.service.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'name_filter': '*',
         'paginate': False,
     })
@@ -51,7 +52,6 @@ def get_service_list(req:'any_') -> 'HttpResponse':
     assigned_names:'set[str]' = set()
     if gateway_id:
         gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
-            'cluster_id': req.zato.cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'id': gateway_id,
             'paginate': False,
@@ -79,7 +79,7 @@ def get_service_list(req:'any_') -> 'HttpResponse':
     for service in response.data:
         name = service['name']
 
-        if name.startswith('zato.') or name.startswith('pub.zato.'):
+        if name.startswith(MCP.Internal_Service_Prefixes):
             continue
 
         items.append({
@@ -100,7 +100,7 @@ def get_service_list(req:'any_') -> 'HttpResponse':
 
 @method_allowed('POST')
 def get_security_list(req:'any_') -> 'HttpResponse':
-    """ Returns the list of available security definitions (API key, Basic Auth)
+    """ Returns the list of available security definitions (API key, Basic Auth, bearer token)
     for the security badge picker, with is_member flags set based on the gateway's
     auto-created security group.
     """
@@ -108,9 +108,10 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     # The gateway ID is provided when editing an existing gateway ..
     gateway_id = req.GET.get('gateway_id')
 
-    # .. get all available security definitions of the supported types ..
+    # .. get all available security definitions of the supported types - these are all the types
+    # a gateway's group may hold, so that a save of the gateway replaces none of its members with nothing ..
     response = req.zato.client.invoke('zato.security.get-list', {
-        'sec_type': ['apikey', 'basic_auth'],
+        'sec_type': [SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH],
         'paginate': False,
     })
 
@@ -118,7 +119,7 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     items:'strdictlist' = []
     for item in response.data:
         name = item['name']
-        if name in {'ide_publisher', 'pubapi'} or 'zato.' in name:
+        if is_hidden_security_name(name):
             continue
 
         sec_type = item['sec_type']
@@ -134,52 +135,22 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     # .. sort by type then name ..
     items.sort(key=lambda elem: (elem['sec_type'], elem['name']))
 
-    # .. if editing, figure out which definitions are already assigned ..
+    # .. if editing, mark the members of the gateway's own group, named after the gateway ..
     if gateway_id:
 
-        logger.info('MCP get_security_list: gateway_id=%s', gateway_id)
+        gateway = read_gateway(req, gateway_id)
+        group_name = get_mcp_group_name(gateway['name'])
 
-        # .. look up the gateway's security_groups field ..
-        gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
-            'cluster_id': req.zato.cluster_id,
-            'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
-            'paginate': False,
-        })
+        if group_id := find_group_id(req, group_name):
 
-        logger.info('MCP get_security_list: gateway_response.ok=%s, data_count=%s',
-            gateway_response.ok, len(gateway_response.data) if gateway_response.data else 0)
+            member_security_ids:'set[int]' = set()
 
-        if gateway_response.ok and gateway_response.data:
-            for gateway_item in gateway_response.data:
-                item_id = gateway_item['id']
-                logger.info('MCP get_security_list: item id=%s (%s) vs gateway_id=%s (%s), keys=%s',
-                    item_id, type(item_id).__name__, gateway_id, type(gateway_id).__name__,
-                    list(gateway_item.keys()))
+            for member in get_group_member_list(req, group_id):
+                member_security_ids.add(member['security_id'])
 
-                if str(item_id) == str(gateway_id):
-                    security_groups = gateway_item.get('security_groups', [])
-                    logger.info('MCP get_security_list: matched, security_groups=%s', security_groups)
-
-                    if security_groups:
-                        group_id = security_groups[0]
-                        logger.info('MCP get_security_list: fetching members for group_id=%s', group_id)
-
-                        member_response = req.zato.client.invoke('zato.groups.get-member-list', {
-                            'group_type': Groups.Type.API_Clients,
-                            'group_id': group_id,
-                        })
-
-                        logger.info('MCP get_security_list: member_response.ok=%s, data=%s',
-                            member_response.ok, member_response.data)
-
-                        if member_response.ok and member_response.data:
-                            member_security_ids = {m['security_id'] for m in member_response.data}
-                            logger.info('MCP get_security_list: member_security_ids=%s', member_security_ids)
-                            for item in items:
-                                if item['id'] in member_security_ids:
-                                    item['is_member'] = True
-                                    logger.info('MCP get_security_list: marked as assigned: id=%s name=%s', item['id'], item['name'])
-                    break
+            for item in items:
+                if item['id'] in member_security_ids:
+                    item['is_member'] = True
 
     logger.info('MCP get_security_list: returning %d items, %d assigned',
         len(items), sum(1 for item in items if item['is_member']))
@@ -209,7 +180,6 @@ def get_skill_list(req:'any_') -> 'HttpResponse':
     assigned_names:'strset' = set()
     if gateway_id:
         gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
-            'cluster_id': req.zato.cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'paginate': False,
         })

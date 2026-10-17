@@ -312,17 +312,36 @@ def _get_link_rows(child_event_id:'int') -> 'anylist':
 
 # ################################################################################################################################
 
+def _get_child_link_rows(parent_event_id:'int') -> 'anylist':
+    """ Returns the lineage links of one parent event as (child_event_id, link_type) tuples.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_link_table.c.child_event_id, event_link_table.c.link_type)
+    query = query.where(event_link_table.c.parent_event_id == parent_event_id)
+    query = query.order_by(event_link_table.c.id)
+
+    out:'anylist' = []
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            out.append(tuple(row))
+
+    return out
+
+# ################################################################################################################################
+
 def _run_lineage_checks(audit_log:'AuditLog') -> 'None':
     """ Confirms lineage links - multiple parents at insert time and links added
     after the fact, as when a resubmission points back to its original.
     """
-    first_parent_id = audit_log.insert(AuditSource.X12, AuditEvent.Message_Received, 'audit.test.lineage',
+    first_parent_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, 'audit.test.lineage',
         cid='cid-lineage-parent-1')
-    second_parent_id = audit_log.insert(AuditSource.X12, AuditEvent.Message_Received, 'audit.test.lineage',
+    second_parent_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, 'audit.test.lineage',
         cid='cid-lineage-parent-2')
 
     # One message aggregated out of two parents ..
-    child_id = audit_log.insert(AuditSource.X12, AuditEvent.Message_Sent, 'audit.test.lineage',
+    child_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Sent, 'audit.test.lineage',
         cid='cid-lineage-child', parents=[first_parent_id, second_parent_id],
         parent_link_type=AuditLink.Aggregated_From)
 
@@ -333,7 +352,7 @@ def _run_lineage_checks(audit_log:'AuditLog') -> 'None':
     ], links
 
     # .. and a resubmission linked to its original after both were written.
-    resubmit_id = audit_log.insert(AuditSource.X12, AuditEvent.Message_Sent, 'audit.test.lineage',
+    resubmit_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Sent, 'audit.test.lineage',
         cid='cid-lineage-resubmit')
     audit_log.add_links(resubmit_id, [child_id], AuditLink.Resubmit_Of)
 
@@ -349,35 +368,50 @@ def _run_buffered_writer_checks() -> 'None':
     buffered = AuditLog(_server_name, flush_max_size=3, flush_max_wait_ms=300)
 
     # Buffered writes return no id and nothing is visible yet ..
-    result = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    result = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
     assert result is None
-    assert _count_source_events(AuditSource.AS2) == 0
+    assert _count_source_events(AuditSource.PubSub) == 0
 
     # .. the third event fills the batch up and everything lands at once ..
-    _ = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    _ = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    assert _count_source_events(AuditSource.AS2) == 3
+    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    assert _count_source_events(AuditSource.PubSub) == 3
 
     # .. an explicit flush writes out a partial batch ..
-    _ = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    assert _count_source_events(AuditSource.AS2) == 3
+    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    assert _count_source_events(AuditSource.PubSub) == 3
 
     buffered.flush()
-    assert _count_source_events(AuditSource.AS2) == 4
+    assert _count_source_events(AuditSource.PubSub) == 4
 
     # .. and an event left in the buffer is flushed by time, without any further writes.
-    _ = buffered.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
+    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
 
     deadline = monotonic() + _flush_wait_seconds
 
     while monotonic() < deadline:
 
-        if _count_source_events(AuditSource.AS2) == 5:
+        if _count_source_events(AuditSource.PubSub) == 5:
             break
 
         sleep(0.1)
 
-    assert _count_source_events(AuditSource.AS2) == 5, 'The time-based flush never ran'
+    assert _count_source_events(AuditSource.PubSub) == 5, 'The time-based flush never ran'
+
+    # A caller that links further events to one it writes receives the id from a buffered writer too,
+    # so the links of the events that follow are written as they are under a synchronous writer ..
+    parent_id = buffered.insert(AuditSource.MLLP_Channel, AuditEvent.Interchange_Received, 'audit.test.buffered',
+        cid='cid-buffered-batch', needs_id=True)
+    assert parent_id is not None
+
+    _ = buffered.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, 'audit.test.buffered',
+        cid='cid-buffered-batch', parents=[parent_id], parent_link_type=AuditLink.Batch_Item_Of)
+    buffered.flush()
+
+    # .. and the link row names the parent written at once.
+    child_rows = _get_child_link_rows(parent_id)
+    assert len(child_rows) == 1, child_rows
+    assert child_rows[0][1] == AuditLink.Batch_Item_Of, child_rows
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -79,9 +79,6 @@ class TestEnmassePubSubTopicExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Import security definitions first, as pubsub topics may depend on them
         security_defs_from_yaml = self.yaml_config['security']
         if security_defs_from_yaml:
@@ -119,7 +116,7 @@ class TestEnmassePubSubTopicExporter(TestCase):
         _ = self.session.commit()
 
         # Now test the export functionality
-        all_exported_topics = self.pubsub_topic_exporter.export(self.session, self.exporter.cluster_id)
+        all_exported_topics = self.pubsub_topic_exporter.export(self.session)
 
         # Filter exported topics to only include those with names starting with "enmasse"
         exported_topics = [topic for topic in all_exported_topics if topic['name'].startswith('enmasse')]

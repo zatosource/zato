@@ -48,7 +48,7 @@ if 0:
 
 logger = logging.getLogger('zato.test.playwright')
 
-_Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
+_Topic_Page_Url = '/zato/pubsub/topic/'
 
 _Test_Name_Prefix = 'test.amqp.bridge.' + new_cid() + '.'
 

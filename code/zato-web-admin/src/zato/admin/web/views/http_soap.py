@@ -18,6 +18,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import alerts_tab, delivery_tab
+from zato.admin.web.delivery_tab import has_delivery_tab
 from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
@@ -105,7 +106,7 @@ def _format_security_groups_info(group_count:'int', group_member_count:'int') ->
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_security_href(cluster_id:'int', sec_type:'str', security_name:'str') -> 'str':
+def _get_security_href(sec_type:'str', security_name:'str') -> 'str':
     """ Where the page of the security definition a row uses is found.
     """
     sec_type_as_link = sec_type.replace('_', '-')
@@ -115,7 +116,7 @@ def _get_security_href(cluster_id:'int', sec_type:'str', security_name:'str') ->
     else:
         direction = ''
 
-    out = f'/zato/security/{sec_type_as_link}/{direction}?cluster={cluster_id}&query={security_name}'
+    out = f'/zato/security/{sec_type_as_link}/{direction}?query={security_name}'
     return out
 
 # ################################################################################################################################
@@ -145,14 +146,13 @@ def _edit_create_response(req, id, verb, transport, connection, name): # type: i
     # The security cell of the row rebuilt by the listing renders the canonical name and href,
     # so the object is read anew and both are computed the way the listing computes them.
     response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
         'id': id,
     })
     updated = response.data
 
     # Connections without security carry no name at all here.
     if security_name := updated.get('security_name'):
-        security_href = _get_security_href(req.zato.cluster_id, updated['sec_type'], security_name)
+        security_href = _get_security_href(updated['sec_type'], security_name)
     else:
         security_name = ''
         security_href = ''
@@ -186,12 +186,9 @@ def index(req): # type: ignore
 
     # Outgoing SOAP connections have their own dedicated page
     if connection == 'outgoing' and transport == 'soap':
-        return HttpResponseRedirect(f'/zato/outgoing/soap/?cluster={req.zato.cluster_id}')
+        return HttpResponseRedirect('/zato/outgoing/soap/')
 
-    create_form = None
-    edit_form = None
     meta = {}
-    response = None
 
     colspan = 17
 
@@ -201,138 +198,137 @@ def index(req): # type: ignore
     # The alert type this page's rows carry settings under, empty for a page whose rows carry none
     alert_type = get_alert_type(connection, transport)
 
-    if req.zato.cluster_id:
-        for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
-            if connection == 'outgoing':
-                if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in _rest_security_type_supported:
-                    continue
-
-            elif def_item.sec_type in _outgoing_only_security_types:
-                continue
-
-            _security.append(def_item)
-
-        create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS, req=req, alert_type=alert_type)
-        edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit', req=req, alert_type=alert_type)
-
+    for def_item in req.zato.client.invoke('zato.security.get-list', {}):
         if connection == 'outgoing':
-            create_form.fields['url_path'].required = False
-            edit_form.fields['url_path'].required = False
-
-        # The callback tab lets outgoing REST connections deliver responses to other outgoing REST connections ..
-        if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
-            add_http_soap_select(create_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
-            add_http_soap_select(edit_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
-
-            # .. and to pub/sub topics, selected by name from the topics that currently exist ..
-            add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
-            add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
-
-            # .. which is also where a message from the DLQ is forwarded to.
-            add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
-            add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
-
-        input_dict = {
-            'cluster_id': req.zato.cluster_id,
-            'connection': connection,
-            'transport': transport,
-        }
-
-        response = req.zato.client.invoke('zato.http-soap.get-list', input_dict)
-
-        for item in response.data:
-            if query not in item.name:
+            if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in _rest_security_type_supported:
                 continue
 
-            _security_name = item.security_name
-            if _security_name:
-                security_href = _get_security_href(req.zato.cluster_id, item.sec_type, _security_name)
-            else:
-                _security_name = ''
-                security_href = ''
+        elif def_item.sec_type in _outgoing_only_security_types:
+            continue
 
-            security_id = get_http_channel_security_id(item)
+        _security.append(def_item)
 
-            http_soap = Bunch()
-            http_soap.id = item.id
-            http_soap.name = item.name
-            http_soap.is_active = item.is_active
-            http_soap.is_internal = item.is_internal
-            http_soap.connection = connection
-            http_soap.transport = transport
-            http_soap.host = item.host
-            http_soap.url_path = item.url_path
-            http_soap.method = item.method
-            http_soap.soap_action = item.soap_action
-            http_soap.soap_version = item.soap_version
+    create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS, req=req, alert_type=alert_type)
+    edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit', req=req, alert_type=alert_type)
 
-            # The MTOM flag is an opaque attribute, so it is absent from channels that never set it.
-            if transport == 'soap':
-                use_mtom = item.get('use_mtom')
-                if use_mtom is None:
-                    use_mtom = False
-                http_soap.use_mtom = use_mtom
-            http_soap.data_format = item.data_format
-            http_soap.security_id = security_id
-            http_soap.security_name = _security_name
-            http_soap.security_href = security_href
-            http_soap.content_type = item.content_type
-            http_soap.timeout = item.timeout
+    if connection == 'outgoing':
+        create_form.fields['url_path'].required = False
+        edit_form.fields['url_path'].required = False
 
-            if connection == 'channel':
-                http_soap.service_id = item.service_id
-                http_soap.service_name = item.service_name
-                http_soap.merge_url_params_req = item.merge_url_params_req
-                http_soap.url_params_pri = item.url_params_pri
-                http_soap.params_pri = item.params_pri
+    # The callback tab lets outgoing REST connections deliver responses to other outgoing REST connections ..
+    if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
+        add_http_soap_select(create_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
+        add_http_soap_select(edit_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
 
-                # Channels that never had groups assigned carry no counts at all
-                group_count = item.get('security_group_count')
-                group_member_count = item.get('security_group_member_count')
+        # .. and to pub/sub topics, selected by name from the topics that currently exist ..
+        add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
+        add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
 
-                if not group_count:
-                    group_count = 0
+    # The Delivery tab's DLQ forwards messages to pub/sub topics, selected by name from the topics that currently exist
+    if has_delivery_tab(connection, transport):
+        add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
+        add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
 
-                if not group_member_count:
-                    group_member_count = 0
+    input_dict = {
+        'connection': connection,
+        'transport': transport,
+    }
 
-                http_soap.security_group_count = group_count
-                http_soap.security_groups_info = _format_security_groups_info(group_count, group_member_count)
+    response = req.zato.client.invoke('zato.http-soap.get-list', input_dict)
 
-                match_slash = item.get('match_slash')
-                if match_slash == '':
-                    match_slash = True
+    for item in response.data:
+        if query not in item.name:
+            continue
 
-                http_soap.match_slash = match_slash
-                http_soap.http_accept = item.get('http_accept') or ''
+        _security_name = item.security_name
+        if _security_name:
+            security_href = _get_security_href(item.sec_type, _security_name)
+        else:
+            _security_name = ''
+            security_href = ''
 
-                # The OpenAPI flag is an opaque attribute, so channels that predate it carry no value,
-                # which means they are included in OpenAPI documents.
-                should_include_in_openapi = item.get('should_include_in_openapi')
-                if should_include_in_openapi is None:
-                    should_include_in_openapi = True
+        security_id = get_http_channel_security_id(item)
 
-                http_soap.should_include_in_openapi = should_include_in_openapi
+        http_soap = Bunch()
+        http_soap.id = item.id
+        http_soap.name = item.name
+        http_soap.is_active = item.is_active
+        http_soap.is_internal = item.is_internal
+        http_soap.connection = connection
+        http_soap.transport = transport
+        http_soap.host = item.host
+        http_soap.url_path = item.url_path
+        http_soap.method = item.method
+        http_soap.soap_action = item.soap_action
+        http_soap.soap_version = item.soap_version
 
-                # The deprecation attributes are opaque ones too, so channels that predate them
-                # carry no values, which means they are not deprecated.
-                is_deprecated = item.get('is_deprecated')
-                if is_deprecated is None:
-                    is_deprecated = False
+        # The MTOM flag is an opaque attribute, so it is absent from channels that never set it.
+        if transport == 'soap':
+            use_mtom = item.get('use_mtom')
+            if use_mtom is None:
+                use_mtom = False
+            http_soap.use_mtom = use_mtom
+        http_soap.data_format = item.data_format
+        http_soap.security_id = security_id
+        http_soap.security_name = _security_name
+        http_soap.security_href = security_href
+        http_soap.content_type = item.content_type
+        http_soap.timeout = item.timeout
 
-                http_soap.is_deprecated = is_deprecated
-                http_soap.deprecation_sunset = item.get('deprecation_sunset', '')
-                http_soap.deprecation_successor = item.get('deprecation_successor', '')
-            else:
-                http_soap.ping_method = item.ping_method
-                http_soap.pool_size = item.pool_size
-                http_soap.validate_tls = item.get('validate_tls', True)
+        if connection == 'channel':
+            http_soap.service_id = item.service_id
+            http_soap.service_name = item.service_name
+            http_soap.merge_url_params_req = item.merge_url_params_req
+            http_soap.url_params_pri = item.url_params_pri
+            http_soap.params_pri = item.params_pri
 
-            fill_row_from_item(http_soap, item, alert_type, connection, transport, req.zato.user_profile)
+            # Channels that never had groups assigned carry no counts at all
+            group_count = item.get('security_group_count')
+            group_member_count = item.get('security_group_member_count')
 
-            items.append(http_soap)
+            if not group_count:
+                group_count = 0
 
-        meta = response.meta
+            if not group_member_count:
+                group_member_count = 0
+
+            http_soap.security_group_count = group_count
+            http_soap.security_groups_info = _format_security_groups_info(group_count, group_member_count)
+
+            match_slash = item.get('match_slash')
+            if match_slash == '':
+                match_slash = True
+
+            http_soap.match_slash = match_slash
+            http_soap.http_accept = item.get('http_accept') or ''
+
+            # The OpenAPI flag is an opaque attribute, so channels that predate it carry no value,
+            # which means they are included in OpenAPI documents.
+            should_include_in_openapi = item.get('should_include_in_openapi')
+            if should_include_in_openapi is None:
+                should_include_in_openapi = True
+
+            http_soap.should_include_in_openapi = should_include_in_openapi
+
+            # The deprecation attributes are opaque ones too, so channels that predate them
+            # carry no values, which means they are not deprecated.
+            is_deprecated = item.get('is_deprecated')
+            if is_deprecated is None:
+                is_deprecated = False
+
+            http_soap.is_deprecated = is_deprecated
+            http_soap.deprecation_sunset = item.get('deprecation_sunset', '')
+            http_soap.deprecation_successor = item.get('deprecation_successor', '')
+        else:
+            http_soap.ping_method = item.ping_method
+            http_soap.pool_size = item.pool_size
+            http_soap.validate_tls = item.get('validate_tls', True)
+
+        fill_row_from_item(http_soap, item, alert_type, connection, transport, req.zato.user_profile)
+
+        items.append(http_soap)
+
+    meta = response.meta
 
     openapi_sample_data = ''
     if connection == 'outgoing' and transport == 'plain_http':
@@ -348,9 +344,7 @@ def index(req): # type: ignore
         if getattr(item, 'service_name', None) and item.service_name.startswith(internal_service_prefixes)
     })
 
-    return_data = {'zato_clusters':req.zato.clusters,
-        'cluster_id':req.zato.cluster_id,
-        'search_form':SearchForm(req.zato.clusters, req.GET),
+    return_data = {'search_form':SearchForm(req.GET),
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
@@ -387,8 +381,11 @@ def index(req): # type: ignore
         return_data['edit_alerts_tab'] = alerts_tab.get_alerts_tab_context(edit_form, alert_type)
         return_data['alerts_tab_config'] = alerts_tab.get_alerts_tab_config(alert_type)
 
-    # Outgoing REST connections carry the Delivery tab, the template's includes and its JS read the tab's field names off this
-    if connection == 'outgoing' and transport == 'plain_http':
+    # Outgoing REST connections and REST and SOAP channels carry the Delivery tab, the template's includes
+    # and its JS read the tab's field names off this
+    return_data['has_delivery_tab'] = has_delivery_tab(connection, transport)
+
+    if return_data['has_delivery_tab']:
         return_data['delivery_tab_config'] = delivery_tab.get_delivery_tab_config()
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
@@ -442,7 +439,6 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
     # Read the object as it currently stands - the edit service needs the full picture,
     # so the stored values travel along with the ones that changed ..
     response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
         'id': id,
     })
 
@@ -453,7 +449,6 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
 
     # .. the edit service reads these from its own input rather than from what the read returned ..
     item_dict['id'] = id
-    item_dict['cluster_id'] = req.zato.cluster_id
     item_dict['connection'] = connection
     item_dict['transport'] = transport
 
@@ -487,14 +482,13 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
 
     # Read the object anew so the reply carries the canonical values the row renders.
     response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
         'id': id,
     })
     updated = response.data
 
     # Connections without security carry no name at all here.
     if security_name := updated.get('security_name'):
-        security_href = _get_security_href(req.zato.cluster_id, updated['sec_type'], security_name)
+        security_href = _get_security_href(updated['sec_type'], security_name)
         sec_type_name = Sec_Def_Type_Name[updated['sec_type']]
     else:
         security_name = ''
@@ -536,7 +530,7 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def delete(req, id, cluster_id): # type: ignore
+def delete(req, id): # type: ignore
     _ = id_only_service(req, 'zato.http-soap.delete', id, 'Object could not be deleted, e:`{}`')
     return HttpResponse()
 
@@ -544,7 +538,7 @@ def delete(req, id, cluster_id): # type: ignore
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id): # type: ignore
+def ping(req, id): # type: ignore
     response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
 
     if isinstance(response, HttpResponseServerError):

@@ -30,7 +30,6 @@ class TestChannelREST:
 
     def test_01_get_list_empty(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='channel',
             transport='plain_http',
         )
@@ -38,7 +37,6 @@ class TestChannelREST:
 
     def test_02_create_one(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-ch-rest-1',
             is_active=True,
             is_internal=False,
@@ -53,7 +51,6 @@ class TestChannelREST:
 
     def test_03_get_list_after_create(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='channel',
             transport='plain_http',
         )
@@ -63,7 +60,6 @@ class TestChannelREST:
     def test_04_create_batch(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'test-ch-rest-{i}',
                 is_active=True,
                 is_internal=False,
@@ -77,7 +73,6 @@ class TestChannelREST:
 
     def test_05_get_list_batch(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='channel',
             transport='plain_http',
         )
@@ -88,7 +83,6 @@ class TestChannelREST:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-ch-rest-1-edited',
             is_active=True,
             is_internal=False,
@@ -101,7 +95,6 @@ class TestChannelREST:
 
     def test_07_get_list_after_edit(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='channel',
             transport='plain_http',
         )
@@ -121,7 +114,6 @@ class TestChannelREST:
 
     def test_10_get_list_after_delete(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='channel',
             transport='plain_http',
         )
@@ -135,7 +127,6 @@ class TestChannelREST:
 
     def test_12_get_list_final(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='channel',
             transport='plain_http',
         )

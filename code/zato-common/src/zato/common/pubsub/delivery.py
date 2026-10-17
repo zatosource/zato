@@ -18,13 +18,13 @@ from gevent import sleep
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.util.retry import get_next_sleep_time
+from zato.common.util.retry import get_first_sleep_time, get_next_sleep_time
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import callable_, callnone
+    from zato.common.typing_ import any_, callable_, callnone
     from zato.common.util.retry import RetryPolicy
 
 # ################################################################################################################################
@@ -54,6 +54,20 @@ class DeliveryExhausted(Exception):
 
         # The class name of the exception the last attempt raised.
         self.error_class = error_class
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SendRejected(Exception):
+    """ Raised by an attempt when the endpoint turned the message down. A permanent refusal is the endpoint saying
+    the message itself is wrong, so no further attempt is made with it.
+    """
+
+    def __init__(self, error:'str', response:'any_'=None, *, is_permanent:'bool'=False) -> 'None':
+        super().__init__(error)
+        self.error = error
+        self.response = response
+        self.is_permanent = is_permanent
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,7 +108,7 @@ def deliver_with_policy(
     attempts_allowed = 1 + policy.max_retries
 
     total_sleep_time = 0
-    current_sleep_time = policy.sleep_time
+    current_sleep_time = get_first_sleep_time(policy)
 
     def check_should_continue() -> 'None':
         if should_continue:
@@ -124,10 +138,22 @@ def deliver_with_policy(
             attempt()
             return
 
+        # An attempt that found its connection not taking anything at all stops the round rather than failing it,
+        # the message stays for a round that runs once the connection does
+        except DeliveryInterrupted:
+            raise
+
         except Exception as e:
             attempts_made += 1
 
-            # Both the attempt count and the total wait are caps
+            # The endpoint said the message itself is wrong, which no further attempt can get past ..
+            if isinstance(e, SendRejected):
+                if e.is_permanent:
+                    logger.info('Queue delivery round over cid=%s, conn=%s, attempts=%s, refused=%s',
+                        cid, conn_name, attempts_made, e)
+                    raise DeliveryExhausted(str(e), attempts_made, e.__class__.__name__) from e
+
+            # .. both the attempt count and the total wait are caps
             has_attempts_left = attempts_made < attempts_allowed
             has_time_left = total_sleep_time < policy.backoff_threshold
 

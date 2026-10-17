@@ -14,7 +14,7 @@ from zato.common.util.api import asbool
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dictlist, stranydict
+    from zato.common.typing_ import any_, dictlist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,10 +40,7 @@ class Enmasse(ZatoCommand):
         {'name':'--result-file', 'help':'Path to a JSON file to write counts of created and updated objects to after an import'},
     ]
 
-    def get_cluster_id(self, args):
-        return 1 # Always this value because there is always going to be one cluster only
-
-    def execute(self, args) -> 'None':
+    def execute(self, args:'any_') -> 'None':
 
         # stdlib
         import os
@@ -51,7 +48,6 @@ class Enmasse(ZatoCommand):
 
         # Zato
         from zato.cli.enmasse.client import get_server_client, get_session_from_server_dir
-        from zato.cli.enmasse.config import ModuleCtx
         from zato.cli.enmasse.exporter import EnmasseYAMLExporter
         from zato.cli.enmasse.importer import EnmasseYAMLImporter
         from zato.cli.enmasse.util import FileWriter
@@ -61,9 +57,6 @@ class Enmasse(ZatoCommand):
 
         # Exit with a clear message instead of failing deep inside the crypto setup if this is not a server
         self.ensure_path_is_a_server(server_path)
-
-        # Store cluster ID for exporters and importers
-        ModuleCtx.Cluster_ID = self.get_cluster_id(args)
 
         # Set component_dir - needed by importer/exporter
         self.component_dir = server_path
@@ -76,7 +69,7 @@ class Enmasse(ZatoCommand):
             from zato.common.ext.configobj_ import ConfigObj
 
             # Load the environment variables
-            env_config = ConfigObj(args.env_file)
+            env_config:'any_' = ConfigObj(args.env_file)
 
             # Set environment variables
             for section in env_config:
@@ -157,9 +150,9 @@ class Enmasse(ZatoCommand):
                     wait_for_services_timeout=args.missing_wait_time
                 )
 
-                # .. let the caller know how many objects of each type were created and updated ..
+                # .. let the caller know how many objects of each type were created, updated and deleted ..
                 if args.result_file:
-                    self._write_result_file(args.result_file, created, updated)
+                    self._write_result_file(args.result_file, created, updated, importer.deleted_objects)
 
                 # .. reload the configuration if needed ..
                 if asbool(os.environ.get('Zato_Needs_Config_Reload', True)):
@@ -193,32 +186,13 @@ class Enmasse(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _write_result_file(self, path:'str', created:'stranydict', updated:'stranydict') -> 'None':
-
-        # stdlib
-        from json import dumps
-
-        counts_created = {}
-        counts_updated = {}
-
-        for key, items in created.items():
-            counts_created[key] = len(items)
-
-        for key, items in updated.items():
-            counts_updated[key] = len(items)
-
-        data = {
-            'created': counts_created,
-            'updated': counts_updated,
-        }
-
-        with open(path, 'w') as f:
-            _ = f.write(dumps(data))
+    def _write_result_file(self, path:'str', created:'stranydict', updated:'stranydict', deleted:'stranydict') -> 'None':
+        write_result_file(path, created, updated, deleted)
 
 # ################################################################################################################################
 
     @staticmethod
-    def format_object_name(item):
+    def format_object_name(item:'any_') -> 'any_':
 
         # For groups objects, display name and members but never ID
         if isinstance(item, dict):
@@ -230,6 +204,38 @@ class Enmasse(ZatoCommand):
 
         # For regular objects, just return the name
         return getattr(item, 'name', str(item))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def write_result_file(path:'str', created:'stranydict', updated:'stranydict', deleted:'stranydict') -> 'None':
+    """ Writes how many objects of each type an import created, updated and deleted, for the caller of the command.
+    """
+
+    # stdlib
+    from json import dumps
+
+    counts_created = {}
+    counts_updated = {}
+    counts_deleted = {}
+
+    for key, items in created.items():
+        counts_created[key] = len(items)
+
+    for key, items in updated.items():
+        counts_updated[key] = len(items)
+
+    for key, items in deleted.items():
+        counts_deleted[key] = len(items)
+
+    data = {
+        'created': counts_created,
+        'updated': counts_updated,
+        'deleted': counts_deleted,
+    }
+
+    with open(path, 'w') as f:
+        _ = f.write(dumps(data))
 
 # ################################################################################################################################
 # ################################################################################################################################

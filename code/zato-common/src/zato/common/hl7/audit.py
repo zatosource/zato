@@ -500,10 +500,11 @@ def audit_batch_received(
         attrs={'batch_count': len(messages)},
         bodies={AuditBody.Request: batch_text},
         is_export_payload_active=is_export_payload_active,
+        needs_id=True,
     )
 
-    # Lineage links need the parent's id, which only the synchronous writer returns -
-    # under a buffered writer the children are still written, just without links.
+    # Lineage links need the parent's id, which the write above returns under any writer that is on -
+    # a turned-off audit log returns None and writes nothing, so there is nothing to link to either.
     if out is not None:
         parents = [out]
     else:

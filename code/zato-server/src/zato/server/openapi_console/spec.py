@@ -9,23 +9,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import typing
-from contextlib import closing
 from inspect import isclass
 
 # Zato
-from zato.common.api import OpenAPI_Console_Auth, SEC_DEF_TYPE, URL_TYPE
-from zato.common.crypto.api import is_string_equal
-from zato.common.odb.model import SecurityBase
+from zato.common.api import HTTP_SOAP, URL_TYPE
 from zato.common.typing_ import cast_
-from zato.common.webapp.auth.dashboard_users import is_dashboard_admin
-from zato.openapi.generator.io_scanner import TypeMapper, extract_model_fields_recursive
+from zato.openapi.generator.io_scanner import TypeMapper, extract_model_fields_recursive, get_element_info
 from zato.openapi.generator.openapi_ import OpenAPIGenerator
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dictlist, intnone, stranydict, tuple_
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, intnone, intset, stranydict, tuple_
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -42,131 +38,23 @@ _spec_title = 'Zato API'
 # The HTTP method used when a service has no method-specific handlers
 _default_http_method = 'post'
 
-# The definition types whose callers sign in with the username the definition carries
-_username_sec_types = [SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH]
+# The Accept value of channels that every request reaches, whatever it accepts
+_accept_any = HTTP_SOAP.ACCEPT.ANY
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _get_sec_names_by_username(server:'ParallelServer', username:'str') -> 'anydict':
-    """ Returns, per security definition type, the name of the definition that carries the given username.
-    The database holds at most one row per username and type, so this is a single indexed read.
-    """
-    out = {}
-
-    with closing(server.odb.session()) as session:
-        rows = session.query(
-            SecurityBase.sec_type,
-            SecurityBase.name,
-        ).filter(
-            SecurityBase.cluster_id==server.cluster_id
-        ).filter(
-            SecurityBase.username==username
-        ).filter(
-            SecurityBase.sec_type.in_(_username_sec_types)
-        ).all()
-
-    for sec_type, name in rows:
-        out[sec_type] = name
-
-    return out
-
-# ################################################################################################################################
-
-def _has_secret(sec_def:'anydict | None', password:'str') -> 'bool':
-    """ Whether the given definition is active and its secret is the one the caller sent.
-    """
-    # There may be no definition of a given type for this username
-    if sec_def is None:
-        return False
-
-    config = sec_def['config']
-
-    # Inactive definitions can never match
-    if not config['is_active']:
-        return False
-
-    out = is_string_equal(password, config['password'])
-    return out
-
-# ################################################################################################################################
-
-def validate_credentials(server:'ParallelServer', username:'str', password:'str') -> 'intnone':
-    """ Checks the username and password against the active security definitions of the types
-    REST channels support - Basic Auth, API keys and Bearer tokens. API key callers sign in with
-    the definition's name as the username and the key itself as the password, Bearer token callers
-    with the definition's username and its secret.
-    Returns the matching definition's ID or None if the credentials are not valid.
-    """
-    url_data = server.config_manager.request_dispatcher.url_data
-
-    # The generated usernames of API key definitions mean nothing to callers, so it is the definition's
-    # name that identifies one on the sign-in form, and that is what they are held under here ..
-    apikey_sec_def = url_data.apikey_config.get(username)
-
-    if apikey_sec_def:
-        if _has_secret(apikey_sec_def, password):
-            return apikey_sec_def['config']['id']
-
-    # .. Basic Auth and Bearer token definitions are reached by the username they carry,
-    # which the database resolves to the one name each type can hold it under ..
-    sec_names = _get_sec_names_by_username(server, username)
-
-    # .. and the runtime configuration is what has the secret to compare with.
-    for sec_type, config_dict in ((SEC_DEF_TYPE.BASIC_AUTH, url_data.basic_auth_config),
-        (SEC_DEF_TYPE.OAUTH, url_data.oauth_config)):
-
-        sec_name = sec_names.get(sec_type)
-
-        if not sec_name:
-            continue
-
-        sec_def = config_dict.get(sec_name)
-
-        if sec_def:
-            if _has_secret(sec_def, password):
-                config = sec_def['config']
-
-                # The database matched the username, so the runtime configuration has to carry it too
-                if is_string_equal(username, config['username']):
-                    return config['id']
-
-# ################################################################################################################################
-
-def resolve_caller(server:'ParallelServer', fields:'anydict') -> 'tuple_[intnone, bool]':
-    """ Resolves a console command's auth fields into the caller's security definition ID and admin flag.
-    A caller with no ID and no admin flag could not be identified and gets nothing.
-    """
-    username = fields['username']
-
-    # Entra ID has already authenticated this caller
-    if fields['auth_type'] == OpenAPI_Console_Auth.Type_Entra:
-        return None, True
-
-    # Dashboard users are the console's admins, so their credentials are checked first,
-    # against the auth_user table in the same database the server's ODB uses ..
-    with closing(server.odb.session()) as session:
-        is_admin = is_dashboard_admin(session, username, fields['password'])
-
-    if is_admin:
-        return None, True
-
-    # .. and every other caller is checked against the security definitions.
-    security_id = validate_credentials(server, username, fields['password'])
-
-    return security_id, False
-
 # ################################################################################################################################
 
 def _io_from_string(value:'str') -> 'anydict':
-    """ Turns a single string input or output declaration into a generator definition.
+    """ Turns a single string input or output declaration into a generator definition,
+    with the type that the server gives the element.
     """
-    is_required = not value.startswith('-')
+    element = get_element_info(value)
 
     out = {
         'type': 'string',
-        'name': value.lstrip('-'),
-        'required': is_required,
+        'name': element['name'],
+        'required': element['required'],
+        'schema_type': element['schema_type'],
     }
 
     return out
@@ -175,21 +63,12 @@ def _io_from_string(value:'str') -> 'anydict':
 
 def _io_from_sequence(value:'any_') -> 'anydict':
     """ Turns a tuple or list of input or output elements into a generator definition.
-    Elements are either plain strings or typed elements that carry .name and .is_required.
+    Elements are either plain strings or typed elements, each with the type that the server gives it.
     """
     elements = []
 
     for item in value:
-        if isinstance(item, str):
-            element = {
-                'name': item.lstrip('-'),
-                'required': not item.startswith('-'),
-            }
-        else:
-            element = {
-                'name': item.name,
-                'required': item.is_required,
-            }
+        element = get_element_info(item)
         elements.append(element)
 
     out = {'type': 'tuple', 'elements': elements}
@@ -238,26 +117,90 @@ def _io_definition(value:'any_', models:'stranydict') -> 'anydict':
 
 # ################################################################################################################################
 
-def is_channel_visible(channel_item:'anydict', security_id:'int') -> 'bool':
-    """ Decides whether a channel is visible to the caller identified by the given security definition.
-    The caller's credentials were already verified at sign-in, so visibility is pure membership.
+def is_channel_documented(channel_item:'anydict') -> 'bool':
+    """ Whether a channel is one that OpenAPI documents describe, which are the only channels
+    the console can invoke too.
     """
-    # A channel whose own security definition is the caller's one is always visible ..
-    if channel_item.get('security_id') == security_id:
-        return True
+    # Only active, non-internal REST channels are documented ..
+    if channel_item['connection'] != 'channel':
+        return False
 
-    # .. otherwise, the caller's definition may belong to one of the channel's security groups,
-    # which covers Basic Auth, API key and Bearer token members alike.
-    if security_groups_ctx := channel_item.get('security_groups_ctx'):
+    if channel_item['transport'] != URL_TYPE.PLAIN_HTTP:
+        return False
+
+    if not channel_item['is_active']:
+        return False
+
+    if channel_item['is_internal']:
+        return False
+
+    # .. channels without a service of their own are skipped ..
+    if not channel_item['service_name']:
+        return False
+
+    # .. and channels can opt out of OpenAPI documents - only an explicit off flag excludes them,
+    # channels that predate the flag have no value and are included.
+    if channel_item.get('should_include_in_openapi') is False:
+        return False
+
+    return True
+
+# ################################################################################################################################
+
+def get_accepted_security_id(channel_item:'anydict', security_ids:'intset') -> 'intnone':
+    """ Returns the ID of the one among the given security definitions that the channel accepts,
+    or None if the channel accepts none of them.
+    """
+    security_groups_ctx = channel_item.get('security_groups_ctx')
+
+    # Security groups with members apply alongside the channel's own definition, if it has one ..
+    if security_groups_ctx:
+        has_group_members = security_groups_ctx.has_members()
+    else:
+        has_group_members = False
+
+    # .. a channel with a definition of its own accepts only that definition ..
+    if channel_security_id := channel_item.get('security_id'):
+        if channel_security_id not in security_ids:
+            return None
+        candidates = [channel_security_id]
+
+    # .. a channel with group members accepts each member, in the order of their IDs ..
+    elif has_group_members:
+        candidates = sorted(security_ids)
+
+    # .. and a channel with neither a definition nor group members accepts no console caller.
+    else:
+        return None
+
+    if not has_group_members:
+        return channel_security_id
+
+    # The definition, if there is one, has to be a member of one of the groups too,
+    # which exist whenever they have members.
+    security_groups_ctx = cast_('any_', security_groups_ctx)
+
+    for security_id in candidates:
         if security_groups_ctx.has_security_id(security_id):
-            return True
+            return security_id
 
-    return False
+    return None
+
+# ################################################################################################################################
+
+def is_channel_visible(channel_item:'anydict', security_ids:'intset') -> 'bool':
+    """ Whether a channel is visible to a caller whose credentials the given security definitions accept,
+    which is the case when the channel itself accepts one of these definitions.
+    """
+    security_id = get_accepted_security_id(channel_item, security_ids)
+
+    out = security_id is not None
+    return out
 
 # ################################################################################################################################
 
 def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'stranydict') -> 'dictlist':
-    """ Builds generator service entries for one channel, one entry per HTTP method the service handles.
+    """ Builds generator service entries for one channel, one entry per HTTP method the channel accepts.
     """
     service_name = channel_item['service_name']
     service_store = server.service_store
@@ -273,8 +216,11 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
     input_definition = _io_definition(getattr(class_, 'input', None), models)
     output_definition = _io_definition(getattr(class_, 'output', None), models)
 
-    # .. find out which HTTP methods the service responds to ..
-    if method_handlers := class_.http_method_handlers:
+    # .. a channel with a method of its own accepts that one method only, a channel accepting any method
+    # documents the ones its service has handlers for, and a service with no such handlers is a POST one ..
+    if channel_method := channel_item['method']:
+        http_methods = [channel_method]
+    elif method_handlers := class_.http_method_handlers:
         http_methods = sorted(method_handlers)
     else:
         http_methods = [_default_http_method]
@@ -284,6 +230,20 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
     deprecation_sunset    = channel_item.get('deprecation_sunset', '')
     deprecation_successor = channel_item.get('deprecation_successor', '')
 
+    # .. the service's own docstring, never an inherited one, describes the operation as a single paragraph ..
+    if docstring := class_.__doc__:
+        docstring = ' '.join(docstring.split())
+    else:
+        docstring = ''
+
+    # .. a channel that names an Accept value of its own is reached only by requests that send it,
+    # so the document gives that value as the media type of the operation's responses ..
+    response_media_type = ''
+
+    if http_accept := channel_item['http_accept']:
+        if http_accept != _accept_any:
+            response_media_type = http_accept
+
     # .. and build one entry per method.
     out = []
 
@@ -291,6 +251,7 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
         entry = {
             'name': service_name,
             'class_name': class_.__name__,
+            'docstring': docstring,
             'url_path': channel_item['url_path'],
             'http_method': http_method.lower(),
             'input': input_definition,
@@ -298,6 +259,7 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
             'is_deprecated': is_deprecated,
             'deprecation_sunset': deprecation_sunset,
             'deprecation_successor': deprecation_successor,
+            'response_media_type': response_media_type,
         }
         out.append(entry)
 
@@ -310,7 +272,7 @@ def build_full_spec(server:'ParallelServer') -> 'tuple_[anydict, anydict]':
     Returns the document and a channel map of path -> HTTP method -> channel ID, which is what
     per-caller filtering later uses to decide which operations a caller can see.
     """
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
 
     models:'stranydict' = {}
     services = []
@@ -318,23 +280,8 @@ def build_full_spec(server:'ParallelServer') -> 'tuple_[anydict, anydict]':
 
     for channel_item in url_data.channel_data:
 
-        # Only active, non-internal REST channels are documented ..
-        if channel_item['connection'] != 'channel':
-            continue
-        if channel_item['transport'] != URL_TYPE.PLAIN_HTTP:
-            continue
-        if not channel_item['is_active']:
-            continue
-        if channel_item['is_internal']:
-            continue
-
-        # .. channels without a service of their own, e.g. dispatcher-handled ones, are skipped ..
-        if not channel_item['service_name']:
-            continue
-
-        # .. channels can opt out of OpenAPI documents - only an explicit off flag excludes them,
-        # channels that predate the flag carry no value and are included ..
-        if channel_item.get('should_include_in_openapi') is False:
+        # Only the channels that documents describe are part of it ..
+        if not is_channel_documented(channel_item):
             continue
 
         # .. each remaining channel contributes one entry per HTTP method,
@@ -362,6 +309,31 @@ def build_full_spec(server:'ParallelServer') -> 'tuple_[anydict, anydict]':
 
 # ################################################################################################################################
 
+def get_spec_inputs(server:'ParallelServer') -> 'anylist':
+    """ Returns what the complete document is built out of - each channel that it describes, together with
+    the class of the service behind that channel - which a document built earlier is current for while it remains the same.
+    """
+    service_store = server.service_store
+    out = []
+
+    for channel_item in server.url_data.channel_data:
+
+        if not is_channel_documented(channel_item):
+            continue
+
+        # A channel whose service is not deployed contributes no operations, and a redeployed service has a new class
+        if impl_name := service_store.name_to_impl_name.get(channel_item['service_name']):
+            service_info = service_store.services[impl_name]
+            service_class = service_info['service_class']
+        else:
+            service_class = None
+
+        out.append((channel_item['id'], service_class))
+
+    return out
+
+# ################################################################################################################################
+
 def _collect_schema_refs(node:'any_', out:'any_') -> 'None':
     """ Walks a document fragment and adds the names of all the referenced component schemas to the output set.
     """
@@ -383,13 +355,13 @@ def filter_spec(
     server:'ParallelServer',
     spec:'anydict',
     channel_map:'anydict',
-    security_id:'int',
+    security_ids:'intset',
 ) -> 'anydict':
     """ Filters the cached full document down to the operations the caller's credentials can invoke.
     Tags and component schemas that no remaining operation uses are dropped too, so the filtered
     document reveals nothing about endpoints the caller cannot see.
     """
-    url_data = server.config_manager.request_dispatcher.url_data
+    url_data = server.url_data
 
     # Visibility is checked against live channel data so that security changes take effect immediately
     channel_by_id = {item['id']: item for item in url_data.channel_data}
@@ -410,7 +382,7 @@ def filter_spec(
             if channel_item is None:
                 continue
 
-            if not is_channel_visible(channel_item, security_id):
+            if not is_channel_visible(channel_item, security_ids):
                 continue
 
             kept_operations[http_method] = operation

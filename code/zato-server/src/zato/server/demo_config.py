@@ -23,7 +23,6 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.common.alerting.names import get_notification_conn_name
 from zato.common.api import GENERIC
-from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import Channel_Clinic, Channel_Lab, Channel_Main, Outconn_FHIR, Outconn_Forward
 from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn, HTTPSOAP, Job, PubSubPermission, PubSubSubscription, PubSubTopic, \
@@ -32,6 +31,8 @@ from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.file_system import get_python_files
 from zato.server.demo import _archive_intake_channel, _archive_outconn
+from zato.server.demo_file_transfer.layout import Feeder_Name as _file_transfer_feeder_name, FTP_Connections, \
+    get_connection_names, get_schedule_job_names, SFTP_Connections, SMB_Connections
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,8 +63,9 @@ Set_HL7       = 'hl7'
 Set_IBM_MQ    = 'ibm_mq'
 Set_Kafka     = 'kafka'
 Set_PubSub    = 'pubsub'
+Set_File_Transfer = 'file_transfer'
 
-Set_Names = [Set_Scheduler, Set_Tutorial, Set_HL7, Set_IBM_MQ, Set_Kafka, Set_PubSub]
+Set_Names = [Set_Scheduler, Set_Tutorial, Set_HL7, Set_IBM_MQ, Set_Kafka, Set_PubSub, Set_File_Transfer]
 
 # The demo config sets a fresh environment receives on its first start
 First_Start_Set_Names = [Set_Tutorial, Set_HL7]
@@ -106,6 +108,9 @@ _tutorial_security_name = 'My API Key'
 _tutorial_job_name      = 'my.report.job'
 _tutorial_pickup_file   = 'api.py'
 
+# What the file transfer demo set consists of - the feeder job doubles as its presence check
+_file_transfer_job_names = [_file_transfer_feeder_name] + get_schedule_job_names()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -143,6 +148,12 @@ _manifests = {
         {'kind': 'security-basic-auth', 'names': _pubsub_security_names},
         {'kind': 'job', 'names': [_pubsub_job_name]},
     ],
+    Set_File_Transfer: [
+        {'kind': 'job', 'names': _file_transfer_job_names},
+        {'kind': 'outconn-sftp', 'names': get_connection_names(SFTP_Connections)},
+        {'kind': 'outconn-ftp', 'names': get_connection_names(FTP_Connections)},
+        {'kind': 'outconn-smb', 'names': get_connection_names(SMB_Connections)},
+    ],
 }
 
 # The generic-connection type each generic-connection kind stores its rows under
@@ -154,6 +165,9 @@ _generic_conn_types = {
     'channel-hl7-mllp': 'channel-hl7-mllp',
     'outconn-hl7-mllp': 'outconn-hl7-mllp',
     'outconn-hl7-fhir': 'outconn-hl7-fhir',
+    'outconn-sftp':     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
+    'outconn-ftp':      GENERIC.CONNECTION.TYPE.OUTCONN_FTP,
+    'outconn-smb':      GENERIC.CONNECTION.TYPE.OUTCONN_SMB,
 }
 
 # Which side of the http-soap table each REST kind lives on
@@ -165,13 +179,13 @@ _rest_connections = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The marker that records that the first-start import already ran in this cluster,
-# whether it imported anything or found the cluster non-empty.
+# The marker that records that the first-start import already ran,
+# whether it imported anything or found the environment non-empty.
 _marker_type = 'demo.config.auto.import'
 _marker_name = 'default'
 
-# The security definitions every new cluster is created with - they do not count
-# against the emptiness of a cluster.
+# The security definitions every new environment is created with - they do not count
+# against the emptiness of an environment.
 _baseline_security_names = [
     'admin.invoke',
     'ide_publisher',
@@ -201,7 +215,6 @@ def _existing_job_names(server:'ParallelServer', kind:'str', names:'strlist') ->
     with closing(server.odb.session()) as session:
         rows = session.query(Job.name).\
             filter(job_name_column.in_(names)).\
-            filter(Job.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -223,7 +236,6 @@ def _existing_generic_conn_names(server:'ParallelServer', kind:'str', names:'str
         rows = session.query(GenericConn.name).\
             filter(conn_name_column.in_(names)).\
             filter(GenericConn.type_==type_).\
-            filter(GenericConn.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -245,7 +257,6 @@ def _existing_rest_names(server:'ParallelServer', kind:'str', names:'strlist') -
         rows = session.query(HTTPSOAP.name).\
             filter(rest_name_column.in_(names)).\
             filter(HTTPSOAP.connection==connection).\
-            filter(HTTPSOAP.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -265,7 +276,6 @@ def _existing_security_names(server:'ParallelServer', kind:'str', names:'strlist
     with closing(server.odb.session()) as session:
         rows = session.query(SecurityBase.name).\
             filter(security_name_column.in_(names)).\
-            filter(SecurityBase.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -285,7 +295,6 @@ def _existing_sql_names(server:'ParallelServer', kind:'str', names:'strlist') ->
     with closing(server.odb.session()) as session:
         rows = session.query(SQLConnectionPool.name).\
             filter(sql_name_column.in_(names)).\
-            filter(SQLConnectionPool.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -305,7 +314,6 @@ def _existing_topic_names(server:'ParallelServer', kind:'str', names:'strlist') 
     with closing(server.odb.session()) as session:
         rows = session.query(PubSubTopic.name).\
             filter(topic_name_column.in_(names)).\
-            filter(PubSubTopic.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -335,6 +343,9 @@ _existing_names_funcs = {
     'channel-hl7-mllp': _existing_generic_conn_names,
     'outconn-hl7-mllp': _existing_generic_conn_names,
     'outconn-hl7-fhir': _existing_generic_conn_names,
+    'outconn-sftp':     _existing_generic_conn_names,
+    'outconn-ftp':      _existing_generic_conn_names,
+    'outconn-smb':      _existing_generic_conn_names,
 }
 
 # ################################################################################################################################
@@ -375,6 +386,12 @@ def _import_pubsub(server:'ParallelServer') -> 'any_':
     return out
 
 # ################################################################################################################################
+
+def _import_file_transfer(server:'ParallelServer') -> 'any_':
+    out = server.import_demo_file_transfer()
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _delete_jobs(server:'ParallelServer', job_names:'strlist') -> 'strlist':
@@ -387,7 +404,6 @@ def _delete_jobs(server:'ParallelServer', job_names:'strlist') -> 'strlist':
     with closing(server.odb.session()) as session:
         rows = session.query(Job.id, Job.name).\
             filter(job_name_column.in_(job_names)).\
-            filter(Job.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -415,7 +431,6 @@ def _delete_generic_connections(server:'ParallelServer', connections:'any_') -> 
     with closing(server.odb.session()) as session:
         rows = session.query(GenericConn.id, GenericConn.name).\
             filter(GenericConn.name.in_(connection_names)).\
-            filter(GenericConn.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -423,7 +438,7 @@ def _delete_generic_connections(server:'ParallelServer', connections:'any_') -> 
 
     # .. and each connection goes through the same delete service the Dashboard uses.
     for connection_id, connection_name in rows:
-        _ = server.invoke('zato.generic.connection.delete', {'id': connection_id, 'cluster_id': default_cluster_id})
+        _ = server.invoke('zato.generic.connection.delete', {'id': connection_id})
         out.append(connection_name)
 
     return out
@@ -438,7 +453,6 @@ def _delete_http_soap(server:'ParallelServer', name:'str', connection:'str') -> 
         rows = session.query(HTTPSOAP.id, HTTPSOAP.name).\
             filter(HTTPSOAP.name==name).\
             filter(HTTPSOAP.connection==connection).\
-            filter(HTTPSOAP.cluster_id==default_cluster_id).\
             all()
 
     # Our response to produce
@@ -487,7 +501,6 @@ def _remove_pubsub(server:'ParallelServer') -> 'stranydict':
 
         security_rows = session.query(SecurityBase.id, SecurityBase.name).\
             filter(SecurityBase.name.in_(_pubsub_security_names)).\
-            filter(SecurityBase.cluster_id==default_cluster_id).\
             all()
 
         security_ids = []
@@ -497,17 +510,14 @@ def _remove_pubsub(server:'ParallelServer') -> 'stranydict':
 
         subscription_rows = session.query(PubSubSubscription.id).\
             filter(PubSubSubscription.sec_base_id.in_(security_ids)).\
-            filter(PubSubSubscription.cluster_id==default_cluster_id).\
             all()
 
         permission_rows = session.query(PubSubPermission.id).\
             filter(PubSubPermission.sec_base_id.in_(security_ids)).\
-            filter(PubSubPermission.cluster_id==default_cluster_id).\
             all()
 
         topic_rows = session.query(PubSubTopic.id, PubSubTopic.name).\
             filter(PubSubTopic.name==_pubsub_topic_name).\
-            filter(PubSubTopic.cluster_id==default_cluster_id).\
             all()
 
     deleted:'strlist' = []
@@ -565,7 +575,6 @@ def _remove_tutorial(server:'ParallelServer') -> 'stranydict':
     with closing(server.odb.session()) as session:
         sql_rows = session.query(SQLConnectionPool.id, SQLConnectionPool.name).\
             filter(SQLConnectionPool.name==_tutorial_sql_name).\
-            filter(SQLConnectionPool.cluster_id==default_cluster_id).\
             all()
 
     for sql_id, sql_name in sql_rows:
@@ -577,7 +586,6 @@ def _remove_tutorial(server:'ParallelServer') -> 'stranydict':
     with closing(server.odb.session()) as session:
         security_rows = session.query(SecurityBase.id, SecurityBase.name).\
             filter(SecurityBase.name==_tutorial_security_name).\
-            filter(SecurityBase.cluster_id==default_cluster_id).\
             all()
 
     for security_id, security_name in security_rows:
@@ -589,6 +597,15 @@ def _remove_tutorial(server:'ParallelServer') -> 'stranydict':
     _remove_pickup_file(server, _tutorial_pickup_file)
 
     out = {'deleted': deleted}
+    return out
+
+# ################################################################################################################################
+
+def _remove_file_transfer(server:'ParallelServer') -> 'stranydict':
+
+    from zato.server.demo_file_transfer import remove_demo_file_transfer
+
+    out = remove_demo_file_transfer(server)
     return out
 
 # ################################################################################################################################
@@ -610,6 +627,7 @@ _import_funcs = {
     Set_IBM_MQ:    _import_ibm_mq,
     Set_Kafka:     _import_kafka,
     Set_PubSub:    _import_pubsub,
+    Set_File_Transfer: _import_file_transfer,
 }
 
 _remove_funcs = {
@@ -619,6 +637,7 @@ _remove_funcs = {
     Set_IBM_MQ:    _remove_ibm_mq,
     Set_Kafka:     _remove_kafka,
     Set_PubSub:    _remove_pubsub,
+    Set_File_Transfer: _remove_file_transfer,
 }
 
 # ################################################################################################################################
@@ -665,7 +684,7 @@ def get_demo_config_details(server:'ParallelServer') -> 'stranydict':
 # ################################################################################################################################
 
 def get_demo_config_states(server:'ParallelServer') -> 'strbooldict':
-    """ Returns, for each demo config set, whether its objects currently exist in the cluster.
+    """ Returns, for each demo config set, whether its objects currently exist in the environment.
     """
     details = get_demo_config_details(server)
 
@@ -755,38 +774,26 @@ def save_demo_config(server:'ParallelServer', states:'strbooldict') -> 'stranydi
 # ################################################################################################################################
 # ################################################################################################################################
 
-def is_cluster_empty(server:'ParallelServer') -> 'bool':
-    """ Whether the cluster holds no user-defined objects - nothing beyond what a new
+def is_environment_empty(server:'ParallelServer') -> 'bool':
+    """ Whether the environment holds no user-defined objects - nothing beyond what a new
     environment is created with.
     """
     with closing(server.odb.session()) as session:
 
         # Scheduler jobs - a new environment has none
         job_count = session.query(Job).\
-            filter(Job.cluster_id==default_cluster_id).\
             count()
 
-        # REST objects - a new environment only has internal ones, except the channels
-        # the auto-channel startup pass creates, which their opaque attributes identify
+        # REST objects - a new environment only has internal ones
         is_internal_column = cast_('any_', HTTPSOAP.is_internal)
 
-        rest_rows = session.query(HTTPSOAP.opaque1).\
+        rest_count = session.query(HTTPSOAP).\
             filter(is_internal_column.is_(False)).\
-            filter(HTTPSOAP.cluster_id==default_cluster_id).\
-            all()
+            count()
 
-        rest_count = 0
-
-        for (opaque,) in rest_rows:
-            if opaque:
-                if 'is_auto_created' in opaque:
-                    continue
-            rest_count += 1
-
-        # Security definitions beyond the ones every new cluster is created with
+        # Security definitions beyond the ones every new environment is created with
         security_count = session.query(SecurityBase).\
             filter(SecurityBase.name.notin_(_baseline_security_names)).\
-            filter(SecurityBase.cluster_id==default_cluster_id).\
             count()
 
         # Generic connections - a new environment only has the inactive alert
@@ -794,17 +801,14 @@ def is_cluster_empty(server:'ParallelServer') -> 'bool':
         connection_count = session.query(GenericConn).\
             filter(GenericConn.is_internal.is_(False)).\
             filter(GenericConn.name != get_notification_conn_name()).\
-            filter(GenericConn.cluster_id==default_cluster_id).\
             count()
 
         # Pub/sub topics - a new environment has none
         topic_count = session.query(PubSubTopic).\
-            filter(PubSubTopic.cluster_id==default_cluster_id).\
             count()
 
         # SQL connections - a new environment has none
         sql_count = session.query(SQLConnectionPool).\
-            filter(SQLConnectionPool.cluster_id==default_cluster_id).\
             count()
 
     total = job_count + rest_count + security_count + connection_count + topic_count + sql_count
@@ -838,12 +842,12 @@ def has_user_services(server:'ParallelServer') -> 'bool':
 # ################################################################################################################################
 
 def _claim_startup_marker(server:'ParallelServer') -> 'bool':
-    """ Records that the first-start pass ran in this cluster. Returns whether this very server
-    made the record - the unique index means only one server in a cluster ever does.
+    """ Records that the first-start pass ran. Returns whether this call made the record,
+    the unique index permits only one such record.
     """
     with closing(server.odb.session()) as session:
 
-        wrapper = GenericObjectWrapper(session, default_cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = _marker_type
 
         # A marker from an earlier start means the pass already ran
@@ -858,7 +862,7 @@ def _claim_startup_marker(server:'ParallelServer') -> 'bool':
             session.commit()
         except IntegrityError:
 
-            # Another server made the record first, so it runs the pass
+            # The record already exists, so the pass is not run again
             session.rollback()
             return False
 
@@ -869,7 +873,7 @@ def _claim_startup_marker(server:'ParallelServer') -> 'bool':
 def import_demo_config_on_first_start(server:'ParallelServer') -> 'None':
     """ Imports the demo config sets from First_Start_Set_Names when a fresh environment starts
     for the first time - one with no user services to deploy and no user-defined objects yet.
-    The pass runs once per cluster - a marker records that it ran, so removed demo config never
+    The pass runs once per environment - a marker records that it ran, so removed demo config never
     comes back on a restart.
     """
 
@@ -883,7 +887,7 @@ def import_demo_config_on_first_start(server:'ParallelServer') -> 'None':
         return
 
     # .. neither is one that already holds anything user-defined ..
-    if not is_cluster_empty(server):
+    if not is_environment_empty(server):
         logger.debug('Demo config: skipping the first-start import')
         return
 

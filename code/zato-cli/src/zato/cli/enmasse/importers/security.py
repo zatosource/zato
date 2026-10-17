@@ -14,15 +14,14 @@ from uuid import uuid4
 from zato.cli.enmasse.util import preprocess_item
 from zato.cli.enmasse.util.secrets import Auto_Password_Prefix, decrypt_secret, encrypt_kept_opaque_secrets, \
     encrypt_opaque_secrets, encrypt_secret, ensure_encrypted, is_encrypted, is_usable_secret, load_opaque, secret_needs_update
-from zato.common.api import OAuth as COMMON_OAUTH
+from zato.common.api import GENERIC, OAuth as COMMON_OAUTH
 from zato.common.crypto.api import CryptoManager
-from zato.common.json_internal import loads
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, MTLSSecurity, NTLM, OAuth, SPNEGOSecurity, to_json, \
     WSSecurity
 from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, spnego_list, \
     wss_list
 from zato.common.private_key_jwt import PrivateKeyJWTError, validate_definition
-from zato.common.typing_ import cast_
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -72,7 +71,7 @@ def validate_private_key_jwt(item:'anydict') -> 'None':
     certificate = item.get('certificate') or ''
 
     try:
-        _ = validate_definition(cast_('str', private_key), jwt_algorithm, certificate)
+        _ = validate_definition(private_key, jwt_algorithm, certificate)
     except PrivateKeyJWTError as e:
         raise ValueError(f'Security definition `{item["name"]}` -> {e}') from e
 
@@ -94,6 +93,34 @@ def password_needs_update(session:'SASession', yaml_password:'any_', db_password
 
     out = stored != yaml_password
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _switches_rate_limiting_source(item:'anydict', db_def:'anydict') -> 'bool':
+    """ Returns True if the YAML item references a quota tier while the stored definition carries rules of its own,
+    or gives rules of its own while the stored definition references a quota tier.
+    """
+    yaml_has_tier = 'quota_tier' in item
+    yaml_has_rules = 'rate_limiting' in item
+
+    stored_has_tier = 'quota_tier' in db_def
+    stored_has_rules = 'rate_limiting' in db_def
+
+    out = (yaml_has_tier and stored_has_rules) or (yaml_has_rules and stored_has_tier)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _remove_opaque_attr(definition:'any_', key:'str') -> 'None':
+    """ Removes one attribute from the opaque data a definition stores.
+    """
+    opaque = load_opaque(getattr(definition, GENERIC.ATTR_NAME))
+
+    if key in opaque:
+        del opaque[key]
+        setattr(definition, GENERIC.ATTR_NAME, dumps(opaque))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,45 +153,37 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def get_security_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_security_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
-        logger.info('Retrieving security definitions from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving security definitions from database')
 
-        basic_auth = basic_auth_list(session, cluster_id)
+        basic_auth = basic_auth_list(session)
         logger.info('Getting basic_auth definitions')
         self._process_security_defs(basic_auth, 'basic_auth', out)
 
-        apikey = apikey_security_list(session, cluster_id)
+        apikey = apikey_security_list(session)
         logger.info('Getting apikey definitions')
         self._process_security_defs(apikey, 'apikey', out)
 
-        mtls = mtls_list(session, cluster_id)
+        mtls = mtls_list(session)
         logger.info('Getting mtls definitions')
         self._process_security_defs(mtls, 'mtls', out)
 
-        ntlm = ntlm_list(session, cluster_id)
+        ntlm = ntlm_list(session)
         logger.info('Getting ntlm definitions')
         self._process_security_defs(ntlm, 'ntlm', out)
 
-        spnego = spnego_list(session, cluster_id)
+        spnego = spnego_list(session)
         logger.info('Getting spnego definitions')
         self._process_security_defs(spnego, 'spnego', out)
 
-        oauth = oauth_list(session, cluster_id)
+        oauth = oauth_list(session)
         logger.info('Getting oauth/bearer_token definitions')
         self._process_security_defs(oauth, 'bearer_token', out)
 
-        wss = wss_list(session, cluster_id)
+        wss = wss_list(session)
         logger.info('Getting wss definitions')
         self._process_security_defs(wss, 'wss', out)
-
-        # Filter out specified keys from each security definition
-        to_remove = ['cluster_name']
-
-        for item in out.values():
-            for key in to_remove:
-                if key in item:
-                    del item[key]
 
         logger.info('Total security definitions from DB: %d', len(out))
         for name, details in out.items():
@@ -248,8 +267,14 @@ class SecurityImporter:
             else:
                 logger.info('Definition %s exists in DB with id=%s type=%s', name, db_def.get('id'), db_def.get('type'))
 
-                needs_update = False
+                # A definition either references a quota tier or carries its own rules, never both, so a YAML item
+                # that gives one of the two while the stored definition holds the other is an update even when
+                # nothing else differs - the stored counterpart has to be dropped.
+                needs_update = _switches_rate_limiting_source(item, db_def)
+
                 for key, value in item.items():
+                    if needs_update:
+                        break
                     if key in _comparison_skip_keys:
                         continue
                     if key == 'username' and sec_type == 'apikey':
@@ -294,15 +319,14 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_basic_auth(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_basic_auth(self, security_def:'anydict') -> 'any_':
         auth = HTTPBasicAuth(
             None,
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
             security_def.get('realm', 'zato'),
-            security_def['password'],
-            cluster
+            security_def['password']
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -310,14 +334,13 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_apikey(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_apikey(self, security_def:'anydict') -> 'any_':
         auth = APIKeySecurity(
             None,
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
-            security_def['password'],
-            cluster
+            security_def['password']
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -325,14 +348,13 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_ntlm(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_ntlm(self, security_def:'anydict') -> 'any_':
         auth = NTLM(
             None,
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
-            security_def['password'],
-            cluster
+            security_def['password']
         )
 
         # The model's constructor does not store the password it is given
@@ -343,13 +365,12 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_mtls(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_mtls(self, security_def:'anydict') -> 'any_':
         auth = MTLSSecurity(
             None,
             security_def['name'],
             security_def.get('is_active', True),
-            security_def['name'],
-            cluster
+            security_def['name']
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -357,13 +378,12 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_spnego(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_spnego(self, security_def:'anydict') -> 'any_':
         auth = SPNEGOSecurity(
             None,
             security_def['name'],
             security_def.get('is_active', True),
-            security_def['name'],
-            cluster
+            security_def['name']
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -371,14 +391,13 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_wss(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_wss(self, security_def:'anydict') -> 'any_':
         auth = WSSecurity(
             None,
             security_def['name'],
             security_def.get('is_active', True),
             security_def['username'],
-            security_def.get('password'),
-            cluster
+            security_def.get('password')
         )
 
         set_instance_opaque_attrs(auth, security_def)
@@ -386,7 +405,7 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def _create_bearer_token(self, security_def:'anydict', cluster:'any_') -> 'any_':
+    def _create_bearer_token(self, security_def:'anydict') -> 'any_':
         name = security_def['name']
 
         auth = OAuth(
@@ -397,8 +416,7 @@ class SecurityImporter:
             security_def.get('password'),
             'not-used',
             'not-used',
-            0,
-            cluster
+            0
         )
         set_instance_opaque_attrs(auth, security_def)
 
@@ -412,17 +430,16 @@ class SecurityImporter:
         def_name = security_def.get('name', 'unnamed')
 
         logger.info('Creating security definition: name=%s type=%s', def_name, sec_type)
-        cluster = self.importer.get_cluster(session)
 
         # The definition is written from a copy so that the YAML item keeps the password as the YAML gave it
         security_def = dict(security_def)
 
         # A definition whose type has a password gets a generated one if the YAML gives none,
-        # and whichever it is, it is stored encrypted.
+        # or names an environment variable that is not set, and whichever it is, it is stored encrypted.
         if sec_type in _types_with_password:
             password = security_def.get('password')
 
-            if not password:
+            if not is_usable_secret(password):
                 password = Auto_Password_Prefix + CryptoManager.generate_hex_string(_auto_password_bits)
 
             security_def['password'] = encrypt_secret(session, password)
@@ -432,19 +449,19 @@ class SecurityImporter:
             encrypt_opaque_secrets(security_def, {}, _bearer_token_secret_keys, session, is_create=True)
 
         if sec_type == 'basic_auth':
-            auth = self._create_basic_auth(security_def, cluster)
+            auth = self._create_basic_auth(security_def)
         elif sec_type == 'apikey':
-            auth = self._create_apikey(security_def, cluster)
+            auth = self._create_apikey(security_def)
         elif sec_type == 'mtls':
-            auth = self._create_mtls(security_def, cluster)
+            auth = self._create_mtls(security_def)
         elif sec_type == 'spnego':
-            auth = self._create_spnego(security_def, cluster)
+            auth = self._create_spnego(security_def)
         elif sec_type == 'ntlm':
-            auth = self._create_ntlm(security_def, cluster)
+            auth = self._create_ntlm(security_def)
         elif sec_type == 'wss':
-            auth = self._create_wss(security_def, cluster)
+            auth = self._create_wss(security_def)
         elif sec_type == 'bearer_token':
-            auth = self._create_bearer_token(security_def, cluster)
+            auth = self._create_bearer_token(security_def)
         else:
             logger.warning('Unsupported security type: %s', sec_type)
             return None
@@ -479,7 +496,7 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
-    def get_class_by_type(self, sec_type):
+    def get_class_by_type(self, sec_type:'str') -> 'any_':
         class_map = {
             'basic_auth': HTTPBasicAuth,
             'apikey': APIKeySecurity,
@@ -532,14 +549,24 @@ class SecurityImporter:
 
         # A definition either references a quota tier or carries its own rules, never both,
         # so the stale counterpart merged in from the previous opaque data is dropped.
+        stale_key = ''
+
         if has_yaml_quota_tier and 'rate_limiting' in sec_def:
-            del sec_def['rate_limiting']
+            stale_key = 'rate_limiting'
 
         if has_yaml_rate_limiting and 'quota_tier' in sec_def:
-            del sec_def['quota_tier']
+            stale_key = 'quota_tier'
+
+        if stale_key:
+            del sec_def[stale_key]
 
         definition = session.query(model).filter_by(id=def_id).one()
         self._update_definition(definition, sec_def, session)
+
+        # The opaque attributes are merged into the stored ones, which is what keeps the counterpart in place,
+        # so it is removed from the stored data itself.
+        if stale_key:
+            _remove_opaque_attr(definition, stale_key)
 
         session.add(definition)
         logger.debug('Finished updating security definition: %s', def_name)
@@ -626,7 +653,7 @@ class SecurityImporter:
 
             item['quota_tier'] = tier_def['id']
 
-        db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_security_defs_from_db(session)
         to_create, to_update = self.compare_security_defs(security_list, db_defs, session)
 
         out_created = []
@@ -670,7 +697,7 @@ class SecurityImporter:
     def populate_sec_defs_from_db(self, session:'SASession') -> 'None':
         """ Populates the importer's sec_defs dictionary from existing DB entries.
         """
-        db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_security_defs_from_db(session)
 
         for name, def_info in db_defs.items():
             self.importer.sec_defs[name] = {

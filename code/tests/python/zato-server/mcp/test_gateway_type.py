@@ -68,15 +68,14 @@ class InstanceHookDispatch(TestCase):
         calls = []
         original = conn_module.on_mcp_gateway_delete
 
-        def _mock_delete(service:'any_', session:'any_', gateway_name:'str', cluster_id:'int') -> 'None':
-            calls.append((service, session, gateway_name, cluster_id))
+        def _mock_delete(service:'any_', session:'any_', gateway_name:'str') -> 'None':
+            calls.append((service, session, gateway_name))
 
         conn_module.on_mcp_gateway_delete = _mock_delete
 
         class _MockInstance:
             type_ = 'channel-kafka'
             name = 'test'
-            cluster_id = 1
 
         class _MockAttrs:
             _meta_session = None
@@ -101,7 +100,6 @@ class InstanceHookDispatch(TestCase):
         class _MockInstance:
             type_ = COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP
             name = 'my-mcp'
-            cluster_id = 1
 
         class _MockAttrs:
             _meta_session = 'fake-session'
@@ -109,8 +107,8 @@ class InstanceHookDispatch(TestCase):
         # .. patch the delete function temporarily ..
         original = conn_module.on_mcp_gateway_delete
 
-        def _mock_delete(service:'any_', session:'any_', gateway_name:'str', cluster_id:'int') -> 'None':
-            calls.append((service, session, gateway_name, cluster_id))
+        def _mock_delete(service:'any_', session:'any_', gateway_name:'str') -> 'None':
+            calls.append((service, session, gateway_name))
 
         conn_module.on_mcp_gateway_delete = _mock_delete
 
@@ -121,7 +119,7 @@ class InstanceHookDispatch(TestCase):
 
         # .. verify the call was made with the correct arguments.
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0], (None, 'fake-session', 'my-mcp', 1))
+        self.assertEqual(calls[0], (None, 'fake-session', 'my-mcp'))
 
 # ################################################################################################################################
 # ################################################################################################################################

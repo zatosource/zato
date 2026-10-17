@@ -23,7 +23,7 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # The list of outgoing SFTP connections
-Sftp_Page_Url = '/zato/outgoing/sftp/?cluster=1&type_=outconn-sftp'
+Sftp_Page_Url = '/zato/outgoing/sftp/?type_=outconn-sftp'
 
 # How long to wait for a dialog to open, in milliseconds
 _Dialog_Timeout = 5000

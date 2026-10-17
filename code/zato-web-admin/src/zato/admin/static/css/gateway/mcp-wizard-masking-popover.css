@@ -1,0 +1,258 @@
+/*
+ * MCP gateway wizard - the Data masking popover.
+ *
+ * The grid of cards on the left, the pane on the right, the switches of
+ * both and the total under them. The popover keeps one size whatever it
+ * shows - the grid and the pane scroll inside it, their scrollbars always
+ * there, so nothing ever shifts as the cards and the fields change. The
+ * tokens, the editor and the controls shared with the PII and data masking section are in
+ * gateway/mcp-wizard-masking.css, loaded before this file.
+ */
+
+/* ------------------------------------------------------------ */
+/* Data masking popover - the layout                             */
+/* ------------------------------------------------------------ */
+
+.mcp-masking-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--mcp-masking-pane-width);
+    gap: 16px;
+    height: var(--mcp-masking-layout-height);
+}
+
+.mcp-masking-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 10px;
+    min-height: 0;
+    padding: 1px 8px 1px 1px;
+    overflow-y: scroll;
+}
+
+.mcp-masking-total {
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mcp-masking-strong-color);
+    text-align: right;
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking popover - the switches                           */
+/* ------------------------------------------------------------ */
+
+.mcp-masking-switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: 24px;
+    height: 13px;
+    background: var(--zato-ui-border-strong);
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background-color var(--mcp-masking-transition);
+}
+
+.mcp-masking-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 9px;
+    height: 9px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform var(--mcp-masking-transition);
+}
+
+.mcp-masking-switch-on {
+    background: var(--zato-ui-accent);
+}
+
+.mcp-masking-switch-on .mcp-masking-switch-knob {
+    transform: translateX(11px);
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking popover - the cards                              */
+/* ------------------------------------------------------------ */
+
+.mcp-masking-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 9px 10px 8px;
+    background: #fff;
+    border: 1px solid var(--zato-ui-border);
+    border-radius: var(--mcp-masking-radius);
+    cursor: pointer;
+    transition: border-color var(--mcp-masking-transition), box-shadow var(--mcp-masking-transition);
+}
+
+.mcp-masking-card:hover {
+    border-color: var(--zato-ui-border-strong);
+    box-shadow: var(--mcp-masking-card-shadow);
+    transition-delay: var(--mcp-masking-hover-delay);
+}
+
+.mcp-masking-card-on,
+.mcp-masking-card-on:hover {
+    border-color: var(--zato-ui-accent);
+    box-shadow: inset 0 0 0 1px var(--zato-ui-accent);
+}
+
+/* The card the pane is showing */
+.mcp-masking-card-focused,
+.mcp-masking-card-focused:hover {
+    background: var(--mcp-masking-on-bg);
+}
+
+.mcp-masking-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.mcp-masking-card-header .mcp-masking-switch {
+    margin-top: 2px;
+}
+
+.mcp-masking-card-title {
+    min-width: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--mcp-masking-heading-color);
+}
+
+.mcp-masking-card-count {
+    font-size: 11px;
+    color: var(--zato-ui-accent-soft);
+}
+
+.mcp-masking-card-preview {
+    margin-top: 3px;
+    padding-top: 5px;
+    border-top: 1px solid var(--zato-ui-border);
+}
+
+.mcp-masking-card-preview:empty {
+    display: none;
+}
+
+.mcp-masking-card-line {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.6;
+    color: var(--zato-ui-text);
+}
+
+.mcp-masking-line-out,
+.mcp-masking-card-off .mcp-masking-card-line {
+    color: var(--zato-ui-text-faint);
+}
+
+.mcp-masking-line-out {
+    text-decoration: line-through;
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking popover - the pane                               */
+/* ------------------------------------------------------------ */
+
+.mcp-masking-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid var(--zato-ui-border);
+    border-radius: var(--mcp-masking-radius);
+}
+
+.mcp-masking-pane-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.mcp-masking-pane-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--mcp-masking-heading-color);
+}
+
+.mcp-masking-pane-count {
+    font-size: 11.5px;
+    color: var(--zato-ui-accent-soft);
+}
+
+/* The rows of a list answer a pointer resting on them at once - a delay
+   any longer than this leaves a pointer moving down the list with nothing */
+.mcp-masking-pane-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 24px;
+    padding: 0 6px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color var(--mcp-masking-row-fade);
+}
+
+.mcp-masking-pane-row:hover {
+    background: var(--zato-popup-sand-highlight);
+    transition-duration: 0s;
+    transition-delay: var(--mcp-masking-row-hover-delay);
+}
+
+.mcp-masking-pane-control {
+    flex: 0 0 auto;
+    margin-bottom: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mcp-masking-strong-color);
+    border-bottom: 1px solid var(--zato-ui-border);
+    border-radius: 0;
+}
+
+.mcp-masking-pane-field .mcp-masking-mono {
+    font-size: 12px;
+    color: var(--zato-ui-text);
+}
+
+.mcp-masking-pane-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-right: 4px;
+    overflow-y: scroll;
+}
+
+.mcp-masking-filtered-out,
+.mcp-masking-pane-empty {
+    display: none;
+}
+
+.mcp-masking-pane-empty-on {
+    display: block;
+    padding: 8px 6px;
+    font-size: 12px;
+    color: var(--zato-ui-text-muted);
+}
+
+.mcp-masking-pane-editor {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.mcp-masking-pane-editor .mcp-field-list-editor {
+    flex: 1 1 auto;
+    height: auto;
+}

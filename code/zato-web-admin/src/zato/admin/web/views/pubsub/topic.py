@@ -49,7 +49,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active'
     output_optional = 'description', 'publisher_count', 'subscriber_count', 'backend_type', 'amqp_outconn_name', \
         'amqp_exchange', 'amqp_routing_key', 'amqp_channel_name', 'is_audit_log_active'
@@ -118,14 +117,12 @@ def get_matches(request:'HttpRequest') -> 'HttpResponse':
     """ Retrieves a list of topics matching a pattern.
     """
     # Get the input parameters ..
-    cluster_id = request.POST['cluster_id']
     pattern = request.POST['pattern']
 
-    logger.info('VIEW get_matches: received request with cluster_id=%s, pattern=%s', cluster_id, pattern)
+    logger.info('VIEW get_matches: received request with pattern=%s', pattern)
 
     # .. invoke the service ..
     service_response = request.zato.client.invoke('zato.pubsub.topic.get-matches', {
-        'cluster_id': cluster_id,
         'pattern': pattern,
     })
 

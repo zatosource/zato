@@ -67,13 +67,13 @@ class SQLImporter:
 
 # ################################################################################################################################
 
-    def get_sql_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_sql_defs_from_db(self, session:'SASession') -> 'anydict':
 
         # Our response to produce
         out:'anydict' = {}
 
-        logger.info('Retrieving SQL connection pool definitions from database for cluster_id=%s', cluster_id)
-        sql_connections = out_sql_list(session, cluster_id)
+        logger.info('Retrieving SQL connection pool definitions from database')
+        sql_connections = out_sql_list(session)
 
         self._process_sql_defs(sql_connections, out)
         logger.info('Total SQL connection pool definitions from DB: %d', len(out))
@@ -113,11 +113,7 @@ class SQLImporter:
 
     def create_sql_definition(self, sql_definition:'anydict', session:'SASession') -> 'SQLConnectionPool':
 
-        # The connection belongs to the one cluster there is ..
-        cluster = self.importer.get_cluster(session)
-
         out = SQLConnectionPool()
-        out.cluster = cluster
 
         # .. the user-friendly type maps to the engine name the column stores ..
         connection_type = sql_definition['type']
@@ -140,11 +136,12 @@ class SQLImporter:
         else:
             out.extra = _empty_extra
 
-        # .. a definition without a password gets a generated one and either way it is stored encrypted ..
-        if password := sql_definition.get('password'):
-            out.password = encrypt_secret(session, password)
-        else:
-            out.password = encrypt_secret(session, CryptoManager.generate_password(to_str=True))
+        # .. a definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted ..
+        password = sql_definition.get('password')
+        if not is_usable_secret(password):
+            password = CryptoManager.generate_password(to_str=True)
+        out.password = encrypt_secret(session, password)
 
         # .. payloads leave with the audit export only if the YAML definition says so ..
         sql_definition['is_audit_export_payload_active'] = sql_definition.get('is_audit_export_payload_active', False)
@@ -227,7 +224,7 @@ class SQLImporter:
 
         logger.info('Processing %d SQL connection pool definition(s) from YAML', len(sql_list))
 
-        db_defs = self.get_sql_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_sql_defs_from_db(session)
         to_create, to_update = self.compare_sql_defs(sql_list, db_defs)
 
         out_created = []

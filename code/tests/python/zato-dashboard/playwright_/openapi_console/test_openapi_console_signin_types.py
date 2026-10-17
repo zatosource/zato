@@ -14,8 +14,8 @@ from json import loads
 # Zato
 from zato.common.crypto.api import CryptoManager
 
-from openapi_console_lib import console_login, edit_channel_by_name, relay_invoke, spec_paths, wait_for_spec, \
-    Path_Methods, Path_Untyped, Service_Methods, Service_Untyped
+from openapi_console_lib import console_login, console_login_api_key, edit_channel_by_name, relay_invoke, spec_paths, \
+    wait_for_spec, Path_Methods, Path_Untyped, Service_Methods, Service_Untyped
 from rest_channel import create_apikey_definition, create_bearer_token_definition
 
 # ################################################################################################################################
@@ -37,15 +37,15 @@ _Test_Name_Prefix = 'test.openapi.signin.' + CryptoManager.generate_hex_string(3
 
 class TestOpenAPIConsoleSigninTypes:
     """ Verifies that callers sign in to the console with any of the credential types
-    REST channels support - an API key definition's name and key, and a Bearer token
-    definition's client ID and secret - and that filtering and try-it follow that identity.
+    REST channels support - an API key alone, and a Bearer token definition's client ID
+    and secret - and that filtering and try-it follow that identity.
     """
 
 # ################################################################################################################################
 
     def test_apikey_signin(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Assigns an API key definition to the untyped channel and signs in to the console
-        with the definition's name and its key.
+        with its key alone.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -59,8 +59,8 @@ class TestOpenAPIConsoleSigninTypes:
             'security': f'API key/{definition["name"]}',
         })
 
-        # .. sign in to the console with the definition's name and the key ..
-        console_login(page, console_url, definition['name'], definition['key'])
+        # .. sign in to the console with the key alone ..
+        console_login_api_key(page, console_url, definition['key'])
 
         # .. the caller's document contains exactly the one endpoint the key gives access to ..
         def has_only_untyped_path(spec:'anydict') -> 'bool':

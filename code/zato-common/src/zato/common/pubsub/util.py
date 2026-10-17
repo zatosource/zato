@@ -92,7 +92,7 @@ def _is_ascii_only(text:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -> 'list':
+def get_permissions_for_sec_base(session, sec_base_id:'int') -> 'list':
     """ Get all active permissions for a security definition.
     Returns a list of permission dictionaries with pattern and access_type.
     """
@@ -100,7 +100,6 @@ def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -
 
     permissions = session.query(PubSubPermission).filter(
         PubSubPermission.sec_base_id == sec_base_id,
-        PubSubPermission.cluster_id == cluster_id,
         PubSubPermission.is_active == True # noqa: E712
     ).all()
 
@@ -131,14 +130,14 @@ def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -
 
 # ################################################################################################################################
 
-def evaluate_pattern_match(session, sec_base_name:'str', sec_base_id:'int', cluster_id:'int', topic_name:'str') -> 'str':
+def evaluate_pattern_match(session, sec_base_name:'str', sec_base_id:'int', topic_name:'str') -> 'str':
     """ Evaluate which pattern matches the given topic name for a security definition.
     Returns the matched pattern or raises an exception if no pattern matches.
     """
     # Zato
     from zato.common.pubsub.matcher import PatternMatcher
 
-    permissions = get_permissions_for_sec_base(session, sec_base_id, cluster_id)
+    permissions = get_permissions_for_sec_base(session, sec_base_id)
 
     if not permissions:
         msg = f'No permissions defined for security definition {sec_base_id} ({sec_base_name})'
@@ -162,7 +161,7 @@ def evaluate_pattern_match(session, sec_base_name:'str', sec_base_id:'int', clus
 
 # ################################################################################################################################
 
-def get_security_definition(session, cluster_id, username=None, sec_name=None):
+def get_security_definition(session, username=None, sec_name=None):
     """ Get security definition by username or sec_name.
 
     Returns tuple of (sec_def, lookup_field, lookup_value).
@@ -173,14 +172,12 @@ def get_security_definition(session, cluster_id, username=None, sec_name=None):
 
     if username:
         sec_def = session.query(SecurityBase).\
-            filter(SecurityBase.cluster_id==cluster_id).\
             filter(SecurityBase.username==username).\
             first()
         lookup_field = 'username'
         lookup_value = username
     elif sec_name:
         sec_def = session.query(SecurityBase).\
-            filter(SecurityBase.cluster_id==cluster_id).\
             filter(SecurityBase.name==sec_name).\
             first()
         lookup_field = 'sec_name'

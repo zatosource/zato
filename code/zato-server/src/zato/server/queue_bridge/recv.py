@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The server's listeners for the channels the queue bridge consumes.
 
 # stdlib
-from base64 import b64decode, b64encode
+from base64 import b64decode
 from json import dumps, loads
 from logging import getLogger
 from time import monotonic
@@ -24,8 +24,8 @@ from zato.common.api import DATA_FORMAT, GENERIC, HTTP_SOAP, KAFKA, PubSub
 from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, wait_between_rounds
 from zato.common.pubsub.dlq import move_to_dlq
-from zato.common.pubsub.outgoing import Attempts_None, build_envelope, InboundType, Key_Data, Key_Headers, Key_Is_Base64, \
-    Key_Service
+from zato.common.pubsub.outgoing import Attempts_None, build_envelope, decode_payload, encode_payload, InboundType, Key_Data, \
+    Key_Headers, Key_Is_Base64, Key_Service
 from zato.common.util.api import new_cid_server
 from zato.common.util.retry import RetryPolicy
 from zato.server.queue_bridge.client import get_recv_stream
@@ -75,32 +75,6 @@ Interrupt_Stopped = 'stopped'
 Attempts_Poison = 1
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def decode_payload(payload:'bytes') -> 'anytuple':
-    """ A message's payload as the text an envelope stores and whether that text is base64.
-    """
-    try:
-        out = (payload.decode('utf8'), False)
-    except UnicodeDecodeError:
-        out = (b64encode(payload).decode('ascii'), True)
-
-    return out
-
-# ################################################################################################################################
-
-def encode_payload(request:'stranydict') -> 'bytes':
-    """ The bytes a service is invoked with, out of what an envelope stores.
-    """
-    data = request[Key_Data]
-
-    if request[Key_Is_Base64]:
-        out = b64decode(data)
-    else:
-        out = data.encode('utf8')
-
-    return out
-
 # ################################################################################################################################
 
 def build_channel_request(service:'str', payload:'bytes', headers:'strdict') -> 'stranydict':

@@ -14,17 +14,17 @@ from traceback import format_exc
 # Zato
 from zato.common.api import CONNECTION, MISC, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.ext_db.api import needs_ext_db, to_public_id
 from zato.common.odb.model import HTTPSOAP
-from zato.common.typing_ import cast_
 from zato.common.util.api import utcnow
 from zato.common.util.channel import validate_channel_url_path
+from zato.common.util.gateway import mcp_service_name
 from zato.common.util.sql import get_security_by_id, set_instance_opaque_attrs
 from zato.server.service import AsIs, Boolean
 from zato.server.service.internal.http_soap.alert_settings import alert_input, prepare_alert_settings
-from zato.server.service.internal.http_soap.common import _as2_input, _as4_input, _CreateEdit, _invocation_input, \
+from zato.server.service.internal.http_soap.common import _CreateEdit, _invocation_input, \
     _is_declarative, _normalize_retry_config, _retry_input, _validate_invocation_config
 from zato.server.service.internal.http_soap.delivery_settings import delivery_input, prepare_delivery_settings
+from zato.server.service.internal.http_soap.destination_settings import destination_input, prepare_destination_settings
 from zato.server.service.internal.http_soap.health_check import sync_linked_jobs
 
 # ################################################################################################################################
@@ -41,17 +41,16 @@ class Create(_CreateEdit):
         '-timeout', '-content_type', \
         Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
-        '-is_active', '-transport', '-is_internal', '-cluster_id', \
+        '-is_active', '-transport', '-is_internal', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', Boolean('-is_audit_log_active'), Boolean('-should_include_in_openapi'), \
         Boolean('-is_deprecated'), '-deprecation_sunset', '-deprecation_successor', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
         *_retry_input, \
-        *_as4_input, \
-        *_as2_input, \
         *alert_input, \
-        *delivery_input
+        *delivery_input, \
+        *destination_input
     output = 'id', 'name', '-url_path'
 
     def handle(self):
@@ -86,7 +85,6 @@ class Create(_CreateEdit):
             input.deprecation_since = ''
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
-        input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
         input.data_format = input.get('data_format') or ''
 
         input.data_encoding = input.get('data_encoding') or 'utf-8'
@@ -97,17 +95,11 @@ class Create(_CreateEdit):
         # A new outgoing REST connection starts with every delivery setting the caller did not send at its default
         prepare_delivery_settings(self, input, skip_opaque, {})
 
-        # AS4 private keys are stored encrypted
-        self._encrypt_as4_secrets(input)
+        # A new channel has only the fan-out the caller sent, which is none for most of them
+        prepare_destination_settings(input, skip_opaque, {})
 
-        # AS2 private keys are stored encrypted too
-        self._encrypt_as2_secrets(input)
-
-        # .. and so is the object's own password
+        # The object's own password is stored encrypted
         self._encrypt_own_password(input)
-
-        # The numeric AS2 fields arrive as strings from Dashboard forms
-        self._normalize_as2_fields(input)
 
         # Remove extra whitespace
         input_name = input.name
@@ -138,44 +130,38 @@ class Create(_CreateEdit):
             _validate_invocation_config(self, input)
             _normalize_retry_config(input)
 
-        # AS2/AS4 objects are stored in the external database when one is configured
-        is_ext = needs_ext_db(input.transport)
-
-        with closing(self.server.get_config_session(object_type=input.transport)) as session:
+        with closing(self.odb.session()) as session:
             existing_one = session.query(HTTPSOAP.id).\
-                filter(HTTPSOAP.cluster_id==input.cluster_id).\
                 filter(HTTPSOAP.name==input.name).\
                 filter(HTTPSOAP.connection==input.connection).\
                 filter(HTTPSOAP.transport==input.transport).\
                 first()
 
             if existing_one:
-                raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
+                raise Exception('An object of that name `{}` already exists'.format(input.name))
 
+            # A gateway's channel serves its URL path with every method, so it collides with any other channel of that path
             if input.connection == CONNECTION.CHANNEL:
-                service = self._get_channel_service(session, input, is_ext)
+                service = self._get_service_from_input(session, input)
+                claims_whole_path = service.name == mcp_service_name
             else:
                 service = None
+                claims_whole_path = False
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._get_security_info(session, input, is_ext)
+            sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
 
             # Make sure this combination of channel parameters does not exist already
             if input.connection == CONNECTION.CHANNEL:
                 validate_channel_url_path(input.url_path)
                 self.ensure_channel_is_unique(session,
-                    input.url_path, input.http_accept, input.method, input.cluster_id, None)
-                self.ensure_channel_does_not_conflict(session, input, input.cluster_id, None)
+                    input.url_path, input.http_accept, input.method, None, claims_whole_path)
+                self.ensure_channel_does_not_conflict(session, input, None)
 
             try:
 
-                # The external database has its own cluster row that all its objects point to
-                if is_ext:
-                    item = HTTPSOAP()
-                    item.cluster_id = input.cluster_id
-                else:
-                    item = self._new_zato_instance_with_cluster(HTTPSOAP)
+                item = HTTPSOAP()
                 item.connection = input.connection
                 item.transport = input.transport
                 item.is_internal = input.is_internal
@@ -209,11 +195,7 @@ class Create(_CreateEdit):
                     skip_opaque.append('password')
 
                 if input.security_id:
-                    # The external database holds a mirror of the definition under the same id
-                    if is_ext:
-                        item.security_id = input.security_id
-                    else:
-                        item.security = get_security_by_id(session, input.security_id)
+                    item.security = get_security_by_id(session, input.security_id)
                 else:
                     input.security_id = None # To ensure that SQLite does not reject ''
 
@@ -229,15 +211,7 @@ class Create(_CreateEdit):
                         input.service_id = service.id
                         input.service_name = service.name
 
-                # Everyone else knows objects from the external database under their offset ids
-                item_id = cast_('int', item.id)
-
-                if is_ext:
-                    public_id = to_public_id(item_id)
-                else:
-                    public_id = item_id
-
-                input.id = public_id
+                input.id = item.id
                 input.update(sec_info)
 
                 if input.connection == CONNECTION.CHANNEL:
@@ -248,9 +222,9 @@ class Create(_CreateEdit):
 
                 # The connection is committed by now so its linked jobs can be created
                 if _is_declarative(input):
-                    sync_linked_jobs(self, input, item_id)
+                    sync_linked_jobs(self, input, item.id)
 
-                self.response.payload.id = public_id
+                self.response.payload.id = item.id
                 self.response.payload.name = item.name
                 self.response.payload.url_path = item.url_path
 

@@ -46,12 +46,12 @@ class OutgoingMLLPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'outgoing_mllp_def_list':
+    def export(self, session:'SASession') -> 'outgoing_mllp_def_list':
         """ Exports outgoing HL7 MLLP connection definitions.
         """
         logger.info('Exporting outgoing HL7 MLLP definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP)
 
         if not db_items:
             logger.info('No outgoing HL7 MLLP definitions found in DB')

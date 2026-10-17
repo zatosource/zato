@@ -67,12 +67,11 @@ class OutgoingSOAPImporter:
 
 # ################################################################################################################################
 
-    def get_outgoing_soap_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_outgoing_soap_from_db(self, session:'SASession') -> 'anydict':
         out = {}
-        logger.info('Retrieving outgoing SOAP connections from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving outgoing SOAP connections from database')
 
         query = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.connection==CONNECTION.OUTGOING).\
             filter(HTTPSOAP.transport==URL_TYPE.SOAP) # type: ignore
         connections = to_json(query, return_as_dict=True)
@@ -202,7 +201,6 @@ class OutgoingSOAPImporter:
         outgoing.is_active = outgoing_def.get('is_active', True)
         outgoing.connection = CONNECTION.OUTGOING
         outgoing.transport = URL_TYPE.SOAP
-        outgoing.cluster = self.importer.get_cluster(session)
         outgoing.is_internal = outgoing_def.get('is_internal', False)
 
         # Required SOAP-specific fields
@@ -300,7 +298,7 @@ class OutgoingSOAPImporter:
     def sync_outgoing_soap(self, outgoing_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d outgoing SOAP connections from YAML', len(outgoing_list))
 
-        db_outgoing = self.get_outgoing_soap_from_db(session, self.importer.cluster_id)
+        db_outgoing = self.get_outgoing_soap_from_db(session)
         to_create, to_update = self.compare_outgoing_soap(outgoing_list, db_outgoing)
 
         out_created = []

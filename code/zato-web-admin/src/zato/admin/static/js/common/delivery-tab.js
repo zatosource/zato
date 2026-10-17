@@ -83,15 +83,19 @@ $.fn.zato.delivery_tab.config = {
         'how much longer each next wait is and how long all the waits may add up to. With no retries a message ' +
         'is sent once.',
     helpMaxRetries: 'How many times a failed invocation is retried. 0 means no retries at all.',
-    helpSleepTime: 'How long to wait before the first retry. Each next wait is longer by the multiplier.',
-    helpBackoffThreshold: 'A cap on the total time spent waiting between retries. Once reached, no more retries take place.',
-    helpBackoffMultiplier: 'Each retry waits this many times longer than the previous one, up to 8 seconds per a single wait.',
+    helpSleepTime: 'How long to wait before the first retry, 8 seconds at most.',
+    helpBackoffThreshold: 'How long all the waits may take together. Once that is reached, no more retries take place.',
+    helpBackoffMultiplier: 'How much longer each next wait is.',
     helpUseQueue: 'When on, a message is sent right away and, if the endpoint does not accept it, it is placed in ' +
         'the connection\'s own queue and delivered from there one at a time, in order, retried as the retry settings say. ' +
-        'While the queue holds messages, new ones join it behind them. When off, each message is sent and retried on its own.',
+        'With no retries, such a message is not queued. ' +
+        'While the queue holds messages, new ones join it behind them. ' +
+        'A message leaves the queue once the endpoint has accepted it, so a server stopped between the acceptance ' +
+        'and that moment sends the message once more when it starts again. ' +
+        'When off, each message is sent and retried on its own.',
     helpUseDLQ: 'When on, a message that still fails after its last retry moves to the connection\'s DLQ and the ' +
         'queue delivers the next one. When off, the message stays at the head of the queue and is retried in rounds, ' +
-        'nothing behind it moves until it goes through or an operator discards it.',
+        'nothing behind it moves until it goes through, expires or an operator discards it.',
     helpAction: 'What a rule running every minute does with each message in the DLQ - keeps it for an operator, ' +
         'puts it back into the queue a number of times, forwards it to a pub/sub topic or discards it.',
     helpDlqRetries: 'How many times the rule puts a message back into the queue before leaving it in the DLQ.',
@@ -137,22 +141,22 @@ $.fn.zato.delivery_tab.config.channelDeliveryCellClass = 'kafka-channel-dlq-cell
 // /////////////////////////////////////////////////////////////////////////////
 
 // The cell of a new row that links to the connection's delivery page
-$.fn.zato.delivery_tab.link_cell = function(connType, item, clusterId) {
+$.fn.zato.delivery_tab.link_cell = function(connType, item) {
 
     var config = $.fn.zato.delivery_tab.config;
 
-    var url = config.deliveryPageUrl + connType + '/' + item.id + '/?cluster=' + clusterId + '&tab=' + config.deliveryPageTab;
+    var url = config.deliveryPageUrl + connType + '/' + item.id + '/?tab=' + config.deliveryPageTab;
 
     var out = String.format('<td><a href="{0}">{1}</a></td>', url, config.deliveryLinkLabel);
     return out;
 }
 
 // The cell of a new row that links to a channel's delivery page
-$.fn.zato.delivery_tab.channel_link_cell = function(connType, item, clusterId) {
+$.fn.zato.delivery_tab.channel_link_cell = function(connType, item) {
 
     var config = $.fn.zato.delivery_tab.config;
 
-    var url = config.channelDeliveryPageUrl + connType + '/' + item.id + '/?cluster=' + clusterId + '&tab=' + config.channelDeliveryPageTab;
+    var url = config.channelDeliveryPageUrl + connType + '/' + item.id + '/?tab=' + config.channelDeliveryPageTab;
 
     var out = String.format('<td class="{0}"><a href="{1}">{2}</a></td>', config.channelDeliveryCellClass, url,
         config.channelDeliveryLinkLabel);

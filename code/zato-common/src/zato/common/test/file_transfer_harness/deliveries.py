@@ -105,8 +105,8 @@ class StoreFileTransferItem(Service):
 
     def handle(self):
 
-        # The dispatch service hands us the item object itself
-        item = self.request.raw_request
+        # The dispatch service hands over the item object itself
+        item = self.request.input
         _record(item)
 
 
@@ -127,7 +127,7 @@ class FailSelectedFileTransfer(Service):
 
     def handle(self):
 
-        item = self.request.raw_request
+        item = self.request.input
 
         if _failing_file_token in item.file_name:
             raise Exception('This service refuses the file `{{}}`'.format(item.file_name))
@@ -143,7 +143,7 @@ class SlowStoreFileTransfer(Service):
 
     def handle(self):
 
-        item = self.request.raw_request
+        item = self.request.input
         sleep(_slow_store_delay)
 
         _record(item)
@@ -157,7 +157,7 @@ class EchoFileTransferItem(Service):
 
     def handle(self):
 
-        item = self.request.raw_request
+        item = self.request.input
         _record(item)
 
         self.response.payload = item

@@ -304,30 +304,6 @@ channel_soap:
       ttl_unit: minutes
       cache_on_second_request: false
 
-channel_as4:
-
-  - name: enmasse.channel.as4.1
-    url_path: /enmasse.as4.1
-    as4_profile: peppol
-    as4_to_party: enmasse-ap
-    as4_serviced_participants: |-
-      0192:991825827
-      0088:7315458756324
-    as4_inbound_topic: enmasse.as4.inbound
-
-  - name: enmasse.channel.as4.2
-    url_path: /enmasse.as4.2
-    service: demo.ping
-    security: enmasse.basic_auth.1
-    as4_profile: edelivery1
-    as4_from_party: enmasse-peer
-    as4_to_party: enmasse-ap
-    as4_service: enmasse:service:1
-    as4_action: enmasse:action:1
-    as4_extra_pmodes: |-
-      enmasse:service:2|enmasse:action:2
-    is_audit_log_active: false
-
 outgoing_rest:
 
   - name: enmasse.outgoing.rest.1
@@ -453,6 +429,16 @@ mcp_gateway:
       - email
     safeguards_pii_validate: false
     safeguards_pii_stable_replacements: true
+    safeguards_masking_sets:
+      - banking
+      - healthcare
+    safeguards_masking_excluded:
+      - iban
+    safeguards_masking_custom_fields:
+      - customer.loyalty_id
+    safeguards_masking_custom_enabled: false
+    request_hook_service: crm.mcp-request-hook
+    response_hook_service: crm.mcp-response-hook
     safeguards_normalize_unicode: true
     safeguards_unicode_mode: reject
     safeguards_sanitize_markup: true
@@ -536,38 +522,6 @@ outgoing_fhir:
   - name: enmasse.fhir.outgoing.2
     address: https://bulk.example.com/fhir
     security: enmasse.bearer_token.1
-    bulk_export:
-      is_active: true
-      level: group
-      group_id: diabetes-registry
-      types:
-        - Patient
-        - Observation
-        - Condition
-      since: "2026-01-01T00:00:00Z"
-      type_filter:
-        - "Observation?category=laboratory"
-      run_every: 1
-      run_unit: days
-      start_date: "2026-01-02T03:00:00"
-      delete_files: true
-      delete_on_server: false
-      destinations:
-        - name: enmasse.sftp.archive
-          type: sftp
-          connection: enmasse.sftp.archive
-          options:
-            remote_path: /exports/{{job_id}}/{{file_name}}
-        - name: enmasse.kafka.outgoing.1
-          type: kafka
-          connection: enmasse.kafka.outgoing.1
-        - name: enmasse.fhir.outgoing.1
-          type: hl7-fhir
-          connection: enmasse.fhir.outgoing.1
-        - name: enmasse.bulk.export.handler
-          type: service
-          connection: enmasse.bulk.export.handler
-          is_active: false
 
 outgoing_graphql:
 
@@ -732,59 +686,6 @@ outgoing_soap:
       - name: password
         position: 2
 
-outgoing_as2:
-
-  - name: enmasse.outgoing.as2.1
-    as2_from: EnmasseRetail
-    as2_to: PartnerCorp
-    endpoint_url: https://as2.partnercorp.example.com/as2
-    isa_qualifier: ZZ
-    isa_id: PARTNERCORP
-    gs_id: PARTNERCORP
-    sign_algorithm: sha-256
-    encryption_algorithm: aes-128-cbc
-    compress: true
-    mdn_mode: sync
-    subject: Enmasse AS2 message
-    http_timeout_seconds: 30
-
-  - name: enmasse.outgoing.as2.2
-    as2_from: EnmasseRetail
-    as2_to: LegacyPartner
-    endpoint_url: http://legacy.example.com:8080/as2
-    sign: false
-    encrypt: false
-    mdn_mode: none
-    verify_tls: false
-    content_type: application/edifact
-    unb_id: LEGACYPARTNER
-    is_audit_log_active: false
-
-outgoing_as4:
-
-  - name: enmasse.outgoing.as4.1
-    host: https://ap.example.com
-    url_path: /as4
-    timeout: 20
-    as4_profile: peppol
-    as4_from_party: enmasse-ap
-    as4_original_sender: 0192:991825827
-    as4_use_discovery: true
-    as4_sml_domain: acc.edelivery.tech.ec.europa.eu
-
-  - name: enmasse.outgoing.as4.2
-    host: https://customs.example.com
-    url_path: /domibus/services/msh
-    timeout: 30
-    validate_tls: false
-    as4_profile: ics2
-    as4_from_party: enmasse-eori
-    as4_to_party: sti-taxud
-    as4_service: eu.customs.ics2
-    as4_action: IE3F26
-    as4_mpc: urn:fdc:ec.europa.eu:2019:mpc
-    is_audit_log_active: false
-
 microsoft_cloud:
 
   - name: enmasse.cloud.microsoft365.1
@@ -827,6 +728,13 @@ slack:
   - name: enmasse.chat.slack.1
     is_active: true
     token: Zato_Enmasse_Env.SlackToken
+
+discord:
+
+  - name: enmasse.chat.discord.1
+    is_active: true
+    token: Zato_Enmasse_Env.DiscordToken
+    default_channel_id: "123456789012345678"
 
 confluence:
 

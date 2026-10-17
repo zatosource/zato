@@ -15,9 +15,6 @@ from datetime import datetime, timezone
 from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 
-# Zato
-from zato.common.defaults import default_cluster_id
-
 # Local
 from .constants import Default_Retention_Chunk_Size, Default_Success_Capture_Percent, Hour_Bucket_Format, \
     Maximum_Capture_Percent, Minimum_Capture_Percent
@@ -153,7 +150,6 @@ def decision_to_row(decision:'DecisionWrite', capture_policy:'CapturePolicy') ->
 
     # .. and produce the one row that represents this decision.
     out = {
-        'cluster_id':     default_cluster_id,
         'decision_id':    decision.decision_id,
         'ruleset_id':     decision.ruleset_id,
         'rules_version':  decision.rules_version,
@@ -178,9 +174,7 @@ def find_existing_decision_ids(session:'Session', decision_ids:'strlist') -> 'st
     """
     # Ask for exactly the identifiers under suspicion ..
     query = select(rule_decision_table.c.decision_id)
-    cluster_condition = rule_decision_table.c.cluster_id == default_cluster_id
     id_condition = rule_decision_table.c.decision_id.in_(decision_ids)
-    query = query.where(cluster_condition)
     query = query.where(id_condition)
 
     # .. and collect the ones the log already contains.
@@ -311,9 +305,7 @@ class DecisionStore:
 
         try:
             query = select(rule_decision_table)
-            cluster_condition = rule_decision_table.c.cluster_id == default_cluster_id
             decision_condition = rule_decision_table.c.decision_id == decision_id
-            query = query.where(cluster_condition)
             query = query.where(decision_condition)
             result = session.execute(query)
             row = result.one_or_none()
@@ -357,9 +349,7 @@ class DecisionStore:
             try:
                 with session.begin():
                     query = select(rule_decision_table.c.id)
-                    cluster_condition = rule_decision_table.c.cluster_id == default_cluster_id
                     cutoff_condition = rule_decision_table.c.occurred_at < cutoff
-                    query = query.where(cluster_condition)
                     query = query.where(cutoff_condition)
                     query = query.order_by(rule_decision_table.c.id)
                     query = query.limit(chunk_size)

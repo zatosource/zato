@@ -19,7 +19,7 @@ if 0:
 # ################################################################################################################################
 
 # The list of outgoing FTP connections
-FTP_Page_Url = '/zato/outgoing/ftp/?cluster=1&type_=outconn-ftp'
+FTP_Page_Url = '/zato/outgoing/ftp/?type_=outconn-ftp'
 
 # How long to wait for a dialog to open, in milliseconds
 _Dialog_Timeout = 5000

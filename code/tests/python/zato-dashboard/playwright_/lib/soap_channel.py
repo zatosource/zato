@@ -30,7 +30,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-SOAP_Channel_Page_Url = '/zato/http-soap/?cluster=1&connection=channel&transport=soap'
+SOAP_Channel_Page_Url = '/zato/http-soap/?connection=channel&transport=soap'
 
 # Plain text fields in the create and edit forms, keyed by option name
 _Text_Fields = ('name', 'url_path', 'soap_action')
@@ -220,7 +220,7 @@ def wait_for_channel_fixture_services(page:'Page', base_url:'str') -> 'None':
     which also means they are selectable in the channel form's service list.
     """
 
-    _ = page.goto(f'{base_url}/zato/service/ide/service/{Channel_Fixtures_Probe_Service_Name}/?cluster=1')
+    _ = page.goto(f'{base_url}/zato/service/ide/service/{Channel_Fixtures_Probe_Service_Name}/')
     _ = page.wait_for_selector('#invoke-service:not([disabled])', state='visible', timeout=15000)
 
     deadline = time.monotonic() + _Service_Deploy_Timeout

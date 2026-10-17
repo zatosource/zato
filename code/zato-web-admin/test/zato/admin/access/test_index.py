@@ -62,7 +62,7 @@ class IndexTestCase(BaseTestCase):
         # Zato
         from zato.admin.urls import urlpatterns
 
-        # All the parameters are in the format of a named regex group, e.g. (?P<cluster_id>.*)
+        # All the parameters are in the format of a named regex group, e.g. (?P<id>.*)
         # which is why searching for '?P' will suffice.
         regex_param_marker = '?P'
 

@@ -45,16 +45,15 @@ class UserProfile(models.Model):
 
     __unicode__ = __repr__
 
-class ClusterColorMarker(models.Model):
+class EnvironmentColorMarker(models.Model):
     class Meta:
-        db_table = 'cluster_color_marker'
+        db_table = 'environment_color_marker'
 
-    user_profile = models.ForeignKey(UserProfile, on_delete=_on_delete, related_name='cluster_color_markers')
-    cluster_id = models.IntegerField()
+    user_profile = models.ForeignKey(UserProfile, on_delete=_on_delete, related_name='environment_color_markers')
     color = models.CharField(max_length=6) # RGB
 
     def __repr__(self):
-        return '<{} at {} user_profile:[{}] cluster_id:[{}] color:[{}]>'.format(
-            self.__class__.__name__, hex(id(self)), self.user_profile, self.cluster_id, self.color)
+        return '<{} at {} user_profile:[{}] color:[{}]>'.format(
+            self.__class__.__name__, hex(id(self)), self.user_profile, self.color)
 
     __unicode__ = __repr__

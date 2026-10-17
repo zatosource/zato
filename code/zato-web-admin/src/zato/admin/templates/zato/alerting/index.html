@@ -35,10 +35,9 @@ $(document).ready(function() {
     var alerting = $.fn.zato.alerting;
 
     alerting.init({
-        actionUrl: '{% url "alert-rules-action" %}?cluster={{ cluster_id }}',
+        actionUrl: '{% url "alert-rules-action" %}',
         editorUrl: '{% url "alert-rules-editor" %}',
         nameExistsUrl: '{% url "alert-rules-api-name-exists" %}',
-        clusterId: '{{ cluster_id }}',
         definitionId: definitionId
     });
 

@@ -112,7 +112,6 @@ class TestEnmasseOutgoingRESTDeclarativeExport(TestCase):
     def _import_connection(self) -> 'None':
 
         self.session = get_session_from_server_dir(self.server_path)
-        _ = self.importer.get_cluster(self.session)
 
         created, updated = self.outgoing_rest_importer.sync_outgoing_rest([dict(_connection_def)], self.session)
         self.assertEqual(len(created), 1)
@@ -151,7 +150,7 @@ class TestEnmasseOutgoingRESTDeclarativeExport(TestCase):
         self._import_connection()
 
         # Export the connections and find the one under test
-        exported_connections = self.outgoing_rest_exporter.export(self.session, self.importer.cluster_id)
+        exported_connections = self.outgoing_rest_exporter.export(self.session)
 
         for conn in exported_connections:
             if conn['name'] == _connection_def['name']:

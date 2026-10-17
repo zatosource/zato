@@ -24,12 +24,11 @@ class TestCloudAWS:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'ZatoClient') -> 'None':
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-aws-1',
             type_=TYPE,
             is_active=True,
@@ -47,7 +46,7 @@ class TestCloudAWS:
         self.__class__.created_ids.append(resp['id'])
 
     def test_03_get_list_after_create(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
 
         names = []
         for item in data:
@@ -58,7 +57,6 @@ class TestCloudAWS:
     def test_04_create_batch(self, client:'ZatoClient') -> 'None':
         for item_index in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'test-aws-{item_index}',
                 type_=TYPE,
                 is_active=True,
@@ -75,7 +73,7 @@ class TestCloudAWS:
             self.__class__.created_ids.append(resp['id'])
 
     def test_05_get_list_batch(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
 
         test_items = []
         for item in data:
@@ -88,7 +86,6 @@ class TestCloudAWS:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-aws-1-edited',
             type_=TYPE,
             is_active=True,
@@ -104,7 +101,7 @@ class TestCloudAWS:
         assert resp['id'] == item_id
 
     def test_07_get_list_after_edit(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
 
         names = []
         for item in data:
@@ -130,7 +127,6 @@ class TestCloudAWS:
 
         try:
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name='test-aws-ping-live',
                 type_=TYPE,
                 is_active=True,
@@ -158,7 +154,7 @@ class TestCloudAWS:
         _ = client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_11_get_list_after_delete(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
 
         test_items = []
         for item in data:
@@ -173,7 +169,7 @@ class TestCloudAWS:
             self.__class__.created_ids.remove(item_id)
 
     def test_13_get_list_final(self, client:'ZatoClient') -> 'None':
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
 
         test_items = []
         for item in data:

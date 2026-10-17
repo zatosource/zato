@@ -11,19 +11,21 @@ from contextlib import closing
 import logging
 
 # SQLAlchemy
-from sqlalchemy import and_, select, delete
+from sqlalchemy import and_, select, delete, update
 
 # Zato
 from zato.common.api import Groups
 from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericObject
 from zato.common.odb.query.generic import GroupsWrapper
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
+    from zato.cli.enmasse.importer import EnmasseYAMLImporter
     from zato.common.typing_ import any_, anydict, anylist, strlist
 
 # ################################################################################################################################
@@ -38,7 +40,7 @@ class GroupImporter:
     """ A class that knows how to import security groups from YAML.
     """
 
-    def __init__(self, importer):
+    def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
         self.importer = importer
         self.group_defs = {}
 
@@ -48,7 +50,6 @@ class GroupImporter:
         """ Returns all security groups from the database, keyed by name.
         """
         out = {}
-        cluster_id = self.importer.cluster_id
 
         # Use a single query to get all groups
         with closing(session) as session:
@@ -59,7 +60,6 @@ class GroupImporter:
                 ]).where(and_(
                     GenericObject.type_ == Groups.Type.Group_Parent,
                     GenericObject.subtype == Groups.Type.API_Clients,
-                    GenericObject.cluster_id == cluster_id,
                 ))
 
             # Execute the query and get results
@@ -89,7 +89,6 @@ class GroupImporter:
                         GenericObject.type_ == Groups.Type.Group_Member,
                         GenericObject.subtype == Groups.Type.API_Clients,
                         GenericObject.parent_object_id.in_(group_ids),
-                        GenericObject.cluster_id == cluster_id,
                     ))
 
                 # Execute the query and get results
@@ -122,51 +121,13 @@ class GroupImporter:
 
 # ################################################################################################################################
 
-    def delete_group(self, group_name, group_id, session:'SASession') -> 'None':
-        """ Deletes a group and all its members from the database.
-        """
-        cluster_id = self.importer.cluster_id
-
-        with closing(session) as session:
-            # First, delete all members of the group
-            member_delete = delete(GenericObject).where(
-                and_(
-                    GenericObject.type_ == Groups.Type.Group_Member,
-                    GenericObject.subtype == Groups.Type.API_Clients,
-                    GenericObject.parent_object_id == group_id,
-                    GenericObject.cluster_id == cluster_id
-                )
-            )
-            session.execute(member_delete)
-
-            # Then delete the group itself
-            group_delete = delete(GenericObject).where(
-                and_(
-                    GenericObject.id == group_id,
-                    GenericObject.type_ == Groups.Type.Group_Parent,
-                    GenericObject.subtype == Groups.Type.API_Clients,
-                    GenericObject.cluster_id == cluster_id
-                )
-            )
-            session.execute(group_delete)
-
-            # Commit all changes
-            session.commit()
-
-            logger.info('Deleted group %s with ID %s', group_name, group_id)
-
-# ################################################################################################################################
-
-    def create_group(self, group:'anydict', session:'SASession') -> 'any_':
-        """ Creates a new security group and adds members to it.
+    def _get_opaque(self, group:'anydict') -> 'str':
+        """ Returns the opaque data of a group. A group may reference a quota tier by name,
+        which is resolved to the tier's ID because that is what the group's opaque data stores.
         """
         group_name = group['name']
-        members = group.get('members', [])
-        cluster_id = self.importer.cluster_id
 
-        # A group may reference a quota tier by name - resolve it to the tier's id
-        # because that is what the group's opaque data stores.
-        opaque = ''
+        out = ''
 
         if tier_name := group.get('quota_tier'):
 
@@ -175,11 +136,104 @@ class GroupImporter:
             if not tier_def:
                 raise ValueError(f'Quota tier `{tier_name}` not found for group `{group_name}`')
 
-            opaque = dumps({'quota_tier': tier_def['id']})
+            out = dumps({'quota_tier': tier_def['id']})
+
+        return out
+
+# ################################################################################################################################
+
+    def _add_members(
+        self,
+        wrapper:'GroupsWrapper',
+        group_name:'str',
+        group_id:'int',
+        members:'strlist',
+        session:'SASession',
+        ) -> 'None':
+        """ Inserts the members from YAML into a group.
+        """
+        if not members:
+            return
+
+        logger.info('Adding members to group %s: %s', group_name, sorted(members))
+        member_ids = self._resolve_member_names(members)
+
+        # Each member row is named after the member and the group it belongs to
+        member_list = []
+        for member_id in member_ids:
+            name = f'{member_id}-{group_id}'
+            member_list.append({
+                'name': name,
+                'opaque1': '',
+            })
+
+        insert = wrapper.create_many(
+            member_list,
+            Groups.Type.Group_Member,
+            Groups.Type.API_Clients,
+            parent_object_id=group_id
+        )
+        _ = session.execute(insert)
+
+# ################################################################################################################################
+
+    def update_group(self, group:'anydict', group_id:'int', session:'SASession') -> 'anydict':
+        """ Replaces the members and the opaque data of an existing group. The group keeps its row and its ID,
+        which MCP gateways and channels store as their reference to it.
+        """
+        group_name = group['name']
+        members = group.get('members', [])
+        opaque = self._get_opaque(group)
+
+        with closing(session) as session:
+
+            # The members the group has are replaced by the ones from YAML ..
+            member_delete = delete(GenericObject).where(
+                and_(
+                    GenericObject.type_ == Groups.Type.Group_Member,
+                    GenericObject.subtype == Groups.Type.API_Clients,
+                    GenericObject.parent_object_id == group_id,
+                )
+            )
+            _ = session.execute(member_delete)
+
+            # .. the group's own row receives its opaque data anew ..
+            group_update = update(GenericObject).where(
+                and_(
+                    GenericObject.id == group_id,
+                    GenericObject.type_ == Groups.Type.Group_Parent,
+                    GenericObject.subtype == Groups.Type.API_Clients,
+                )
+            ).values(opaque1=opaque, last_modified=utcnow())
+            _ = session.execute(group_update)
+
+            # .. and the members from YAML are added.
+            wrapper = GroupsWrapper(session)
+            self._add_members(wrapper, group_name, group_id, members, session)
+
+            session.commit()
+
+        logger.info('Updated group %s with ID %s', group_name, group_id)
+
+        out = {
+            'id': group_id,
+            'name': group_name,
+            'members': members
+        }
+        return out
+
+# ################################################################################################################################
+
+    def create_group(self, group:'anydict', session:'SASession') -> 'any_':
+        """ Creates a new security group and adds members to it.
+        """
+        group_name = group['name']
+        members = group.get('members', [])
+        opaque = self._get_opaque(group)
 
         # Create the group
         with closing(session) as session:
-            wrapper = GroupsWrapper(session, cluster_id)
+            wrapper = GroupsWrapper(session)
 
             # Prepare the group data
             group_data = {
@@ -194,7 +248,7 @@ class GroupImporter:
                 Groups.Type.Group_Parent,
                 Groups.Type.API_Clients
             )
-            session.execute(insert)
+            _ = session.execute(insert)
 
             # Get the new group ID - need to query the database since create_many doesn't return it
             query = select([GenericObject.id]).where(
@@ -202,7 +256,6 @@ class GroupImporter:
                     GenericObject.name == group_name,
                     GenericObject.type_ == Groups.Type.Group_Parent,
                     GenericObject.subtype == Groups.Type.API_Clients,
-                    GenericObject.cluster_id == cluster_id
                 )
             )
             group_id_result = session.execute(query).fetchone()
@@ -212,29 +265,7 @@ class GroupImporter:
             group_id = group_id_result['id']
 
             # Add members if there are any
-            if members:
-                logger.info('Adding members to new group %s: %s', group_name, sorted(members))
-                member_ids = self._resolve_member_names(members)
-                if member_ids:
-                    # Add members directly using GroupsWrapper
-                    member_list = []
-                    for member_id in member_ids:
-                        # Create a composite name
-                        name = f'{member_id}-{group_id}'
-                        member_list.append({
-                            'name': name,
-                            'opaque1': '',
-                        })
-
-                    # Insert members in bulk
-                    if member_list:
-                        insert = wrapper.create_many(
-                            member_list,
-                            Groups.Type.Group_Member,
-                            Groups.Type.API_Clients,
-                            parent_object_id=group_id
-                        )
-                        session.execute(insert)
+            self._add_members(wrapper, group_name, group_id, members, session)
 
             # Commit all changes
             session.commit()
@@ -291,23 +322,22 @@ class GroupImporter:
             for group in group_list:
                 group_name = group['name']
 
-                # Check if the group already exists
+                # An existing group keeps its ID and receives the members from YAML ..
                 if group_name in db_groups:
-                    existing_group = db_groups[group_name]
-                    group_id = existing_group['id']
+                    group_id = db_groups[group_name]['id']
+                    logger.info('Updating group %s with members from YAML', group_name)
+                    processed_group = self.update_group(group, group_id, session)
 
-                    # Delete the existing group and all its members
-                    logger.info('Group %s already exists - deleting it first', group_name)
-                    self.delete_group(group_name, group_id, session)
+                # .. while a new one is created with them.
+                else:
+                    logger.info('Creating group %s with members from YAML', group_name)
+                    processed_group = self.create_group(group, session)
 
-                # Create the group with all its members from YAML
-                logger.info('Creating group %s with members from YAML', group_name)
-                created_group = self.create_group(group, session)
-                processed_groups.append(created_group)
+                processed_groups.append(processed_group)
 
                 # Store the group definition for later use
                 self.group_defs[group_name] = {
-                    'id': created_group['id'],
+                    'id': processed_group['id'],
                     'name': group_name
                 }
 

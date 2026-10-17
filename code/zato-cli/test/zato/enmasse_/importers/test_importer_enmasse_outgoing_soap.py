@@ -85,9 +85,6 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Get the cluster instance from the database
-        self.importer.cluster = self.importer.get_cluster(self.session)
-
         # Create security definitions first since outgoing SOAP connections may use them
         security_list = self.yaml_config['security']
         _ = self.security_importer.sync_security_definitions(security_list, self.session)

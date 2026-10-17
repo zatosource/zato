@@ -218,20 +218,6 @@ class TestAllowList(TestCase):
 
 # ################################################################################################################################
 
-    def test_as2_sends_mic_and_disposition(self) -> 'None':
-
-        data = dumps({'mic': 'abc=', 'disposition': 'processed', 'payload': 'EDI'})
-
-        out:'stranydict' = {}
-        build_data_attributes(AuditSource.AS2, AuditEvent.MDN_Received, data, out)
-
-        self.assertEqual(out, {
-            _data('mic'): 'abc=',
-            _data('disposition'): 'processed',
-        })
-
-# ################################################################################################################################
-
     def test_alert_raised_of_any_source(self) -> 'None':
 
         data = dumps({'kind': 'latency', 'message': 'slow', 'rule': 'r1', 'count': 2, 'secret': 'no'})

@@ -18,9 +18,10 @@ from zato.admin.web.views.channel.hl7.mllp.common import _alert_field_names, _al
     _REST_Channel_Name_Prefix, _Row_Edit_Prefix, logger
 from zato.common.alerting.object_config import Field_Prefix
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, ZATO_NONE
-from zato.common.destination.model import count_entries
+from zato.common.destination.constants import Channel_Fan_Out_Fields
+from zato.common.destination.model import count_active_entries, count_entries
 from zato.common.hl7.mllp.fields import get_match_label, resolve_max_message_size, Channel_Defaults, Matcher_Labels
-from zato.common.hl7.mllp.settings import describe_bounds_violations
+from zato.common.hl7.mllp.settings import describe_bounds_violations, listener_config_from_bounds
 from zato.common.model.hl7 import HL7MLLPChannelConfigObject
 
 # ################################################################################################################################
@@ -56,7 +57,7 @@ class Index(_Index):
     output_class = HL7MLLPChannelConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name'
     output_optional = (
         'should_parse_on_input', 'should_validate', 'should_return_errors',
@@ -208,10 +209,10 @@ class _CreateEdit(CreateEdit):
 
     def _check_target(self) -> 'None':
         """ Refuses a new channel that hands each message it accepts to neither a service nor a
-        destination, there being nowhere for its messages to go - the same rule the enmasse
-        importer enforces, applied to what the page posts. A stored channel is not asked again,
-        one that had its service and its destinations taken away being one someone meant to
-        leave that way.
+        destination a message can reach, there being nowhere for its messages to go - a paused
+        destination receives nothing, so it does not count. The same rule the enmasse importer
+        enforces, applied to what the page posts. A stored channel is not asked again, one that
+        had its service and its destinations taken away being one someone meant to leave that way.
         """
         prefix = self.form_prefix
         post_data = self.req.POST
@@ -223,9 +224,9 @@ class _CreateEdit(CreateEdit):
             return
 
         if self.is_target_required:
-            if not count_entries(destinations):
+            if not count_active_entries(destinations):
                 name = post_data[f'{prefix}name']
-                raise Exception(f'HL7 MLLP channel `{name}` needs a service or at least one destination')
+                raise Exception(f'HL7 MLLP channel `{name}` needs a service or at least one active destination')
 
         # The backing REST channel hands each request to a service of its own, which is the
         # channel's, so there is no bridge to build for a channel that names no service.
@@ -237,7 +238,8 @@ class _CreateEdit(CreateEdit):
 
     def _check_listener_bounds(self) -> 'None':
         """ Refuses a channel asking for more room or more time than the listener it runs on has,
-        since a channel's values tune what the listener already allows.
+        since a channel's values tune what the listener already allows. The bounds are the server's
+        own, read from the process the listener runs in rather than from this one.
         """
         prefix = self.form_prefix
         post_data = self.req.POST
@@ -246,9 +248,13 @@ class _CreateEdit(CreateEdit):
         max_msg_size_unit = post_data[f'{prefix}max_msg_size_unit']
         idle_timeout = float(post_data[f'{prefix}idle_timeout'])
 
+        response = self.req.zato.client.invoke('zato.server.invoker', {'func_name': 'get_hl7_mllp_listener_bounds'})
+        listener_config = listener_config_from_bounds(response.data)
+
         violations = describe_bounds_violations(
             resolve_max_message_size(max_msg_size, max_msg_size_unit),
             idle_timeout,
+            listener_config,
         )
 
         if violations:
@@ -372,7 +378,6 @@ class _CreateEdit(CreateEdit):
         prefix = self.form_prefix
 
         out = {
-            'cluster_id': self.cluster_id,
             'is_internal': False,
             'is_active': True,
             'connection': 'channel',
@@ -387,6 +392,11 @@ class _CreateEdit(CreateEdit):
             'match_slash': False,
             'merge_url_params_req': True,
         }
+
+        # The backing channel is given the fan-out of the MLLP channel it backs, so a message
+        # received over REST reaches the same destinations, in the same way, as one received over MLLP
+        for name in Channel_Fan_Out_Fields:
+            out[name] = self.req.POST[prefix + name]
 
         return out
 
@@ -428,7 +438,6 @@ class _CreateEdit(CreateEdit):
         """
         message = {
             'id': rest_channel_id,
-            'cluster_id': self.cluster_id,
         }
         response = self.req.zato.client.invoke('zato.http-soap.delete', message)
 
@@ -450,7 +459,6 @@ class _CreateEdit(CreateEdit):
         name = _REST_Channel_Name_Prefix + mllp_name
 
         response = self.req.zato.client.invoke('zato.http-soap.get-list', {
-            'cluster_id': self.cluster_id,
             'connection': 'channel',
             'transport': 'plain_http',
             'query': name,

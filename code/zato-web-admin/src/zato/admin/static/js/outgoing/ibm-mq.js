@@ -144,15 +144,13 @@ $.fn.zato.outgoing.ibm_mq.data_table.new_row = function(item, data, include_tr) 
 $.fn.zato.outgoing.ibm_mq.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Outgoing IBM MQ connection `{0}` deleted',
-        'Are you sure you want to delete outgoing IBM MQ connection `{0}`?',
-        true);
+        'Are you sure you want to delete outgoing IBM MQ connection `{0}`?');
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.ibm_mq.import_demo_config = function() {
-    var cluster_id = '1';
-    var import_url = '/zato/outgoing/ibm-mq/import-demo-config?cluster=' + cluster_id;
+    var import_url = '/zato/outgoing/ibm-mq/import-demo-config';
 
     var spinner_html = '<div id="import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
     $('body').append(spinner_html);

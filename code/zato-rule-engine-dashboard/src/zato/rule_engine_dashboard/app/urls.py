@@ -30,7 +30,6 @@ urlpatterns = [
 
     # Sign-in and sign-out
     path('login/', auth.login, name='login'),
-    path('login/callback/', auth.login_callback, name='login-callback'),
     path('logout/', auth.logout, name='logout'),
 
     # User management

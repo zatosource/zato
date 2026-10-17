@@ -9,11 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND, TOO_MANY_REQUESTS, UNAUTHORIZED
+from http.client import ACCEPTED, FORBIDDEN, METHOD_NOT_ALLOWED, NOT_FOUND, TOO_MANY_REQUESTS, UNAUTHORIZED
 from time import monotonic
 from traceback import format_exc
 
 # Zato
+from zato.common.api import MCP
 from zato.common.bearer_token_identity import Auth_Info_Key, build_auth_block, Identity_Key
 from zato.common.json_internal import dumps
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
@@ -85,11 +86,20 @@ _not_deployed_note = 'Not deployed'
 # What the tool list says about a connection that is on an allow list but does not exist
 _not_found_note = 'Not found'
 
-# Internal service namespace - never exposed as MCP tools, the same rule the tool registry follows
-_internal_prefix = 'zato.'
+# Internal service namespaces - never exposed as MCP tools, the same rule the tool registry follows
+_internal_prefixes = MCP.Internal_Service_Prefixes
 
 # The header a gateway with OAuth on answers unauthenticated requests with
 _www_authenticate_header = 'WWW-Authenticate'
+
+# The HTTP methods of the MCP endpoint - POST sends JSON-RPC messages and DELETE ends a session
+_http_post       = 'POST'
+_http_delete     = 'DELETE'
+_allowed_methods = (_http_post, _http_delete)
+
+# The header a 405 response lists the accepted methods in
+_allow_header       = 'Allow'
+_allow_header_value = 'DELETE, POST'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,7 +124,7 @@ class GetToolList(AdminService):
 
             # Internal services are never exposed as tools, so they do not
             # belong in the document either - the same rule the registry follows.
-            if service_name.startswith(_internal_prefix):
+            if service_name.startswith(_internal_prefixes):
                 continue
 
             # A service that is on the list but not deployed is still reported,
@@ -308,8 +318,22 @@ class MCPEndpoint(AdminService):
         # in configurations predating the field, which means it is off ..
         is_audit_log_active = wrapper.config.get('is_audit_log_active')
 
+        # .. the endpoint offers no SSE stream, so a GET, as any other method than POST and DELETE,
+        # is answered with 405 and the methods the endpoint accepts ..
+        http_method = self.request.http.method
+
+        if http_method not in _allowed_methods:
+
+            logger.info(
+                'MCP gateway `%s` rejected HTTP method `%s` (sec name=`%s` username=`%s`)',
+                self.channel.name, printable(http_method), channel_security.name, channel_security.username)
+            self.response.status_code = METHOD_NOT_ALLOWED
+            self.response.headers[_allow_header] = _allow_header_value
+            self.response.payload = ''
+            return
+
         # .. handle DELETE requests for session termination ..
-        if self.request.http.method == 'DELETE':
+        if http_method == _http_delete:
 
             # .. measure how long the dispatch takes for the audit log ..
             start_time = monotonic()
@@ -355,7 +379,7 @@ class MCPEndpoint(AdminService):
         # .. set the response ..
         self.response.status_code = mcp_response.status_code
 
-        if mcp_response.status_code == NO_CONTENT:
+        if mcp_response.status_code == ACCEPTED:
             payload = ''
 
         else:

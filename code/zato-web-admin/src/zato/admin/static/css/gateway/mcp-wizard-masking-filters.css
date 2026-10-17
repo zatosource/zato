@@ -1,0 +1,88 @@
+/*
+ * MCP gateway wizard - the filter box over the field list of the Data masking
+ * popover. The pane it stands in is in gateway/mcp-wizard-masking-popover.css,
+ * loaded before this file.
+ */
+
+/* ------------------------------------------------------------ */
+/* Data masking filter - the box                                 */
+/* ------------------------------------------------------------ */
+
+.mcp-masking-search {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 6px;
+    box-sizing: border-box;
+    height: 26px;
+    margin-bottom: 8px;
+    padding: 0 4px 0 8px;
+    color: var(--zato-ui-text-muted);
+    background: #fff;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+}
+
+.mcp-masking-search:focus-within {
+    border-color: var(--zato-ui-accent);
+}
+
+/* The box is what draws the frame - formalize.css frames every text input
+   and shadows it on focus, and both are named back here */
+.mcp-masking-search input.mcp-masking-search-input,
+.mcp-masking-search input.mcp-masking-search-input:focus {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--zato-ui-text);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+}
+
+.mcp-masking-filter-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.mcp-masking-filter-icon-search {
+    cursor: text;
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking filter - the clear button                        */
+/* ------------------------------------------------------------ */
+
+/* Shown only while the box has text in it */
+.mcp-masking-search .mcp-masking-search-clear {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    color: var(--zato-ui-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: color var(--mcp-masking-transition);
+}
+
+.mcp-masking-search-filled .mcp-masking-search-clear {
+    display: inline-flex;
+}
+
+.mcp-masking-search .mcp-masking-search-clear:hover {
+    color: var(--zato-ui-accent);
+    background: transparent;
+    transition-delay: var(--mcp-masking-hover-delay);
+}

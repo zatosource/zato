@@ -1,0 +1,42 @@
+label: Expenses
+position: 13
+fields:
+  - email
+  - firstname
+  - lastname
+  - username
+  - givenname
+  - familyname
+  - first_name
+  - last_name
+  - manageremail
+  - employeeid
+  - emails
+  - name
+  - employeenumber
+  - phonenumbers
+  - dateofbirth
+  - emergencycontacts
+  - displayname
+  - accountnumber
+  - accountname
+  - bankname
+  - banknumber
+  - postaladdressline1
+  - employee_id
+  - user_email
+  - user_full_name
+  - login
+  - employee-number
+  - phone-mobile
+  - phone-work
+  - bank-account-number
+  - employeeemail
+  - externalemployeeid
+  - cardnumber
+  - partnerusersecret
+  - primaryemailaddress
+  - alternateemailaddresses
+  - cvv
+  - expiration_date
+  - holder_name

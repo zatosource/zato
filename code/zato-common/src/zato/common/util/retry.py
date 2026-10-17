@@ -101,6 +101,14 @@ def _resolve(config:'stranydict', name:'str', default:'int') -> 'int':
 
 # ################################################################################################################################
 
+def get_first_sleep_time(policy:'RetryPolicy') -> 'int':
+    """ How long the first sleep is - the configured sleep time, held under both the per-sleep ceiling and the total budget.
+    """
+    out = min(policy.sleep_time, policy.max_sleep_time, policy.backoff_threshold)
+    return out
+
+# ################################################################################################################################
+
 def get_next_sleep_time(policy:'RetryPolicy', current_sleep_time:'int', total_sleep_time:'int') -> 'int':
     """ How long the sleep after the one just made is - it grows by the multiplier but is held under both
     the per-sleep ceiling and whatever is left of the total budget, so a loop cannot overshoot the threshold,

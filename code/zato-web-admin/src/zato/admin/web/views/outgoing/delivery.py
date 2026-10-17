@@ -26,11 +26,13 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.audit_log.details import _access_log
 from zato.common.api import HTTP_SOAP
+from zato.common.audit_log.config_audit import record_view_event
 from zato.common.content_type import format_content
-from zato.common.defaults import default_cluster_id
-from zato.common.pubsub.dlq import Header_Moved_Time, Header_Rounds, Key_DLQ
-from zato.common.pubsub.outgoing import Body_Mode_HL7, Body_Mode_JSON, Body_Mode_Text, Body_Mode_XML, Key_Data, Key_Request
+from zato.common.pubsub.dlq import Header_Moved_Time, Header_Rule_Rounds, Key_DLQ
+from zato.common.pubsub.outgoing import Body_Mode_HL7, Body_Mode_JSON, Body_Mode_Text, Body_Mode_XML, Key_CID, Key_Conn_Name, \
+    Key_Data, Key_Msg_ID, Key_Request
 from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
@@ -47,6 +49,9 @@ logger = logging.getLogger(__name__)
 _dlq = HTTP_SOAP.DLQ
 
 _template = 'zato/outgoing/delivery.html'
+
+# The screen a queued message's body is read from, as the log access source names it
+_screen_delivery = 'delivery-queue'
 
 _default_error_message = 'Error'
 _default_page = 1
@@ -184,7 +189,7 @@ def _page_url(kind:'str', query:'str', page:'int') -> 'str':
     """ The address of one page of one tab's list.
     """
     query_encoded = quote(query, safe='')
-    out = f'?cluster={default_cluster_id}&tab={kind}&query={query_encoded}&cur_page={page}'
+    out = f'?tab={kind}&query={query_encoded}&cur_page={page}'
     return out
 
 # ################################################################################################################################
@@ -288,7 +293,6 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
         active_tab = Kind_DLQ
 
     out = TemplateResponse(req, _template, {
-        'cluster_id': default_cluster_id,
         'active_tab': active_tab,
         'conn_type': conn_type,
         'conn_id': conn_id,
@@ -299,7 +303,6 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
         'queue_tab': tabs[Kind_Queue],
         'dlq_tab': tabs[Kind_DLQ],
         'req': req,
-        'zato_clusters': True,
         'zato_template_name': _template,
     })
 
@@ -325,12 +328,32 @@ def _get_message(req:'any_') -> 'stranydict':
 
 # ################################################################################################################################
 
+def _record_message_view(req:'any_', document:'stranydict') -> 'None':
+    """ Records who read the body of one queued message - access to patient data is itself an audited
+    operation, and a message waiting in a queue carries the same data an audit event does once it is sent.
+    """
+    _ = record_view_event(
+        _access_log,
+        actor=req.user.username,
+        viewed_event_id=None,
+        screen=_screen_delivery,
+        cid=document[Key_CID],
+        viewed_source=req.GET['conn_type'],
+        viewed_object_name=document[Key_Conn_Name],
+        viewed_msg_id=document[Key_Msg_ID],
+    )
+
+# ################################################################################################################################
+
 @method_allowed('GET')
 def message(req:'any_') -> 'JsonResponse':
     """ One message for the details window.
     """
     message_data = _get_message(req)
     document = message_data['document']
+
+    # Whoever is reading this message is recorded
+    _record_message_view(req, document)
     request = document[Key_Request]
 
     data = request[Key_Data]
@@ -342,7 +365,8 @@ def message(req:'any_') -> 'JsonResponse':
     # What the DLQ rule will do with this message is told here rather than in the listing
     if has_dlq_header:
         dlq_header = document[Key_DLQ]
-        rule = _rule_text(dlq_header[Header_Moved_Time], dlq_header[Header_Rounds], message_data['dlq_settings'], utcnow())
+        now = utcnow()
+        rule = _rule_text(dlq_header[Header_Moved_Time], dlq_header[Header_Rule_Rounds], message_data['dlq_settings'], now)
 
     out = JsonResponse({
         'document': document,
@@ -367,6 +391,9 @@ def download(req:'any_') -> 'HttpResponse':
     document = message_data['document']
     msg_id = req.GET['msg_id']
     what = req.GET['what']
+
+    # Whoever is downloading this message is recorded, the document carrying its body as the body alone does
+    _record_message_view(req, document)
 
     if what == Download_Body:
         request = document[Key_Request]

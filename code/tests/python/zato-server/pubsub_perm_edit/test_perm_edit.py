@@ -73,7 +73,7 @@ def _drain_pull_queue_a() -> 'None':
 def _get_subscriptions_a(admin:'any_') -> 'anylist':
     """ Returns all subscriptions for subscriber-A.
     """
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list
@@ -103,7 +103,6 @@ def _edit_permission(admin:'any_', pattern:'str', sec_base_id:'int'=0) -> 'any_'
         'sec_base_id': sec_base_id,
         'pattern': pattern,
         'access_type': PubSub.API_Client.Publisher_Subscriber,
-        'cluster_id': 1,
     })
 
     return out
@@ -253,7 +252,6 @@ class TestPermEdit:
 
         # .. create a subscription for subscriber-B ..
         _ = admin.invoke('zato.pubsub.subscription.create', {
-            'cluster_id': 1,
             'sec_base_id': TestConfig.subscriber_b_sec_base_id,
             'delivery_type': 'pull',
             'topic_name_list': [

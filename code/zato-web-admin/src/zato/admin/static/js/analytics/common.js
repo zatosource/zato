@@ -8,7 +8,6 @@
 $.namespace('zato.analytics.dashboard');
 
 $.fn.zato.analytics.dashboard.config = {
-    cluster_id: '1',
     screen: '',
     poll_url: '',
     csv_url: '',
@@ -192,7 +191,6 @@ $.fn.zato.analytics.dashboard.range_names = {
     // The address of this screen's CSV export, with the current filters applied.
     dash.csv_href = function() {
         var href = dash.config.csv_url + '?range=' + encodeURIComponent(dash.config.time_range);
-        href += '&cluster=' + dash.config.cluster_id;
 
         if (dash.config.name) {
             href += '&name=' + encodeURIComponent(dash.config.name);
@@ -277,7 +275,6 @@ $.fn.zato.analytics.dashboard.range_names = {
                 var href = dash.config.audit_log_page;
                 href += '?source=' + encodeURIComponent(data.source);
                 href += '&object_name=' + encodeURIComponent(dash.config.name);
-                href += '&cluster=' + dash.config.cluster_id;
                 href += '&time_from=' + encodeURIComponent(dash.to_iso_second(bucket.start));
                 href += '&time_to=' + encodeURIComponent(dash.to_iso_second(bucket.end));
 

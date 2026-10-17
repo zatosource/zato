@@ -27,3 +27,4 @@ hl7
 aiosmtpd
 fhir.resources
 confluent-kafka
+websockets==17.2

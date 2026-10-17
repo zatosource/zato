@@ -43,13 +43,12 @@ from zato.common.typing_ import cast_
 
 logger = logging.getLogger(__name__)
 
-_Page_Url_Pattern = '/zato/cloud/microsoft-fabric/?cluster=1&type_=cloud-microsoft-fabric'
+_Page_Url_Pattern = '/zato/cloud/microsoft-fabric/?type_=cloud-microsoft-fabric'
 
 _Test_Name_Prefix = 'test.microsoft.fabric.ping.' + CryptoManager.generate_hex_string(32) + '.'
 
 _Connection_Type = 'cloud-microsoft-fabric'
 
-_Cluster_ID = 1
 
 # A ping that fails on the server side is logged as a warning whose first line is the traceback header,
 # the token error message itself appears in later lines of the same record, and the dashboard
@@ -170,7 +169,6 @@ def _set_token_url(
 
     _ = api_client.edit('zato.generic.connection.edit',
         id=int(item_id),
-        cluster_id=_Cluster_ID,
         name=name,
         type_=_Connection_Type,
         is_active=True,

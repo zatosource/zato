@@ -138,7 +138,6 @@ def get_user_profile(user, needs_logging=False):
 def get_pubsub_security_definitions(request:'any_', form_type:'str'='edit', context:'str'='subscription') -> 'list':
 
     response = request.zato.client.invoke('zato.security.basic-auth.get-list', {
-        'cluster_id': request.zato.cluster_id,
     })
 
     # Get already used security definitions based on context
@@ -149,7 +148,6 @@ def get_pubsub_security_definitions(request:'any_', form_type:'str'='edit', cont
         if context == 'subscription':
             # For subscriptions, exclude definitions used by other subscriptions ..
             subscriptions_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
-                'cluster_id': request.zato.cluster_id,
             })
 
             # .. create a mapping of security names to IDs ..
@@ -172,7 +170,6 @@ def get_pubsub_security_definitions(request:'any_', form_type:'str'='edit', cont
         elif context in ('permission', 'client'):
             # For permissions and clients, exclude definitions already in use.
             permissions_response = request.zato.client.invoke('zato.pubsub.permission.get-list', {
-                'cluster_id': request.zato.cluster_id,
             })
             for item in permissions_response.data:
                 used_sec_ids.add(item['sec_base_id'])
@@ -207,7 +204,6 @@ def get_pubsub_security_choices(request:'any_', form_type:'str'='edit', context:
 def get_service_list(request):
 
     response = request.zato.client.invoke('zato.service.get-list', {
-        'cluster_id': request.zato.cluster_id,
     })
 
     services = []

@@ -12,9 +12,6 @@ from dataclasses import dataclass
 # typing-extensions
 from typing_extensions import TypeAlias
 
-# Zato
-from zato.common.defaults import default_cluster_id
-
 # Local
 from .data import any_, count_point_list, decision_record_list, CountPoint, DecisionFilter
 from .decisions import normalize_utc
@@ -132,11 +129,7 @@ def count_points(totals:'count_total_dict') -> 'count_point_list':
 def apply_filters(query:'any_', filters:'DecisionFilter') -> 'any_':
     """ Adds promoted-column filters to a decision query.
     """
-    # Every query stays inside the one Zato cluster ..
-    cluster_condition = rule_decision_table.c.cluster_id == default_cluster_id
-    query = query.where(cluster_condition)
-
-    # .. then each supplied promoted-column filter narrows the same SQL statement.
+    # Each supplied promoted-column filter narrows the same SQL statement.
     if filters.ruleset_id is not None:
         ruleset_condition = rule_decision_table.c.ruleset_id == filters.ruleset_id
         query = query.where(ruleset_condition)

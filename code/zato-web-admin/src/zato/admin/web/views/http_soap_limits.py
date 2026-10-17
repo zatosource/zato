@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 @method_allowed('GET')
 def rate_limiting(req, id): # type: ignore
     response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
         'id': id,
     })
 
@@ -44,7 +43,6 @@ def rate_limiting(req, id): # type: ignore
     tier_list = get_tier_list(req)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'channel_id': id,
         'channel_name': response.data.name,
         'channel_url_path': response.data.url_path,
@@ -106,7 +104,6 @@ def rate_limiting_clear_counters(req, id): # type: ignore
 @method_allowed('GET')
 def response_caching(req:'any_', id:'str') -> 'TemplateResponse':
     response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
         'id': id,
     })
 
@@ -115,7 +112,6 @@ def response_caching(req:'any_', id:'str') -> 'TemplateResponse':
     })
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'channel_id': id,
         'channel_name': response.data.name,
         'channel_url_path': response.data.url_path,

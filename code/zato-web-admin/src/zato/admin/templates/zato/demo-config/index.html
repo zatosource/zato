@@ -119,6 +119,17 @@ its final state and nothing visibly slides at load.
                     <div class="demo-config-set-body" id="demo-config-body-ibm_mq"></div>
                 </div>
 
+                <div class="dashboard-card demo-config-set-card" id="demo-config-card-file_transfer">
+                    <div class="demo-config-set-header">
+                        <label class="demo-config-set-title" for="id_demo_config_file_transfer">File transfer</label>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span><span id="demo-config-running-label-file_transfer">Importing</span></span>
+                        <span class="demo-config-ok" id="demo-config-ok-file_transfer"></span>
+                        <input type="checkbox" id="id_demo_config_file_transfer"{% if demo_config_sets.file_transfer.is_present %} checked{% endif %}>
+                    </div>
+                    <div class="demo-config-set-status" id="demo-config-status-file_transfer"></div>
+                    <div class="demo-config-set-body" id="demo-config-body-file_transfer"></div>
+                </div>
+
             </div>
 
             {% comment %} Help for the page as a whole, anchored at the Everything slider {% endcomment %}

@@ -1,0 +1,136 @@
+/*
+ * MCP gateway wizard - data masking, at the head of the PII and data masking section.
+ *
+ * The tokens, the data masking line, the controls the popover shares with it
+ * and the line-numbered editor of field names. The popover itself is in
+ * gateway/mcp-wizard-masking-popover.css. It is appended to document.body,
+ * so its rules are not scoped to the section.
+ */
+
+/* ------------------------------------------------------------ */
+/* Data masking - tokens                                         */
+/* ------------------------------------------------------------ */
+
+/* The gutter and the text of the editor share one font and one line height,
+   which is what keeps every number level with its line. The gutter's tail is
+   the room the editor's horizontal scrollbar takes, so the last number still
+   reaches its line with the editor scrolled to the bottom. */
+:root {
+    --mcp-field-list-font: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --mcp-field-list-font-size: 12px;
+    --mcp-field-list-line-height: 18px;
+    --mcp-field-list-rows: 10;
+    --mcp-field-list-min-rows: 4;
+    --mcp-field-list-padding: 6px;
+    --mcp-field-list-gutter-tail: 24px;
+    --mcp-field-list-gutter-bg: rgba(0, 0, 0, 0.03);
+
+    --mcp-masking-hover-delay: 80ms;
+    --mcp-masking-transition: 120ms ease;
+    --mcp-masking-heading-color: var(--zato-seablue);
+    --mcp-masking-strong-color: var(--zato-seablue-light1);
+    --mcp-masking-on-bg: rgba(47, 129, 191, 0.1);
+    --mcp-masking-row-hover-delay: 30ms;
+    --mcp-masking-row-fade: 90ms ease;
+    --mcp-masking-card-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    --mcp-masking-radius: 4px;
+
+    /* The popover's fixed size - its width is masking-popover.js's, the pane's width
+       and the height of the cards and the pane alike are these */
+    --mcp-masking-pane-width: 520px;
+    --mcp-masking-layout-height: 540px;
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking - the data masking line                          */
+/* ------------------------------------------------------------ */
+
+.mcp-wizard-masking {
+    margin-bottom: 14px;
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking - controls shared by the popovers                */
+/* ------------------------------------------------------------ */
+
+/* A <button> receives the raised look of formalize.css in each of its states,
+   and every one of them is named back here */
+.mcp-masking-plain,
+.mcp-masking-plain:hover,
+.mcp-masking-plain:focus,
+.mcp-masking-plain:active {
+    font-family: inherit;
+    font-weight: 400;
+    line-height: 1;
+    text-shadow: none;
+    background-image: none;
+    box-shadow: none;
+    outline: none;
+}
+
+.mcp-masking-mono {
+    font-family: var(--mcp-field-list-font);
+    font-size: 11px;
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking - the line-numbered editor                       */
+/* ------------------------------------------------------------ */
+
+.mcp-field-list-editor {
+    display: flex;
+    box-sizing: border-box;
+    height: calc(var(--mcp-field-list-rows) * var(--mcp-field-list-line-height) + 2 * var(--mcp-field-list-padding) + 2px);
+    min-height: calc(var(--mcp-field-list-min-rows) * var(--mcp-field-list-line-height) + 2 * var(--mcp-field-list-padding) + 2px);
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: 3px;
+}
+
+.mcp-field-list-editor:focus-within {
+    border-color: var(--zato-ui-accent);
+}
+
+.mcp-field-list-gutter,
+.mcp-field-list-input {
+    box-sizing: border-box;
+    font-family: var(--mcp-field-list-font);
+    font-size: var(--mcp-field-list-font-size);
+    line-height: var(--mcp-field-list-line-height);
+}
+
+.mcp-field-list-gutter {
+    flex: 0 0 auto;
+    min-width: 2.75em;
+    padding: var(--mcp-field-list-padding) 6px calc(var(--mcp-field-list-padding) + var(--mcp-field-list-gutter-tail));
+    overflow: hidden;
+    color: var(--zato-ui-text-faint);
+    text-align: right;
+    background: var(--mcp-field-list-gutter-bg);
+    border-right: 1px solid var(--zato-ui-border);
+    user-select: none;
+}
+
+.mcp-field-list-input,
+.mcp-field-list-input:focus {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    height: 100%;
+    margin: 0;
+    padding: var(--mcp-field-list-padding) 8px;
+    color: var(--zato-ui-text);
+    white-space: pre;
+    overflow: auto;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+    resize: none;
+}
+
+.mcp-field-list-input::placeholder {
+    color: var(--zato-ui-text-faint);
+}

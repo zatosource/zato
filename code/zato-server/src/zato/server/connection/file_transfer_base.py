@@ -23,6 +23,7 @@ from humanize import naturalsize
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
     Operation_Store, Status_Verified, Status_Verify_Failed
+from zato.common.json_ import dumps
 from zato.server.connection.file_transfer_verify import verify_store, FileTransferVerifyError
 
 # ################################################################################################################################
@@ -65,6 +66,25 @@ def _elapsed_ms(start:'float') -> 'int':
     """
     elapsed = monotonic() - start
     out = int(elapsed * _ms_in_second)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def to_file_bytes(data:'any_', encoding:'str') -> 'bytes':
+    """ Returns the bytes a file is written out from. Bytes pass through, text is encoded,
+    and a dict, a list or a service's input is serialized to JSON first.
+    """
+    if isinstance(data, bytes):
+        out = data
+
+    elif isinstance(data, str):
+        out = data.encode(encoding)
+
+    else:
+        serialized = dumps(data)
+        out = serialized.encode(encoding)
+
     return out
 
 # ################################################################################################################################
@@ -417,8 +437,7 @@ class FileTransferConnection(ExchangeNotes):
     def write(self, data:'any_', remote_path:'str', encoding:'str' = 'utf8') -> 'None':
 
         # Data to be written out must be always bytes.
-        if not isinstance(data, bytes):
-            data = data.encode(encoding)
+        data = to_file_bytes(data, encoding)
 
         size = len(data)
         start = monotonic()
@@ -520,8 +539,7 @@ class FileTransferConnection(ExchangeNotes):
         """
 
         # Data to be written out must be always bytes.
-        if not isinstance(data, bytes):
-            data = data.encode(encoding)
+        data = to_file_bytes(data, encoding)
 
         spool_path = spool_file_payload(data)
 

@@ -35,7 +35,7 @@ class PubSubPermissionExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'pubsub_permission_def_list':
+    def export(self, session: 'SASession') -> 'pubsub_permission_def_list':
         """ Exports pub/sub permission definitions.
         """
         logger.info('Exporting pub/sub permission definitions')
@@ -46,7 +46,7 @@ class PubSubPermissionExporter:
         exported_permissions: 'pubsub_permission_def_list' = []
 
         # Get pub/sub permissions from database
-        query_result = pubsub_permission_list(session, cluster_id, needs_columns=False)
+        query_result = pubsub_permission_list(session, needs_columns=False)
 
         search_results = query_result[0]
         items = search_results.result

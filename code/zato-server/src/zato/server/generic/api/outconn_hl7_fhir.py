@@ -26,7 +26,7 @@ import requests
 # Zato
 from zato.common.api import HL7, HTTP_SOAP
 from zato.common.audit_log.api import AuditLog
-from zato.common.audit_log.common import Export_Payload_Flag
+from zato.common.audit_log.common import AuditClassification, derive_http_classification, Export_Payload_Flag
 from zato.common.bearer_token import normalize_scopes
 from zato.common.hl7.fhir.fields import Outgoing_Bool_Names, Outgoing_Config_Defaults, Outgoing_Int_Names
 from zato.common.json_internal import dumps
@@ -47,7 +47,7 @@ if 0:
     from requests import Response
     from zato.common.ext.bunch import Bunch
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, stranydict, strdictnone, strlistnone
+    from zato.common.typing_ import any_, stranydict, strdictnone
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -122,6 +122,16 @@ def is_fhir_rejection(response:'Response') -> 'bool':
     return out
 
 # ################################################################################################################################
+
+def _is_rejection_permanent(response:'Response') -> 'bool':
+    """ Whether the status the server turned a write down with says the request itself is wrong.
+    """
+    classification = derive_http_classification(response.status_code)
+
+    out = classification == AuditClassification.Permanent
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
@@ -180,40 +190,6 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
         request = self._build_request_part(_publish_method, resource['resourceType'], resource, None)
 
         out = self.zato_publisher.publish_request('', Attempts_None, request, **kwargs)
-        return out
-
-# ################################################################################################################################
-
-    def export(
-        self,
-        *,
-        level:'str'=HL7.BulkExport.Level.Group,
-        group_id:'str'='',
-        patient_ids:'strlistnone'=None,
-        types:'strlistnone'=None,
-        since:'str'='',
-        type_filter:'strlistnone'=None,
-        destinations:'any_'=None,
-        ) -> 'str':
-        """ Starts a bulk export of this connection with what is given here in place of the tab's settings
-        and returns the id of the job started - the files land where the connection's tab says, or at the
-        destinations given here.
-        """
-        request = {
-            'conn_name': self.zato_config['name'],
-            'level': level,
-            'group_id': group_id,
-            'patient_ids': patient_ids,
-            'types': types,
-            'since': since,
-            'type_filter': type_filter,
-            'destinations': destinations,
-        }
-
-        server = self.zato_config['server'] # type: ParallelServer
-        response = server.invoke(HL7.BulkExport.Dispatch_Service, request, cid=self.zato_cid)
-
-        out = response['job_id']
         return out
 
 # ################################################################################################################################
@@ -367,7 +343,8 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
 
             if is_fhir_rejection(response):
                 error, body = get_fhir_rejection(response)
-                raise SendRejected(error, body)
+                is_permanent = _is_rejection_permanent(response)
+                raise SendRejected(error, body, is_permanent=is_permanent)
 
             out = self._read_response(response, False)
             return out
@@ -392,7 +369,8 @@ class _HL7FHIRConnection(FHIRAuditMixin, SyncFHIRClient):
 
         if is_fhir_rejection(response):
             error, body = get_fhir_rejection(response)
-            raise SendRejected(error, body)
+            is_permanent = _is_rejection_permanent(response)
+            raise SendRejected(error, body, is_permanent=is_permanent)
 
 # ################################################################################################################################
 

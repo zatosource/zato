@@ -128,6 +128,10 @@
     /* Puts one text into one pane - most kinds are coloured right here, SQL is sent
        to the server's pygments, the escaped text standing in until the colours land. */
     kit.payload_panel._show_text = function($pane, text) {
+
+        // The text as given is what Copy puts on the clipboard, not what the colouring left in the DOM.
+        $pane.data('payload_text', text);
+
         if (kit._sql_starter_pattern.test(text.trim())) {
             $pane.html('<span class="syntax-monokai">' + kit._esc_html(text) + '</span>');
 
@@ -164,6 +168,20 @@
         });
     };
 
+    /* Every pane whose tab arrived with its text keeps that text for Copy. */
+    kit.payload_panel._keep_texts = function($panel) {
+        var tabs = $panel.data('payload_tabs');
+
+        $panel.find('.dashboard-payload-text').each(function() {
+            var $pane = $(this);
+            var tab = tabs[parseInt($pane.attr('data-tab-index'), 10)];
+
+            if (tab.text !== undefined) {
+                $pane.data('payload_text', tab.text);
+            }
+        });
+    };
+
     /* A panel whose every tab already has its text. */
     kit.payload_panel.render = function($host, tabs) {
         $host.html(kit.payload_panel._html(tabs));
@@ -171,6 +189,7 @@
         var $panel = $host.find('.dashboard-payload');
         $panel.data('payload_tabs', tabs);
 
+        kit.payload_panel._keep_texts($panel);
         kit.payload_panel._color_sql($panel);
     };
 
@@ -184,6 +203,7 @@
         $panel.data('payload_tabs', tabs);
         $panel.data('payload_fetch', fetch);
 
+        kit.payload_panel._keep_texts($panel);
         kit.payload_panel._color_sql($panel);
 
         if (open_index === undefined) {
@@ -212,8 +232,8 @@
         $panel.data('payload_fetch', fetch);
 
         // Every pane is owed the text of the new message, and the tab standing open is
-        // the one worth having right away.
-        $panel.find('.dashboard-payload-text').data('payload_loaded', false);
+        // the one worth having right away. Until a pane's text arrives there is nothing to copy from it.
+        $panel.find('.dashboard-payload-text').data('payload_loaded', false).removeData('payload_text');
 
         if (open_index === undefined) {
             open_index = $panel.find('.dashboard-payload-tab.dashboard-panel-action-badge-active')
@@ -347,9 +367,14 @@
 
         var text;
 
-        // A table copies as its rows, tab-separated, header first - text copies as it stands
+        // A table copies as its rows, tab-separated, header first - text copies as it was given.
+        // A pane still waiting for its text has nothing to copy.
         if (tab.table === undefined) {
-            text = $pane.text();
+            text = $pane.data('payload_text');
+
+            if (text === undefined) {
+                return;
+            }
         }
         else {
             var lines = [tab.table.columns.join('\t')];

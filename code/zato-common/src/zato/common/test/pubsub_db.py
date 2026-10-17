@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Read-side helpers for server-level pub/sub tests - they open the same database
-# the test server uses, selected through the Zato_PubSub_DB_* environment variables
-# that the shared server fixture points at the current quickstart directory.
+# the test server uses, selected through Zato_PubSub_DB_Path, which the shared
+# server fixture points at the current quickstart directory.
 
 # SQLAlchemy
 from sqlalchemy import func, select

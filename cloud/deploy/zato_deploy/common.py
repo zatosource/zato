@@ -57,6 +57,7 @@ class Path:
     Env_Repo_Config  = '/etc/zato-deploy/env-repo.env'
     Env_Repo_Key     = '/etc/zato-deploy/env-repo-key'
     Env_Secrets      = '/etc/zato-deploy/env-secrets.env'
+    Secrets_Command  = '/etc/zato-deploy/secrets-command'
     Program_Dir      = '/opt/zato-deploy'
     Files_List       = '/opt/zato-deploy/files.txt'
     Static_Dir       = '/opt/zato-deploy/static'
@@ -262,13 +263,12 @@ def clean_terminal_line(line:'str') -> 'str':
 
 # ################################################################################################################################
 
-def read_env_file(path:'str') -> 'strstrdict':
-    """ Returns the key=value lines of a file, each value taken literally up to the end of its line.
+def parse_env_lines(text:'str') -> 'strstrdict':
+    """ Returns the key=value lines of a text, each value taken literally up to the end of its line.
     """
     out:'strstrdict' = {}
 
-    with open(path) as input_file:
-        lines = input_file.read().splitlines()
+    lines = text.splitlines()
 
     for line in lines:
         if not line:
@@ -276,6 +276,17 @@ def read_env_file(path:'str') -> 'strstrdict':
         key, _, value = line.partition('=')
         out[key] = value
 
+    return out
+
+# ################################################################################################################################
+
+def read_env_file(path:'str') -> 'strstrdict':
+    """ Returns the key=value lines of a file, each value taken literally up to the end of its line.
+    """
+    with open(path) as input_file:
+        text = input_file.read()
+
+    out = parse_env_lines(text)
     return out
 
 # ################################################################################################################################

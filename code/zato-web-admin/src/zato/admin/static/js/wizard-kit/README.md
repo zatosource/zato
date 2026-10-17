@@ -64,7 +64,7 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 
 | Key | Meaning |
 |---|---|
-| `list_url` | Where the link closing the form goes back to, and where a save that went through redirects to with `&highlight=<id>` appended - it always carries a query string of its own |
+| `list_url` | Where the link closing the form goes back to, and where a save that went through redirects to with the `highlight=<id>` parameter appended to its query string, or opening one when it carries none |
 | `is_edit` | Whether the page was opened on an object that already exists |
 
 ## Core config contract
@@ -169,7 +169,7 @@ Some answers can be proven right there and then. A probe is one button, the spin
 $.fn.zato.wizard_kit.probe.init(wizard, {
     slotId: 'mllp-outconn-wizard-slot-check',
     buttonId: 'mllp-outconn-wizard-check',
-    endpoint: '/zato/outgoing/hl7/mllp/wizard/test/?cluster=1',
+    endpoint: '/zato/outgoing/hl7/mllp/wizard/test/',
     fields: ['address', 'start_seq', 'end_seq', 'recv_timeout'],
     validate: function() { return wizard.field('address').val() ? '' : 'The address is empty'; },
     validatedField: 'address',

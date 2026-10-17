@@ -111,7 +111,6 @@ from zato.common.alerting.outcome_codes import parse_outcome_codes
 from zato.common.alerting.status_codes import parse_status_codes
 from zato.common.alerting.validate_numbers import validate_number_settings
 from zato.common.api import EMAIL, GENERIC
-from zato.common.defaults import default_cluster_id
 from zato.common.odb.model import GenericConn, IMAP, SMTP
 from zato.common.util.sql import parse_instance_opaque_attr
 
@@ -138,11 +137,11 @@ def _find_email_connection(kind:'str', name:'str', session:'SASession') -> 'bool
     connection may, whereas among IMAP ones only Microsoft 365 has the Graph API to send with.
     """
     if kind == object_config.Email_Conn_Type_SMTP:
-        connection = session.query(SMTP).filter_by(cluster_id=default_cluster_id, name=name).first()
+        connection = session.query(SMTP).filter_by(name=name).first()
         out = connection is not None
         return out
 
-    connection = session.query(IMAP).filter_by(cluster_id=default_cluster_id, name=name).first()
+    connection = session.query(IMAP).filter_by(name=name).first()
 
     # No such IMAP connection at all
     if connection is None:
@@ -198,7 +197,7 @@ def _ensure_llm_connection_exists(
         return
 
     connection = session.query(GenericConn).\
-        filter_by(cluster_id=default_cluster_id, name=name, type_=GENERIC.CONNECTION.TYPE.OUTCONN_LLM).\
+        filter_by(name=name, type_=GENERIC.CONNECTION.TYPE.OUTCONN_LLM).\
         first()
 
     if connection is None:

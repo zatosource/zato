@@ -20,22 +20,29 @@ from json import dumps, loads
 
 # Zato
 from zato.common.destination.constants import Active_Delivery_Modes, Default_Delivery_Mode, Default_Is_Active, \
-    Known_Destination_Types, Respond_From_Service
+    DestinationOption, DestinationType, Known_Destination_Types, Known_Methods, Respond_From_Service
 from zato.common.typing_ import dict_field, list_field
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, stranydict, strlist
+    from zato.common.typing_ import any_, anylist, stranydict, strlist, strset
     anylist = anylist
     stranydict = stranydict
+    strset = strset
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 #  Type aliases
 destination_entry_list = list['DestinationEntry']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The destination types that make an HTTP call and name the method the call is made with
+_types_with_method = (DestinationType.REST, DestinationType.FHIR)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,6 +120,10 @@ class ChannelDestinationConfig:
     # How the destinations that do not produce the reply receive their message.
     delivery_mode: str = Default_Delivery_Mode
 
+    # Whether the payload of each delivery leaves the process with the audit export - the channel's own
+    # switch, because the rows of the fan-out belong to the trail of the message the channel received.
+    is_export_payload_active: bool = False
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -186,12 +197,31 @@ def parse_entry(entry_data:'stranydict') -> 'DestinationEntry':
     # A destination is addressed by a name of its own, defaulting to the connection it delivers through.
     name = entry_data.get('name', connection)
 
+    options = entry_data.get('options', {})
+
+    # A method the destination cannot be delivered with is refused at save time, so the error reaches the
+    # user who configured it, rather than at delivery time, where it would be raised once per message.
+    if destination_type in _types_with_method:
+        if DestinationOption.Method in options:
+            method = options[DestinationOption.Method]
+            if method not in Known_Methods:
+                raise DestinationException(f'Destination `{connection}` cannot be delivered to with method `{method}`')
+
+    # The search parameters of a FHIR destination are a query string, the form the Dashboard panel stores
+    # them in, so a value of any other type is refused at save time.
+    if destination_type == DestinationType.FHIR:
+        if DestinationOption.Params in options:
+            params = options[DestinationOption.Params]
+            if not isinstance(params, str):
+                raise DestinationException(
+                    f'Destination `{connection}` requires its search parameters as a query string, not `{params!r}`')
+
     out = new_entry(
         name,
         destination_type,
         connection,
         is_active=entry_data.get('is_active', Default_Is_Active),
-        options=entry_data.get('options', {}),
+        options=options,
     )
 
     return out
@@ -234,14 +264,24 @@ def parse_config(
     destinations:'any_',
     respond_from:'str' = Respond_From_Service,
     delivery_mode:'str' = Default_Delivery_Mode,
+    *,
+    is_export_payload_active:'bool' = False,
     ) -> 'ChannelDestinationConfig':
     """ Builds one channel's destination configuration out of the three values it stores,
-    refusing a configuration that names a reply nobody produces or a delivery mode
-    that does not exist.
+    refusing a configuration that names a reply nobody produces, a delivery mode
+    that does not exist or two destinations that nothing addressing them could tell apart.
     """
     entries = parse_entries(destinations)
 
-    # An unset respond-from means the service answers the caller ..
+    # A destination is addressed by its name alone, so two of one name cannot both be there ..
+    names:'strset' = set()
+
+    for entry in entries:
+        if entry.name in names:
+            raise DestinationException(f'Channel `{channel_name}` has two destinations named `{entry.name}`')
+        names.add(entry.name)
+
+    # .. an unset respond-from means the service answers the caller ..
     if not respond_from:
         respond_from = Respond_From_Service
 
@@ -260,6 +300,7 @@ def parse_config(
     out.entries = entries
     out.respond_from = respond_from
     out.delivery_mode = delivery_mode
+    out.is_export_payload_active = is_export_payload_active
 
     if respond_from != Respond_From_Service:
         if not get_entry(out, respond_from):
@@ -330,6 +371,22 @@ def count_entries(destinations:'any_') -> 'int':
         out = 0
     else:
         out = len(entries)
+
+    return out
+
+# ################################################################################################################################
+
+def count_active_entries(destinations:'any_') -> 'int':
+    """ Returns how many of the destinations a channel declares a message can reach, which leaves out
+    the paused ones - a list that cannot be read counts as declaring none.
+    """
+    try:
+        entries = parse_entries(destinations)
+    except DestinationException:
+        out = 0
+    else:
+        active = [entry for entry in entries if entry.is_active]
+        out = len(active)
 
     return out
 

@@ -28,6 +28,7 @@ from test_mcp_response_controls import (
 from _client import MCPClient
 
 import _mcp_wizard as wizard_page
+import _mcp_wizard_masking as masking_page
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,10 +141,10 @@ def _create_pii_gateway(page:'Page', base_url:'str', gateway_name:'str', url_pat
     wizard_page.assign_badge(page, 'services', _Echo_Service)
     wizard_page.assign_badge(page, 'security', definition_name)
 
-    # .. turn PII removal on through its card on step 2 - the international land
+    # .. turn PII removal on through its section on step 2 - the international land
     # holds the email and IMEI detectors, and validation keeps broken checksums alone ..
     wizard_page.go_to_step(page, 1)
-    wizard_page.open_pii_card(page)
+    masking_page.open_pii_section(page)
 
     page.check('#id_safeguards_pii_enabled')
     page.check('#id_safeguards_pii_validate')

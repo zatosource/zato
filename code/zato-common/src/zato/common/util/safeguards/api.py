@@ -14,6 +14,7 @@ from zato.common.typing_ import any_
 from zato.common.util.safeguards.common import Kind_Markup, Kind_Unicode, Kind_Url, Mode_Reject, SafeguardConfig, \
     SafeguardResult, Url_Mode_Reject
 from zato.common.util.safeguards.markup import sanitize_markup
+from zato.common.util.safeguards.masking import mask_fields
 from zato.common.util.safeguards.noise import collapse_whitespace, strip_base64, strip_nulls
 from zato.common.util.safeguards.pii import remove_pii
 from zato.common.util.safeguards.secrets_ import remove_secrets
@@ -43,7 +44,7 @@ def _finalize(out:'SafeguardResult', value:'any_', work:'any_', reject_kind:'str
 
 def apply_safeguards(value:'any_', config:'SafeguardConfig') -> 'SafeguardResult':
     """ Applies the enabled safeguards to a JSON-serializable value - null stripping, unicode normalization,
-    base64 stripping, markup sanitization, URL policy, whitespace collapsing, PII removal and secrets removal,
+    base64 stripping, markup sanitization, URL policy, whitespace collapsing, data masking, PII removal and secrets removal,
     in that order - and returns the outcome with a full account of what happened. The input is never mutated
     and this function never raises - a rejection is expressed on the result, the caller decides what to do with it.
     """
@@ -103,6 +104,11 @@ def apply_safeguards(value:'any_', config:'SafeguardConfig') -> 'SafeguardResult
     # and before PII scanning, so identifiers spread across wide gaps still match.
     if config.collapse_whitespace:
         work = collapse_whitespace(work, out)
+
+    # Data masking replaces whole fields by name, so PII removal never spends work on values masked anyway.
+    if config.masking_enabled:
+        work, fields_masked = mask_fields(work, config.masked_fields)
+        out.fields_masked = fields_masked
 
     # PII removal runs on the already normalized, sanitized and collapsed strings.
     if config.pii_enabled:

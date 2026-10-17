@@ -146,43 +146,6 @@ _sql_outgoing_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
-_as2_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
-    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
-    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
-    {'key': 'disposition', 'label': 'Disposition', 'type': 'text'},
-    {'key': 'mic', 'label': 'MIC', 'type': 'text'},
-    {'key': 'size', 'label': 'Size', 'type': 'size'},
-    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
-    {'key': 'action', 'label': 'Actions', 'type': 'action'},
-]
-
-_as4_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
-    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
-    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
-    {'key': 'conversation_id', 'label': 'Conversation id', 'type': 'text'},
-    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
-    {'key': 'size', 'label': 'Size', 'type': 'size'},
-    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
-    {'key': 'action', 'label': 'Actions', 'type': 'action'},
-]
-
-_x12_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
-    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
-    {'key': 'msg_id', 'label': 'Control number', 'type': 'text'},
-    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
-    {'key': 'size', 'label': 'Size', 'type': 'size'},
-    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
-]
-
 _mcp_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -245,23 +208,6 @@ _fhir_columns = [
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
     {'key': 'action', 'label': 'Actions', 'type': 'action'},
-]
-
-# All the events of one bulk export job share the job's id as their cid.
-_fhir_bulk_export_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
-    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
-    {'key': 'phase', 'label': 'Phase', 'type': 'text'},
-    {'key': 'endpoint', 'label': 'Request', 'type': 'text'},
-    {'key': 'resource_type', 'label': 'Resource', 'type': 'text'},
-    {'key': 'file_name', 'label': 'File', 'type': 'text'},
-    {'key': 'count', 'label': 'Count', 'type': 'text'},
-    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
-    {'key': 'status', 'label': 'Status', 'type': 'text'},
-    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
-    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
 _kafka_channel_columns = [
@@ -415,16 +361,12 @@ _source_columns = {
     'email-smtp': _email_smtp_columns,
     'file-outgoing': _file_outgoing_columns,
     'sql-outgoing': _sql_outgoing_columns,
-    'as2': _as2_columns,
-    'as4': _as4_columns,
-    'x12': _x12_columns,
     'mcp': _mcp_columns,
     'mllp-channel': _mllp_columns,
     'mllp-outgoing': _mllp_columns,
     'kafka-channel': _kafka_channel_columns,
     'kafka-outgoing': _kafka_outgoing_columns,
     'fhir': _fhir_columns,
-    'fhir-bulk-export': _fhir_bulk_export_columns,
     'scheduler': _scheduler_columns,
     'service': _service_columns,
     'llm': _llm_columns,

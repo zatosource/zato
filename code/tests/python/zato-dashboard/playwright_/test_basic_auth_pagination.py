@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
+_Page_Url_Pattern = '/zato/security/basic-auth/'
 
 _Test_Name_Prefix = 'test.pag.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -193,7 +193,7 @@ class TestBasicAuthPagination:
             created_names.append(defn['name'])
 
         # .. navigate with query filter ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={filter_prefix}')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={filter_prefix}')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. collect all visible names ..
@@ -226,7 +226,7 @@ class TestBasicAuthPagination:
         defn = _create_definition(page, 'search-find')
 
         # .. navigate with query filter to find it ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={defn["name"]}')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the row is found.

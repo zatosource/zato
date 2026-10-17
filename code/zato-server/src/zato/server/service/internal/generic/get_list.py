@@ -16,8 +16,6 @@ from contextlib import closing
 # Zato
 from zato.common.alerting.object_config import apply_defaults, conn_type_to_alert_type
 from zato.common.api import query_parameters
-from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db, \
-     to_local_id, to_public_id
 from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
@@ -42,14 +40,13 @@ class GetList(AdminService):
     name = 'zato.generic.connection.get-list'
     _filter_by = ModelGenericConn.name,
 
-    input = 'cluster_id', '-type_', *query_parameters
+    input = '-type_', *query_parameters
 
 # ################################################################################################################################
 
     def get_data(self, session:'any_') -> 'any_':
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
-        self.logger.info('GenericConn GetList.get_data: cluster_id=%s, type_=%s', cluster_id, self.request.input.type_)
-        data:'any_' = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
+        self.logger.info('GenericConn GetList.get_data: type_=%s', self.request.input.type_)
+        data:'any_' = self._search(connection_list, session, self.request.input.type_, False)
         self.logger.info('GenericConn GetList.get_data: result count=%s', data.count() if hasattr(data, 'count') else 'N/A')
         return data
 
@@ -63,7 +60,6 @@ class GetList(AdminService):
     def _enrich_conn_dict(self, conn_dict:'anydict') -> 'None':
 
         # Local aliases
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
         # Secrets never leave the server in listings ..
         for key in never_returned_keys:
@@ -86,7 +82,6 @@ class GetList(AdminService):
                     service_attr = prefix + '_service_name'
                     try:
                         service_name = self.invoke('zato.service.get-by-id', {
-                            'cluster_id': cluster_id,
                             'id': value,
                         })['zato_service_get_by_name_response']['name']
                     except Exception:
@@ -104,24 +99,6 @@ class GetList(AdminService):
             apply_defaults(conn_type_to_alert_type[conn_type], conn_dict)
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-    def _append_conn_dicts(self, session:'any_', out:'anylist', needs_id_offset:'bool') -> 'None':
-
-        search_result = self.get_data(session)
-
-        for item in search_result:
-            conn = GenericConnection.from_model(item)
-            conn_dict = conn.to_dict()
-
-            # Everyone else knows objects from the external database under their offset ids
-            if needs_id_offset:
-                conn_dict['id'] = to_public_id(conn_dict['id'])
-
-            self._enrich_conn_dict(conn_dict)
-            out.append(conn_dict)
-
-# ################################################################################################################################
 
     def handle(self) -> 'None':
         out:'anylist' = []
@@ -129,17 +106,15 @@ class GetList(AdminService):
 
         self.logger.info('GenericConn GetList.handle: type_=%s', type_)
 
-        # AS2 outgoing connections come from the external database when one is configured ..
-        is_ext = needs_ext_db(type_)
+        with closing(self.odb.session()) as session:
 
-        with closing(self.server.get_config_session(object_type=type_)) as session:
-            self._append_conn_dicts(session, out, is_ext)
+            search_result = self.get_data(session)
 
-        # .. lists without a type filter combine both databases.
-        if is_ext_db_configured():
-            if not type_:
-                with closing(get_ext_db_session()) as session:
-                    self._append_conn_dicts(session, out, True)
+            for item in search_result:
+                conn = GenericConnection.from_model(item)
+                conn_dict = conn.to_dict()
+                self._enrich_conn_dict(conn_dict)
+                out.append(conn_dict)
 
         self.logger.info('GenericConn GetList.handle: returning %s items for type_=%s', len(out), type_)
 
@@ -156,26 +131,15 @@ class GetByID(AdminService):
 
     def handle(self) -> 'None':
 
-        input_id = self.request.input.id
-
-        # Objects from the external AS2/AS4 database are stored under their local ids there ..
-        if is_ext_object_id(input_id):
-            local_id = to_local_id(input_id)
-        else:
-            local_id = input_id
-
-        # .. look the connection up in the correct database ..
-        with closing(self.server.get_config_session(object_id=input_id)) as session:
+        # Look the connection up ..
+        with closing(self.odb.session()) as session:
             query = session.query(ModelGenericConn)
-            query = query.filter(ModelGenericConn.id==local_id)
+            query = query.filter(ModelGenericConn.id==self.request.input.id)
             item = query.one()
 
             # .. turn the model into a dict ..
             conn = GenericConnection.from_model(item)
             conn_dict = conn.to_dict()
-
-        # .. everyone else knows objects from the external database under their offset ids ..
-        conn_dict['id'] = input_id
 
         # .. secrets never leave the server ..
         for key in never_returned_keys:

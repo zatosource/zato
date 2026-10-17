@@ -60,13 +60,13 @@ class SFTPExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'sftp_def_list':
+    def export(self, session: 'SASession') -> 'sftp_def_list':
         """ Exports SFTP connection definitions.
         """
         logger.info('Exporting SFTP connection definitions')
 
         # Get SFTP connections from database using the generic connection query
-        db_sftp = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP)
+        db_sftp = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP)
 
         if not db_sftp:
             logger.info('No SFTP connection definitions found in DB')

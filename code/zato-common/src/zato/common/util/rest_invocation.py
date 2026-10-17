@@ -17,7 +17,7 @@ from jsonata import Jsonata
 from lxml import etree
 
 # Zato
-from zato.common.api import HL7, HTTP_SOAP, SchedulerLink
+from zato.common.api import HTTP_SOAP, SchedulerLink
 from zato.common.odb.model import GenericConn, HTTPSOAP
 
 # ################################################################################################################################
@@ -34,7 +34,6 @@ if 0:
 
 _invocation = HTTP_SOAP.Invocation
 _health_check = HTTP_SOAP.HealthCheck
-_bulk = HL7.BulkExport
 
 # How many compiled JSONata expressions and parsed row sets are kept. Both are keyed by
 # configuration text rather than by anything a request carries, so the number of distinct keys is
@@ -286,15 +285,6 @@ def update_linked_job_fields(
             _health_check.Field_Job_ID: job_id,
         }
 
-    # .. bulk export jobs use the fields of a FHIR connection's bulk export tab ..
-    elif kind == SchedulerLink.KindType.BulkExport:
-        values = {
-            _bulk.Field_Run_Every: run_every,
-            _bulk.Field_Run_Unit: run_unit,
-            _bulk.Field_Start_Date: start_date,
-            _bulk.Field_Job_ID: job_id,
-        }
-
     # .. scheduled invocations use the connection's scheduler tab fields.
     else:
         values = {
@@ -314,8 +304,6 @@ def clear_linked_job_fields(session:'SASession', conn_id:'int', link_conn_type:'
     """
     if kind == SchedulerLink.KindType.HealthCheck:
         field_names = list(_health_check.FieldList)
-    elif kind == SchedulerLink.KindType.BulkExport:
-        field_names = list(_bulk.ScheduleFieldList)
     else:
         field_names = list(_invocation.SchedulerFieldList)
 

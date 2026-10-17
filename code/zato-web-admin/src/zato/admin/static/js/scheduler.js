@@ -240,8 +240,6 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", job.id);
     }
 
-    var cluster_id = $(document).getUrlParam('cluster');
-
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
@@ -275,8 +273,8 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format('<td class="zato-time-ago" data-time-ago-id="{0}" data-time-utc="{1}" data-duration-ms="{2}"></td>',
         job.id, last_run_utc, last_duration_ms);
 
-    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
-    row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all&range={2}">Audit log</a></td>', job.id, cluster_id, $.fn.zato.scheduler.default_time_range_minutes);
+    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service));
+    row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?outcomes=all&range={1}">Audit log</a></td>', job.id, $.fn.zato.scheduler.default_time_range_minutes);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.scheduler.execute('{0}', this)\">Execute</a>", job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.delete_('{0}');\">Delete</a>", job.id));
@@ -356,8 +354,8 @@ $.fn.zato.scheduler.field_descriptions = {
         'start_date': 'The exact date and time the job runs. ' +
             'A one-time job fires once at this moment and never again.',
         'service': 'The service invoked when the job fires. ' +
-            'Data from the extra field is available to it as self.request.raw_request.',
-        'extra': 'Optional data passed to the service on each run, available as self.request.raw_request. ' +
+            'Data from the extra field is available to it as self.request.input.',
+        'extra': 'Optional data passed to the service on each run, available as self.request.input. ' +
             'Use it to parameterize the service.',
         'on_success_service': 'A service invoked each time this job completes successfully, ' +
             'e.g. for follow-up processing or notifications.',
@@ -389,11 +387,11 @@ $.fn.zato.scheduler.field_descriptions = {
         'start_date': 'When the first execution takes place. ' +
             'Later runs follow at each interval, counted from this moment.',
         'service': 'The service invoked each time the job fires. ' +
-            'Data from the extra field is available to it as self.request.raw_request.',
-        'extra': 'Optional data passed to the service on each run, available as self.request.raw_request. ' +
+            'Data from the extra field is available to it as self.request.input.',
+        'extra': 'Optional data passed to the service on each run, available as self.request.input. ' +
             'Use it to parameterize the service.',
-        'timezone': 'The timezone the start time and intervals are computed in. ' +
-            'Leave empty to use the scheduler server\'s own timezone.',
+        'timezone': 'The timezone the start time is given in. Later runs follow at each interval. ' +
+            'Leave empty to give the start time in the timezone from My settings.',
         'on_success_service': 'A service invoked each time this job completes successfully, ' +
             'e.g. for follow-up processing or notifications.',
         'on_success_job': 'Another scheduler job to run after this one completes successfully. ' +
@@ -436,7 +434,7 @@ $.fn.zato.scheduler.create = function(job_type) {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.execute = function(id, link_elem) {
-    var url = String.format('./execute/{0}/cluster/{1}/', id, $('#cluster_id').val());
+    var url = String.format('./execute/{0}/', id);
     $.fn.zato.action_runner.run({
         link_elem: link_elem,
         url: url,
@@ -560,15 +558,13 @@ $.fn.zato.scheduler.edit = function(job_type, id) {
 $.fn.zato.scheduler.delete_ = function(id) {
 
     $.fn.zato.data_table.delete_(id, 'td.job_id_',
-        'Job [{0}] deleted', 'Are you sure you want to delete job [{0}]?',
-        true);
+        'Job [{0}] deleted', 'Are you sure you want to delete job [{0}]?');
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.import_demo_config = function() {
-    var cluster_id = $(document).getUrlParam('cluster') || '1';
-    var import_url = '/zato/scheduler/import-demo-config?cluster=' + cluster_id;
+    var import_url = '/zato/scheduler/import-demo-config';
 
     var spinner_html = '<div id="import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
     $('body').append(spinner_html);

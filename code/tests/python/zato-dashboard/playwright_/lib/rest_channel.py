@@ -33,7 +33,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-Channel_Page_Url = '/zato/http-soap/?cluster=1&connection=channel&transport=plain_http'
+Channel_Page_Url = '/zato/http-soap/?connection=channel&transport=plain_http'
 
 # How long to wait for a hot-deployed service to appear in the service select
 _Service_Deploy_Timeout = 60
@@ -620,7 +620,7 @@ def create_apikey_definition(page:'Page', base_url:'str', name:'str', header:'st
         'password': key,
     }
 
-    _create_definition_on_page(page, base_url, '/zato/security/apikey/?cluster=1', fields)
+    _create_definition_on_page(page, base_url, '/zato/security/apikey/', fields)
 
     out = {
         'name': name,
@@ -645,7 +645,7 @@ def create_ntlm_definition(page:'Page', base_url:'str', name:'str') -> 'anydict'
         'password': password,
     }
 
-    _create_definition_on_page(page, base_url, '/zato/security/ntlm/?cluster=1', fields)
+    _create_definition_on_page(page, base_url, '/zato/security/ntlm/', fields)
 
     out = {
         'name': name,
@@ -670,7 +670,7 @@ def create_mtls_definition(page:'Page', base_url:'str', name:'str', fields:'anyd
     if fields:
         form_fields.update(fields)
 
-    _create_definition_on_page(page, base_url, '/zato/security/mtls/?cluster=1', form_fields)
+    _create_definition_on_page(page, base_url, '/zato/security/mtls/', form_fields)
 
     out = dict(form_fields)
     return out
@@ -683,7 +683,7 @@ def delete_mtls_definition(page:'Page', base_url:'str', name:'str') -> 'None':
 
     # The page may be anywhere, e.g. in the IDE after an invocation, so go to the definitions
     # page first, filtered by the name so the row is there to be read.
-    navigate_to_page(page, base_url, f'/zato/security/mtls/?cluster=1&query={name}')
+    navigate_to_page(page, base_url, f'/zato/security/mtls/?query={name}')
 
     # .. read the server-side ID off the row ..
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
@@ -718,7 +718,7 @@ def create_spnego_definition(page:'Page', base_url:'str', name:'str', fields:'an
     if fields:
         form_fields.update(fields)
 
-    _create_definition_on_page(page, base_url, '/zato/security/spnego/?cluster=1', form_fields)
+    _create_definition_on_page(page, base_url, '/zato/security/spnego/', form_fields)
 
     out = dict(form_fields)
     return out
@@ -739,7 +739,7 @@ def create_bearer_token_definition(page:'Page', base_url:'str', name:'str') -> '
         'secret': secret,
     }
 
-    _create_definition_on_page(page, base_url, '/zato/security/oauth/outconn/client-credentials/?cluster=1', fields)
+    _create_definition_on_page(page, base_url, '/zato/security/oauth/outconn/client-credentials/', fields)
 
     out = {
         'name': name,
@@ -756,7 +756,7 @@ def create_security_group(page:'Page', base_url:'str', name:'str', member_names:
     """
 
     # Navigate to the groups page ..
-    navigate_to_page(page, base_url, '/zato/groups/group/zato-api-creds/?cluster=1')
+    navigate_to_page(page, base_url, '/zato/groups/group/zato-api-creds/')
 
     # .. open the create dialog ..
     page.evaluate('$.fn.zato.groups.create()')

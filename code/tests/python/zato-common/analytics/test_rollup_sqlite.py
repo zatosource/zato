@@ -10,16 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from common import run_rollup_scenario
-from live_sql.env import database_env
+from common import analytics_test_env, run_rollup_scenario
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def test_rollup_sqlite(tmp_path:'os.PathLike') -> 'None':
-    """ The complete rollup scenario against the default SQLite backend, with the audit log
-    and the analytics store each in its own file.
+    """ The complete rollup scenario with the audit log and the analytics store
+    each in its own SQLite file.
     """
     audit_db_path = os.path.join(str(tmp_path), 'audit.db')
     analytics_db_path = os.path.join(str(tmp_path), 'analytics.db')
@@ -29,14 +28,8 @@ def test_rollup_sqlite(tmp_path:'os.PathLike') -> 'None':
         'name': audit_db_path,
     }
 
-    analytics_details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': analytics_db_path,
-    }
-
-    with database_env('Zato_Audit_Log_DB_', audit_details):
-        with database_env('Zato_Analytics_DB_', analytics_details):
-            run_rollup_scenario()
+    with analytics_test_env(audit_details, analytics_db_path):
+        run_rollup_scenario()
 
     # Each store created its own file under the path its environment pointed at
     assert os.path.exists(audit_db_path)

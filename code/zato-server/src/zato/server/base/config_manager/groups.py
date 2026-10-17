@@ -20,7 +20,7 @@ logger_groups = logging.getLogger('zato.groups.config_manager')
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, intlist
     from zato.server.base.config_manager import ConfigManager
 
     Bunch = Bunch
@@ -41,6 +41,24 @@ class SecurityGroups(ConfigManagerImpl):
         for channel_item in self.config_store.http_soap:
             if security_groups_ctx := channel_item.get('security_groups_ctx'):
                 yield security_groups_ctx
+
+# ################################################################################################################################
+
+    def update_security_definition_in_groups(
+        self:'ConfigManager', # type: ignore
+        security_id:'int',
+    ) -> 'None':
+        """ Builds the security definition of the given id anew in the security groups of each channel,
+        from its current configuration, which leaves out a definition that is no longer active.
+        """
+        group_id_list:'intlist' = []
+
+        for member in self.server.groups_manager.get_member_list(Groups.Type.API_Clients):
+            if member.security_id == security_id:
+                group_id_list.append(member.group_id)
+
+        for security_groups_ctx in self._yield_security_groups_ctx_items():
+            security_groups_ctx.on_security_definition_edited(security_id, group_id_list)
 
 # ################################################################################################################################
 

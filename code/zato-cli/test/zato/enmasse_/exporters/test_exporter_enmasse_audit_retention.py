@@ -65,9 +65,6 @@ class TestEnmasseAuditRetentionExporter(TestCase):
         if not self.session:
             self.session = get_session_from_server_dir(self.server_path)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Import the retention policy definition
         _, _ = self.audit_retention_importer.sync_retention_policies([self.policy_def], self.session)
 

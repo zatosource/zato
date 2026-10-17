@@ -251,19 +251,20 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         self.assertIsNotNone(connection_query.first())
         self.assertIsNotNone(channel_query.first())
 
-        # .. and the should_delete path removes the generic connection
-        # and its REST channel together.
+        # .. and a file that marks the gateway should_delete removes the generic connection
+        # and its REST channel together, through the server's delete service.
         delete_def = {
             'name': 'enmasse.mcp.gateway.2',
             'should_delete': True,
         }
 
-        _ = self.mcp_importer.sync_definitions([delete_def], self.session)
+        _ = self.importer.sync_from_yaml({'mcp_gateway': [delete_def]}, self.session, server_dir=self.server_path)
 
         self.session.expire_all()
 
         self.assertIsNone(connection_query.first())
         self.assertIsNone(channel_query.first())
+        self.assertEqual(len(self.importer.deleted_objects['mcp_gateway']), 1)
 
 # ################################################################################################################################
 

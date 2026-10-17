@@ -16,11 +16,11 @@ from __future__ import annotations
 from datetime import timedelta
 
 # SQLAlchemy
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, case, func, not_, select
 
 # Zato
 from zato.common.alerting.collectors.common import apply_newest_error, collect_newest_error_events, is_outcome_row, \
-    is_streak_row, new_fact, response_event_type_by_source, Default_Consecutive_Depth
+    is_streak_row, is_unanswered_row, new_fact, response_event_type_by_source, Default_Consecutive_Depth
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome
 
 # ################################################################################################################################
@@ -259,7 +259,8 @@ def collect_latency_facts(
     of measures per (source, object) pair. Only events that carry a duration count -
     a request-sent event has none and would drag the average down to nothing - and a source
     with a response event type is averaged over that type alone, so an MCP gateway's
-    initialize and tools/list rows never dilute the duration of its tool calls.
+    initialize and tools/list rows never dilute the duration of its tool calls. A send that no
+    acknowledgment came back for is not a response, so its row stays out of the average as well.
     """
 
     # Our response to produce
@@ -272,6 +273,7 @@ def collect_latency_facts(
         event_table.c.event_time_iso >= window_start_iso,
         event_table.c.duration_ms > 0,
         is_outcome_row(),
+        not_(is_unanswered_row()),
     ]
 
     # The optional criteria narrow the measures only when set

@@ -52,7 +52,6 @@ class Index(_Index):
 
     def get_initial_input(self) -> 'strdict':
         return {
-            'cluster_id': self.cluster_id,
             'group_type': self.input.group_type
         }
 
@@ -349,7 +348,6 @@ def manage_group_members(req:'any_', group_type:'str', group_id:'str | int') -> 
 
     # Build the return data for the template ..
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'group_type': group_type,
         'group_id': group_id,
         'group_list': group_list,

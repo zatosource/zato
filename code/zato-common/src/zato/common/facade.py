@@ -51,7 +51,7 @@ class SecurityFacade:
         self.server = server
 
     def get_bearer_token_by_name(self, key:'str') -> 'anydict':
-        item:'anydictnone' = self.server.config_manager.request_dispatcher.url_data.oauth_config.get(key)
+        item:'anydictnone' = self.server.url_data.oauth_config.get(key)
         if item:
             out = item['config']
             return out
@@ -60,7 +60,7 @@ class SecurityFacade:
 
     def get_bearer_token_by_id(self, id:'int') -> 'anydict':
 
-        for value in self.server.config_manager.request_dispatcher.url_data.oauth_config.values():
+        for value in self.server.url_data.oauth_config.values():
             if value['config']['id'] == id:
                 out = value['config']
                 return out
@@ -104,7 +104,12 @@ class PubSubFacade:
                 if cid is None:
                     cid = ''
 
-                out = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data, topic_name, cid)
+                # A publisher that stores the message under its own id, as the outgoing queues do, gives it here
+                msg_id = kwargs.get('msg_id')
+                if msg_id is None:
+                    msg_id = ''
+
+                out = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data, topic_name, cid, msg_id)
                 return out
 
         # .. the CID stays in kwargs so the audit log can cross-reference this publication,

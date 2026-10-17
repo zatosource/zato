@@ -8,7 +8,6 @@ $.fn.zato.alerting.config = {
     actionUrl: '',
     editorUrl: '',
     nameExistsUrl: '',
-    clusterId: '',
     definitionId: 0,
     deletePrompt: 'Delete the rule {0}?',
 
@@ -169,8 +168,8 @@ $.fn.zato.alerting.submitCreate = function() {
 
     // .. and a good one opens the editor on a fresh rule of that name,
     // carrying the description and the active state along.
-    window.location.href = config.editorUrl + '?cluster=' + config.clusterId +
-        '&new=' + encodeURIComponent(name) + '&docs=' + encodeURIComponent(docs) +
+    window.location.href = config.editorUrl +
+        '?new=' + encodeURIComponent(name) + '&docs=' + encodeURIComponent(docs) +
         '&active=' + active;
 };
 
@@ -244,7 +243,6 @@ $.fn.zato.alerting.init = function(config) {
     $.fn.zato.alerting.config.actionUrl = config.actionUrl;
     $.fn.zato.alerting.config.editorUrl = config.editorUrl;
     $.fn.zato.alerting.config.nameExistsUrl = config.nameExistsUrl;
-    $.fn.zato.alerting.config.clusterId = config.clusterId;
     $.fn.zato.alerting.config.definitionId = config.definitionId;
 
     // The create and edit popups - the same dialogs every other listing goes

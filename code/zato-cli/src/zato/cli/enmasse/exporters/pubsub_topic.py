@@ -35,7 +35,7 @@ class PubSubTopicExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'pubsub_topic_def_list':
+    def export(self, session: 'SASession') -> 'pubsub_topic_def_list':
         """ Exports pub/sub topic definitions.
         """
         logger.info('Exporting pub/sub topic definitions')
@@ -43,7 +43,7 @@ class PubSubTopicExporter:
         exported_topics: 'pubsub_topic_def_list' = []
 
         # Get pub/sub topics from database
-        query_result = pubsub_topic_list(session, cluster_id, needs_columns=False)
+        query_result = pubsub_topic_list(session, needs_columns=False)
 
         search_results = query_result[0]
         items = search_results.result

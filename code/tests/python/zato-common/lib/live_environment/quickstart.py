@@ -28,7 +28,7 @@ from zato.common.util.config import get_config_object, update_config_file
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strstrdict
+    from zato.common.typing_ import any_, intnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -164,21 +164,24 @@ class ZatoEnvironment:
 
 # ################################################################################################################################
 
-    def create(self, *, needs_scheduler:'bool'=False) -> 'None':
+    def create(self, *, needs_scheduler:'bool'=False, redis_port:'intnone'=None) -> 'None':
         """ Lays the environment down with quickstart - into a directory of its own, because quickstart
         refuses to write into one that already holds anything. Without needs_scheduler the scheduler component is left out.
+        With redis_port the server is pointed at a Redis on that port instead of the default one.
         """
         os.makedirs(self.environment_directory)
 
         command = [
             _zato_bin, 'quickstart', 'create', self.environment_directory,
-            '--servers', '1',
             '--password', self.password,
             '--server-api-client-for-scheduler-password', self.password,
         ]
 
         if not needs_scheduler:
             command.append('--no-scheduler')
+
+        if redis_port:
+            command.extend(['--redis-host', Host, '--redis-port', str(redis_port)])
 
         result = subprocess.run(
             command, capture_output=True, text=True, timeout=_quickstart_timeout, env=_subprocess_environment())

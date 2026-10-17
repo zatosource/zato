@@ -14,7 +14,6 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,8 +36,6 @@ def index(req:'HttpRequest') -> 'TemplateResponse':
     so the view only renders the page shell.
     """
     return TemplateResponse(req, 'zato/mapping/index.html', {
-        'cluster_id': default_cluster_id,
-        'zato_clusters': True,
         'zato_template_name': 'zato/mapping/index.html',
     })
 

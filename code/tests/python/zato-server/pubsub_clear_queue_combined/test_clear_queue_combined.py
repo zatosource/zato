@@ -31,7 +31,7 @@ _settle_time = 0.5
 def _get_sub_key(admin_client:'any_', username:'str') -> 'str':
     """ Looks up the sub_key for a given security username via the admin API.
     """
-    result = admin_client.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    result = admin_client.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(result, list):
         items:'anylist' = result

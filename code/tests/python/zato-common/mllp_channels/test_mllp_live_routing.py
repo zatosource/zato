@@ -235,3 +235,75 @@ class TestIsDefaultRouting(TestCase):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class TestRouteOrder(TestCase):
+    """ Which channel a message goes to when more than one would take it.
+    """
+
+    def test_a_channel_that_named_the_message_beats_one_that_takes_everything(self) -> 'None':
+        """ A channel with no matchers accepts every message, so a channel whose matchers hold is not
+        hidden behind it merely for having been created later.
+        """
+        router = HL7MessageRouter()
+
+        router.add_route(channel_name='takes-everything', callback=_noop_callback)
+        router.add_route(channel_name='only-adt', callback=_noop_callback, msh9_message_type='ADT')
+
+        result = router.match(_adt_a01_msh)
+        assert result is not None
+        self.assertEqual(result.channel_name, 'only-adt')
+
+        # .. while a message nobody named goes to the channel that takes everything, not nowhere.
+        result = router.match(_oru_r01_msh)
+        assert result is not None
+        self.assertEqual(result.channel_name, 'takes-everything')
+
+# ################################################################################################################################
+
+    def test_the_first_of_two_that_both_named_the_message_wins(self) -> 'None':
+        """ Among channels whose matchers all hold, the one registered first takes the message.
+        """
+        router = HL7MessageRouter()
+
+        router.add_route(channel_name='by-application', callback=_noop_callback, msh3_sending_application='SendApp')
+        router.add_route(channel_name='by-type', callback=_noop_callback, msh9_message_type='ADT')
+
+        result = router.match(_adt_a01_msh)
+        assert result is not None
+        self.assertEqual(result.channel_name, 'by-application')
+
+# ################################################################################################################################
+
+    def test_an_edited_channel_keeps_its_place(self) -> 'None':
+        """ A channel registered again, which is what an edit does, stands where it stood, so the edit
+        does not hand its messages to a channel it was in front of.
+        """
+        router = HL7MessageRouter()
+
+        router.add_route(channel_name='by-application', callback=_noop_callback, msh3_sending_application='SendApp')
+        router.add_route(channel_name='by-type', callback=_noop_callback, msh9_message_type='ADT')
+
+        # .. the edit, the same channel registered again with its matcher spelled differently ..
+        router.add_route(channel_name='by-application', callback=_noop_callback, msh3_sending_application='sendapp')
+
+        result = router.match(_adt_a01_msh)
+        assert result is not None
+        self.assertEqual(result.channel_name, 'by-application')
+        self.assertEqual(router.get_channel_names(), ['by-application', 'by-type'])
+
+# ################################################################################################################################
+
+    def test_the_default_comes_after_a_channel_that_takes_everything(self) -> 'None':
+        """ The default receives what no other channel claimed, and a channel with no matchers claims everything.
+        """
+        router = HL7MessageRouter()
+
+        router.add_route(channel_name='the-default', callback=_noop_callback, is_default=True)
+        router.add_route(channel_name='takes-everything', callback=_noop_callback)
+
+        result = router.match(_unknown_msh)
+        assert result is not None
+        self.assertEqual(result.channel_name, 'takes-everything')
+
+# ################################################################################################################################
+# ################################################################################################################################

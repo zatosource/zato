@@ -165,7 +165,7 @@ class TestUsernameToken:
 # ################################################################################################################################
 
 class TestX509:
-    """ The X.509 token profile - what Peppol-style profiles and e-invoicing
+    """ The X.509 token profile - what e-invoicing networks
     and government gateways demand from message signatures.
     """
 

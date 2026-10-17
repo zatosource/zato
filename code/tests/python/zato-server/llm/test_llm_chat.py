@@ -52,7 +52,7 @@ class _TestParallelServer:
     def __init__(self, cache_api:'CacheAPI') -> 'None':
         self.name = 'test-llm-server'
         self.config_manager = _TestConfigManager(cache_api)
-        self.zato_lock_manager = LockManager('zato-pass-through', 'zato', cast_('any_', None))
+        self.zato_lock_manager = LockManager('zato-pass-through', 'zato')
 
         # A directory with no default-models.yaml, so the wrapper reads the default catalog
         self.user_conf_location = [gettempdir()]

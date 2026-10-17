@@ -11,16 +11,17 @@ import os
 
 # Zato
 from cleanup import run_cleanup_scenario
-from common import pubsub_backend_env
+from common import pubsub_path_env
+from dlq_rule import run_dlq_rule_scenario
 from encryption import run_encryption_scenario
 from lifecycle import run_lifecycle_scenario
 from outgoing import run_outgoing_scenario
 from push_delivery import run_push_delivery_scenario
+from queue_order import run_queue_order_scenario
 from queues import run_queues_scenario
 from retry_settings import run_retry_settings_scenario
 from stats import run_stats_scenario
 from wakeup import run_wakeup_scenario
-from zato.common.pubsub.sql.config import ModuleCtx as PubSubDBCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,12 +31,7 @@ def test_pubsub_backend_sqlite(tmp_path:'os.PathLike') -> 'None':
     """
     db_path = os.path.join(str(tmp_path), 'pubsub.db')
 
-    details = {
-        'type': PubSubDBCtx.Type_SQLite,
-        'name': db_path,
-    }
-
-    with pubsub_backend_env(details):
+    with pubsub_path_env(db_path):
         run_lifecycle_scenario()
         run_queues_scenario()
         run_stats_scenario()
@@ -45,6 +41,8 @@ def test_pubsub_backend_sqlite(tmp_path:'os.PathLike') -> 'None':
         run_push_delivery_scenario()
         run_retry_settings_scenario()
         run_outgoing_scenario()
+        run_queue_order_scenario()
+        run_dlq_rule_scenario()
 
     # The database file was created under the path the environment pointed at.
     assert os.path.exists(db_path)

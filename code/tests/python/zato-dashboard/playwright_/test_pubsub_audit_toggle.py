@@ -31,7 +31,7 @@ from audit_toggle import assert_checkbox_exists, get_audit_row_count, get_checkb
 
 _Test_Name_Prefix = 'test.pubsub.audit.toggle.' + rand_string() + '.'
 
-_Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
+_Topic_Page_Url = '/zato/pubsub/topic/'
 
 _Audit_Source = 'pubsub'
 

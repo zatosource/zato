@@ -54,7 +54,7 @@ def _get_puller() -> 'any_':
 def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
     """ Finds a topic ID by name.
     """
-    topic_list = admin.invoke('zato.pubsub.topic.get-list', {'cluster_id': 1})
+    topic_list = admin.invoke('zato.pubsub.topic.get-list', {})
 
     if isinstance(topic_list, list):
         items:'anylist' = topic_list
@@ -72,7 +72,7 @@ def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
 def _get_subscriptions(admin:'any_', sec_name:'str') -> 'anylist':
     """ Returns all subscriptions for a given security definition name.
     """
-    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+    sub_list = admin.invoke('zato.pubsub.subscription.get-list', {})
 
     if isinstance(sub_list, list):
         items:'anylist' = sub_list
@@ -143,7 +143,6 @@ class TestTopicDelete:
         # .. re-subscribe ..
         from zato.common.test.config_pubsub_topic_delete import TestConfig
         _ = admin.invoke('zato.pubsub.subscription.create', {
-            'cluster_id': 1,
             'topic_name_list': ['td.pull.single'],
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'pull',
@@ -227,7 +226,6 @@ class TestTopicDelete:
         # .. subscribe again ..
         from zato.common.test.config_pubsub_topic_delete import TestConfig
         _ = admin.invoke('zato.pubsub.subscription.create', {
-            'cluster_id': 1,
             'topic_name_list': ['td.pull.single'],
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'pull',
@@ -268,7 +266,6 @@ class TestTopicDelete:
         # .. re-subscribing must generate a fresh sub_key,
         # .. proving that stale keys do not block a new subscription ..
         _ = admin.invoke('zato.pubsub.subscription.create', {
-            'cluster_id': 1,
             'topic_name_list': ['td.multi.second'],
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'pull',
@@ -412,7 +409,6 @@ class TestTopicDelete:
 
         # .. create a multi-topic pull subscription ..
         _ = admin.invoke('zato.pubsub.subscription.create', {
-            'cluster_id': 1,
             'topic_name_list': ['td.stale.pull.first', 'td.stale.pull.second'],
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'pull',

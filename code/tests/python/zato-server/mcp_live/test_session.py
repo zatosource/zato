@@ -56,12 +56,12 @@ class TestSession:
 # ################################################################################################################################
 
     def test_bogus_session_id_rejected(self, client:'MCPClient') -> 'None':
-        """ A bogus session ID on a request returns 400.
+        """ A bogus session ID on a request returns 404.
         """
 
         response = client.jsonrpc('ping', session_id='not-a-real-session')
 
-        assert response.status_code == BAD_REQUEST
+        assert response.status_code == NOT_FOUND
 
 # ################################################################################################################################
 
@@ -95,17 +95,17 @@ class TestSession:
 # ################################################################################################################################
 
     def test_request_with_deleted_session_rejected(self, client:'MCPClient') -> 'None':
-        """ A request with a deleted session ID returns 400.
+        """ A request with a deleted session ID returns 404.
         """
 
         # Create and delete a session ..
         _, session_id = client.initialize()
         _ = client.delete_session(session_id=session_id)
 
-        # .. a subsequent request with that session ID must return 400.
+        # .. a subsequent request with that session ID must return 404.
         response = client.jsonrpc('ping', session_id=session_id)
 
-        assert response.status_code == BAD_REQUEST
+        assert response.status_code == NOT_FOUND
 
 # ################################################################################################################################
 

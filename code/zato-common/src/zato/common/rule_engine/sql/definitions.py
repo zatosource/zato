@@ -12,7 +12,6 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine.changes import Change_Definition_Archived, Change_Definition_Created, \
     Change_Definition_Renamed
 from zato.common.typing_ import cast_
@@ -89,14 +88,13 @@ class DefinitionStore:
         try:
             with session.begin():
 
-                # Resolve the optional parent in the same cluster ..
+                # Resolve the optional parent ..
                 if parent_id is not None:
                     _ = get_definition(session, parent_id)
 
                 # .. insert the current definition ..
                 definition_parent_key = parent_key(parent_id)
                 definition_values = {
-                    'cluster_id':      default_cluster_id,
                     'parent_id':       parent_id,
                     'parent_key':      definition_parent_key,
                     'name':            name,
@@ -151,7 +149,6 @@ class DefinitionStore:
                 # .. and build the detached definition from the values just written, avoiding a redundant re-read.
                 definition = RuleDefinitionRecord(
                     id=definition_id,
-                    cluster_id=default_cluster_id,
                     parent_id=parent_id,
                     parent_key=definition_parent_key,
                     name=name,
@@ -183,7 +180,7 @@ class DefinitionStore:
     def get(self, definition_id:'int') -> 'RuleDefinitionRecord':
         """ Returns one definition by id.
         """
-        # Load the definition through the shared cluster-aware query ..
+        # Load the definition through the shared query ..
         session = self._session_factory()
 
         try:
@@ -217,11 +214,9 @@ class DefinitionStore:
         """
         # Match the exact name of one type anywhere in the tree ..
         query = select(rule_definition_table)
-        cluster_condition = rule_definition_table.c.cluster_id == default_cluster_id
         type_condition = rule_definition_table.c.object_type == object_type
         name_condition = rule_definition_table.c.name == name
         active_condition = rule_definition_table.c.is_active.is_(True)
-        query = query.where(cluster_condition)
         query = query.where(type_condition)
         query = query.where(name_condition)
         query = query.where(active_condition)
@@ -253,11 +248,9 @@ class DefinitionStore:
         """
         # Match active rulesets whose live pointer is set, anywhere in the tree ..
         query = select(rule_definition_table)
-        cluster_condition = rule_definition_table.c.cluster_id == default_cluster_id
         type_condition = rule_definition_table.c.object_type == Definition_Type_Ruleset
         active_condition = rule_definition_table.c.is_active.is_(True)
         live_condition = rule_definition_table.c.live_version.isnot(None)
-        query = query.where(cluster_condition)
         query = query.where(type_condition)
         query = query.where(active_condition)
         query = query.where(live_condition)
@@ -300,10 +293,8 @@ class DefinitionStore:
         if offset < 0:
             raise InvalidStoreInputError('Definition list offset cannot be negative')
 
-        # .. start with the cluster and parent path every list uses ..
+        # .. start with the parent path every list uses ..
         query = select(rule_definition_table)
-        cluster_condition = rule_definition_table.c.cluster_id == default_cluster_id
-        query = query.where(cluster_condition)
         definition_parent_key = parent_key(parent_id)
         parent_condition = rule_definition_table.c.parent_key == definition_parent_key
         query = query.where(parent_condition)

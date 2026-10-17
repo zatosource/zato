@@ -156,7 +156,7 @@ class TestEnmasseOnPremGateways(TestCase):
     def _get_stored_gateway(self, name:'str') -> 'any_':
         """ Reads one gateway back from the ODB.
         """
-        wrapper = OnPremGatewayWrapper(self.session, self.importer.cluster_id)
+        wrapper = OnPremGatewayWrapper(self.session)
 
         for item in wrapper.get_list():
             if item['name'] == name:

@@ -61,7 +61,6 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
             'amqp_exchange': 'my.exchange',
             'amqp_routing_key': 'my.routing.key',
             'amqp_channel_name': '',
-            'original_service_name': '',
         }
         self.config_manager._topic_backends['topic.amqp'] = self.backend_config
 
@@ -100,6 +99,19 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
 
         self.assertIsInstance(out, PublishResult)
         self.assertTrue(out.msg_id.startswith('zpsm.'))
+
+# ################################################################################################################################
+
+    def test_amqp_topic_keeps_the_id_the_publisher_gave(self) -> 'None':
+        """ A publisher that stores the message under its own id sees that id in the result and in the audit log.
+        """
+        out = self.facade.publish('topic.amqp', 'amqp data', msg_id='zpsm.given-by-the-publisher', cid='cid-1')
+
+        self.assertEqual(out.msg_id, 'zpsm.given-by-the-publisher')
+
+        audit_kwargs = self.config_manager.server.pubsub_backend.audit_log.insert.call_args[1]
+        self.assertEqual(audit_kwargs['msg_id'], 'zpsm.given-by-the-publisher')
+        self.assertEqual(audit_kwargs['cid'], 'cid-1')
 
 # ################################################################################################################################
 

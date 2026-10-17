@@ -257,30 +257,6 @@ class OutgoingSync:
 
 # ################################################################################################################################
 
-    def sync_outgoing_as2(self, as2_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes outgoing AS2 connection definitions from a YAML configuration with the database.
-        """
-        if not as2_list:
-            return [], []
-
-        count = len(as2_list)
-        noun = 'definition' if count == 1 else 'definitions'
-        logger.info(f'Processing {count} outgoing AS2 connection {noun}')
-
-        # Examine each outgoing AS2 connection item
-        for idx, item in enumerate(as2_list):
-            logger.info('Outgoing AS2 connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
-
-        as2_created, as2_updated = self.as2_importer.sync_definitions(as2_list, session)
-
-        # Get outgoing AS2 definitions from the AS2 importer
-        self.outgoing_as2_defs = self.as2_importer.connection_defs
-        logger.info('Processed outgoing AS2 connection definitions: created=%d updated=%d', len(as2_created), len(as2_updated))
-
-        return as2_created, as2_updated
-
-# ################################################################################################################################
-
     def _sync_odata_impl(self, item_list:'list', session:'SASession', importer:'ODataImporter') -> 'tuple':
         """ Synchronizes connection definitions of one OData subtype from a YAML configuration with the database.
         """
@@ -658,6 +634,31 @@ class OutgoingSync:
 
 # ################################################################################################################################
 
+    def sync_discord(self, discord_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Discord connection definitions from a YAML configuration with the database.
+        """
+        if not discord_list:
+            return [], []
+
+        count = len(discord_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Discord connection {noun}')
+
+        # Examine each Discord connection item
+        for idx, item in enumerate(discord_list):
+            logger.info('Discord connection item %d: %s', idx, redact_secrets(item, Known_Secret_Keys))
+
+        discord_created, discord_updated = self.discord_importer.sync_definitions(discord_list, session)
+
+        # Get Discord definitions from the Discord importer
+        self.discord_defs = self.discord_importer.connection_defs
+        logger.info('Processed Discord connection definitions: created=%d updated=%d',
+            len(discord_created), len(discord_updated))
+
+        return discord_created, discord_updated
+
+# ################################################################################################################################
+
     def sync_microsoft_fabric(self, microsoft_fabric_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Microsoft Fabric connection definitions from a YAML configuration with the database.
         """
@@ -743,16 +744,6 @@ class OutgoingSync:
         """Synchronizes outgoing SOAP connection definitions from a YAML configuration with the database.
         """
         return self.outgoing_soap_importer.sync_outgoing_soap(outgoing_list, session)
-
-# ################################################################################################################################
-
-    def sync_outgoing_as4(self, outgoing_list:'list', session:'SASession') -> 'tuple':
-        """Synchronizes outgoing AS4 connection definitions from a YAML configuration with the database.
-        """
-        if not outgoing_list:
-            return [], []
-
-        return self.outgoing_as4_importer.sync_outgoing_as4(outgoing_list, session)
 
 # ################################################################################################################################
 # ################################################################################################################################

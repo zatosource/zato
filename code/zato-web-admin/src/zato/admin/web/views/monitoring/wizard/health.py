@@ -14,7 +14,6 @@ from django.template.response import TemplateResponse
 
 def health(req):
     return_data = {
-        'cluster_id': req.zato.cluster_id,
     }
 
     return TemplateResponse(req, 'zato/monitoring/wizard/health.html', return_data)

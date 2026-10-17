@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from collections.abc import Iterator
-from http.client import BAD_REQUEST, OK
+from http.client import BAD_REQUEST, NOT_FOUND, OK
 from uuid import uuid4
 
 # pytest
@@ -64,14 +64,14 @@ class TestSessionValidation:
     """
 
     def test_forged_session_id_rejected(self, client:'MCPClient') -> 'None':
-        """ A forged session ID with valid UUID format must be rejected with 400.
+        """ A forged session ID with valid UUID format must be rejected with 404.
         """
 
         session_uuid = uuid4()
         forged_id = f'mcp{session_uuid.hex}'
         response = client.jsonrpc('ping', session_id=forged_id)
 
-        assert response.status_code == BAD_REQUEST
+        assert response.status_code == NOT_FOUND
 
 # ################################################################################################################################
 
@@ -85,15 +85,15 @@ class TestSessionValidation:
 
         _ = client.delete_session(session_id)
 
-        # .. trying to use the deleted session should return 400.
+        # .. trying to use the deleted session should return 404.
         response = client.jsonrpc('ping', session_id=session_id)
 
-        assert response.status_code == BAD_REQUEST
+        assert response.status_code == NOT_FOUND
 
 # ################################################################################################################################
 
     def test_session_id_enumeration(self, client:'MCPClient') -> 'None':
-        """ Iterating through sequential UUIDs must all be rejected as 400.
+        """ Iterating through sequential UUIDs must all be rejected as 404.
         """
 
         for _ in range(_enumeration_attempts):
@@ -101,7 +101,7 @@ class TestSessionValidation:
             guessed_id = f'mcp{session_uuid.hex}'
             response = client.jsonrpc('ping', session_id=guessed_id)
 
-            assert response.status_code == BAD_REQUEST
+            assert response.status_code == NOT_FOUND
 
 # ################################################################################################################################
 
@@ -122,13 +122,13 @@ class TestSessionCredentialValidation:
     """
 
     def test_request_rejected_invalid_session_credential(self, client:'MCPClient', client_b:'MCPClient', session_id:'str') -> 'None':
-        """ A request with a session credential that does not match is rejected with 400.
+        """ A request with a session credential that does not match is rejected with 404.
         """
 
         # Send a request using a session that was created with a different credential ..
         response = client_b.jsonrpc('tools/list', session_id=session_id)
 
-        assert response.status_code == BAD_REQUEST
+        assert response.status_code == NOT_FOUND
 
         # .. the response must contain a JSON-RPC error.
         body = response.json()

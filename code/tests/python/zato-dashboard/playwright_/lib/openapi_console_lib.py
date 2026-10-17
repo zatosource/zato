@@ -12,6 +12,7 @@ import logging
 import os
 import time
 from http.client import OK
+from json import dumps as json_dumps
 
 # PyYAML
 import yaml
@@ -19,8 +20,7 @@ import yaml
 # Zato
 from zato.common.crypto.api import CryptoManager
 
-from rest_channel import deploy_service_file, edit_channel, get_channel_id, find_channel_row, open_channel_page, \
-    wait_for_channel_row
+from rest_channel import deploy_service_file, edit_channel, get_channel_id, open_channel_page, wait_for_channel_row
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,13 +49,26 @@ Spec_JSON_Path      = '/openapi/console/openapi.json'
 Spec_YAML_Path      = '/openapi/console/openapi.yaml'
 Relay_Base_Path     = '/openapi/console/relay'
 
+# The relay receives every try-it as a POST of one JSON document
+Relay_Method        = 'POST'
+Content_Type_Header = 'Content-Type'
+Content_Type_JSON   = 'application/json'
+
+# The relay accepts a POST only with the token from the console's CSRF cookie
+CSRF_Cookie_Name  = 'zato-openapi-console-csrf'
+CSRF_Token_Header = 'X-CSRFToken'
+
 # The console's admin is the Dashboard's own admin user, with the same username and password
 Admin_Username = 'admin'
+
+# The values of the sign-in form's auth type selector
+Auth_Type_Basic_Auth = 'basic_auth'
+Auth_Type_API_Key    = 'apikey'
 
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# The suite's fixture services and their auto-created channels
+# The suite's fixture services and their channels
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,11 +79,11 @@ Service_Methods    = 'api.test.openapi.methods.multi'
 Service_Prestarted = 'api.test.openapi.prestarted.ping'
 Service_Diffing    = 'api.test.openapi.diffing.contract'
 
-Path_Typed      = '/api/api/test/openapi/typed/get-user'
-Path_Untyped    = '/api/api/test/openapi/untyped/echo'
-Path_Methods    = '/api/api/test/openapi/methods/multi'
-Path_Prestarted = '/api/api/test/openapi/prestarted/ping'
-Path_Diffing    = '/api/api/test/openapi/diffing/contract'
+Path_Typed      = '/api/test/openapi/typed/get-user'
+Path_Untyped    = '/api/test/openapi/untyped/echo'
+Path_Methods    = '/api/test/openapi/methods/multi'
+Path_Prestarted = '/api/test/openapi/prestarted/ping'
+Path_Diffing    = '/api/test/openapi/diffing/contract'
 
 # The file that carries all the fixture services, both at boot and during redeployments
 Fixture_Services_File_Name = 'openapi_console_test_services.py'
@@ -112,12 +125,6 @@ _Spec_Timeout = 30
 # How long to wait between document fetches
 _Spec_Poll_Interval = 0.5
 
-# How long to wait for a hot-deployed channel change to show up in the channel list
-_Deploy_Timeout = 90
-
-# How long to wait between channel list reloads
-_Deploy_Poll_Interval = 1.0
-
 # The pickup listener deploys a given file at most once per its 2-second debounce window,
 # so consecutive writes keep a slightly longer distance from each other.
 _Listener_Debounce_Interval = 3
@@ -148,10 +155,34 @@ def console_logout(page:'Page', console_url:'str') -> 'None':
 # ################################################################################################################################
 
 def console_login(page:'Page', console_url:'str', username:'str', password:'str', timeout:'int'=_Login_Timeout) -> 'None':
-    """ Signs in to the console through its sign-in form, retrying while newly created
-    credentials propagate to the server. Returns once the console page has rendered.
+    """ Signs in to the console with a username and a password through its sign-in form, retrying while
+    newly created credentials propagate to the server. Returns once the console page has rendered.
     """
-    # The sign-in page sends a caller whose session already carries an identity straight
+    fields = {'#username': username, '#password': password}
+    _submit_login_form(page, console_url, Auth_Type_Basic_Auth, fields, username, timeout)
+
+# ################################################################################################################################
+
+def console_login_api_key(page:'Page', console_url:'str', key:'str', timeout:'int'=_Login_Timeout) -> 'None':
+    """ Signs in to the console with an API key through its sign-in form, retrying while
+    the newly created key propagates to the server. Returns once the console page has rendered.
+    """
+    fields = {'#key': key}
+    _submit_login_form(page, console_url, Auth_Type_API_Key, fields, Auth_Type_API_Key, timeout)
+
+# ################################################################################################################################
+
+def _submit_login_form(
+    page:'Page',
+    console_url:'str',
+    auth_type:'str',
+    fields:'anydict',
+    identity:'str',
+    timeout:'int',
+    ) -> 'None':
+    """ Chooses the auth type on the sign-in form, fills in its fields and submits it until the console page renders.
+    """
+    # The sign-in page sends a caller whose session already has an identity straight
     # to the console, so any previous session is ended before this one signs in.
     console_logout(page, console_url)
 
@@ -159,9 +190,12 @@ def console_login(page:'Page', console_url:'str', username:'str', password:'str'
 
     while True:
 
-        # Fill in the credentials ..
-        page.fill('#username', username)
-        page.fill('#password', password)
+        # Choose the kind of credentials, which shows the fields that belong to it ..
+        _ = page.select_option('#auth-type', auth_type)
+
+        # .. fill in the credentials ..
+        for selector, value in fields.items():
+            page.fill(selector, value)
 
         # .. submit the form - a success redirects to the console page,
         # a failure re-renders the form with an error message ..
@@ -174,7 +208,7 @@ def console_login(page:'Page', console_url:'str', username:'str', password:'str'
 
         # .. otherwise, the credentials may not have reached the server yet, so try again.
         if time.monotonic() >= deadline:
-            raise Exception(f'Could not sign in to the console as `{username}` within {timeout}s')
+            raise Exception(f'Could not sign in to the console as `{identity}` within {timeout}s')
 
         time.sleep(_Login_Poll_Interval)
 
@@ -253,17 +287,48 @@ def spec_schema_names(spec:'anydict') -> 'any_':
 
 # ################################################################################################################################
 
+def get_csrf_token(page:'Page', console_url:'str') -> 'str':
+    """ Returns the value of the console's CSRF cookie in the page's browser context.
+    """
+    cookies:'any_' = page.context.cookies(console_url)
+
+    for cookie in cookies:
+        if cookie['name'] == CSRF_Cookie_Name:
+            out = cookie['value']
+            break
+
+    # No such cookie means the console has not rendered a page in this context yet
+    else:
+        raise Exception(f'No cookie `{CSRF_Cookie_Name}` for `{console_url}`')
+
+    return out
+
+# ################################################################################################################################
+
 def relay_invoke(page:'Page', console_url:'str', method:'str', url_path:'str', body:'str'='') -> 'any_':
     """ Sends a try-it request through the console's relay inside the signed-in session
     and returns the raw response.
     """
-    url = console_url + Relay_Base_Path + url_path
+    url = console_url + Relay_Base_Path
+
+    # The console's own pages send the method, the path, the query string, the caller's headers and the body
+    # as one JSON document, with no body in it when there is none to send ..
+    headers:'anydict' = {}
 
     if body:
-        out = page.request.fetch(url, method=method, data=body)
+        headers[Content_Type_Header] = Content_Type_JSON
+        request_body = body
     else:
-        out = page.request.fetch(url, method=method)
+        request_body = None
 
+    envelope = {'method': method, 'path': url_path, 'query': '', 'headers': headers, 'body': request_body}
+    data = json_dumps(envelope)
+
+    # .. and the relay itself receives the document with the console's CSRF token.
+    csrf_token = get_csrf_token(page, console_url)
+    relay_headers = {Content_Type_Header: Content_Type_JSON, CSRF_Token_Header: csrf_token}
+
+    out = page.request.fetch(url, method=Relay_Method, headers=relay_headers, data=data)
     return out
 
 # ################################################################################################################################
@@ -289,29 +354,6 @@ def edit_channel_by_name(page:'Page', dashboard_url:'str', name:'str', options:'
     out = channel_id
 
     return out
-
-# ################################################################################################################################
-
-def wait_for_channel_row_reloading(page:'Page', dashboard_url:'str', name:'str', timeout:'int'=_Deploy_Timeout) -> 'any_':
-    """ Reloads the channel list until a row with the given name appears and returns that row -
-    used after hot-deployments, whose completion is not observable from the UI alone.
-    """
-    deadline = time.monotonic() + timeout
-
-    while True:
-
-        # Reload the filtered channel list ..
-        open_channel_page(page, dashboard_url, query=name)
-
-        # .. and stop as soon as the row is there.
-        if row := find_channel_row(page, name):
-            out = row
-            return out
-
-        if time.monotonic() >= deadline:
-            raise Exception(f'Channel `{name}` did not appear within {timeout}s')
-
-        time.sleep(_Deploy_Poll_Interval)
 
 # ################################################################################################################################
 # ################################################################################################################################

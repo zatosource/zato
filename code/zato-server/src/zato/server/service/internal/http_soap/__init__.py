@@ -15,7 +15,6 @@ from traceback import format_exc
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ZatoException
-from zato.common.ext_db.api import is_ext_object_id, to_local_id
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.connection.http_soap import BadRequest
@@ -44,27 +43,13 @@ class Delete(AdminService, _HTTPSOAPService):
         if not has_expected_input:
             raise Exception('Either ID or name/connection are required on input')
 
-        # Ids arrive as strings and the external database check needs an integer
-        if input_id:
-            input_id = int(input_id)
-        else:
-            input_id = 0
-
-        # Objects from the external AS2/AS4 database are stored under their local ids there
-        is_ext = is_ext_object_id(input_id)
-
-        if is_ext:
-            local_id = to_local_id(input_id)
-        else:
-            local_id = input_id
-
-        with closing(self.server.get_config_session(object_id=input_id)) as session:
+        with closing(self.odb.session()) as session:
             try:
                 query = session.query(HTTPSOAP)
 
                 if input_id:
                     query = query.\
-                        filter(HTTPSOAP.id==local_id)
+                        filter(HTTPSOAP.id==input_id)
 
                 else:
                     query = query.\
@@ -90,10 +75,8 @@ class Delete(AdminService, _HTTPSOAPService):
                 old_http_method = item.method
                 old_http_accept = opaque.get('http_accept')
 
-                # .. clean up all pub/sub state before the CASCADE delete -
-                # .. the state lives in the main ODB only, so external-database objects have none ..
-                if not is_ext:
-                    self.server.config_manager.cleanup_rest_endpoint_pubsub(session, item.id)
+                # .. clean up all pub/sub state before the CASCADE delete ..
+                self.server.config_manager.cleanup_rest_endpoint_pubsub(session, item.id)
 
                 session.delete(item)
                 session.commit()
@@ -138,18 +121,10 @@ class Ping(AdminService):
 
     def handle(self) -> 'None':
 
-        # Objects from the external AS2/AS4 database are stored under their local ids there
-        input_id = int(self.request.input.id)
-
-        if is_ext_object_id(input_id):
-            local_id = to_local_id(input_id)
-        else:
-            local_id = input_id
-
         # The name and the transport are read while the session is still open
         # because the object is detached from it once it closes.
-        with closing(self.server.get_config_session(object_id=input_id)) as session:
-            item = session.query(HTTPSOAP).filter_by(id=local_id).one()
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             name = item.name
             transport = item.transport
 

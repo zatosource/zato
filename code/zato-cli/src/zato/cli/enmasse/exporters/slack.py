@@ -36,13 +36,13 @@ class SlackExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'slack_def_list':
+    def export(self, session: 'SASession') -> 'slack_def_list':
         """ Exports Slack connection definitions.
         """
         logger.info('Exporting Slack connection definitions')
 
         # Get Slack connections from database using the generic connection query
-        db_slack = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHAT_SLACK)
+        db_slack = connection_list(session, GENERIC.CONNECTION.TYPE.CHAT_SLACK)
 
         if not db_slack:
             logger.info('No Slack connection definitions found in DB')

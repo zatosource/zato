@@ -30,7 +30,6 @@ from zato.common.alerting import config_map
 from zato.common.alerting.config_store import apply_type_config, NoSuchRulesetError
 from zato.common.alerting.notification_config import notification_keys
 from zato.common.api import Alerting
-from zato.common.defaults import default_cluster_id
 from zato.common.rule_engine import webapi
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
@@ -160,10 +159,8 @@ def config(req:'any_') -> 'TemplateResponse':
         })
 
     return TemplateResponse(req, 'zato/alerting/config.html', {
-        'cluster_id': default_cluster_id,
         'types': types,
         'notification_cells': notification_cells,
-        'zato_clusters': True,
         'zato_template_name': 'zato/alerting/config.html',
     })
 
@@ -248,10 +245,8 @@ def index(req:'any_') -> 'TemplateResponse':
     definition_id = definition.id if definition else 0
 
     return TemplateResponse(req, 'zato/alerting/index.html', {
-        'cluster_id': default_cluster_id,
         'definition_id': definition_id,
         'ruleset_name': _ruleset_name,
-        'zato_clusters': True,
         'zato_template_name': 'zato/alerting/index.html',
     })
 
@@ -297,7 +292,6 @@ def editor(req:'any_') -> 'TemplateResponse':
         new_rule_active = _default_rule_active
 
     return TemplateResponse(req, 'zato/alerting/editor.html', {
-        'cluster_id': default_cluster_id,
         'definition_id': definition_id,
         'rule_key': rule_key,
         'rule_name': rule_name,
@@ -305,7 +299,6 @@ def editor(req:'any_') -> 'TemplateResponse':
         'new_rule_name': new_rule_name,
         'new_rule_docs': new_rule_docs,
         'new_rule_active': new_rule_active == '1',
-        'zato_clusters': True,
         'zato_template_name': 'zato/alerting/editor.html',
     })
 

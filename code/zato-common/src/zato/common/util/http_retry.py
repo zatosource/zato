@@ -16,7 +16,7 @@ from time import sleep
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 
 # Zato
-from zato.common.util.retry import get_next_sleep_time
+from zato.common.util.retry import get_first_sleep_time, get_next_sleep_time
 from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
@@ -86,7 +86,7 @@ def send_with_retry(policy:'RetryPolicy', send:'callable_', cid:'str', label:'st
     """
     attempt = 0
     total_sleep_time = 0
-    current_sleep_time = policy.sleep_time
+    current_sleep_time = get_first_sleep_time(policy)
 
     while True:
 

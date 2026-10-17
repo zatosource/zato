@@ -13,8 +13,7 @@ than for any one of them:
   fan-out of a channel to its destinations, which is the one place a single cid crosses sources
 - an event_link, read in both directions, is batch membership and resubmission
 - a correl_id bridge is a resubmission naming the event it was born from by that event's cid
-- the same (source, msg_id) is how AS2 MDNs, AS4 receipts and X12 acks pair with what they answer,
-  since those never share a cid with it
+- the same (source, msg_id) is how an ack that shares no cid with what it answers still pairs with it
 """
 
 # stdlib

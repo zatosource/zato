@@ -117,7 +117,7 @@ $.fn.zato.invoker.get_sync_invoke_request_url = function() {
         }
     }
 
-    let out = '/zato/service/invoke/' + service + '/cluster/1/';
+    let out = '/zato/service/invoke/' + service + '/';
     return out
 };
 

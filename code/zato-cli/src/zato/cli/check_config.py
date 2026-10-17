@@ -48,69 +48,35 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def ping_sql(self, engine_params, ping_query):
+    def ping_sql_odb(self, engine, sqlite_path):
+        """ Opens the ODB file and runs a query against it.
+        """
+        # SQLAlchemy
+        from sqlalchemy import create_engine, text
 
         # Zato
-        from zato.common.odb import ping_database
+        from zato.common.util.api import get_engine_url
 
-        ping_database(engine_params, ping_query)
+        engine_url = get_engine_url({'engine': engine, 'sqlite_path': sqlite_path})
+        sql_engine = create_engine(engine_url)
+
+        with sql_engine.connect() as connection:
+            _ = connection.execute(text('SELECT 1'))
+
+        sql_engine.dispose()
 
         if self.show_output:
             self.logger.info('SQL ODB connection OK')
 
 # ################################################################################################################################
 
-    def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config, needs_decrypt_password=True):
-
-        # Zato
-        from zato.common.odb.ping import get_ping_query
-
-        engine_params = dict((conf['odb']))
-        engine_params['extra'] = {}
-        engine_params['pool_size'] = 1
-
-        # This will be needed by scheduler but not server
-        if needs_decrypt_password:
-            password = engine_params['password']
-            if password:
-                engine_params['password'] = cm.decrypt(password)
-
-        self.ping_sql(engine_params, get_ping_query(fs_sql_config, engine_params))
+    def check_sql_odb_server(self, conf):
+        self.ping_sql_odb(conf['odb']['engine'], conf['odb']['db_name'])
 
 # ################################################################################################################################
 
-    def check_sql_odb_web_admin(self, cm, conf):
-
-        # Zato
-        from zato.common.api import ping_queries
-
-        pairs = (
-            ('engine', 'db_type'),
-            ('username', 'DATABASE_USER'),
-            ('password', 'DATABASE_PASSWORD'),
-            ('host', 'DATABASE_HOST'),
-            ('port', 'DATABASE_PORT'),
-            ('db_name', 'DATABASE_NAME'),
-        )
-        engine_params = {'extra':{}, 'pool_size':1}
-        for sqlalch_name, django_name in pairs:
-            engine_params[sqlalch_name] = conf[django_name]
-
-        # SSL/TLS configuration - configurations written by older releases may not carry these keys at all.
-        ssl_pairs = (
-            ('ssl', 'DATABASE_SSL'),
-            ('ssl_ca_file', 'DATABASE_SSL_CA_FILE'),
-            ('ssl_cert_file', 'DATABASE_SSL_CERT_FILE'),
-            ('ssl_key_file', 'DATABASE_SSL_KEY_FILE'),
-            ('ssl_verify', 'DATABASE_SSL_VERIFY'),
-        )
-        for sqlalch_name, django_name in ssl_pairs:
-            engine_params[sqlalch_name] = conf.get(django_name, '')
-        password = engine_params['password']
-        if password:
-            engine_params['password'] = cm.decrypt(password)
-
-        self.ping_sql(engine_params, ping_queries[engine_params['engine']])
+    def check_sql_odb_web_admin(self, conf):
+        self.ping_sql_odb(conf['db_type'], conf['DATABASE_NAME'])
 
 # ################################################################################################################################
 
@@ -214,19 +180,6 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_sql_ini(self, conf_file, repo_dir=None):
-
-        # stdlib
-        from os.path import join
-
-        # Zato
-        from zato.common.ext.configobj_ import ConfigObj
-
-        repo_dir = repo_dir or join(self.config_dir, 'repo')
-        return ConfigObj(join(repo_dir, conf_file))
-
-# ################################################################################################################################
-
     def _on_server(self, args):
 
         # stdlib
@@ -241,13 +194,12 @@ class CheckConfig(ManageCommand):
         cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None),
             class_=ServerCryptoManager)
 
-        fs_sql_config = self.get_sql_ini('sql.conf')
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'server.conf')
         secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
 
-        self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config, False)
+        self.check_sql_odb_server(server_conf)
 
         if getattr(args, 'ensure_no_pidfile', False):
             self.ensure_no_pidfile('server')
@@ -262,18 +214,9 @@ class CheckConfig(ManageCommand):
         # stdlib
         from os.path import join
 
-        # Zato
-        from zato.common.crypto.api import WebAdminCryptoManager
-        from zato.common.crypto.secret_key import resolve_secret_key
-
         repo_dir = join(self.component_dir, 'config', 'repo')
 
-        secret_key = getattr(args, 'secret_key', None)
-        secret_key = resolve_secret_key(secret_key)
-
-        self.check_sql_odb_web_admin(
-            self.get_crypto_manager(secret_key, getattr(args, 'stdin_data', None), WebAdminCryptoManager),
-            self.get_json_conf('web-admin.conf', repo_dir))
+        self.check_sql_odb_web_admin(self.get_json_conf('web-admin.conf', repo_dir))
 
         self.ensure_no_pidfile('web-admin')
         self.ensure_json_config_port_free('Web admin', 'web-admin.conf')

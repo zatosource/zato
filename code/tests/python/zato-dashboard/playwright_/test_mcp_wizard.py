@@ -33,6 +33,7 @@ if _this_directory not in sys.path:
     sys.path.insert(0, _this_directory)
 
 import _mcp_wizard as wizard_page
+import _mcp_wizard_masking as masking_page
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -344,7 +345,7 @@ class TestMCPWizard:
             wizard_page.set_compaction(page, strip_nulls=True)
 
             # .. PII removal - the master toggle enables the selects under it ..
-            wizard_page.open_pii_card(page)
+            masking_page.open_pii_section(page)
             page.check('#id_safeguards_pii_enabled')
 
             wizard_page.pick_from_chosen(page, 'safeguards_pii_lands', 'Poland')
@@ -395,10 +396,10 @@ class TestMCPWizard:
             strip_nulls_value = _get_review_value(page, 'Compaction', 'Strip null fields')
             assert strip_nulls_value == 'On', f'Expected null stripping on the review, got: {strip_nulls_value}'
 
-            pii_enabled_value = _get_review_value(page, 'PII removal', 'Enabled')
+            pii_enabled_value = _get_review_value(page, 'PII and data masking', 'Enabled')
             assert pii_enabled_value == 'Yes', f'Expected PII enabled on the review, got: {pii_enabled_value}'
 
-            pii_text = _get_review_group_text(page, 'PII removal')
+            pii_text = _get_review_group_text(page, 'PII and data masking')
             assert 'Poland' in pii_text, f'Expected Poland on the review, got: {pii_text}'
             assert 'Germany' in pii_text, f'Expected Germany on the review, got: {pii_text}'
             assert 'Email address' in pii_text, f'Expected the email detector on the review, got: {pii_text}'
@@ -569,18 +570,14 @@ class TestMCPWizard:
             'document.getElementById("mcp-wizard-tools-body").classList.contains("wizard-option-body-open")')
         assert is_open, 'Expected the tools card open after the review edit link'
 
-        # .. and the PII group's link goes to step 2 with the options unfolded and the PII card open.
+        # .. and the PII group's link goes to step 2 with the PII and data masking section unfolded.
         wizard_page.go_to_step(page, wizard_page.Review_Step)
-        _click_review_edit(page, 'PII removal')
+        _click_review_edit(page, 'PII and data masking')
 
         _ = page.wait_for_selector('#mcp-wizard-step-body-1', state='visible', timeout=_UI_Timeout)
 
-        options_hidden = page.evaluate('document.getElementById("mcp-wizard-options-body").hidden')
-        assert not options_hidden, 'Expected the options unfolded after the review edit link'
-
-        is_open = page.evaluate(
-            'document.getElementById("mcp-wizard-pii-body").classList.contains("wizard-option-body-open")')
-        assert is_open, 'Expected the PII card open after the review edit link'
+        pii_hidden = page.evaluate('document.getElementById("mcp-wizard-pii-body").hidden')
+        assert not pii_hidden, 'Expected the PII and data masking section unfolded after the review edit link'
 
 # ################################################################################################################################
 

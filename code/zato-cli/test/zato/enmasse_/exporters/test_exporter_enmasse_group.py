@@ -66,9 +66,6 @@ class TestEnmasseGroupExporter(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Ensure importer has cluster context
-        _ = self.importer.get_cluster(self.session)
-
         # Import security definitions first, as groups depend on them
         security_defs_from_yaml = self.yaml_config.get('security', [])
         if security_defs_from_yaml:

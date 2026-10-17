@@ -27,7 +27,6 @@ from sqlalchemy import and_, or_, select
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table, get_audit_engine
 from zato.common.audit_log.reports import get_range_cutoff
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,7 +124,7 @@ def _audit_log_link(source:'str', channel:'str') -> 'str':
     # The name is user-defined and can hold characters that would split the query string
     channel = quote(channel)
 
-    out = f'/zato/audit-log/?source={source}&object_name={channel}&cluster={default_cluster_id}'
+    out = f'/zato/audit-log/?source={source}&object_name={channel}'
     return out
 
 # ################################################################################################################################

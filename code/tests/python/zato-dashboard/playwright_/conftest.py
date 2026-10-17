@@ -286,7 +286,6 @@ def zato_dashboard() -> 'any_':
 
     quickstart_command = [
         _Zato_Bin, 'quickstart', 'create', temporary_dir,
-        '--servers', '1',
         '--password', _Password,
         '--server-api-client-for-scheduler-password', _Password,
         '--no-scheduler',
@@ -365,7 +364,7 @@ def zato_dashboard() -> 'any_':
     # The pub/sub database lives inside this test server's own directory,
     # which is also where tests that read it directly find it.
     pubsub_db_path = os.path.join(server_dir, 'pubsub.db')
-    server_env['Zato_PubSub_DB_Name'] = pubsub_db_path
+    server_env['Zato_PubSub_DB_Path'] = pubsub_db_path
 
     # SFTP tests copy a private key to this path and point their connections at it
     sftp_key_path = os.path.join(temporary_dir, 'sftp-test-key')

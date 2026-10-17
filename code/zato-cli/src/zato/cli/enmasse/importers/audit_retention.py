@@ -47,7 +47,7 @@ class AuditRetentionImporter:
         # Our response to produce
         out = {}
 
-        wrapper = GenericObjectWrapper(session, self.importer.cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Audit_Config.Type.Retention_Policy
 
         rows = wrapper.get_list()
@@ -75,7 +75,7 @@ class AuditRetentionImporter:
 
         db_policies = self.get_policies_from_db(session)
 
-        wrapper = GenericObjectWrapper(session, self.importer.cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Audit_Config.Type.Retention_Policy
 
         for policy in policy_list:

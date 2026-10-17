@@ -56,7 +56,7 @@ def get_explanation(service:'AdminService', payload:'stranydict') -> 'stranydict
 
     # .. and one alert produces one explanation, not one per sweep - an error alert
     # dispatched again within its dedup window carries the explanation it already has.
-    store = ExplanationStore(service.odb.session, service.server.cluster_id)
+    store = ExplanationStore(service.odb.session)
     name = _explanation_name_prefix + str(payload['alert_id'])
 
     if stored := store.get(name):

@@ -25,7 +25,7 @@ if 0:
 
 # The type_ parameter is required for the page to list its connections,
 # the same way the dashboard's own menu links carry it.
-Kafka_Channel_Page_Url = '/zato/channel/kafka/?cluster=1&type_=channel-kafka'
+Kafka_Channel_Page_Url = '/zato/channel/kafka/?type_=channel-kafka'
 
 # Plain text fields in the create and edit forms, keyed by option name - topics is a textarea
 # that takes one topic per line or a comma-separated list.

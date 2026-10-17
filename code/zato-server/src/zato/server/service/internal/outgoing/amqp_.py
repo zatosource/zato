@@ -38,7 +38,7 @@ class GetList(AdminService):
     name = 'zato.outgoing.amqp.get-list'
     _filter_by = OutgoingAMQP.name,
 
-    input = 'cluster_id', '-subtype', *query_parameters
+    input = '-subtype', *query_parameters
     output = 'id', 'name', 'address', 'username', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
         '-content_type', '-content_encoding', '-expiration', AsIs('-user_id'), AsIs('-app_id')
 
@@ -47,7 +47,7 @@ class GetList(AdminService):
         # Without a subtype on input, connections of all the subtypes are returned
         subtype = self.request.input.subtype or None
 
-        return self._search(out_amqp_list, session, self.request.input.cluster_id, subtype, False)
+        return self._search(out_amqp_list, session, subtype, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -62,7 +62,7 @@ class Create(AdminService):
     """
     name = 'zato.outgoing.amqp.create'
 
-    input = 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
+    input = 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
         '-address', '-username', '-password', '-content_type', '-content_encoding', \
         '-expiration', '-subtype', AsIs('-user_id'), AsIs('-app_id')
     output = 'id', 'name'
@@ -91,7 +91,7 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing AMQP connection `{}` already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing AMQP connection `{}` already exists'.format(input.name))
 
             try:
                 item = OutgoingAMQP()
@@ -141,7 +141,7 @@ class Edit(AdminService):
     """
     name = 'zato.outgoing.amqp.edit'
 
-    input = 'id', 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
+    input = 'id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
         '-address', '-username', '-password', '-content_type', '-content_encoding', \
         '-expiration', '-subtype', AsIs('-user_id'), AsIs('-app_id')
     output = 'id', 'name'
@@ -168,7 +168,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing AMQP connection `{}` already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing AMQP connection `{}` already exists'.format(input.name))
 
             try:
                 item = session.query(OutgoingAMQP).filter_by(id=input.id).one()

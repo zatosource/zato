@@ -21,11 +21,11 @@ from zato.common.alerting.object_config import storage_name
 from zato.common.api import GENERIC, Groups
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import MCPAttr
-from zato.common.odb.model import Cluster, GenericConn, GenericObject, HTTPBasicAuth
+from zato.common.odb.model import GenericConn, GenericObject, HTTPBasicAuth
 from zato.common.typing_ import cast_
 
 # Test helpers
-from explain_helpers import _cluster_id, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
+from explain_helpers import _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
     new_payload as _new_payload, new_service as _new_service, new_session as _new_session, \
     object_section as _object_section, stored_explanation as _stored_explanation
 
@@ -86,10 +86,9 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
     stored under its id the way the dashboard stores it, or under its name the way enmasse does.
     """
     session = session_maker()
-    cluster = session.query(Cluster).filter(Cluster.id==_cluster_id).one()
 
     for caller_id, caller_name in zip(_caller_ids, _caller_names):
-        security = HTTPBasicAuth(caller_id, caller_name, True, caller_name, 'MCP agents', 'secret', cluster)
+        security = HTTPBasicAuth(caller_id, caller_name, True, caller_name, 'MCP agents', 'secret')
         session.add(security)
 
     group = cast_('any_', GenericObject())
@@ -97,7 +96,6 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
     group.name = _group_name
     group.type_ = Groups.Type.Group_Parent
     group.subtype = Groups.Type.API_Clients
-    group.cluster = cluster
     session.add(group)
 
     # A member is stored as `<sec type>-<security id>-<group id>`
@@ -107,7 +105,6 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
         member.type_ = Groups.Type.Group_Member
         member.subtype = Groups.Type.API_Clients
         member.parent_object_id = _group_id
-        member.cluster = cluster
         session.add(member)
 
     if groups_as_names:
@@ -139,7 +136,6 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
     row.is_channel = True
     row.is_outconn = False
     row.pool_size = 1
-    row.cluster = cluster
     row.opaque1 = json.dumps(opaque)
 
     session.add(row)

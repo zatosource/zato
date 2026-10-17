@@ -50,7 +50,7 @@ change_password = microsoft_365.change_password
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     out = ping_connection(req, 'zato.generic.connection.ping', id, 'Microsoft Teams connection')
     return out
 

@@ -93,6 +93,5 @@ $.fn.zato.security.mtls.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.security.mtls.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'mTLS definition `{0}` deleted',
-        'Are you sure you want to delete mTLS definition `{0}`?',
-        true);
+        'Are you sure you want to delete mTLS definition `{0}`?');
 }

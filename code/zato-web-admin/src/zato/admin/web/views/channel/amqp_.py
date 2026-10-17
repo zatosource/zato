@@ -37,7 +37,6 @@ def _get_edit_create_message(params:'any_', subtype:'str', prefix:'str'='') -> '
     """
     return {
         'id': params.get('id'),
-        'cluster_id': params['cluster_id'],
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
         'queue': params[prefix + 'queue'],
@@ -67,7 +66,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'address', 'username', 'queue', 'consumer_tag_prefix', 'service_name', \
         'pool_size', 'ack_mode', 'prefetch_count', 'data_format'
     output_repeated = True

@@ -97,6 +97,23 @@ class ChannelRoute:
         return out
 
 # ################################################################################################################################
+
+    def has_criteria(self) -> 'bool':
+        """ Whether the channel names anything a message has to equal, as against taking every message.
+        """
+        out = bool(
+            self.msh3_sending_application or
+            self.msh4_sending_facility or
+            self.msh5_receiving_application or
+            self.msh6_receiving_facility or
+            self.msh9_message_type or
+            self.msh9_trigger_event or
+            self.msh11_processing_id or
+            self.msh12_version_id
+        )
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 channel_route_list = list[ChannelRoute]
@@ -220,19 +237,24 @@ class HL7MessageRouter:
         route.settings                  = settings
 
         # A channel has one rule - a rule built again for the same channel, which is what a configuration
-        # reload does, takes the place of the one it had rather than queueing up behind it, since the first
-        # match wins and a stale rule in front would keep answering for the channel with its old service
+        # reload does, takes the place of the one it had, in the very position it had, since the first
+        # match wins among channels whose criteria all hold and an edit must not move a channel behind
+        # another one that it stood in front of
         with self._lock:
 
             updated_routes:'channel_route_list' = []
+            is_replacing = False
 
             for existing_route in self._routes:
-                if existing_route.channel_name != channel_name:
+                if existing_route.channel_name == channel_name:
+                    updated_routes.append(route)
+                    is_replacing = True
+                else:
                     updated_routes.append(existing_route)
 
-            is_replacing = len(updated_routes) != len(self._routes)
+            if not is_replacing:
+                updated_routes.append(route)
 
-            updated_routes.append(route)
             self._routes = updated_routes
 
         if is_replacing:
@@ -341,10 +363,13 @@ class HL7MessageRouter:
 # ################################################################################################################################
 
     def match(self, msh_line:'str') -> 'ChannelRoute | None':
-        """ Finds the first routing rule that matches the given MSH line.
-        Non-default routes are evaluated first (first match wins),
-        then the default route is tried if no regular route matched.
-        Returns None if no route matches at all.
+        """ Finds the routing rule that matches the given MSH line.
+
+        Channels with criteria are tried first, in the order they were registered, and the first
+        whose criteria all hold wins. A channel with no criteria accepts every message, so it is
+        tried only once no channel that named the message has claimed it - otherwise one registered
+        earlier would take messages from every narrower channel behind it. The default route comes
+        last of all. Returns None if no route matches at all.
         """
 
         # Parse the MSH fields from the line ..
@@ -356,12 +381,19 @@ class HL7MessageRouter:
         with self._lock:
 
             default_route:'ChannelRoute | None' = None
+            catch_all_route:'ChannelRoute | None' = None
 
-            # Walk non-default routes first ..
+            # Walk the routes with criteria first ..
             for route in self._routes:
 
                 if route.is_default:
                     default_route = route
+                    continue
+
+                # .. a channel with no criteria is remembered, the first of them, for when nothing narrower claims the message ..
+                if not route.has_criteria():
+                    if catch_all_route is None:
+                        catch_all_route = route
                     continue
 
                 if self._route_matches(route, parsed_fields):
@@ -369,7 +401,13 @@ class HL7MessageRouter:
                     out = route
                     return out
 
-            # .. no regular route matched, try the default.
+            # .. no channel named the message, so the first that takes everything has it ..
+            if catch_all_route:
+
+                out = catch_all_route
+                return out
+
+            # .. and failing that, the default.
             if default_route:
 
                 out = default_route

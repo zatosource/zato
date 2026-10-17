@@ -269,7 +269,6 @@ class TestManagerStatusList(TestCase):
     def _get_manager(self, rows:'anylist') -> 'OnPremGatewayManager':
 
         server = MagicMock()
-        server.cluster_id = 1
 
         session = MagicMock()
         out = OnPremGatewayManager(server, session=session)

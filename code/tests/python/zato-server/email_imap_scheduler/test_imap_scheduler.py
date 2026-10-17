@@ -18,7 +18,6 @@ import pytest
 
 # Zato
 from zato.common.api import EMAIL, SCHEDULER
-from zato.common.defaults import default_cluster_id
 from zato.common.test.client import AdminClient
 
 # Local test helpers
@@ -70,14 +69,14 @@ def cleanup(client:'any_', imap_test_server:'any_'):
     yield
 
     # Deleting a connection also deletes its linked job
-    data, _meta = client.get_list(f'{_service_imap}.get-list', cluster_id=default_cluster_id, paginate=True, cur_page=1)
+    data, _meta = client.get_list(f'{_service_imap}.get-list', paginate=True, cur_page=1)
 
     for item in data:
         if item['name'].startswith(_conn_name_prefix):
             _ = client.delete(f'{_service_imap}.delete', id=item['id'])
 
     # Jobs renamed away from the convention are not covered by the connection delete above
-    data, _meta = client.get_list(f'{_service_job}.get-list', cluster_id=default_cluster_id)
+    data, _meta = client.get_list(f'{_service_job}.get-list')
 
     for item in data:
         if item['name'].startswith(_job_name_prefix) or item['name'].startswith(_custom_job_name_prefix):
@@ -108,7 +107,7 @@ def _new_conn_name():
 def _get_imap_item(client:'any_', name:'any_'):
     """ Returns the get-list row of the IMAP connection of the given name.
     """
-    data, _meta = client.get_list(f'{_service_imap}.get-list', cluster_id=default_cluster_id, paginate=True, cur_page=1)
+    data, _meta = client.get_list(f'{_service_imap}.get-list', paginate=True, cur_page=1)
 
     for item in data:
         if item['name'] == name:
@@ -122,7 +121,7 @@ def _get_imap_item(client:'any_', name:'any_'):
 # ################################################################################################################################
 
 def _get_job_names(client:'any_'):
-    data, _meta = client.get_list(f'{_service_job}.get-list', cluster_id=default_cluster_id)
+    data, _meta = client.get_list(f'{_service_job}.get-list')
 
     out = []
     for item in data:
@@ -133,7 +132,7 @@ def _get_job_names(client:'any_'):
 # ################################################################################################################################
 
 def _get_job(client:'any_', name:'any_'):
-    out = _unwrap(client.invoke(f'{_service_job}.get-by-name', {'cluster_id': default_cluster_id, 'name': name}))
+    out = _unwrap(client.invoke(f'{_service_job}.get-by-name', {'name': name}))
     return out
 
 # ################################################################################################################################
@@ -142,7 +141,6 @@ def _conn_payload(imap_test_server:'any_', name:'any_'):
     """ A base create/edit payload for an IMAP connection pointing to the test IMAP server.
     """
     out = {
-        'cluster_id': default_cluster_id,
         'name': name,
         'is_active': True,
         'server_type': EMAIL.IMAP.ServerType.Generic,
@@ -415,7 +413,6 @@ def test_job_edit_syncs_back_to_conn(client:'any_', imap_test_server:'any_'):
     # Edit the job directly, the way the scheduler UI does it - renaming it, changing its interval
     # and pointing its extra data to another per-message service.
     _ = client.edit(f'{_service_job}.edit',
-        cluster_id=default_cluster_id,
         id=job_id,
         name=custom_job_name,
         is_active=True,

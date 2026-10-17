@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 
 # Zato
+from zato.input_output import ServiceInput
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -20,6 +21,7 @@ from zato.server.service import Model, Service
 
 _simple_received = []
 _typed_received = []
+_input_received = []
 
 _chain_received = []
 _fanout_1_received = []
@@ -60,6 +62,98 @@ class PubSubTestTypedReceiver(Service):
 
     def handle(self) -> 'None':
         _typed_received.append(self.request.input)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class OrderEvent(Model):
+    order_id: str = ''
+    status: str = ''
+    amount: float = 0.0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubTestInputReceiver(Service):
+    """ Receives a pub/sub push message and stores what the request's input and raw attributes hold.
+    """
+
+    name = 'test.pubsub.input-receiver'
+
+    def handle(self) -> 'None':
+
+        input = self.request.input
+
+        # The input is reported as a dict for both a ServiceInput and a Model, and as it is otherwise
+        if isinstance(input, (Model, ServiceInput)):
+            input_value = input.to_dict()
+        else:
+            input_value = input
+
+        _input_received.append({
+            'input_type': type(input).__name__,
+            'input': input_value,
+            'raw_type': type(self.request.raw).__name__,
+            'raw': str(self.request.raw),
+        })
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubTestPublishEvent(Service):
+    """ Publishes to the input receiver a dict, a text or an OrderEvent instance, as the kind field says.
+    """
+
+    name = 'test.pubsub.publish-event'
+
+    def handle(self) -> 'None':
+        from json import dumps
+
+        kind = self.request.input.kind
+        data = self.request.input.data
+
+        if kind == 'model':
+            event = OrderEvent()
+            event.order_id = data['order_id']
+            event.status = data['status']
+            event.amount = data['amount']
+            data = event
+
+        result = self.pubsub.publish('test.pubsub.input-receiver', data)
+
+        self.response.payload = dumps({'msg_id': result.msg_id})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubTestGetInputReceived(Service):
+    """ Returns what the input receiver has collected so far.
+    """
+
+    name = 'test.pubsub.get-input-received'
+
+    def handle(self) -> 'None':
+        from json import dumps
+
+        out = {
+            'count': len(_input_received),
+            'received': _input_received,
+        }
+
+        self.response.payload = dumps(out)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubTestClearInputReceived(Service):
+    """ Clears what the input receiver has collected.
+    """
+
+    name = 'test.pubsub.clear-input-received'
+
+    def handle(self) -> 'None':
+        _input_received.clear()
 
 # ################################################################################################################################
 # ################################################################################################################################

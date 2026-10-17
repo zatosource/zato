@@ -70,12 +70,6 @@ class ServerStub:
 
         channel_data = [
             {
-                'name': 'audit.test.as4.channel',
-                'transport': URL_TYPE.AS4,
-                'service_name': 'audit.test.as4.target',
-                'data_format': XML_Data_Format,
-            },
-            {
                 'name': REST_Channel_Name,
                 'transport': URL_TYPE.PLAIN_HTTP,
                 'service_name': REST_Service,
@@ -89,9 +83,7 @@ class ServerStub:
             },
         ]
 
-        url_data = Bunch(channel_data=channel_data)
-        request_dispatcher = Bunch(url_data=url_data)
-        self.config_manager = Bunch(request_dispatcher=request_dispatcher)
+        self.url_data = Bunch(channel_data=channel_data)
 
     def invoke(self, service_name:'str', payload:'any_', **kwargs:'any_') -> 'None':
         self.invoked.append((service_name, payload, kwargs))

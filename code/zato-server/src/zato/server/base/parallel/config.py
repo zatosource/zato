@@ -11,16 +11,13 @@ from contextlib import closing
 from logging import getLogger
 
 # Zato
-from zato.common.api import GENERIC
+from zato.common.api import HTTP_SOAP
 from zato.common.ext.bunch import Bunch
 from zato.common.const import SECRETS
-from zato.common.ext_db.api import get_ext_db_session, get_ext_http_soap_list, is_ext_db_configured, \
-    merge_ext_channel_items, merge_ext_config_entries
 from zato.common.json_internal import loads
-from zato.common.odb.query import http_soap_list
-from zato.common.odb.query.generic import connection_list
-from zato.common.typing_ import cast_
+from zato.common.pubsub.outgoing import http_soap_inbound_types
 from zato.common.util.config import resolve_name
+from zato.common.util.delivery_config import apply_delivery_defaults
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target, resolve_match_slash
 from zato.server.config import ConfigDict
@@ -39,6 +36,8 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+_queue = HTTP_SOAP.Queue
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,34 +64,34 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def set_up_security(self:'ParallelServer', cluster_id:'int') -> 'None':
+    def set_up_security(self:'ParallelServer') -> 'None':
 
         # API keys
-        query = self.odb.get_apikey_security_list(cluster_id, True)
+        query = self.odb.get_apikey_security_list(True)
         self.config.apikey = ConfigDict.from_query('apikey', query, decrypt_func=self.decrypt)
 
         # HTTP Basic Auth
-        query = self.odb.get_basic_auth_list(cluster_id, None, True)
+        query = self.odb.get_basic_auth_list(True)
         self.config.basic_auth = ConfigDict.from_query('basic_auth', query, decrypt_func=self.decrypt)
 
         # mTLS
-        query = self.odb.get_mtls_list(cluster_id, True)
+        query = self.odb.get_mtls_list(True)
         self.config.mtls = ConfigDict.from_query('mtls', query, decrypt_func=self.decrypt)
 
         # NTLM
-        query = self.odb.get_ntlm_list(cluster_id, True)
+        query = self.odb.get_ntlm_list(True)
         self.config.ntlm = ConfigDict.from_query('ntlm', query, decrypt_func=self.decrypt)
 
         # Kerberos (SPNEGO)
-        query = self.odb.get_spnego_list(cluster_id, True)
+        query = self.odb.get_spnego_list(True)
         self.config.spnego = ConfigDict.from_query('spnego', query, decrypt_func=self.decrypt)
 
         # OAuth
-        query = self.odb.get_oauth_list(cluster_id, True)
+        query = self.odb.get_oauth_list(True)
         self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
 
         # WS-Security
-        query = self.odb.get_wss_list(cluster_id, True)
+        query = self.odb.get_wss_list(True)
         self.config.wss = ConfigDict.from_query('wss', query, decrypt_func=self.decrypt)
 
         # Load rate limiting for security definitions - for every type a channel authenticates against
@@ -148,7 +147,7 @@ class ConfigLoader:
     ) -> 'None':
 
         # Services
-        query = self.odb.get_service_list(server.cluster.id, True)
+        query = self.odb.get_service_list(True)
         self.config.service = ConfigDict.from_query('service_list', query, decrypt_func=self.decrypt)
 
         #
@@ -156,7 +155,7 @@ class ConfigLoader:
         #
 
         # AMQP
-        query = self.odb.get_channel_amqp_list(server.cluster.id, True)
+        query = self.odb.get_channel_amqp_list(True)
         self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query, decrypt_func=self.decrypt)
 
         #
@@ -168,38 +167,27 @@ class ConfigLoader:
         #
 
         # AMQP
-        query = self.odb.get_out_amqp_list(server.cluster.id, True)
+        query = self.odb.get_out_amqp_list(True)
         self.config.out_amqp = ConfigDict.from_query('out_amqp', query, decrypt_func=self.decrypt)
 
         # Odoo
-        query = self.odb.get_out_odoo_list(server.cluster.id, True)
+        query = self.odb.get_out_odoo_list(True)
         self.config.out_odoo = ConfigDict.from_query('out_odoo', query, decrypt_func=self.decrypt)
 
         # REST
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
+        query = self.odb.get_http_soap_list('outgoing', 'plain_http', True)
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query, decrypt_func=self.decrypt)
 
         # SOAP
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
+        query = self.odb.get_http_soap_list('outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query, decrypt_func=self.decrypt)
 
-        # AS4
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'as4', True)
-        self.config.out_as4 = ConfigDict.from_query('out_as4', query, decrypt_func=self.decrypt)
-
-        # AS4 - outgoing connections kept in the external AS2/AS4 database, if one is configured
-        if is_ext_db_configured():
-            with closing(get_ext_db_session()) as ext_session:
-                ext_query = http_soap_list(ext_session, server.cluster_id, 'outgoing', 'as4', True, None, True)
-                ext_out_as4 = ConfigDict.from_query('out_as4', ext_query, decrypt_func=self.decrypt)
-            merge_ext_config_entries(self.config.out_as4._impl, ext_out_as4._impl)
-
         # SQL
-        query = self.odb.get_out_sql_list(server.cluster.id, True)
+        query = self.odb.get_out_sql_list(True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
 
         # Pub/sub
-        query = self.odb.get_pubsub_subscription_list(server.cluster.id, True)
+        query = self.odb.get_pubsub_subscription_list(True)
         self.config.pubsub_subs = ConfigDict.from_query('pubsub_subs', query, decrypt_func=self.decrypt, list_config=True)
 
         #
@@ -216,19 +204,9 @@ class ConfigLoader:
 
         # Connections - names are unique per type only, so the entries are keyed by type and name together
         # right as they are read, otherwise connections of different types sharing a name would overwrite each other.
-        query = self.odb.get_generic_connection_list(server.cluster.id, True)
+        query = self.odb.get_generic_connection_list(True)
         self.config.generic_connection = ConfigDict.from_query('generic_connection', query, decrypt_func=self.decrypt,
             key_func=generic_connection_key)
-
-        # Connections kept in the external AS2/AS4 database, if one is configured
-        if is_ext_db_configured():
-            ext_cluster_id = cast_('int', server.cluster_id)
-            with closing(get_ext_db_session()) as ext_session:
-                ext_query = connection_list(
-                    ext_session, ext_cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_AS2, True)
-                ext_generic = ConfigDict.from_query('generic_connection', ext_query, decrypt_func=self.decrypt,
-                    key_func=generic_connection_key)
-            merge_ext_config_entries(self.config.generic_connection._impl, ext_generic._impl)
 
         #
         # Generic - end
@@ -240,7 +218,7 @@ class ConfigLoader:
         # Security - start
         #
 
-        self.set_up_security(server.cluster_id)
+        self.set_up_security()
 
         #
         # Security - end
@@ -250,15 +228,8 @@ class ConfigLoader:
 
         # All the HTTP/SOAP channels.
         http_soap = []
-        channel_items = elems_with_opaque(self.odb.get_http_soap_list(server.cluster.id, 'channel'))
 
-        # Channels kept in the external AS2/AS4 database override same-name ones from the main ODB
-        if is_ext_db_configured():
-            ext_cluster_id = cast_('int', server.cluster_id)
-            ext_channel_items = get_ext_http_soap_list(ext_cluster_id, 'channel')
-            merge_ext_channel_items(channel_items, ext_channel_items)
-
-        for item in channel_items:
+        for item in elems_with_opaque(self.odb.get_http_soap_list('channel')):
 
             # The runtime hands this very object to services and to the dispatcher, both of which
             # reach into it by attribute as well as by key, and it is built once per channel here
@@ -270,8 +241,8 @@ class ConfigLoader:
 
             channel['name'] = resolve_name(channel['name'])
 
-            # Dispatcher-handled channels, such as AS2 ones, have no service of their own,
-            # so the outer-joined column comes back as NULL - the runtime spells that as an empty string.
+            # A channel without a service of its own comes back with the outer-joined column
+            # set to NULL - the runtime spells that as an empty string.
             if channel['service_name'] is None:
                 channel['service_name'] = ''
 
@@ -280,6 +251,14 @@ class ConfigLoader:
             # built out of it here, so both find the same thing.
             if channel.get('http_accept') is None:
                 channel['http_accept'] = ''
+
+            # REST and SOAP channels carry the queue switch, the retry and DLQ settings and the static queue response,
+            # at their defaults for a channel written before the settings existed, such as the ones a new environment is created with.
+            if channel['transport'] in http_soap_inbound_types:
+                apply_delivery_defaults(channel)
+
+                if channel.get(_queue.Field_Queue_Response) is None:
+                    channel[_queue.Field_Queue_Response] = _queue.Default_Queue_Response
 
             channel['match_target'] = get_match_target(channel, http_methods_allowed_re=self.http_methods_allowed_re)
 
@@ -308,11 +287,11 @@ class ConfigLoader:
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # E-mail - SMTP
-        query = self.odb.get_email_smtp_list(server.cluster.id, True)
+        query = self.odb.get_email_smtp_list(True)
         self.config.email_smtp = ConfigDict.from_query('email_smtp', query, decrypt_func=self.decrypt)
 
         # E-mail - IMAP
-        query = self.odb.get_email_imap_list(server.cluster.id, True)
+        query = self.odb.get_email_imap_list(True)
         self.config.email_imap = ConfigDict.from_query('email_imap', query, decrypt_func=self.decrypt)
 
         # .. reusable ..
@@ -367,21 +346,6 @@ class ConfigLoader:
         odb_data.token = parallel_server.fs_server_config.main.token
 
         odb_data.is_odb = True
-
-        if odb_data.engine != 'sqlite':
-            odb_data.password = parallel_server.odb_data['password']
-            odb_data.host = parallel_server.odb_data['host']
-            odb_data.port = parallel_server.odb_data['port']
-            odb_data.engine = parallel_server.odb_data['engine']
-            odb_data.pool_size = parallel_server.odb_data['pool_size']
-            odb_data.username = parallel_server.odb_data['username']
-
-            # SSL/TLS configuration - configurations written by older releases may not carry these keys at all.
-            odb_data.ssl           = parallel_server.odb_data.get('ssl', '')
-            odb_data.ssl_ca_file   = parallel_server.odb_data.get('ssl_ca_file', '')
-            odb_data.ssl_cert_file = parallel_server.odb_data.get('ssl_cert_file', '')
-            odb_data.ssl_key_file  = parallel_server.odb_data.get('ssl_key_file', '')
-            odb_data.ssl_verify    = parallel_server.odb_data.get('ssl_verify', '')
 
         # Note that we don't read is_active off of anywhere - ODB always must
         # be active and it's not a regular connection pool anyway.

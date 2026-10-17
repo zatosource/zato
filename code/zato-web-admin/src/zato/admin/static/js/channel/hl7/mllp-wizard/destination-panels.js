@@ -417,15 +417,26 @@ panels._filterBadge = function(badge, textWords, typeValue) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The assigned zone read back into the state, in the order it holds.
+// The assigned zone read back into the state, in the order it holds. A destination is
+// addressed by its connection's name alone, so of two connections of one name picked
+// under different kinds, the one picked first is the one that stays.
 panels._readPicker = function() {
 
     var assigned = $('#badge-zone-assigned-' + panels.config.pickerAction + ' .badge-zone-body .security-badge');
     var destinationList = [];
+    var pickedNames = {};
 
     assigned.each(function() {
 
         var badge = $(this);
+        var connection = badge.attr('data-connection');
+
+        if(pickedNames[connection]) {
+            return;
+        }
+
+        pickedNames[connection] = true;
+
         var options = {};
 
         badge.find('[data-option]').each(function() {
@@ -436,7 +447,7 @@ panels._readPicker = function() {
 
         destinationList.push({
             type: badge.attr('data-type'),
-            connection: badge.attr('data-connection'),
+            connection: connection,
             isActive: badge.find('.wizard-destination-active').prop('checked'),
             options: options
         });

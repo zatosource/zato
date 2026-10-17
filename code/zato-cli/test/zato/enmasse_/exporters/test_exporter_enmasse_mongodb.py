@@ -151,7 +151,6 @@ class TestEnmasseMongoDBExporter(TestCase):
         mongodb_list_from_yaml = self.get_definitions()
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_mongodb_connections, _ = self.mongodb_importer.sync_definitions(mongodb_list_from_yaml, self.session)
 
         self.assertEqual(len(created_mongodb_connections), 2, 'Not all MongoDB connections were created.')

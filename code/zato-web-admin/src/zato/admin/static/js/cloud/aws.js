@@ -115,8 +115,7 @@ $.fn.zato.cloud.aws.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.cloud.aws.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'AWS connection `{0}` deleted',
-        'Are you sure you want to delete AWS connection `{0}`?',
-        true);
+        'Are you sure you want to delete AWS connection `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

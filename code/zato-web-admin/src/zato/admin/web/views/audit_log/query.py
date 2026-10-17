@@ -18,7 +18,7 @@ from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_nu
 from zato.admin.web.views.audit_log.sources import _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
-from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Payload_Kind_Described
+from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.audit_log.resubmit import Resend_Hop_Service
 from zato.common.audit_log.service import Attribute_Channel
 from zato.common.json_internal import loads
@@ -243,7 +243,8 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
 
 def _carries_a_repeatable_call(data:'str') -> 'bool':
     """ Whether one row's stored document holds the call a per-hop resend would repeat. A row with
-    no body at all is no such call, and neither is one whose body was recorded by description.
+    no body at all is no such call, and neither is one whose body was recorded by description nor
+    one recorded without its credentials, which the resend refuses the same way.
     """
 
     # Our response to produce
@@ -258,7 +259,9 @@ def _carries_a_repeatable_call(data:'str') -> 'bool':
         # Only a JSON object follows the resubmit convention, a plain string payload does not.
         if isinstance(details, dict):
             if Key_Payload in details:
-                out = details.get(Key_Payload_Kind) != Payload_Kind_Described
+                is_described = details.get(Key_Payload_Kind) == Payload_Kind_Described
+                is_redacted = Key_Redacted in details
+                out = not (is_described or is_redacted)
 
     return out
 

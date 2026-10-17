@@ -24,7 +24,7 @@ if 0:
 
 logger = logging.getLogger('zato.test.playwright')
 
-_Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
+_Permission_Page_Url = '/zato/pubsub/permission/'
 
 # How long the browser-side fetch may wait before it is considered starved
 _Fetch_Abort_Ms = 8000

@@ -25,7 +25,6 @@ from urllib3.util.retry import Retry
 from zato.common.api import URLInfo
 from zato.common.const import ServiceConst
 from zato.common.exception import ZatoException
-from zato.common.odb.model import Server
 from zato.common.util.config import get_url_protocol_from_config_item
 
 CID_LENGTH = 24
@@ -215,7 +214,6 @@ class ZatoClient:
         self.tls_verify = tls_verify
         self.has_debug = self.logger.isEnabledFor(logging.DEBUG)
 
-        self.cluster_id = None
         self.odb_session = None
 
         self.session = session or requests.session()
@@ -328,7 +326,7 @@ def get_client_from_server_conf(
     server_url = server_url if server_url else config.main.bind # type: str
     server_url = server_url.replace('0.0.0.0', '127.0.0.1')
 
-    client_auth = client_auth_func(config, repo_location, crypto_manager, False, url_path=url_path)
+    client_auth = client_auth_func(config, repo_location, crypto_manager, url_path=url_path)
 
     use_tls = config.crypto.use_tls
     api_protocol = get_url_protocol_from_config_item(use_tls)
@@ -336,11 +334,7 @@ def get_client_from_server_conf(
 
     client = ZatoClient(address, ServiceConst.API_Invoke_Url_Path,
         client_auth, max_response_repr=15000)
-    session = get_odb_session_from_server_config(config, None, False)
-
-    client.cluster_id = session.query(Server).\
-        filter(Server.token == config.main.token).\
-        one().cluster_id
+    session = get_odb_session_from_server_config(config)
 
     client.odb_session = session
 

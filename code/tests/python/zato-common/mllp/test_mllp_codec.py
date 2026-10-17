@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
-from zato.common.hl7.mllp.preprocess import split_concatenated_messages
+from zato.common.hl7.mllp.preprocess import preprocess_message, split_concatenated_messages
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -204,6 +204,31 @@ class TestSplittingOneFrameIntoMessages:
 
     def test_an_empty_payload_yields_nothing(self) -> 'None':
         assert split_concatenated_messages('') == []
+
+    def test_messages_with_lf_endings_are_split_apart(self) -> 'None':
+        first = 'MSH|^~\\&|A|A|A|A|20230101120000||ADT^A01|FIRST|P|2.5\nPID|||123\n'
+        second = 'MSH|^~\\&|B|B|B|B|20230101120000||ORU^R01|SECOND|P|2.5\nPID|||456'
+
+        out = split_concatenated_messages(first + second)
+
+        assert out == [first, second]
+
+    def test_messages_with_crlf_endings_keep_their_endings_when_split(self) -> 'None':
+        first = 'MSH|^~\\&|A|A|A|A|20230101120000||ADT^A01|FIRST|P|2.5\r\nPID|||123\r\n'
+        second = 'MSH|^~\\&|B|B|B|B|20230101120000||ORU^R01|SECOND|P|2.5\r\nPID|||456\r\n'
+        third = 'MSH|^~\\&|C|C|C|C|20230101120000||ORU^R01|THIRD|P|2.5'
+
+        out = split_concatenated_messages(first + second + third)
+
+        assert out == [first, second, third]
+
+    def test_a_payload_is_split_with_line_ending_normalization_off(self) -> 'None':
+        first = 'MSH|^~\\&|A|A|A|A|20230101120000||ADT^A01|FIRST|P|2.5\nPID|||123\n'
+        second = 'MSH|^~\\&|B|B|B|B|20230101120000||ORU^R01|SECOND|P|2.5\nPID|||456'
+
+        out = preprocess_message((first + second).encode('utf-8'), should_normalize_line_endings=False)
+
+        assert out == [first, second]
 
 # ################################################################################################################################
 # ################################################################################################################################

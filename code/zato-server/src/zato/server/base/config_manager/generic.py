@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import nullcontext
+from traceback import format_exc
 
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -23,10 +24,9 @@ from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, channel_int_config_keys
 from zato.server.generic.api.channel_kafka import channel_bool_config_keys as channel_kafka_bool_config_keys, \
     channel_config_defaults as channel_kafka_config_defaults, channel_int_config_keys as channel_kafka_int_config_keys
+from zato.server.generic.api.chat_discord import discord_config_defaults, discord_int_config_keys
 from zato.server.generic.api.cloud_aws import cloud_aws_config_defaults, cloud_aws_int_config_keys
 from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
-from zato.server.generic.api.outconn_as2 import outconn_as2_bool_config_keys, outconn_as2_config_defaults, \
-    outconn_as2_int_config_keys
 from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outconn_es_config_defaults, \
     outconn_es_int_config_keys
 from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, outconn_grpc_config_defaults, \
@@ -95,7 +95,6 @@ class Generic(ConfigManagerImpl):
     logger: 'Logger'
     generic_conn_api: 'stranydict'
     sdk_connector_types: 'stranydict'
-    as2_config_generation: 'int'
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
     get_outgoing_publish_lock: 'callable_'
@@ -104,15 +103,6 @@ class Generic(ConfigManagerImpl):
     delete_outgoing_subscription: 'callable_'
     rename_outgoing_dlq: 'callable_'
     delete_outgoing_dlq: 'callable_'
-
-# ################################################################################################################################
-
-    def _note_as2_config_change(self, type_:'str') -> 'None':
-        """ Records that the AS2 outgoing connections changed, which is what tells an AS2 channel
-        its partnerships have to be built again rather than reused.
-        """
-        if type_ == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2:
-            self.as2_config_generation += 1
 
 # ################################################################################################################################
 
@@ -158,21 +148,29 @@ class Generic(ConfigManagerImpl):
 
 # ################################################################################################################################
 
-    def _delete_generic_connection(self, msg:'stranydict', needs_queue_delete:'bool'=True) -> 'None':
+    def _delete_generic_connection(self, msg:'stranydict', needs_queue_delete:'bool'=True, is_edit:'bool'=False) -> 'None':
 
         conn_dict, conn_value = self._find_conn_info(msg['id'], msg['name'])
+
+        # A connection this server never loaded, such as one inserted into the database without a config reload,
+        # has no wrapper or queue to remove - the database row is gone already, so there is nothing more to do.
         if not conn_dict:
-            raise Exception('Could not find configuration matching input message `{}`'.format(msg))
+            self.logger.info('Generic connection `%s` (%s) is not loaded, skipping its runtime deletion',
+                msg['name'], msg['type_'])
         else:
 
             # Delete the connection object ..
             conn = conn_dict.conn # type: Wrapper
 
-            # .. provide the reason code if the connection type supports it ..
+            # .. provide the reason code if the connection type supports it, and tell a connection type
+            # .. that shares a resource with others whether this delete is the first half of an edit ..
             has_delete_reasons = getattr(conn, 'has_delete_reasons', None)
+            has_edit_aware_delete = getattr(conn, 'has_edit_aware_delete', False)
 
             if has_delete_reasons:
                 conn.delete(reason=COMMON_GENERIC.DeleteReason)
+            elif has_edit_aware_delete:
+                conn.delete(is_edit=is_edit)
             else:
                 conn.delete()
 
@@ -181,7 +179,7 @@ class Generic(ConfigManagerImpl):
             _ = conn_value.pop(conn_name, None)
 
             # .. a connection that can be published to takes its queue with it and a channel takes its DLQ,
-            # .. unless this delete is only the first half of an edit ..
+            # .. unless this delete is only the first half of an edit.
             if needs_queue_delete:
                 conn_type = publishable_generic_types.get(conn_dict['type_'])
                 inbound_type = inbound_generic_types.get(conn_dict['type_'])
@@ -190,9 +188,6 @@ class Generic(ConfigManagerImpl):
                     self.delete_outgoing_subscription(conn_type, conn_dict['id'], conn_name)
                 elif inbound_type:
                     self.delete_outgoing_dlq(inbound_type, conn_dict['id'], conn_name)
-
-            # .. and note the change for whoever caches anything built out of these configs.
-            self._note_as2_config_change(conn_dict['type_'])
 
 # ################################################################################################################################
 
@@ -248,13 +243,18 @@ class Generic(ConfigManagerImpl):
         replace_query_string_items_in_dict(self.server, item_dict)
 
         config_attr[msg_name] = item_dict
-        conn_wrapper = wrapper(item_dict, self.server)
-        config_attr[msg_name].conn = conn_wrapper
-        config_attr[msg_name].conn.build_wrapper()
 
-        # An AS2 channel builds its partnerships out of these configs, so it needs to know
-        # that the ones it built earlier no longer describe the connections.
-        self._note_as2_config_change(item.type_)
+        try:
+            conn_wrapper = wrapper(item_dict, self.server)
+            config_attr[msg_name].conn = conn_wrapper
+            config_attr[msg_name].conn.build_wrapper()
+        except Exception:
+            if raise_exc:
+                raise
+            else:
+                # At startup, one connection that cannot be built must not keep the server from starting
+                self.logger.warning('Could not build generic connection `%s` (%s), e:`%s`',
+                    msg_name, item.type_, format_exc())
 
 # ################################################################################################################################
 
@@ -320,7 +320,7 @@ class Generic(ConfigManagerImpl):
         with hold:
 
             # Delete the connection, although not the queue in front of it, which this edit keeps
-            self._delete_generic_connection(msg, needs_queue_delete=False)
+            self._delete_generic_connection(msg, needs_queue_delete=False, is_edit=True)
 
             # Recreate it now but make sure to include the secret too
             msg['secret'] = secret
@@ -543,33 +543,6 @@ class Generic(ConfigManagerImpl):
 
 # ################################################################################################################################
 
-    def _generic_normalize_config_outconn_as2(self, config:'stranydict') -> 'None':
-        """ Fills in defaults for fields that the create path did not supply and coerces
-        numeric and boolean fields that may arrive as strings from opaque storage.
-        """
-
-        # Apply a default for every field that is missing or None - column-backed fields
-        # the message did not carry arrive as no-value markers and count as missing too ..
-        for key, default in outconn_as2_config_defaults.items():
-            value = config.get(key)
-            is_marker = isinstance(value, str) and value.startswith(_no_value_marker)
-            if value is None or is_marker:
-                config[key] = default
-
-        # .. make sure numeric fields are integers ..
-        for key in outconn_as2_int_config_keys:
-            value = config[key]
-            if isinstance(value, str):
-                config[key] = int(value)
-
-        # .. and make sure boolean fields are booleans.
-        for key in outconn_as2_bool_config_keys:
-            value = config[key]
-            if isinstance(value, str):
-                config[key] = as_bool(value)
-
-# ################################################################################################################################
-
     def _generic_normalize_config_outconn_hl7_fhir(self, config:'stranydict') -> 'None':
         """ Fills in defaults for fields that the create path did not supply, coerces numeric fields
         that may arrive as strings from opaque storage and resolves the connection's security definition
@@ -640,6 +613,28 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = as_bool(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_chat_discord(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply and coerces
+        numeric fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in discord_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. and make sure numeric fields are integers - an empty string means
+        # .. the create path had no value for the field, so its default applies.
+        for key in discord_int_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                if value:
+                    config[key] = int(value)
+                else:
+                    config[key] = discord_config_defaults[key]
 
 # ################################################################################################################################
 

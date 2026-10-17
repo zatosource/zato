@@ -12,7 +12,6 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common.defaults import default_cluster_id
 from zato.common.typing_ import cast_
 
 # Local
@@ -63,9 +62,7 @@ class NotificationStore:
 
                 # Look for the platform's current row ..
                 query = select(rule_chat_config_table.c.id)
-                cluster_condition = rule_chat_config_table.c.cluster_id == default_cluster_id
                 kind_condition = rule_chat_config_table.c.kind == kind
-                query = query.where(cluster_condition)
                 query = query.where(kind_condition)
                 result = session.execute(query)
                 row = result.one_or_none()
@@ -81,7 +78,6 @@ class NotificationStore:
                 # .. or create the platform's first row.
                 else:
                     values = {
-                        'cluster_id': default_cluster_id,
                         'kind':       kind,
                         'payload':    payload,
                         'updated_at': now,
@@ -103,9 +99,7 @@ class NotificationStore:
         _require_kind(kind)
 
         query = select(rule_chat_config_table)
-        cluster_condition = rule_chat_config_table.c.cluster_id == default_cluster_id
         kind_condition = rule_chat_config_table.c.kind == kind
-        query = query.where(cluster_condition)
         query = query.where(kind_condition)
         session = self._session_factory()
 
@@ -131,8 +125,6 @@ class NotificationStore:
         """ Returns every configured chat platform's credentials row.
         """
         query = select(rule_chat_config_table)
-        cluster_condition = rule_chat_config_table.c.cluster_id == default_cluster_id
-        query = query.where(cluster_condition)
         session = self._session_factory()
 
         # Load every configured platform ..
@@ -181,7 +173,6 @@ class NotificationStore:
 
                 # .. and insert the destination row.
                 values = {
-                    'cluster_id':       default_cluster_id,
                     'definition_id':    definition_id,
                     'kind':             kind,
                     'target':           target,
@@ -201,7 +192,6 @@ class NotificationStore:
 
                 out = RuleNotifyDestinationRecord(
                     id=destination_id,
-                    cluster_id=default_cluster_id,
                     definition_id=definition_id,
                     kind=kind,
                     target=target,
@@ -235,10 +225,8 @@ class NotificationStore:
         ) -> 'destination_record_list':
         """ Returns destinations, all of them or one ruleset's.
         """
-        # Start with the cluster every list uses ..
+        # Start with every destination ..
         query = select(rule_notify_destination_table)
-        cluster_condition = rule_notify_destination_table.c.cluster_id == default_cluster_id
-        query = query.where(cluster_condition)
 
         # .. add the optional parent filter ..
         if definition_id is not None:
@@ -274,9 +262,7 @@ class NotificationStore:
         """ Removes one destination together with its cursor and delivery status.
         """
         statement = delete(rule_notify_destination_table)
-        cluster_condition = rule_notify_destination_table.c.cluster_id == default_cluster_id
         id_condition = rule_notify_destination_table.c.id == destination_id
-        statement = statement.where(cluster_condition)
         statement = statement.where(id_condition)
         session = self._session_factory()
 
@@ -340,9 +326,7 @@ class NotificationStore:
         """ Applies one set of delivery-state values to one destination row.
         """
         statement = update(rule_notify_destination_table)
-        cluster_condition = rule_notify_destination_table.c.cluster_id == default_cluster_id
         id_condition = rule_notify_destination_table.c.id == destination_id
-        statement = statement.where(cluster_condition)
         statement = statement.where(id_condition)
         statement = statement.values(**values)
         session = self._session_factory()
@@ -362,9 +346,7 @@ class NotificationStore:
         """ Returns a named job's feed position, 0 when the job has never run.
         """
         query = select(rule_job_cursor_table)
-        cluster_condition = rule_job_cursor_table.c.cluster_id == default_cluster_id
         name_condition = rule_job_cursor_table.c.name == name
-        query = query.where(cluster_condition)
         query = query.where(name_condition)
         session = self._session_factory()
 
@@ -400,9 +382,7 @@ class NotificationStore:
 
                 # Look for the job's current position ..
                 query = select(rule_job_cursor_table.c.id)
-                cluster_condition = rule_job_cursor_table.c.cluster_id == default_cluster_id
                 name_condition = rule_job_cursor_table.c.name == name
-                query = query.where(cluster_condition)
                 query = query.where(name_condition)
                 result = session.execute(query)
                 row = result.one_or_none()
@@ -418,7 +398,6 @@ class NotificationStore:
                 # .. or create the job's first position row.
                 else:
                     values = {
-                        'cluster_id': default_cluster_id,
                         'name':       name,
                         'last_id':    last_id,
                         'updated_at': now,

@@ -21,7 +21,6 @@ from zato.admin.web.views.audit_log.columns import _source_label
 from zato.common.audit_log.api import Retention_Days
 from zato.common.audit_log.reports import Default_Range, Range_Day, Range_Hours, Range_Month, Range_Week
 from zato.common.audit_log.usage import get_object_options, get_usage, normalize_sources, usage_csv, Usage_Sources
-from zato.common.defaults import default_cluster_id
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -148,14 +147,12 @@ def index(req:'any_') -> 'TemplateResponse':
         ranges.append({'value': value, 'label': _range_label[value]})
 
     return_data = {
-        'cluster_id': default_cluster_id,
         'time_range': time_range,
         'sources': ','.join(sources),
         'objects': ','.join(objects),
         'filter_options_json': json.dumps(_get_filter_options()),
         'ranges': ranges,
         'rows': rows,
-        'zato_clusters': True,
         'zato_template_name': 'zato/channel-usage.html',
     }
 

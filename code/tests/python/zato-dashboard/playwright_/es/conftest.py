@@ -142,7 +142,6 @@ def zato_dashboard() -> 'any_':
 
     quickstart_command = [
         _Zato_Bin, 'quickstart', 'create', temporary_dir,
-        '--servers', '1',
         '--password', _Password,
         '--server-api-client-for-scheduler-password', _Password,
         '--no-scheduler',

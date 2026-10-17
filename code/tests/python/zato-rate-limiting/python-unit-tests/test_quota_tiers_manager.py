@@ -66,12 +66,11 @@ def _make_manager(tier_rows:'any_', sec_rows:'any_', group_rows:'any_', member_r
     session_factory = MagicMock(return_value=mock_session)
 
     server = MagicMock()
-    server.cluster_id = 1
 
     manager = QuotaTiersManager(server, session_factory)
 
     # Security definition rows come from a direct SQLAlchemy query
-    mock_session.query.return_value.filter.return_value.all.return_value = sec_rows
+    mock_session.query.return_value.all.return_value = sec_rows
 
     # Everything else comes through GenericObjectWrapper.get_list
     def get_list_side_effect(*args:'any_', **kwargs:'any_'):

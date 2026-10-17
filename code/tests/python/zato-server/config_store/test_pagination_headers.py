@@ -61,7 +61,6 @@ class TestPaginationHeaders:
         and pagination headers are present.
         """
         response, headers = client._invoke(f'{SERVICE}.get-list', {
-            'cluster_id': 1,
             'paginate': True,
             'cur_page': 1,
         })
@@ -85,7 +84,6 @@ class TestPaginationHeaders:
         """ Verify that the response body does NOT contain _meta or response wrapper keys.
         """
         response, _ = client._invoke(f'{SERVICE}.get-list', {
-            'cluster_id': 1,
             'paginate': True,
             'cur_page': 1,
         })
@@ -98,7 +96,7 @@ class TestPaginationHeaders:
     def test_04_get_list_helper_returns_meta_from_headers(self, client:'any_'):
         """ Verify that the get_list() helper populates meta from headers.
         """
-        data, meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, paginate=True, cur_page=1)
+        data, meta = client.get_list(f'{SERVICE}.get-list', paginate=True, cur_page=1)
 
         assert isinstance(data, list)
         assert 'cur_page' in meta

@@ -300,10 +300,10 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
         ctx.mock_check_security.assert_not_called()
 
@@ -318,14 +318,14 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
         ctx.mock_check_security.assert_called_once_with(
             sec, _test_cid, channel_item, meta.path_info,
-            b'payload', request_ctx, {}, worker_store, enforce_auth=True)
+            b'payload', request_ctx, {}, config_manager, enforce_auth=True)
 
 # ################################################################################################################################
 
@@ -338,11 +338,11 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         with self.assertRaises(Unauthorized):
             ctx.dispatcher._check_security(
-                _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+                _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
 # ################################################################################################################################
 
@@ -355,10 +355,10 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'security_groups_ctx': None})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
         mock_groups_check.assert_not_called()
 
@@ -377,10 +377,10 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
         mock_groups_check.assert_not_called()
 
@@ -398,10 +398,10 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
         mock_groups_check.assert_called_once_with(
             _test_cid, 'test.channel', groups_ctx, request_ctx)
@@ -419,11 +419,11 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         with self.assertRaises(Forbidden):
             ctx.dispatcher._check_security(
-                _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+                _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
 # ################################################################################################################################
 
@@ -437,11 +437,11 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         with self.assertRaises(Forbidden):
             ctx.dispatcher._check_security(
-                _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+                _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
 # ################################################################################################################################
 
@@ -456,10 +456,10 @@ class CheckSecurityTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
         ctx.mock_check_security.assert_called_once()
 
@@ -479,11 +479,11 @@ class InvokeServiceTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'merge_url_params_req': True})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
             _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
-            b'payload', {}, worker_store, {})
+            b'payload', {}, config_manager, {})
 
         ctx.mock_create_channel_params.assert_called_once()
 
@@ -497,11 +497,11 @@ class InvokeServiceTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'merge_url_params_req': False})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
             _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
-            b'payload', {}, worker_store, {})
+            b'payload', {}, config_manager, {})
 
         call_args = ctx.mock_handle.call_args[0]
         channel_params_arg = call_args[9]
@@ -517,16 +517,16 @@ class InvokeServiceTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
         headers_container = {'x-custom': 'val'}
 
         _ = ctx.dispatcher._invoke_service(
             _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
-            b'payload', {'key': 'val'}, worker_store, headers_container)
+            b'payload', {'key': 'val'}, config_manager, headers_container)
 
         ctx.mock_handle.assert_called_once_with(
             _test_cid, '/test/path', channel_item, request_ctx,
-            b'payload', worker_store,
+            b'payload', config_manager,
             {'key': 'val'}, meta.path_info, {'param1': 'value1'}, headers_container)
 
 # ################################################################################################################################
@@ -539,11 +539,11 @@ class InvokeServiceTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         result = ctx.dispatcher._invoke_service(
             _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
-            b'payload', {}, worker_store, {})
+            b'payload', {}, config_manager, {})
 
         self.assertIs(result, response)
 
@@ -556,11 +556,11 @@ class InvokeServiceTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'merge_url_params_req': True})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
             _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
-            b'payload', {'post': 'data'}, worker_store, {})
+            b'payload', {'post': 'data'}, config_manager, {})
 
         ctx.mock_create_channel_params.assert_called_once_with(
             '/test/path', channel_item, request_ctx, b'payload', {'post': 'data'})
@@ -660,10 +660,10 @@ class HypothesisTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         meta = _make_meta(path_info=path_info)
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, request_ctx, b'', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'', {}, config_manager)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -898,11 +898,11 @@ class InvokeServiceSecDefTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'merge_url_params_req': True})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
             _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
-            b'payload', {}, worker_store, {})
+            b'payload', {}, config_manager, {})
 
         ctx.mock_create_channel_params.assert_called_once()
 
@@ -915,11 +915,11 @@ class InvokeServiceSecDefTestCase(unittest.TestCase):
         channel_item = _make_channel_item({'merge_url_params_req': False})
         meta = _make_meta()
         request_ctx = _make_request_ctx()
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
             _test_cid, meta, cast_('any_', '/test/path'), channel_item, request_ctx,
-            b'payload', {}, worker_store, {})
+            b'payload', {}, config_manager, {})
 
         ctx.mock_create_channel_params.assert_not_called()
 
@@ -1342,10 +1342,10 @@ class CheckSecurityNoDumpsTestCase(unittest.TestCase):
         channel_item = _make_channel_item()
         meta = _make_meta()
         request_ctx = _make_request_ctx({'HTTP_AUTHORIZATION': 'Basic secret-material'})
-        worker_store = MagicMock()
+        config_manager = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, request_ctx, b'payload', {}, worker_store)
+            _test_cid, meta, channel_item, request_ctx, b'payload', {}, config_manager)
 
         logged = [str(item) for item in mock_logger.info.call_args_list]
 

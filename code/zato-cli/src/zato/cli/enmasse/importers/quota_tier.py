@@ -47,7 +47,7 @@ class QuotaTierImporter:
         # Our response to produce
         out = {}
 
-        wrapper = GenericObjectWrapper(session, self.importer.cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
         rows = wrapper.get_list()
@@ -76,7 +76,7 @@ class QuotaTierImporter:
 
         db_tiers = self.get_tiers_from_db(session)
 
-        wrapper = GenericObjectWrapper(session, self.importer.cluster_id)
+        wrapper = GenericObjectWrapper(session)
         wrapper.type_ = Quota_Tiers.Type.Quota_Tier
 
         for tier in tier_list:

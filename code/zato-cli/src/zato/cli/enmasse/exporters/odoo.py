@@ -39,12 +39,12 @@ class OdooExporter:
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'odoo_def_list':
+    def export(self, session:'SASession') -> 'odoo_def_list':
         """ Exports Odoo connection definitions.
         """
         logger.info('Exporting Odoo connection definitions')
 
-        db_odoo_connections = out_odoo_list(session, cluster_id)
+        db_odoo_connections = out_odoo_list(session)
 
         if not db_odoo_connections:
             logger.info('No Odoo connection definitions found in DB')

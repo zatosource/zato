@@ -1,0 +1,37 @@
+label: Insurance
+position: 5
+fields:
+  - firstname
+  - lastname
+  - dateofbirth
+  - city
+  - phonenumber
+  - taxid
+  - primaryphone
+  - email
+  - phone
+  - name
+  - street1
+  - postalcode
+  - mailingaddress
+  - emailaddress
+  - socialsecuritynumber
+  - emailaddress1
+  - emailaddress2
+  - primaryaddress
+  - companyname
+  - workphone
+  - ssn
+  - street2
+  - zipcode
+  - taxidentificationnumber
+  - addressline1
+  - driverslicensenumber
+  - email1
+  - address
+  - birthdt
+  - emailaddr
+  - givenname
+  - surname
+  - addr
+  - taxidentity

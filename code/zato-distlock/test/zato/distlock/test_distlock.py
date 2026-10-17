@@ -172,21 +172,3 @@ class FCNTLLockTestCase(_Base):
         self.is_set_up = True
 
 # ################################################################################################################################
-
-# pylint: disable-next=unused-variable
-class MySQLLockTestCase(_Base):
-    backend_type = 'mysql+pymysql'
-
-    def setUp(self):
-        self.is_set_up = False
-
-# ################################################################################################################################
-
-# pylint: disable-next=unused-variable
-class PostgresSQLLockTestCase(_Base):
-    backend_type = 'postgresql+pg8000'
-
-    def setUp(self):
-        self.is_set_up = False
-
-# ################################################################################################################################

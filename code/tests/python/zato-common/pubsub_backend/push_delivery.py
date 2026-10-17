@@ -14,7 +14,7 @@ from gevent import sleep
 
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
-from zato.common.api import PubSub
+from zato.common.api import DATA_FORMAT, PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.server.base.parallel.delivery import PushDelivery
 
@@ -80,7 +80,7 @@ class _StubServer:
         self.attempt_times:'anylist' = []
         self.fail_count = 0
 
-    def invoke(self, service_name:'str', payload:'any_') -> 'None':
+    def invoke(self, service_name:'str', payload:'any_', data_format:'str') -> 'None':
 
         self.attempt_times.append(monotonic())
 
@@ -88,7 +88,7 @@ class _StubServer:
             self.fail_count -= 1
             raise Exception('Simulated delivery failure')
 
-        self.invoked.append((service_name, payload))
+        self.invoked.append((service_name, payload, data_format))
 
 # ################################################################################################################################
 
@@ -176,7 +176,7 @@ def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', de
     _wait_until(lambda: not get_delivery_rows(_sub_key), 'the startup drain acknowledges everything')
 
     # .. every delivery invoked the configured service with the published payload ..
-    assert server.invoked[0] == (_service_name, 'push-drain-0'), server.invoked[0]
+    assert server.invoked[0] == (_service_name, 'push-drain-0', DATA_FORMAT.JSON), server.invoked[0]
 
     # .. new publications wake the blocking fetch up and are delivered live ..
     for index in range(_live_message_count):
@@ -194,7 +194,7 @@ def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', de
     delivered_so_far += 1
 
     _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the failed delivery is retried')
-    assert server.invoked[-1] == (_service_name, 'push-retried'), server.invoked[-1]
+    assert server.invoked[-1] == (_service_name, 'push-retried', DATA_FORMAT.JSON), server.invoked[-1]
 
     gap = _get_last_gap(server)
     _assert_gap_within(gap, _publisher_sleep_time)
@@ -206,7 +206,7 @@ def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', de
     delivered_so_far += 1
 
     _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the failed delivery is retried under the default policy')
-    assert server.invoked[-1] == (_service_name, 'push-retried-default'), server.invoked[-1]
+    assert server.invoked[-1] == (_service_name, 'push-retried-default', DATA_FORMAT.JSON), server.invoked[-1]
 
     gap = _get_last_gap(server)
     _assert_gap_within(gap, _default_sleep_time)
@@ -228,7 +228,7 @@ def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', de
     delivered_so_far += 1
 
     _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the message after the given-up one is delivered')
-    assert server.invoked[-1] == (_service_name, 'push-after-given-up'), server.invoked[-1]
+    assert server.invoked[-1] == (_service_name, 'push-after-given-up', DATA_FORMAT.JSON), server.invoked[-1]
 
     # .. a message that keeps failing expires for the push subscriber and leaves
     # .. its queue, while the second subscriber - a pull one with no push greenlet -

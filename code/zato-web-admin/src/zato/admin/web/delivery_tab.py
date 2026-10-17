@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.common.api import HTTP_SOAP
+from zato.common.api import CONNECTION, HTTP_SOAP, URL_TYPE
 from zato.common.util.delivery_config import Delivery_Bool_Fields, Delivery_Field_Defaults, Delivery_Int_Fields
 
 # ################################################################################################################################
@@ -29,6 +29,25 @@ if 0:
 _retry = HTTP_SOAP.Retry
 _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
+
+# Which HTTP/SOAP list pages carry the Delivery tab - outgoing REST connections and REST and SOAP channels
+_transports_with_delivery_tab = {
+    CONNECTION.OUTGOING: (URL_TYPE.PLAIN_HTTP,),
+    CONNECTION.CHANNEL: (URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP),
+}
+
+# ################################################################################################################################
+
+def has_delivery_tab(connection:'str', transport:'str') -> 'bool':
+    """ Whether the list page of this connection and transport carries the Delivery tab.
+    """
+    if connection not in _transports_with_delivery_tab:
+        return False
+
+    out = transport in _transports_with_delivery_tab[connection]
+    return out
+
+# ################################################################################################################################
 
 dlq_action_choices = (
     (_dlq.Action.Keep, 'Keep in DLQ'),

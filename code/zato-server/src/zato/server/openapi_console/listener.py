@@ -10,10 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from json import dumps as json_dumps
+from time import time
 from traceback import format_exc
 
 # gevent
 from gevent import sleep, spawn
+from gevent.pool import Pool
 
 # redis
 from redis import Redis
@@ -21,6 +23,7 @@ from redis import Redis
 # Zato
 from zato.common.typing_ import cast_
 from zato.server.openapi_console.cache import get_spec
+from zato.server.openapi_console.caller import sign_in
 from zato.server.openapi_console.invoke import handle_invoke
 
 # ################################################################################################################################
@@ -45,13 +48,37 @@ logger = logging.getLogger(__name__)
 _stream_prefix = os.environ.get('Zato_OpenAPI_Stream_Prefix', 'zato:openapi')
 
 class ModuleCtx:
-    Request_Stream = f'{_stream_prefix}:stream:request'
-    Reply_Stream = f'{_stream_prefix}:stream:reply'
-    Consumer_Group = 'server-openapi'
-    Consumer_Name = 'server-openapi-0'
-    Max_Stream_Len = 10_000
+    Request_Stream  = f'{_stream_prefix}:stream:request'
+    Reply_Stream    = f'{_stream_prefix}:stream:reply'
+    Consumer_Group  = 'server-openapi'
+    Consumer_Name   = 'server-openapi-0'
+    Max_Stream_Len  = 10_000
+    Read_Count      = 10
+    Read_Block_MS   = 1000
+
+    # How many commands are handled at the same time, each in a greenlet of its own
+    Max_Concurrent_Commands = 100
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _handle_sign_in(server:'ParallelServer', fields:'anydict') -> 'anydict':
+    """ Builds a reply to a sign_in command - the session token that the console sends in place of the credentials afterwards.
+    """
+    # Our response to produce
+    out = {'correlation_id': fields['correlation_id']}
+
+    session_token = sign_in(server, fields)
+
+    if session_token is None:
+        out['status'] = 'unauthorized'
+        out['data'] = ''
+    else:
+        out['status'] = 'ok'
+        out['data'] = session_token
+
+    return out
+
 # ################################################################################################################################
 
 def _handle_get_spec(server:'ParallelServer', fields:'anydict') -> 'anydict':
@@ -77,9 +104,57 @@ def _handle_get_spec(server:'ParallelServer', fields:'anydict') -> 'anydict':
 # Maps command names from the request stream to their handlers - every handler receives the server
 # and the message fields and returns the reply fields to place on the reply stream.
 _command_handlers = {
+    'sign_in': _handle_sign_in,
     'get_spec': _handle_get_spec,
     'invoke': handle_invoke,
 }
+
+# ################################################################################################################################
+
+def is_expired(fields:'anydict', now:'float') -> 'bool':
+    """ Whether the console stopped waiting for the reply to a command before the command could be handled.
+    """
+    expires_at = float(fields['expires_at'])
+
+    out = now > expires_at
+    return out
+
+# ################################################################################################################################
+
+def handle_message(server:'ParallelServer', redis_conn:'Redis', stream_name:'str', msg_id:'str', fields:'anydict') -> 'None':
+    """ Handles one command from the request stream and places its reply on the reply stream.
+    """
+    command = fields['command']
+
+    # A command whose reply the console no longer waits for is not run at all ..
+    now = time()
+
+    if is_expired(fields, now):
+        logger.info('Skipping expired OpenAPI console command `%s`, correlation_id=%s', command, fields['correlation_id'])
+
+    # .. each other command replies on the reply stream, correlated by the ID the console sent ..
+    elif handler := _command_handlers.get(command):
+        try:
+            reply = handler(server, fields)
+        except Exception:
+            logger.warning('Could not handle OpenAPI console command `%s`: %s', command, format_exc())
+            reply = {
+                'correlation_id': fields['correlation_id'],
+                'status': 'error',
+                'data': '',
+            }
+
+        # The reply always maps field names to strings and numbers, which Redis accepts
+        reply = cast_('any_', reply)
+        _ = redis_conn.xadd(ModuleCtx.Reply_Stream, reply, maxlen=ModuleCtx.Max_Stream_Len)
+
+    # .. unknown commands are logged and skipped.
+    else:
+        logger.warning('Unknown OpenAPI console command `%s`', command)
+
+    # A handled command is removed from the stream, together with the credentials or the session token it carries
+    _ = redis_conn.xack(stream_name, ModuleCtx.Consumer_Group, msg_id)
+    _ = redis_conn.xdel(stream_name, msg_id)
 
 # ################################################################################################################################
 
@@ -99,6 +174,9 @@ def start_openapi_console_listener(server:'ParallelServer') -> 'None':
 
     server._ensure_stream_group(redis_conn, ModuleCtx.Request_Stream, ModuleCtx.Consumer_Group)
 
+    # Commands run concurrently, and reading from the stream waits while all the greenlets are busy
+    pool = Pool(ModuleCtx.Max_Concurrent_Commands)
+
     def _listener_loop() -> 'None':
 
         error_since = 0.0
@@ -110,8 +188,8 @@ def start_openapi_console_listener(server:'ParallelServer') -> 'None':
                     groupname=ModuleCtx.Consumer_Group,
                     consumername=ModuleCtx.Consumer_Name,
                     streams={ModuleCtx.Request_Stream: '>'},
-                    count=10,
-                    block=1000,
+                    count=ModuleCtx.Read_Count,
+                    block=ModuleCtx.Read_Block_MS,
                 )
 
                 # A synchronous Redis client always returns a list here, never an awaitable
@@ -127,29 +205,7 @@ def start_openapi_console_listener(server:'ParallelServer') -> 'None':
 
                 for stream_name, messages in result:
                     for msg_id, fields in messages:
-
-                        command = fields['command']
-
-                        # Each command replies on the reply stream, correlated by the ID the console sent ..
-                        if handler := _command_handlers.get(command):
-                            try:
-                                reply = handler(server, fields)
-                            except Exception:
-                                logger.warning('Could not handle OpenAPI console command `%s`: %s', command, format_exc())
-                                reply = {
-                                    'correlation_id': fields['correlation_id'],
-                                    'status': 'error',
-                                    'data': '',
-                                }
-                            # The reply always maps field names to strings and numbers, which Redis accepts
-                            reply = cast_('any_', reply)
-                            _ = redis_conn.xadd(ModuleCtx.Reply_Stream, reply, maxlen=ModuleCtx.Max_Stream_Len)
-
-                        # .. unknown commands are logged and skipped.
-                        else:
-                            logger.warning('Unknown OpenAPI console command `%s`', command)
-
-                        _ = redis_conn.xack(stream_name, ModuleCtx.Consumer_Group, msg_id)
+                        _ = pool.spawn(handle_message, server, redis_conn, stream_name, msg_id, fields)
 
             except Exception as exc:
                 error_since, last_logged = server._handle_stream_listener_error(

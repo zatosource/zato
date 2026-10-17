@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.exporters.email_imap import IMAPExporter
 from zato.cli.enmasse.exporters.email_smtp import SMTPExporter
 from zato.cli.enmasse.exporters.group import GroupExporter
@@ -23,7 +22,6 @@ from zato.cli.enmasse.exporters.audit_extraction import AuditExtractionExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
-from zato.cli.enmasse.exporters.channel_as4 import ChannelAS4Exporter
 from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
 from zato.cli.enmasse.exporters.channel_soap import ChannelSOAPExporter
 from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
@@ -37,6 +35,7 @@ from zato.cli.enmasse.exporters.microsoft_fabric import MicrosoftFabricExporter
 from zato.cli.enmasse.exporters.microsoft_power_automate import MicrosoftPowerAutomateExporter
 from zato.cli.enmasse.exporters.microsoft_teams import MicrosoftTeamsExporter
 from zato.cli.enmasse.exporters.slack import SlackExporter
+from zato.cli.enmasse.exporters.discord import DiscordExporter
 from zato.cli.enmasse.exporters.mongodb import MongoDBExporter
 from zato.cli.enmasse.exporters.odata import ODataExporter
 from zato.cli.enmasse.exporters.sftp import SFTPExporter
@@ -54,21 +53,18 @@ from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMM
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
 from zato.cli.enmasse.exporters.mcp import GatewayMCPExporter
 from zato.cli.enmasse.exporters.rule_engine_api import RuleEngineAPIExporter
-from zato.cli.enmasse.exporters.as2 import AS2Exporter
-from zato.cli.enmasse.exporters.outgoing_as4 import OutgoingAS4Exporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
 from zato.cli.enmasse.exporters.pubsub_topic import PubSubTopicExporter
 from zato.cli.enmasse.exporters.pubsub_permission import PubSubPermissionExporter
 from zato.cli.enmasse.exporters.pubsub_subscription import PubSubSubscriptionExporter
-from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, dictlist, stranydict
+    from zato.common.typing_ import dictlist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,10 +78,6 @@ class EnmasseYAMLExporter:
     """ Exports Zato objects to a YAML-compatible dictionary structure.
     """
     def __init__(self) -> 'None':
-
-        # This is always the same
-        self.cluster_id = ModuleCtx.Cluster_ID
-        self.cluster:'any_' = None # To store the cluster object, similar to importer
 
         # Initialize exporters
         self.email_imap_exporter = IMAPExporter(self)
@@ -102,7 +94,6 @@ class EnmasseYAMLExporter:
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
         self.channel_soap_exporter = ChannelSOAPExporter(self)
-        self.channel_as4_exporter = ChannelAS4Exporter(self)
         self.channel_mllp_exporter = ChannelMLLPExporter(self)
         self.outgoing_mllp_exporter = OutgoingMLLPExporter(self)
         self.outgoing_fhir_exporter = OutgoingFHIRExporter(self)
@@ -133,13 +124,12 @@ class EnmasseYAMLExporter:
         self.microsoft_power_automate_exporter = MicrosoftPowerAutomateExporter(self)
         self.microsoft_teams_exporter = MicrosoftTeamsExporter(self)
         self.slack_exporter = SlackExporter(self)
+        self.discord_exporter = DiscordExporter(self)
         self.confluence_exporter = ConfluenceExporter(self)
         self.custom_exporter = CustomConnectorExporter(self)
         self.elastic_search_exporter = ElasticSearchExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
-        self.as2_exporter = AS2Exporter(self)
-        self.outgoing_as4_exporter = OutgoingAS4Exporter(self)
         self.pubsub_topic_exporter = PubSubTopicExporter(self)
         self.pubsub_permission_exporter = PubSubPermissionExporter(self)
         self.pubsub_subscription_exporter = PubSubSubscriptionExporter(self)
@@ -147,21 +137,10 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
-    def get_cluster(self, session:'SASession') -> 'any_':
-        """ Returns the cluster instance, retrieving it from the database if needed.
-        """
-        if not self.cluster:
-            logger.info('Getting cluster by id=%s', self.cluster_id)
-            self.cluster = session.query(Cluster).filter(Cluster.id == self.cluster_id).one() # type: ignore
-        return self.cluster
-
-# ################################################################################################################################
-
     def export_odoo(self, session:'SASession') -> 'list':
         """ Exports Odoo connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        odoo_list = self.odoo_exporter.export(session, self.cluster_id)
+        odoo_list = self.odoo_exporter.export(session)
         return odoo_list
 
 # ################################################################################################################################
@@ -169,8 +148,7 @@ class EnmasseYAMLExporter:
     def export_scheduler(self, session:'SASession') -> 'list':
         """ Exports scheduler job definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        scheduler_list = self.scheduler_exporter.export(session, self.cluster_id)
+        scheduler_list = self.scheduler_exporter.export(session)
         return scheduler_list
 
 # ################################################################################################################################
@@ -178,8 +156,7 @@ class EnmasseYAMLExporter:
     def export_sql(self, session:'SASession') -> 'list':
         """ Exports SQL connection pool definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        sql_list = self.sql_exporter.export(session, self.cluster_id)
+        sql_list = self.sql_exporter.export(session)
         return sql_list
 
 # ################################################################################################################################
@@ -187,8 +164,7 @@ class EnmasseYAMLExporter:
     def export_quota_tier(self, session:'SASession') -> 'list':
         """ Exports quota tier definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        quota_tier_list = self.quota_tier_exporter.export(session, self.cluster_id)
+        quota_tier_list = self.quota_tier_exporter.export(session)
         return quota_tier_list
 
 # ################################################################################################################################
@@ -196,8 +172,7 @@ class EnmasseYAMLExporter:
     def export_on_prem_gateway(self, session:'SASession') -> 'list':
         """ Exports on-prem gateway definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        on_prem_gateway_list = self.on_prem_gateway_exporter.export(session, self.cluster_id)
+        on_prem_gateway_list = self.on_prem_gateway_exporter.export(session)
         return on_prem_gateway_list
 
 # ################################################################################################################################
@@ -205,8 +180,7 @@ class EnmasseYAMLExporter:
     def export_audit_retention(self, session:'SASession') -> 'list':
         """ Exports audit retention policy definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        audit_retention_list = self.audit_retention_exporter.export(session, self.cluster_id)
+        audit_retention_list = self.audit_retention_exporter.export(session)
         return audit_retention_list
 
 # ################################################################################################################################
@@ -223,8 +197,7 @@ class EnmasseYAMLExporter:
     def export_alert_notifications(self, session:'SASession') -> 'stranydict':
         """ Exports alert notification targets from the sweep job's extra.
         """
-        _ = self.get_cluster(session)
-        alert_notifications = self.alert_config_exporter.export_notifications(session, self.cluster_id)
+        alert_notifications = self.alert_config_exporter.export_notifications(session)
         return alert_notifications
 
 # ################################################################################################################################
@@ -232,8 +205,7 @@ class EnmasseYAMLExporter:
     def export_audit_extraction(self, session:'SASession') -> 'list':
         """ Exports attribute-extraction rule set definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        audit_extraction_list = self.audit_extraction_exporter.export(session, self.cluster_id)
+        audit_extraction_list = self.audit_extraction_exporter.export(session)
         return audit_extraction_list
 
 # ################################################################################################################################
@@ -241,8 +213,7 @@ class EnmasseYAMLExporter:
     def export_security(self, session:'SASession') -> 'list':
         """ Exports security definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        security_list = self.security_exporter.export(session, self.cluster_id)
+        security_list = self.security_exporter.export(session)
         return security_list
 
 # ################################################################################################################################
@@ -250,8 +221,7 @@ class EnmasseYAMLExporter:
     def export_email_imap(self, session:'SASession') -> 'list':
         """ Exports email IMAP connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        imap_list = self.email_imap_exporter.export(session, self.cluster_id)
+        imap_list = self.email_imap_exporter.export(session)
         return imap_list
 
 # ################################################################################################################################
@@ -259,8 +229,7 @@ class EnmasseYAMLExporter:
     def export_email_smtp(self, session:'SASession') -> 'list':
         """ Exports email SMTP connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        smtp_list = self.email_smtp_exporter.export(session, self.cluster_id)
+        smtp_list = self.email_smtp_exporter.export(session)
         return smtp_list
 
 # ################################################################################################################################
@@ -268,8 +237,7 @@ class EnmasseYAMLExporter:
     def export_groups(self, session:'SASession') -> 'list':
         """ Exports security group definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
-        group_list = self.group_exporter.export(session, self.cluster_id)
+        group_list = self.group_exporter.export(session)
         return group_list
 
 # ################################################################################################################################
@@ -277,8 +245,7 @@ class EnmasseYAMLExporter:
     def export_channel_rest(self, session:'SASession') -> 'list':
         """ Exports REST Channel definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        channel_list = self.channel_exporter.export(session, self.cluster_id)
+        channel_list = self.channel_exporter.export(session)
         return channel_list
 
 # ################################################################################################################################
@@ -286,8 +253,7 @@ class EnmasseYAMLExporter:
     def export_channel_soap(self, session:'SASession') -> 'list':
         """ Exports SOAP channel definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        channel_list = self.channel_soap_exporter.export(session, self.cluster_id)
+        channel_list = self.channel_soap_exporter.export(session)
         return channel_list
 
 # ################################################################################################################################
@@ -295,8 +261,7 @@ class EnmasseYAMLExporter:
     def export_channel_mllp(self, session:'SASession') -> 'list':
         """ Exports HL7 MLLP channel definitions.
         """
-        _ = self.get_cluster(session)
-        channel_mllp_list = self.channel_mllp_exporter.export(session, self.cluster_id)
+        channel_mllp_list = self.channel_mllp_exporter.export(session)
         return channel_mllp_list
 
 # ################################################################################################################################
@@ -304,8 +269,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_mllp(self, session:'SASession') -> 'list':
         """ Exports outgoing HL7 MLLP definitions.
         """
-        _ = self.get_cluster(session)
-        outgoing_mllp_list = self.outgoing_mllp_exporter.export(session, self.cluster_id)
+        outgoing_mllp_list = self.outgoing_mllp_exporter.export(session)
         return outgoing_mllp_list
 
 # ################################################################################################################################
@@ -313,8 +277,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_fhir(self, session:'SASession') -> 'list':
         """ Exports outgoing HL7 FHIR definitions.
         """
-        _ = self.get_cluster(session)
-        outgoing_fhir_list = self.outgoing_fhir_exporter.export(session, self.cluster_id)
+        outgoing_fhir_list = self.outgoing_fhir_exporter.export(session)
         return outgoing_fhir_list
 
 # ################################################################################################################################
@@ -322,8 +285,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_graphql(self, session:'SASession') -> 'list':
         """ Exports GraphQL outgoing definitions.
         """
-        _ = self.get_cluster(session)
-        outgoing_graphql_list = self.outgoing_graphql_exporter.export(session, self.cluster_id)
+        outgoing_graphql_list = self.outgoing_graphql_exporter.export(session)
         return outgoing_graphql_list
 
 # ################################################################################################################################
@@ -331,8 +293,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_grpc(self, session:'SASession') -> 'list':
         """ Exports gRPC outgoing definitions.
         """
-        _ = self.get_cluster(session)
-        outgoing_grpc_list = self.outgoing_grpc_exporter.export(session, self.cluster_id)
+        outgoing_grpc_list = self.outgoing_grpc_exporter.export(session)
         return outgoing_grpc_list
 
 # ################################################################################################################################
@@ -340,8 +301,7 @@ class EnmasseYAMLExporter:
     def export_channel_ibm_mq(self, session:'SASession') -> 'list':
         """ Exports IBM MQ channel definitions.
         """
-        _ = self.get_cluster(session)
-        channel_ibm_mq_list = self.channel_ibm_mq_exporter.export(session, self.cluster_id)
+        channel_ibm_mq_list = self.channel_ibm_mq_exporter.export(session)
         return channel_ibm_mq_list
 
 # ################################################################################################################################
@@ -349,8 +309,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_ibm_mq(self, session:'SASession') -> 'list':
         """ Exports IBM MQ outgoing definitions.
         """
-        _ = self.get_cluster(session)
-        outgoing_ibm_mq_list = self.outgoing_ibm_mq_exporter.export(session, self.cluster_id)
+        outgoing_ibm_mq_list = self.outgoing_ibm_mq_exporter.export(session)
         return outgoing_ibm_mq_list
 
 # ################################################################################################################################
@@ -358,8 +317,7 @@ class EnmasseYAMLExporter:
     def export_channel_amqp(self, session:'SASession') -> 'list':
         """ Exports AMQP channel definitions.
         """
-        _ = self.get_cluster(session)
-        channel_amqp_defs = self.channel_amqp_exporter.export(session, self.cluster_id)
+        channel_amqp_defs = self.channel_amqp_exporter.export(session)
         return channel_amqp_defs
 
 # ################################################################################################################################
@@ -367,8 +325,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_amqp(self, session:'SASession') -> 'list':
         """ Exports AMQP outgoing definitions.
         """
-        _ = self.get_cluster(session)
-        outgoing_amqp_defs = self.outgoing_amqp_exporter.export(session, self.cluster_id)
+        outgoing_amqp_defs = self.outgoing_amqp_exporter.export(session)
         return outgoing_amqp_defs
 
 # ################################################################################################################################
@@ -376,8 +333,7 @@ class EnmasseYAMLExporter:
     def export_channel_azure_service_bus(self, session:'SASession') -> 'list':
         """ Exports Azure Service Bus channel definitions.
         """
-        _ = self.get_cluster(session)
-        channel_azure_defs = self.channel_azure_service_bus_exporter.export(session, self.cluster_id)
+        channel_azure_defs = self.channel_azure_service_bus_exporter.export(session)
         return channel_azure_defs
 
 # ################################################################################################################################
@@ -385,8 +341,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_azure_service_bus(self, session:'SASession') -> 'list':
         """ Exports Azure Service Bus outgoing definitions.
         """
-        _ = self.get_cluster(session)
-        outgoing_azure_defs = self.outgoing_azure_service_bus_exporter.export(session, self.cluster_id)
+        outgoing_azure_defs = self.outgoing_azure_service_bus_exporter.export(session)
         return outgoing_azure_defs
 
 # ################################################################################################################################
@@ -394,8 +349,7 @@ class EnmasseYAMLExporter:
     def export_channel_kafka(self, session:'SASession') -> 'list':
         """ Exports Kafka channel definitions.
         """
-        _ = self.get_cluster(session)
-        channel_kafka_list = self.channel_kafka_exporter.export(session, self.cluster_id)
+        channel_kafka_list = self.channel_kafka_exporter.export(session)
         return channel_kafka_list
 
 # ################################################################################################################################
@@ -403,8 +357,7 @@ class EnmasseYAMLExporter:
     def export_gateway_mcp(self, session:'SASession') -> 'list':
         """ Exports MCP gateway definitions.
         """
-        _ = self.get_cluster(session)
-        gateway_mcp_list = self.gateway_mcp_exporter.export(session, self.cluster_id)
+        gateway_mcp_list = self.gateway_mcp_exporter.export(session)
         return gateway_mcp_list
 
 # ################################################################################################################################
@@ -412,8 +365,7 @@ class EnmasseYAMLExporter:
     def export_rule_engine_api(self, session:'SASession') -> 'list':
         """ Exports Rule engine API definitions.
         """
-        _ = self.get_cluster(session)
-        rule_engine_api_list = self.rule_engine_api_exporter.export(session, self.cluster_id)
+        rule_engine_api_list = self.rule_engine_api_exporter.export(session)
         return rule_engine_api_list
 
 # ################################################################################################################################
@@ -421,8 +373,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_kafka(self, session:'SASession') -> 'list':
         """ Exports Kafka outgoing definitions.
         """
-        _ = self.get_cluster(session)
-        outgoing_kafka_list = self.outgoing_kafka_exporter.export(session, self.cluster_id)
+        outgoing_kafka_list = self.outgoing_kafka_exporter.export(session)
         return outgoing_kafka_list
 
 # ################################################################################################################################
@@ -430,8 +381,7 @@ class EnmasseYAMLExporter:
     def export_outgoing_rest(self, session:'SASession') -> 'list':
         """ Exports outgoing REST connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        outgoing_rest_list = self.outgoing_rest_exporter.export(session, self.cluster_id)
+        outgoing_rest_list = self.outgoing_rest_exporter.export(session)
         return outgoing_rest_list
 
 # ################################################################################################################################
@@ -439,44 +389,15 @@ class EnmasseYAMLExporter:
     def export_outgoing_soap(self, session:'SASession') -> 'list':
         """ Exports outgoing SOAP connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        outgoing_soap_list = self.outgoing_soap_exporter.export(session, self.cluster_id)
+        outgoing_soap_list = self.outgoing_soap_exporter.export(session)
         return outgoing_soap_list
-
-# ################################################################################################################################
-
-    def export_outgoing_as2(self, session:'SASession') -> 'list':
-        """ Exports outgoing AS2 connection definitions.
-        """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        outgoing_as2_list = self.as2_exporter.export(session, self.cluster_id)
-        return outgoing_as2_list
-
-# ################################################################################################################################
-
-    def export_outgoing_as4(self, session:'SASession') -> 'list':
-        """ Exports outgoing AS4 connection definitions.
-        """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        outgoing_as4_list = self.outgoing_as4_exporter.export(session, self.cluster_id)
-        return outgoing_as4_list
-
-# ################################################################################################################################
-
-    def export_channel_as4(self, session:'SASession') -> 'list':
-        """ Exports AS4 channel definitions.
-        """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        channel_as4_list = self.channel_as4_exporter.export(session, self.cluster_id)
-        return channel_as4_list
 
 # ################################################################################################################################
 
     def export_jira(self, session:'SASession') -> 'list':
         """ Exports JIRA connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        jira_list = self.jira_exporter.export(session, self.cluster_id)
+        jira_list = self.jira_exporter.export(session)
         return jira_list
 
 # ################################################################################################################################
@@ -484,8 +405,7 @@ class EnmasseYAMLExporter:
     def export_salesforce(self, session:'SASession') -> 'list':
         """ Exports Salesforce connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        out = self.salesforce_exporter.export(session, self.cluster_id)
+        out = self.salesforce_exporter.export(session)
         return out
 
 # ################################################################################################################################
@@ -493,8 +413,7 @@ class EnmasseYAMLExporter:
     def export_ldap(self, session:'SASession') -> 'list':
         """ Exports LDAP connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        ldap_list = self.ldap_exporter.export(session, self.cluster_id)
+        ldap_list = self.ldap_exporter.export(session)
         return ldap_list
 
 # ################################################################################################################################
@@ -502,8 +421,7 @@ class EnmasseYAMLExporter:
     def export_llm(self, session:'SASession') -> 'list':
         """ Exports LLM connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        llm_list = self.llm_exporter.export(session, self.cluster_id)
+        llm_list = self.llm_exporter.export(session)
         return llm_list
 
 # ################################################################################################################################
@@ -511,8 +429,7 @@ class EnmasseYAMLExporter:
     def export_odata(self, session:'SASession') -> 'list':
         """ Exports OData connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        odata_list = self.odata_exporter.export(session, self.cluster_id)
+        odata_list = self.odata_exporter.export(session)
         return odata_list
 
 # ################################################################################################################################
@@ -520,8 +437,7 @@ class EnmasseYAMLExporter:
     def export_sap(self, session:'SASession') -> 'list':
         """ Exports SAP connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        sap_list = self.sap_exporter.export(session, self.cluster_id)
+        sap_list = self.sap_exporter.export(session)
         return sap_list
 
 # ################################################################################################################################
@@ -529,8 +445,7 @@ class EnmasseYAMLExporter:
     def export_sftp(self, session:'SASession') -> 'list':
         """ Exports SFTP connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        sftp_list = self.sftp_exporter.export(session, self.cluster_id)
+        sftp_list = self.sftp_exporter.export(session)
         return sftp_list
 
 # ################################################################################################################################
@@ -538,8 +453,7 @@ class EnmasseYAMLExporter:
     def export_smb(self, session:'SASession') -> 'list':
         """ Exports SMB connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        smb_list = self.smb_exporter.export(session, self.cluster_id)
+        smb_list = self.smb_exporter.export(session)
         return smb_list
 
 # ################################################################################################################################
@@ -547,9 +461,8 @@ class EnmasseYAMLExporter:
     def export_ftp(self, session:'SASession') -> 'dictlist':
         """ Exports FTP connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded.
 
-        out = self.ftp_exporter.export(session, self.cluster_id)
+        out = self.ftp_exporter.export(session)
         return out
 
 # ################################################################################################################################
@@ -557,8 +470,7 @@ class EnmasseYAMLExporter:
     def export_mongodb(self, session:'SASession') -> 'list':
         """ Exports MongoDB connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        mongodb_list = self.mongodb_exporter.export(session, self.cluster_id)
+        mongodb_list = self.mongodb_exporter.export(session)
         return mongodb_list
 
 # ################################################################################################################################
@@ -566,8 +478,7 @@ class EnmasseYAMLExporter:
     def export_microsoft_cloud(self, session:'SASession') -> 'list':
         """ Exports Microsoft 365 connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        microsoft_cloud_list = self.microsoft_cloud_exporter.export(session, self.cluster_id)
+        microsoft_cloud_list = self.microsoft_cloud_exporter.export(session)
         return microsoft_cloud_list
 
 # ################################################################################################################################
@@ -575,8 +486,7 @@ class EnmasseYAMLExporter:
     def export_microsoft_fabric(self, session:'SASession') -> 'list':
         """ Exports Microsoft Fabric connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        microsoft_fabric_list = self.microsoft_fabric_exporter.export(session, self.cluster_id)
+        microsoft_fabric_list = self.microsoft_fabric_exporter.export(session)
         return microsoft_fabric_list
 
 # ################################################################################################################################
@@ -584,8 +494,7 @@ class EnmasseYAMLExporter:
     def export_microsoft_power_automate(self, session:'SASession') -> 'list':
         """ Exports Microsoft Power Automate connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        microsoft_power_automate_list = self.microsoft_power_automate_exporter.export(session, self.cluster_id)
+        microsoft_power_automate_list = self.microsoft_power_automate_exporter.export(session)
         return microsoft_power_automate_list
 
 # ################################################################################################################################
@@ -593,8 +502,7 @@ class EnmasseYAMLExporter:
     def export_microsoft_teams(self, session:'SASession') -> 'list':
         """ Exports Microsoft Teams connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        microsoft_teams_list = self.microsoft_teams_exporter.export(session, self.cluster_id)
+        microsoft_teams_list = self.microsoft_teams_exporter.export(session)
         return microsoft_teams_list
 
 # ################################################################################################################################
@@ -602,17 +510,23 @@ class EnmasseYAMLExporter:
     def export_slack(self, session:'SASession') -> 'list':
         """ Exports Slack connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        slack_list = self.slack_exporter.export(session, self.cluster_id)
+        slack_list = self.slack_exporter.export(session)
         return slack_list
+
+# ################################################################################################################################
+
+    def export_discord(self, session:'SASession') -> 'list':
+        """ Exports Discord connection definitions.
+        """
+        discord_list = self.discord_exporter.export(session)
+        return discord_list
 
 # ################################################################################################################################
 
     def export_confluence(self, session:'SASession') -> 'list':
         """ Exports Confluence connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        confluence_list = self.confluence_exporter.export(session, self.cluster_id)
+        confluence_list = self.confluence_exporter.export(session)
         return confluence_list
 
 # ################################################################################################################################
@@ -620,8 +534,7 @@ class EnmasseYAMLExporter:
     def export_elastic_search(self, session:'SASession') -> 'list':
         """ Exports Elasticsearch connection definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        elastic_search_list = self.elastic_search_exporter.export(session, self.cluster_id)
+        elastic_search_list = self.elastic_search_exporter.export(session)
         return elastic_search_list
 
 # ################################################################################################################################
@@ -629,8 +542,7 @@ class EnmasseYAMLExporter:
     def export_pubsub_topic(self, session:'SASession') -> 'list':
         """ Exports pub/sub topic definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        pubsub_topic_list = self.pubsub_topic_exporter.export(session, self.cluster_id)
+        pubsub_topic_list = self.pubsub_topic_exporter.export(session)
         return pubsub_topic_list
 
 # ################################################################################################################################
@@ -638,8 +550,7 @@ class EnmasseYAMLExporter:
     def export_pubsub_permission(self, session:'SASession') -> 'list':
         """ Exports pub/sub permission definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        pubsub_permission_list = self.pubsub_permission_exporter.export(session, self.cluster_id)
+        pubsub_permission_list = self.pubsub_permission_exporter.export(session)
         return pubsub_permission_list
 
 # ################################################################################################################################
@@ -647,8 +558,7 @@ class EnmasseYAMLExporter:
     def export_pubsub_subscription(self, session:'SASession') -> 'list':
         """ Exports pub/sub subscription definitions.
         """
-        _ = self.get_cluster(session) # Ensure cluster info is loaded
-        pubsub_subscription_list = self.pubsub_subscription_exporter.export(session, self.cluster_id)
+        pubsub_subscription_list = self.pubsub_subscription_exporter.export(session)
         return pubsub_subscription_list
 
 # ################################################################################################################################
@@ -656,8 +566,7 @@ class EnmasseYAMLExporter:
     def export_channel_openapi(self, session:'SASession') -> 'list':
         """ Exports OpenAPI channel definitions.
         """
-        _ = self.get_cluster(session)
-        channel_openapi_list = self.channel_openapi_exporter.export(session, self.cluster_id)
+        channel_openapi_list = self.channel_openapi_exporter.export(session)
         return channel_openapi_list
 
 # ################################################################################################################################
@@ -665,8 +574,7 @@ class EnmasseYAMLExporter:
     def export_custom_connectors(self, session:'SASession') -> 'stranydict':
         """ Exports custom connector definitions, mapping each type's top-level key, e.g. custom_crm, to its definitions.
         """
-        _ = self.get_cluster(session)
-        custom_defs = self.custom_exporter.export(session, self.cluster_id)
+        custom_defs = self.custom_exporter.export(session)
         return custom_defs
 
 # ################################################################################################################################
@@ -754,11 +662,6 @@ class EnmasseYAMLExporter:
         if channel_soap_defs:
             output_dict['channel_soap'] = channel_soap_defs
 
-        # Export AS4 channel definitions
-        channel_as4_defs = self.export_channel_as4(session)
-        if channel_as4_defs:
-            output_dict['channel_as4'] = channel_as4_defs
-
         # Export HL7 MLLP channel definitions
         channel_mllp_defs = self.export_channel_mllp(session)
         if channel_mllp_defs:
@@ -844,16 +747,6 @@ class EnmasseYAMLExporter:
         if outgoing_soap_defs:
             output_dict['outgoing_soap'] = outgoing_soap_defs
 
-        # Export outgoing AS2 connection definitions
-        outgoing_as2_defs = self.export_outgoing_as2(session)
-        if outgoing_as2_defs:
-            output_dict['outgoing_as2'] = outgoing_as2_defs
-
-        # Export outgoing AS4 connection definitions
-        outgoing_as4_defs = self.export_outgoing_as4(session)
-        if outgoing_as4_defs:
-            output_dict['outgoing_as4'] = outgoing_as4_defs
-
         # Export JIRA connection definitions
         jira_defs = self.export_jira(session)
         if jira_defs:
@@ -928,6 +821,11 @@ class EnmasseYAMLExporter:
         slack_defs = self.export_slack(session)
         if slack_defs:
             output_dict['slack'] = slack_defs
+
+        # Export Discord connection definitions
+        discord_defs = self.export_discord(session)
+        if discord_defs:
+            output_dict['discord'] = discord_defs
 
         # Export Confluence connection definitions
         confluence_defs = self.export_confluence(session)

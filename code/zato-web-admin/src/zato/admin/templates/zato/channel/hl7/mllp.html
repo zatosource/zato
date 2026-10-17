@@ -92,13 +92,9 @@
 
 {% block "content" %}
 
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
             <h2 class="zato">{% include "zato/include/header-brand.html" with badge="HL7" %}HL7 MLLP channels</h2>
@@ -108,12 +104,12 @@
 {% endwith %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="{% url "channel-hl7-mllp-wizard-create" %}?cluster={{ cluster_id }}">Create a new channel</a> |
+            <a href="{% url "channel-hl7-mllp-wizard-create" %}">Create a new channel</a> |
 
             <a href="javascript:void(0)" id="mllp-copy-address-link" class="common">Copy address</a> |
 
             <a href="javascript:$.fn.zato.channel.hl7.mllp.import_demo_config()" class="common">Import demo config</a> |
-            <a href="{% url "channel-hl7-dashboard" %}?cluster={{ cluster_id }}" class="common">Go to analytics</a>
+            <a href="{% url "channel-hl7-dashboard" %}" class="common">Go to analytics</a>
 
         </div>
 
@@ -176,9 +172,9 @@
                         {# The outgoing connections each message is delivered to, written in by the page #}
                         <td id="mllp-destinations-cell-{{ item.id }}"></td>
 
-                        <td><a href="/zato/audit-log/?source=mllp-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
-                        <td><a href="/zato/channel-usage/?sources=mllp-channel&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a></td>
-                        <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
+                        <td><a href="/zato/audit-log/?source=mllp-channel&amp;object_name={{ item.name|urlencode }}">Audit log</a></td>
+                        <td><a href="/zato/channel-usage/?sources=mllp-channel&amp;objects={{ item.name|urlencode }}">Usage</a></td>
+                        <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -231,9 +227,7 @@ serves the whole table - the row clicked fills them in before the popover opens.
 
         </div>
 
-    {% endif %}
 
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

@@ -33,7 +33,7 @@ from zato.cli.enmasse.importers.outgoing_fhir import OutgoingFHIRImporter
 from zato.cli.enmasse.util import FileWriter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC, HTTP_SOAP, SchedulerLink
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, IntervalBasedJob, Job, \
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, IntervalBasedJob, Job, \
     SecurityBase, Service, SMTP
 from zato.common.typing_ import cast_
 
@@ -53,9 +53,6 @@ if 0:
 
 _health_check = HTTP_SOAP.HealthCheck
 _fhir_type = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR
-
-# The cluster every object in the test database belongs to
-_cluster_id = 1
 
 # The email and LLM connections the alerts mappings name
 _smtp_name = 'enmasse.alerts.fhir.smtp'
@@ -110,13 +107,12 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster, the SMTP and LLM connections
+    """ A real ODB session over an in-memory SQLite database holding the SMTP and LLM connections
     the alerts mappings name and the service a health check job invokes.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         GenericConnDef.__table__,
         GenericConn.__table__,
         GenericObject.__table__,
@@ -131,11 +127,8 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
     session.add(Service(None, _health_check.Dispatch_Service, True, 'zato.server.service.internal.connection.HealthCheckRun',
-        True, cluster))
+        True))
 
     smtp = cast_('any_', SMTP())
     smtp.name = _smtp_name
@@ -146,7 +139,6 @@ def session() -> 'any_':
     smtp.is_debug = False
     smtp.mode = EMAIL.SMTP.MODE.STARTTLS
     smtp.ping_address = 'ping@example.com'
-    smtp.cluster = cluster
     session.add(smtp)
 
     llm = cast_('any_', GenericConn())
@@ -156,7 +148,6 @@ def session() -> 'any_':
     llm.is_internal = False
     llm.is_channel = False
     llm.is_outconn = True
-    llm.cluster = cluster
     session.add(llm)
 
     session.commit()
@@ -437,7 +428,7 @@ class TestOutgoingFHIRAlertsExport:
     ) -> 'None':
         _, _ = fhir_importer.sync_definitions(yaml_config['outgoing_fhir'], session)
 
-        exported = fhir_exporter.export(session, _cluster_id)
+        exported = fhir_exporter.export(session)
         item = _by_name(exported)[_conn_name_1]
 
         expected = {
@@ -480,7 +471,7 @@ class TestOutgoingFHIRAlertsExport:
         tmp_path:'Path',
     ) -> 'None':
         _, _ = fhir_importer.sync_definitions(yaml_config['outgoing_fhir'], session)
-        exported = fhir_exporter.export(session, _cluster_id)
+        exported = fhir_exporter.export(session)
 
         path = tmp_path / 'enmasse.yaml'
         FileWriter(str(path)).write({'outgoing_fhir': exported})
@@ -496,7 +487,7 @@ class TestOutgoingFHIRAlertsExport:
 
         # The same settings again store the same settings and export the same file
         _, _ = fhir_importer.sync_definitions(read_back['outgoing_fhir'], session)
-        assert fhir_exporter.export(session, _cluster_id) == exported
+        assert fhir_exporter.export(session) == exported
 
 # ################################################################################################################################
 # ################################################################################################################################

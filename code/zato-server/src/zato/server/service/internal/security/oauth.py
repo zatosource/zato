@@ -13,14 +13,16 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import OAuth as COMMON_OAUTH, query_parameters, SEC_DEF_TYPE
+from zato.common.api import Groups, OAuth as COMMON_OAUTH, query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.const import SECRETS
-from zato.common.odb.model import Cluster, OAuth
+from zato.common.exception import BadRequest
+from zato.common.odb.model import GenericObject, OAuth
 from zato.common.odb.query import oauth_list
 from zato.common.private_key_jwt import get_public_jwk, get_public_key_pem, load_private_key, validate_definition
+from zato.common.util.gateway import find_stranded_oauth_gateway
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
@@ -28,6 +30,36 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 
 if 0:
     from zato.common.typing_ import any_, anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The types a bearer token definition may be stored under in the names of security group members
+_member_type_list = (SEC_DEF_TYPE.OAUTH, 'bearer_token')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _raise_if_gateway_stranded(service:'AdminService', session:'any_', definition:'any_') -> 'None':
+    """ Takes a session in which a change to the definition is flushed but not committed, and raises BadRequest
+    naming the first MCP gateway with OAuth on that the change leaves with no bearer token definition able to verify its tokens.
+    """
+    group_id_list = []
+
+    for member_type in _member_type_list:
+
+        member_list = session.query(GenericObject.parent_object_id).\
+            filter(GenericObject.type_ == Groups.Type.Group_Member).\
+            filter(GenericObject.name.startswith(f'{member_type}-{definition.id}-')).\
+            all()
+
+        for member in member_list:
+            group_id_list.append(member.parent_object_id)
+
+    if gateway_name := find_stranded_oauth_gateway(session, group_id_list):
+        msg = f'Bearer token definition `{definition.name}` is the only one that verifies tokens ' + \
+            f'for MCP gateway `{gateway_name}`, which has OAuth on'
+        raise BadRequest(service.cid, msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,7 +108,7 @@ class GetList(AdminService):
     """
     _filter_by = OAuth.name,
 
-    input = 'cluster_id', *query_parameters
+    input = query_parameters
     output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
         '-auth_server_url', '-scopes', '-extra_fields', '-data_format', \
         '-static_header', 'is_static_token', '-static_prefix', \
@@ -84,7 +116,7 @@ class GetList(AdminService):
         '-client_auth_method', 'has_private_key', '-jwt_algorithm', '-key_id', '-assertion_audience', '-certificate'
 
     def get_data(self, session:'any_') -> 'anylist':
-        data = elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
+        data = elems_with_opaque(self._search(oauth_list, session, False)) # type: ignore
 
         # The token itself is never returned - only a flag indicating whether the definition uses one ..
         for item in data:
@@ -107,7 +139,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Bearer token definition.
     """
-    input = 'cluster_id', 'name', 'is_active', *_common_optional_input
+    input = 'name', 'is_active', *_common_optional_input
     output = 'id', 'name', 'has_private_key'
 
     def handle(self):
@@ -123,16 +155,14 @@ class Create(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(OAuth).\
-                    filter(Cluster.id==input.cluster_id).\
                     filter(OAuth.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('Bearer token definition `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('Bearer token definition `{}` already exists'.format(input.name))
 
                 definition = OAuth()
                 definition.name = input.name
@@ -141,7 +171,6 @@ class Create(AdminService):
                 definition.proto_version = 'not-used' # type: ignore
                 definition.sig_method = 'not-used' # type: ignore
                 definition.max_nonce_log = 0 # type: ignore
-                definition.cluster = cluster # type: ignore
 
                 set_instance_opaque_attrs(definition, input)
 
@@ -173,7 +202,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an Bearer token definition.
     """
-    input = 'id', 'cluster_id', 'name', 'is_active', *_common_optional_input
+    input = Int('id'), 'name', 'is_active', *_common_optional_input
     output = 'id', 'name', 'has_private_key'
 
     def handle(self):
@@ -182,13 +211,12 @@ class Edit(AdminService):
         with closing(self.odb.session()) as session:
             try:
                 existing_one = session.query(OAuth).\
-                    filter(Cluster.id==input.cluster_id).\
                     filter(OAuth.name==input.name).\
                     filter(OAuth.id!=input.id).\
                     first()
 
                 if existing_one:
-                    raise Exception('Bearer token definition `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('Bearer token definition `{}` already exists'.format(input.name))
 
                 definition = session.query(OAuth).filter_by(id=input.id).one()
                 old_name = definition.name
@@ -213,6 +241,11 @@ class Edit(AdminService):
                 set_instance_opaque_attrs(definition, input)
 
                 session.add(definition)
+                session.flush()
+
+                # A gateway with OAuth on keeps a bearer token definition that verifies its tokens
+                _raise_if_gateway_stranded(self, session, definition)
+
                 session.commit()
 
             except Exception:
@@ -260,7 +293,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an Bearer token definition.
     """
-    input = 'id',
+    input = Int('id'),
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -273,6 +306,11 @@ class Delete(AdminService):
                 self.server.config_manager.cleanup_security_pubsub(session, auth.id, auth.username)
 
                 session.delete(auth)
+                session.flush()
+
+                # .. a gateway with OAuth on keeps a bearer token definition that verifies its tokens ..
+                _raise_if_gateway_stranded(self, session, auth)
+
                 session.commit()
             except Exception:
                 msg = 'Bearer token definition could not be deleted, e:`%s`'

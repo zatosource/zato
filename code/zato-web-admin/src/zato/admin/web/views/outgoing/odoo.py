@@ -33,7 +33,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'host', 'port', 'user', 'database', 'protocol', 'pool_size'
     output_repeated = True
 
@@ -81,7 +80,7 @@ def change_password(req):
     return _change_password(req, 'zato.outgoing.odoo.change-password')
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     ret = id_only_service(req, 'zato.outgoing.odoo.ping', id, 'Could not ping the Odoo connection, e:`{}`')
     if isinstance(ret, HttpResponseServerError):
         return ret

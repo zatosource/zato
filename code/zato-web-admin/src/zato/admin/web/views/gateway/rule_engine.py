@@ -92,7 +92,6 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active'
     output_optional = 'url_path', 'rulesets', 'security_groups'
     output_repeated = True
@@ -302,7 +301,6 @@ def get_security_list(req:'any_') -> 'HttpResponse':
 
         # .. look up the object's security_groups field ..
         object_response = req.zato.client.invoke('zato.generic.connection.get-list', {
-            'cluster_id': req.zato.cluster_id,
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE,
             'paginate': False,
         })

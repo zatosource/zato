@@ -5,8 +5,10 @@
  * strip, the decision lines, the review, the footer and the popover
  * micro-forms - comes from shared/wizard-kit.css and
  * shared/decision-lines.css. This file holds only what is MCP's own:
- * the badge picker sections of step 1 and the field grids inside the
- * PII and content safety cards.
+ * the badge picker sections of step 1 and the field grids of the PII and
+ * data masking section and the content safety card. The data masking
+ * line is styled in gateway/mcp-wizard-masking.css and the section's own
+ * line and surface in gateway/mcp-wizard-pii.css.
  */
 
 /* ------------------------------------------------------------ */
@@ -43,6 +45,27 @@
    longest label on one line inside it */
 #mcp-wizard .decision-line-label {
     white-space: nowrap;
+}
+
+/* The Request and Response lines of the hook services card are one grid,
+   whose label column is as wide as the longer of the two words, so each
+   chip follows its label at the gap the field grids of the cards keep */
+#mcp-wizard-hooks-body .decision-lines {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--decision-lines-gap) var(--mcp-wizard-control-gap);
+}
+
+/* A subgrid's own gap is what it uses, and a decision line has one of its own */
+#mcp-wizard-hooks-body .decision-line {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    column-gap: var(--mcp-wizard-control-gap);
+}
+
+#mcp-wizard-hooks-body .decision-line-label {
+    width: auto;
 }
 
 /* The three lines of step 2 read as one evenly spaced list, though the
@@ -296,7 +319,7 @@
 /* MCP wizard - PII multi-selects                                */
 /* ------------------------------------------------------------ */
 
-/* The selects take the card's whole width, past their labels */
+/* The selects take the section's whole width, past their labels */
 .mcp-wizard-pii-selects {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
@@ -382,44 +405,51 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - OAuth below the Security picker                  */
+/* MCP wizard - the Security card's tabs, Definitions and OAuth  */
 /* ------------------------------------------------------------ */
 
-/* The answers start in the column the Name and URL path inputs start in */
-.mcp-wizard-oauth {
-    --decision-line-label-width: var(--mcp-wizard-row-label-width);
-    margin-top: 12px;
+/* The step strip's own tabs, recolored with the wizard accent the same way */
+.mcp-wizard-security-tabs {
+    --tab-active-color: var(--zato-ui-accent);
+    --tab-active-border-color: var(--zato-ui-accent);
+    margin: 0 0 10px;
 }
 
-.mcp-wizard-oauth .decision-line {
-    gap: var(--mcp-wizard-row-gap);
+/* Both panes share one cell, so the card is as tall as the picker whichever is shown */
+.mcp-wizard-security-panes {
+    display: grid;
 }
 
-/* The scopes box takes the whole row, past the width a column of lines keeps */
-.mcp-wizard-oauth .decision-lines {
-    max-width: none;
+.mcp-wizard-security-pane {
+    grid-area: 1 / 1;
+    visibility: hidden;
 }
 
-.mcp-wizard-oauth-scopes-slot {
+.mcp-wizard-security-pane-active {
+    visibility: visible;
+}
+
+/* The OAuth pane stretches to the cell, and the scopes box takes all of it under the switch */
+.mcp-wizard-security-pane[data-pane="oauth"] {
+    display: flex;
+    flex-direction: column;
+}
+
+.mcp-wizard-oauth-grid {
     flex: 1 1 auto;
+    grid-template-rows: auto 1fr;
 }
 
-/* The box is taller than one line, so its label sits level with the first
-   row of chips rather than with the middle of the box */
-#mcp-wizard-line-oauth-scopes {
-    align-items: flex-start;
+.mcp-wizard-field-grid label.mcp-wizard-oauth-scopes {
+    min-height: 0;
 }
 
-#mcp-wizard-line-oauth-scopes .decision-line-label {
-    margin-top: var(--mcp-scope-label-offset);
+.mcp-wizard-oauth-scopes .mcp-chip-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
 }
 
-#mcp-wizard-line-oauth-scopes {
-    --mcp-scope-label-offset: 5px;
-}
-
-/* The scopes line follows the toggle - the chip box dims itself through
-   chosen-disabled, the label is dimmed here */
-#mcp-wizard .mcp-wizard-line-disabled .decision-line-label {
-    opacity: 0.5;
+.mcp-wizard-oauth-scopes .chosen-container-multi.mcp-chip-list .chosen-choices {
+    flex: 1 1 auto;
 }

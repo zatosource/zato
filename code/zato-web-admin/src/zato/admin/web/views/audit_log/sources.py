@@ -17,7 +17,6 @@ from sqlalchemy import select
 
 # Zato
 from zato.admin.web.views.audit_log.columns import _source_event_label
-from zato.common.as2.mdn import describe_disposition
 from zato.common.audit_log.api import event_table
 from zato.common.audit_log.common import event_attr_table, event_body_table, AuditBody
 from zato.common.audit_log.query import source_outstanding
@@ -50,56 +49,6 @@ _source_outstanding = source_outstanding
 _source_resubmit = source_resubmit_actions
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _enrich_as2_row(row:'anydict') -> 'None':
-    """ Extracts the disposition and MIC of an AS2 event out of its JSON data,
-    so they render as columns of their own.
-    """
-    row['disposition'] = ''
-    row['mic'] = ''
-
-    data = row['data']
-    if not data:
-        return
-
-    # A payload that is not JSON, e.g. a raw MIME body, has nothing to extract.
-    try:
-        details = json.loads(data)
-    except ValueError:
-        return
-
-    # A message-sent event carries the MIC computed at send time,
-    # an mdn-received event carries what the receipt itself reported.
-    if mic := details.get('mic'):
-        row['mic'] = mic
-
-    if disposition := details.get('disposition'):
-        row['disposition'] = describe_disposition(disposition, details['modifier_kind'], details['modifier'])
-
-# ################################################################################################################################
-
-def _enrich_as4_row(row:'anydict') -> 'None':
-    """ Extracts the conversation id of an AS4 event out of its JSON data, so it renders as a column
-    of its own - one conversation groups the messages of a business exchange that spans several.
-    """
-    row['conversation_id'] = ''
-
-    data = row['data']
-    if not data:
-        return
-
-    # A payload that is not JSON has nothing to extract.
-    try:
-        details = json.loads(data)
-    except ValueError:
-        return
-
-    # Only the user message events carry a conversation - a receipt refers to one through
-    # the message id it echoes.
-    if conversation_id := details.get('conversation_id'):
-        row['conversation_id'] = conversation_id
-
 # ################################################################################################################################
 
 # The data keys a file transfer row lifts into columns of its own.
@@ -156,8 +105,6 @@ def _enrich_file_outgoing_row(row:'anydict') -> 'None':
 
 # Per-source row enrichment - a source with columns extracted out of the event data registers itself here
 _source_row_enrich = {
-    'as2': _enrich_as2_row,
-    'as4': _enrich_as4_row,
     'file-outgoing': _enrich_file_outgoing_row,
 }
 
@@ -211,6 +158,7 @@ def _render_hl7_parsed(data:'str') -> 'str':
 # know is named by its own code
 _screen_label = {
     'audit-log-browser': 'Audit log',
+    'delivery-queue': 'Delivery queue',
 }
 
 # ################################################################################################################################
@@ -246,14 +194,19 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
     if 'viewed_event_id' not in payload:
         return ''
 
-    # What the viewed event calls itself - its object, its source and its own message id
-    viewed_query = select(
-        event_table.c.object_name, event_table.c.source, event_table.c.msg_id).where(
-        event_table.c.id == payload['viewed_event_id'])
+    # What the viewed event calls itself - its object, its source and its own message id -
+    # when the body was read off an audit event at all, a queued message naming none
+    viewed_row = None
 
-    with engine.connect() as connection:
-        result = connection.execute(viewed_query)
-        viewed_row = result.fetchone()
+    if payload['viewed_event_id'] is not None:
+
+        viewed_query = select(
+            event_table.c.object_name, event_table.c.source, event_table.c.msg_id).where(
+            event_table.c.id == payload['viewed_event_id'])
+
+        with engine.connect() as connection:
+            result = connection.execute(viewed_query)
+            viewed_row = result.fetchone()
 
     lines = []
 
@@ -270,10 +223,15 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
         if viewed_row[2]:
             lines.append(f'Message:    {viewed_row[2]}')
 
-    # .. and one pruned since reads by the coordinates written down at view time
+    # .. and one pruned since, or a message that was never an event, reads by the coordinates
+    # written down at view time - a record older than the message id carries none
     elif payload['viewed_object_name']:
         viewed_source_label = _view_source_label(payload['viewed_source'])
         lines.append(f'Viewed:     {payload["viewed_object_name"]} ({viewed_source_label})')
+
+        if 'viewed_msg_id' in payload:
+            if payload['viewed_msg_id']:
+                lines.append(f'Message:    {payload["viewed_msg_id"]}')
 
     screen = payload['screen']
 
@@ -392,8 +350,7 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
 
 # ################################################################################################################################
 
-# Per-source parsed renderers - the default is the EDI renderer, which returns
-# an empty string for payloads that do not embed an EDI document. The config source
+# Per-source parsed renderers - a source not listed here has no parsed view. The config source
 # is not here - its view records resolve against the database and the details view
 # calls render_view_record for them itself.
 _source_parse = {

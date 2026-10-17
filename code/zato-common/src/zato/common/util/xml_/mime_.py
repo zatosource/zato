@@ -45,8 +45,8 @@ class Part:
     # (compression, then encryption) and parse steps reverse it.
     data: bytes = b''
 
-    # The MIME type of the original, unprocessed payload - protocols such as AS4
-    # carry it in a part property so the receiver can restore it.
+    # The MIME type of the original, unprocessed payload - a protocol may carry it
+    # in a part property so the receiver can restore it.
     mime_type: str = 'application/xml'
 
     # Optional character set of the original payload.

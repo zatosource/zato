@@ -30,12 +30,11 @@ class TestOutgoingHL7MLLP:
     created_ids = []
 
     def test_01_get_list_empty(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         assert isinstance(data, list)
 
     def test_02_create_one(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-out-hl7mllp-1',
             type_=TYPE,
             is_active=True,
@@ -51,14 +50,13 @@ class TestOutgoingHL7MLLP:
         self.__class__.created_ids.append(resp['id'])
 
     def test_03_get_list_after_create(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         names = [item['name'] for item in data]
         assert 'test-out-hl7mllp-1' in names
 
     def test_04_create_batch(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'test-out-hl7mllp-{i}',
                 type_=TYPE,
                 is_active=True,
@@ -73,7 +71,7 @@ class TestOutgoingHL7MLLP:
             self.__class__.created_ids.append(resp['id'])
 
     def test_05_get_list_batch(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-out-hl7mllp-')]
         assert len(test_items) >= 5
 
@@ -81,7 +79,6 @@ class TestOutgoingHL7MLLP:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-out-hl7mllp-1-edited',
             type_=TYPE,
             is_active=True,
@@ -95,7 +92,7 @@ class TestOutgoingHL7MLLP:
         assert resp['id'] == item_id
 
     def test_07_get_list_after_edit(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         names = [item['name'] for item in data]
         assert 'test-out-hl7mllp-1-edited' in names
         assert 'test-out-hl7mllp-1' not in names
@@ -111,7 +108,7 @@ class TestOutgoingHL7MLLP:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_10_get_list_after_delete(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-out-hl7mllp-')]
         assert len(test_items) >= 4
 
@@ -121,6 +118,6 @@ class TestOutgoingHL7MLLP:
             self.__class__.created_ids.remove(item_id)
 
     def test_12_get_list_final(self, client:'any_'):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-out-hl7mllp-')]
         assert len(test_items) == 0

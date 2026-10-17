@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 _SQLITE_PATH = os.path.join(default_env_base_dir, 'zato.db')
 _ENGINE = create_engine(f'sqlite:///{_SQLITE_PATH}')
 Session = sessionmaker(bind=_ENGINE)
-CLUSTER_ID = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,30 +49,27 @@ def fetch_all():
 
         # Get all channels, regardless of status/transport
         channels = session.query(HTTPSOAP).filter(
-            HTTPSOAP.cluster_id == CLUSTER_ID,
             HTTPSOAP.connection == 'channel',  # Only incoming channels
         ).all() # type: ignore
-        logger.info(f'All incoming channels with cluster_id={CLUSTER_ID}: {len(channels)}')
+        logger.info(f'All incoming channels: {len(channels)}')
 
         # Include everything (be more permissive)
         logger.info('Using all available channels for OpenAPI generation')
 
         # All HTTP Basic Auth definitions
-        basic_auth_defs = session.query(HTTPBasicAuth).filter(HTTPBasicAuth.cluster_id == CLUSTER_ID).all() # type: ignore
+        basic_auth_defs = session.query(HTTPBasicAuth).all() # type: ignore
 
         # All API Key definitions
-        api_key_defs = session.query(APIKeySecurity).filter(APIKeySecurity.cluster_id == CLUSTER_ID).all() # type: ignore
+        api_key_defs = session.query(APIKeySecurity).all() # type: ignore
 
         # All groups
         groups = session.query(GenericObject).filter(
             GenericObject.type_ == 'group',
-            GenericObject.cluster_id == CLUSTER_ID
         ).all() # type: ignore
 
         # All group members (as GenericObject, type_='group-member')
         group_members = session.query(GenericObject).filter(
             GenericObject.type_ == 'group-member',
-            GenericObject.cluster_id == CLUSTER_ID
         ).all() # type: ignore
 
         return {

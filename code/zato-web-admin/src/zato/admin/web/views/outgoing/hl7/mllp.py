@@ -17,7 +17,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import alerts_tab, delivery_tab
-from zato.admin.web.forms import populate_form_initial
+from zato.admin.web.forms import add_select_from_service, populate_form_initial
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.alerting.object_config import alert_type_mllp_outgoing, Field_Prefix
@@ -25,6 +25,7 @@ from zato.common.api import GENERIC, generic_attrs
 from zato.common.ext.bunch import Bunch
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.tls import build_client_ssl_context
+from zato.common.pubsub.outgoing import OutgoingType
 from zato.common.util.api import hex_sequence_to_bytes
 from zato.common.util.tcp import parse_address
 
@@ -60,6 +61,12 @@ _alert_field_names = alerts_tab.get_storage_field_names(_alert_type)
 # .. the retry fields, the queue switch and the DLQ config, stored in the connection's opaque attributes ..
 _delivery_field_names = tuple(delivery_tab.retry_field_defaults) + tuple(delivery_tab.field_defaults)
 
+# .. the service that reports how many messages the queue and the DLQ of a connection hold, which the delete
+# .. confirmation shows before the connection is deleted along with both ..
+_Service_Pending = 'zato.pubsub.outgoing.get-message-list'
+_Pending_Kind = 'queue'
+_Pending_Page_Size = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -79,7 +86,7 @@ class Index(_Index):
     output_class = OutgoingMLLPConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address', 'pool_size'
     output_optional = (
         'should_log_messages', 'logging_level',
@@ -105,10 +112,17 @@ class Index(_Index):
 # ################################################################################################################################
 
     def handle(self):
+        create_form = CreateForm(self.req)
+        edit_form = EditForm(self.req, prefix='edit')
+
+        # The Delivery tab's DLQ forwards messages to pub/sub topics, selected by name from the topics that currently exist
+        add_select_from_service(create_form, self.req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
+        add_select_from_service(edit_form, self.req, 'zato.pubsub.topic.get-list', 'dlq_forward_to', by_id=False)
+
         return {
             'show_search_form': True,
-            'create_form': CreateForm(self.req),
-            'edit_form': EditForm(self.req, prefix='edit'),
+            'create_form': create_form,
+            'edit_form': edit_form,
             'delivery_tab_config': delivery_tab.get_delivery_tab_config(),
         }
 
@@ -196,13 +210,38 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('GET')
+def pending(req:'any_', id:'str') -> 'JsonResponse':
+    """ How many messages the queue and the DLQ of a connection hold, which a delete of the connection drops with it.
+    """
+    try:
+        response = req.zato.client.invoke(_Service_Pending, {
+            'conn_type': OutgoingType.MLLP,
+            'conn_id': int(id),
+            'kind': _Pending_Kind,
+            'page_size': _Pending_Page_Size,
+        })
+
+        if not response.ok:
+            raise Exception(response.details)
+
+        return JsonResponse({
+            'queue_depth': response.data['queue_depth'],
+            'dlq_depth': response.data['dlq_depth'],
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
 def wizard_create(req:'any_') -> 'TemplateResponse':
     """ A multi-step wizard for a new HL7 MLLP outgoing connection.
     """
     form = CreateForm(req)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': False,
         'item_id': '',
@@ -241,7 +280,6 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     populate_form_initial(form, item_dict)
 
     return_data = {
-        'cluster_id': req.zato.cluster_id,
         'form': form,
         'is_edit': True,
         'item_id': item_dict['id'],

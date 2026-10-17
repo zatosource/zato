@@ -78,7 +78,7 @@ class RateLimitingSave(AdminService):
             # .. persist the reference ..
             self._save_opaque(channel_id, 'quota_tier', tier_id, 'rate_limiting')
 
-            # .. and let all workers re-resolve tier assignments.
+            # .. and let the server re-resolve tier assignments.
             params = {
                 'action': SECURITY.QUOTA_TIER_EDIT.value,
                 'id': tier_id,
@@ -97,7 +97,7 @@ class RateLimitingSave(AdminService):
 
         # .. validate each rule by running it through from_dict ..
         for item in rule_dicts:
-            SlottedCIDRRule.from_dict(item)
+            _ = SlottedCIDRRule.from_dict(item)
 
         # .. persist to the ODB ..
         self._save_opaque(channel_id, 'rate_limiting', rule_dicts, 'quota_tier')

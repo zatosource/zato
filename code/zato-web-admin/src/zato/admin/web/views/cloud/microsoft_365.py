@@ -29,7 +29,7 @@ class Index(_Index):
     output_class = Microsoft365ConfigObject
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'type_',
     output_required = 'id', 'name', 'is_active', 'client_id', 'scopes', 'tenant_id'
     output_optional = generic_attrs
     output_repeated = True
@@ -124,7 +124,7 @@ def change_password(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'Microsoft 365 connection')
 
 # ################################################################################################################################

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from functools import partial
 from logging import getLogger
 
 # Zato
@@ -127,10 +128,21 @@ class GatewayMCPWrapper:
         if not (invoke_timeout := self.config.get('invoke_timeout')):
             invoke_timeout = MCP.Default_Invoke_Timeout
 
+        # .. the hook services, invoked by name for every message and every reply - configs predating
+        # the fields lack the keys and an empty name means no hook ..
+        request_hook_func = None
+        response_hook_func = None
+
+        if request_hook_service := self.config.get('request_hook_service'):
+            request_hook_func = partial(self._invoke_request_hook, request_hook_service)
+
+        if response_hook_service := self.config.get('response_hook_service'):
+            response_hook_func = partial(self._invoke_response_hook, response_hook_service)
+
         # .. build the handler with an invoke function that calls services through the server.
         self.handler = MCPHandler(
             tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config, validate_input,
-            skill_prompts, allow_agent_filters, invoke_timeout)
+            skill_prompts, allow_agent_filters, invoke_timeout, request_hook_func, response_hook_func)
 
         service_count_text = count_text(len(allowed_services), 'allowed service', 'allowed services')
         sorted_services = sorted(allowed_services)
@@ -139,6 +151,10 @@ class GatewayMCPWrapper:
         skill_count_text = count_text(len(allowed_skills), 'skill', 'skills')
         sorted_skills = sorted(allowed_skills)
         logger.info('MCP gateway `%s` serves %s as prompts: %s', self.config.name, skill_count_text, sorted_skills)
+
+        if request_hook_service or response_hook_service:
+            logger.info('MCP gateway `%s` hook services: request `%s`, response `%s`',
+                self.config.name, request_hook_service, response_hook_service)
 
 # ################################################################################################################################
 
@@ -153,6 +169,70 @@ class GatewayMCPWrapper:
             out = self.invoke_tool(service_name, payload)
         else:
             out = self.server.invoke(service_name, payload)
+
+        return out
+
+# ################################################################################################################################
+
+    def _invoke_request_hook(self, service_name:'str', identity:'str', message:'stranydict') -> 'stranydict':
+        """ Invokes the request hook service with one parsed message and returns the message to process -
+        the one the service returned under the request key, or the original one when it returned nothing there.
+        """
+        payload = {
+            'gateway': self.config.name,
+            'method': message.get('method'),
+            'username': identity,
+            'request': message,
+        }
+
+        out = self._invoke_hook(service_name, payload, 'request', message)
+        return out
+
+# ################################################################################################################################
+
+    def _invoke_response_hook(self, service_name:'str', message:'stranydict | None', body:'stranydict') -> 'stranydict':
+        """ Invokes the response hook service with one reply body and returns the body to send -
+        the one the service returned under the response key, or the original one when it returned nothing there.
+        The message is None when the request body never parsed into an object.
+        """
+
+        if message is None:
+            method = None
+        else:
+            method = message.get('method')
+
+        payload = {
+            'gateway': self.config.name,
+            'method': method,
+            'request': message,
+            'response': body,
+        }
+
+        out = self._invoke_hook(service_name, payload, 'response', body)
+        return out
+
+# ################################################################################################################################
+
+    def _invoke_hook(self, service_name:'str', payload:'stranydict', key:'str', original:'stranydict') -> 'stranydict':
+        """ Invokes a hook service and returns the object it placed under the key, or the original object
+        when the service returned no such key. Anything other than an object under the key is refused.
+        """
+
+        # The service's response is whatever it produced, unserialized, possibly nothing at all ..
+        response = self.server.invoke(service_name, payload, serialize=False)
+
+        # .. a response without the key leaves the original as it was ..
+        if not isinstance(response, dict):
+            return original
+
+        if key not in response:
+            return original
+
+        out = response[key]
+
+        # .. and a replacement has to be an object, as the message or body it replaces is.
+        if not isinstance(out, dict):
+            raise Exception(f'Hook service `{service_name}` returned a non-object under `{key}`')
 
         return out
 

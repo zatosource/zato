@@ -330,7 +330,6 @@ class OnPremGatewayManager:
         hub_admin_url = get_hub_admin_url()
 
         self.server = server
-        self.cluster_id = server.cluster_id
         self.hub = HubClient(hub_admin_url)
 
         if session:
@@ -344,7 +343,7 @@ class OnPremGatewayManager:
         """ The configuration of every gateway, excluding its runtime state.
         """
         with closing(self.session()) as session:
-            wrapper = OnPremGatewayWrapper(session, self.cluster_id)
+            wrapper = OnPremGatewayWrapper(session)
             out = wrapper.get_list()
 
         return out
@@ -356,7 +355,7 @@ class OnPremGatewayManager:
         """
         with closing(self.session()) as session:
 
-            wrapper = OnPremGatewayWrapper(session, self.cluster_id)
+            wrapper = OnPremGatewayWrapper(session)
             row = wrapper.get(name)
 
             if row is None:
@@ -377,7 +376,6 @@ class OnPremGatewayManager:
             row = session.query(ModelGenericObject).\
                 filter(ModelGenericObject.id==id).\
                 filter(ModelGenericObject.type_==On_Prem_Gateway.Type.On_Prem_Gateway).\
-                filter(ModelGenericObject.cluster_id==self.cluster_id).\
                 first()
 
             if row is None:
@@ -386,7 +384,7 @@ class OnPremGatewayManager:
             row_with_opaque = get_dict_with_opaque(row)
             row = cast_('strdict', row_with_opaque)
 
-            wrapper = OnPremGatewayWrapper(session, self.cluster_id)
+            wrapper = OnPremGatewayWrapper(session)
             out = wrapper.build_list_item_from_sql_row(row)
 
         return out
@@ -401,7 +399,7 @@ class OnPremGatewayManager:
 
         with closing(self.session()) as session:
 
-            wrapper = OnPremGatewayWrapper(session, self.cluster_id)
+            wrapper = OnPremGatewayWrapper(session)
 
             insert = wrapper.create(name, opaque)
             session.execute(insert)
@@ -425,7 +423,7 @@ class OnPremGatewayManager:
 
         with closing(self.session()) as session:
 
-            wrapper = OnPremGatewayWrapper(session, self.cluster_id)
+            wrapper = OnPremGatewayWrapper(session)
 
             update = wrapper.update(name, opaque, id=id)
             session.execute(update)
@@ -438,7 +436,7 @@ class OnPremGatewayManager:
         """
         with closing(self.session()) as session:
 
-            wrapper = OnPremGatewayWrapper(session, self.cluster_id)
+            wrapper = OnPremGatewayWrapper(session)
 
             delete = wrapper.delete_by_id(id)
             session.execute(delete)

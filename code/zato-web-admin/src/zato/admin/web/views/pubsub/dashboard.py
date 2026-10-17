@@ -49,7 +49,6 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,13 +77,11 @@ def _get_dashboard_data(request:'HttpRequest') -> 'str':
 
     # Get the list of topics ..
     response = request.zato.client.invoke('zato.pubsub.topic.get-list', {
-        'cluster_id': default_cluster_id,
     })
     topics = response.data
 
     # .. get the list of subscriptions ..
     sub_response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {
-        'cluster_id': default_cluster_id,
     })
     subscriptions = sub_response.data
 
@@ -169,10 +166,8 @@ def index(request:'HttpRequest') -> 'TemplateResponse':
     data_json = _get_dashboard_data(request)
 
     out = TemplateResponse(request, 'zato/pubsub/dashboard.html', {
-        'cluster_id': default_cluster_id,
         'dashboard_data': data_json,
         'dashboard_base_url': _Dashboard_Base_URL,
-        'zato_clusters': True,
         'zato_template_name': 'zato/pubsub/dashboard.html',
     })
 

@@ -6,7 +6,6 @@ disclosure. Basic answers live directly on the steps while everything
 advanced opens in small popover micro-forms. The generic machinery and
 look come from the wizard kit. The view provides:
 
-* cluster_id        - the current cluster
 * form              - CreateForm, its fields carrying all the defaults,
                       or EditForm prefilled from the stored channel
 * is_edit           - whether the wizard opened on an existing channel
@@ -86,7 +85,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.channel.hl7.mllp.wizard.init({
-        list_url: '{% url "channel-hl7-mllp" %}?cluster={{ cluster_id }}&type_=channel-hl7-mllp',
+        list_url: '{% url "channel-hl7-mllp" %}?type_=channel-hl7-mllp',
         is_edit: {% if is_edit %}true{% else %}false{% endif %},
         security_key_list: JSON.parse(document.getElementById('mllp-wizard-security-key-list').textContent)
     });
@@ -368,7 +367,6 @@ $(document).ready(function() {
                 <input type="hidden" id="id_rest_channel_id" name="rest_channel_id" value="{{ rest_channel_id }}" />
                 {% endif %}
 
-                <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
             </form>
 
         </div>

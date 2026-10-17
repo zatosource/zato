@@ -34,7 +34,7 @@ from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.util import FileWriter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import CONNECTION, EMAIL, GENERIC
-from zato.common.odb.model import Base, Cluster, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, \
+from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, \
     SMTP
 from zato.common.typing_ import cast_
 
@@ -54,9 +54,6 @@ if 0:
 
 _mcp_type = GENERIC.CONNECTION.TYPE.GATEWAY_MCP
 _llm_type = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
-
-# The cluster every object in the test database belongs to
-_cluster_id = 1
 
 # The email and LLM connections the alerts mappings name
 _smtp_name = 'enmasse.alerts.mcp.smtp'
@@ -123,13 +120,12 @@ def yaml_config() -> 'stranydict':
 
 @pytest.fixture
 def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding one cluster, the SMTP and LLM connections
+    """ A real ODB session over an in-memory SQLite database holding the SMTP and LLM connections
     the alerts mappings name, and the tables the REST channel every gateway rides on is created in.
     """
     engine = create_engine('sqlite://')
 
     tables = [
-        Cluster.__table__,
         Service.__table__,
         SecurityBase.__table__,
         HTTPSOAP.__table__,
@@ -143,9 +139,6 @@ def session() -> 'any_':
     session_factory = sessionmaker(bind=engine)
     session = session_factory()
 
-    cluster = Cluster(_cluster_id, 'test-cluster', '', 'sqlite')
-    session.add(cluster)
-
     smtp = cast_('any_', SMTP())
     smtp.name = _smtp_name
     smtp.is_active = True
@@ -155,7 +148,6 @@ def session() -> 'any_':
     smtp.is_debug = False
     smtp.mode = EMAIL.SMTP.MODE.STARTTLS
     smtp.ping_address = 'ping@example.com'
-    smtp.cluster = cluster
     session.add(smtp)
 
     explainer = cast_('any_', GenericConn())
@@ -167,7 +159,6 @@ def session() -> 'any_':
     explainer.is_outconn = True
     explainer.address = 'http://ollama.internal:11434/v1'
     explainer.opaque1 = '{"model": "llama3.1"}'
-    explainer.cluster = cluster
     session.add(explainer)
 
     session.commit()
@@ -437,7 +428,7 @@ class TestGatewayMCPAlertsExport:
     ) -> 'None':
         _, _ = mcp_importer.sync_definitions(yaml_config['mcp_gateway'], session)
 
-        exported = mcp_exporter.export(session, _cluster_id)
+        exported = mcp_exporter.export(session)
         item = _by_name(exported)[_gateway_name_1]
 
         expected = {
@@ -485,7 +476,7 @@ class TestGatewayMCPAlertsExport:
         tmp_path:'Path',
     ) -> 'None':
         _, _ = mcp_importer.sync_definitions(yaml_config['mcp_gateway'], session)
-        exported = mcp_exporter.export(session, _cluster_id)
+        exported = mcp_exporter.export(session)
 
         path = tmp_path / 'enmasse.yaml'
         FileWriter(str(path)).write({'mcp_gateway': exported})
@@ -503,7 +494,7 @@ class TestGatewayMCPAlertsExport:
 
         # The same settings again store the same settings and export the same file
         _, _ = mcp_importer.sync_definitions(read_back['mcp_gateway'], session)
-        assert mcp_exporter.export(session, _cluster_id) == exported
+        assert mcp_exporter.export(session) == exported
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -20,12 +20,12 @@ class Delete(ZatoCommand):
     def execute(self, args):
 
         # Zato
-        from zato.common.odb import drop_all
+        from zato.common.odb.model import Base
 
         engine = self._get_engine(args)
 
         if engine.dialect.has_table(engine.connect(), 'install_state'):
-            drop_all(engine)
+            Base.metadata.drop_all(engine)
 
             if self.verbose:
                 self.logger.debug('Successfully deleted the ODB')

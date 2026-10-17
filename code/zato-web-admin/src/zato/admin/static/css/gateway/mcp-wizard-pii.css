@@ -1,0 +1,63 @@
+/*
+ * MCP gateway wizard - the PII and data masking section of step 2, one line
+ * unfolding the fields on the surface of a popover. The fields themselves are
+ * styled in gateway/mcp-wizard.css and gateway/mcp-wizard-masking.css.
+ */
+
+/* ------------------------------------------------------------ */
+/* PII and data masking - tokens                                 */
+/* ------------------------------------------------------------ */
+
+:root {
+
+    /* The surface of the popover micro-forms - shared/popup.css scopes its own token to the popup */
+    --mcp-wizard-pii-sand: #faf9f5;
+
+    --mcp-wizard-pii-panel-padding: 12px 14px;
+}
+
+/* The step's longest question is "PII and data masking", so the column of
+   answers starts after it for every line of the step */
+.mcp-wizard-wide-labels {
+    --decision-line-label-width: 12em;
+}
+
+/* ------------------------------------------------------------ */
+/* PII and data masking - the line                               */
+/* ------------------------------------------------------------ */
+
+.mcp-wizard-pii-line {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* The chevron follows what the line says, the way a chip's caret follows its value */
+.mcp-wizard-pii-line .decision-line-slot {
+    gap: 6px;
+}
+
+.mcp-wizard-pii-summary {
+    font-size: 12px;
+    color: var(--zato-ui-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* PII and data masking - the fields                             */
+/* ------------------------------------------------------------ */
+
+.mcp-wizard-pii-body {
+    max-width: var(--decision-lines-max-width);
+    margin-top: 12px;
+    padding: var(--mcp-wizard-pii-panel-padding);
+    background: var(--mcp-wizard-pii-sand);
+    border-radius: 3px;
+}
+
+.mcp-wizard-pii-body[hidden] {
+    display: none;
+}
+
+/* What follows the PII removal switch is not on screen while it is off */
+.mcp-wizard-pii-body:has(input[name$="safeguards_pii_enabled"]:not(:checked)) .mcp-wizard-pii-dependent {
+    display: none;
+}

@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
+_Page_Url_Pattern = '/zato/security/basic-auth/'
 
 _Test_Name_Prefix = 'test.nav.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -110,7 +110,7 @@ class TestBasicAuthNavigation:
         assert f'/rate-limiting/{item_id}/' in current_url
 
         # .. navigate back with query filter so the row is visible ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={defn["name"]}')
         _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
         # .. verify we are back on the basic auth list page ..
@@ -140,7 +140,7 @@ class TestBasicAuthNavigation:
         defn_beta = _create_definition(page, 'search-beta')
 
         # .. reload with query filter so both test rows are visible ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}search')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={_Test_Name_Prefix}search')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify both exist before searching ..
@@ -182,7 +182,7 @@ class TestBasicAuthNavigation:
         defn = _create_definition(page, 'cross-page')
 
         # .. navigate to API keys page ..
-        _ = page.goto(f'{base_url}/zato/security/apikey/?cluster=1')
+        _ = page.goto(f'{base_url}/zato/security/apikey/')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the basic auth definition name is not in the API keys table ..
@@ -190,7 +190,7 @@ class TestBasicAuthNavigation:
         assert ba_row_on_apikey is None, 'Basic auth definition should not appear on API keys page'
 
         # .. navigate back to basic auth with query filter ..
-        _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={defn["name"]}')
         _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the definition is still there ..

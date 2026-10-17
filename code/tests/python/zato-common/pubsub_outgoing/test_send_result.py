@@ -13,24 +13,34 @@ from json import loads
 from unittest.mock import MagicMock
 
 # Zato
-from zato.common.pubsub.outgoing import Attempts_Direct, Attempts_None, get_outgoing_sub_key, get_outgoing_topic_name, \
-    Key_Attempts, Key_CID, Key_Conn_ID, Key_Conn_Name, Key_Conn_Type, Key_Data, Key_Method, Key_Request, OutgoingPublisher, \
+from zato.common.api import HTTP_SOAP
+from zato.common.pubsub.delivery import DeliveryExhausted
+from zato.common.pubsub.dlq import get_dlq_topic_name, Header_Attempts, Header_Error, Header_Error_Class, Key_DLQ, move_to_dlq
+from zato.common.pubsub.outgoing import Attempts_Direct, Attempts_None, conn_directions, conn_locators, delivery_handlers, \
+    dlq_settings_readers, get_outgoing_sub_key, get_outgoing_topic_name, Key_Attempts, Key_CID, Key_Conn_ID, Key_Conn_Name, \
+    Key_Conn_Type, Key_Data, Key_Method, Key_Request, OutgoingPublisher, register_outgoing_conn_type, retry_policy_builders, \
     SendRejected, SendResult
 from zato.common.pubsub.sql.backend import PublishResult
+from zato.common.util.retry import RetryPolicy
 from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, stranydict
+    from zato.common.typing_ import any_, anylist, anytuple, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_conn_type = 'rest'
+_retry = HTTP_SOAP.Retry
+
+_conn_type = 'rest-test'
 _conn_id = 17
 _conn_name = 'Order Intake'
+
+# The retries a connection has unless a test says otherwise
+_max_retries = 2
 
 _cid = 'test-cid-001'
 
@@ -38,6 +48,10 @@ _accepted_response = 'HTTP 200 accepted'
 
 _rejected_response = 'HTTP 500 rejected'
 _rejected_error = 'HTTP 500 Internal Server Error'
+
+# What an endpoint that will never take this message answers with
+_refused_response = 'HTTP 400 refused'
+_refused_error = 'HTTP 400 Bad Request'
 
 _timeout_error = 'Timeout error: the endpoint did not answer'
 
@@ -67,6 +81,9 @@ class _Attempt:
 
         elif self.outcome == 'rejected':
             raise SendRejected(_rejected_error, _rejected_response)
+
+        elif self.outcome == 'refused':
+            raise SendRejected(_refused_error, _refused_response, is_permanent=True)
 
         else:
             raise Exception(_timeout_error)
@@ -99,8 +116,57 @@ class SendOrQueueTestCase(unittest.TestCase):
 
         self.server.pubsub_backend.publish.side_effect = _publish
 
+        # The connection's retries and its DLQ switch, as each test sets them
+        self.max_retries = _max_retries
+        self.use_dlq = False
+
+        self._register_conn_type()
+
+        # The DLQ the config manager moves a message to
+        self.dlq_topic_name = get_dlq_topic_name(_conn_type, _conn_name)
+        self.server.config_manager.ensure_outgoing_dlq.return_value = (self.dlq_topic_name, _conn_name)
+
+        def _move_to_outgoing_dlq(cid:'str', envelope:'stranydict', exhausted:'DeliveryExhausted') -> 'str':
+            out = move_to_dlq(self.server, cid, envelope, exhausted)
+            return out
+
+        self.server.config_manager.move_to_outgoing_dlq.side_effect = _move_to_outgoing_dlq
+
         self.publisher = OutgoingPublisher(self.server, _conn_type, _conn_id)
         self.sub_key = get_outgoing_sub_key(_conn_type, _conn_id)
+
+# ################################################################################################################################
+
+    def tearDown(self) -> 'None':
+
+        for registry in (conn_locators, delivery_handlers, conn_directions, retry_policy_builders, dlq_settings_readers):
+            _ = registry.pop(_conn_type, None)
+
+# ################################################################################################################################
+
+    def _register_conn_type(self) -> 'None':
+
+        def locator(server:'any_', conn_id:'int') -> 'anytuple':
+            out = (_conn_name, _conn_name)
+            return out
+
+        def handler(server:'any_', cid:'str', wrapper:'any_', request:'stranydict') -> 'None':
+            pass
+
+        def retry_policy(wrapper:'any_') -> 'RetryPolicy':
+            config = {
+                _retry.Field_Max_Retries: self.max_retries,
+            }
+            out = RetryPolicy.from_config(config, _retry)
+            return out
+
+        def dlq_settings(wrapper:'any_') -> 'stranydict':
+            out = {
+                HTTP_SOAP.DLQ.Field_Use_DLQ: self.use_dlq,
+            }
+            return out
+
+        register_outgoing_conn_type(_conn_type, locator, handler, retry_policy=retry_policy, dlq_settings=dlq_settings)
 
 # ################################################################################################################################
 
@@ -121,10 +187,12 @@ class SendOrQueueTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def _assert_flags_are_consistent(self, result:'SendResult') -> 'None':
-        """ The two flags are never both on.
+        """ Of the four flags, at most one is ever on.
         """
         self.assertIsInstance(result, SendResult)
-        self.assertFalse(result.is_ok and result.is_in_queue)
+
+        flags_on = [result.is_ok, result.is_in_queue, result.is_in_dlq, result.is_rejected].count(True)
+        self.assertLessEqual(flags_on, 1)
 
 # ################################################################################################################################
 
@@ -157,7 +225,7 @@ class SendOrQueueTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_a_rejected_message_goes_to_the_queue(self) -> 'None':
+    def test_a_message_turned_down_for_now_goes_to_the_queue(self) -> 'None':
 
         attempt = _Attempt('rejected')
         result = self.publisher.send_or_queue(_cid, _request, attempt)
@@ -165,6 +233,7 @@ class SendOrQueueTestCase(unittest.TestCase):
         self._assert_flags_are_consistent(result)
         self.assertFalse(result.is_ok)
         self.assertTrue(result.is_in_queue)
+        self.assertFalse(result.is_rejected)
         self._assert_msg_id_is_the_envelope_one(result)
 
         self.assertEqual(result.error, _rejected_error)
@@ -172,6 +241,44 @@ class SendOrQueueTestCase(unittest.TestCase):
 
         self.assertEqual(attempt.calls, 1)
         self.assertEqual(self.depth.get(self.sub_key), 1)
+
+# ################################################################################################################################
+
+    def test_a_message_turned_down_for_good_is_not_queued(self) -> 'None':
+        """ The endpoint said the message itself is wrong, so the queue would only hand it
+        the same answer again - the result says so and the answer travels with it.
+        """
+        attempt = _Attempt('refused')
+        result = self.publisher.send_or_queue(_cid, _request, attempt)
+
+        self._assert_flags_are_consistent(result)
+        self.assertFalse(result.is_ok)
+        self.assertFalse(result.is_in_queue)
+        self.assertTrue(result.is_rejected)
+
+        self.assertEqual(result.error, _refused_error)
+        self.assertEqual(result.response, _refused_response)
+        self.assertEqual(result.msg_id, '')
+
+        self.assertEqual(attempt.calls, 1)
+        self.server.pubsub_backend.publish.assert_not_called()
+        self.assertEqual(self.depth.get(self.sub_key), 0)
+
+# ################################################################################################################################
+
+    def test_a_message_turned_down_for_good_behind_others_waits_its_turn(self) -> 'None':
+        """ With others already in the queue nothing touches the wire, so the endpoint's
+        refusal is not known yet and the message waits like any other.
+        """
+        self.depth.raise_(self.sub_key)
+
+        attempt = _Attempt('refused')
+        result = self.publisher.send_or_queue(_cid, _request, attempt)
+
+        self._assert_flags_are_consistent(result)
+        self.assertTrue(result.is_in_queue)
+        self.assertFalse(result.is_rejected)
+        self.assertEqual(attempt.calls, 0)
 
 # ################################################################################################################################
 
@@ -265,10 +372,97 @@ class SendOrQueueTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    def test_a_message_with_no_retries_that_did_not_reach_the_endpoint_is_not_queued(self) -> 'None':
+
+        self.max_retries = 0
+
+        attempt = _Attempt('timeout')
+        result = self.publisher.send_or_queue(_cid, _request, attempt)
+
+        self._assert_flags_are_consistent(result)
+        self.assertFalse(result.is_ok)
+        self.assertFalse(result.is_in_queue)
+        self.assertFalse(result.is_in_dlq)
+        self.assertEqual(result.msg_id, '')
+        self.assertEqual(result.error, _timeout_error)
+
+        self.assertEqual(attempt.calls, 1)
+        self.server.pubsub_backend.publish.assert_not_called()
+        self.assertEqual(self.depth.get(self.sub_key), 0)
+
+# ################################################################################################################################
+
+    def test_a_message_with_no_retries_turned_down_for_now_is_not_queued(self) -> 'None':
+
+        self.max_retries = 0
+
+        attempt = _Attempt('rejected')
+        result = self.publisher.send_or_queue(_cid, _request, attempt)
+
+        self._assert_flags_are_consistent(result)
+        self.assertFalse(result.is_in_queue)
+        self.assertFalse(result.is_in_dlq)
+        self.assertEqual(result.error, _rejected_error)
+        self.assertEqual(result.response, _rejected_response)
+
+        self.server.pubsub_backend.publish.assert_not_called()
+        self.assertEqual(self.depth.get(self.sub_key), 0)
+
+# ################################################################################################################################
+
+    def test_a_message_with_no_retries_moves_to_the_dlq_when_the_dlq_is_on(self) -> 'None':
+
+        self.max_retries = 0
+        self.use_dlq = True
+
+        attempt = _Attempt('timeout')
+        result = self.publisher.send_or_queue(_cid, _request, attempt)
+
+        self._assert_flags_are_consistent(result)
+        self.assertFalse(result.is_in_queue)
+        self.assertTrue(result.is_in_dlq)
+        self.assertEqual(result.error, _timeout_error)
+
+        self.assertEqual(attempt.calls, 1)
+        self.assertEqual(self.depth.get(self.sub_key), 0)
+
+        call_args = self.server.pubsub_backend.publish.call_args
+        positional = call_args[0]
+        topic_name = positional[0]
+        document = loads(positional[1])
+        header = document[Key_DLQ]
+
+        self.assertEqual(topic_name, self.dlq_topic_name)
+        self.assertEqual(result.msg_id, call_args[1]['msg_id'])
+        self.assertEqual(document[Key_Request], _request)
+        self.assertEqual(header[Header_Attempts], Attempts_Direct)
+        self.assertEqual(header[Header_Error], _timeout_error)
+        self.assertEqual(header[Header_Error_Class], 'Exception')
+
+# ################################################################################################################################
+
+    def test_a_message_with_no_retries_behind_others_is_queued(self) -> 'None':
+        """ Nothing touches the wire, so the queue makes the message's one attempt.
+        """
+        self.max_retries = 0
+        self.depth.raise_(self.sub_key)
+
+        attempt = _Attempt('timeout')
+        result = self.publisher.send_or_queue(_cid, _request, attempt)
+
+        self._assert_flags_are_consistent(result)
+        self.assertTrue(result.is_in_queue)
+        self.assertEqual(attempt.calls, 0)
+
+        envelope = self._get_published_envelope()
+        self.assertEqual(envelope[Key_Attempts], Attempts_None)
+
+# ################################################################################################################################
+
     def test_nothing_raises(self) -> 'None':
         """ Nothing raises.
         """
-        outcomes = ('accepted', 'rejected', 'timeout')
+        outcomes = ('accepted', 'rejected', 'refused', 'timeout')
         results:'anylist' = []
 
         for outcome in outcomes:
@@ -289,7 +483,7 @@ class SendOrQueueTestCase(unittest.TestCase):
                     self._assert_flags_are_consistent(result)
                     results.append(result)
 
-        self.assertEqual(len(results), 12)
+        self.assertEqual(len(results), 16)
 
 # ################################################################################################################################
 # ################################################################################################################################

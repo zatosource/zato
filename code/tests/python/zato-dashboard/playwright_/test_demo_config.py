@@ -19,7 +19,10 @@ if 0:
 _Page_Url_Pattern = '/zato/demo-config/'
 
 # One card per demo config set, in the order they are rendered
-_Set_Names = ['tutorial', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq']
+_Set_Names = ['tutorial', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq', 'file_transfer']
+
+# What the pills of the file transfer card are about, in the order they are shown
+_File_Transfer_Pill_Labels = ['jobs', 'SFTP connections', 'FTP and FTPS connections', 'SMB connections']
 
 # The scheduler set is the quickest to import and remove, so it is the one the toggle test flips
 _Toggle_Set = 'scheduler'
@@ -91,6 +94,24 @@ class TestDemoConfig:
         hl7_title = page.inner_text('#demo-config-card-hl7 .demo-config-set-title')
         assert hl7_title.strip() == 'HL7 MLLP and FHIR', f'Expected "HL7 MLLP and FHIR", got: {hl7_title}'
 
+        # .. the file transfer card is called File transfer ..
+        file_transfer_title = page.inner_text('#demo-config-card-file_transfer .demo-config-set-title')
+        assert file_transfer_title.strip() == 'File transfer', f'Expected "File transfer", got: {file_transfer_title}'
+
+        # .. and it has a pill for its jobs and one for the connections of each protocol ..
+        file_transfer_pills = page.query_selector_all('#demo-config-body-file_transfer .demo-config-pill')
+
+        pill_texts = []
+        for pill in file_transfer_pills:
+            pill_text = pill.inner_text()
+            pill_texts.append(pill_text.strip())
+
+        assert len(pill_texts) == len(_File_Transfer_Pill_Labels), f'Unexpected pills: {pill_texts}'
+
+        for pill_text, label in zip(pill_texts, _File_Transfer_Pill_Labels):
+            _, _, pill_label = pill_text.partition(' ')
+            assert pill_label == label, f'Expected a pill with "{label}", got: {pill_text}'
+
         # .. and the page-wide help badge is present.
         help_badge = page.query_selector('#demo-config-how-it-works')
         assert help_badge is not None, 'No help badge'
@@ -126,7 +147,7 @@ class TestDemoConfig:
         flipped_state = page.is_checked(selector)
         assert flipped_state == (not initial_state), f'Expected {not initial_state}, got: {flipped_state}'
 
-        # .. a reload shows the same state, so it really is what exists in the cluster ..
+        # .. a reload shows the same state, so it really is what exists in the environment ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         _ = page.wait_for_selector('#id_demo_config_all', state='visible')
 

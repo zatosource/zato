@@ -30,7 +30,6 @@ class TestOutgoingREST:
 
     def test_01_get_list_empty(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='outgoing',
             transport='plain_http',
         )
@@ -38,7 +37,6 @@ class TestOutgoingREST:
 
     def test_02_create_one(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
-            cluster_id=1,
             name='test-out-rest-1',
             is_active=True,
             is_internal=False,
@@ -53,7 +51,6 @@ class TestOutgoingREST:
 
     def test_03_get_list_after_create(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='outgoing',
             transport='plain_http',
         )
@@ -63,7 +60,6 @@ class TestOutgoingREST:
     def test_04_create_batch(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name=f'test-out-rest-{i}',
                 is_active=True,
                 is_internal=False,
@@ -77,7 +73,6 @@ class TestOutgoingREST:
 
     def test_05_get_list_batch(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='outgoing',
             transport='plain_http',
         )
@@ -88,7 +83,6 @@ class TestOutgoingREST:
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
-            cluster_id=1,
             name='test-out-rest-1-edited',
             is_active=True,
             is_internal=False,
@@ -101,7 +95,6 @@ class TestOutgoingREST:
 
     def test_07_get_list_after_edit(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='outgoing',
             transport='plain_http',
         )
@@ -114,7 +107,6 @@ class TestOutgoingREST:
         port, server = start_http_stub()
         try:
             resp = client.create(f'{SERVICE}.create',
-                cluster_id=1,
                 name='test-out-rest-ping-live',
                 is_active=True,
                 is_internal=False,
@@ -138,7 +130,6 @@ class TestOutgoingREST:
 
     def test_10_get_list_after_delete(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='outgoing',
             transport='plain_http',
         )
@@ -152,7 +143,6 @@ class TestOutgoingREST:
 
     def test_12_get_list_final(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list',
-            cluster_id=1,
             connection='outgoing',
             transport='plain_http',
         )

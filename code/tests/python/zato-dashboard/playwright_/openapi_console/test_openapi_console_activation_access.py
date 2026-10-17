@@ -36,7 +36,7 @@ _Test_Name_Prefix = 'test.openapi.access.' + CryptoManager.generate_hex_string(3
 # ################################################################################################################################
 
 class TestOpenAPIConsoleActivationAccess:
-    """ Verifies the full path from an inactive auto-created channel to a working endpoint -
+    """ Verifies the full path from an inactive channel to a working endpoint -
     activation and security assignment in the Dashboard, per-caller document filtering
     in the console and a try-it invocation through the relay.
     """
@@ -54,7 +54,7 @@ class TestOpenAPIConsoleActivationAccess:
         # Create a Basic Auth definition for the caller ..
         definition = create_basic_auth(page, base_url, _Test_Name_Prefix, 'typed')
 
-        # .. activate the auto-created channel and assign the definition to it in one edit ..
+        # .. activate the channel and assign the definition to it in one edit ..
         _ = edit_channel_by_name(page, base_url, Service_Typed, {
             'is_active': True,
             'security': f'Basic Auth/{definition["name"]}',

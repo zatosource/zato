@@ -82,7 +82,6 @@ $.fn.zato.channel.hl7.rest.data_table.new_row = function(item, data, include_tr)
     }
 
     let is_active = item.is_active == true;
-    let cluster_id = $(document).getUrlParam('cluster');
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -93,11 +92,11 @@ $.fn.zato.channel.hl7.rest.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', item.hl7_version);
 
     row += String.format('<td>{0}</td>', item.url_path);
-    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
+    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service));
     row += String.format('<td>{0}</td>', data.sec_def_link || $.fn.zato.empty_value);
 
     // The audit log of this channel's messages is filed under the channel's name
-    row += String.format('<td><a href="/zato/audit-log/?source=mllp-channel&object_name={0}&cluster=1">Audit log</a></td>', encodeURIComponent(item.name));
+    row += String.format('<td><a href="/zato/audit-log/?source=mllp-channel&object_name={0}">Audit log</a></td>', encodeURIComponent(item.name));
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.rest.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.rest.delete_('{0}');\">Delete</a>", item.id));
@@ -126,8 +125,7 @@ $.fn.zato.channel.hl7.rest.data_table.new_row = function(item, data, include_tr)
 $.fn.zato.channel.hl7.rest.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'HL7 REST channel `{0}` deleted',
-        'Are you sure you want to delete HL7 REST channel `{0}`?',
-        true);
+        'Are you sure you want to delete HL7 REST channel `{0}`?');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

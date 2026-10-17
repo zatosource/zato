@@ -29,21 +29,12 @@ class MS_SQL:
 
 ZATO_INFO_FILE = '.zato-info'
 
-SUPPORTED_DB_TYPES = ('mysql', 'postgresql', 'sqlite')
+SUPPORTED_DB_TYPES = ('sqlite',)
 
 # ################################################################################################################################
 
 _opts_odb_type = 'Operational database type, must be one of {}'.format(SUPPORTED_DB_TYPES) # noqa
-_opts_odb_host = 'Operational database host'
-_opts_odb_port = 'Operational database port'
-_opts_odb_user = 'Operational database user'
-_opts_odb_schema = 'Operational database schema'
-_opts_odb_db_name = 'Operational database name'
-_opts_odb_ssl = 'Whether to use SSL/TLS for connections to the operational database'
-_opts_odb_ssl_ca_file = 'Path to the CA certificate to verify the operational database server certificate against'
-_opts_odb_ssl_cert_file = 'Path to the client certificate for mutual TLS with the operational database'
-_opts_odb_ssl_key_file = 'Path to the private key of the client certificate'
-_opts_odb_ssl_verify = 'Whether to verify the operational database server certificate'
+_opts_odb_path = 'Path to the operational database file'
 
 # ################################################################################################################################
 
@@ -65,17 +56,7 @@ default_common_name = 'localhost'
 
 common_odb_opts = [
     {'name':'--odb-type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'sqlite'}, # noqa
-    {'name':'--odb-host', 'help':_opts_odb_host},
-    {'name':'--odb-port', 'help':_opts_odb_port},
-    {'name':'--odb-user', 'help':_opts_odb_user},
-    {'name':'--odb-db-name', 'help':_opts_odb_db_name},
-    {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
-    {'name':'--odb-password', 'help':'ODB database password', 'default':''},
-    {'name':'--odb-ssl', 'help':_opts_odb_ssl},
-    {'name':'--odb-ssl-ca-file', 'help':_opts_odb_ssl_ca_file},
-    {'name':'--odb-ssl-cert-file', 'help':_opts_odb_ssl_cert_file},
-    {'name':'--odb-ssl-key-file', 'help':_opts_odb_ssl_key_file},
-    {'name':'--odb-ssl-verify', 'help':_opts_odb_ssl_verify},
+    {'name':'--odb-path', 'help':_opts_odb_path},
 ]
 
 common_ca_create_opts = [
@@ -161,7 +142,6 @@ command_imports = (
     ('check_config', 'zato.cli.check_config.CheckConfig'),
     ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
     ('create_basic_auth', 'zato.cli.security.basic_auth.CreateDefinition'),
-    ('create_cluster', 'zato.cli.create_cluster.Create'),
     ('create_odb', 'zato.cli.create_odb.Create'),
     ('create_rest_channel', 'zato.cli.rest.channel.CreateChannel'),
     ('create_server', 'zato.cli.create_server.Create'),
@@ -245,9 +225,7 @@ class ZatoCommand:
         NOT_A_ZATO_COMPONENT = 3
         NO_ODB_FOUND = 4
         DIR_NOT_EMPTY = 5
-        CLUSTER_NAME_ALREADY_EXISTS = 6
         SERVER_NAME_ALREADY_EXISTS = 7
-        NO_SUCH_CLUSTER = 8
         COMPONENT_ALREADY_RUNNING = 9
         NO_PID_FOUND = 10
         NO_SUCH_WEB_ADMIN_USER = 11
@@ -554,77 +532,14 @@ class ZatoCommand:
         import sqlalchemy
 
         # Zato
-        from zato.common.odb.ssl_config import get_ssl_connect_args
-        from zato.common.util import api as util_api
         from zato.common.util.api import get_engine_url
 
-        if not args.odb_type.startswith('postgresql'):
-            connect_args = {}
-        else:
-            connect_args = {'application_name':util_api.get_component_name('enmasse')}
+        if not getattr(args, 'odb_path', None):
+            raise Exception('Option --odb-path is required')
 
-        # SSL/TLS configuration built out of the --odb-ssl-* options
-        ssl_config = {
-            'ssl':           getattr(args, 'odb_ssl', ''),
-            'ssl_ca_file':   getattr(args, 'odb_ssl_ca_file', ''),
-            'ssl_cert_file': getattr(args, 'odb_ssl_cert_file', ''),
-            'ssl_key_file':  getattr(args, 'odb_ssl_key_file', ''),
-            'ssl_verify':    getattr(args, 'odb_ssl_verify', ''),
-        }
-        ssl_connect_args = get_ssl_connect_args(ssl_config, args.odb_type)
-        connect_args.update(ssl_connect_args)
+        engine_url = get_engine_url({'engine': args.odb_type, 'sqlite_path': args.odb_path})
 
-        return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
-
-# ################################################################################################################################
-
-    def _force_drop_odb(self, args):
-        """ When --force is used with postgresql, drop and recreate the database.
-        """
-        odb_type = getattr(args, 'odb_type', None)
-        if not odb_type or not odb_type.startswith('postgresql'):
-            return
-
-        odb_host = getattr(args, 'odb_host', None)
-        odb_port = getattr(args, 'odb_port', None)
-        odb_db_name = getattr(args, 'odb_db_name', None)
-
-        if not (odb_host and odb_port and odb_db_name):
-            return
-
-        import sqlalchemy
-
-        from zato.common.util import api as util_api
-
-        connect_args = {'application_name': util_api.get_component_name('enmasse')}
-        maint_url = 'postgresql://{}:{}@{}:{}/postgres'.format(
-            args.odb_user, args.odb_password, odb_host, odb_port)
-
-        create_sql = sqlalchemy.text("CREATE DATABASE {} ENCODING 'UTF-8' TEMPLATE template0".format(odb_db_name))
-
-        try:
-            engine = sqlalchemy.create_engine(maint_url, connect_args=connect_args, isolation_level='AUTOCOMMIT')
-            with engine.connect() as conn:
-
-                # Check if the database exists
-                result = conn.execute(sqlalchemy.text(
-                    "SELECT 1 FROM pg_database WHERE datname = '{}'".format(odb_db_name)))
-                db_exists = result.scalar() is not None
-
-                if db_exists:
-                    conn.execute(sqlalchemy.text(
-                        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                        "WHERE datname = '{}' AND pid <> pg_backend_pid()".format(odb_db_name)))
-                    conn.execute(sqlalchemy.text('DROP DATABASE {}'.format(odb_db_name)))
-                    conn.execute(create_sql)
-                    self.logger.info('Database `%s` dropped and recreated (--force)', odb_db_name)
-                else:
-                    conn.execute(create_sql)
-                    self.logger.info('Database `%s` did not exist, created (--force)', odb_db_name)
-
-            engine.dispose()
-        except Exception as e:
-            self.logger.warning('Could not reset database `%s`: %s', odb_db_name, e)
+        return sqlalchemy.create_engine(engine_url)
 
 # ################################################################################################################################
 
@@ -687,7 +602,6 @@ class ZatoCommand:
                     if os.path.exists(work_dir):
                         import shutil
                         shutil.rmtree(work_dir)
-                    self._force_drop_odb(args)
 
                 if not os.path.exists(work_dir):
                     self.logger.info('Creating directory `%s`', work_dir)
@@ -718,10 +632,6 @@ class ZatoCommand:
 
                     # Don't require a component's secret key
                     if name == '--secret-key':
-                        continue
-
-                    # Don't require passwords with SQLite
-                    if 'odb' in name and args.odb_type == 'sqlite':
                         continue
 
                     check_password.append((name, opt_dict['help']))
@@ -764,9 +674,6 @@ class ZatoCommand:
     def before_execute(self, args):
         """ A hooks that lets commands customize their input before they are actually executed.
         """
-        # Update odb_type if it's MySQL so that users don't have to think about the particular client implementation.
-        if getattr(args, 'odb_type', None) == 'mysql':
-            args.odb_type = 'mysql+pymysql'
 
 # ################################################################################################################################
 
@@ -808,15 +715,6 @@ class ZatoCommand:
             ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'web-admin-{}.pem'.format(name))
             shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
-
-# ################################################################################################################################
-
-    def get_crypto_manager_from_server_config(self, config, repo_dir):
-
-        # Zato
-        from zato.common.util.api import get_crypto_manager_from_server_config
-
-        return get_crypto_manager_from_server_config(config, repo_dir)
 
 # ################################################################################################################################
 
@@ -948,7 +846,7 @@ class CACreateCommand(ZatoCommand):
             'target_dir':self.target_dir
         }
 
-        for arg in('cluster_name', 'server_name', 'scheduler_name'):
+        for arg in('server_name', 'scheduler_name'):
             if hasattr(args, arg):
                 file_args[arg] = getattr(args, arg)
 

@@ -168,7 +168,7 @@ class _Server:
 class PubSubAMQPHarness:
     """ The real AMQP pub/sub production classes assembled without a server - a ConnectorStore
     of ConnectorAMQP connectors, the real ConfigManager publish, inbound delivery and channel
-    override methods bound to this object, and a real AuditLog behind them.
+    dispatch methods bound to this object, and a real AuditLog behind them.
     """
 
     # The real production methods under test, bound to this harness.
@@ -176,8 +176,9 @@ class PubSubAMQPHarness:
     pubsub_publish_to_amqp = ConfigManager.pubsub_publish_to_amqp
     get_pubsub_topic_by_amqp_channel = ConfigManager.get_pubsub_topic_by_amqp_channel
     pubsub_deliver_amqp_message = ConfigManager.pubsub_deliver_amqp_message
-    _apply_amqp_channel_override = ConfigManager._apply_amqp_channel_override
-    _remove_amqp_channel_override = ConfigManager._remove_amqp_channel_override
+    is_pubsub_amqp_channel = ConfigManager.is_pubsub_amqp_channel
+    on_amqp_channel_message = ConfigManager.on_amqp_channel_message
+    amqp_stop_all = ConfigManager.amqp_stop_all
     amqp_invoke = ConfigManager.amqp_invoke
 
     def __init__(self, address:'str', server_name:'str') -> 'None':
@@ -200,7 +201,7 @@ class PubSubAMQPHarness:
         self.server = _Server(self, self.audit_log)
 
         # Invocations of channel services other than the inbound delivery service -
-        # what arrives after a channel override was removed.
+        # what arrives once no topic reads from the channel any longer.
         self.channel_invocations:'anylist' = []
 
         # Config object identifiers, unique within this harness.
@@ -240,7 +241,7 @@ class PubSubAMQPHarness:
         config.priority = 5
         config.user_id = ''
 
-        self.amqp_api.create(name, config, self.on_message_callback, needs_start=True)
+        self.amqp_api.create(name, config, self.on_amqp_channel_message, needs_start=True)
         self.amqp_api.create_outconn(name, config)
 
         self._wait_until_connected(name)
@@ -272,15 +273,7 @@ class PubSubAMQPHarness:
         if drain_events_timeout:
             config.consumer_drain_events_timeout = drain_events_timeout
 
-        # A topic already registered against this channel points the consumers
-        # at the pub/sub delivery service from the very first message - the same
-        # override the registry sync applies on a real server at startup.
-        for backend_config in self._topic_backends.values():
-            if backend_config['amqp_channel_name'] == name:
-                backend_config['original_service_name'] = service_name
-                config.service_name = _pubsub_amqp_bridge_service
-
-        self.amqp_api.create(name, config, self.on_message_callback, needs_start=True)
+        self.amqp_api.create(name, config, self.on_amqp_channel_message, needs_start=True)
         self.amqp_api.create_channel(name, config)
 
         self._wait_until_connected(name)
@@ -343,8 +336,7 @@ class PubSubAMQPHarness:
         routing_key:'str'='',
         channel_name:'str'='',
     ) -> 'strdict':
-        """ Registers an AMQP-backed topic the way the registry sync does on a real server,
-        applying the channel override when the topic consumes from a channel.
+        """ Registers an AMQP-backed topic the way the registry load does on a real server.
         """
         backend_config = {
             'backend_type': PubSub.Backend_Type.AMQP,
@@ -352,25 +344,18 @@ class PubSubAMQPHarness:
             'amqp_exchange': exchange,
             'amqp_routing_key': routing_key,
             'amqp_channel_name': channel_name,
-            'original_service_name': '',
         }
         self._topic_backends[topic_name] = backend_config
-
-        if channel_name:
-            self._apply_amqp_channel_override(backend_config)
 
         return backend_config
 
 # ################################################################################################################################
 
     def remove_amqp_topic(self, topic_name:'str') -> 'None':
-        """ Removes an AMQP-backed topic the way a topic delete does, restoring
-        the channel's own service when the topic consumed from a channel.
+        """ Removes an AMQP-backed topic the way a topic delete does - from then on the channel
+        the topic read from dispatches to its own service again.
         """
-        backend_config = self._topic_backends.pop(topic_name)
-
-        if backend_config['amqp_channel_name']:
-            self._remove_amqp_channel_override(backend_config)
+        _ = self._topic_backends.pop(topic_name)
 
 # ################################################################################################################################
 
@@ -400,16 +385,16 @@ class PubSubAMQPHarness:
 
 # ################################################################################################################################
 
-    def on_message_callback(self, service_name:'str', body:'any_', **kwargs:'any_') -> 'None':
-        """ What channel consumers dispatch each consumed message to - the role
-        ConfigManager.invoke plays on a real server. The pub/sub inbound delivery
+    def invoke(self, service_name:'str', body:'any_', **kwargs:'any_') -> 'None':
+        """ What the real channel dispatch bound above invokes once it has decided on the service -
+        the role ConfigManager.invoke plays on a real server. The pub/sub inbound delivery
         service runs for real, any other service has its invocation recorded.
         """
         zato_ctx = kwargs['zato_ctx']
         channel_item = zato_ctx['zato.channel_item']
 
-        # The channel points at the pub/sub inbound delivery service, so the real
-        # service class runs with the real config manager methods underneath it ..
+        # A topic reads from the channel, so the real service class runs
+        # with the real config manager methods underneath it ..
         if service_name == _pubsub_amqp_bridge_service:
 
             service = OnAMQPMessage.__new__(OnAMQPMessage)
@@ -422,8 +407,8 @@ class PubSubAMQPHarness:
             # so the broker redelivers it - the production failure semantics.
             service.handle()
 
-        # .. any other service is the channel's own one, running after
-        # .. an override was removed - the invocation is recorded only.
+        # .. any other service is the channel's own one, running once
+        # .. no topic reads from the channel - the invocation is recorded only.
         else:
             self.channel_invocations.append({
                 'service_name': service_name,
@@ -434,17 +419,9 @@ class PubSubAMQPHarness:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops every consumer and producer and closes all the connectors. Consumers get
-        their stop flag ahead of the sequential per-channel waits, so they all wind down
-        concurrently and the teardown stays quick even with many channels.
+        """ Stops every consumer and producer and closes all the connectors, the way a server does.
         """
-        for connector in self.amqp_api.connectors.values():
-            for consumers in connector._consumers.values():
-                for consumer in consumers:
-                    consumer.keep_running = False
-
-        for name in list(self.amqp_api.connectors):
-            _ = self.amqp_api.delete(name)
+        self.amqp_stop_all()
 
 # ################################################################################################################################
 # ################################################################################################################################

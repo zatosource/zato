@@ -8,31 +8,32 @@ This file is a proprietary product, not an open-source one.
 
 # stdlib
 import logging
+from base64 import b64decode
 from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
+from json import dumps as json_dumps, loads as json_loads
+from urllib.parse import quote
 
 # Django
-from django.http import FileResponse, HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.csrf import csrf_exempt
 
 # PyYAML
 import yaml
 
 # Zato
-from zato.common.api import OpenAPI_Console_Auth
 from zato.common.typing_ import cast_
-from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, Session_Entra_Key, decrypt_credentials, \
-    decrypt_entra_identity, encrypt_credentials, encrypt_entra_identity
-from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path
+from zato.common.webapp.auth.auth_type import ConsoleAuthType
+from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, decrypt_credentials, encrypt_credentials
+from zato.common.webapp.request import client_address
+from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path, \
+    get_logo_content_type, get_logo_file
 from zato.openapi.console.client import OpenAPIConsoleClient
-from zato.openapi.console.entra_auth import AuthType, complete_auth_code_flow, EntraAuthError, get_authorize_url, \
-    is_entra_enabled
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict, stranydict
     anydict = anydict
 
 # ################################################################################################################################
@@ -44,7 +45,20 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 # The message shown on the sign-in page when the credentials are rejected
-_invalid_credentials_message = 'Invalid username or password'
+_invalid_credentials_message = 'Invalid credentials'
+
+# The auth types of the sign-in form, in the order they are offered
+_auth_types = [
+    (ConsoleAuthType.Basic_Auth, 'Basic Auth'),
+    (ConsoleAuthType.API_Key, 'API Key'),
+    (ConsoleAuthType.Bearer_Token, 'Bearer token'),
+]
+
+# What the header shows for a caller signed in with a secret that has no username next to it
+_secret_only_identities = {
+    ConsoleAuthType.API_Key: 'API key',
+    ConsoleAuthType.Bearer_Token: 'Bearer token',
+}
 
 # The message shown when no server replied in time
 _no_server_message = 'No server is available, please try again'
@@ -53,15 +67,26 @@ _no_server_message = 'No server is available, please try again'
 # so that anonymous callers cannot tell apart missing, expired and rejected sessions.
 _unauthorized_message = 'Unauthorized'
 
+# The message returned for a branding file that was not provided
+_no_such_file_message = 'No such file'
+
 # The base URL under which try-it requests are relayed to the servers - the document's servers
 # entry points here, so the browser only ever talks to the console, never to the servers.
 _relay_url_base = '/openapi/console/relay'
+
+# The only method that the relay accepts from a signed-in caller
+_relay_method = 'POST'
+
+# The response header in which the browser receives the headers that the endpoint's REST channel would respond with,
+# as URL-encoded JSON, apart from the headers of the console's own response
+_relay_response_headers_name = 'X-Zato-Console-Response-Headers'
 
 # Maps rejection statuses from the reply stream to the HTTP status and message the browser receives
 _relay_rejections = {
     'unauthorized': (UNAUTHORIZED, _unauthorized_message),
     'not_found': (NOT_FOUND, 'Not found'),
     'error': (INTERNAL_SERVER_ERROR, 'The invocation could not be completed'),
+    'dropped': (BAD_GATEWAY, _no_server_message),
 }
 
 # Created lazily so that the console starts even when Redis is briefly unavailable
@@ -79,56 +104,59 @@ def _get_client() -> 'OpenAPIConsoleClient':
 
 # ################################################################################################################################
 
-def _is_signed_in(req):
-    """ Whether the session already carries an identity, of either kind.
+def _text_response(message:'str', status:'int') -> 'HttpResponse':
+    """ Returns a response whose body is the given message.
     """
-    if Session_Credentials_Key in req.session:
-        out = True
-    else:
-        out = Session_Entra_Key in req.session
+    content = message.encode('utf8')
 
+    out = HttpResponse(content, status=status)
     return out
 
 # ################################################################################################################################
 
-def login_view(req):
-    """ Renders the sign-in page and handles sign-in attempts. Credentials are validated by a Zato server
-    and, once accepted, stored encrypted in the session cookie. With Entra ID enabled, a GET may go
-    straight to Microsoft instead, the same way the Dashboard's login view does it.
+def _is_signed_in(req:'any_') -> 'bool':
+    """ Whether the session already has the caller's credentials.
     """
-    # Someone whose session already carries an identity has nothing to do on the sign-in page
+    out = Session_Credentials_Key in req.session
+    return out
+
+# ################################################################################################################################
+
+def login_view(req:'any_') -> 'any_':
+    """ Renders the sign-in page and handles sign-in attempts. Credentials are validated by a Zato server
+    and, once accepted, stored encrypted in the session cookie.
+    """
+    # Someone whose session already has credentials has nothing to do on the sign-in page
     if _is_signed_in(req):
         return redirect('console')
 
     context = get_branding_context()
-    context['entra_enabled'] = is_entra_enabled()
-
-    if req.method == 'GET':
-
-        # With Entra ID enabled, a GET goes to Microsoft when the person clicked the Microsoft button.
-        # The auth=built-in query parameter always keeps the plain form reachable so that sign-ins
-        # against security definitions keep working too - the two mechanisms coexist.
-        if is_entra_enabled():
-            if req.GET.get('auth') == AuthType.Entra:
-                authorize_url = get_authorize_url(req, '/openapi/console')
-                return redirect(authorize_url)
+    context['auth_type'] = ConsoleAuthType.Basic_Auth
+    context['auth_types'] = _auth_types
+    context['basic_auth_type'] = ConsoleAuthType.Basic_Auth
+    context['api_key_type'] = ConsoleAuthType.API_Key
+    context['bearer_token_type'] = ConsoleAuthType.Bearer_Token
 
     if req.method == 'POST':
-        username = req.POST['username']
-        password = req.POST['password']
+        auth_type = req.POST['auth_type']
+        context['auth_type'] = auth_type
 
-        # Ask a server to validate the credentials by building the caller's document ..
-        client = _get_client()
-        spec = client.get_spec({
-            'auth_type': OpenAPI_Console_Auth.Type_Credentials,
-            'username': username,
-            'password': password,
-        })
+        # Each auth type reads its own fields from the form ..
+        if build_credentials := _credential_builders.get(auth_type):
+            credentials = build_credentials(req.POST)
 
-        # .. a document means the credentials are valid and the session can be established ..
-        if spec is not None:
-            req.session[Session_Credentials_Key] = encrypt_credentials(username, password)
-            return redirect('console')
+            # .. a server verifies them and issues a session token for them ..
+            client = _get_client()
+            session_token = client.sign_in(credentials)
+
+            # .. which the session keeps in place of the credentials, together with what the header shows ..
+            if session_token is not None:
+                req.session[Session_Credentials_Key] = encrypt_credentials({
+                    'auth_type': credentials['auth_type'],
+                    'username': credentials['username'],
+                    'session_token': session_token,
+                })
+                return redirect('console')
 
         # .. otherwise, show the sign-in page again with an error message.
         context['error'] = _invalid_credentials_message
@@ -137,33 +165,55 @@ def login_view(req):
 
 # ################################################################################################################################
 
-def login_callback_view(req):
-    """ Completes an Entra ID sign-in - the identity confirmed by Microsoft is stored encrypted
-    in the session cookie.
+def _build_basic_auth_credentials(form:'any_') -> 'stranydict':
+    """ Returns the credentials of a username and password sign-in.
     """
-    # A callback that arrives for a session which already carries an identity changes nothing
-    if _is_signed_in(req):
-        return redirect('console')
+    out = {
+        'auth_type': ConsoleAuthType.Basic_Auth,
+        'username': form['username'],
+        'password': form['password'],
+    }
 
-    context = get_branding_context()
-    context['entra_enabled'] = is_entra_enabled()
-
-    try:
-        username, _display_name, _next_path = complete_auth_code_flow(req)
-    except EntraAuthError as e:
-        logger.warning('Entra ID sign-in error -> `%s`', e.args[0])
-        context['error'] = e.args[0]
-        return render(req, 'login.html', context)
-
-    req.session[Session_Entra_Key] = encrypt_entra_identity(username)
-
-    logger.info('User `%s` signed in to the console through Entra ID', username)
-
-    return redirect('console')
+    return out
 
 # ################################################################################################################################
 
-def logout_view(req):
+def _build_api_key_credentials(form:'any_') -> 'stranydict':
+    """ Returns the credentials of an API key sign-in - the key is the only secret and there is no username.
+    """
+    out = {
+        'auth_type': ConsoleAuthType.API_Key,
+        'username': '',
+        'password': form['key'],
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _build_bearer_token_credentials(form:'any_') -> 'stranydict':
+    """ Returns the credentials of a bearer token sign-in - the token is the only secret and there is no username.
+    """
+    out = {
+        'auth_type': ConsoleAuthType.Bearer_Token,
+        'username': '',
+        'password': form['token'],
+    }
+
+    return out
+
+# ################################################################################################################################
+
+# Maps each auth type of the sign-in form to the function that reads its fields
+_credential_builders = {
+    ConsoleAuthType.Basic_Auth: _build_basic_auth_credentials,
+    ConsoleAuthType.API_Key: _build_api_key_credentials,
+    ConsoleAuthType.Bearer_Token: _build_bearer_token_credentials,
+}
+
+# ################################################################################################################################
+
+def logout_view(req:'any_') -> 'any_':
     """ Ends the session and returns to the sign-in page.
     """
     req.session.flush()
@@ -174,13 +224,25 @@ def logout_view(req):
 
 # ################################################################################################################################
 
-def console_view(req):
+def console_view(req:'any_') -> 'any_':
     """ Renders the console page - the actual document is loaded by the browser from the spec endpoint.
     """
-    if not _is_signed_in(req):
+    # A session without credentials that can be read signs in again ..
+    auth, error = _get_auth_or_error(req)
+    if error:
         return redirect('login')
 
+    # No error means the auth details are there, hence the cast
+    auth = cast_('anydict', auth)
+
+    # .. and the header shows who is signed in, which for an API key or a token is the kind of credentials only.
     context = get_branding_context()
+    auth_type = auth['auth_type']
+
+    if auth_type in _secret_only_identities:
+        context['identity'] = _secret_only_identities[auth_type]
+    else:
+        context['identity'] = auth['username']
 
     out = render(req, 'console.html', context)
 
@@ -188,50 +250,26 @@ def console_view(req):
 
 # ################################################################################################################################
 
-def _get_auth_or_error(req):
+def _get_auth_or_error(req:'any_') -> 'any_':
     """ Returns the signed-in caller's auth details and no error, or no details and an error response
-    when there is no valid session. The details carry either the credentials the person signed in with
-    or the identity that Entra ID confirmed.
+    when there is no valid session. The details are the auth type, the username and the session token that a server issued.
     """
-    # A credentials session takes what the person typed at the sign-in form ..
-    if token := req.session.get(Session_Credentials_Key):
+    # No session at all is unauthorized ..
+    if not (token := req.session.get(Session_Credentials_Key)):
+        return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
-        # The token becomes invalid when the console is restarted, in which case the user signs in again
-        credentials = decrypt_credentials(token)
-        if not credentials:
-            req.session.flush()
-            return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+    # .. the token becomes invalid when the console is restarted, in which case the user signs in again ..
+    auth = decrypt_credentials(token)
+    if not auth:
+        req.session.flush()
+        return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
-        username, password = credentials
-
-        auth = {
-            'auth_type': OpenAPI_Console_Auth.Type_Credentials,
-            'username': username,
-            'password': password,
-        }
-        return auth, None
-
-    # .. an Entra ID session carries the identity Microsoft confirmed instead ..
-    if token := req.session.get(Session_Entra_Key):
-
-        username = decrypt_entra_identity(token)
-        if not username:
-            req.session.flush()
-            return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
-
-        auth = {
-            'auth_type': OpenAPI_Console_Auth.Type_Entra,
-            'username': username,
-            'password': '',
-        }
-        return auth, None
-
-    # .. and no session at all is unauthorized.
-    return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+    # .. and the session has what the server issued at sign-in.
+    return auth, None
 
 # ################################################################################################################################
 
-def _get_spec_or_error(req):
+def _get_spec_or_error(req:'any_') -> 'any_':
     """ Returns the signed-in caller's filtered document and no error, or no document and an error response
     when the session or the credentials are not valid.
     """
@@ -243,10 +281,10 @@ def _get_spec_or_error(req):
     auth = cast_('anydict', auth)
 
     client = _get_client()
-    spec = client.get_spec(auth)
+    spec = client.get_spec(auth['session_token'])
 
     if spec is None:
-        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+        return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
     # Try-it requests go through the console's relay, never directly to the servers
     spec['servers'] = [{'url': _relay_url_base}]
@@ -255,7 +293,7 @@ def _get_spec_or_error(req):
 
 # ################################################################################################################################
 
-def spec_view(req):
+def spec_view(req:'any_') -> 'any_':
     """ Serves the OpenAPI document filtered down to what the signed-in user's credentials give access to.
     The filtering happens on Zato servers - the document never contains endpoints the caller cannot invoke.
     """
@@ -269,7 +307,7 @@ def spec_view(req):
 
 # ################################################################################################################################
 
-def spec_yaml_view(req):
+def spec_yaml_view(req:'any_') -> 'any_':
     """ Serves the same per-caller filtered OpenAPI document as the JSON view, rendered as YAML.
     """
     spec, error = _get_spec_or_error(req)
@@ -277,15 +315,15 @@ def spec_yaml_view(req):
         return error
 
     document = yaml.dump(spec, sort_keys=False, allow_unicode=True)
+    content = document.encode('utf8')
 
-    out = HttpResponse(document, content_type='application/yaml')
+    out = HttpResponse(content, content_type='application/yaml')
 
     return out
 
 # ################################################################################################################################
 
-@csrf_exempt
-def relay_view(req, relay_path):
+def relay_view(req:'any_') -> 'any_':
     """ Relays a try-it invocation to the servers over Redis Streams and returns the response,
     so the browser only ever talks to the console. The target service is invoked with the signed-in
     user's own credentials and only if those credentials give access to the endpoint.
@@ -294,39 +332,54 @@ def relay_view(req, relay_path):
     if error:
         return error
 
+    # A caller without a session receives the same rejection whatever the method, and a signed-in one relays with POST only
+    if req.method != _relay_method:
+        out = HttpResponseNotAllowed([_relay_method])
+        return out
+
     # No error means the auth details are there, hence the cast
     auth = cast_('anydict', auth)
 
-    # The relay path arrives without its leading slash, which channels always have
-    url_path = '/' + relay_path
+    # The browser sends the request as one JSON document, with the path as typed and the caller's own headers
+    # apart from those it adds itself ..
+    envelope = json_loads(req.body)
+    url_path = envelope['path']
 
-    body = req.body.decode('utf-8')
-    query_string = req.META['QUERY_STRING']
+    # .. and a request with no body has none in the document either.
+    body = envelope['body']
+
+    if body is None:
+        body = ''
+
+    headers = json_dumps(envelope['headers'])
+    remote_addr = client_address(req)
 
     client = _get_client()
-    reply = client.invoke(auth, req.method, url_path, query_string, body)
+    reply = client.invoke(auth['session_token'], envelope['method'], url_path, envelope['query'], headers, body, remote_addr)
 
     # No reply means no server was available in time
     if reply is None:
-        return HttpResponse(_no_server_message, status=BAD_GATEWAY)
+        return _text_response(_no_server_message, BAD_GATEWAY)
 
     status = reply['status']
 
-    # A successful invocation passes the service's response through ..
+    # A successful invocation passes the service's response through, with the headers its REST channel would send ..
     if status == 'ok':
         http_status = int(reply['http_status'])
-        out = HttpResponse(reply['data'], status=http_status, content_type=reply['content_type'])
+        content = b64decode(reply['data'])
+        out = HttpResponse(content, status=http_status, content_type=reply['content_type'])
+        out[_relay_response_headers_name] = quote(reply['headers'])
 
     # .. anything else maps to one of the known rejections.
     else:
         http_status, message = _relay_rejections[status]
-        out = HttpResponse(message, status=http_status)
+        out = _text_response(message, http_status)
 
     return out
 
 # ################################################################################################################################
 
-def favicon_view(req):
+def favicon_view(req:'any_') -> 'any_':
     """ Answers the icon request browsers make at the root path on their own, with whichever
     icon the console is branded with.
     """
@@ -336,17 +389,31 @@ def favicon_view(req):
 
 # ################################################################################################################################
 
-def branding_view(req, file_name):
+def branding_view(req:'any_', file_name:'str') -> 'any_':
     """ Serves a user-provided branding file from the well-known branding directory.
     """
     full_path = get_branding_file_path(file_name)
 
     if not full_path:
-        return HttpResponse('No such file', status=NOT_FOUND)
+        return _text_response(_no_such_file_message, NOT_FOUND)
 
     content_type = Branding_Files[file_name]
 
     out = FileResponse(open(full_path, 'rb'), content_type=content_type)
+
+    return out
+
+# ################################################################################################################################
+
+def logo_view(req:'any_') -> 'any_':
+    """ Serves the custom logo file that the environment points to.
+    """
+    if not (logo_path := get_logo_file()):
+        return _text_response(_no_such_file_message, NOT_FOUND)
+
+    content_type = get_logo_content_type(logo_path)
+
+    out = FileResponse(open(logo_path, 'rb'), content_type=content_type)
 
     return out
 

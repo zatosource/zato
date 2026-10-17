@@ -41,7 +41,7 @@ class OutgoingRESTExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'outgoing_rest_def_list':
+    def export(self, session: 'SASession') -> 'outgoing_rest_def_list':
         """ Exports outgoing REST connection definitions.
         """
         logger.info('Exporting outgoing REST connection definitions')
@@ -49,7 +49,6 @@ class OutgoingRESTExporter:
         # Get outgoing REST connections from database
         db_outgoing = http_soap_list(
             session,
-            cluster_id,
             connection=CONNECTION.OUTGOING,
             transport=URL_TYPE.PLAIN_HTTP,
             return_internal=False,

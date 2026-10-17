@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 # Every runtime field an MCP gateway stores - the same list the importer declares defaults for,
 # so what one environment exports another can import without losing a single option.
-GATEWAY_OPTIONAL_FIELDS = [
+Gateway_Optional_Fields = [
 
     # Routing and security
     'url_path', 'services', 'security_groups', 'is_audit_log_active',
@@ -68,6 +68,13 @@ GATEWAY_OPTIONAL_FIELDS = [
     'safeguards_pii_enabled', 'safeguards_pii_lands', 'safeguards_pii_detectors', 'safeguards_pii_exclude',
     'safeguards_pii_validate', 'safeguards_pii_stable_replacements',
 
+    # Data masking
+    'safeguards_masking_sets', 'safeguards_masking_excluded', 'safeguards_masking_custom_fields',
+    'safeguards_masking_custom_enabled',
+
+    # Hook services
+    'request_hook_service', 'response_hook_service',
+
     # Secrets removal
     'safeguards_secrets_enabled',
 
@@ -79,7 +86,7 @@ GATEWAY_OPTIONAL_FIELDS = [
     *MCP.Connection_List_Keys,
 ]
 
-GATEWAY_OPAQUE_FIELDS = list(GATEWAY_OPTIONAL_FIELDS)
+Gateway_Opaque_Fields = list(Gateway_Optional_Fields)
 
 # The documented default of each field - a stored value equal to its default is not exported.
 _field_defaults = GatewayMCPImporter.connection_extra_field_defaults
@@ -98,8 +105,8 @@ class GatewayMCPExporter:
 
 # ################################################################################################################################
 
-    def _load_security_groups(self, session:'SASession', cluster_id:'int') -> 'None':
-        """ Loads the security groups of the cluster and builds an id-to-name mapping,
+    def _load_security_groups(self, session:'SASession') -> 'None':
+        """ Loads the security groups and builds an id-to-name mapping,
         so gateways created through the dashboard, which stores ids, export names too.
         """
         self.group_id_to_name = {}
@@ -112,7 +119,6 @@ class GatewayMCPExporter:
         ]).where(and_(
             GenericObject.type_ == Groups.Type.Group_Parent,
             GenericObject.subtype == Groups.Type.API_Clients,
-            GenericObject.cluster_id == cluster_id,
         ))
 
         groups = session.execute(query).fetchall()
@@ -146,15 +152,15 @@ class GatewayMCPExporter:
 
 # ################################################################################################################################
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'mcp_def_list':
+    def export(self, session: 'SASession') -> 'mcp_def_list':
         """ Exports MCP gateway definitions.
         """
         logger.info('Exporting MCP gateway definitions')
 
         # Load security groups for the id-to-name conversion
-        self._load_security_groups(session, cluster_id)
+        self._load_security_groups(session)
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.GATEWAY_MCP)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.GATEWAY_MCP)
 
         if not db_items:
             logger.info('No MCP gateway definitions found in DB')
@@ -179,7 +185,7 @@ class GatewayMCPExporter:
             # A field is exported whenever the row carries a value other than the field's
             # documented default - an explicit False against a True default survives that way,
             # while fields left at their defaults stay out of the export.
-            for field in GATEWAY_OPTIONAL_FIELDS:
+            for field in Gateway_Optional_Fields:
 
                 if field not in row:
                     continue

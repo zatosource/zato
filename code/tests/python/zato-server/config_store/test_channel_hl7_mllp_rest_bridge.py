@@ -33,7 +33,7 @@ def client(zato_server:'dict') -> 'ZatoClient':
 def _find_channel_by_name(client:'ZatoClient', name:'str') -> 'dict':
     """ Returns the first MLLP channel matching the given name from the get-list response.
     """
-    data, _ = client.get_list(f'{_GENERIC_SERVICE}.get-list', cluster_id=1, type_=_TYPE)
+    data, _ = client.get_list(f'{_GENERIC_SERVICE}.get-list', type_=_TYPE)
 
     for item in data:
         if item['name'] == name:
@@ -58,7 +58,6 @@ class TestMLLPRestBridgePersistence:
         """
 
         resp = client.create(f'{_GENERIC_SERVICE}.create',
-            cluster_id=1,
             name='test-persist-rest-bridge',
             type_=_TYPE,
             is_active=True,
@@ -97,7 +96,6 @@ class TestMLLPRestBridgePersistence:
 
         resp = client.edit(f'{_GENERIC_SERVICE}.edit',
             id=self.__class__.mllp_id,
-            cluster_id=1,
             name='test-persist-rest-bridge',
             type_=_TYPE,
             is_active=True,
@@ -135,7 +133,6 @@ class TestMLLPRestBridgePersistence:
 
         resp = client.edit(f'{_GENERIC_SERVICE}.edit',
             id=self.__class__.mllp_id,
-            cluster_id=1,
             name='test-persist-rest-bridge',
             type_=_TYPE,
             is_active=True,
@@ -177,7 +174,7 @@ class TestMLLPRestBridgePersistence:
     def test_08_verify_deleted(self, client:'ZatoClient') -> 'None':
         """ Verifies the channel no longer appears in the list.
         """
-        data, _ = client.get_list(f'{_GENERIC_SERVICE}.get-list', cluster_id=1, type_=_TYPE)
+        data, _ = client.get_list(f'{_GENERIC_SERVICE}.get-list', type_=_TYPE)
         names = [item['name'] for item in data]
         assert 'test-persist-rest-bridge' not in names
 

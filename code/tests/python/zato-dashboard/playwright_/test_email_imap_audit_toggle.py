@@ -43,7 +43,7 @@ from rest_channel import create_channel, deploy_service_file, invoke_until_statu
 
 _Test_Name_Prefix = 'test.imap.audit.toggle.' + rand_string() + '.'
 
-_IMAP_Page_Url = '/zato/email/imap/?cluster=1'
+_IMAP_Page_Url = '/zato/email/imap/'
 
 _Audit_Source = 'email-imap'
 

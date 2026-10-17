@@ -27,7 +27,6 @@ from zato.common.alerting.explain.settings_info import Label_Alerts, On
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
-from zato.common.defaults import default_cluster_id
 from zato.common.soap.common import FaultCode
 from zato.common.test.client import AdminClient
 
@@ -321,7 +320,7 @@ def _get_stored_fault_explanations() -> 'anylist':
     path = os.path.join(os.path.dirname(LiveServer.server_directory), 'zato.db')
     session_maker = sessionmaker(bind=create_engine(f'sqlite:///{path}'))
 
-    store = ExplanationStore(session_maker, default_cluster_id)
+    store = ExplanationStore(session_maker)
 
     # Our response to produce
     out:'anylist' = []

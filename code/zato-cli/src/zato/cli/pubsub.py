@@ -186,7 +186,7 @@ Examples:
             sub_keys = []
 
         # .. always fetch subscription list to get security names ..
-        response = client.invoke('zato.pubsub.subscription.get-list', {'cluster_id': 1})
+        response = client.invoke('zato.pubsub.subscription.get-list', {})
         if not response.ok:
             self._print_error(f'Failed to list subscriptions: {response.details}')
             return

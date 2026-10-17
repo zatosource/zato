@@ -21,23 +21,20 @@ import threading
 import socket
 import sys
 from ast import literal_eval
-from base64 import b64decode
 from binascii import hexlify as binascii_hexlify
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from getpass import getuser as getpass_getuser
 from glob import glob
-from inspect import isfunction, ismethod
-from itertools import tee, zip_longest
+from inspect import isfunction
+from itertools import tee
 from io import StringIO
 from logging.config import dictConfig
-from operator import itemgetter
 from os.path import abspath, isabs, join
 from pathlib import Path
 from pprint import pprint as _pprint, PrettyPrinter
 from string import Template
-from subprocess import Popen, PIPE
 from tempfile import gettempdir
 from threading import current_thread
 from time import sleep
@@ -84,45 +81,40 @@ import requests
 # YAML
 import yaml
 
-# Python 2/3 compatibility
-from builtins import bytes
-from zato.common.ext.future.utils import iteritems, raise_
-from zato.common.py23_.past.builtins import basestring, cmp, reduce, unicode
-from six import PY3
-from six.moves.urllib.parse import urlparse
-from zato.common.py23_ import ifilter, izip
-
-if PY3:
-    from functools import cmp_to_key
-
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_snowflake, engine_def_sqlite, MISC, \
-     Secret_Shadow, IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
+     Secret_Shadow, TRACE1, zato_no_op_marker
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
-from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
+from zato.common.odb.model import HTTPBasicAuth
 from zato.common.util.config import enrich_config_from_environment
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
-from zato.common.util.open_ import open_r, open_w
+from zato.common.util.open_ import open_r
 from zato.common.util.snowflake import new_snowflake
+from zato.common.typing_ import cast_
 from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
+    from importlib.abc import Loader
+    from importlib.machinery import ModuleSpec
     from typing import Iterable as iterable
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strdict, strlist, strlistnone, strnone, \
-        strset
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, byteslist, callable_, intnone, strbytes, strdict, \
+        stranydict, strlist, strlistnone, strnone, strset, strtuple
+    anytuple = anytuple
     callable_ = callable_
     iterable = iterable
+    Loader = Loader
+    ModuleSpec = ModuleSpec
     strlistnone = strlistnone
     strnone = strnone
 
@@ -162,15 +154,11 @@ _data_format_json_like = DATA_FORMAT.JSON, DATA_FORMAT.DICT
 # ################################################################################################################################
 
 # Kept here for backward compatibility
+fs_safe_name = fs_safe_name
 get_free_port = get_free_port
 is_port_taken = is_port_taken
 wait_until_port_free = wait_until_port_free
 wait_until_port_taken = wait_until_port_taken
-
-# ################################################################################################################################
-
-class ModuleCtx:
-    PID_To_Port_Pattern = 'zato-ipc-port-{cluster_name}-{server_name}-{pid}.txt'
 
 # ################################################################################################################################
 
@@ -189,7 +177,7 @@ TLS_KEY_TYPE = {
 
 # ################################################################################################################################
 
-def is_encrypted(data:'str | bytes') -> 'bool':
+def is_encrypted(data:'any_') -> 'bool':
 
     # Zato
     from zato.common.const import SECRETS
@@ -204,12 +192,12 @@ def is_encrypted(data:'str | bytes') -> 'bool':
 
 # ################################################################################################################################
 
-def is_method(class_, func=isfunction if PY3 else ismethod):
+def is_method(class_:'any_', func:'callable_'=isfunction) -> 'bool':
     return func(class_)
 
 # ################################################################################################################################
 
-def absjoin(base, path):
+def absjoin(base:'str', path:'str') -> 'str':
     """ Turns a path into an absolute path if it's relative to the base location. If the path is already an absolute path,
     it is returned as-is.
     """
@@ -220,7 +208,7 @@ def absjoin(base, path):
 
 # ################################################################################################################################
 
-def absolutize(path, base=''):
+def absolutize(path:'str', base:'str'='') -> 'str':
     """ Turns a relative path into an absolute one or returns it as is if it's already absolute.
     """
     if not isabs(path):
@@ -233,17 +221,17 @@ def absolutize(path, base=''):
 
 # ################################################################################################################################
 
-def current_host():
+def current_host() -> 'str':
     return _current_host
 
 # ################################################################################################################################
 
-def current_user(_getpass_getuser=getpass_getuser):
+def current_user(_getpass_getuser:'callable_'=getpass_getuser) -> 'str':
     return _getpass_getuser()
 
 # ################################################################################################################################
 
-def pprint(obj):
+def pprint(obj:'any_') -> 'str':
     """ Pretty-print an object into a string buffer.
     """
     # Get dicts' items.
@@ -260,27 +248,36 @@ def pprint(obj):
 
 # ################################################################################################################################
 
-def get_zato_command():
+def get_zato_command() -> 'str':
     """ Returns the full path to the 'zato' command' in a buildout environment.
     """
     return os.path.join(os.path.dirname(sys.executable), 'zato')
 
 # ################################################################################################################################
 
-def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
-    attrs = dir(_object)
+def object_attrs(_object:'any_', ignore_double_underscore:'bool', to_avoid_list:'str', sort:'bool') -> 'strlist':
 
-    if ignore_double_underscore:
-        attrs = ifilter(lambda elem: not elem.startswith('__'), attrs)
+    out:'strlist' = []
 
-    _to_avoid_list = getattr(_object, to_avoid_list, None) # Don't swallow exceptions
-    if _to_avoid_list is not None:
-        attrs = ifilter(lambda elem: elem not in _to_avoid_list, attrs)
+    # Names of attributes the object asks to be left out
+    _to_avoid_list = getattr(_object, to_avoid_list, None)
+
+    for attr in dir(_object):
+
+        if ignore_double_underscore:
+            if attr.startswith('__'):
+                continue
+
+        if _to_avoid_list is not None:
+            if attr in _to_avoid_list:
+                continue
+
+        out.append(attr)
 
     if sort:
-        attrs = sorted(attrs)
+        out.sort()
 
-    return attrs
+    return out
 
 # ################################################################################################################################
 
@@ -296,7 +293,7 @@ def pluralize(count:'int', singular:'str') -> 'str':
 
 # ################################################################################################################################
 
-def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avoid', sort=True):
+def make_repr(_object:'any_', ignore_double_underscore:'bool'=True, to_avoid_list:'str'='repr_to_avoid', sort:'bool'=True) -> 'str':
     """ Makes a nice string representation of an object, suitable for logging purposes.
     """
     attrs = object_attrs(_object, ignore_double_underscore, to_avoid_list, sort)
@@ -310,20 +307,6 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avo
     out = _repr_template.safe_substitute(
         class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
     buff.close()
-
-    return out
-
-# ################################################################################################################################
-
-def to_form(_object):
-    """ Reads public attributes of an object and creates a dictionary out of it;
-    handy for providing initial data to a Django form which isn't backed by
-    a true Django model.
-    """
-    out = {}
-    attrs = object_attrs(_object, True, 'repr_to_avoid', False)
-    for attr in attrs:
-        out[attr] = getattr(_object, attr)
 
     return out
 
@@ -414,7 +397,7 @@ def convert_config_values(config:'Bunch') -> 'Bunch':
     for key in config:
         value = config[key]
         if isinstance(value, Bunch):
-            convert_config_values(value)
+            _ = convert_config_values(value)
         elif isinstance(value, str):
             config[key] = parse_simple_type(value)
         elif isinstance(value, list):
@@ -427,61 +410,62 @@ def convert_config_values(config:'Bunch') -> 'Bunch':
 
 def _get_config(
     *,
-    conf, # type: ConfigObj
-    config_name, # type: str
-    bunchified, # type: bool
-    needs_user_config, # type: bool
-    repo_location=None # type: strnone
-) -> 'Bunch | ConfigObj':
+    conf:'ConfigObj',
+    config_name:'str',
+    bunchified:'bool',
+    needs_user_config:'bool',
+    repo_location:'str'='',
+    ) -> 'any_':
 
-    conf = bunchify(conf) if bunchified else conf # type: ignore
+    out:'any_' = conf
 
     if bunchified:
-        conf = convert_config_values(conf)
+        out = bunchify(conf)
+        out = convert_config_values(out)
 
     if needs_user_config:
-        conf.user_config_items = {} # type: ignore
+        out.user_config_items = {}
 
-        user_config = conf.get('user_config')
+        user_config = out.get('user_config')
         if user_config:
-            for name, path in user_config.items(): # type: ignore
+            for name, path in user_config.items():
                 path = absolutize(path, repo_location)
                 if not os.path.exists(path):
                     logger.warning('User config not found `%s`, name:`%s`', path, name)
                 else:
-                    user_conf = ConfigObj(path)
-                    user_conf = bunchify(user_conf) if bunchified else user_conf
+                    user_conf:'any_' = ConfigObj(path)
                     if bunchified:
+                        user_conf = bunchify(user_conf)
                         user_conf = convert_config_values(user_conf)
-                    conf.user_config_items[name] = user_conf # type: ignore
+                    out.user_config_items[name] = user_conf
 
     # At this point, we have a Bunch instance that contains
     # the contents of the file. Now, we need to enrich it
     # with values that may be potentially found in the environment.
-    if isinstance(conf, Bunch):
-        conf = enrich_config_from_environment(config_name, conf) # type: ignore
+    if isinstance(out, Bunch):
+        out = enrich_config_from_environment(config_name, out)
 
-    return conf # type: ignore
+    return out
 
 # ################################################################################################################################
 
 def get_config(
-    repo_location,   # type: str
-    config_name,     # type: str
-    bunchified=True, # type: bool
-    needs_user_config=True, # type: bool
-    crypto_manager=None,    # type: CryptoManager | None
-    secrets_conf=None,      # type: any_
-    raise_on_error=False,   # type: bool
-    log_exception=True,     # type: bool
-    require_exists=True,    # type: bool
-    conf_location=None      # type: strnone
-) -> 'Bunch | ConfigObj':
+    repo_location:'str',
+    config_name:'str',
+    bunchified:'bool'=True,
+    needs_user_config:'bool'=True,
+    crypto_manager:'CryptoManager | None'=None,
+    secrets_conf:'any_'=None,
+    raise_on_error:'bool'=False,
+    log_exception:'bool'=True,
+    require_exists:'bool'=True,
+    conf_location:'strnone'=None
+    ) -> 'any_':
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
 
     # Default output to produce
-    result = Bunch()
+    result:'any_' = Bunch()
 
     try:
         if not conf_location:
@@ -513,8 +497,8 @@ def get_config(
 
 # ################################################################################################################################
 
-def get_config_from_file(conf_location, config_name):
-    return get_config(repo_location=None, config_name=config_name, conf_location=conf_location)
+def get_config_from_file(conf_location:'str', config_name:'str') -> 'any_':
+    return get_config(repo_location='', config_name=config_name, conf_location=conf_location)
 
 # ################################################################################################################################
 
@@ -530,7 +514,7 @@ def set_up_logging(repo_location:'str') -> 'None':
 
 # ################################################################################################################################
 
-def get_config_from_string(data):
+def get_config_from_string(data:'str') -> 'any_':
     """ A simplified version of get_config which creates a config object from string, skipping any user-defined config files.
     """
     buff = StringIO()
@@ -545,12 +529,12 @@ def get_config_from_string(data):
 
 # ################################################################################################################################
 
-def get_current_user():
+def get_current_user() -> 'str':
     return _current_user
 
 # ################################################################################################################################
 
-def service_name_from_impl(impl_name):
+def service_name_from_impl(impl_name:'str') -> 'str':
     """ Turns a Zato internal service's implementation name into a shorter
     service name
     """
@@ -558,7 +542,15 @@ def service_name_from_impl(impl_name):
 
 # ################################################################################################################################
 
-def deployment_info(method, object_, timestamp, fs_location, remote_host='', remote_user='', should_deploy_in_place=False):
+def deployment_info(
+    method:'str',
+    object_:'any_',
+    timestamp:'str',
+    fs_location:'str',
+    remote_host:'str'='',
+    remote_user:'str'='',
+    should_deploy_in_place:'bool'=False
+    ) -> 'stranydict':
     """ Returns a JSON document containing information who deployed a service
     onto a server, where from and when it was.
     """
@@ -576,23 +568,17 @@ def deployment_info(method, object_, timestamp, fs_location, remote_host='', rem
 
 # ################################################################################################################################
 
-def get_body_payload(body):
-    body_children_count = body[0].countchildren()
-
-    if body_children_count == 0:
-        body_payload = None
-    elif body_children_count == 1:
-        body_payload = body[0].getchildren()[0]
-    else:
-        body_payload = body[0].getchildren()
-
-    return body_payload
-
-# ################################################################################################################################
-
-def payload_from_request(json_parser, cid, request, data_format, transport, channel_item=None):
+def payload_from_request(
+    json_parser:'any_',
+    cid:'str',
+    request:'any_',
+    data_format:'strnone',
+    transport:'strnone',
+    channel_item:'any_'=None
+    ) -> 'any_':
     """ Converts a raw request to a payload suitable for usage with I/O.
     """
+    payload:'any_'
 
     # No request at all is the same as an empty one, so services always see '' and never None
     if request is None:
@@ -607,13 +593,14 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
         if not request:
             return ''
 
-        if isinstance(request, basestring) and data_format == _data_format_json:
+        if isinstance(request, (str, bytes)) and data_format == _data_format_json:
             try:
                 request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
+                # Text that is not JSON is the payload as received, a str stays a str and bytes stay bytes
                 try:
                     payload = json_parser.parse(request_bytes)
                 except ValueError:
-                    payload = request_bytes
+                    payload = request
                 if hasattr(payload, 'as_dict'):
                     payload = payload.as_dict()
             except ValueError:
@@ -640,7 +627,7 @@ ARCHIVE_EXTENSIONS = (ZIP_EXTENSIONS + BZ2_EXTENSIONS + TAR_EXTENSIONS + XZ_EXTE
 
 # ################################################################################################################################
 
-def splitext(path):
+def splitext(path:'str') -> 'strtuple':
     """Like os.path.splitext, but take off .tar too"""
     base, ext = os.path.splitext(path)
     if base.lower().endswith('.tar'):
@@ -650,7 +637,7 @@ def splitext(path):
 
 # ################################################################################################################################
 
-def is_archive_file(name):
+def is_archive_file(name:'str') -> 'bool':
     """Return True if `name` is a considered as an archive file."""
     ext = splitext(name)[1].lower()
     if ext in ARCHIVE_EXTENSIONS:
@@ -659,34 +646,26 @@ def is_archive_file(name):
 
 # ################################################################################################################################
 
-def is_python_file(name):
+def is_python_file(name:'str') -> 'bool':
     """ Is it a Python file we can import Zato services from?
     """
     for suffix in('py', 'pyw'):
         if name.endswith(suffix):
             return True
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _DummyLink:
-    """ A dummy class for staying consistent with pip's API in certain places
-    below.
-    """
-    def __init__(self, url):
-        self.url = url
+    return False
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleInfo:
-    def __init__(self, file_name, module):
+    def __init__(self, file_name:'str', module:'ModuleType') -> 'None':
         self.file_name = file_name
         self.module = module
 
 # ################################################################################################################################
 
-def import_module_from_path(file_name, base_dir=None):
+def import_module_from_path(file_name:'str', base_dir:'str'='') -> 'ModuleInfo':
 
     if not os.path.isabs(file_name):
         file_name = os.path.normpath(os.path.join(base_dir, file_name))
@@ -704,9 +683,13 @@ def import_module_from_path(file_name, base_dir=None):
             os.remove(path)
 
     spec = importlib.util.spec_from_file_location(mod_name, file_name)
+    spec = cast_('ModuleSpec', spec)
+
     mod = importlib.util.module_from_spec(spec)
     sys.modules[mod_name] = mod
-    spec.loader.exec_module(mod)
+
+    loader = cast_('Loader', spec.loader)
+    loader.exec_module(mod)
 
     return ModuleInfo(file_name, mod)
 
@@ -754,14 +737,21 @@ def visit_py_source(
 
 # ################################################################################################################################
 
-def _os_remove(path):
+def _os_remove(path:'str') -> 'None':
     """ A helper function so it's easier to mock it in unittests.
     """
     return os.remove(path)
 
 # ################################################################################################################################
 
-def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True, should_deploy_in_place=False):
+def hot_deploy(
+    parallel_server:'any_',
+    file_name:'str',
+    path:'str',
+    delete_path:'bool'=True,
+    notify:'bool'=True,
+    should_deploy_in_place:'bool'=False
+    ) -> 'any_':
     """ Hot-deploys a package if it looks like a Python module or archive.
     """
     logger.debug('About to hot-deploy `%s`', path)
@@ -783,45 +773,17 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True, 
 
 # ################################################################################################################################
 
-# As taken from http://wiki.python.org/moin/SortingListsOfDictionaries
-def multikeysort(items, columns):
-    comparers = [((itemgetter(col[1:].strip()), -1) if col.startswith('-') else (itemgetter(col.strip()), 1)) for col in columns]
-
-    def comparer(left, right):
-        for fn, mult in comparers:
-            result = cmp(fn(left), fn(right))
-            if result:
-                return mult * result
-        else:
-            return 0
-
-    if PY3:
-        return sorted(items, key=cmp_to_key(comparer))
-    else:
-        return sorted(items, cmp=comparer)
-
-# ################################################################################################################################
-
 # From http://docs.python.org/release/2.7/library/itertools.html#recipes
-def grouper(n, iterable, fillvalue=None) -> 'any_':
-    """ grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx
-    """
-    args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=fillvalue)
-
-# ################################################################################################################################
-
-# From http://docs.python.org/release/2.7/library/itertools.html#recipes
-def pairwise(iterable):
+def pairwise(iterable:'any_') -> 'any_':
     """ s -> (s0,s1), (s1,s2), (s2, s3), ...
     """
     a, b = tee(iterable)
-    next(b, None)
-    return izip(a, b)
+    _ = next(b, None)
+    return zip(a, b)
 
 # ################################################################################################################################
 
-def from_local_to_utc(dt, tz_name, dayfirst=True):
+def from_local_to_utc(dt:'any_', tz_name:'str', dayfirst:'bool'=True) -> 'datetime':
     """ What is the UTC time given the local time and the timezone's name?
     """
     if not isinstance(dt, datetime):
@@ -833,7 +795,7 @@ def from_local_to_utc(dt, tz_name, dayfirst=True):
 
 # ################################################################################################################################
 
-def from_utc_to_local(dt, tz_name):
+def from_utc_to_local(dt:'any_', tz_name:'str') -> 'datetime':
     """ What is the local time in the user-provided time zone name?
     """
     if not isinstance(dt, datetime):
@@ -845,14 +807,14 @@ def from_utc_to_local(dt, tz_name):
 
 # ################################################################################################################################
 
-def _now(tz):
+def _now(tz:'any_') -> 'datetime':
     """ See zato.common.util.utcnow for docstring.
     """
     return datetime.now(tz)
 
 # ################################################################################################################################
 
-def now(tz=None):
+def now(tz:'any_'=None) -> 'datetime':
     """ A thin wrapper around datetime.now added so that tests can mock it
     out and return their own timestamps at will.
     """
@@ -860,15 +822,8 @@ def now(tz=None):
 
 # ################################################################################################################################
 
-def datetime_to_seconds(dt):
-    """ Converts a datetime object to a number of seconds since UNIX epoch.
-    """
-    return (dt - _epoch).total_seconds()
-
-# ################################################################################################################################
-
 # Inspired by http://stackoverflow.com/a/9283563
-def uncamelify(s, separator='-', elem_func=unicode.lower):
+def uncamelify(s:'str', separator:'str'='-', elem_func:'callable_'=str.lower) -> 'str':
     """ Converts a CamelCaseName into a more readable one, e.g.
     will turn ILikeToReadWSDLDocsNotReallyNOPENotMeQ into
     i-like-to-read-wsdl-docs-not-really-nope-not-me-q or a similar one,
@@ -878,7 +833,7 @@ def uncamelify(s, separator='-', elem_func=unicode.lower):
 
 # ################################################################################################################################
 
-def get_component_name(prefix='parallel'):
+def get_component_name(prefix:'str'='parallel') -> 'str':
     """ Returns a name of the component issuing a given request so it's possible
     to trace which Zato component issued it.
     """
@@ -886,29 +841,11 @@ def get_component_name(prefix='parallel'):
 
 # ################################################################################################################################
 
-def dotted_getattr(o, path):
-    return reduce(getattr, path.split('.'), o)
-
-# ################################################################################################################################
-
-def hexlify(item, _hexlify=binascii_hexlify):
+def hexlify(item:'strbytes', _hexlify:'callable_'=binascii_hexlify) -> 'str':
     """ Returns a nice hex version of a string given on input.
     """
-    item = item if isinstance(item, unicode) else item.decode('utf8')
+    item = item if isinstance(item, str) else item.decode('utf8')
     return ' '.join(hex(ord(elem)) for elem in item)
-
-# ################################################################################################################################
-
-def validate_input_dict(cid, *validation_info):
-    """ Checks that input belongs is one of allowed values.
-    """
-    for key_name, key, source in validation_info:
-        if not source.has(key):
-            msg = 'Invalid {}:[{}]'.format(key_name, key)
-            log_msg = '{} (attrs: {})'.format(msg, source.attrs)
-
-            logger.warning(log_msg)
-            raise ZatoException(cid, msg)
 
 # ################################################################################################################################
 
@@ -916,23 +853,23 @@ def validate_input_dict(cid, *validation_info):
 # under the terms of LGPL (see LICENSE.txt file for details).
 
 class SafePrettyPrinter(PrettyPrinter):
-    def format(self, obj, context, maxlevels, level):
+    def format(self, obj:'any_', context:'any_', maxlevels:'int', level:'int') -> 'any_':
         try:
             return super(SafePrettyPrinter, self).format(
                 obj, context, maxlevels, level)
         except Exception:
             return object.__repr__(obj)[:-1] + ' (bad repr)>', True, False
 
-def spformat(obj, depth=None):
+def spformat(obj:'any_', depth:'intnone'=None) -> 'str':
     return SafePrettyPrinter(indent=1, width=76, depth=depth).pformat(obj)
 
-def formatvalue(v):
+def formatvalue(v:'any_') -> 'str':
     s = spformat(v, depth=1).replace('\n', '')
     if len(s) > 12500:
         s = object.__repr__(v)[:-1] + ' (really long repr)>'
     return '=' + s
 
-def get_stack(f, with_locals=False):
+def get_stack(f:'any_', with_locals:'bool'=False) -> 'str':
     limit = getattr(sys, 'tracebacklimit', None)
 
     frames = []
@@ -976,11 +913,11 @@ def get_stack(f, with_locals=False):
 
 # ################################################################################################################################
 
-def get_threads_traceback(pid):
-    result = {}
+def get_threads_traceback(pid:'int') -> 'strdict':
+    result:'strdict' = {}
     id_name = {th.ident: th.name for th in threading.enumerate()}
 
-    for thread_id, frame in iteritems(sys._current_frames()):
+    for thread_id, frame in sys._current_frames().items():
         key = '{}:{}'.format(pid, id_name.get(thread_id, '(No name)'))
         result[key] = get_stack(frame, True)
 
@@ -988,8 +925,8 @@ def get_threads_traceback(pid):
 
 # ################################################################################################################################
 
-def get_greenlets_traceback(pid):
-    result = {}
+def get_greenlets_traceback(pid:'int') -> 'strdict':
+    result:'strdict' = {}
     for item in gc.get_objects():
         if not isinstance(item, (Greenlet, Hub)):
             continue
@@ -1003,27 +940,32 @@ def get_greenlets_traceback(pid):
 
 # ################################################################################################################################
 
-def dump_stacks(*ignored):
+def dump_stacks(*ignored:'any_') -> 'None':
     pid = os.getpid()
 
     table = Texttable()
-    table.set_cols_width((30, 90))
-    table.set_cols_dtype(['t', 't'])
+    _ = table.set_cols_width([30, 90])
+    _ = table.set_cols_dtype(['t', 't'])
 
-    rows = [['Proc:Thread/Greenlet', 'Traceback']]
+    rows:'anylist' = [['Proc:Thread/Greenlet', 'Traceback']]
 
-    rows.extend(sorted(iteritems(get_threads_traceback(pid))))
-    rows.extend(sorted(iteritems(get_greenlets_traceback(pid))))
+    threads_traceback = get_threads_traceback(pid)
+    greenlets_traceback = get_greenlets_traceback(pid)
 
-    table.add_rows(rows)
-    logger.info('\n' + table.draw())
+    rows.extend(sorted(threads_traceback.items()))
+    rows.extend(sorted(greenlets_traceback.items()))
+
+    _ = table.add_rows(rows)
+
+    table_text = table.draw()
+    logger.info('\n%s', table_text)
 
 # ################################################################################################################################
 
-def register_diag_handlers():
+def register_diag_handlers() -> 'None':
     """ Registers diagnostic handlers dumping stacks, threads and greenlets on receiving a signal.
     """
-    signal.signal(signal.SIGURG, dump_stacks)
+    _ = signal.signal(signal.SIGURG, dump_stacks)
 
 # ################################################################################################################################
 
@@ -1059,13 +1001,13 @@ def parse_literal_dict(value:'str') -> 'str | anydict':
 
 # ################################################################################################################################
 
-def parse_extra_into_dict(lines:'str | bytes', convert_bool:'bool'=True):
+def parse_extra_into_dict(lines:'str | bytes', convert_bool:'bool'=True) -> 'stranydict':
     """ Creates a dictionary out of key=value lines.
     """
     if isinstance(lines, bytes):
         lines = lines.decode('utf8')
 
-    _extra = {}
+    _extra:'stranydict' = {}
 
     if lines:
         extra = ';'.join(lines.splitlines())
@@ -1114,26 +1056,7 @@ def parse_job_extra(extra:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-# Taken from http://plumberjack.blogspot.cz/2009/09/how-to-treat-logger-like-output-stream.html
-
-class LoggerWriter:
-    def __init__(self, logger, level):
-        self.logger = logger
-        self.level = level
-
-    def write(self, message):
-        if message != '\n':
-            self.logger.log(self.level, message)
-
-# ################################################################################################################################
-
-def get_haproxy_agent_pidfile(component_dir):
-    json_config = loads(
-        open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf'), encoding='utf8').read()
-        )
-    return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
-
-def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
+def store_pidfile(component_dir:'str', pidfile:'str'=MISC.PIDFILE) -> 'None':
     from logging import getLogger
     logger = getLogger(__name__)
 
@@ -1145,14 +1068,14 @@ def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
 
     try:
         with open(pidfile_path, 'w', encoding='utf8') as f:
-            f.write('{}'.format(pid))
+            _ = f.write('{}'.format(pid))
         logger.info('store_pidfile: pidfile written successfully to {}'.format(pidfile_path))
     except Exception as e:
         logger.error('store_pidfile: failed to write pidfile: {}'.format(e))
 
 # ################################################################################################################################
 
-def ping_odoo(conn):
+def ping_odoo(conn:'any_') -> 'None':
     user_model = conn.get_model('res.users')
     ids = user_model.search([('login', '=', conn.login)])
     user_model.read(ids, ['login'])[0]['login']
@@ -1160,24 +1083,22 @@ def ping_odoo(conn):
 # ################################################################################################################################
 
 class StaticConfig(Bunch):
-    def __init__(self, base_dir):
-        # type: (str) -> None
+    def __init__(self, base_dir:'str') -> 'None':
         super(StaticConfig, self).__init__()
         self.base_dir = base_dir
 
-    def read_file(self, full_path, file_name):
-        # type: (str, str) -> None
+    def read_file(self, full_path:'str', file_name:'str') -> 'None':
         f = open(full_path, encoding='utf8')
         file_contents = f.read()
         f.close()
 
         # Convert to a Path object to prepare to manipulations ..
-        full_path = Path(full_path)
+        path = Path(full_path)
 
         # .. this is the path to the directory containing the file
         # relative to the base directory, e.g. the "config/repo/static" part
         # in "/home/zato/server1/config/repo/static" ..
-        relative_dir = Path(full_path.parent).relative_to(self.base_dir)
+        relative_dir = Path(path.parent).relative_to(self.base_dir)
 
         # .. now, convert all the components from relative_dir into a nested Bunch of Bunch instances ..
         relative_dir_elems = list(relative_dir.parts)
@@ -1206,8 +1127,8 @@ class StaticConfig(Bunch):
             if not relative_dir_elems:
                 _bunch[file_name] = file_contents
 
-    def read_directory(self, root_dir):
-        for elem in Path(root_dir).rglob('*'): # type: Path
+    def read_directory(self, root_dir:'str') -> 'None':
+        for elem in Path(root_dir).rglob('*'):
             full_path = str(elem)
             try:
                 if elem.is_file():
@@ -1217,102 +1138,40 @@ class StaticConfig(Bunch):
 
 # ################################################################################################################################
 
-def get_basic_auth_credentials(auth):
-
-    if not auth:
-        return None, None
-
-    prefix = 'Basic '
-    if not auth.startswith(prefix):
-        return None, None
-
-    _, auth = auth.split(prefix)
-    auth = b64decode(auth.strip())
-
-    return auth.split(':', 1)
+def get_engine(args:'any_') -> 'any_':
+    return sa.create_engine(get_engine_url(args))
 
 # ################################################################################################################################
 
-def get_http_json_channel(name, service, cluster, security):
-    return HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', None, '/zato/json/{}'.format(name),
-        None, '', None, IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
-
-# ################################################################################################################################
-
-def get_engine(args):
-
-    # Imported here to avoid circular imports
-    from zato.common.odb.ssl_config import get_ssl_connect_args
-
-    # SSL/TLS configuration built out of the odb_ssl_* attributes, if any were given on input
-    ssl_config = {
-        'ssl':           getattr(args, 'odb_ssl', ''),
-        'ssl_ca_file':   getattr(args, 'odb_ssl_ca_file', ''),
-        'ssl_cert_file': getattr(args, 'odb_ssl_cert_file', ''),
-        'ssl_key_file':  getattr(args, 'odb_ssl_key_file', ''),
-        'ssl_verify':    getattr(args, 'odb_ssl_verify', ''),
-    }
-    connect_args = get_ssl_connect_args(ssl_config, getattr(args, 'odb_type', ''))
-
-    return sa.create_engine(get_engine_url(args), connect_args=connect_args)
-
-# ################################################################################################################################
-
-def get_session(engine):
+def get_session(engine:'any_') -> 'any_':
     session = orm.sessionmaker() # noqa
     session.configure(bind=engine)
     return session()
 
 # ################################################################################################################################
 
-def get_crypto_manager_from_server_config(config, repo_dir):
-
-    priv_key_location = os.path.abspath(os.path.join(repo_dir, config.crypto.priv_key_location))
-
-    cm = CryptoManager(priv_key_location=priv_key_location)
-    cm.load_keys()
-
-    return cm
-
-# ################################################################################################################################
-
-def get_odb_session_from_server_config(config, cm, odb_password_encrypted):
+def get_odb_session_from_server_config(config:'any_') -> 'any_':
 
     engine_args = Bunch()
-    engine_args.odb_type = config.odb.engine
-    engine_args.odb_user = config.odb.username
-    engine_args.odb_host = config.odb.host
-    engine_args.odb_port = config.odb.port
-    engine_args.odb_db_name = config.odb.db_name
-
-    # SSL/TLS configuration - configurations written by older releases may not carry these keys at all.
-    engine_args.odb_ssl           = config.odb.get('ssl', '')
-    engine_args.odb_ssl_ca_file   = config.odb.get('ssl_ca_file', '')
-    engine_args.odb_ssl_cert_file = config.odb.get('ssl_cert_file', '')
-    engine_args.odb_ssl_key_file  = config.odb.get('ssl_key_file', '')
-    engine_args.odb_ssl_verify    = config.odb.get('ssl_verify', '')
-
-    if odb_password_encrypted:
-        engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
-    else:
-        engine_args.odb_password = config.odb.password
+    engine_args.engine = config.odb.engine
+    engine_args.sqlite_path = config.odb.db_name
 
     return get_session(get_engine(engine_args))
 
 # ################################################################################################################################
 
-def get_odb_session_from_component_dir(component_dir, config_file, CryptoManagerClass):
+def get_odb_session_from_component_dir(component_dir:'str', config_file:'str', CryptoManagerClass:'any_') -> 'any_':
 
     repo_dir = get_repo_dir_from_component_dir(component_dir)
     cm = CryptoManagerClass.from_repo_dir(None, repo_dir, None)
     secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
     config = get_config(repo_dir, config_file, crypto_manager=cm, secrets_conf=secrets_conf)
 
-    return get_odb_session_from_server_config(config, None, False)
+    return get_odb_session_from_server_config(config)
 
 # ################################################################################################################################
 
-def get_odb_session_from_server_dir(server_dir):
+def get_odb_session_from_server_dir(server_dir:'str') -> 'any_':
 
     # Zato
     from zato.common.crypto.api import ServerCryptoManager
@@ -1322,16 +1181,15 @@ def get_odb_session_from_server_dir(server_dir):
 # ################################################################################################################################
 
 def get_server_client_auth(
-    config,
-    repo_dir,
-    cm,
-    odb_password_encrypted,
+    config:'any_',
+    repo_dir:'str',
+    cm:'any_',
     *,
-    url_path=None,
-) -> 'any_':
+    url_path:'strnone'=None,
+    ) -> 'any_':
     """ Returns credentials to authenticate with against Zato's own invocation channels.
     """
-    session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
+    session = get_odb_session_from_server_config(config)
 
     with closing(session) as session:
 
@@ -1386,44 +1244,11 @@ def get_repo_dir_from_component_dir(component_dir:'str') -> 'str':
 
 # ################################################################################################################################
 
-django_sa_mappings = {
-    'NAME': 'db_name',
-    'HOST': 'host',
-    'PORT': 'port',
-    'USER': 'username',
-    'PASSWORD': 'password',
-    'odb_type': 'engine',
-    'db_type': 'engine',
-}
-
-cli_sa_mappings = {
-    'odb_db_name': 'db_name',
-    'odb_host': 'host',
-    'odb_port': 'port',
-    'odb_user': 'username',
-    'odb_password': 'password',
-    'odb_type': 'engine',
-}
-
-# ################################################################################################################################
-
-def get_engine_url(args):
+def get_engine_url(args:'any_') -> 'str':
     attrs = {}
-    is_sqlite = False
-    is_django = 'NAME' in args
     has_get = getattr(args, 'get', False)
 
-    odb_type = getattr(args, 'odb_type', None)
-    if odb_type:
-        is_sqlite = odb_type == 'sqlite'
-    else:
-        is_sqlite = args.get('engine') == 'sqlite' or args.get('db_type') == 'sqlite'
-
-    names = (
-        'engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type', 'sqlite_path', 'odb_type',
-        'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
-        'PASSWORD', 'PORT'
-    )
+    names = ('engine', 'username', 'password', 'host', 'port', 'db_name', 'sqlite_path')
 
     for name in names:
         if has_get:
@@ -1431,24 +1256,10 @@ def get_engine_url(args):
         else:
             attrs[name] = getattr(args, name, '')
 
-    # Re-map Django params into SQLAlchemy params
-    if is_django:
-        for name in django_sa_mappings:
-            value = attrs.get(name, ZATO_NOT_GIVEN)
-            if value != ZATO_NOT_GIVEN:
-                if not value and (name in 'db_type', 'odb_type'):
-                    continue
-                attrs[django_sa_mappings[name]] = value
+    is_sqlite = attrs['engine'] == 'sqlite'
 
-    # Zato CLI to SQLAlchemy
-    if not attrs.get('engine'):
-        for name in cli_sa_mappings:
-            value = attrs.get(name, ZATO_NOT_GIVEN)
-            if value != ZATO_NOT_GIVEN:
-                attrs[cli_sa_mappings[name]] = value
-
-    # Re-map server ODB params into SQLAlchemy params
-    if attrs['engine'] == 'sqlite':
+    # An SQLite path may arrive under either of the two names
+    if is_sqlite:
         db_name = attrs.get('db_name')
         sqlite_path = attrs.get('sqlite_path')
 
@@ -1475,7 +1286,7 @@ def get_engine_url(args):
 
 # ################################################################################################################################
 
-def startup_service_payload_from_path(name, value, repo_location):
+def startup_service_payload_from_path(name:'str', value:'str', repo_location:'str') -> 'strnone':
     """ Reads payload from a local file. Abstracted out to ease in testing.
     """
     orig_path = value.replace('file://', '')
@@ -1494,12 +1305,20 @@ def startup_service_payload_from_path(name, value, repo_location):
 
 # ################################################################################################################################
 
-def invoke_startup_services(source, key, fs_server_config, repo_location, config_dispatcher=None, service_name=None,
-    skip_include=True, config_manager=None):
-    """ Invoked when we are the first server and we know we have a broker client and all the other config is ready
-    so we can publish the request to execute startup services.
+def invoke_startup_services(
+    source:'str',
+    key:'str',
+    fs_server_config:'any_',
+    repo_location:'str',
+    config_dispatcher:'any_'=None,
+    service_name:'strnone'=None,
+    skip_include:'bool'=True,
+    config_manager:'any_'=None
+    ) -> 'None':
+    """ Publishes the requests to execute startup services once the configuration dispatcher
+    and all the other configuration are ready.
     """
-    for name, payload in iteritems(fs_server_config.get(key, {})):
+    for name, payload in fs_server_config.get(key, {}).items():
 
         if service_name:
 
@@ -1513,14 +1332,14 @@ def invoke_startup_services(source, key, fs_server_config, repo_location, config
                 if name != service_name:
                     continue
 
-        if isinstance(payload, basestring) and payload.startswith('file://'):
+        if isinstance(payload, str) and payload.startswith('file://'):
             payload = startup_service_payload_from_path(name, payload, repo_location)
             if not payload:
                 continue
 
         cid = new_cid()
 
-        msg = {}
+        msg:'stranydict' = {}
         msg['action'] = SERVICE.PUBLISH.value
         msg['service'] = name
         msg['payload'] = payload
@@ -1534,34 +1353,7 @@ def invoke_startup_services(source, key, fs_server_config, repo_location, config
 
 # ################################################################################################################################
 
-def timeouting_popen(command, timeout, timeout_msg, rc_non_zero_msg, common_msg=''):
-    """ Runs a command in background and returns its return_code, stdout and stderr.
-    stdout and stderr will be None if return code = 0
-    """
-    stdout, stderr = None, None
-
-    # Run the command
-    p = Popen(command, stdout=PIPE, stderr=PIPE)
-
-    # Sleep as long as requested and poll for results
-    sleep(timeout)
-    p.poll()
-
-    if p.returncode is None:
-        msg = timeout_msg + common_msg + 'command:[{}]'.format(command)
-        raise Exception(msg.format(timeout))
-    else:
-        if p.returncode != 0:
-            stdout, stderr = p.communicate()
-            msg = rc_non_zero_msg + common_msg + 'command:[{}], return code:[{}], stdout:[{}], stderr:[{}] '.format(
-                command, p.returncode, stdout, stderr)
-            raise Exception(msg)
-
-    return p.returncode
-
-# ################################################################################################################################
-
-def spawn_greenlet(callable, *args, **kwargs):
+def spawn_greenlet(callable:'callable_', *args:'any_', **kwargs:'any_') -> 'any_':
     """ Spawns a new greenlet and waits up to timeout seconds for its response. It is expected that the response never arrives
     because if it does, it means that there were some errors.
     """
@@ -1572,9 +1364,10 @@ def spawn_greenlet(callable, *args, **kwargs):
         g.join(timeout)
 
         if g.exception:
-            type_, value, traceback = g.exc_info
-            exc_type = Exception(value, str(g.exception))
-            raise_(exc_type, None, traceback)
+            exc_info = cast_('anytuple', g.exc_info)
+            _, value, traceback = exc_info
+            exception = Exception(value, str(g.exception))
+            raise exception.with_traceback(traceback)
 
     except Timeout:
         pass # Timeout = good = no errors
@@ -1583,71 +1376,7 @@ def spawn_greenlet(callable, *args, **kwargs):
 
 # ################################################################################################################################
 
-def get_logger_for_class(class_):
-    return logging.getLogger('{}.{}'.format(inspect.getmodule(class_).__name__, class_.__name__))
-
-# ################################################################################################################################
-
-def get_server_pids_by_parent(parent_pid:'int') -> 'intlist':
-    """ Returns all children PIDs of the process whose PID is given on input.
-    """
-    # psutil
-    import psutil
-
-    return sorted(elem.pid for elem in psutil.Process(parent_pid).children())
-
-# ################################################################################################################################
-
-def get_server_pids():
-    """ Returns all sibling server PIDs of the server process we are being invoked on, including our own process too.
-    """
-    # psutil
-    import psutil
-
-    # This is our own process ..
-    current_process = psutil.Process()
-
-    # .. and this is its parent PID ..
-    parent_pid = current_process.ppid()
-
-    # .. now, we can return PIDs of all the server processes.
-    return get_server_pids_by_parent(parent_pid)
-
-# ################################################################################################################################
-
-def update_bind_port(data, idx):
-    address_info = urlparse(data.address)
-    base, port = address_info.netloc.split(':')
-    port = int(port) + idx
-
-    data.address = '{}://{}:{}{}'.format(address_info.scheme, base, port, address_info.path)
-    data.bind_port = port
-
-# ################################################################################################################################
-
-def start_connectors(config_manager, service_name, data):
-
-    for pid in get_server_pids():
-        config_manager.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
-
-# ################################################################################################################################
-
-def require_tcp_port(address):
-    if ':' not in address:
-        raise Exception('No TCP port in {}'.format(address))
-
-    port = address.split(':')[-1]
-    if not port.strip():
-        raise Exception('No TCP port in {}'.format(address))
-
-    try:
-        int(port)
-    except ValueError:
-        raise Exception('Invalid TCP port in {}'.format(address))
-
-# ################################################################################################################################
-
-def update_apikey_username_to_channel(config):
+def update_apikey_username_to_channel(config:'any_') -> 'None':
 
     header = config.get('header')
 
@@ -1658,28 +1387,28 @@ def update_apikey_username_to_channel(config):
 
 # ################################################################################################################################
 
-def get_response_value(response):
+def get_response_value(response:'any_') -> 'any_':
     """ Extracts the actual response string from a response object produced by services.
     """
     return (response.payload.getvalue() if hasattr(response.payload, 'getvalue') else response.payload) or ''
 
 # ################################################################################################################################
 
-def parse_cmd_line_options(argv):
+def parse_cmd_line_options(argv:'str') -> 'stranydict':
     options = argv.split(CLI_ARG_SEP)
     options = '\n'.join(options)
     return parse_extra_into_dict(options)
 
 # ################################################################################################################################
 
-def get_sa_model_columns(model):
+def get_sa_model_columns(model:'any_') -> 'strlist':
     """ Returns all columns (as string) of an input SQLAlchemy model.
     """
     return [elem.key for elem in model.__table__.columns]
 
 # ################################################################################################################################
 
-def is_func_overridden(func):
+def is_func_overridden(func:'any_') -> 'bool':
     """ Returns True if input func was overridden by user in a subclass - used to decide
     whether users implemented a given hook. If there is a special internal marker in input arguments,
     it means that it is an internal function from parent class, not a user-defined one.
@@ -1693,9 +1422,11 @@ def is_func_overridden(func):
         if not (func_defaults and isinstance(func_defaults, tuple) and zato_no_op_marker in func_defaults):
             return True
 
+    return False
+
 # ################################################################################################################################
 
-def get_sql_engine_display_name(engine, fs_sql_config):
+def get_sql_engine_display_name(engine:'str', fs_sql_config:'any_') -> 'str':
     display_name = None
     for key, value in fs_sql_config.items():
         if key == engine:
@@ -1707,11 +1438,6 @@ def get_sql_engine_display_name(engine, fs_sql_config):
             engine, fs_sql_config))
     else:
         return display_name
-
-# ################################################################################################################################
-
-def pretty_format_float(value):
-    return ('%f' % value).rstrip('0').rstrip('.') if value else value
 
 # ################################################################################################################################
 
@@ -1802,7 +1528,7 @@ def wait_for_dict_key_by_get_func(
     # In this function, we wait for a key through a user-provided get-key function,
     # which may be different than dict.get, e.g. topic_api.get_topic_by_name.
 
-    def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
+    def _predicate_dict_key(*_ignored_args:'any_', **_ignored_kwargs:'any_') -> 'any_':
         try:
             value = get_key_func(key)
             return value
@@ -1824,7 +1550,7 @@ def wait_for_dict_key(
     # In this function, we wait for a key by accessing the dict object directly,
     # using the dict's own .get method.
 
-    def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
+    def _predicate_dict_key(*_ignored_args:'any_', **_ignored_kwargs:'any_') -> 'any_':
         value = _dict.get(key)
         return value
 
@@ -1834,7 +1560,7 @@ def wait_for_dict_key(
 
 def wait_for_file(full_path:'str', timeout:'int'=999999, interval:'float'=0.01) -> 'any_':
 
-    def _predicate_wait_for_file(*_ignored_args, **_ignored_kwargs) -> 'any_':
+    def _predicate_wait_for_file(*_ignored_args:'any_', **_ignored_kwargs:'any_') -> 'any_':
 
         file_exists = os.path.exists(full_path)
 
@@ -1849,10 +1575,10 @@ def wait_for_file(full_path:'str', timeout:'int'=999999, interval:'float'=0.01) 
 
 # ################################################################################################################################
 
-def wait_for_200_ok(address):
+def wait_for_200_ok(address:'str') -> 'bool':
     """ Waits for an HTTP/HTTPS address to return a 200 OK response.
     """
-    def _predicate_200_ok():
+    def _predicate_200_ok() -> 'bool':
         try:
             response = requests.get(address, timeout=0.1)
             return response.status_code == requests.codes.ok
@@ -1863,48 +1589,18 @@ def wait_for_200_ok(address):
 
 # ################################################################################################################################
 
-def hex_sequence_to_bytes(elems):
-    # type: (str) -> bytes
+def hex_sequence_to_bytes(elems:'str') -> 'bytes':
 
-    elems = [int(elem.strip(), 16) for elem in elems.split()]
-    elems = [chr(elem) for elem in elems]
-    elems = [bytes(elem, 'utf8') for elem in elems]
+    parts:'byteslist' = []
 
-    return b''.join(elems)
+    for elem in elems.split():
+        code_point = int(elem.strip(), 16)
+        char = chr(code_point)
+        char_bytes = char.encode('utf8')
+        parts.append(char_bytes)
 
-# ################################################################################################################################
-
-def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
-
-    # stdlib
-    from copy import deepcopy
-
-    # Tabulate
-    from tabulate import tabulate
-
-    # Return early if there is not anything that we can tabulate
-    if not data:
-        return ''
-
-    # If we have keys to skip, we need re-build the dictionary without these keys first.
-    if skip_keys:
-        skip_keys = skip_keys if isinstance(skip_keys, list) else [skip_keys]
-        _data = []
-        for elem in data:
-            _elem = deepcopy(elem)
-            for key in skip_keys:
-                _elem.pop(key, None)
-            _data.append(_elem)
-        data = _data
-
-    # We assume that all elements will have the same keys
-    elem0 = data[0]
-    len_keys = len(elem0)
-
-    # We align all the columns to the left hand side
-    col_align = ('left',) * len_keys
-
-    return tabulate(data, headers='keys', tablefmt='pretty', colalign=col_align)
+    out = b''.join(parts)
+    return out
 
 # ################################################################################################################################
 
@@ -1938,65 +1634,16 @@ def get_new_tmp_full_path(file_name:'str'='', *, prefix:'str'='', suffix:'str'='
 
 # ################################################################################################################################
 
-def get_ipc_pid_port_path(cluster_name:'str', server_name:'str', pid:'int') -> 'str':
-
-    # This is where the file name itself ..
-    file_name = ModuleCtx.PID_To_Port_Pattern.format(
-        cluster_name=cluster_name,
-        server_name=server_name,
-        pid=pid,
-    )
-
-    # .. make sure the name is safe to use in the file-system ..
-    file_name = fs_safe_name(file_name)
-
-    # .. now, we can obtain a full path to a temporary directory ..
-    full_path = get_new_tmp_full_path(file_name)
-
-    # .. and return the result to our caller.
-    return full_path
-
-# ################################################################################################################################
-
-def save_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int', port:'int') -> 'None':
-
-    # Make sure we store a string ..
-    port = str(port)
-
-    # .. get a path where we can save it ..
-    path = get_ipc_pid_port_path(cluster_name, server_name, pid)
-
-    # .. and do save it now.
-    with open_w(path) as f:
-        _ = f.write(port)
-        f.flush()
-
-# ################################################################################################################################
-
-def load_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int') -> 'int':
-
-    # Get a path to load the port from ..
-    path = get_ipc_pid_port_path(cluster_name, server_name, pid)
-
-    # .. wait until the file exists (which may be required when the server starts up) ..
-    wait_for_file(path, interval=2.5)
-
-    # .. load it now ..
-    with open_r(path) as f:
-        data = f.read()
-        data = data.strip()
-        out = int(data)
-
-    return out
-
-# ################################################################################################################################
-
 def make_list_from_string_list(value:'str', separator:'str') -> 'strlist':
 
-    value = value.split(separator) # type: ignore
-    value = [elem.strip() for elem in value if elem] # type: ignore
+    out:'strlist' = []
 
-    return value
+    for elem in value.split(separator):
+        if elem:
+            elem = elem.strip()
+            out.append(elem)
+
+    return out
 
 # ################################################################################################################################
 
@@ -2096,7 +1743,7 @@ def find_internal_modules(root:'ModuleType') -> 'strlist':
                 module_suffix_parts = relative_file_path.split(os.sep)
 
                 if module_suffix_parts[-1] == '__init__.py':
-                    module_suffix_parts.pop()  # Represents the package name from its __init__.py
+                    _ = module_suffix_parts.pop()  # Represents the package name from its __init__.py
                     if not module_suffix_parts:
                         # This safeguard covers an unlikely scenario where an __init__.py path
                         # might lead to empty parts after pop (e.g., if separators were unusual).
@@ -2116,7 +1763,7 @@ def find_internal_modules(root:'ModuleType') -> 'strlist':
 
 # ################################################################################################################################
 
-def publish_file(config_dispatcher, cid:'str', file_path:'str') -> 'dict':
+def publish_file(config_dispatcher:'any_', cid:'str', file_path:'str') -> 'stranydict':
     """ Publish a file's content to the broker for hot-deployment.
     """
 
@@ -2129,44 +1776,6 @@ def publish_file(config_dispatcher, cid:'str', file_path:'str') -> 'dict':
         'action': HOT_DEPLOY.CREATE_SERVICE.value,
         'payload_name': file_path,
         'payload': event_data,
-        'timestamp': utcnow().isoformat(),
-    }
-
-    config_dispatcher.publish(msg)
-    return msg
-
-# ################################################################################################################################
-
-def publish_enmasse(config_dispatcher, cid:'str', file_path:'str') -> 'dict':
-    """ Publish an enmasse file's content to the broker for deployment.
-    """
-    msg = {
-        'cid': cid,
-        'full_path': file_path,
-        'action': HOT_DEPLOY.UPDATE_ENMASSE.value,
-    }
-
-    config_dispatcher.publish(msg)
-    return msg
-
-# ################################################################################################################################
-
-def publish_user_conf(config_dispatcher, cid:'str', file_path:'str') -> 'dict':
-    """ Publish a static file's content to the broker for hot-deployment.
-    """
-
-    with open_r(file_path) as f:
-        event_data = f.read()
-
-    file_name = os.path.basename(file_path)
-
-    msg = {
-        'cid': cid,
-        'event_type': 'file_ready',
-        'action': HOT_DEPLOY.CREATE_USER_CONF.value,
-        'full_path': file_path,
-        'file_name': file_name,
-        'data': event_data,
         'timestamp': utcnow().isoformat(),
     }
 
@@ -2193,37 +1802,4 @@ def replace_secrets(data:'any_') -> 'strdict':
     return data
 
 # ################################################################################################################################
-
-def rebuild_subscription_dict_list(subscription_list):
-    """ Rebuilds a list of subscription dictionaries by consolidating multiple rows
-    for the same sub_key into a single dictionary with a topic_name_list.
-    """
-    result = {}
-
-    for item in subscription_list:
-        config = item['config']
-        sub_key = config['sub_key']
-        topic_name = config['topic_name']
-
-        if sub_key not in result:
-            # Create new entry with all attributes except topic_name
-            new_config = config.copy()
-            del new_config['topic_name']
-            new_config['topic_name_list'] = [topic_name]
-            result[sub_key] = {'config': new_config}
-        else:
-            # Add topic_name to existing entry
-            existing_item = result[sub_key]
-            existing_config = existing_item['config']
-            existing_topic_list = existing_config['topic_name_list']
-            existing_topic_list.append(topic_name)
-
-    # Sort topic names in each subscription
-    for item in result.values():
-        config = item['config']
-        topic_list = config['topic_name_list']
-        topic_list.sort()
-
-    return list(result.values())
-
 # ################################################################################################################################

@@ -91,7 +91,6 @@ def _get_service_items(req:'any_') -> 'strlist':
     """
 
     response = req.zato.client.invoke('zato.service.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'name_filter': '*',
         'paginate': False,
     })
@@ -116,7 +115,6 @@ def _get_http_soap_items(req:'any_', transport:'str') -> 'strlist':
     """
 
     response = req.zato.client.invoke('zato.http-soap.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'connection': 'outgoing',
         'transport': transport,
         'paginate': False,
@@ -154,7 +152,6 @@ def _get_sql_items(req:'any_') -> 'strlist':
     """
 
     response = req.zato.client.invoke('zato.outgoing.sql.get-list', {
-        'cluster_id': req.zato.cluster_id,
     })
 
     out:'strlist' = []
@@ -172,7 +169,6 @@ def _get_odoo_items(req:'any_') -> 'strlist':
     """
 
     response = req.zato.client.invoke('zato.outgoing.odoo.get-list', {
-        'cluster_id': req.zato.cluster_id,
     })
 
     out:'strlist' = []
@@ -190,7 +186,6 @@ def _get_generic_items(req:'any_', type_:'str') -> 'strlist':
     """
 
     response = req.zato.client.invoke('zato.generic.connection.get-list', {
-        'cluster_id': req.zato.cluster_id,
         'type_': type_,
         'paginate': False,
     })

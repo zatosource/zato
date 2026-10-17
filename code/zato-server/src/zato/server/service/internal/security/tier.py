@@ -117,7 +117,7 @@ class Edit(AdminService):
             after=after,
         )
 
-        # .. notify all workers so every definition referencing this tier is re-resolved ..
+        # .. notify the server so every definition referencing this tier is re-resolved ..
         params = {
             'action': SECURITY.QUOTA_TIER_EDIT.value,
             'id': tier_id,
@@ -194,7 +194,7 @@ class SetForGroup(AdminService):
         # .. persist the reference ..
         self.server.groups_manager.set_group_quota_tier(group_id, tier_id)
 
-        # .. and let all workers re-resolve tier assignments.
+        # .. and let the server re-resolve tier assignments.
         params = {
             'action': SECURITY.QUOTA_TIER_EDIT.value,
             'id': group_id,

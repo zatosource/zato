@@ -83,7 +83,7 @@ def test_a_send_comes_back_with_the_acknowledgment() -> 'None':
 # ################################################################################################################################
 
 def test_a_negative_acknowledgment_is_a_rejection_and_the_message_arrives_later() -> 'None':
-    """ An AE turns a send down - the message goes to the queue with the code as its error and the acknowledgment as the
+    """ An AR turns a send down - the message goes to the queue with the code as its error and the acknowledgment as the
     response, and it arrives once the receiving system accepts again.
     """
     client = get_client()

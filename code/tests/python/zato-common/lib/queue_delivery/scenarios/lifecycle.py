@@ -161,6 +161,18 @@ class LifecycleScenarios(ScenarioBase):
         try:
             _ = send_to_dlq(client, conn_name, receiver, {'seq': 1})
 
+            queue_topic = get_outgoing_topic_name(conn_type, conn_name)
+            dlq_topic = get_dlq_topic_name(conn_type, conn_name)
+
+            # Both topics and their subscriptions exist once a message went through the queue to the DLQ, and this
+            # is the one moment when the counts do not move - the round of a message sent while the endpoint refuses
+            # ends a second later and moves it to the DLQ, so the sends below are followed by the delete without delay
+            # and the counts are read before them.
+            assert get_topic_subscribers(client, queue_topic) == [get_outgoing_sub_key(conn_type, conn_id)]
+            assert get_topic_subscribers(client, dlq_topic) == [get_dlq_sub_key(conn_type, conn_id)]
+            assert count_topic_messages(queue_topic) == 0
+            assert count_topic_messages(dlq_topic) == 1
+
             receiver.refuse_all()
 
             head = send(client, conn_name, _head)
@@ -168,14 +180,6 @@ class LifecycleScenarios(ScenarioBase):
 
             assert head['is_in_queue'] is True
             assert waiting['is_in_queue'] is True
-
-            queue_topic = get_outgoing_topic_name(conn_type, conn_name)
-            dlq_topic = get_dlq_topic_name(conn_type, conn_name)
-
-            assert get_topic_subscribers(client, queue_topic) == [get_outgoing_sub_key(conn_type, conn_id)]
-            assert get_topic_subscribers(client, dlq_topic) == [get_dlq_sub_key(conn_type, conn_id)]
-            assert count_topic_messages(queue_topic) == 2
-            assert count_topic_messages(dlq_topic) == 1
 
             deleted_id = delete_connection(client, conn_name)
             is_deleted = True

@@ -53,13 +53,13 @@ class LDAPExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'ldap_def_list':
+    def export(self, session: 'SASession') -> 'ldap_def_list':
         """ Exports LDAP connection definitions.
         """
         logger.info('Exporting LDAP connection definitions')
 
         # Get LDAP connections from database using the generic connection query
-        db_ldap = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_LDAP)
+        db_ldap = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_LDAP)
 
         if not db_ldap:
             logger.info('No LDAP connection definitions found in DB')

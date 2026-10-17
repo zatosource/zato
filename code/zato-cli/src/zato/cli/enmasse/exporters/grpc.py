@@ -53,12 +53,12 @@ class OutgoingGRPCExporter:
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'grpc_def_list':
+    def export(self, session:'SASession') -> 'grpc_def_list':
         """ Exports gRPC outgoing definitions.
         """
         logger.info('Exporting gRPC outgoing definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_GRPC)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_GRPC)
 
         if not db_items:
             logger.info('No gRPC outgoing definitions found in DB')

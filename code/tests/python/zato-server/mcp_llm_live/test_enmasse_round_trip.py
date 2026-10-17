@@ -73,6 +73,12 @@ def _build_config(suffix:'str') -> 'stranydict':
         'safeguards_url_policy_enabled': True,
         'safeguards_url_allow_list': [_constants.Safety_Allowed_Host],
         'safeguards_url_mode': 'neutralize',
+        'safeguards_masking_sets': [_constants.Masking_Set],
+        'safeguards_masking_excluded': [_constants.Masking_Excluded],
+        'safeguards_masking_custom_fields': list(_constants.Masking_Custom_Fields),
+        'safeguards_masking_custom_enabled': False,
+        'request_hook_service': _constants.Service_Hook_Request_Record,
+        'response_hook_service': _constants.Service_Hook_Response_Record,
     }
 
     minimal_gateway = {
@@ -189,6 +195,15 @@ class TestEnmasseRoundTrip:
             assert full['safeguards_url_allow_list'] == [_constants.Safety_Allowed_Host], full
             assert full['safeguards_url_mode'] == 'neutralize', full
 
+            # .. data masking and the hook services travel as they were given, the custom switch's
+            # explicit False against a True default included ..
+            assert full['safeguards_masking_sets'] == [_constants.Masking_Set], full
+            assert full['safeguards_masking_excluded'] == [_constants.Masking_Excluded], full
+            assert full['safeguards_masking_custom_fields'] == _constants.Masking_Custom_Fields, full
+            assert full['safeguards_masking_custom_enabled'] is False, full
+            assert full['request_hook_service'] == _constants.Service_Hook_Request_Record, full
+            assert full['response_hook_service'] == _constants.Service_Hook_Response_Record, full
+
             # .. the security group travels by name in both directions ..
             assert full['security_groups'] == [f'llm.test-group-roundtrip.{suffix}'], full
 
@@ -205,6 +220,12 @@ class TestEnmasseRoundTrip:
             assert 'safeguards_pii_enabled' not in minimal, minimal
             assert 'safeguards_secrets_enabled' not in minimal, minimal
             assert 'safeguards_url_policy_enabled' not in minimal, minimal
+            assert 'safeguards_masking_sets' not in minimal, minimal
+            assert 'safeguards_masking_excluded' not in minimal, minimal
+            assert 'safeguards_masking_custom_fields' not in minimal, minimal
+            assert 'safeguards_masking_custom_enabled' not in minimal, minimal
+            assert 'request_hook_service' not in minimal, minimal
+            assert 'response_hook_service' not in minimal, minimal
 
             # .. the export is a clean input of its own ..
             _enmasse.run_import_file(server_directory, export_path)

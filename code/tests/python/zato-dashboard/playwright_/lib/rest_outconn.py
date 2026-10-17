@@ -30,7 +30,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-Outconn_Page_Url = '/zato/http-soap/?cluster=1&connection=outgoing&transport=plain_http'
+Outconn_Page_Url = '/zato/http-soap/?connection=outgoing&transport=plain_http'
 
 # How long to wait for a hot-deployed service to respond to its first invocation
 _Service_Deploy_Timeout = 60

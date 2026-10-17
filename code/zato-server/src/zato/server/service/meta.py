@@ -24,8 +24,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.api import ZATO_NOT_GIVEN
-from zato.common.ext_db.api import is_ext_object_id, to_local_id
-from zato.common.odb.model import Base, Cluster
+from zato.common.odb.model import Base
 from zato.common.util.api import parse_literal_dict
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
@@ -112,7 +111,7 @@ def as_optional_elem(elem):
 
 # ################################################################################################################################
 
-def get_io_elems(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
+def get_io_elems(attrs, elems_name, is_edit, is_required, is_output, is_get_list):
 
     # This can be either a list or an SQLAlchemy object
     elems = attrs.get(elems_name) or []
@@ -126,14 +125,6 @@ def get_io_elems(attrs, elems_name, is_edit, is_required, is_output, is_get_list
         columns_to_visit = get_columns_to_visit(columns_to_visit, is_required)
 
         for column in columns_to_visit:
-
-            # Each model has a cluster_id column but it's not really needed for anything on output
-            if column.name == 'cluster_id' and is_output:
-                continue
-
-            # We already have cluster_id and don't need an IOElem one.
-            if column.name == 'cluster_id' and has_cluster_id:
-                continue
 
             if column.name in attrs.skip_input_params:
                 continue
@@ -247,7 +238,6 @@ class AdminServiceMeta(type):
         output_optional=None,
         is_list=True,
         class_=None,
-        skip_input_required=False
     ):
 
         if not input_optional:
@@ -258,10 +248,7 @@ class AdminServiceMeta(type):
                 input_optional = []
 
         if not input_required:
-            if skip_input_required:
-                input_required = []
-            else:
-                input_required = ['cluster_id']
+            input_required = []
 
         io_def = {
             'input_required': input_required,
@@ -295,8 +282,7 @@ class AdminServiceMeta(type):
             else:
                 target = merged_output_optional
 
-            has_cluster_id = 'cluster_id' in target
-            io_to_add = get_io_elems(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
+            io_to_add = get_io_elems(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list)
             target.extend(io_to_add)
 
             if attrs.is_create_edit and is_required:
@@ -356,15 +342,12 @@ class GetListMeta(AdminServiceMeta):
     def get_data(get_data_func):
         def get_data_impl(self, session):
             # type: (Service, object)
-            return self._search(get_data_func, session, self.request.input.cluster_id, False)
+            return self._search(get_data_func, session, False)
         return get_data_impl
 
     @staticmethod
     def handle(attrs):
         def handle_impl(self:'AdminService') -> 'None':
-            input = self.request.input
-            input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-
             with closing(self.odb.session()) as session:
                 elems = self.strip_listing_secrets(elems_with_opaque(self.get_data(session)))
                 self.response.payload[:] = elems
@@ -398,7 +381,6 @@ class CreateEditMeta(AdminServiceMeta):
             # type: (Service)
 
             input = self.request.input
-            input.cluster_id = input.get('cluster_id') or self.server.cluster_id
             input.update(attrs.initial_input)
             verb = 'edit' if attrs.is_edit else 'create'
             old_name = None
@@ -421,7 +403,6 @@ class CreateEditMeta(AdminServiceMeta):
                         # because certain models don't have the .name attribute.
 
                         existing_one = session.query(attrs.model).\
-                            filter(Cluster.id==input.cluster_id).\
                             filter(attrs.model.name==input.name)
 
                         if attrs.is_edit:
@@ -434,20 +415,20 @@ class CreateEditMeta(AdminServiceMeta):
                                 if attrs.skip_if_exists:
                                     pass # Ignore it explicitly
                                 else:
-                                    raise BadRequest(self.cid, '{} `{}` already exists in this cluster'.format(
+                                    raise BadRequest(self.cid, '{} `{}` already exists'.format(
                                         attrs.label[0].upper() + attrs.label[1:], input.name))
                             else:
                                 if attrs.skip_if_missing:
                                     pass # Ignore it explicitly
                                 else:
-                                    raise BadRequest(self.cid, 'No such {} `{}` in this cluster'.format(
+                                    raise BadRequest(self.cid, 'No such {} `{}`'.format(
                                         attrs.label[0].upper() + attrs.label[1:], input.name))
 
                     if attrs.is_edit:
                         instance = session.query(attrs.model).filter_by(id=input.id).one()
                         old_name = instance.name
                     else:
-                        instance = self._new_zato_instance_with_cluster(attrs.model)
+                        instance = attrs.model()
 
                     # Update the instance with data received on input, however,
                     # note that this may overwrite some of existing attributes
@@ -526,7 +507,6 @@ class DeleteMeta(AdminServiceMeta):
             input_required=[],
             input_optional=[IntIO('id'), 'name', 'should_raise_if_missing'],
             output_required=[],
-            skip_input_required=True,
         )
         cls.input = io['input']
         cls.output = io['output']
@@ -546,23 +526,14 @@ class DeleteMeta(AdminServiceMeta):
             if not (input_id or input_name):
                 raise BadRequest(self.cid, 'Either id or name is required on input')
 
-            # Objects from the external AS2/AS4 database are recognized by their offset ids
-            # and they are stored in that database under their local ids.
-            object_id = input_id or 0
-
-            if is_ext_object_id(object_id):
-                db_input_id = to_local_id(input_id)
-            else:
-                db_input_id = input_id
-
-            with closing(self.server.get_config_session(object_id=object_id)) as session:
+            with closing(self.odb.session()) as session:
                 attrs._meta_session = session
                 try:
                     query = session.query(attrs.model)
 
                     if input_id:
                         query = query.\
-                            filter(attrs.model.id==db_input_id)
+                            filter(attrs.model.id==input_id)
 
                     else:
                         query = query.\

@@ -95,6 +95,9 @@ class DeliveryContext:
     # How long to wait before another attempt at the same destination.
     retry_sleep_seconds: float = Default_Retry_Sleep_Seconds
 
+    # Whether the payload of each recorded attempt leaves the process with the audit export.
+    is_export_payload_active: bool = False
+
 # ################################################################################################################################
 
 @dataclass(init=False)
@@ -174,6 +177,7 @@ def new_context(
     *,
     retry_count:'int' = Default_Retry_Count,
     retry_sleep_seconds:'float' = Default_Retry_Sleep_Seconds,
+    is_export_payload_active:'bool' = False,
     ) -> 'DeliveryContext':
     """ Builds the context the deliveries of one message share.
     """
@@ -187,6 +191,7 @@ def new_context(
     out.audit_log = audit_log
     out.retry_count = retry_count
     out.retry_sleep_seconds = retry_sleep_seconds
+    out.is_export_payload_active = is_export_payload_active
 
     return out
 
@@ -317,6 +322,7 @@ def deliver_hop(context:'DeliveryContext', planned:'PlannedHop') -> 'HopResult':
             error=error,
             classification=classification,
             response_text=response_text,
+            is_export_payload_active=context.is_export_payload_active,
         )
 
         if out.is_ok:

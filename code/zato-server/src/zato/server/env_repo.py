@@ -85,8 +85,8 @@ def _deploy_code(server:'ParallelServer', path:'str') -> 'strlist':
 
 # ################################################################################################################################
 
-def _deploy_enmasse(server:'ParallelServer', path:'str') -> 'tuple[int, int]':
-    """ Imports one enmasse file and returns how many objects it created and updated.
+def _deploy_enmasse(server:'ParallelServer', path:'str') -> 'tuple[int, int, int]':
+    """ Imports one enmasse file and returns how many objects it created, updated and deleted.
     """
     # Zato
     from zato.server.commands import CommandsFacade
@@ -112,15 +112,16 @@ def _deploy_enmasse(server:'ParallelServer', path:'str') -> 'tuple[int, int]':
 
     created = sum(data.get('created', {}).values())
     updated = sum(data.get('updated', {}).values())
+    deleted = sum(data.get('deleted', {}).values())
 
-    return created, updated
+    return created, updated, deleted
 
 # ################################################################################################################################
 
 def deploy(server:'ParallelServer', path:'str', files:'strlist', is_full:'bool'=False) -> 'anydict':
     """ Deploys a checkout of a repository - everything in it if asked to or the first time this process sees it,
     otherwise only the files given, if any - and returns how many services were new or updated, how many enmasse objects
-    were created or updated, and what could not be deployed.
+    were created, updated or deleted, and what could not be deployed.
     """
     root = os.path.abspath(path)
 
@@ -154,6 +155,7 @@ def deploy(server:'ParallelServer', path:'str', files:'strlist', is_full:'bool'=
     services_updated = 0
     objects_created = 0
     objects_updated = 0
+    objects_deleted = 0
     errors:'strlist' = []
 
     for item in py_files:
@@ -170,9 +172,10 @@ def deploy(server:'ParallelServer', path:'str', files:'strlist', is_full:'bool'=
 
     for item in enmasse_files:
         try:
-            created, updated = _deploy_enmasse(server, item)
+            created, updated, deleted = _deploy_enmasse(server, item)
             objects_created += created
             objects_updated += updated
+            objects_deleted += deleted
         except Exception as e:
             logger.warning('Could not import `%s`, e:`%s`', item, format_exc())
             errors.append(f'{os.path.relpath(item, root)}: {e}')
@@ -182,6 +185,7 @@ def deploy(server:'ParallelServer', path:'str', files:'strlist', is_full:'bool'=
         'services_updated': services_updated,
         'objects_created':  objects_created,
         'objects_updated':  objects_updated,
+        'objects_deleted':  objects_deleted,
         'errors':           errors,
     }
 

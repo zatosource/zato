@@ -15,7 +15,7 @@ from zato.common.api import query_parameters
 from zato.common.broker_message import CHANNEL
 from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import ChannelAMQP, Cluster, Service
+from zato.common.odb.model import ChannelAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.service.internal import AdminService
 
@@ -27,7 +27,7 @@ class GetList(AdminService):
     name = 'zato.channel.amqp.get-list'
     _filter_by = ChannelAMQP.name,
 
-    input = 'cluster_id', '-subtype', *query_parameters
+    input = '-subtype', *query_parameters
     output = 'id', 'name', 'address', 'username', 'is_active', 'queue', 'consumer_tag_prefix', \
         'service_name', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
 
@@ -36,7 +36,7 @@ class GetList(AdminService):
         # Without a subtype on input, channels of all the subtypes are returned
         subtype = self.request.input.subtype or None
 
-        return self._search(channel_amqp_list, session, self.request.input.cluster_id, subtype, False)
+        return self._search(channel_amqp_list, session, subtype, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -50,7 +50,7 @@ class Create(AdminService):
     """
     name = 'zato.channel.amqp.create'
 
-    input = 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', \
+    input = 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', \
         'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format', '-subtype'
     output = 'id', 'name'
 
@@ -72,17 +72,15 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An AMQP channel `{}` already exists on this cluster'.format(input.name))
+                raise Exception('An AMQP channel `{}` already exists'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
                 filter(Service.name==input.service).\
                 first()
 
             if not service:
-                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist'.format(input.service)
                 raise ServiceMissingException(self.cid, msg)
 
             try:
@@ -130,7 +128,7 @@ class Edit(AdminService):
     """
     name = 'zato.channel.amqp.edit'
 
-    input = 'id', 'cluster_id', 'name', 'is_active', 'address', 'username', '-password', 'queue', \
+    input = 'id', 'name', 'is_active', 'address', 'username', '-password', 'queue', \
         'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format', '-subtype'
     output = 'id', 'name'
 
@@ -150,17 +148,15 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An AMQP channel `{}` already exists on this cluster'.format(input.name))
+                raise Exception('An AMQP channel `{}` already exists'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
                 filter(Service.name==input.service).\
                 first()
 
             if not service:
-                msg = 'Service [{0}] does not exist in this cluster'.format(input.service)
+                msg = 'Service [{0}] does not exist'.format(input.service)
                 raise Exception(msg)
 
             try:

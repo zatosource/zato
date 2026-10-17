@@ -56,7 +56,6 @@ class GenericConnection:
         self.secret_type = None
 
         self.conn_def_id = None
-        self.cluster_id = None
 
 # ################################################################################################################################
 

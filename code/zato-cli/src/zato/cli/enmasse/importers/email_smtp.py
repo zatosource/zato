@@ -53,11 +53,11 @@ class SMTPImporter:
 
 # ################################################################################################################################
 
-    def get_smtp_defs_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_smtp_defs_from_db(self, session:'SASession') -> 'anydict':
         out = {}
 
-        logger.info('Retrieving SMTP connection definitions from database for cluster_id=%s', cluster_id)
-        smtp_connections = email_smtp_list(session, cluster_id)
+        logger.info('Retrieving SMTP connection definitions from database')
+        smtp_connections = email_smtp_list(session)
 
         self._process_smtp_defs(smtp_connections, out)
         logger.info('Total SMTP connection definitions from DB: %d', len(out))
@@ -97,12 +97,8 @@ class SMTPImporter:
 
     def create_smtp_definition(self, smtp_def:'anydict', session:'SASession') -> 'any_':
 
-        # Get the cluster instance from the importer
-        cluster = self.importer.get_cluster(session)
-
         # Create a new SMTP connection instance
         smtp_conn = SMTP()
-        smtp_conn.cluster = cluster
 
         # Define attribute values
         name = smtp_def['name']
@@ -127,10 +123,10 @@ class SMTPImporter:
         # Optional username - empty string if not provided
         smtp_conn.username = smtp_def.get('username', '') or ''
 
-        # Set password if provided, otherwise generate one, and store it encrypted either way
-        if 'password' in smtp_def:
-            password = smtp_def['password']
-        else:
+        # A definition gets a generated password if it gives none, or names an environment variable that is not set,
+        # and whichever it is, it is stored encrypted
+        password = smtp_def.get('password')
+        if not is_usable_secret(password):
             password = uuid4().hex
 
         smtp_conn.password = encrypt_secret(session, password)
@@ -199,7 +195,7 @@ class SMTPImporter:
     def sync_smtp_definitions(self, smtp_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d SMTP connection definitions from YAML', len(smtp_list))
 
-        db_defs = self.get_smtp_defs_from_db(session, self.importer.cluster_id)
+        db_defs = self.get_smtp_defs_from_db(session)
         to_create, to_update = self.compare_smtp_defs(smtp_list, db_defs)
 
         out_created = []

@@ -29,15 +29,15 @@ from requests import \
     put    as requests_put
 
 # Zato
-from zato.common.api import AS4, SCHEDULER
-from zato.common.as2.common import DeliveryKind as AS2DeliveryKind
+from zato.common.api import SCHEDULER
 from zato.common.json_internal import dumps
 from zato.common.pubsub.outgoing import Key_Data, SendRejected
 from zato.common.typing_ import cast_
 from zato.server.connection.ftp import FTPConnection
 from zato.server.connection.sftp import SFTPConnection
 from zato.server.connection.smb import SMBConnection
-from zato.server.generic.api.outconn_hl7_mllp import get_ack_rejection, to_message_text
+from zato.server.generic.api.outconn_hl7_mllp import get_ack_rejection, pool_block_timeout as mllp_pool_block_timeout, \
+    to_message_text
 
 ################################################################################################################################
 ################################################################################################################################
@@ -46,19 +46,13 @@ if 0:
     from elasticsearch import Elasticsearch
     from pymongo import MongoClient
     from requests import Response
-    from zato.common.as2.outbound import SendResult as AS2SendResult
-    from zato.common.as4.outbound import PullResult, SendResult
-    from zato.common.as4.resend import ResendCandidate
     from zato.common.hl7.mllp.ack import AckResult
     from zato.common.pubsub.outgoing import SendResult as QueueSendResult
-    from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, anydict, anydictnone, callnone, intnone, strbytes, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, callnone, intnone, strnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict
-    from zato.server.connection.as4 import AS4Wrapper
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
-    from zato.server.generic.api.outconn_as2 import as2_payload, OutconnAS2Wrapper
     from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
     from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
     from zato.server.queue_bridge.client import QueueBridgeClient
@@ -159,7 +153,6 @@ class SchedulerFacade:
         # Now, we are ready to create a new job ..
         response = self.server.invoke(
             'zato.scheduler.job.create', {
-                'cluster_id': self.server.cluster_id,
                 'name': name,
                 'is_active': True,
                 'job_type': SCHEDULER.JOB_TYPE.ONE_TIME,
@@ -445,229 +438,6 @@ class SOAPFacade:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AS4Invoker:
-    """ Wraps a single AS4 outgoing connection for use from services.
-    """
-    conn: 'AS4Wrapper'
-    cid: 'str'
-
-    def __init__(self, conn:'AS4Wrapper', cid:'str') -> 'None':
-        self.conn = conn
-        self.cid = cid
-
-    def __repr__(self) -> 'str':
-        return f'AS4Invoker({self.conn.config["name"]} at {hex(id(self))})'
-
-# ################################################################################################################################
-
-    def send(
-        self,
-        data:'strbytes',
-        mime_type:'str'=AS4.Default.Payload_MIME_Type,
-        conversation_id:'strnone'=None,
-        ) -> 'SendResult':
-        """ Sends one AS4 message to the connection's configured endpoint,
-        verifying the synchronous receipt.
-        """
-        out = self.conn.send(self.cid, data, mime_type, conversation_id)
-        return out
-
-# ################################################################################################################################
-
-    def send_to(
-        self,
-        participant_id:'str',
-        document_type:'str',
-        data:'strbytes',
-        from_participant:'strnone'=None,
-        conversation_id:'strnone'=None,
-        ) -> 'SendResult':
-        """ The access-point one-liner - discovers the receiver's endpoint through SML and SMP,
-        wraps the business document in an SBDH and delivers it there, verifying the receipt.
-        """
-        out = self.conn.send_to(self.cid, participant_id, document_type, data, from_participant, conversation_id)
-        return out
-
-# ################################################################################################################################
-
-    def resend(self, candidate:'ResendCandidate') -> 'SendResult':
-        """ Delivers one message again under the eb:MessageId of the attempt it repeats - the
-        reception awareness retry, which the receiving side's duplicate detection is what makes safe.
-        """
-        out = self.conn.resend(self.cid, candidate)
-        return out
-
-# ################################################################################################################################
-
-    def resubmit(self, candidate:'ResendCandidate') -> 'SendResult':
-        """ Delivers the payloads of a stored message as a message of its own, with an eb:MessageId
-        of its own - the operator resend, which the caller records itself.
-        """
-        out = self.conn.resubmit(self.cid, candidate)
-        return out
-
-# ################################################################################################################################
-
-    def pull(self, mpc:'strnone'=None) -> 'PullResult':
-        """ Sends one pull request to the connection's configured endpoint -
-        the generic One-Way/Pull exchange - and returns whatever came back.
-        """
-        out = self.conn.pull(self.cid, mpc)
-        return out
-
-# ################################################################################################################################
-
-    def queue_for_pull(
-        self,
-        data:'strbytes',
-        mime_type:'str'=AS4.Default.Payload_MIME_Type,
-        conversation_id:'strnone'=None,
-        mpc:'strnone'=None,
-        ) -> 'str':
-        """ Puts one message on a message partition channel for the partner to pull, and returns the
-        eb:MessageId it will be handed over under - the sending half of One-Way/Pull, where the
-        partner asks and the AS4 channel serving its request hands the message over.
-        """
-        out = self.conn.queue_for_pull(self.cid, data, mime_type, conversation_id, mpc)
-        return out
-
-# ################################################################################################################################
-
-    def ping(self) -> 'str':
-        """ Performs a signed ping exchange with the connection's configured endpoint.
-        """
-        out = self.conn.ping(self.cid)
-        return out
-
-# ################################################################################################################################
-
-    def publish(
-        self,
-        data:'strbytes',
-        mime_type:'str'=AS4.Default.Payload_MIME_Type,
-        conversation_id:'strnone'=None,
-        participant_id:'strnone'=None,
-        document_type:'strnone'=None,
-        from_participant:'strnone'=None,
-        ) -> 'PublishResult':
-        """ Publishes the message to the outbound AS4 topic instead of posting it directly -
-        the built-in delivery subscriber performs the HTTP delivery, so redelivery on failure
-        is pub/sub's built-in behavior. With a participant id the delivery runs send_to,
-        without one it runs send.
-        """
-        if isinstance(data, bytes):
-            data = data.decode('utf8')
-
-        # Everything the delivery service needs to replay this call travels in the message.
-        message = {
-            'connection': self.conn.config['name'],
-            'data': data,
-            'mime_type': mime_type,
-            'conversation_id': conversation_id,
-            'participant_id': participant_id,
-            'document_type': document_type,
-            'from_participant': from_participant,
-        }
-
-        server = self.conn.server
-        out = server.pubsub_backend.publish(AS4.Default.Outbound_Topic, message, cid=self.cid, correl_id=self.cid)
-
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class AS4Facade:
-    """ Provides dict-like access to AS4 outgoing connections from services via self.as4.
-    """
-    cid: 'str'
-    _out_as4: 'ConfigDict'
-
-    def init(self, cid:'str', _out_as4:'ConfigDict') -> 'None':
-        self.cid = cid
-        self._out_as4 = _out_as4
-
-# ################################################################################################################################
-
-    def __getitem__(self, name:'str') -> 'AS4Invoker':
-
-        # This will raise a KeyError if there is no such connection
-        item = self._out_as4[name]
-
-        return AS4Invoker(item.conn, self.cid)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class AS2Invoker:
-    """ Wraps a single AS2 outgoing connection for use from services.
-    """
-    conn: 'OutconnAS2Wrapper'
-    cid: 'str'
-
-    def __init__(self, conn:'OutconnAS2Wrapper', cid:'str') -> 'None':
-        self.conn = conn
-        self.cid = cid
-
-    def __repr__(self) -> 'str':
-        return f'AS2Invoker({self.conn.config["name"]} at {hex(id(self))})'
-
-# ################################################################################################################################
-
-    def send(
-        self,
-        payload:'as2_payload',
-        filename:'strnone'=None,
-        *,
-        needs_audit:'bool'=True,
-        message_id:'strnone'=None,
-        delivery_kind:'str'=AS2DeliveryKind.Original,
-        ) -> 'AS2SendResult':
-        """ Sends one AS2 message to the connection's configured endpoint,
-        reconciling the synchronous MDN when one was requested. Passing the Message-ID of an
-        earlier delivery makes this the automatic retry or resend of that message.
-        """
-        out = self.conn.send(
-            self.cid, payload, filename, needs_audit=needs_audit, message_id=message_id, delivery_kind=delivery_kind)
-        return out
-
-# ################################################################################################################################
-
-    def ping(self) -> 'None':
-        """ Validates the endpoint without posting anything - a TCP connection
-        plus, over HTTPS, the TLS handshake against the endpoint's certificate.
-        """
-        self.conn.ping()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class AS2Facade:
-    """ Provides dict-like access to AS2 outgoing connections from services via self.as2.
-    """
-    cid: 'str'
-    _outconn_as2: 'anydict'
-
-    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
-        self.cid = cid
-        self._outconn_as2 = config_manager.outconn_as2
-
-# ################################################################################################################################
-
-    def __getitem__(self, name:'str') -> 'AS2Invoker':
-
-        # This will raise a KeyError if there is no such connection
-        item = self._outconn_as2[name]
-
-        # The wrapper holds a queue with the underlying AS2 connections
-        wrapper = item['conn']
-
-        out = AS2Invoker(wrapper, self.cid)
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class KeysightVisionFacade(RESTFacade):
     name_prefix = 'KeysightVision.'
     has_path_in_args = True
@@ -900,15 +670,16 @@ class HL7MLLPInvoker:
         """
         wrapper = self._outconn_hl7_mllp[self._conn_name].conn
 
-        with wrapper.client() as connection:
+        with wrapper.client(should_block=True, block_timeout=mllp_pool_block_timeout) as connection:
             connection.ping()
 
 # ################################################################################################################################
 
     def _send_direct(self, wrapper:'any_', data:'str | bytes', needs_audit:'bool', *, needs_retry:'bool') -> 'AckResult':
-        """ One send through a pooled connection, which goes back to the pool afterwards.
+        """ One send through a pooled connection, which goes back to the pool afterwards. A send that finds every
+        pooled connection in use waits for one.
         """
-        with wrapper.client() as connection:
+        with wrapper.client(should_block=True, block_timeout=mllp_pool_block_timeout) as connection:
             out = connection.invoke(data, cid=self._cid, needs_audit=needs_audit, needs_retry=needs_retry)
 
         return out
@@ -926,8 +697,10 @@ class HL7MLLPInvoker:
         def attempt() -> 'AckResult':
             ack = self._send_direct(wrapper, data, needs_audit, needs_retry=False)
 
+            # An AE is the receiving application saying the message itself is wrong, an AR that it could not take it now
             if rejection := get_ack_rejection(ack):
-                raise SendRejected(rejection, ack)
+                is_permanent = not ack.should_retry
+                raise SendRejected(rejection, ack, is_permanent=is_permanent)
 
             return ack
 
@@ -950,8 +723,15 @@ class MLLPFacade:
 # ################################################################################################################################
 
     def __getitem__(self, name:'str') -> 'HL7MLLPInvoker':
-        self._outconn_hl7_mllp[name]
-        return HL7MLLPInvoker(name, self.cid, self._outconn_hl7_mllp)
+
+        # A name that is not a connection raises here, and an inactive connection is not looked up either
+        item = self._outconn_hl7_mllp[name]
+
+        if not item['is_active']:
+            raise Exception(f'HL7 MLLP outgoing connection `{name}` is inactive')
+
+        out = HL7MLLPInvoker(name, self.cid, self._outconn_hl7_mllp)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

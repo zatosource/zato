@@ -67,7 +67,6 @@ Examples:
         {'name':'--env-file', 'help':'Path to a file with environment variables to use', 'action':'store'},
         {'name':'--stop-after', 'help':'After how many seconds to stop all the Zato components in the system', 'action':'store'},
         {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'},
-        {'name':'--with-test-data', 'help':'If given, test data will be used', 'action':'store_true'},
     ]
 
 # ################################################################################################################################
@@ -164,7 +163,6 @@ Examples:
             'stderr_path': self.args.stderr_path,
             'env_file': env_file,
             'stop_after': self.args.stop_after,
-            'with_test_data': self.args.with_test_data,
         }
 
         if extra_options:

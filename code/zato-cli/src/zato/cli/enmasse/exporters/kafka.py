@@ -149,12 +149,12 @@ class ChannelKafkaExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'kafka_def_list':
+    def export(self, session: 'SASession') -> 'kafka_def_list':
         """ Exports Kafka channel definitions.
         """
         logger.info('Exporting Kafka channel definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA)
 
         if not db_items:
             logger.info('No Kafka channel definitions found in DB')
@@ -212,12 +212,12 @@ class OutgoingKafkaExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'kafka_def_list':
+    def export(self, session: 'SASession') -> 'kafka_def_list':
         """ Exports Kafka outgoing definitions.
         """
         logger.info('Exporting Kafka outgoing definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA)
+        db_items = connection_list(session, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA)
 
         if not db_items:
             logger.info('No Kafka outgoing definitions found in DB')

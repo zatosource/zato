@@ -23,11 +23,11 @@ from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.util.secrets import Auto_Password_Prefix, decrypt_secret, get_crypto_manager, is_encrypted, \
     load_opaque
-from zato.common.api import AS2, AS4, CONNECTION, EnvVariable
+from zato.common.api import EnvVariable
 from zato.common.const import SECRETS
 from zato.common.json_internal import dumps
-from zato.common.odb.model import APIKeySecurity, ChannelAMQP, GenericConn, HTTPBasicAuth, HTTPSOAP, IMAP, NTLM, OAuth, \
-    OutgoingAMQP, OutgoingOdoo, SMTP, SQLConnectionPool, WSSecurity
+from zato.common.odb.model import APIKeySecurity, ChannelAMQP, GenericConn, HTTPBasicAuth, IMAP, NTLM, OAuth, OutgoingAMQP, \
+    OutgoingOdoo, SMTP, SQLConnectionPool, WSSecurity
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -182,11 +182,6 @@ generic_table = (
     ('slack', 'token', {}),
     ('llm', 'secret', {'address': 'https://api.openai.com/v1', 'model': 'gpt-4o-mini'}),
 )
-
-# ################################################################################################################################
-
-# A PEM-looking text standing in for a private key - what is asserted is where it lands and how, not what it is
-pem_text = '-----BEGIN PRIVATE KEY-----\nenmasse-secret-update-key-material\n-----END PRIVATE KEY-----'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -525,131 +520,6 @@ class TestEnmasseSecretUpdate(TestCase):
                 cleanup_enmasse(self.server_path)
 
 # ################################################################################################################################
-
-    def test_opaque_secrets_as2(self) -> 'None':
-        """ 6.5 - the AS2 signing key is encrypted in the opaque attributes.
-        """
-        name = 'enmasse.secret.outgoing.as2'
-        definition = {
-            'name': name,
-            'as2_from': 'EnmasseSecret',
-            'as2_to': 'PartnerCorp',
-            'endpoint_url': 'https://as2.example.com/as2',
-            'as2_signing_key': pem_text,
-        }
-
-        _ = self._sync({'outgoing_as2': [definition]})
-        row = self._get_row(GenericConn, name)
-        opaque = load_opaque(row.opaque1)
-
-        self._assert_stored(opaque['as2_signing_key'], pem_text)
-
-        # The other secret fields keep their empty defaults, which are not secrets and are not encrypted
-        for field_name in AS2.Secret_Fields:
-            if field_name != 'as2_signing_key':
-                self.assertEqual(opaque[field_name], '')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-    def _as4_channel_def(self, password:'str | None', signing_key:'str | None', decryption_key:'str | None') -> 'anydict':
-        out:'anydict' = {
-            'name': 'enmasse.secret.channel.as4',
-            'url_path': '/enmasse.secret.as4',
-            'as4_profile': 'peppol',
-            'as4_to_party': 'enmasse-ap',
-            'as4_inbound_topic': 'enmasse.secret.as4.inbound',
-        }
-
-        if password is not None:
-            out['as4_password'] = password
-
-        if signing_key is not None:
-            out['as4_signing_key'] = signing_key
-
-        if decryption_key is not None:
-            out['as4_decryption_key'] = decryption_key
-
-        return out
-
-# ################################################################################################################################
-
-    def _as4_outgoing_def(self, password:'str | None', signing_key:'str | None', decryption_key:'str | None') -> 'anydict':
-        out:'anydict' = {
-            'name': 'enmasse.secret.outgoing.as4',
-            'host': 'https://ap.example.com',
-            'url_path': '/as4',
-            'as4_profile': 'peppol',
-            'as4_from_party': 'enmasse-ap',
-        }
-
-        if password is not None:
-            out['as4_password'] = password
-
-        if signing_key is not None:
-            out['as4_signing_key'] = signing_key
-
-        if decryption_key is not None:
-            out['as4_decryption_key'] = decryption_key
-
-        return out
-
-# ################################################################################################################################
-
-    def test_as4_secrets(self) -> 'None':
-        """ 6.6 - the AS4 keystore secrets are encrypted in the opaque attributes, compared through decryption
-        and preserved when absent.
-        """
-        table = (
-            ('channel_as4', self._as4_channel_def, CONNECTION.CHANNEL),
-            ('outgoing_as4', self._as4_outgoing_def, CONNECTION.OUTGOING),
-        )
-
-        for yaml_key, build, connection in table:
-            with self.subTest(yaml_key=yaml_key):
-
-                name = build(None, None, None)['name']
-
-                # Created with all three secrets ..
-                created, updated = self._sync({yaml_key: [build(ModuleCtx.Password_A, pem_text, pem_text)]})
-                self.assertEqual(len(created[yaml_key]), 1)
-
-                row = self._get_row(HTTPSOAP, name, connection=connection)
-                opaque = load_opaque(row.opaque1)
-
-                for field_name in AS4.Secret_Fields:
-                    self.assertTrue(is_encrypted(opaque[field_name]), field_name)
-
-                self._assert_stored(opaque['as4_password'], ModuleCtx.Password_A)
-                self._assert_stored(opaque['as4_signing_key'], pem_text)
-                self._assert_stored(opaque['as4_decryption_key'], pem_text)
-
-                # .. the identical definition is no update ..
-                created, updated = self._sync({yaml_key: [build(ModuleCtx.Password_A, pem_text, pem_text)]})
-                self.assertNotIn(yaml_key, updated)
-
-                # .. a password-only change is one update ..
-                created, updated = self._sync({yaml_key: [build(ModuleCtx.Password_B, pem_text, pem_text)]})
-                self.assertEqual(len(updated[yaml_key]), 1)
-
-                row = self._get_row(HTTPSOAP, name, connection=connection)
-                opaque = load_opaque(row.opaque1)
-                self._assert_stored(opaque['as4_password'], ModuleCtx.Password_B)
-                self._assert_stored(opaque['as4_signing_key'], pem_text)
-
-                # .. and absent fields are preserved.
-                created, updated = self._sync({yaml_key: [build(None, None, None)]})
-                self.assertNotIn(yaml_key, updated)
-
-                row = self._get_row(HTTPSOAP, name, connection=connection)
-                opaque = load_opaque(row.opaque1)
-                self._assert_stored(opaque['as4_password'], ModuleCtx.Password_B)
-                self._assert_stored(opaque['as4_signing_key'], pem_text)
-                self._assert_stored(opaque['as4_decryption_key'], pem_text)
-
-                cleanup_enmasse(self.server_path)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
     def _deploy_custom_connector(self) -> 'None':
@@ -781,23 +651,6 @@ class TestEnmasseSecretUpdate(TestCase):
         opaque = load_opaque(row.opaque1)
         self._assert_stored(opaque['consumer_secret'], ModuleCtx.Password_B)
         self._assert_stored(opaque['password'], ModuleCtx.Password_A)
-
-        # An AS4 channel - the secrets are inside the opaque attributes too
-        as4_name = 'enmasse.secret.channel.as4'
-
-        _ = self._sync({'channel_as4': [self._as4_channel_def(ModuleCtx.Password_A, pem_text, pem_text)]})
-        row = self._get_row(HTTPSOAP, as4_name, connection=CONNECTION.CHANNEL)
-        opaque = load_opaque(row.opaque1)
-        opaque['as4_password'] = ModuleCtx.Password_B
-        self._write_plaintext(row, 'opaque1', self._dump_opaque(opaque))
-
-        _, updated = self._sync({'channel_as4': [self._as4_channel_def(None, None, None)]})
-        self.assertNotIn('channel_as4', updated)
-
-        row = self._get_row(HTTPSOAP, as4_name, connection=CONNECTION.CHANNEL)
-        opaque = load_opaque(row.opaque1)
-        self._assert_stored(opaque['as4_password'], ModuleCtx.Password_B)
-        self._assert_stored(opaque['as4_signing_key'], pem_text)
 
 # ################################################################################################################################
 

@@ -18,9 +18,10 @@ from zato.common.ext.bunch import Bunch
 # Zato
 from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
-from zato.common.odb.model import Cluster, HTTPBasicAuth
+from zato.common.odb.model import HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
@@ -36,12 +37,12 @@ class GetList(AdminService):
     """
     _filter_by = HTTPBasicAuth.name,
 
-    input = 'cluster_id', *query_parameters
+    input = query_parameters
     output = 'id', 'name', 'is_active', 'username', 'realm'
 
     def get_data(self, session): # type: ignore
 
-        out = elems_with_opaque(self._search(basic_auth_list, session, self.request.input.cluster_id, None, False))
+        out = elems_with_opaque(self._search(basic_auth_list, session, False))
         return out
 
     def handle(self):
@@ -55,7 +56,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
     """
-    input = 'name', 'is_active', 'username', 'realm', '-cluster_id'
+    input = 'name', 'is_active', 'username', 'realm'
     output = 'id', 'name'
 
     def handle(self):
@@ -66,20 +67,16 @@ class Create(AdminService):
         logger.info('Create.handle is_active trace -> input.is_active=%r, type=%s, name=%s',
             input.is_active, type(input.is_active).__name__, input.name)
 
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
-
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(HTTPBasicAuth).\
-                    filter(Cluster.id==cluster_id).\
                     filter(HTTPBasicAuth.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('HTTP Basic Auth definition `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('HTTP Basic Auth definition `{}` already exists'.format(input.name))
 
                 realm = input.realm if input.realm else 'API'
 
@@ -87,7 +84,7 @@ class Create(AdminService):
                     input.is_active, type(input.is_active).__name__, input.name)
 
                 auth = HTTPBasicAuth(None, input.name, input.is_active, input.username,
-                    realm, input.password, cluster)
+                    realm, input.password)
                 set_instance_opaque_attrs(auth, input)
 
                 session.add(auth)
@@ -136,7 +133,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
-    input = 'name', 'is_active', 'username', 'realm', '-id', '-cluster_id'
+    input = 'name', 'is_active', 'username', 'realm', Int('-id')
     output = 'id', 'name'
 
     def handle(self):
@@ -144,15 +141,13 @@ class Edit(AdminService):
         # Local aliases
         input = self.request.input
         input_id = input.get('id')
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
-        logger.info('Edit.handle: name=%s, id=%s, username=%s, realm=%s, cluster_id=%s',
-            input.name, input_id, input.username, input.realm, cluster_id)
+        logger.info('Edit.handle: name=%s, id=%s, username=%s, realm=%s',
+            input.name, input_id, input.username, input.realm)
 
         with closing(self.odb.session()) as session: # type: ignore
             try:
                 existing_one = session.query(HTTPBasicAuth).\
-                    filter(Cluster.id==cluster_id).\
                     filter(HTTPBasicAuth.name==input.name)
 
                 if input_id:
@@ -160,7 +155,7 @@ class Edit(AdminService):
                     existing_one = existing_one.first()
 
                 if existing_one:
-                    raise Exception('HTTP Basic Auth definition `{}` already exists on this cluster'.format(input.name))
+                    raise Exception('HTTP Basic Auth definition `{}` already exists'.format(input.name))
 
                 definition = session.query(HTTPBasicAuth)
 
@@ -195,7 +190,8 @@ class Edit(AdminService):
                 raise
             else:
 
-                # Enrich the message for the server ..
+                # Enrich the message for the server, which finds the definition by its id ..
+                input.id = definition.id
                 input.action = SECURITY.BASIC_AUTH_EDIT.value
                 input.old_name = old_name
                 input.old_username = old_username
@@ -250,7 +246,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
     """
-    input = 'id',
+    input = Int('id'),
 
     def handle(self):
         logger.info('Delete.handle: id=%s', self.request.input.id)

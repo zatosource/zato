@@ -158,87 +158,79 @@ def add_http_soap_select(form, field_name, req, connection, transport, needs_ini
 
     field = form.fields[field_name]
 
-    if req.zato.cluster_id:
+    response = req.zato.client.invoke('zato.http-soap.get-list', {
+        'connection': connection,
+        'transport': transport,
+    })
 
-        response = req.zato.client.invoke('zato.http-soap.get-list', {
-            'cluster_id': req.zato.cluster_id,
-            'connection': connection,
-            'transport': transport,
-        })
-
-        for item in response.data:
-            value = item.id if by_id else item.name
-            field.choices.append([value, item.name])
+    for item in response.data:
+        value = item.id if by_id else item.name
+        field.choices.append([value, item.name])
 
 # ################################################################################################################################
 
 def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True,
     should_include_scheduler=False):
 
-    if req.zato.cluster_id:
+    fields = {}
 
-        fields = {}
+    for name in SELECT_SERVICE_FIELDS:
+        field = form.fields.get(name)
+        if field:
+            fields[name] = field
 
-        for name in SELECT_SERVICE_FIELDS:
-            field = form.fields.get(name)
-            if field:
-                fields[name] = field
+    if not fields:
+        raise ValueError('Could not find any service field (tried: `{}` in `{}`)'.format(
+            SELECT_SERVICE_FIELDS, form.fields))
 
-        if not fields:
-            raise ValueError('Could not find any service field (tried: `{}` in `{}`)'.format(
-                SELECT_SERVICE_FIELDS, form.fields))
-
-        for field_name, field in fields.items():
-
-            field.choices = []
-            field.choices.append(INITIAL_CHOICES)
-
-            request = {
-                'cluster_id': req.zato.cluster_id,
-                'name_filter':'*',
-                'should_include_scheduler': should_include_scheduler,
-            }
-
-            if has_name_filter:
-                request['name_filter'] = '*'
-
-            response = req.zato.client.invoke(api_name, request)
-            data = response.data
-
-            for service in data:
-
-                # Older parts of web-admin use service names only but newer ones prefer service ID
-                id_attr = service.id if by_id else service.name
-                field.choices.append([id_attr, service.name])
-
-            if initial_service:
-                form.initial[field_name] = initial_service
-
-# ################################################################################################################################
-
-def add_select_from_service(form, req, service_name, field_names, by_id=True, service_extra=None):
-    if req.zato.cluster_id:
-
-        field_names = field_names if isinstance(field_names, list) else [field_names]
-
-        field = None
-        for name in field_names:
-            field = form.fields.get(name)
-            if field:
-                break
+    for field_name, field in fields.items():
 
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
 
-        service_request = {'cluster_id': req.zato.cluster_id}
-        service_request.update(service_extra or {})
+        request = {
+            'name_filter':'*',
+            'should_include_scheduler': should_include_scheduler,
+        }
 
-        response = req.zato.client.invoke(service_name, service_request)
-        response = response.data if isinstance(response.data, list) else response.data.response
+        if has_name_filter:
+            request['name_filter'] = '*'
 
-        for item in response:
-            id_attr = item.id if by_id else item.name
-            field.choices.append([id_attr, item.name])
+        response = req.zato.client.invoke(api_name, request)
+        data = response.data
+
+        for service in data:
+
+            # Older parts of web-admin use service names only but newer ones prefer service ID
+            id_attr = service.id if by_id else service.name
+            field.choices.append([id_attr, service.name])
+
+        if initial_service:
+            form.initial[field_name] = initial_service
+
+# ################################################################################################################################
+
+def add_select_from_service(form, req, service_name, field_names, by_id=True, service_extra=None):
+    field_names = field_names if isinstance(field_names, list) else [field_names]
+
+    field = None
+    for name in field_names:
+        field = form.fields.get(name)
+        if field:
+            break
+
+    field.choices = []
+    field.choices.append(INITIAL_CHOICES)
+
+    service_request = {}
+    service_request.update(service_extra or {})
+
+    response = req.zato.client.invoke(service_name, service_request)
+    response = response.data if isinstance(response.data, list) else response.data.response
+
+    for item in response:
+        id_attr = item.id if by_id else item.name
+        field.choices.append([id_attr, item.name])
 
 # ################################################################################################################################
 
@@ -270,37 +262,12 @@ def populate_form_initial(form:'any_', item:'stranydict') -> 'None':
 
 class SearchForm(forms.Form):
 
-    cluster = forms.ChoiceField(widget=forms.Select())
     query = forms.CharField(widget=forms.TextInput(
         attrs={'style':'width:40%', 'class':'required', 'placeholder':'Enter search terms'}))
 
-    def __init__(self, clusters, data=None):
-
-        data = data or {}
-
-        #
-        # https://github.com/zatosource/zato/issues/361
-        #
-        # If the length is 1 we have only one cluster defined.
-        # This means we can make use that only one straightaway to display anything that is needed.
-        #
-
-        if len(clusters) == 1:
-            initial = dict(iteritems(data))
-            initial.update({'cluster':clusters[0].id})
-            self.zato_auto_submit = True
-        else:
-            initial = {'query': data.get('query', '')}
-            self.zato_auto_submit = False
-
+    def __init__(self, data):
+        initial = dict(iteritems(data))
         super(SearchForm, self).__init__(initial)
-
-        self.fields['cluster'].choices = [INITIAL_CHOICES]
-        for cluster in clusters:
-            server_info = '{0} - http://127.0.0.1:17010'
-            self.fields['cluster'].choices.append([cluster.id, server_info])
-
-        self.initial['cluster'] = (data.get('cluster') or [''])[0]
 
 # ################################################################################################################################
 # ################################################################################################################################

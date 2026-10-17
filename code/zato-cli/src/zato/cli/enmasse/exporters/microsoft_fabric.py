@@ -38,13 +38,13 @@ class MicrosoftFabricExporter:
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'microsoft_fabric_def_list':
+    def export(self, session: 'SASession') -> 'microsoft_fabric_def_list':
         """ Exports Microsoft Fabric connection definitions.
         """
         logger.info('Exporting Microsoft Fabric connection definitions')
 
         # Get Microsoft Fabric connections from database using the generic connection query
-        db_connections = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC)
+        db_connections = connection_list(session, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC)
 
         if not db_connections:
             logger.info('No Microsoft Fabric connection definitions found in DB')

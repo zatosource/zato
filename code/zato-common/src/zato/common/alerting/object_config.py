@@ -83,7 +83,7 @@ alert_type_mllp_outgoing = 'mllp_outgoing'
 # An outgoing Kafka connection alerts on its queue and DLQ alone - the depths are read off the connection, not off the audit log
 alert_type_kafka_outgoing = 'kafka_outgoing'
 
-# An outgoing LLM connection's settings follow the cluster-level llm type, so the connection and the alerts_llm ruleset are one type
+# An outgoing LLM connection's settings follow the environment-wide llm type, so the connection and the alerts_llm ruleset are one type
 alert_type_llm = 'llm'
 
 # An MCP gateway's settings follow the mcp type - the gateway is the only writer of the mcp audit source

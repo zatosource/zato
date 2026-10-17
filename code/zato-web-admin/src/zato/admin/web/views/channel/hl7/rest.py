@@ -35,7 +35,6 @@ class Index(_Index):
             'data_format': DATA_FORMAT.HL7
         }
 
-    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service_name', 'security_name', \
         'security_id', 'sec_type', 'sec_type_name', 'data_format',
     output_optional = ('json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
@@ -52,7 +51,7 @@ class Index(_Index):
 
         # What the channel's audit log link carries - the template adds it to the audit log page's URL.
         object_name = quote(item.name)
-        item.audit_log_query = f'source={AuditSource.REST_Channel}&object_name={object_name}&cluster={self.cluster_id}'
+        item.audit_log_query = f'source={AuditSource.REST_Channel}&object_name={object_name}'
 
         return item
 

@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Subscription_Page_Url = '/zato/pubsub/subscription/?cluster=1'
+_Subscription_Page_Url = '/zato/pubsub/subscription/'
 
 _Test_Name_Prefix = 'test.sub.' + CryptoManager.generate_hex_string(32) + '.'
 

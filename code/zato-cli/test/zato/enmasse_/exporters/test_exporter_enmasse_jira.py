@@ -96,7 +96,6 @@ class TestEnmasseJiraExporter(TestCase):
             self.yaml_config['jira'] = jira_list_from_yaml
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_jira_connections, _ = self.jira_importer.sync_definitions(jira_list_from_yaml, self.session)
 
         self.assertTrue(len(created_jira_connections) > 0, 'No JIRA connections were created.')

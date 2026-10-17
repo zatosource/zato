@@ -11,7 +11,8 @@ import logging
 from json import loads
 
 # Zato
-from zato.cli.enmasse.util import preprocess_item, security_needs_update
+from zato.cli.enmasse.util import Channel_Delivery_Fields, channel_delivery_needs_update, prepare_channel_delivery_fields, \
+    preprocess_item, security_needs_update, take_channel_delivery_attrs
 from zato.cli.enmasse.util.alerts import alerts_need_update, take_alert_attrs
 from zato.common.alerting.object_config import Alerts_Key, alert_type_channels
 from zato.common.api import CONNECTION, URL_TYPE
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Keys that never map to database columns directly - they are handled separately.
 _non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'response_cache', 'use_mtom', 'is_audit_log_active',
-    'is_audit_export_payload_active')
+    'is_audit_export_payload_active') + Channel_Delivery_Fields
 
 # What the alert settings name the object as in the errors they raise
 _connection_type = 'channel_soap'
@@ -49,12 +50,11 @@ class ChannelSOAPImporter:
 
 # ################################################################################################################################
 
-    def get_soap_channels_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_soap_channels_from_db(self, session:'SASession') -> 'anydict':
         out = {}
-        logger.info('Retrieving SOAP channels from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving SOAP channels from database')
 
         query = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
             filter(HTTPSOAP.transport==URL_TYPE.SOAP) # type: ignore
         channels = to_json(query, return_as_dict=True)
@@ -108,6 +108,10 @@ class ChannelSOAPImporter:
                     if key in ('security', 'security_name', 'groups', 'rate_limiting', 'response_cache', 'service', Alerts_Key):
                         continue
 
+                    # The delivery keys are compared on their own, with their defaults standing in for absent values
+                    if key in Channel_Delivery_Fields:
+                        continue
+
                     # A field the database row does not have yet means an update too.
                     if key not in db_def:
                         logger.info('Field %s.%s not in DB yet, will update', name, key)
@@ -137,6 +141,10 @@ class ChannelSOAPImporter:
 
                 # Check the alert settings
                 if alerts_need_update(item, db_def, alert_type_channels):
+                    needs_update = True
+
+                # Check the queue switch, the retry and DLQ settings and the static queue response
+                if channel_delivery_needs_update(item, db_def):
                     needs_update = True
 
                 if needs_update:
@@ -261,6 +269,11 @@ class ChannelSOAPImporter:
         # Payloads leave with the audit export only if the YAML definition says so
         opaque_attrs['is_audit_export_payload_active'] = channel_def.get('is_audit_export_payload_active', False)
 
+        # The queue switch, the retry and DLQ settings and the static queue response, validated and with their defaults filled in
+        prepare_channel_delivery_fields(channel_def, _connection_type)
+        delivery_attrs = take_channel_delivery_attrs(channel_def)
+        opaque_attrs.update(delivery_attrs)
+
         return opaque_attrs
 
 # ################################################################################################################################
@@ -291,10 +304,9 @@ class ChannelSOAPImporter:
         alert_attrs = take_alert_attrs(channel_def, alert_type_channels, _connection_type, session)
 
         service_name = channel_def['service']
-        service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
-        cluster = self.importer.get_cluster(session)
+        service = session.query(Service).filter_by(name=service_name).one()
 
-        channel = HTTPSOAP(cluster=cluster, service=service)
+        channel = HTTPSOAP(service=service)
         channel.name = name
         channel.connection = CONNECTION.CHANNEL
         channel.transport = URL_TYPE.SOAP
@@ -339,7 +351,7 @@ class ChannelSOAPImporter:
             channel.url_path = url_path
 
         if service_name := channel_def.get('service'):
-            service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).first()
+            service = session.query(Service).filter_by(name=service_name).first()
             if not service:
                 raise Exception(f'Service not found: {service_name}')
             channel.service = service
@@ -366,12 +378,12 @@ class ChannelSOAPImporter:
     def sync_channel_soap(self, channel_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d SOAP channels from YAML', len(channel_list))
 
-        db_channels = self.get_soap_channels_from_db(session, self.importer.cluster_id)
+        db_channels = self.get_soap_channels_from_db(session)
         to_create, to_update = self.compare_channel_soap(channel_list, db_channels)
 
         # Nothing is written before every definition is known to have a URL path of its own,
         # since two channels resolving to one match target leave only one of them reachable.
-        ensure_channel_definitions_are_unique(session, self.importer.cluster_id, to_create + to_update)
+        ensure_channel_definitions_are_unique(session, to_create + to_update)
 
         out_created = []
         out_updated = []

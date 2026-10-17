@@ -117,7 +117,7 @@ class TierCreateTestCase(_AuditTestCase):
 class TierEditTestCase(_AuditTestCase):
 
     def test_edit_publishes_config_event(self):
-        """ A tier edit publishes the event that makes all workers re-resolve references.
+        """ A tier edit publishes the event that makes the server re-resolve references.
         """
         rules = _make_rule_dicts()
         service = _make_service(TierEdit, {'id': '100', 'name': 'Bronze', 'description': '', 'rules_json': dumps(rules)})

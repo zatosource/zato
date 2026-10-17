@@ -237,6 +237,7 @@ class BearerTokenLifecycle(TestCase):
         out:'stranydict' = {
             'id': _bearer_security_id,
             'name': 'test.bearer.member',
+            'is_active': True,
             'sec_type': 'oauth',
             'static_token': _static_token,
         }

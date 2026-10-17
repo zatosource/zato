@@ -25,7 +25,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/cloud/salesforce/?cluster=1&type_=cloud-salesforce'
+_Page_Url_Pattern = '/zato/cloud/salesforce/?type_=cloud-salesforce'
 
 _Test_Name_Prefix = 'test.salesforce.' + CryptoManager.generate_hex_string(32) + '.'
 

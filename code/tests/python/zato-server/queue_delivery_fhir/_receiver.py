@@ -13,7 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import threading
 from dataclasses import dataclass, field
-from http.client import CREATED, OK, UNPROCESSABLE_ENTITY
+from http.client import CREATED, OK, SERVICE_UNAVAILABLE
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from json import dumps, loads
 from urllib.parse import urlsplit
@@ -39,7 +39,8 @@ _shutdown_timeout_seconds = 5
 # A GET is a read, never a delivery
 _read_method = 'GET'
 
-# What a refused request is answered with - an OperationOutcome saying so
+# What a refused request is answered with - an OperationOutcome saying so, under a status that says the server
+# could not take the resource right now rather than that the resource itself is wrong, so the connection queues it
 Outcome_Diagnostics = 'The resource was not accepted'
 Outcome_Code = 'processing'
 _outcome_severity = 'error'
@@ -185,7 +186,7 @@ class FHIRRecordingReceiver(RecordingReceiver[FHIRRecordedRequest]):
 
     # A write is accepted with the resource created and refused with an OperationOutcome
     Accept_Outcome = CREATED
-    Refuse_Outcome = UNPROCESSABLE_ENTITY
+    Refuse_Outcome = SERVICE_UNAVAILABLE
 
     def __init__(self, port:'int') -> 'None':
         super().__init__(port)

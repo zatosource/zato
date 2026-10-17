@@ -44,7 +44,8 @@ from zato.common.marshal_.api import Model as DataClassModel
 from zato.common.marshal_.io import DataClassIO
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
-from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
+from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, \
+    visit_py_source
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
 from zato.server.config import ConfigDict
@@ -130,7 +131,7 @@ class _TestingConfigManager:
 
 # ################################################################################################################################
 
-class _TestingWorkerConfig:
+class _TestingConfigStore:
     out_odoo = None
     out_soap = None
 
@@ -139,7 +140,6 @@ class _TestingWorkerConfig:
 @total_ordering
 class InRAMService:
 
-    cluster_id: 'int' = 0
     id: 'int' = 0
     impl_name: 'str' = ''
     name: 'str' = ''
@@ -168,7 +168,6 @@ class InRAMService:
             'impl_name': self.impl_name,
             'is_active': self.is_active,
             'is_internal': self.is_internal,
-            'cluster_id': self.cluster_id
         }
 
 inramlist = list_[InRAMService]
@@ -287,7 +286,7 @@ class ServiceStore:
 
         if self.is_testing:
             self._testing_config_manager = cast_('ConfigManager', _TestingConfigManager())
-            self._testing_config_manager.config_store = cast_('ConfigStore', _TestingWorkerConfig())
+            self._testing_config_manager.config_store = cast_('ConfigStore', _TestingConfigStore())
 
 # ################################################################################################################################
 
@@ -483,6 +482,9 @@ class ServiceStore:
         except AttributeError:
             class_.has_io = False
 
+        # A channel with the queue on reads this flag instead of calling the hook to find out if there is one
+        class_.has_get_queue_response = bool(is_func_overridden(class_.get_queue_response))
+
         if class_.has_io:
 
             io_input  = getattr(
@@ -587,6 +589,7 @@ class ServiceStore:
                 class_.microsoft.fabric.conn_dict = service_store.server.config_manager.cloud_microsoft_fabric
                 class_.microsoft.teams.conn_dict = service_store.server.config_manager.chat_microsoft_teams
                 class_.slack.conn_dict = service_store.server.config_manager.chat_slack
+                class_.discord.conn_dict = service_store.server.config_manager.chat_discord
                 class_.amqp.publish = service_store.server.config_manager.amqp_invoke
                 class_.commands.init(service_store.server)
 
@@ -722,7 +725,7 @@ class ServiceStore:
 
         sql_services = {}
 
-        for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
+        for item in self.odb.get_sql_internal_service_list():
             sql_services[item.impl_name] = { # type: ignore
                 'id': item.id,               # type: ignore
                 'impl_name': item.impl_name, # type: ignore
@@ -846,7 +849,7 @@ class ServiceStore:
                 self.odb.add_services(session, elems)
 
                 # Now that we have them, we can look up their IDs ..
-                service_id_list = self.odb.get_service_id_list(session, self.server.cluster_id,
+                service_id_list = self.odb.get_service_id_list(session,
                     [elem['name'] for elem in elems]) # type: anydict
 
                 # .. and add them for later use.
@@ -1136,16 +1139,10 @@ class ServiceStore:
         # .. and now we know for which services to create ConfigDict objects.
 
         query = self.odb.get_service_list_with_include(
-            session, self.server.cluster_id, deployed_service_name_list, True) # type: anylist
+            session, deployed_service_name_list, True) # type: anylist
 
         service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
         self.server.config.service.update(service_list._impl)
-
-        # The newly deployed services may need auto-created REST channels, handled as one batch
-        # on the deployment session, whose owner commits it along with the deployment itself.
-        if session is not None:
-            from zato.server.auto_channel import create_auto_channels
-            create_auto_channels(self.server, [item.name for item in info.to_process], session)
 
         # The deployed services may change the OpenAPI document, so it is rebuilt now,
         # with breaking changes against the previous document reported in the deploy output.
@@ -1523,7 +1520,6 @@ class ServiceStore:
         # Note that at this point we do not have the service's ID, is_active and slow_threshold values;
         # this is because this object is created prior to its deployment in ODB.
         service = InRAMService()
-        service.cluster_id = self.server.cluster_id
         service.is_active = True
         service.is_internal = is_internal
         service.name = name

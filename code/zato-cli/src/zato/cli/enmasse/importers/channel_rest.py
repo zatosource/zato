@@ -11,7 +11,8 @@ from json import loads
 import logging
 
 # Zato
-from zato.cli.enmasse.util import preprocess_item, security_needs_update
+from zato.cli.enmasse.util import Channel_Delivery_Fields, channel_delivery_needs_update, prepare_channel_delivery_fields, \
+    preprocess_item, security_needs_update, take_channel_delivery_attrs
 from zato.cli.enmasse.util.alerts import alerts_need_update, take_alert_attrs
 from zato.common.alerting.object_config import Alerts_Key, alert_type_channels
 from zato.common.api import CONNECTION, URL_TYPE
@@ -36,6 +37,11 @@ logger = logging.getLogger(__name__)
 # The name the alerts helpers call a REST channel by in their messages
 _connection_type = 'channel_rest'
 
+# Keys that are compared and stored on their own, not as columns of the database row
+_non_column_keys = ('security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
+    'is_audit_log_active', 'is_audit_export_payload_active', Alerts_Key,
+    'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor') + Channel_Delivery_Fields
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -46,12 +52,11 @@ class ChannelImporter:
 
 # ################################################################################################################################
 
-    def get_rest_channels_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+    def get_rest_channels_from_db(self, session:'SASession') -> 'anydict':
         out = {}
-        logger.info('Retrieving REST channels from database for cluster_id=%s', cluster_id)
+        logger.info('Retrieving REST channels from database')
 
         query = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
             filter(HTTPSOAP.transport==URL_TYPE.PLAIN_HTTP) # type: ignore
         channels = to_json(query, return_as_dict=True)
@@ -92,10 +97,7 @@ class ChannelImporter:
 
                 # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
-                    if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
-                        'is_audit_log_active', 'is_audit_export_payload_active', Alerts_Key,
-                        'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor'] \
-                        and key in db_def and db_def[key] != value:
+                    if key not in _non_column_keys and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
                         break
@@ -134,6 +136,10 @@ class ChannelImporter:
 
                 # Check the alert settings
                 if alerts_need_update(item, db_def, alert_type_channels):
+                    needs_update = True
+
+                # Check the queue switch, the retry and DLQ settings and the static queue response
+                if channel_delivery_needs_update(item, db_def):
                     needs_update = True
 
                 if needs_update:
@@ -369,9 +375,12 @@ class ChannelImporter:
 
         alert_attrs = take_alert_attrs(channel_def, alert_type_channels, _connection_type, session)
 
+        # The delivery keys leave the definition too, validated and with their defaults filled in
+        prepare_channel_delivery_fields(channel_def, _connection_type)
+        delivery_attrs = take_channel_delivery_attrs(channel_def)
+
         service_name = channel_def['service']
-        service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
-        cluster = self.importer.get_cluster(session)
+        service = session.query(Service).filter_by(name=service_name).one()
 
         security_item = None
         if security_name := channel_def.get('security'):
@@ -386,7 +395,7 @@ class ChannelImporter:
         else:
             logger.info('No security definition specified for channel %s', name)
 
-        channel = HTTPSOAP(cluster=cluster, service=service)
+        channel = HTTPSOAP(service=service)
         channel.name = name
         channel.connection = CONNECTION.CHANNEL
         channel.transport = URL_TYPE.PLAIN_HTTP
@@ -398,9 +407,7 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
-                'is_audit_log_active', 'is_audit_export_payload_active',
-                'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor']:
+            if key not in _non_column_keys and key != 'service':
                 setattr(channel, key, value)
 
         if security_item:
@@ -454,6 +461,9 @@ class ChannelImporter:
         # The alert settings, every one of them, over the defaults
         opaque_attrs.update(alert_attrs)
 
+        # The queue switch, the retry and DLQ settings and the static queue response
+        opaque_attrs.update(delivery_attrs)
+
         set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
@@ -472,19 +482,21 @@ class ChannelImporter:
 
         alert_attrs = take_alert_attrs(channel_def, alert_type_channels, _connection_type, session)
 
+        # The delivery keys leave the definition too, validated and with their defaults filled in
+        prepare_channel_delivery_fields(channel_def, _connection_type)
+        delivery_attrs = take_channel_delivery_attrs(channel_def)
+
         channel.url_path = channel_def['url_path']
 
         service_name = channel_def['service']
-        service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).first()
+        service = session.query(Service).filter_by(name=service_name).first()
         if not service:
             raise Exception(f'Service not found: {service_name}')
         channel.service = service
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
-                'is_audit_log_active', 'is_audit_export_payload_active',
-                'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor']:
+            if key not in _non_column_keys and key not in ('id', 'service'):
                 setattr(channel, key, value)
 
         # Handle security definition
@@ -556,6 +568,9 @@ class ChannelImporter:
         # The alert settings, every one of them, over the defaults
         opaque_attrs.update(alert_attrs)
 
+        # The queue switch, the retry and DLQ settings and the static queue response
+        opaque_attrs.update(delivery_attrs)
+
         set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
@@ -566,12 +581,12 @@ class ChannelImporter:
     def sync_channel_rest(self, channel_list:'anylist', session:'SASession') -> 'listtuple':
         logger.info('Processing %d REST channels from YAML', len(channel_list))
 
-        db_channels = self.get_rest_channels_from_db(session, self.importer.cluster_id)
+        db_channels = self.get_rest_channels_from_db(session)
         to_create, to_update = self.compare_channel_rest(channel_list, db_channels)
 
         # Nothing is written before every definition is known to have a URL path of its own,
         # since two channels resolving to one match target leave only one of them reachable.
-        ensure_channel_definitions_are_unique(session, self.importer.cluster_id, to_create + to_update)
+        ensure_channel_definitions_are_unique(session, to_create + to_update)
 
         out_created = []
         out_updated = []

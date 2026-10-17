@@ -93,7 +93,6 @@ class TestSchedulerLogEntries:
         start_date = datetime.now(timezone.utc).isoformat()
 
         response = _parse(client.create(f'{_job_service_prefix}.create',
-            cluster_id=1,
             name=_job_name,
             is_active=True,
             job_type='interval_based',

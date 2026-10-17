@@ -67,14 +67,13 @@ def _stored_value(opaque:'stranydict', name:'str') -> 'object':
 
 # ################################################################################################################################
 
-def describe_mllp_outgoing(session:'SASession', cluster_id:'int', name:'str') -> 'anylist | None':
+def describe_mllp_outgoing(session:'SASession', name:'str') -> 'anylist | None':
     """ The label and value pairs describing one outgoing MLLP connection - where it sends, whether over TLS,
     how many connections it keeps open, how long it waits for an acknowledgment, how a failed send is retried
     and when sending pauses, whether its audit log is on and the alert thresholds it sets of its own.
-    None when no outgoing MLLP connection goes by the name in the cluster.
+    None when no outgoing MLLP connection goes by the name.
     """
     row = session.query(GenericConn).\
-        filter(GenericConn.cluster_id==cluster_id).\
         filter(GenericConn.type_==GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP).\
         filter(GenericConn.name==name).\
         first()

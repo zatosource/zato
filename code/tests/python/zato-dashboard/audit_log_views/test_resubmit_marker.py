@@ -18,7 +18,7 @@ from zato.admin.web.views.audit_log.query import _mark_resubmittable, _mark_resu
 from zato.admin.web.views.audit_log.resubmit import resubmit
 from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource, \
     ModuleCtx as AuditLogCtx
-from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Payload_Kind_Described
+from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps, loads
 
@@ -192,6 +192,21 @@ class TestResubmittableFlag:
         })
 
         rows = [_new_row(3, 'flag-3', described)]
+        _mark_resubmittable(AuditSource.REST_Outgoing, rows)
+
+        assert rows[0]['is_resubmittable'] is False
+
+# ################################################################################################################################
+
+    def test_a_call_recorded_without_its_credentials_offers_nothing(self) -> 'None':
+
+        # The resend refuses a call whose credentials were replaced by a marker, so the page does not offer it.
+        redacted = dumps({
+            Key_Payload: '{"order": 1}',
+            Key_Redacted: ['Authorization'],
+        })
+
+        rows = [_new_row(4, 'flag-4', redacted)]
         _mark_resubmittable(AuditSource.REST_Outgoing, rows)
 
         assert rows[0]['is_resubmittable'] is False

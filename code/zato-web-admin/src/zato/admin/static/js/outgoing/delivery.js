@@ -87,7 +87,6 @@ $.fn.zato.outgoing_delivery.state = {
     connType: '',
     connId: '',
     connName: '',
-    clusterId: '',
 
     pendingAction: '',
     pendingTarget: null,
@@ -108,7 +107,6 @@ $.fn.zato.outgoing_delivery.init = function(options) {
     state.connType = options.connType;
     state.connId = options.connId;
     state.connName = options.connName;
-    state.clusterId = options.clusterId;
 
     page.initTabs(options.activeTab);
 

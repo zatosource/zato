@@ -83,7 +83,6 @@ class TestEnmasseSAPExporter(TestCase):
         sap_list_from_yaml = self.yaml_config['sap']
 
         # 2. Import these definitions into the database to have something to export
-        _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
         created_sap_connections, _ = self.sap_importer.sync_definitions(sap_list_from_yaml, self.session)
 
         self.assertTrue(len(created_sap_connections) > 0, 'No SAP connections were created.')

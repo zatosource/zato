@@ -83,26 +83,21 @@
 {% endblock %}
 
 {% block "content" %}
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if cluster_id %}
 
         <div id="markup">
 <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Scheduler" %}Jobs</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show jobs"%}
 
-        <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
 
 
     <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.scheduler.create('interval_based')">Create a new job</a> |
             <a href="javascript:$.fn.zato.scheduler.import_demo_config()" class="common">Import demo config</a> |
-            <a href="{% url "scheduler-dashboard" %}?cluster={{ cluster_id }}&range={{ default_time_range_minutes }}" class="common">Go to dashboard</a>
+            <a href="{% url "scheduler-dashboard" %}?range={{ default_time_range_minutes }}" class="common">Go to dashboard</a>
     </div>
 
             <table class="zato-table" id="data-table">
@@ -142,8 +137,8 @@
                         <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.toggle_active('{{ job.job_type }}', '{{ job.id }}', this)">{{ job.is_active|yesno:"Yes,No" }}</a></td>
                         <td>{% if job.job_type == 'interval_based' %}<a href="javascript:void(0)" onclick="$.fn.zato.scheduler.edit_interval('{{ job.id }}', this)">{{ job.definition_text|safe }}</a>{% else %}{{ job.definition_text|safe }}{% endif %}</td>
                         <td class="zato-time-ago" data-time-ago-id="{{ job.id }}" data-time-utc="{{ job.last_run_utc }}" data-duration-ms="{{ job.last_duration_ms }}"></td>
-                        <td><a href="{% url "service-ide" "service" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
-                        <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&range={{ default_time_range_minutes }}&outcomes=all">Audit log</a></td>
+                        <td><a href="{% url "service-ide" "service" job.service_name %}">{{ job.service_name }}</a></td>
+                        <td><a href="{% url "scheduler-job-detail" job.id %}?range={{ default_time_range_minutes }}&outcomes=all">Audit log</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.execute('{{ job.id }}', this)">Execute</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', '{{ job.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.delete_('{{ job.id }}');">Delete</a></td>
@@ -181,7 +176,7 @@
 
         <div id="create-one_time" class='data-popup ignore'>
             <div>
-                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="create-form-one_time">
+                <form novalidate action="." method="post" id="create-form-one_time">
                     <table class="form-data fit-labels">
 
                         <tr>
@@ -282,7 +277,7 @@
 
         <div id="edit-one_time" class='data-popup ignore'>
             <div>
-                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
+                <form novalidate action="." method="post" id="edit-form-one_time">
                     <table class="form-data fit-labels">
 
                         <tr>
@@ -383,7 +378,7 @@
 
         <div id="create-interval_based" class='data-popup ignore'>
             <div>
-                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="create-form-interval_based">
+                <form novalidate action="." method="post" id="create-form-interval_based">
                     <table class="form-data fit-labels">
 
                         <tr>
@@ -561,7 +556,7 @@
 
         <div id="edit-interval_based" class='data-popup ignore'>
             <div>
-                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="edit-form-interval_based">
+                <form novalidate action="." method="post" id="edit-form-interval_based">
                     <table class="form-data fit-labels">
 
                         <tr>
@@ -745,8 +740,6 @@
         </form>
 
 
-    {% endif %} {% comment %}cluster_id{% endcomment %}
 
-{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}
