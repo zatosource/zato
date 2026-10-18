@@ -15,12 +15,13 @@ from contextvars import ContextVar
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, dictlist, intnone, stranydict
+    from zato.common.typing_ import anydict, anylist, dictlist, intnone, stranydict, strlist
     anydict = anydict
     anylist = anylist
     dictlist = dictlist
     intnone = intnone
     stranydict = stranydict
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,6 +71,33 @@ def count_text(count:'int', singular:'str', plural:'str') -> 'str':
         noun = plural
 
     out = f'{count} {noun}'
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def escape_nonprintable(value:'str') -> 'str':
+    """ Returns the value with each non-printable character, C0 and C1 control characters included,
+    replaced with its backslash escape sequence, e.g. U+009E becomes `\\x9e`.
+    """
+    # A value that consists of printable characters only is returned as it is ..
+    if value.isprintable():
+        out = value
+
+    # .. otherwise, each non-printable character is replaced with its escape sequence.
+    else:
+        parts:'strlist' = []
+
+        for character in value:
+            if character.isprintable():
+                parts.append(character)
+            else:
+                escaped = character.encode('unicode_escape')
+                escaped = escaped.decode('ascii')
+                parts.append(escaped)
+
+        out = ''.join(parts)
+
     return out
 
 # ################################################################################################################################
