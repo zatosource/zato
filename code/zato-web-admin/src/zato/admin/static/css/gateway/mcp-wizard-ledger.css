@@ -21,7 +21,7 @@
     --ledger-label-width-basic: 5.5rem;
     --ledger-label-width-options: 8.75rem;
     --ledger-label-width-review: 11.5rem;
-    --ledger-active-gap: 24px;
+    --ledger-active-gap: 14px;
     --ledger-row-padding: 11px;
     --ledger-end-padding: 14px;
     --ledger-field-width: 24rem;
@@ -30,6 +30,17 @@
     --ledger-band: var(--wizard-surface-raised);
     --ledger-band-bleed: 14px;
     --ledger-nest-indent: 14px;
+    --ledger-review-row-padding: 5px;
+    --ledger-review-line-height: 1.55;
+    --ledger-tab-ink: #8c95a0;
+}
+
+/* ------------------------------------------------------------ */
+/* Ledger - the step strip                                      */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard-steps {
+    --tab-color: var(--ledger-tab-ink);
 }
 
 #mcp-wizard-step-body-0,
@@ -312,7 +323,8 @@
 #mcp-wizard-review .wizard-review-row {
     align-items: baseline;
     min-height: 0;
-    padding: 3px var(--ledger-end-padding) 3px 0;
+    padding: var(--ledger-review-row-padding) var(--ledger-end-padding) var(--ledger-review-row-padding) 0;
+    line-height: var(--ledger-review-line-height);
 }
 
 #mcp-wizard-review .wizard-review-value {

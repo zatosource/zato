@@ -57,3 +57,8 @@
     flex-direction: column;
     gap: var(--mcp-wizard-pii-label-gap);
 }
+
+/* A label is as wide as its words, so a click beside them does not open the select */
+.mcp-wizard-pii-select > label {
+    align-self: flex-start;
+}

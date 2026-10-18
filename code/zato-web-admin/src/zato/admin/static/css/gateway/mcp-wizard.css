@@ -271,7 +271,7 @@
 
 /* A row is a label whose text and control take the grid's own columns,
    which is what keeps the controls lined up down the group */
-.mcp-wizard-field-grid label {
+.mcp-wizard-field-grid > label {
     display: grid;
     grid-template-columns: subgrid;
     grid-column: span 2;
@@ -285,7 +285,7 @@
 
 /* A select reads as the answer to the words in front of it, so it follows
    them directly instead of being pushed out to the switch column */
-.mcp-wizard-field-grid label:has(select) {
+.mcp-wizard-field-grid > label:has(select) {
     display: flex;
     grid-column: 1 / -1;
     gap: 8px;
@@ -293,7 +293,7 @@
 
 /* A row whose switch is off reads a notch back, the way every other label
    naming a switch does */
-.mcp-wizard-field-grid label:has(input[type="checkbox"]:not(:checked)) {
+.mcp-wizard-field-grid > label:has(input[type="checkbox"]:not(:checked)) {
     color: var(--wizard-text-off);
 }
 
@@ -325,7 +325,7 @@
 /* The allow list holds a list of hosts - the label sits above and the
    input takes the card's whole width, the same label-above-input shape
    the popover micro-forms use for their text fields */
-.mcp-wizard-field-grid label.mcp-wizard-wide-field {
+.mcp-wizard-field-grid > .mcp-wizard-wide-field {
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -333,7 +333,15 @@
     gap: 4px;
 }
 
-.mcp-wizard-field-grid label.mcp-wizard-wide-field input[type="text"] {
+/* The label is as wide as its words, so a click beside them does not reach the input */
+.mcp-wizard-wide-field > label {
+    align-self: flex-start;
+    font-size: 12px;
+    color: var(--zato-ui-text);
+    cursor: pointer;
+}
+
+.mcp-wizard-wide-field input[type="text"] {
     width: 100%;
 }
 
@@ -433,7 +441,7 @@
     grid-template-rows: auto 1fr;
 }
 
-.mcp-wizard-field-grid label.mcp-wizard-oauth-scopes {
+.mcp-wizard-field-grid > .mcp-wizard-oauth-scopes {
     min-height: 0;
 }
 

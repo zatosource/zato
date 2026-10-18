@@ -30,6 +30,8 @@ pii.config = {
 
     labels: {
         off: 'Off',
+        offOpen: 'Off (',
+        offClose: ')',
         nothingPicked: 'No lands or detectors picked',
         lands: 'Lands: ',
         detectors: 'Detectors: ',
@@ -53,32 +55,35 @@ pii._picked = function(fieldName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Off, or what the detection runs on - the detectors picked by name take
-// precedence over the lands, the way the gateway applies them.
+// What the detection runs on - the detectors picked by name take precedence over the lands,
+// the way the gateway applies them - and while it is off, what it would run on once switched on.
 pii.summary = function() {
 
     var labels = pii.config.labels;
-
-    if(!wizard.field('safeguards_pii_enabled').prop('checked')) {
-        return labels.off;
-    }
+    var isEnabled = wizard.field('safeguards_pii_enabled').prop('checked');
 
     var detectors = pii._picked('safeguards_pii_detectors');
     var lands = pii._picked('safeguards_pii_lands');
 
-    var out;
+    var picked = null;
 
     if(detectors.length) {
-        out = labels.detectors + detectors.join(labels.separator);
+        picked = labels.detectors + detectors.join(labels.separator);
     }
     else if(lands.length) {
-        out = labels.lands + lands.join(labels.separator);
-    }
-    else {
-        out = labels.nothingPicked;
+        picked = labels.lands + lands.join(labels.separator);
     }
 
-    return out;
+    if(isEnabled) {
+        var out = picked === null ? labels.nothingPicked : picked;
+        return out;
+    }
+
+    if(picked === null) {
+        return labels.off;
+    }
+
+    return labels.offOpen + picked + labels.offClose;
 };
 
 // ////////////////////////////////////////////////////////////////////////

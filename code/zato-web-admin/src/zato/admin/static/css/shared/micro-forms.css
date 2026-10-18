@@ -190,6 +190,11 @@
     color: var(--zato-ui-text-muted);
 }
 
+/* A label is as wide as its words, so a click beside them does not reach the input */
+.micro-form-field > .micro-form-label {
+    align-self: flex-start;
+}
+
 /* ------------------------------------------------------------ */
 /* Labels in a column of their own                               */
 /* ------------------------------------------------------------ */
@@ -212,6 +217,11 @@
     justify-self: end;
 }
 
+.micro-form-labels-left .micro-form-field > .micro-form-label {
+    align-self: center;
+    justify-self: start;
+}
+
 /* A checkbox row keeps to the same two columns - its text where the other
    labels stand and its switch on the shared right edge */
 .micro-form-labels-left .micro-form-checkbox {
@@ -226,6 +236,7 @@
 }
 
 .micro-form-labels-left .micro-form-checkbox-text {
+    justify-self: start;
     font-size: var(--micro-form-label-size);
     font-weight: var(--micro-form-label-weight);
     color: var(--zato-ui-text-muted);
@@ -286,6 +297,7 @@
 
 /* The switch ends the line the label takes, so a page of them reads as one
    column of switches rather than as one switch per length of text */
+/* Only the words and the switch take a click, never the room between them */
 .micro-form-checkbox {
     display: flex;
     align-items: center;
@@ -293,6 +305,11 @@
     font-size: var(--micro-form-checkbox-font-size);
     color: var(--zato-ui-text);
     cursor: pointer;
+    pointer-events: none;
+}
+
+.micro-form-checkbox > * {
+    pointer-events: auto;
 }
 
 /* A label naming a switch that is off steps back with it */
@@ -305,7 +322,8 @@
 }
 
 .micro-form-checkbox-text {
-    flex: 1;
+    flex: 0 1 auto;
+    margin-right: auto;
 }
 
 /* A count is entered with the arrows the browser draws on a number field,

@@ -250,7 +250,7 @@ $(document).ready(function() {
                             <div class="mcp-wizard-security-pane" data-pane="oauth">
                                 <div class="mcp-wizard-field-grid mcp-wizard-oauth-grid">
                                     <label for="{{ form.oauth.id_for_label }}">OAuth sign-in active {{ form.oauth }}</label>
-                                    <label class="mcp-wizard-wide-field mcp-wizard-oauth-scopes" for="{{ form.oauth_scopes.id_for_label }}">Scopes {{ form.oauth_scopes }}</label>
+                                    <div class="mcp-wizard-wide-field mcp-wizard-oauth-scopes"><label for="{{ form.oauth_scopes.id_for_label }}">Scopes</label>{{ form.oauth_scopes }}</div>
                                 </div>
                             </div>
                         </div>

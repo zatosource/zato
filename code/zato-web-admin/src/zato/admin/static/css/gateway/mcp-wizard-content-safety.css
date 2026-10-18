@@ -77,5 +77,6 @@
 }
 
 .mcp-wizard-safety-hosts > label {
+    align-self: flex-start;
     color: var(--zato-ui-text);
 }
