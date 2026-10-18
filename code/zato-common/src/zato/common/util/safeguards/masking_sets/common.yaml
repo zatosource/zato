@@ -55,6 +55,14 @@ fields:
   - picture
   - password_hash
   - last_ip
+  - ip
+  - ip_address
+  - ipaddress
+  - ip_addresses
+  - client_ip
+  - remote_ip
+  - remote_addr
+  - source_ip
   - identities
   - zip
   - company

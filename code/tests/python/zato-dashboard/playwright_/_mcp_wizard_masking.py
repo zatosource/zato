@@ -140,22 +140,33 @@ def focus_card(page:'Page', key:'str') -> 'None':
 
 # ################################################################################################################################
 
-def filter_fields(page:'Page', text:'str') -> 'None':
-    """ Types into the filter over the list of the focused set.
+def search_fields(page:'Page', text:'str') -> 'None':
+    """ Types into the search heading the cards.
     """
-    page.fill(f'{_pane_selector} .mcp-masking-search-input', text)
+    page.fill(f'{_popup_selector} .mcp-search-box-input', text)
 
 # ################################################################################################################################
 
-def clear_filter(page:'Page') -> 'None':
-    """ Empties the filter with its clear button.
+def clear_search(page:'Page') -> 'None':
+    """ Empties the search with its clear button.
     """
-    page.click(f'{_pane_selector} .mcp-masking-search-clear')
+    page.click(f'{_popup_selector} .mcp-search-box-clear')
+
+# ################################################################################################################################
+
+def get_shown_cards(page:'Page') -> 'strlist':
+    """ The keys of the cards the search leaves in, in order.
+    """
+    out = page.evaluate(f'''Array.from(document.querySelectorAll(
+        '{_popup_selector} .mcp-masking-card:not(.mcp-masking-card-unmatched)'))
+        .map(card => card.getAttribute('data-key'))''')
+
+    return out
 
 # ################################################################################################################################
 
 def get_shown_fields(page:'Page') -> 'strlist':
-    """ The fields of the focused set the filter shows, in order.
+    """ The fields the pane shows, in order - those of the focused set, or the results of the search across every set.
     """
     out = page.evaluate(f'''Array.from(document.querySelectorAll(
         '{_pane_selector} .mcp-masking-pane-field:not(.mcp-masking-filtered-out)'))
@@ -166,7 +177,7 @@ def get_shown_fields(page:'Page') -> 'strlist':
 # ################################################################################################################################
 
 def is_field_masked(page:'Page', field_name:'str') -> 'bool':
-    """ Whether a field of the focused set has its switch on.
+    """ Whether a field the pane shows has its switch on.
     """
     out = page.evaluate(f'''document.querySelector(
         '{_field_row_selector(field_name)} .mcp-masking-switch').classList.contains('mcp-masking-switch-on')''')
@@ -175,9 +186,16 @@ def is_field_masked(page:'Page', field_name:'str') -> 'bool':
 # ################################################################################################################################
 
 def toggle_field(page:'Page', field_name:'str') -> 'None':
-    """ Flips the switch of one field of the focused set.
+    """ Flips the switch of one field the pane shows.
     """
     page.click(_field_row_selector(field_name))
+
+# ################################################################################################################################
+
+def toggle_show_only_active(page:'Page') -> 'None':
+    """ Flips the switch in the pane's header showing the masked fields alone.
+    """
+    page.click(f'{_pane_selector} .mcp-masking-pane-only')
 
 # ################################################################################################################################
 

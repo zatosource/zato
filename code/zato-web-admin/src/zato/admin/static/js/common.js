@@ -135,6 +135,7 @@ $.namespace('zato.gateway.mcp.wizard.maskingPopover');
 $.namespace('zato.gateway.mcp.wizard.maskingSets');
 $.namespace('zato.gateway.mcp.wizard.pii');
 $.namespace('zato.gateway.mcp.wizard.review');
+$.namespace('zato.gateway.mcp.wizard.searchBox');
 $.namespace('zato.gateway.mcp.wizard.contentSafety');
 $.namespace('zato.gateway.mcp.wizard.toolSources');
 $.namespace('zato.gateway.rule_engine');

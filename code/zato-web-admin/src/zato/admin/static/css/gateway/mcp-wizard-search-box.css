@@ -1,0 +1,170 @@
+/*
+ * MCP gateway wizard - the search box shared by the Data masking popover
+ * and the filters of the Tools, Skills and Security sections.
+ * Loaded after shared/wizard-surface.css, whose filter inputs and buttons
+ * this box restyles.
+ */
+
+/* ------------------------------------------------------------ */
+/* Search box - tokens                                          */
+/* ------------------------------------------------------------ */
+
+:root {
+    --mcp-search-box-height: 30px;
+    --mcp-search-box-gap: 8px;
+    --mcp-search-box-radius: 4px;
+    --mcp-search-box-transition: 120ms ease;
+    --mcp-search-box-hover-delay: 80ms;
+    --mcp-search-box-font-size: 12.5px;
+    --mcp-search-box-caret-room: 2px;
+    --mcp-search-box-clear-size: 18px;
+    --mcp-search-box-clear-inset: 3px;
+    --mcp-search-box-chip-padding: 0 7px;
+    --mcp-search-box-chip-radius: 4px;
+    --mcp-search-box-found-hue: #3d8a55;
+    --mcp-search-box-found-text: color-mix(in srgb, var(--mcp-search-box-found-hue) 80%, #000);
+    --mcp-search-box-found-bg: color-mix(in srgb, var(--mcp-search-box-found-hue) 5%, #fff);
+    --mcp-search-box-found-border: color-mix(in srgb, var(--mcp-search-box-found-hue) 16%, #fff);
+    --mcp-search-box-none-hue: #c98a1a;
+    --mcp-search-box-none-text: color-mix(in srgb, var(--mcp-search-box-none-hue) 72%, #000);
+    --mcp-search-box-none-bg: color-mix(in srgb, var(--mcp-search-box-none-hue) 6%, #fff);
+    --mcp-search-box-none-border: color-mix(in srgb, var(--mcp-search-box-none-hue) 20%, #fff);
+}
+
+/* ------------------------------------------------------------ */
+/* Search box - the frame                                       */
+/* ------------------------------------------------------------ */
+
+.mcp-search-box,
+.badge-picker-filter.mcp-search-box {
+    display: flex;
+    align-items: center;
+    gap: var(--mcp-search-box-gap);
+    box-sizing: border-box;
+    height: var(--mcp-search-box-height);
+    padding: 0 6px 0 10px;
+    font-size: var(--mcp-search-box-font-size);
+    color: var(--zato-ui-text-muted);
+    background: #fff;
+    border: 1px solid var(--zato-ui-border-strong);
+    border-radius: var(--mcp-search-box-radius);
+    cursor: text;
+}
+
+.mcp-search-box:focus-within {
+    border-color: var(--zato-ui-accent);
+}
+
+/* The box is what draws the frame - formalize.css and shared/wizard-surface.css
+   frame every text input and shadow it on focus, and all of it is named back here */
+/* The input and an invisible copy of its text share one cell, the copy giving the cell its width -
+   the input starts from a zero width, or its default width of some twenty characters would size the cell */
+.mcp-search-box-sizer {
+    display: inline-grid;
+    flex: 0 1 auto;
+    align-self: stretch;
+    align-items: center;
+    min-width: 0;
+    margin-right: calc(-1 * var(--mcp-search-box-caret-room));
+    overflow: hidden;
+}
+
+.mcp-search-box-sizer::after {
+    content: attr(data-fit);
+    grid-area: 1 / 1;
+    padding-right: var(--mcp-search-box-caret-room);
+    font-family: inherit;
+    font-size: inherit;
+    white-space: pre;
+    visibility: hidden;
+}
+
+.mcp-search-box input[type="text"].mcp-search-box-input,
+.mcp-search-box input[type="text"].mcp-search-box-input:focus {
+    grid-area: 1 / 1;
+    width: 0;
+    min-width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 400;
+    color: var(--zato-ui-text);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+}
+
+.mcp-search-box-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.mcp-search-box-result {
+    flex: 0 0 auto;
+    padding: var(--mcp-search-box-chip-padding);
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--mcp-search-box-found-text);
+    white-space: nowrap;
+    background: var(--mcp-search-box-found-bg);
+    border: 1px solid var(--mcp-search-box-found-border);
+    border-radius: var(--mcp-search-box-chip-radius);
+}
+
+.mcp-search-box-result-none {
+    color: var(--mcp-search-box-none-text);
+    background: var(--mcp-search-box-none-bg);
+    border-color: var(--mcp-search-box-none-border);
+}
+
+.mcp-search-box-result:empty {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Search box - the clear button                                */
+/* ------------------------------------------------------------ */
+
+/* The button is larger than its icon to be easy to hit, and its margins give the extra back,
+   so the icon stands one gap from whatever precedes it, the same as the chip from the words */
+.mcp-search-box button.mcp-search-box-clear,
+.mcp-search-box button.mcp-search-box-clear:focus,
+.mcp-search-box button.mcp-search-box-clear:active {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: var(--mcp-search-box-clear-size);
+    height: var(--mcp-search-box-clear-size);
+    margin: 0 calc(-1 * var(--mcp-search-box-clear-inset));
+    padding: 0;
+    line-height: 1;
+    color: var(--zato-ui-text-muted);
+    text-shadow: none;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    box-shadow: none;
+    outline: none;
+    cursor: pointer;
+    transition: color var(--mcp-search-box-transition);
+}
+
+.mcp-search-box:has(.mcp-search-box-input:not(:placeholder-shown)) button.mcp-search-box-clear {
+    display: inline-flex;
+}
+
+.mcp-search-box button.mcp-search-box-clear:hover {
+    color: var(--zato-ui-accent);
+    background: transparent;
+    transition-delay: var(--mcp-search-box-hover-delay);
+}
+
+.mcp-search-box button.mcp-search-box-clear:focus-visible {
+    outline: 2px solid var(--zato-ui-accent-soft);
+    outline-offset: 1px;
+}

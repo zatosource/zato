@@ -7,7 +7,7 @@
 // overview and the hidden inputs written on save. The micro-forms
 // live in forms.js, the hook services in hooks.js, the PII and data masking
 // section in pii.js, data masking in data-masking.js, masking-sets.js,
-// masking-popover.js and masking-filters.js, and the summaries plus the
+// masking-popover.js and masking-search.js, and the summaries plus the
 // review step in review.js.
 
 (function($) {
@@ -102,7 +102,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-field-row, ' +
-        '.wizard-option-header, .decision-line, .mcp-wizard-field-grid, .mcp-wizard-pii-selects',
+        '.wizard-option-header, .decision-line, .mcp-wizard-field-grid, .mcp-wizard-pii-fields',
 
     // Fields that must not be empty on submit
     requiredFields: [
@@ -147,6 +147,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         // The size caps line, the Alerts line, the hook services, the option cards of step 2
         // and the PII and data masking section with its industry sets and its data masking line ..
         wizard.forms.initRows();
+        wizard.searchBox.init();
         wizard.alerts.init();
         wizard.hooks.init();
         wizard.contentSafety.init();

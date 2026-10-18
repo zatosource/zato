@@ -9,14 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.util.safeguards.api import apply_safeguards
 from zato.common.util.safeguards.config import build_safeguard_config, is_safeguards_active
-from zato.common.util.safeguards.masking import Masked_Value, mask_fields
+from zato.common.util.safeguards.masking import get_masking_config, Masked_Value, mask_fields
 from zato.common.util.truncate.common import Max_Node_Count, Max_Recursion_Depth
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -187,6 +187,32 @@ class TestMaskingConfiguration:
         assert 'jane@example.com' not in result.value['note']
         assert result.fields_masked == 1
         assert result.pii_removed == {'email': 1}
+
+    def test_an_exclusion_covers_every_set_listing_the_field(self) -> 'None':
+
+        config = build_safeguard_config({
+            'safeguards_masking_sets': ['common', 'banking'],
+            'safeguards_masking_excluded': ['email'],
+        })
+
+        assert 'email' not in config.masked_fields
+        assert 'iban' in config.masked_fields
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestMaskingSets:
+
+    def test_no_set_lists_a_field_twice(self) -> 'None':
+
+        for item in get_masking_config():
+
+            seen:'strset' = set()
+
+            for field_name in item['fields']:
+                field_name_lower = field_name.lower()
+                assert field_name_lower not in seen, (item['name'], field_name)
+                seen.add(field_name_lower)
 
 # ################################################################################################################################
 # ################################################################################################################################

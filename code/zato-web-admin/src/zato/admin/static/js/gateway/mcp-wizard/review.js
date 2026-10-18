@@ -254,7 +254,7 @@ review.initOptionCards = function() {
 // the whole row visible - the card's own left margin is where it goes.
 review._placeFieldGridHelp = function() {
 
-    $('.mcp-wizard-field-grid label[for], .mcp-wizard-pii-selects label[for]').each(function() {
+    $('.mcp-wizard-field-grid label[for], .mcp-wizard-pii-fields label[for]').each(function() {
         $(this).attr('data-help-anchor', 'label');
         $(this).attr('data-help-placement', 'left');
     });

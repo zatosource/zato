@@ -45,6 +45,13 @@ _echo_service = 'demo.echo'
 _picked_sets = ['banking', 'healthcare']
 _excluded_field = 'iban'
 
+# A field listed by the Common set and one other set only, the set every card search starts from,
+# a field Common and Banking both list and one Banking lists and Common does not
+_common_set = 'common'
+_shared_field = 'last_ip'
+_shared_field_banking = 'email'
+_banking_only_field = 'bic'
+
 # The custom fields the round trip masks, one in a case of its own
 _custom_fields = ['customer.loyalty_id', 'Loyalty_Tier']
 
@@ -180,8 +187,75 @@ class TestMCPWizardMasking:
 
 # ################################################################################################################################
 
-    def test_the_filter_narrows_the_fields_of_a_set(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ The filter shows only the fields of the focused set that match it, and its clear button shows all of them again.
+    def test_the_search_shows_the_matching_fields_of_every_set(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ The pane shows the fields of every set that match the search, each once, a card clicked shows its own matching fields,
+        and the clear button returns the pane to that card with all of its fields.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        set_name = _picked_sets[0]
+        all_sets = get_masking_config()
+        set_fields = [item['fields'] for item in all_sets if item['name'] == set_name][0]
+
+        expected:'strlist' = []
+
+        for item in all_sets:
+            for field_name in item['fields']:
+                if _shared_field_banking in field_name.lower() and field_name.lower() not in [name.lower() for name in expected]:
+                    expected.append(field_name)
+
+        wizard_page.open_wizard_create(page, base_url)
+        wizard_page.go_to_step(page, 1)
+
+        masking_page.open_masking_popover(page)
+
+        masking_page.search_fields(page, _shared_field_banking.upper())
+        shown = masking_page.get_shown_fields(page)
+
+        assert shown == expected, shown
+
+        masking_page.focus_card(page, set_name)
+        shown = masking_page.get_shown_fields(page)
+
+        assert shown == [field_name for field_name in set_fields if _shared_field_banking in field_name.lower()], shown
+
+        masking_page.clear_search(page)
+        shown = masking_page.get_shown_fields(page)
+
+        assert shown == set_fields, shown
+
+# ################################################################################################################################
+
+    def test_the_search_narrows_the_cards(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ The search leaves in only the cards of the sets listing a matching field, and its clear button brings back all of them.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        all_sets = get_masking_config()
+        listing = [item['name'] for item in all_sets if _shared_field in item['fields']]
+
+        wizard_page.open_wizard_create(page, base_url)
+        wizard_page.go_to_step(page, 1)
+
+        masking_page.open_masking_popover(page)
+
+        masking_page.search_fields(page, _shared_field)
+        shown = masking_page.get_shown_cards(page)
+
+        assert shown == listing, shown
+
+        masking_page.clear_search(page)
+        shown = masking_page.get_shown_cards(page)
+
+        assert shown == [masking_page.Custom_Key] + [item['name'] for item in all_sets], shown
+
+# ################################################################################################################################
+
+    def test_show_only_active_shows_the_fields_masked_when_it_is_switched_on(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Show only active leaves in the fields masked at the moment it is switched on, keeps a field switched off after that
+        in sight, and lets it go once it is switched on again.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -193,20 +267,60 @@ class TestMCPWizardMasking:
         wizard_page.go_to_step(page, 1)
 
         masking_page.open_masking_popover(page)
+        masking_page.toggle_card(page, set_name)
         masking_page.focus_card(page, set_name)
+        masking_page.toggle_field(page, _excluded_field)
 
-        masking_page.filter_fields(page, _excluded_field.upper())
+        masking_page.toggle_show_only_active(page)
         shown = masking_page.get_shown_fields(page)
 
-        assert _excluded_field in shown, shown
+        assert shown == [field_name for field_name in set_fields if field_name != _excluded_field], shown
 
-        for field_name in shown:
-            assert _excluded_field in field_name.lower(), shown
+        masking_page.toggle_field(page, _banking_only_field)
+        shown = masking_page.get_shown_fields(page)
 
-        masking_page.clear_filter(page)
+        assert _banking_only_field in shown, shown
+
+        masking_page.toggle_show_only_active(page)
+        masking_page.toggle_show_only_active(page)
+        shown = masking_page.get_shown_fields(page)
+
+        assert _banking_only_field not in shown, shown
+
+        masking_page.toggle_show_only_active(page)
         shown = masking_page.get_shown_fields(page)
 
         assert shown == set_fields, shown
+
+# ################################################################################################################################
+
+    def test_a_field_of_another_set_keeps_the_shared_fields_masked(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ A field is masked or not whichever set's pane shows it - with one set picked, its fields are masked in the pane
+        of a set not picked, and switching on a single field there picks that set without unmasking the fields both list.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        wizard_page.open_wizard_create(page, base_url)
+        wizard_page.go_to_step(page, 1)
+
+        masking_page.open_masking_popover(page)
+        masking_page.toggle_card(page, _common_set)
+
+        masking_page.focus_card(page, _picked_sets[0])
+
+        assert masking_page.is_field_masked(page, _shared_field_banking)
+        assert not masking_page.is_field_masked(page, _excluded_field)
+
+        masking_page.toggle_field(page, _excluded_field)
+
+        assert masking_page.is_card_on(page, _picked_sets[0])
+        assert masking_page.is_field_masked(page, _excluded_field)
+        assert masking_page.is_field_masked(page, _shared_field_banking)
+        assert not masking_page.is_field_masked(page, _banking_only_field)
+
+        masking_page.focus_card(page, _common_set)
+        assert masking_page.is_field_masked(page, _shared_field_banking)
 
 # ################################################################################################################################
 

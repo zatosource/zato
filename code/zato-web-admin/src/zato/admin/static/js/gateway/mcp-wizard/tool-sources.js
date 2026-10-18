@@ -270,7 +270,9 @@ toolSources.select = function(key) {
     rows.filter('[data-key="' + key + '"]').addClass('mcp-tool-source-active');
 
     // .. a filter typed for one source means nothing for another ..
-    $('#badge-filter-text-' + config.pickerAction).val('');
+    var filterInput = document.getElementById('badge-filter-text-' + config.pickerAction);
+    filterInput.value = '';
+    wizard.searchBox.fit(filterInput);
 
     // .. and the picker reloads with the source's items, the ones picked
     // before opening in the assigned zone again.

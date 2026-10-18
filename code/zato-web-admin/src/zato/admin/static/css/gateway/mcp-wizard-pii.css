@@ -16,6 +16,7 @@
 
 :root {
     --mcp-wizard-pii-gap: 12px;
+    --mcp-wizard-pii-label-gap: 6px;
 }
 
 /* ------------------------------------------------------------ */
@@ -26,8 +27,33 @@
     display: none;
 }
 
-.mcp-wizard-pii-body {
+/* Each control stands right by its own label - a switch after its words,
+   a select under its name - and every label reads the same */
+.mcp-wizard-pii-fields {
     display: flex;
     flex-direction: column;
     gap: var(--mcp-wizard-pii-gap);
+}
+
+.mcp-wizard-pii-fields label {
+    font-size: 12px;
+    color: var(--zato-ui-text);
+    cursor: pointer;
+}
+
+.mcp-wizard-pii-switch {
+    display: flex;
+    align-self: flex-start;
+    align-items: center;
+    gap: var(--mcp-wizard-pii-label-gap);
+}
+
+.mcp-wizard-pii-switch > input[type="checkbox"] {
+    margin: 0;
+}
+
+.mcp-wizard-pii-select {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mcp-wizard-pii-label-gap);
 }

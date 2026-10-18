@@ -5,8 +5,8 @@
  * strip, the decision lines, the review, the footer and the popover
  * micro-forms - comes from shared/wizard-kit.css and
  * shared/decision-lines.css. This file holds only what is MCP's own:
- * the badge picker sections of step 1 and the field grids of the PII
- * popover. The data masking popover is styled
+ * the badge picker sections of step 1 and the field grids of the
+ * popovers. The data masking popover is styled
  * in gateway/mcp-wizard-masking.css and the PII fields in
  * gateway/mcp-wizard-pii.css.
  */
@@ -335,24 +335,6 @@
 
 .mcp-wizard-field-grid label.mcp-wizard-wide-field input[type="text"] {
     width: 100%;
-}
-
-/* ------------------------------------------------------------ */
-/* MCP wizard - PII multi-selects                               */
-/* ------------------------------------------------------------ */
-
-/* The selects take the section's whole width, past their labels */
-.mcp-wizard-pii-selects {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    gap: 8px 14px;
-    align-items: center;
-    margin: 10px 0;
-}
-
-.mcp-wizard-pii-selects > label {
-    font-size: 12px;
-    color: var(--zato-ui-text);
 }
 
 /* ------------------------------------------------------------ */

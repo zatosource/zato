@@ -100,7 +100,7 @@ dataMasking.maskedFields = function(state) {
 // ////////////////////////////////////////////////////////////////////////
 
 // The names an editor holds - one per line, trimmed, blank lines left out
-// and a name given twice kept once, where it first appears.
+// and a name given twice, in any case, kept once where it first appears.
 dataMasking.parse = function(text) {
 
     var out = [];
@@ -114,7 +114,7 @@ dataMasking.parse = function(text) {
             continue;
         }
 
-        if(out.indexOf(name) === -1) {
+        if(!maskingSets.holds(out, name)) {
             out.push(name);
         }
     }
