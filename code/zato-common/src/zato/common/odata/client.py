@@ -573,4 +573,12 @@ class ODataClient:
         self.session.close()
 
 # ################################################################################################################################
+
+    def zato_delete_impl(self, reason:'str'='') -> 'None':
+        """ Releases the underlying HTTP session when the connection queue removes this client.
+        The queue calls this method instead of .delete, which is the entity-level OData operation.
+        """
+        self.close()
+
+# ################################################################################################################################
 # ################################################################################################################################

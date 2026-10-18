@@ -14,7 +14,10 @@ from unittest import main, TestCase
 from zato.common.ext.bunch import bunchify
 
 # Zato
+from zato.common.api import GENERIC
 from zato.common.test.ldap_ import LDAPTestServer
+from zato.common.typing_ import cast_
+from zato.server.base.config_manager.generic import Generic
 from zato.server.generic.api.outconn_ldap import LDAPClient
 
 # ################################################################################################################################
@@ -86,6 +89,7 @@ class OutconnLDAPTestCase(TestCase):
             'should_return_empty_attrs': None,
             'pool_keep_alive': None,
         })
+        config = cast_('Bunch', config)
 
         return config
 
@@ -127,6 +131,47 @@ class OutconnLDAPTestCase(TestCase):
             has_result = conn.search(search_base, user_filter, attributes=query_attributes)
             if not has_result:
                 self.fail('Expected for results to be available')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OutconnLDAPConfigTestCase(TestCase):
+    """ Tests for the configuration of an LDAP connection created with the required fields only.
+    """
+
+    def test_conn_config_is_built_from_required_fields(self) -> 'None':
+
+        # The fields of a connection created through zato.generic.connection.create with no optional ones ..
+        config = bunchify({
+            'id': 1,
+            'name': 'test.ldap.required-fields',
+            'type_': GENERIC.CONNECTION.TYPE.OUTCONN_LDAP,
+            'is_active': True,
+            'username': 'cn=admin,dc=example,dc=com',
+            'secret': 'test.password',
+            'pool_size': 1,
+            'pool_max_cycles': 1,
+            'pool_keep_alive': 30,
+            'use_auto_range': True,
+            'use_tls': False,
+            'sasl_mechanism': '',
+            'server_list': 'ldap://localhost:389',
+        })
+        config = cast_('Bunch', config)
+
+        # .. the config manager fills in the remaining ones ..
+        manager = Generic.__new__(Generic)
+        manager._generic_normalize_config_outconn_ldap(config)
+
+        # .. and the client builds its connection configuration from the result.
+        client = LDAPClient.__new__(LDAPClient)
+        client.config = config
+
+        conn_config = client.get_conn_config()
+
+        self.assertFalse(config.is_tls_enabled)
+        self.assertEqual(conn_config['user'], 'cn=admin,dc=example,dc=com')
+        self.assertEqual(conn_config['password'], 'test.password')
 
 # ################################################################################################################################
 # ################################################################################################################################
