@@ -394,18 +394,23 @@ wizard.helpDescriptions = function() {
 
     $.extend(out, wizard.alerts.descriptions());
 
-    // .. the two hooks ..
+    // .. the two hooks and the line they open from ..
+    out[wizard.hooks.config.editLinkId] = 'The services the gateway invokes for every MCP request it receives ' +
+        'and for every MCP response it is about to return.';
     out['mcp-wizard-slot-request-hook-chip'] = 'The service invoked each time the gateway receives an MCP request, ' +
         'before the request is processed. It is independent of the services exposed as tools.';
     out['mcp-wizard-slot-response-hook-chip'] = 'The service invoked each time the gateway is about to return ' +
         'an MCP response. It is independent of the services exposed as tools.';
 
     // .. the options folded away under the More options line ..
-    out['mcp-wizard-edit-options'] = 'Input validation and the audit log, the compaction of responses, ' +
-        'the hook services and content safety. The line says what is currently set.';
+    out['mcp-wizard-edit-options'] = 'Input validation and the audit log, the compaction of responses ' +
+        'and content safety. The line says what is currently set.';
 
-    // .. and the fields the PII and data masking section masks in every response.
+    // .. the fields masked in every response ..
     out[wizard.dataMasking.config.editLinkId] = 'Fields masked in every tool response, whatever the PII detectors find.';
+
+    // .. and the removal of PII from responses.
+    out[wizard.pii.config.editLinkId] = 'Whether the PII detectors remove personal data from tool responses, and which lands and detectors they use.';
     out[wizard.forms.inputId(wizard.maskingPopover.config.customInputField)] = 'Field names masked in addition to the ones selected, one per line.';
 
     return out;

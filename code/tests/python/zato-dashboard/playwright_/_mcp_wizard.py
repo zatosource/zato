@@ -469,7 +469,7 @@ def set_compaction(
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# The hook services and content safety cards of step 2
+# The hook services line and the content safety card of step 2
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -489,9 +489,13 @@ def _open_option_card(page:'Page', card_name:'str') -> 'None':
 # ################################################################################################################################
 
 def open_hooks_card(page:'Page') -> 'None':
-    """ Unfolds the hook services card, unless it is already open.
+    """ Opens the popover of the hook services line, unless it is already open.
     """
-    _open_option_card(page, 'hooks')
+    is_open = page.evaluate('document.getElementById("mcp-wizard-hooks-body").closest(".tippy-box") !== null')
+
+    if not is_open:
+        page.click('#mcp-wizard-edit-hooks')
+        _ = page.wait_for_selector('#mcp-wizard-hooks-body', state='visible', timeout=_Wizard_Timeout)
 
 # ################################################################################################################################
 

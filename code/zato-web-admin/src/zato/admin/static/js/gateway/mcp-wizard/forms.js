@@ -22,6 +22,9 @@ $.fn.zato.micro_forms.setup(wizard, {
     // The class the popovers wear, under which wizard-kit.css sizes their switches
     popupClass: 'wizard-micro-form',
 
+    // The pick panel a hook line's chip opens stands outside the popover the lines are in
+    menuSelector: '.zato-dropdown-menu, .decision-pick-panel',
+
     descriptors: {
 
         // The size caps live in mcp-size-caps.js - the gateway list opens

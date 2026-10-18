@@ -73,6 +73,9 @@ review.config = {
     // The one group the Skills card counts its badges in
     skillsLabel: 'Skills',
 
+    // What the Security card's summary adds while OAuth sign-in is active
+    oauthLabel: 'OAuth sign-in',
+
     // How each group of a picker card's summary is written, e.g. Services (3)
     countOpen: ' (',
     countClose: ')',
@@ -82,7 +85,7 @@ review.config = {
 // ////////////////////////////////////////////////////////////////////////
 
 // The three badge picker cards of step 1 - each folds its picker away the
-// way the hook services and content safety cards of step 2 fold their fields.
+// way the content safety card of step 2 folds its fields.
 review.pickerCards = function() {
 
     var ownConfig = wizard.config_own;
@@ -140,6 +143,16 @@ review._cardGroups = function(card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Whether the card is the Security one with OAuth sign-in active
+review._isOAuthOn = function(card) {
+
+    var out = card.name === 'security' && wizard.field('oauth').prop('checked');
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How many things a card holds - its assigned badges, and OAuth sign-in on the Security card as one more.
 review._cardCount = function(card) {
 
     var out = 0;
@@ -148,25 +161,34 @@ review._cardCount = function(card) {
         out += group.count;
     });
 
+    if(review._isOAuthOn(card)) {
+        out++;
+    }
+
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What one picker card's summary says, e.g. Services (3), Microsoft Teams (1).
+// What one picker card's summary says, e.g. Services (3), Microsoft Teams (1),
+// or Bearer token (1), OAuth sign-in.
 review._cardSummary = function(card) {
 
     var config = review.config;
-    var groups = review._cardGroups(card);
 
-    if(groups.length === 0) {
+    var parts = review._cardGroups(card).map(function(group) {
+        return group.label + config.countOpen + group.count + config.countClose;
+    });
+
+    if(review._isOAuthOn(card)) {
+        parts.push(config.oauthLabel);
+    }
+
+    if(parts.length === 0) {
         return config.noneAssignedLabel;
     }
 
-    var out = groups.map(function(group) {
-        return group.label + config.countOpen + group.count + config.countClose;
-    }).join(config.groupSeparator);
-
+    var out = parts.join(config.groupSeparator);
     return out;
 };
 
@@ -202,6 +224,12 @@ review.initOptionCards = function() {
         observer.observe(assignedZone, {childList: true});
     });
 
+    // .. the Security card's summary follows the OAuth switch as well ..
+    wizard.field('oauth').on('change', function() {
+        review.pickerCards().forEach(review._showCardSummary);
+        wizard.assign.refreshIndex();
+    });
+
     // .. the two smaller cards open their micro-forms ..
     $('#mcp-wizard-card-gateway-options').on('click', function() {
         wizard.forms.open('gateway_options', this);
@@ -211,12 +239,8 @@ review.initOptionCards = function() {
         wizard.forms.open('compaction', this);
     });
 
-    // .. the hook services and content safety cards expand and collapse in place ..
-    $('#mcp-wizard-hooks-header').on('click', function() {
-        $('#mcp-wizard-hooks-body').toggleClass('wizard-option-body-open');
-        $('#mcp-wizard-hooks-chevron').toggleClass('wizard-chevron-open');
-    });
 
+    // .. the content safety card expands and collapses in place ..
     $('#mcp-wizard-safety-header').on('click', function() {
         $('#mcp-wizard-safety-body').toggleClass('wizard-option-body-open');
         $('#mcp-wizard-safety-chevron').toggleClass('wizard-chevron-open');
@@ -358,7 +382,6 @@ review._optionsSummary = function() {
     parts.push(wizard.field('is_audit_log_active').prop('checked') ? config.auditLogOnLabel : config.auditLogOffLabel);
     parts.push(review._checkedCount(config.compactionFields) + config.ofLabel +
         config.compactionFields.length + config.compactionLabel);
-    parts.push(wizard.hooks.countLabel().toLowerCase());
     parts.push(review._checkedCount(config.safetyFields) + config.ofLabel +
         config.safetyFields.length + config.safetyChecksLabel);
 

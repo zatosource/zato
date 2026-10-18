@@ -5,7 +5,7 @@
  * both and the total under them. The popover keeps one size whatever it
  * shows - the grid and the pane scroll inside it, their scrollbars always
  * there, so nothing ever shifts as the cards and the fields change. The
- * tokens, the editor and the controls shared with the PII and data masking section are in
+ * tokens, the editor and the controls shared with the data masking row are in
  * gateway/mcp-wizard-masking.css, loaded before this file.
  */
 

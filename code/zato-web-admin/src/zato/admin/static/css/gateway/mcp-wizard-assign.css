@@ -26,6 +26,9 @@
     --mcp-assign-entry-mark: 2px;
     --mcp-assign-pane-padding: 14px;
     --mcp-assign-radius: 2px;
+    --mcp-assign-oauth-label-gap: 10px;
+    --mcp-assign-oauth-gap: 14px;
+    --mcp-assign-oauth-off-opacity: 0.5;
 }
 
 /* ------------------------------------------------------------ */
@@ -181,4 +184,28 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Assignments - the OAuth pane                                 */
+/* ------------------------------------------------------------ */
+
+/* The switch heads the pane right after its label, the scopes it governs under it */
+.mcp-assign .mcp-wizard-oauth-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mcp-assign-oauth-gap);
+}
+
+.mcp-assign .mcp-wizard-oauth-grid > label:first-child {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-self: start;
+    align-items: center;
+    gap: var(--mcp-assign-oauth-label-gap);
+    font-size: 13px;
+}
+
+/* The scopes step back while OAuth is off */
+.mcp-assign .mcp-wizard-oauth-grid:has(> label:first-child input:not(:checked)) .mcp-wizard-oauth-scopes {
+    opacity: var(--mcp-assign-oauth-off-opacity);
 }

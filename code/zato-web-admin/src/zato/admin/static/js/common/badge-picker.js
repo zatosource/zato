@@ -13,6 +13,10 @@ $.fn.zato.badge_picker = {};
 
 $.fn.zato.badge_picker._default_config = {
 
+    // What a zone with no badges in it shows
+    empty_available_text: 'None available',
+    empty_assigned_text: 'None assigned',
+
     // Build a single badge DOM element from an item. Override to change badge layout.
     make_badge: function(item, num) {
         var badge = $('<div/>', { 'class': 'security-badge', 'data-id': item.id, 'data-name': (item.name || '').toLowerCase() });
@@ -70,6 +74,9 @@ $.fn.zato.badge_picker.init = function(action, data, config) {
 
     available_body.empty();
     assigned_body.empty();
+
+    available_body.attr('data-empty-text', config.empty_available_text);
+    assigned_body.attr('data-empty-text', config.empty_assigned_text);
 
     var assigned_items = [];
     var available_items = [];
@@ -152,6 +159,11 @@ $.fn.zato.badge_picker.attach_events = function(action, config) {
             return;
         }
 
+        // A marquee drawn within one row ends in a click on that row, which leaves the row where it is
+        if (marquee_state.just_ended) {
+            return;
+        }
+
         if (e.ctrlKey || e.metaKey) {
             $(this).toggleClass('selected');
             return;
@@ -198,6 +210,13 @@ $.fn.zato.badge_picker.attach_events = function(action, config) {
 
         var zone_body = $(this);
         var badge = $(e.target).closest('.security-badge');
+
+        // A full zone has no free space left between its rows, so a press on
+        // a row past its text starts a marquee the way a press on the zone does
+        if (e.target === badge[0]) {
+            badge = $();
+        }
+
         var offset = zone_body.offset();
         var scroll_top = zone_body.scrollTop();
         var scroll_left = zone_body.scrollLeft();
@@ -326,6 +345,12 @@ $.fn.zato.badge_picker.attach_events = function(action, config) {
     $(document).off('mouseup.unified_' + action).on('mouseup.unified_' + action, function(e) {
         if (marquee_state.active) {
             marquee_state.active = false;
+
+            // The click that follows this mouseup is dispatched before the timer runs
+            marquee_state.just_ended = true;
+            setTimeout(function() {
+                marquee_state.just_ended = false;
+            }, 0);
             if (marquee_state.marquee) {
                 marquee_state.marquee.remove();
                 marquee_state.marquee = null;

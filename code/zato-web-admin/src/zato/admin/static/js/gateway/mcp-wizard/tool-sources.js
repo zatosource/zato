@@ -3,9 +3,11 @@
 // One card serves every tool source - the services and each kind of
 // outgoing connection. The sources stand in a tree whose group nodes
 // mirror the dashboard menu, drawn with the dashboard kit's tree
-// connectors. Clicking a leaf switches what the one badge picker on the
-// right shows, and the picks of every source are kept while another one
-// is on screen. The tree and its items come embedded in the page.
+// connectors. Every source has its leaf, with the number of items it
+// offers, and a source that offers none is dimmed.
+// Clicking a leaf switches what the one badge picker on the right shows,
+// and the picks of every source are kept while another one is on screen.
+// The tree and its items come embedded in the page.
 
 (function($) {
 
@@ -25,12 +27,16 @@ toolSources.config = {
     listId: 'mcp-wizard-tool-source-list',
 
     // The action the shared badge picker is registered under
-    pickerAction: 'wizard'
+    pickerAction: 'wizard',
+
+    // A leaf offering no items, and a leaf with at least one of its items assigned
+    emptyClass: 'mcp-tool-source-empty',
+    pickedClass: 'mcp-tool-source-picked'
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The card's state - the pruned tree, the leaves in their tree order, the
+// The card's state - the tree, the leaves in their tree order, the
 // picks each leaf holds while it is off screen and which leaf the picker
 // currently shows.
 toolSources.state = {
@@ -50,8 +56,7 @@ toolSources.init = function() {
     var dataScript = document.getElementById(toolSources.config.dataScriptId);
     var allNodes = JSON.parse(dataScript.textContent);
 
-    // .. a leaf with nothing to offer has no row and a group left without
-    // leaves has none either - only what actually holds items appears ..
+    // .. a group with a single child stands aside for that child ..
     state.tree = toolSources._prune(allNodes);
 
     // .. the leaves are collected in their tree order ..
@@ -60,15 +65,24 @@ toolSources.init = function() {
     // .. the tree is built ..
     toolSources._buildTree();
 
-    // .. and the picker opens on the first leaf.
-    toolSources.select(state.sources[0].key);
+    // .. and the picker opens on the first leaf that offers anything, or on
+    // the first leaf when none does.
+    var firstKey = state.sources[0].key;
+
+    for(var sourceIndex = 0; sourceIndex < state.sources.length; sourceIndex++) {
+        if(state.sources[sourceIndex].items.length) {
+            firstKey = state.sources[sourceIndex].key;
+            break;
+        }
+    }
+
+    toolSources.select(firstKey);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The given nodes without empty leaves, without groups that lost every
-// child to the pruning, and with no single-child chains - a group left
-// with exactly one child stands aside for that child.
+// The given nodes with no single-child chains - a group with exactly one
+// child stands aside for that child.
 toolSources._prune = function(nodes) {
 
     var out = [];
@@ -78,17 +92,10 @@ toolSources._prune = function(nodes) {
 
         // A leaf carries a key, a group carries children ..
         if('key' in node) {
-            if(node.items.length) {
-                out.push(node);
-            }
+            out.push(node);
         } else {
 
-            // .. a group with nothing left under it disappears ..
             var children = toolSources._prune(node.children);
-
-            if(!children.length) {
-                continue;
-            }
 
             // .. a group with one child hands its place to that child ..
             if(children.length === 1) {
@@ -133,13 +140,14 @@ toolSources._collectLeaves = function(nodes) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// One leaf's row - the label and, at the row's end, how many of its
-// items are assigned.
+// One leaf's row - the label and, at the row's end, how many items the
+// source offers.
 toolSources._leafRow = function(node) {
 
     var row = document.createElement('div');
     row.className = 'mcp-tool-source';
     row.setAttribute('data-key', node.key);
+    row.classList.toggle(toolSources.config.emptyClass, node.items.length === 0);
 
     var label = document.createElement('span');
     label.className = 'mcp-tool-source-label';
@@ -147,6 +155,7 @@ toolSources._leafRow = function(node) {
 
     var count = document.createElement('span');
     count.className = 'mcp-tool-source-count';
+    count.textContent = node.items.length;
 
     row.appendChild(label);
     row.appendChild(count);
@@ -301,8 +310,7 @@ toolSources.assignedNames = function(key) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Brings every leaf row's count in line with what the leaf holds -
-// a leaf with no picks says nothing.
+// Marks the leaves that have at least one of their items assigned.
 toolSources.syncCounts = function() {
 
     var config = toolSources.config;
@@ -314,7 +322,7 @@ toolSources.syncCounts = function() {
         var assignedCount = toolSources.assignedNames(source.key).length;
 
         var row = $('#' + config.listId + ' .mcp-tool-source[data-key="' + source.key + '"]');
-        row.find('.mcp-tool-source-count').text(assignedCount ? assignedCount : '');
+        row.toggleClass(config.pickedClass, assignedCount > 0);
     }
 };
 

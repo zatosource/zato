@@ -570,14 +570,14 @@ class TestMCPWizard:
             'document.getElementById("mcp-wizard-tools-body").classList.contains("wizard-option-body-open")')
         assert is_open, 'Expected the tools card open after the review edit link'
 
-        # .. and the PII group's link goes to step 2 with the PII and data masking section unfolded.
+        # .. and the PII group's link goes to step 2 with the PII fields open in their popover.
         wizard_page.go_to_step(page, wizard_page.Review_Step)
         _click_review_edit(page, 'PII and data masking')
 
         _ = page.wait_for_selector('#mcp-wizard-step-body-1', state='visible', timeout=_UI_Timeout)
 
-        pii_hidden = page.evaluate('document.getElementById("mcp-wizard-pii-body").hidden')
-        assert not pii_hidden, 'Expected the PII and data masking section unfolded after the review edit link'
+        is_in_popover = page.evaluate('document.getElementById("mcp-wizard-pii-body").closest(".tippy-box") !== null')
+        assert is_in_popover, 'Expected the PII fields in their popover after the review edit link'
 
 # ################################################################################################################################
 

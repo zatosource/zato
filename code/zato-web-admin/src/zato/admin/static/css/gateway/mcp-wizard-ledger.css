@@ -21,7 +21,7 @@
     --ledger-rule-outer: 1px solid var(--wizard-surface-field-border);
     --ledger-rule: 1px solid var(--wizard-surface-hairline-strong);
     --ledger-label-width-basic: 5.5rem;
-    --ledger-label-width-options: 11.5rem;
+    --ledger-label-width-options: 8.75rem;
     --ledger-label-width-review: 11.5rem;
     --ledger-active-gap: 24px;
     --ledger-row-padding: 11px;
@@ -32,6 +32,9 @@
     --ledger-band: var(--wizard-surface-raised);
     --ledger-band-bleed: 14px;
     --ledger-nest-indent: 14px;
+    --ledger-safety-row-height: 24px;
+    --ledger-safety-group-gap: 16px;
+    --ledger-safety-first-group-gap: 12px;
 }
 
 #mcp-wizard-step-body-0,
@@ -83,10 +86,22 @@
     color: var(--zato-ui-text);
 }
 
+/* A switch row is as tall as a select row, so the rows of a group keep one rhythm under its title */
+#mcp-wizard-safety-body .wizard-collapse-group {
+    margin-top: var(--ledger-safety-group-gap);
+}
+
+#mcp-wizard-safety-body .wizard-collapse-group:first-child {
+    margin-top: var(--ledger-safety-first-group-gap);
+}
+
+#mcp-wizard-safety-body .mcp-wizard-field-grid > label {
+    min-height: var(--ledger-safety-row-height);
+}
+
 /* A title that unfolds or opens something has its chevron right after it, in its color */
 #mcp-wizard-step-body-0 .wizard-option-label,
 #mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-label,
-#mcp-wizard-pii-line > .decision-line-label,
 #mcp-wizard-row-options > .decision-line-label {
     display: flex;
     align-items: center;
@@ -94,7 +109,6 @@
 }
 
 #mcp-wizard .wizard-option-label > .wizard-chevron,
-#mcp-wizard-pii-line > .decision-line-label > .wizard-chevron,
 #mcp-wizard-row-options > .decision-line-label > .wizard-chevron,
 #mcp-wizard-safety-body .wizard-collapse-group-title > .wizard-chevron {
     color: inherit;
@@ -104,7 +118,6 @@
 #mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-summary,
 #mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line .summary-link-text,
 #mcp-wizard-row-options .summary-link-text,
-#mcp-wizard-summary-pii,
 #mcp-wizard-review .wizard-review-value {
     color: var(--ledger-ink);
 }
@@ -256,7 +269,6 @@
 /* Ledger - step 2, what the rows unfold                        */
 /* ------------------------------------------------------------ */
 
-#mcp-wizard-step-body-1 #mcp-wizard-pii-body,
 #mcp-wizard-options-body > .wizard-option-card > .wizard-option-body-open {
     max-width: none;
     margin: 0;
@@ -272,7 +284,6 @@
 /* An open section stands on a band of its own, the row it opened from
    included, and the band reaches past the column on both sides so the
    labels and the values stay where every other row has them */
-#mcp-wizard-pii:has(> #mcp-wizard-pii-body:not([hidden])),
 #mcp-wizard-step-body-1 > .wizard-section:has(> #mcp-wizard-options-body:not([hidden])),
 #mcp-wizard-options-body > .wizard-option-card:has(> .wizard-option-body-open) {
     margin-right: calc(-1 * var(--ledger-band-bleed));

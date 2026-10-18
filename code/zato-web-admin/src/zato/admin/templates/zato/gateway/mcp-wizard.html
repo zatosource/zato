@@ -242,7 +242,7 @@ $(document).ready(function() {
                             </div>
                             <div class="mcp-wizard-security-pane" data-pane="oauth">
                                 <div class="mcp-wizard-field-grid mcp-wizard-oauth-grid">
-                                    <label for="{{ form.oauth.id_for_label }}">OAuth {{ form.oauth }}</label>
+                                    <label for="{{ form.oauth.id_for_label }}">OAuth sign-in active {{ form.oauth }}</label>
                                     <label class="mcp-wizard-wide-field mcp-wizard-oauth-scopes" for="{{ form.oauth_scopes.id_for_label }}">Scopes {{ form.oauth_scopes }}</label>
                                 </div>
                             </div>
@@ -252,7 +252,7 @@ $(document).ready(function() {
 
                 </div>
 
-                <!-- Step 2 - response shaping, PII and data masking, and the folded options -->
+                <!-- Step 2 - response shaping, data masking, PII, hook services and the folded options -->
                 <div class="wizard-step-body" id="mcp-wizard-step-body-1" hidden>
 
                     <div class="wizard-section">
@@ -279,23 +279,33 @@ $(document).ready(function() {
                     <div class="wizard-section mcp-wizard-pii" id="mcp-wizard-pii">
 
                         <div class="decision-lines mcp-wizard-wide-labels">
-                            <div class="decision-line mcp-wizard-pii-line" id="mcp-wizard-pii-line">
-                                <span class="decision-line-label">PII and data masking<svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
-                                <span class="decision-line-slot"><span class="mcp-wizard-pii-summary" id="mcp-wizard-summary-pii"></span></span>
+
+                            <div class="decision-line" id="mcp-wizard-line-data-masking">
+                                <label class="decision-line-label" for="mcp-wizard-edit-data-masking">Data masking</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-data-masking"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-data-masking"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
+
+                            <div class="decision-line" id="mcp-wizard-line-pii">
+                                <label class="decision-line-label" for="mcp-wizard-edit-pii">PII</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-pii"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-pii"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                            <div class="decision-line" id="mcp-wizard-line-hooks">
+                                <label class="decision-line-label" for="mcp-wizard-edit-hooks">Hook services</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-hooks"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-hooks"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
                         </div>
 
-                        <div class="mcp-wizard-pii-body" id="mcp-wizard-pii-body" hidden>
-
-                            <div class="mcp-wizard-field-grid mcp-wizard-masking">
-                                <label for="mcp-wizard-edit-data-masking">Data masking <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-data-masking"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-data-masking"></span><span class="zato-soft-hint">Click to edit</span></a></label>
-                            </div>
+                        <!-- The PII fields open in a popover and are kept here while it is closed -->
+                        <div class="mcp-wizard-pii-holder" id="mcp-wizard-pii-holder" hidden>
+                        <div class="mcp-wizard-pii-body" id="mcp-wizard-pii-body">
 
                             <div class="mcp-wizard-field-grid">
                                 <label for="{{ form.safeguards_pii_enabled.id_for_label }}">Remove PII from responses {{ form.safeguards_pii_enabled }}</label>
                             </div>
 
-                            <div class="mcp-wizard-pii-selects mcp-wizard-pii-dependent">
+                            <div class="mcp-wizard-pii-selects">
                                 <label for="{{ form.safeguards_pii_lands.id_for_label }}">Lands</label>
                                 {{ form.safeguards_pii_lands }}
                                 <label for="{{ form.safeguards_pii_detectors.id_for_label }}">Detectors</label>
@@ -304,11 +314,31 @@ $(document).ready(function() {
                                 {{ form.safeguards_pii_exclude }}
                             </div>
 
-                            <div class="mcp-wizard-field-grid mcp-wizard-pii-dependent">
+                            <div class="mcp-wizard-field-grid">
                                 <label for="{{ form.safeguards_pii_validate.id_for_label }}">Validate matches with checksums {{ form.safeguards_pii_validate }}</label>
                                 <label for="{{ form.safeguards_pii_stable_replacements.id_for_label }}">Stable replacements across one response {{ form.safeguards_pii_stable_replacements }}</label>
                             </div>
 
+                        </div>
+                        </div>
+
+                        <!-- The hook lines open in a popover and are kept here while it is closed -->
+                        <div id="mcp-wizard-hooks-holder" hidden>
+                        <div class="mcp-wizard-hooks-body" id="mcp-wizard-hooks-body">
+                            <div class="decision-lines">
+
+                                <div class="decision-line" id="mcp-wizard-line-request-hook">
+                                    <label class="decision-line-label" for="mcp-wizard-slot-request-hook-chip">Request</label>
+                                    <span class="decision-line-slot" id="mcp-wizard-slot-request-hook"></span>
+                                </div>
+
+                                <div class="decision-line" id="mcp-wizard-line-response-hook">
+                                    <label class="decision-line-label" for="mcp-wizard-slot-response-hook-chip">Response</label>
+                                    <span class="decision-line-slot" id="mcp-wizard-slot-response-hook"></span>
+                                </div>
+
+                            </div>
+                        </div>
                         </div>
 
                     </div>
@@ -333,28 +363,6 @@ $(document).ready(function() {
                             <div class="wizard-option-header">
                                 <span class="wizard-option-label">Compaction</span>
                                 <span class="wizard-option-summary" id="mcp-wizard-summary-compaction"></span>
-                            </div>
-                        </div>
-
-                        <div class="wizard-option-card" id="mcp-wizard-card-hooks">
-                            <div class="wizard-option-header" id="mcp-wizard-hooks-header">
-                                <span class="wizard-option-label">Hook services<svg class="wizard-chevron" id="mcp-wizard-hooks-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
-                                <span class="wizard-option-summary" id="mcp-wizard-summary-hooks"></span>
-                            </div>
-                            <div class="wizard-option-body" id="mcp-wizard-hooks-body">
-                                <div class="decision-lines">
-
-                                    <div class="decision-line" id="mcp-wizard-line-request-hook">
-                                        <label class="decision-line-label" for="mcp-wizard-slot-request-hook-chip">Request</label>
-                                        <span class="decision-line-slot" id="mcp-wizard-slot-request-hook"></span>
-                                    </div>
-
-                                    <div class="decision-line" id="mcp-wizard-line-response-hook">
-                                        <label class="decision-line-label" for="mcp-wizard-slot-response-hook-chip">Response</label>
-                                        <span class="decision-line-slot" id="mcp-wizard-slot-response-hook"></span>
-                                    </div>
-
-                                </div>
                             </div>
                         </div>
 

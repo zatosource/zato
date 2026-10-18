@@ -92,15 +92,26 @@ def _expected_masked_fields(sets:'strlist', excluded:'strlist', custom_fields:'s
 
 # ################################################################################################################################
 
-def _expected_summary(sets:'strlist', masked_fields:'strlist') -> 'str':
-    """ What the data masking line says - the sets by label, Custom, and how many fields that comes to.
+def _expected_summary(sets:'strlist', excluded:'strlist', custom_fields:'strlist') -> 'str':
+    """ What the data masking line says - each set by label with how many of its fields are masked,
+    then Custom with the number of the custom fields.
     """
-    labels_by_set = {item['name']: item['label'] for item in get_masking_config()}
+    sets_by_name = {item['name']: item for item in get_masking_config()}
+    parts:'strlist' = []
 
-    parts = [labels_by_set[set_name] for set_name in sets]
-    parts.append(_custom_label)
+    for set_name in sets:
+        item = sets_by_name[set_name]
+        masked_count = 0
 
-    out = ', '.join(parts) + f' ({len(masked_fields)} fields)'
+        for field_name in item['fields']:
+            if not _holds(excluded, field_name):
+                masked_count += 1
+
+        parts.append(f'{item["label"]} ({masked_count})')
+
+    parts.append(f'{_custom_label} ({len(custom_fields)})')
+
+    out = ', '.join(parts)
     return out
 
 # ################################################################################################################################
@@ -210,7 +221,7 @@ class TestMCPWizardMasking:
         url_path = '/mcp/' + gateway_name
 
         masked_fields = _expected_masked_fields(_picked_sets, [_excluded_field], _custom_fields)
-        expected_summary = _expected_summary(_picked_sets, masked_fields)
+        expected_summary = _expected_summary(_picked_sets, [_excluded_field], _custom_fields)
 
         # Step 1 - the gateway's name, path and one service ..
         wizard_page.open_wizard_create(page, base_url)

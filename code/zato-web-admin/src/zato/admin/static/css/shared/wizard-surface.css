@@ -228,15 +228,18 @@
 /* Wizard surface - switches                                    */
 /* ------------------------------------------------------------ */
 
-.wizard-card input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox) {
+.wizard-card input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox),
+.wizard-surface-pickers input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox) {
     box-shadow: var(--wizard-surface-track-inset);
 }
 
-.wizard-card input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox)::before {
+.wizard-card input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox)::before,
+.wizard-surface-pickers input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox)::before {
     box-shadow: var(--wizard-surface-knob-shadow);
 }
 
-.wizard-card input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox):focus-visible {
+.wizard-card input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox):focus-visible,
+.wizard-surface-pickers input[type="checkbox"]:not(.tri-state):not(.zato-plain-checkbox):focus-visible {
     outline: 2px solid var(--wizard-surface-accent-light);
     outline-offset: 2px;
 }
@@ -381,7 +384,9 @@
 }
 
 .wizard-card .badge-zone-empty,
-.wizard-surface-pickers .badge-zone-empty {
+.wizard-surface-pickers .badge-zone-empty,
+.wizard-card .badge-zone-body::before,
+.wizard-surface-pickers .badge-zone-body::before {
     padding: 14px 12px;
     font-family: var(--wizard-surface-font-mono);
     font-size: 11px;

@@ -5,14 +5,14 @@
  * strip, the decision lines, the review, the footer and the popover
  * micro-forms - comes from shared/wizard-kit.css and
  * shared/decision-lines.css. This file holds only what is MCP's own:
- * the badge picker sections of step 1 and the field grids of the PII and
- * data masking section and the content safety card. The data masking
- * line is styled in gateway/mcp-wizard-masking.css and the section's own
- * line and surface in gateway/mcp-wizard-pii.css.
+ * the badge picker sections of step 1 and the field grids of the PII
+ * popover and the content safety card. The data masking popover is styled
+ * in gateway/mcp-wizard-masking.css and the PII fields in
+ * gateway/mcp-wizard-pii.css.
  */
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - decision lines                                   */
+/* MCP wizard - decision lines                                  */
 /* ------------------------------------------------------------ */
 
 /* The step 2 label column is just wide enough for the longest question,
@@ -68,6 +68,15 @@
     width: auto;
 }
 
+/* The pick panel of a hook line opens over the popover the lines are in */
+:root {
+    --mcp-wizard-hook-panel-layer: 100002;
+}
+
+.mcp-wizard-hook-panel {
+    --decision-pick-panel-z-index: var(--mcp-wizard-hook-panel-layer);
+}
+
 /* The three lines of step 2 read as one evenly spaced list, though the
    More options line lives in a section of its own - the kit's rhythm
    tokens are set to one value for this step body */
@@ -91,7 +100,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - the size caps popover                            */
+/* MCP wizard - the size caps popover                           */
 /* ------------------------------------------------------------ */
 
 /* Both answers of the popover's second row are a word or a short number -
@@ -106,7 +115,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - badge picker sections                            */
+/* MCP wizard - badge picker sections                           */
 /* ------------------------------------------------------------ */
 
 /* The URL path row is the last thing above the pickers, so it carries
@@ -122,7 +131,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - the Tools card's source tree                     */
+/* MCP wizard - the Tools card's source tree                    */
 /* ------------------------------------------------------------ */
 
 /* The height the Tools card's row keeps no matter how many sources there
@@ -132,6 +141,7 @@
     --mcp-tool-sources-height: 21em;
     --mcp-tool-scrollbar-width: 9px;
     --mcp-tool-text-color: #000000;
+    --mcp-tool-empty-opacity: 0.45;
 }
 
 /* The source tree and the picker share the card's row - the tree keeps
@@ -216,17 +226,32 @@
     background: rgba(41, 128, 185, 0.08);
 }
 
-/* The count keeps the room of two digits, so the tree, as wide as its
-   text, does not change its width as items are assigned */
+/* The count keeps the room of four digits, so the tree, as wide as its
+   text, keeps one width whatever the sources hold */
 .mcp-tool-source-count {
-    min-width: 2ch;
+    min-width: 4ch;
     font-size: 11px;
+    font-variant-numeric: tabular-nums;
     text-align: right;
     color: var(--mcp-tool-text-color);
 }
 
+.mcp-tool-source:not(.mcp-tool-source-empty) .mcp-tool-source-count {
+    font-weight: 600;
+}
+
+/* A source with nothing to offer stays in the tree, dimmed */
+.mcp-tool-source-list .mcp-tool-source-empty {
+    opacity: var(--mcp-tool-empty-opacity);
+}
+
+/* A source with at least one of its items assigned */
+.mcp-tool-source-picked .mcp-tool-source-label {
+    font-weight: 600;
+}
+
 /* ------------------------------------------------------------ */
-/* MCP wizard - field grids inside the folded cards              */
+/* MCP wizard - field grids inside the folded cards             */
 /* ------------------------------------------------------------ */
 
 /* The room between the longest label and the control column that follows it */
@@ -313,7 +338,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - PII multi-selects                                */
+/* MCP wizard - PII multi-selects                               */
 /* ------------------------------------------------------------ */
 
 /* The selects take the section's whole width, past their labels */
@@ -331,7 +356,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - chip lists, the URL allow list and the scopes    */
+/* MCP wizard - chip lists, the URL allow list and the scopes   */
 /* ------------------------------------------------------------ */
 
 /* The chips wear the look every chip in the app shares, from shared/chips.css -
@@ -391,7 +416,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - fields behind a master toggle that is off        */
+/* MCP wizard - fields behind a master toggle that is off       */
 /* ------------------------------------------------------------ */
 
 /* The gateway list styles these inside its popups only - the wizard page
@@ -402,7 +427,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MCP wizard - the Security card's tabs, Definitions and OAuth  */
+/* MCP wizard - the Security card's tabs, Definitions and OAuth */
 /* ------------------------------------------------------------ */
 
 /* The step strip's own tabs, recolored with the wizard accent the same way */
