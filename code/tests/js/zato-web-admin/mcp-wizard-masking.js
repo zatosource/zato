@@ -1,5 +1,6 @@
-// MCP gateway wizard - the data masking logic of masking-sets.js and data-masking.js,
-// run in a vm context with a stub of the jQuery namespace and of the document.
+// MCP gateway wizard - the data masking logic of masking-sets.js, data-masking.js,
+// masking-popover.js and masking-search.js, run in a vm context with a stub of the jQuery
+// namespace, of the micro-forms engine and of the document.
 //
 // Usage: node mcp-wizard-masking.js <the mcp-wizard static directory>
 // The industry sets arrive as JSON on standard input, in the form the page embeds them.
@@ -15,7 +16,7 @@ var vm = require('vm');
 // ////////////////////////////////////////////////////////////////////////
 
 var config = {
-    scriptNames: ['masking-sets.js', 'data-masking.js'],
+    scriptNames: ['masking-sets.js', 'data-masking.js', 'masking-popover.js', 'masking-search.js'],
     setsScriptId: 'mcp-wizard-masking-sets',
     stateScriptId: 'mcp-wizard-masking-state'
 };
@@ -32,6 +33,11 @@ var buildContext = function(setsText, stateText) {
         maskingSets: {},
         dataMasking: {},
         maskingPopover: {},
+        searchBox: {},
+        forms: {
+            descriptors: {},
+            registerKind: function() {}
+        },
         review: {
             setSummary: function() {}
         }
@@ -72,6 +78,50 @@ var loadWizard = function(staticDirectory, setsText, state) {
     wizard.dataMasking.init();
 
     return wizard;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The popover with a working copy of the answers, as the micro-form gives it when it opens.
+var loadPopover = function(staticDirectory, setsText, setNames, excluded) {
+
+    var state = emptyState();
+    state.sets = setNames;
+    state.excluded = excluded;
+
+    var popover = loadWizard(staticDirectory, setsText, state).maskingPopover;
+    popover.working = popover._copyState(state);
+
+    return popover;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The names of the sets listing a field, compared without regard to case, in the order of the sets.
+var setsListing = function(sets, fieldName) {
+
+    var out = [];
+
+    for(var setIdx = 0; setIdx < sets.length; setIdx++) {
+
+        var lowered = sets[setIdx].fields.map(function(name) { return name.toLowerCase(); });
+
+        if(lowered.indexOf(fieldName.toLowerCase()) !== -1) {
+            out.push(sets[setIdx].name);
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+var maskingSetsSubtract = function(fieldList, names) {
+
+    var lowered = names.map(function(name) { return name.toLowerCase(); });
+
+    var out = fieldList.filter(function(fieldName) { return lowered.indexOf(fieldName.toLowerCase()) === -1; });
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -203,7 +253,7 @@ var buildCases = function(staticDirectory, setsText) {
 
         var dataMasking = loadWizard(staticDirectory, setsText, state).dataMasking;
         var label = dataMasking.config.labels;
-        var expected = 'Banking, ' + label.custom + ' (' + (bankingFields.length + 1) + ' fields)';
+        var expected = 'Banking (' + bankingFields.length + '), ' + label.custom + ' (1)';
 
         assert.strictEqual(dataMasking.summary(), expected);
     };
@@ -212,6 +262,121 @@ var buildCases = function(staticDirectory, setsText) {
         var dataMasking = loadWizard(staticDirectory, setsText, emptyState()).dataMasking;
         var out = dataMasking.parse('  iban \n\nbic\niban\n');
         assert.deepStrictEqual(plain(out), ['iban', 'bic']);
+    };
+
+    cases.parseKeepsEachNameOnceInAnyCase = function() {
+        var dataMasking = loadWizard(staticDirectory, setsText, emptyState()).dataMasking;
+        var out = dataMasking.parse('iban\nIBAN\nIban\nbic');
+        assert.deepStrictEqual(plain(out), ['iban', 'bic']);
+    };
+
+    cases.setsListingNamesEverySetListingTheField = function() {
+        var maskingSets = loadWizard(staticDirectory, setsText, emptyState()).maskingSets;
+        assert.deepStrictEqual(plain(maskingSets.setsListing('EMAIL')), setsListing(sets, 'email'));
+        assert.deepStrictEqual(plain(maskingSets.setsListing('iban')), setsListing(sets, 'iban'));
+    };
+
+    cases.noSetListsAFieldTwice = function() {
+        for(var setIdx = 0; setIdx < sets.length; setIdx++) {
+            var lowered = sets[setIdx].fields.map(function(fieldName) { return fieldName.toLowerCase(); });
+            assert.strictEqual(new Set(lowered).size, lowered.length, sets[setIdx].name);
+        }
+    };
+
+    cases.aFieldIsMaskedWhicheverPickedSetListsIt = function() {
+        var popover = loadPopover(staticDirectory, setsText, ['common'], []);
+        assert.strictEqual(popover.isMasked('email'), true);
+        assert.strictEqual(popover.isMasked('EMAIL'), true);
+        assert.strictEqual(popover.isMasked('iban'), false);
+    };
+
+    cases.anExclusionCoversEverySetListingTheField = function() {
+        var popover = loadPopover(staticDirectory, setsText, ['common', 'banking'], []);
+        popover.toggleField('banking', 'email');
+
+        assert.strictEqual(popover.isMasked('email'), false);
+        assert.deepStrictEqual(plain(popover.working.sets), ['common', 'banking']);
+        assert.deepStrictEqual(plain(popover.working.excluded), ['email']);
+    };
+
+    cases.aFieldOfASetNotPickedPicksTheSetWithThatFieldAlone = function() {
+        var popover = loadPopover(staticDirectory, setsText, ['common'], []);
+        popover.toggleField('banking', 'iban');
+
+        assert.strictEqual(popover.isPicked('banking'), true);
+        assert.strictEqual(popover.isMasked('iban'), true);
+        assert.strictEqual(popover.isMasked('email'), true);
+        assert.strictEqual(popover.isMasked('bic'), false);
+    };
+
+    cases.aFieldAnotherPickedSetListsLeavesTheSetUnpicked = function() {
+        var popover = loadPopover(staticDirectory, setsText, ['common'], ['email']);
+        popover.toggleField('banking', 'email');
+
+        assert.strictEqual(popover.isMasked('email'), true);
+        assert.strictEqual(popover.isPicked('banking'), false);
+        assert.deepStrictEqual(plain(popover.working.excluded), []);
+    };
+
+    cases.lettingASetGoKeepsTheExclusionsOtherSetsNeed = function() {
+        var popover = loadPopover(staticDirectory, setsText, ['common', 'banking'], ['email', 'iban']);
+        popover.setPicked('banking', false);
+
+        assert.deepStrictEqual(plain(popover.working.sets), ['common']);
+        assert.deepStrictEqual(plain(popover.working.excluded), ['email']);
+        assert.strictEqual(popover.isMasked('email'), false);
+    };
+
+    cases.pickingASetClearsTheExclusionsOfItsFields = function() {
+        var popover = loadPopover(staticDirectory, setsText, ['common'], ['email', 'last_ip']);
+        popover.setPicked('banking', true);
+
+        assert.strictEqual(popover.isMasked('email'), true);
+        assert.deepStrictEqual(plain(popover.working.excluded), maskingSetsSubtract(['last_ip'], bankingFields));
+    };
+
+    cases.aSetLeftWithNoFieldIsLetGo = function() {
+        var excluded = bankingFields.filter(function(fieldName) { return fieldName !== 'bic'; });
+        var popover = loadPopover(staticDirectory, setsText, ['banking'], excluded);
+        popover.toggleField('banking', 'bic');
+
+        assert.strictEqual(popover.isPicked('banking'), false);
+    };
+
+    cases.theSearchTermsSplitOnSpacesAndUnderscores = function() {
+        var search = loadPopover(staticDirectory, setsText, [], []).search;
+        assert.deepStrictEqual(plain(search.terms('  Last_IP  address ')), ['last', 'ip', 'address']);
+        assert.deepStrictEqual(plain(search.terms('   ')), []);
+    };
+
+    cases.aFieldMatchesWhenItHoldsEveryTerm = function() {
+        var search = loadPopover(staticDirectory, setsText, [], []).search;
+        assert.strictEqual(search.matches('last_ip', ['last', 'ip']), true);
+        assert.strictEqual(search.matches('Last_IP', ['last', 'ip']), true);
+        assert.strictEqual(search.matches('ip_address', ['last', 'ip']), false);
+        assert.strictEqual(search.matches('anything', []), true);
+    };
+
+    cases.theSearchKeepsTheOrderOfTheFields = function() {
+        var search = loadPopover(staticDirectory, setsText, [], []).search;
+        assert.deepStrictEqual(plain(search.matching(['remote_ip', 'email', 'client_ip'], ['ip'])), ['remote_ip', 'client_ip']);
+    };
+
+    cases.theResultTextNamesTheFieldsAndTheSets = function() {
+        var search = loadPopover(staticDirectory, setsText, [], []).search;
+        assert.strictEqual(search.resultText(0, 0), 'No fields');
+        assert.strictEqual(search.resultText(1, 1), '1 field in 1 set');
+        assert.strictEqual(search.resultText(21, 15), '21 fields in 15 sets');
+    };
+
+    cases.commonListsTheAddressesOfAClient = function() {
+        var commonFields = sets.filter(function(set) { return set.name === 'common'; })[0].fields;
+        var expected = ['last_ip', 'ip', 'ip_address', 'ipaddress', 'ip_addresses', 'client_ip', 'remote_ip', 'remote_addr',
+            'source_ip'];
+
+        for(var fieldIdx = 0; fieldIdx < expected.length; fieldIdx++) {
+            assert.notStrictEqual(commonFields.indexOf(expected[fieldIdx]), -1, expected[fieldIdx]);
+        }
     };
 
     return cases;

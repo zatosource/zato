@@ -520,6 +520,9 @@ mcp_gateway:
       - {enmasse_group_name}
     is_audit_log_active: true
     validate_input: true
+    safeguards_strip_nulls: true
+    safeguards_collapse_whitespace: true
+    safeguards_strip_base64: true
 """
 
         input_path = os.path.join(tempfile.gettempdir(), f'zato-mcp-agent-audit-{os.getpid()}.yaml')

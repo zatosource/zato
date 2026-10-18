@@ -144,14 +144,16 @@ def _run_tools_card_scenario(
     wizard_page.open_picker_card(page, source_key)
     wizard_page.wait_for_available_badges(page, source_key, len(connection_names))
 
+    # .. the source's tree row counts what the source offers, the connections of the initial data included ..
+    offered_names = wizard_page.get_available_badge_names(page, source_key)
+
+    count_text = tool_sources_page.get_tool_source_count(page, source_key)
+    expected_count = str(len(offered_names))
+    assert count_text == expected_count, f'Expected count "{expected_count}", got: "{count_text}"'
+
     # .. assign every connection by name ..
     for connection_name in connection_names:
         wizard_page.assign_badge(page, source_key, connection_name)
-
-    # .. the source's tree row counts its picks ..
-    count_text = tool_sources_page.get_tool_source_count(page, source_key)
-    expected_count = str(len(connection_names))
-    assert count_text == expected_count, f'Expected count "{expected_count}", got: "{count_text}"'
 
     # .. save from the review step ..
     wizard_page.save_create(page)

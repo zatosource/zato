@@ -14,15 +14,15 @@ from zato.common.test.playwright_pubsub import navigate_to_page
 from zato.common.typing_ import cast_
 
 # Zato - test helpers
-from _mcp_tool_sources import _picker_action, assigned_badge_selector, available_badge_selector, select_tool_source, \
-    Tool_Source_Keys, Tools_Card
+from _mcp_tool_sources import _picker_action, assigned_badge_selector, available_badge_selector, close_assign_popover, \
+    select_tool_source, Tool_Source_Keys, Tools_Card
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydictnone, anylistnone, boolnone, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, anylistnone, boolnone, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -159,8 +159,9 @@ def open_wizard_edit(page:'Page', base_url:'str', gateway_name:'str') -> 'None':
 # ################################################################################################################################
 
 def go_to_step(page:'Page', step_index:'int') -> 'None':
-    """ Jumps to one of the wizard's steps through its tab on the step strip.
+    """ Jumps to one of the wizard's steps through its tab on the step strip, which the picker cards' popover covers.
     """
+    close_assign_popover(page)
     page.click(f'#mcp-wizard-steps .wizard-step[data-step="{step_index}"]')
     _ = page.wait_for_selector(f'#mcp-wizard-step-body-{step_index}', state='visible', timeout=_Wizard_Timeout)
 
@@ -198,6 +199,7 @@ def save_edit(page:'Page') -> 'None':
     """ Saves an edit from whichever step is on screen - an edit has one Save button in its footer,
     and the save lands back on the gateway list with the row highlighted.
     """
+    close_assign_popover(page)
     page.click('#mcp-wizard-save')
 
     wait_until_saved(page)
@@ -256,6 +258,7 @@ def open_picker_card(page:'Page', card_name:'str') -> 'None':
         f'document.getElementById("mcp-wizard-{card_name}-body").classList.contains("wizard-option-body-open")')
 
     if not is_open:
+        close_assign_popover(page)
         page.click(f'#mcp-wizard-{card_name}-header')
         _ = page.wait_for_selector(f'#mcp-wizard-{card_name}-body', state='visible', timeout=_Wizard_Timeout)
 
@@ -352,6 +355,36 @@ def get_picker_summary(page:'Page', card_name:'str') -> 'str':
 # The popover micro-forms of step 2
 #
 # ################################################################################################################################
+# ################################################################################################################################
+
+def get_search_box_layout(page:'Page', box_selector:'str') -> 'anydict':
+    """ Where the parts of a search box stand - the gaps from the words typed to the chip and from the chip
+    to the clear button's icon, or from the words straight to the icon when no chip is shown, the gap the box
+    keeps between its parts, and whether the clear button is shown.
+    """
+    out = page.evaluate(f'''(() => {{
+        const box = document.querySelector('{box_selector}');
+        const caretRoom = parseFloat(getComputedStyle(box).getPropertyValue('--mcp-search-box-caret-room'));
+        const wordsRight = box.querySelector('.mcp-search-box-sizer').getBoundingClientRect().right - caretRoom;
+        const chip = box.querySelector('.mcp-search-box-result');
+        const isChipShown = chip !== null && chip.offsetParent !== null;
+        const clear = box.querySelector('.mcp-search-box-clear');
+        const iconLeft = clear.querySelector('svg').getBoundingClientRect().left;
+        const boxRect = box.getBoundingClientRect();
+        const chipRect = isChipShown ? chip.getBoundingClientRect() : null;
+        return {{
+            gap: parseFloat(getComputedStyle(box).columnGap),
+            wordsToChip: isChipShown ? chipRect.left - wordsRight : null,
+            chipToClear: isChipShown ? iconLeft - chipRect.right : null,
+            wordsToClear: isChipShown ? null : iconLeft - wordsRight,
+            boxMiddle: boxRect.left + boxRect.width / 2,
+            clearLeft: iconLeft,
+            isClearShown: clear.offsetParent !== null
+        }};
+    }})()''')
+
+    return out
+
 # ################################################################################################################################
 
 def popover_input_selector(field_name:'str') -> 'str':

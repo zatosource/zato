@@ -144,12 +144,13 @@ def _create_pii_gateway(page:'Page', base_url:'str', gateway_name:'str', url_pat
     # .. turn PII removal on through its section on step 2 - the international land
     # holds the email and IMEI detectors, and validation keeps broken checksums alone ..
     wizard_page.go_to_step(page, 1)
-    masking_page.open_pii_section(page)
+    masking_page.open_pii_popover(page)
 
     page.check('#id_safeguards_pii_enabled')
     page.check('#id_safeguards_pii_validate')
 
     wizard_page.pick_from_chosen(page, 'safeguards_pii_lands', _PII_Land_Label)
+    wizard_page.accept_popover(page)
 
     # .. save from the review step ..
     wizard_page.save_create(page)
