@@ -474,11 +474,8 @@
 .wizard-card .mcp-tool-group-label,
 .wizard-surface-pickers .mcp-tool-group-label {
     padding: 4px 8px;
-    font-family: var(--wizard-surface-font-mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--wizard-surface-text-faint);
+    font-size: 12px;
+    color: var(--wizard-surface-text-muted);
 }
 
 /* ------------------------------------------------------------ */

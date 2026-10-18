@@ -40,7 +40,6 @@ review.config = {
     auditLogOnLabel: 'audit log on',
     auditLogOffLabel: 'audit log off',
     compactionLabel: ' compaction',
-    safetyChecksLabel: ' safety checks',
     hostsAllowedLabel: ' hosts allowed',
     hostAllowedLabel: ' host allowed',
     allUrlsLabel: 'all URLs checked',
@@ -59,22 +58,11 @@ review.config = {
         safeguards_strip_base64: 'Strip base64 blobs'
     },
 
-    // The content safety master toggles, counted for the summaries
-    safetyFields: [
-        'safeguards_normalize_unicode',
-        'safeguards_sanitize_markup',
-        'safeguards_url_policy_enabled',
-        'safeguards_secrets_enabled'
-    ],
-
     // What a picker card's summary says while nothing is assigned in it
     noneAssignedLabel: 'None assigned',
 
     // The one group the Skills card counts its badges in
     skillsLabel: 'Skills',
-
-    // What the Security card's summary adds while OAuth sign-in is active
-    oauthLabel: 'OAuth sign-in',
 
     // How each group of a picker card's summary is written, e.g. Services (3)
     countOpen: ' (',
@@ -84,8 +72,7 @@ review.config = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The three badge picker cards of step 1 - each folds its picker away the
-// way the content safety card of step 2 folds its fields.
+// The three badge picker cards of step 1, each folding its picker away.
 review.pickerCards = function() {
 
     var ownConfig = wizard.config_own;
@@ -171,7 +158,7 @@ review._cardCount = function(card) {
 // ////////////////////////////////////////////////////////////////////////
 
 // What one picker card's summary says, e.g. Services (3), Microsoft Teams (1),
-// or Bearer token (1), OAuth sign-in.
+// or Bearer token (1), OAuth sign-in (2 scopes).
 review._cardSummary = function(card) {
 
     var config = review.config;
@@ -181,7 +168,7 @@ review._cardSummary = function(card) {
     });
 
     if(review._isOAuthOn(card)) {
-        parts.push(config.oauthLabel);
+        parts.push(wizard.assign.oauthSummary());
     }
 
     if(parts.length === 0) {
@@ -224,8 +211,8 @@ review.initOptionCards = function() {
         observer.observe(assignedZone, {childList: true});
     });
 
-    // .. the Security card's summary follows the OAuth switch as well ..
-    wizard.field('oauth').on('change', function() {
+    // .. the Security card's summary follows the OAuth switch and its scopes as well ..
+    wizard.field('oauth').add(wizard.field('oauth_scopes')).on('change', function() {
         review.pickerCards().forEach(review._showCardSummary);
         wizard.assign.refreshIndex();
     });
@@ -238,16 +225,6 @@ review.initOptionCards = function() {
     $('#mcp-wizard-card-compaction').on('click', function() {
         wizard.forms.open('compaction', this);
     });
-
-
-    // .. the content safety card expands and collapses in place ..
-    $('#mcp-wizard-safety-header').on('click', function() {
-        $('#mcp-wizard-safety-body').toggleClass('wizard-option-body-open');
-        $('#mcp-wizard-safety-chevron').toggleClass('wizard-chevron-open');
-    });
-
-    // .. each content safety group opens and closes on its own ..
-    $.fn.zato.wizard_kit.collapse.initGroups('#mcp-wizard-safety-body');
 
     review._placeFieldGridHelp();
 
@@ -361,16 +338,6 @@ review._multiSelectLabels = function(fieldName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-review._safetySummary = function() {
-
-    var config = review.config;
-
-    var out = review._checkedCount(config.safetyFields) + config.ofLabel + config.safetyFields.length + ' on';
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 // What the one line above the folded options says - the shape of each of
 // the cards, counted rather than listed.
 review._optionsSummary = function() {
@@ -382,8 +349,6 @@ review._optionsSummary = function() {
     parts.push(wizard.field('is_audit_log_active').prop('checked') ? config.auditLogOnLabel : config.auditLogOffLabel);
     parts.push(review._checkedCount(config.compactionFields) + config.ofLabel +
         config.compactionFields.length + config.compactionLabel);
-    parts.push(review._checkedCount(config.safetyFields) + config.ofLabel +
-        config.safetyFields.length + config.safetyChecksLabel);
 
     var out = parts.join(', ');
     return out;
@@ -404,7 +369,7 @@ review.refreshSummaries = function() {
     review.setSummary('mcp-wizard-summary-hooks', wizard.hooks.summary());
     wizard.dataMasking.refreshSummaries();
     review.setSummary(wizard.pii.config.summaryId, wizard.pii.summary());
-    review.setSummary('mcp-wizard-summary-safety', review._safetySummary());
+    review.setSummary(wizard.contentSafety.config.summaryId, wizard.contentSafety.summary());
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -580,17 +545,6 @@ review._editCompaction = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-review._editSafety = function() {
-
-    review._openOptions();
-
-    if(!$('#mcp-wizard-safety-body').hasClass('wizard-option-body-open')) {
-        $('#mcp-wizard-safety-header').trigger('click');
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 // Renders the review step from the current form state.
 review.render = function() {
 
@@ -669,10 +623,10 @@ review.render = function() {
 
     // Content safety
     var safetyRows = [
+        ['Secrets', wizard.field('safeguards_secrets_enabled').prop('checked') ? config.onLabel : config.offLabel],
         ['Unicode', review._safetyModeSummary('safeguards_normalize_unicode', 'safeguards_unicode_mode')],
         ['Markup', review._safetyModeSummary('safeguards_sanitize_markup', 'safeguards_markup_mode')],
-        ['URL policy', review._urlPolicySummary()],
-        ['Secrets', wizard.field('safeguards_secrets_enabled').prop('checked') ? config.onLabel : config.offLabel]
+        ['URL policy', review._urlPolicySummary()]
     ];
 
     review.renderGroups([
@@ -686,10 +640,10 @@ review.render = function() {
         {label: groups.shaping,        step: 1, rows: shapingRows, edit: review._editSizeCaps},
         {label: groups.alerts,         step: 1, rows: wizard.alerts.reviewRows(), edit: review._editAlerts},
         {label: groups.pii,            step: 1, rows: review._piiReviewRows(), edit: wizard.pii.edit},
-        {label: groups.gatewayOptions, step: 1, rows: gatewayOptionsRows, edit: review._editGatewayOptions},
-        {label: groups.compaction,     step: 1, rows: compactionRows, edit: review._editCompaction},
         {label: groups.hooks,          step: 1, rows: wizard.hooks.reviewRows(), edit: wizard.hooks.edit},
-        {label: groups.contentSafety,  step: 1, rows: safetyRows, edit: review._editSafety}
+        {label: groups.contentSafety,  step: 1, rows: safetyRows, edit: wizard.contentSafety.edit},
+        {label: groups.gatewayOptions, step: 1, rows: gatewayOptionsRows, edit: review._editGatewayOptions},
+        {label: groups.compaction,     step: 1, rows: compactionRows, edit: review._editCompaction}
     ]);
 };
 

@@ -52,6 +52,37 @@ $.fn.zato.micro_forms.setup(wizard, {
 
 // ////////////////////////////////////////////////////////////////////////
 
+forms.placement = {
+    openTop: 12,
+    viewportMargin: 24,
+    cardId: 'mcp-wizard',
+    stepsId: 'mcp-wizard-steps'
+};
+
+// The openAt of a floating popover of the given width, centered over the card under its step strip.
+forms.openUnderSteps = function(width) {
+
+    var out = function() {
+
+        var placement = forms.placement;
+        var card = document.getElementById(placement.cardId).getBoundingClientRect();
+        var steps = document.getElementById(placement.stepsId).getBoundingClientRect();
+
+        var centeredLeft = card.left + (card.width - width) / 2;
+
+        var position = {
+            left: Math.max(placement.viewportMargin, centeredLeft),
+            top: steps.bottom + placement.openTop
+        };
+
+        return position;
+    };
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Wires up the step 2 rows that open micro-forms - the option cards under
 // the More options line have their wiring in review.js.
 forms.initRows = function() {

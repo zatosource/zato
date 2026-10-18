@@ -23,12 +23,6 @@ pii.config = {
     title: 'PII',
     width: 640,
 
-    // The popover opens centered over the card and this far under its step strip
-    openTop: 12,
-    viewportMargin: 24,
-
-    cardId: 'mcp-wizard',
-    stepsId: 'mcp-wizard-steps',
     editLinkId: 'mcp-wizard-edit-pii',
     holderId: 'mcp-wizard-pii-holder',
     bodyId: 'mcp-wizard-pii-body',
@@ -89,24 +83,6 @@ pii.summary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-pii._openAt = function() {
-
-    var config = pii.config;
-    var card = document.getElementById(config.cardId).getBoundingClientRect();
-    var steps = document.getElementById(config.stepsId).getBoundingClientRect();
-
-    var centeredLeft = card.left + (card.width - config.width) / 2;
-
-    var out = {
-        left: Math.max(config.viewportMargin, centeredLeft),
-        top: steps.bottom + config.openTop
-    };
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 pii.open = function() {
     forms.open(pii.config.descriptorName, document.getElementById(pii.config.editLinkId));
 };
@@ -154,7 +130,7 @@ forms.descriptors[pii.config.descriptorName] = {
     title: pii.config.title,
     width: pii.config.width + 'px',
     floating: true,
-    openAt: pii._openAt,
+    openAt: forms.openUnderSteps(pii.config.width),
     pages: [[{kind: pii.config.kindName}]],
     onClose: pii._putAway
 };

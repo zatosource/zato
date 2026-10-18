@@ -6,7 +6,7 @@
  * micro-forms - comes from shared/wizard-kit.css and
  * shared/decision-lines.css. This file holds only what is MCP's own:
  * the badge picker sections of step 1 and the field grids of the PII
- * popover and the content safety card. The data masking popover is styled
+ * popover. The data masking popover is styled
  * in gateway/mcp-wizard-masking.css and the PII fields in
  * gateway/mcp-wizard-pii.css.
  */
@@ -413,17 +413,6 @@
 /* The placeholder is a sample list, so it goes once there is a real one */
 .mcp-chip-list .chosen-choices:has(li.search-choice) li.search-field input[type="text"]::placeholder {
     color: transparent;
-}
-
-/* ------------------------------------------------------------ */
-/* MCP wizard - fields behind a master toggle that is off       */
-/* ------------------------------------------------------------ */
-
-/* The gateway list styles these inside its popups only - the wizard page
-   says the same thing on its own card */
-#mcp-wizard input.routing-disabled,
-#mcp-wizard select.routing-disabled {
-    opacity: 0.5;
 }
 
 /* ------------------------------------------------------------ */

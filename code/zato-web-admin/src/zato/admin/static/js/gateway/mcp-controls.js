@@ -551,81 +551,8 @@ $.fn.zato.gateway.mcp._init_chip_list = function(action, config) {
         }
     });
 
-    // .. the container follows the disabled state of the input it wraps,
-    // told about it the way the Chosen selects are ..
-    var sync_disabled = function() {
-        var is_disabled = input.prop('disabled');
-        container.toggleClass('chosen-disabled', is_disabled);
-        text_field.prop('disabled', is_disabled);
-    };
-
-    input.on('chip-list:updated', sync_disabled);
-    sync_disabled();
-
     // .. and the chips open on whatever the input arrived with.
     render();
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Master toggles in the response safeguards fields - each key is a checkbox that
-// enables or disables the inputs listed under it.
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.gateway.mcp.safeguard_groups = {
-    'safeguards_pii_enabled': [
-        'safeguards_pii_lands',
-        'safeguards_pii_detectors',
-        'safeguards_pii_exclude',
-        'safeguards_pii_validate',
-        'safeguards_pii_stable_replacements'
-    ],
-    'safeguards_normalize_unicode': [
-        'safeguards_unicode_mode'
-    ],
-    'safeguards_sanitize_markup': [
-        'safeguards_markup_mode'
-    ],
-    'safeguards_url_policy_enabled': [
-        'safeguards_url_allow_list',
-        'safeguards_url_mode'
-    ]
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.gateway.mcp._init_safeguard_toggles = function(action) {
-
-    var prefix = action === 'edit' ? 'id_edit-' : 'id_';
-    var groups = $.fn.zato.gateway.mcp.safeguard_groups;
-
-    $.each(groups, function(master_name, dependent_names) {
-
-        var master = $('#' + prefix + master_name);
-
-        // Enable or disable every dependent input based on the master checkbox ..
-        var apply_state = function() {
-            var is_enabled = master.is(':checked');
-            $.each(dependent_names, function(dependent_idx, dependent_name) {
-                var dependent = $('#' + prefix + dependent_name);
-                dependent.prop('disabled', !is_enabled);
-                dependent.toggleClass('routing-disabled', !is_enabled);
-
-                // Chosen mirrors the disabled state only when told the select changed
-                if (dependent.hasClass('chosen-multi')) {
-                    dependent.trigger('chosen:updated');
-                }
-
-                // The chip list widget mirrors it the same way
-                if (dependent.data('chip-list-built')) {
-                    dependent.trigger('chip-list:updated');
-                }
-            });
-        };
-
-        // .. re-apply on every change and once now for the initial state.
-        master.off('change.safeguards').on('change.safeguards', apply_state);
-        apply_state();
-    });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

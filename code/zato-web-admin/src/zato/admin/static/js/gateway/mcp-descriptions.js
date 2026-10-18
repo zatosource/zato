@@ -92,7 +92,7 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_safeguards_url_allow_list': 'Host suffixes whose URLs pass untouched, ' +
         'e.g. example.com also covers api.example.com. When empty, every URL is subject to the policy.',
     'id_safeguards_url_mode': 'Remove replaces the URL with a marker. ' +
-        'Defang rewrites it so it cannot be followed, https becomes hxxps and dots become [.], ' +
+        'Neutralize rewrites it so it cannot be followed, https becomes hxxps and dots become [.], ' +
         'which keeps the URL visible for analysis. Reject refuses the whole response.',
 };
 

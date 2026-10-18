@@ -15,8 +15,6 @@
 
 #mcp-wizard {
     --ledger-ink: #101c29;
-    --ledger-group-title-size: 13px;
-    --ledger-group-title-weight: 600;
     --ledger-value-size: 13px;
     --ledger-rule-outer: 1px solid var(--wizard-surface-field-border);
     --ledger-rule: 1px solid var(--wizard-surface-hairline-strong);
@@ -32,9 +30,6 @@
     --ledger-band: var(--wizard-surface-raised);
     --ledger-band-bleed: 14px;
     --ledger-nest-indent: 14px;
-    --ledger-safety-row-height: 24px;
-    --ledger-safety-group-gap: 16px;
-    --ledger-safety-first-group-gap: 12px;
 }
 
 #mcp-wizard-step-body-0,
@@ -77,28 +72,6 @@
     width: var(--ledger-label-width-review);
 }
 
-/* The group titles of Content safety read in the face of the labels around them */
-#mcp-wizard-safety-body .wizard-collapse-group-title {
-    font-size: var(--ledger-group-title-size);
-    font-weight: var(--ledger-group-title-weight);
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--zato-ui-text);
-}
-
-/* A switch row is as tall as a select row, so the rows of a group keep one rhythm under its title */
-#mcp-wizard-safety-body .wizard-collapse-group {
-    margin-top: var(--ledger-safety-group-gap);
-}
-
-#mcp-wizard-safety-body .wizard-collapse-group:first-child {
-    margin-top: var(--ledger-safety-first-group-gap);
-}
-
-#mcp-wizard-safety-body .mcp-wizard-field-grid > label {
-    min-height: var(--ledger-safety-row-height);
-}
-
 /* A title that unfolds or opens something has its chevron right after it, in its color */
 #mcp-wizard-step-body-0 .wizard-option-label,
 #mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-label,
@@ -109,8 +82,7 @@
 }
 
 #mcp-wizard .wizard-option-label > .wizard-chevron,
-#mcp-wizard-row-options > .decision-line-label > .wizard-chevron,
-#mcp-wizard-safety-body .wizard-collapse-group-title > .wizard-chevron {
+#mcp-wizard-row-options > .decision-line-label > .wizard-chevron {
     color: inherit;
 }
 

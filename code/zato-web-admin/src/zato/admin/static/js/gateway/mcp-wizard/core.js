@@ -149,17 +149,15 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         wizard.forms.initRows();
         wizard.alerts.init();
         wizard.hooks.init();
+        wizard.contentSafety.init();
         wizard.review.initOptionCards();
         wizard.maskingSets.init();
         wizard.dataMasking.init();
         wizard.pii.init();
 
-        // .. the PII multi-selects, the URL allow list chips and the master
-        // toggles enabling the safeguard fields under them - the same wiring
-        // both actions share ..
+        // .. the PII multi-selects and the URL allow list chips - the same wiring both actions share ..
         $.fn.zato.gateway.mcp._init_pii_selects(action);
         $.fn.zato.gateway.mcp._init_host_list(action);
-        $.fn.zato.gateway.mcp._init_safeguard_toggles(action);
 
         // .. the tools the gateway exposes - the services and the outgoing
         // connections, each source of the one Tools card holding its own
@@ -402,9 +400,13 @@ wizard.helpDescriptions = function() {
     out['mcp-wizard-slot-response-hook-chip'] = 'The service invoked each time the gateway is about to return ' +
         'an MCP response. It is independent of the services exposed as tools.';
 
+    out[wizard.contentSafety.config.editLinkId] = 'The checks applied to every tool response - secrets, hidden ' +
+        'control characters, active HTML and Markdown, and URLs outside the allowed hosts - and what happens ' +
+        'to each finding.';
+
     // .. the options folded away under the More options line ..
-    out['mcp-wizard-edit-options'] = 'Input validation and the audit log, the compaction of responses ' +
-        'and content safety. The line says what is currently set.';
+    out['mcp-wizard-edit-options'] = 'Input validation and the audit log, and the compaction of responses. ' +
+        'The line says what is currently set.';
 
     // .. the fields masked in every response ..
     out[wizard.dataMasking.config.editLinkId] = 'Fields masked in every tool response, whatever the PII detectors find.';

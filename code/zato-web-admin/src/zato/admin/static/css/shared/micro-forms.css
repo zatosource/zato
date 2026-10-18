@@ -240,7 +240,8 @@
    of a count field and of a unit select below still win over the 100% here. */
 .micro-form-field:where(:not(.micro-form-field-own)) input[type="text"],
 .micro-form-field:where(:not(.micro-form-field-own)) input[type="number"],
-.micro-form-field:where(:not(.micro-form-field-own)) select {
+.micro-form-field:where(:not(.micro-form-field-own)) select,
+.micro-form-field .micro-form-select {
     width: 100%;
     box-sizing: border-box;
     height: var(--micro-form-input-height);
@@ -255,7 +256,8 @@
    The formalize height of 1.8em squeezed the select's line box out through
    the bottom edge, sitting the text low - the explicit height above plus
    paddings sized to the line box recenter it. */
-.micro-form-field:where(:not(.micro-form-field-own)) select {
+.micro-form-field:where(:not(.micro-form-field-own)) select,
+.micro-form-field .micro-form-select {
     font-size: var(--micro-form-select-font-size);
     font-family: Arial, "Liberation Sans", FreeSans, sans-serif;
     line-height: normal;
@@ -265,7 +267,8 @@
 
 .micro-form-field:where(:not(.micro-form-field-own)) input[type="text"]:focus,
 .micro-form-field:where(:not(.micro-form-field-own)) input[type="number"]:focus,
-.micro-form-field:where(:not(.micro-form-field-own)) select:focus {
+.micro-form-field:where(:not(.micro-form-field-own)) select:focus,
+.micro-form-field .micro-form-select:focus {
     border-color: var(--zato-ui-accent);
     outline: none;
     box-shadow: none;

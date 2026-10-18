@@ -356,19 +356,15 @@ class TestMCPWizard:
 
             wizard_page.pick_from_chosen(page, 'safeguards_pii_exclude', 'IPv4 address')
 
-            # .. content safety - each group opens on its own, each master toggle
-            # enables the fields under it ..
-            wizard_page.open_safety_group(page, 'Unicode')
-            page.check('#id_safeguards_normalize_unicode')
-
-            wizard_page.open_safety_group(page, 'Markup')
-            page.check('#id_safeguards_sanitize_markup')
-
-            wizard_page.open_safety_group(page, 'URL policy')
-            page.check('#id_safeguards_url_policy_enabled')
+            # .. content safety, through the popover of its line ..
+            wizard_page.open_safety_popover(page)
+            page.check(wizard_page.popover_input_selector('safeguards_normalize_unicode'))
+            page.check(wizard_page.popover_input_selector('safeguards_sanitize_markup'))
+            page.check(wizard_page.popover_input_selector('safeguards_url_policy_enabled'))
 
             wizard_page.add_host_chip(page, 'example.com')
             wizard_page.add_host_chip(page, 'zato.io')
+            wizard_page.accept_popover(page)
 
             # The review names every group with the values chosen ..
             wizard_page.go_to_step(page, wizard_page.Review_Step)
@@ -484,10 +480,12 @@ class TestMCPWizard:
 
             # .. the stored comma-separated hosts come back as chips ..
             wizard_page.go_to_step(page, 1)
-            wizard_page.open_safety_group(page, 'URL policy')
+            wizard_page.open_safety_popover(page)
 
             chips = wizard_page.get_host_chip_texts(page)
             assert chips == ['example.com', 'zato.io'], f'Expected the hosts back as chips, got: {chips}'
+
+            wizard_page.accept_popover(page)
 
             # .. switching the cap to block mode through the edit ..
             wizard_page.set_size_caps(page, size_cap_mode='block')
@@ -598,10 +596,10 @@ class TestMCPWizard:
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        # The chips live in the URL policy group and stay disabled until the policy is on ..
+        # The chips are in the content safety popover ..
         wizard_page.go_to_step(page, 1)
-        wizard_page.open_safety_group(page, 'URL policy')
-        page.check('#id_safeguards_url_policy_enabled')
+        wizard_page.open_safety_popover(page)
+        page.check(wizard_page.popover_input_selector('safeguards_url_policy_enabled'))
 
         text_field = f'{wizard_page.Host_List_Selector} .search-field input'
 
@@ -651,19 +649,20 @@ class TestMCPWizard:
         chip = f'{wizard_page.Host_List_Selector} li.search-choice:has-text("blur.example.com")'
         _ = page.wait_for_selector(chip, state='visible', timeout=_UI_Timeout)
 
-        # The underlying input carries the whole list as one comma-separated line ..
+        # The underlying input has the whole list as one comma-separated line ..
         stored_value = page.input_value('#id_safeguards_url_allow_list')
         assert stored_value == 'example.com, zato.io, blur.example.com', \
             f'Expected the comma-separated line, got: {stored_value}'
 
         # .. the save goes through ..
+        wizard_page.accept_popover(page)
         wizard_page.save_create(page)
 
         # .. and the stored value round-trips into chips on edit.
         wizard_page.open_wizard_edit(page, base_url, gateway_name)
 
         wizard_page.go_to_step(page, 1)
-        wizard_page.open_safety_group(page, 'URL policy')
+        wizard_page.open_safety_popover(page)
 
         chips = wizard_page.get_host_chip_texts(page)
         assert chips == ['example.com', 'zato.io', 'blur.example.com'], \

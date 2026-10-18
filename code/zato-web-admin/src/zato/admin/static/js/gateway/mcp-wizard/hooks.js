@@ -340,6 +340,8 @@ forms.registerKind(hooks.config.kindName, {
 forms.descriptors[hooks.config.descriptorName] = {
     title: hooks.config.title,
     width: hooks.config.width + 'px',
+    floating: true,
+    openAt: forms.openUnderSteps(hooks.config.width),
     pages: [[{kind: hooks.config.kindName}]],
     onClose: hooks._putAway
 };

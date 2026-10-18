@@ -469,23 +469,9 @@ def set_compaction(
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# The hook services line and the content safety card of step 2
+# The hook services line and the content safety line of step 2
 #
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _open_option_card(page:'Page', card_name:'str') -> 'None':
-    """ Unfolds one of the collapsible option cards of step 2, unless it is already open.
-    """
-    open_more_options(page)
-
-    is_open = page.evaluate(
-        f'document.getElementById("mcp-wizard-{card_name}-body").classList.contains("wizard-option-body-open")')
-
-    if not is_open:
-        page.click(f'#mcp-wizard-{card_name}-header')
-        _ = page.wait_for_selector(f'#mcp-wizard-{card_name}-body', state='visible', timeout=_Wizard_Timeout)
-
 # ################################################################################################################################
 
 def open_hooks_card(page:'Page') -> 'None':
@@ -499,27 +485,14 @@ def open_hooks_card(page:'Page') -> 'None':
 
 # ################################################################################################################################
 
-def open_safety_card(page:'Page') -> 'None':
-    """ Unfolds the content safety card, unless it is already open.
+def open_safety_popover(page:'Page') -> 'None':
+    """ Opens the popover of the content safety line, unless it is already open.
     """
-    _open_option_card(page, 'safety')
+    is_open = page.evaluate('document.getElementById("mcp-wizard-safety-hosts").closest(".tippy-box") !== null')
 
-# ################################################################################################################################
-
-def open_safety_group(page:'Page', group_title:'str') -> 'None':
-    """ Unfolds one of the collapse groups inside the content safety card - Unicode, Markup or URL policy.
-    """
-    open_safety_card(page)
-
-    title_selector = f'#mcp-wizard-safety-body .wizard-collapse-group-title:has-text("{group_title}")'
-    body_selector = f'{title_selector} + .wizard-collapse-group-body'
-
-    body = cast_('any_', page.query_selector(body_selector))
-    is_hidden = body.evaluate('element => element.hidden')
-
-    if is_hidden:
-        page.click(title_selector)
-        _ = page.wait_for_selector(body_selector, state='visible', timeout=_Wizard_Timeout)
+    if not is_open:
+        page.click('#mcp-wizard-edit-safety')
+        _ = page.wait_for_selector('#mcp-wizard-safety-hosts', state='visible', timeout=_Wizard_Timeout)
 
 # ################################################################################################################################
 
@@ -589,7 +562,7 @@ def pick_from_chosen(page:'Page', field_name:'str', option_label:'str', is_edit:
 # ################################################################################################################################
 
 # Where the chip widget standing in for the allowed hosts input lives
-Host_List_Selector = '#mcp-wizard-safety-body .mcp-host-list'
+Host_List_Selector = '#mcp-wizard-safety-hosts .mcp-host-list'
 
 # ################################################################################################################################
 

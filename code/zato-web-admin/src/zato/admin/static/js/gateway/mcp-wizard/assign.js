@@ -27,14 +27,9 @@ assign.config = {
     kindName: 'assignSections',
     title: 'Tools, skills and security',
 
-    // The size the popover first opens at, centered over the card and this far under its step strip
+    // The size the popover first opens at
     width: 1000,
     height: 560,
-    openTop: 12,
-    viewportMargin: 24,
-
-    cardId: 'mcp-wizard',
-    stepsId: 'mcp-wizard-steps',
 
     layoutClass: 'mcp-assign wizard-surface-pickers',
     indexClass: 'mcp-assign-index',
@@ -47,7 +42,14 @@ assign.config = {
     countClose: ')',
     paneClass: 'mcp-assign-pane',
     growsClass: 'micro-form-grows',
-    bodyOpenClass: 'wizard-option-body-open'
+    bodyOpenClass: 'wizard-option-body-open',
+
+    // What the Security summary says while OAuth sign-in is active, e.g. OAuth sign-in (2 scopes)
+    oauthLabel: 'OAuth sign-in',
+    oauthCountOpen: ' (',
+    scopeLabel: ' scope',
+    scopesLabel: ' scopes',
+    noScopesLabel: 'no scopes'
 };
 
 // The section in the pane, and the pane and the index entries while the popover is open
@@ -87,22 +89,6 @@ assign._putBack = function(name) {
 };
 
 // ////////////////////////////////////////////////////////////////////////
-
-assign._openAt = function() {
-
-    var config = assign.config;
-    var card = document.getElementById(config.cardId).getBoundingClientRect();
-    var steps = document.getElementById(config.stepsId).getBoundingClientRect();
-
-    var centeredLeft = card.left + (card.width - config.width) / 2;
-
-    var out = {
-        left: Math.max(config.viewportMargin, centeredLeft),
-        top: steps.bottom + config.openTop
-    };
-
-    return out;
-};
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -204,6 +190,26 @@ assign._show = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// OAuth sign-in and how many scopes the clients ask the identity provider for.
+assign.oauthSummary = function() {
+
+    var config = assign.config;
+    var mcp = $.fn.zato.gateway.mcp;
+
+    var scopes = mcp._chip_list_split(wizard.field('oauth_scopes').val(), mcp.scope_list_config);
+
+    var countText = config.noScopesLabel;
+
+    if(scopes.length) {
+        countText = scopes.length + (scopes.length === 1 ? config.scopeLabel : config.scopesLabel);
+    }
+
+    var out = config.oauthLabel + config.oauthCountOpen + countText + config.countClose;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // The counts in the strip follow the assigned zones the way the summaries on the step do
 assign.refreshIndex = function() {
 
@@ -247,7 +253,7 @@ forms.registerKind(assign.config.kindName, {
 forms.descriptors[assign.config.descriptorName] = {
     title: assign.config.title,
     floating: true,
-    openAt: assign._openAt,
+    openAt: forms.openUnderSteps(assign.config.width),
     size: {width: assign.config.width, height: assign.config.height},
     pages: [[{kind: assign.config.kindName}]],
     onClose: assign._putAway
