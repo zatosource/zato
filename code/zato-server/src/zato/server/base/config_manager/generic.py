@@ -36,7 +36,8 @@ from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_bool_config_ke
 from zato.server.generic.api.outconn_hl7_mllp import outconn_bool_config_keys, outconn_config_defaults, \
     outconn_int_config_keys
 from zato.server.generic.api.outconn_kafka import outconn_bool_config_keys as outconn_kafka_bool_config_keys, \
-    outconn_config_defaults as outconn_kafka_config_defaults, outconn_int_config_keys as outconn_kafka_int_config_keys
+    outconn_config_defaults as outconn_kafka_config_defaults, outconn_int_config_keys as     outconn_kafka_int_config_keys
+from zato.server.generic.api.outconn_ldap import outconn_ldap_config_defaults
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
@@ -864,10 +865,17 @@ class Generic(ConfigManagerImpl):
 
     def _generic_normalize_config_outconn_ldap(self, config:'stranydict') -> 'None':
 
+        # Apply a default for every field that is missing or None ..
+        for key, default in outconn_ldap_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. and coerce the fields that may arrive as strings from opaque storage.
         config['pool_max_cycles'] = int(config['pool_max_cycles'])
         config['pool_keep_alive'] = int(config['pool_keep_alive'])
         config['use_auto_range'] = as_bool(config['use_auto_range'])
         config['use_tls'] = as_bool(config['use_tls'])
+        config['is_tls_enabled'] = as_bool(config['is_tls_enabled'])
 
         # If GSS-API SASL method is used, the username may be a set of credentials actually
         if config['sasl_mechanism'] == LDAP.SASL_MECHANISM.GSSAPI.id:

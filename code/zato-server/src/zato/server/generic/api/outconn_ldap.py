@@ -17,6 +17,7 @@ from uuid import uuid4
 from ldap3 import Connection as LDAPConnection, Server, ServerPool, SYNC, Tls
 
 # Zato
+from zato.common.api import LDAP
 from zato.common.util.api import spawn_greenlet
 from zato.server.connection.queue import Wrapper
 
@@ -33,6 +34,31 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Defaults applied by the config manager when the create path does not supply a field,
+# e.g. when an outconn is created directly through zato.generic.connection.create.
+outconn_ldap_config_defaults:'stranydict' = {
+    'is_tls_enabled': False,
+    'use_tls': False,
+    'get_info': LDAP.GET_INFO.SCHEMA.id,
+    'connect_timeout': LDAP.DEFAULT.CONNECT_TIMEOUT,
+    'ip_mode': LDAP.IP_MODE.IP_SYSTEM_DEFAULT.id,
+    'auto_bind': LDAP.AUTO_BIND.DEFAULT.id,
+    'pool_ha_strategy': LDAP.POOL_HA_STRATEGY.ROUND_ROBIN.id,
+    'pool_max_cycles': LDAP.DEFAULT.POOL_MAX_CYCLES,
+    'pool_exhaust_timeout': LDAP.DEFAULT.POOL_EXHAUST_TIMEOUT,
+    'pool_keep_alive': LDAP.DEFAULT.POOL_KEEP_ALIVE,
+    'pool_lifetime': LDAP.DEFAULT.POOL_LIFETIME,
+    'pool_name': '',
+    'use_auto_range': True,
+    'should_check_names': False,
+    'should_return_empty_attrs': True,
+    'is_read_only': False,
+    'sasl_mechanism': '',
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,7 +157,7 @@ class LDAPClient:
             servers.append(Server(**server_config))
 
         # Configuration for the server pool
-        pool_config = {
+        pool_config:'stranydict' = {
             'servers': servers,
             'pool_strategy': self.config.pool_ha_strategy,
             'active': self.config.pool_max_cycles,

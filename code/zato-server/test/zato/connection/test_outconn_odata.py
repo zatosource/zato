@@ -9,14 +9,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from unittest import main, TestCase
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # Bunch
 from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.common.odata.client import ODataClient
+from zato.common.typing_ import cast_
 from zato.server.connection.facade import ODataConnection, ODataFacade
+from zato.server.generic.api.outconn_odata import OutconnODataWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +57,7 @@ class OutconnODataLiveTestCase(TestCase):
             'page_size': 0,
             'needs_csrf_token': False,
         })
+        config = cast_('Bunch', config)
 
         return config
 
@@ -251,6 +254,42 @@ class ODataFacadeTestCase(TestCase):
         connection = facade['test-sap-conn']
 
         self.assertIsInstance(connection, ODataConnection)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OutconnODataWrapperDeleteTestCase(TestCase):
+    """ Tests for the removal of pooled OData clients from the connection queue of their wrapper.
+    """
+
+    def test_delete_queue_connections_closes_client_session(self) -> 'None':
+
+        config = bunchify({
+            'id': 1,
+            'name': 'test.odata.delete',
+            'is_active': True,
+            'address': 'https://odata.example.com/data/',
+            'username': '',
+            'secret': '',
+            'pool_size': 1,
+            'queue_build_cap': 30,
+        })
+        config = cast_('Bunch', config)
+
+        wrapper = OutconnODataWrapper(config, MagicMock())
+
+        # A pooled client whose HTTP session can be inspected ..
+        client = ODataClient(config)
+        client.session = MagicMock()
+        _ = wrapper.client.put_client(client)
+
+        # .. is removed from the queue as when its connection is edited or deleted ..
+        with patch('zato.server.connection.queue.logger') as queue_logger:
+            wrapper.delete_queue_connections()
+
+        # .. which closes its session without any exception.
+        client.session.close.assert_called_once_with()
+        queue_logger.warning.assert_not_called()
 
 # ################################################################################################################################
 # ################################################################################################################################
