@@ -1,0 +1,211 @@
+/*
+ * MCP gateway wizard - the popover the Tools, Skills and Security sections
+ * of step 1 open in, built by gateway/mcp-wizard/assign.js.
+ *
+ * The strip of the three sections on top, the pane with the section on
+ * show under it. The pane gives the section's pickers all the height the
+ * popover has, so the zones and the tool tree scroll inside it. The faces of
+ * the pickers come from shared/wizard-surface.css, under the
+ * .wizard-surface-pickers class the layout wears.
+ */
+
+/* ------------------------------------------------------------ */
+/* Assignments - tokens                                         */
+/* ------------------------------------------------------------ */
+
+:root {
+    --mcp-assign-ghost-layer: 100002;
+}
+
+.mcp-assign {
+    --mcp-assign-ink: #101c29;
+    --mcp-assign-gap: 10px;
+    --mcp-assign-natural-height: 360px;
+    --mcp-assign-entry-padding: 6px 2px;
+    --mcp-assign-entry-gap: 22px;
+    --mcp-assign-entry-mark: 2px;
+    --mcp-assign-pane-padding: 14px;
+    --mcp-assign-radius: 2px;
+    --mcp-assign-oauth-label-gap: 10px;
+    --mcp-assign-oauth-gap: 14px;
+    --mcp-assign-oauth-off-opacity: 0.5;
+}
+
+/* ------------------------------------------------------------ */
+/* Assignments - the layout                                     */
+/* ------------------------------------------------------------ */
+
+/* The height the popover is measured at before it takes a size of its own,
+   which is what keeps the measurement from growing with the lists */
+.mcp-assign {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--mcp-assign-gap);
+    height: var(--mcp-assign-natural-height);
+}
+
+.micro-form-resized .micro-form-field-own:has(> .mcp-assign) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* The grid's own smallest height is that of its tallest list, so it is let
+   shrink to what the popover gives it, and the lists scroll inside instead */
+.micro-form-resized .mcp-assign {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+}
+
+/* A badge dragged out of a zone joins the page outside the popover and must stay above it */
+.badge-drag-ghost {
+    z-index: var(--mcp-assign-ghost-layer);
+}
+
+/* ------------------------------------------------------------ */
+/* Assignments - the strip                                      */
+/* ------------------------------------------------------------ */
+
+.mcp-assign-index {
+    display: flex;
+    gap: var(--mcp-assign-entry-gap);
+}
+
+.mcp-assign-entry,
+.mcp-assign-entry:hover,
+.mcp-assign-entry:focus,
+.mcp-assign-entry:active {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    padding: var(--mcp-assign-entry-padding);
+    border: none;
+    border-bottom: var(--mcp-assign-entry-mark) solid transparent;
+    border-radius: 0;
+    font-family: var(--wizard-surface-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--wizard-surface-text-muted);
+    background-color: transparent;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.mcp-assign-entry-current,
+.mcp-assign-entry-current:hover,
+.mcp-assign-entry-current:focus,
+.mcp-assign-entry-current:active {
+    border-bottom-color: var(--wizard-surface-accent);
+    color: var(--mcp-assign-ink);
+}
+
+.mcp-assign-entry:focus-visible {
+    outline: 2px solid var(--wizard-surface-accent-light);
+    outline-offset: 1px;
+}
+
+.mcp-assign-entry-count {
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.mcp-assign-entry-empty .mcp-assign-entry-count {
+    color: var(--wizard-surface-text-faint);
+}
+
+/* ------------------------------------------------------------ */
+/* Assignments - the pane                                       */
+/* ------------------------------------------------------------ */
+
+.mcp-assign-pane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: var(--mcp-assign-pane-padding);
+    border: 1px solid var(--wizard-surface-hairline-strong);
+    border-radius: var(--mcp-assign-radius);
+    background: var(--wizard-surface-panel);
+    box-shadow: var(--wizard-surface-shadow-small);
+}
+
+.mcp-assign-pane > .wizard-option-body-open {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Assignments - the sections in the pane                       */
+/* ------------------------------------------------------------ */
+
+.mcp-assign .mcp-tool-sources,
+.mcp-assign .badge-picker,
+.mcp-assign .mcp-wizard-security-panes {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.mcp-assign .mcp-tool-sources {
+    height: auto;
+}
+
+.mcp-assign .badge-picker-filter,
+.mcp-assign .mcp-wizard-security-tabs {
+    flex: none;
+}
+
+.mcp-assign .badge-picker-filter {
+    margin-bottom: 8px;
+}
+
+.mcp-assign .badge-zone,
+.mcp-assign .badge-zone-body {
+    min-height: 0;
+}
+
+.mcp-assign .badge-zone-body {
+    max-height: none;
+}
+
+/* Both panes of the Security section share the one cell, which takes the height the tabs leave */
+.mcp-assign .mcp-wizard-security-panes {
+    grid-template-rows: minmax(0, 1fr);
+}
+
+.mcp-assign .mcp-wizard-security-pane[data-pane="definitions"] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Assignments - the OAuth pane                                 */
+/* ------------------------------------------------------------ */
+
+/* The switch heads the pane right after its label, the scopes it governs under it */
+.mcp-assign .mcp-wizard-oauth-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mcp-assign-oauth-gap);
+}
+
+.mcp-assign .mcp-wizard-oauth-grid > label:first-child {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-self: start;
+    align-items: center;
+    gap: var(--mcp-assign-oauth-label-gap);
+    font-size: 13px;
+}
+
+/* The scopes step back while OAuth is off */
+.mcp-assign .mcp-wizard-oauth-grid:has(> label:first-child input:not(:checked)) .mcp-wizard-oauth-scopes {
+    opacity: var(--mcp-assign-oauth-off-opacity);
+}

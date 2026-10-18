@@ -40,7 +40,6 @@ review.config = {
     auditLogOnLabel: 'audit log on',
     auditLogOffLabel: 'audit log off',
     compactionLabel: ' compaction',
-    safetyChecksLabel: ' safety checks',
     hostsAllowedLabel: ' hosts allowed',
     hostAllowedLabel: ' host allowed',
     allUrlsLabel: 'all URLs checked',
@@ -59,23 +58,21 @@ review.config = {
         safeguards_strip_base64: 'Strip base64 blobs'
     },
 
-    // The content safety master toggles, counted for the summaries
-    safetyFields: [
-        'safeguards_normalize_unicode',
-        'safeguards_sanitize_markup',
-        'safeguards_url_policy_enabled',
-        'safeguards_secrets_enabled'
-    ],
+    // What a picker card's summary says while nothing is assigned in it
+    noneAssignedLabel: 'None assigned',
 
-    // The words the picker card summaries are written with
-    assignedLabel: ' assigned',
-    noneAssignedLabel: 'None assigned'
+    // The one group the Skills card counts its badges in
+    skillsLabel: 'Skills',
+
+    // How each group of a picker card's summary is written, e.g. Services (3)
+    countOpen: ' (',
+    countClose: ')',
+    groupSeparator: ', '
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The three badge picker cards of step 1 - each folds its picker away the
-// way the hook services and content safety cards of step 2 fold their fields.
+// The three badge picker cards of step 1, each folding its picker away.
 review.pickerCards = function() {
 
     var ownConfig = wizard.config_own;
@@ -91,17 +88,68 @@ review.pickerCards = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What one picker card's summary says - the Tools card counts its picks
-// per source, the other two count their assigned badges.
-review._cardSummary = function(card) {
+// What one picker card has assigned, counted in groups - per tool source
+// for the Tools card, per security type for the Security card and as one
+// group for the Skills card. A group with nothing assigned is left out.
+review._cardGroups = function(card) {
 
-    var out;
+    var config = review.config;
 
     if(card.name === 'tools') {
         wizard.toolSources.syncCounts();
-        out = wizard.toolSources.summary();
-    } else {
-        out = review._pickerSummary(card.action);
+        return wizard.toolSources.assignedCounts();
+    }
+
+    var badges = wizard.assignedBadges(card.action);
+
+    if(card.name === 'skills') {
+        if(badges.length === 0) {
+            return [];
+        }
+        return [{label: config.skillsLabel, count: badges.length}];
+    }
+
+    var out = [];
+    var byType = {};
+
+    // The types are counted in the order the assigned zone lists them
+    badges.each(function() {
+
+        var typeName = $(this).find('.security-badge-type').text();
+
+        if(!(typeName in byType)) {
+            byType[typeName] = {label: typeName, count: 0};
+            out.push(byType[typeName]);
+        }
+
+        byType[typeName].count++;
+    });
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Whether the card is the Security one with OAuth sign-in active
+review._isOAuthOn = function(card) {
+
+    var out = card.name === 'security' && wizard.field('oauth').prop('checked');
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How many things a card holds - its assigned badges, and OAuth sign-in on the Security card as one more.
+review._cardCount = function(card) {
+
+    var out = 0;
+
+    review._cardGroups(card).forEach(function(group) {
+        out += group.count;
+    });
+
+    if(review._isOAuthOn(card)) {
+        out++;
     }
 
     return out;
@@ -109,15 +157,45 @@ review._cardSummary = function(card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// What one picker card's summary says, e.g. Services (3), Microsoft Teams (1),
+// or Bearer token (1), OAuth sign-in (2 scopes).
+review._cardSummary = function(card) {
+
+    var config = review.config;
+
+    var parts = review._cardGroups(card).map(function(group) {
+        return group.label + config.countOpen + group.count + config.countClose;
+    });
+
+    if(review._isOAuthOn(card)) {
+        parts.push(wizard.assign.oauthSummary());
+    }
+
+    if(parts.length === 0) {
+        return config.noneAssignedLabel;
+    }
+
+    var out = parts.join(config.groupSeparator);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._showCardSummary = function(card) {
+    review.setSummary('mcp-wizard-summary-' + card.name, review._cardSummary(card));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 review.initOptionCards = function() {
 
-    // The picker cards of step 1 expand and collapse in place, and each
-    // summary follows its assigned zone as badges move in and out ..
+    // The picker cards of step 1 open their sections in the popover of assign.js, and each
+    // summary, on the card and in the popover's index, follows its assigned zone
+    // as badges move in and out ..
     review.pickerCards().forEach(function(card) {
 
         $('#mcp-wizard-' + card.name + '-header').on('click', function() {
-            $('#mcp-wizard-' + card.name + '-body').toggleClass('wizard-option-body-open');
-            $('#mcp-wizard-' + card.name + '-chevron').toggleClass('wizard-chevron-open');
+            wizard.assign.open(card.name, this);
         });
 
         // The pickers load after this wiring runs and badges travel between
@@ -126,10 +204,17 @@ review.initOptionCards = function() {
         var assignedZone = document.querySelector('#badge-zone-assigned-' + card.action + ' .badge-zone-body');
 
         var observer = new MutationObserver(function() {
-            review.setSummary('mcp-wizard-summary-' + card.name, review._cardSummary(card));
+            review._showCardSummary(card);
+            wizard.assign.refreshIndex();
         });
 
         observer.observe(assignedZone, {childList: true});
+    });
+
+    // .. the Security card's summary follows the OAuth switch and its scopes as well ..
+    wizard.field('oauth').add(wizard.field('oauth_scopes')).on('change', function() {
+        review.pickerCards().forEach(review._showCardSummary);
+        wizard.assign.refreshIndex();
     });
 
     // .. the two smaller cards open their micro-forms ..
@@ -141,28 +226,17 @@ review.initOptionCards = function() {
         wizard.forms.open('compaction', this);
     });
 
-    // .. the hook services and content safety cards expand and collapse in place ..
-    $('#mcp-wizard-hooks-header').on('click', function() {
-        $('#mcp-wizard-hooks-body').toggleClass('wizard-option-body-open');
-        $('#mcp-wizard-hooks-chevron').toggleClass('wizard-chevron-open');
-    });
-
-    $('#mcp-wizard-safety-header').on('click', function() {
-        $('#mcp-wizard-safety-body').toggleClass('wizard-option-body-open');
-        $('#mcp-wizard-safety-chevron').toggleClass('wizard-chevron-open');
-    });
-
-    // .. each content safety group opens and closes on its own ..
-    $.fn.zato.wizard_kit.collapse.initGroups('#mcp-wizard-safety-body');
-
     review._placeFieldGridHelp();
 
-    // .. the whole options block is folded away behind one line,
-    // its link saying what is inside ..
+    // .. the whole options block is folded away behind one line, the whole
+    // of which opens and closes it, its link saying what is inside ..
     $.fn.zato.wizard_kit.collapse.initSection({
-        toggleId: 'mcp-wizard-edit-options',
+        toggleId: 'mcp-wizard-row-options',
         bodyId: 'mcp-wizard-options-body',
-        hintId: 'mcp-wizard-hint-options'
+        hintId: 'mcp-wizard-hint-options',
+        onToggle: function(isOpen) {
+            $('#mcp-wizard-options-chevron').toggleClass('wizard-chevron-open', isOpen);
+        }
     });
 
     // .. and the summaries follow the inline fields as they change - the
@@ -180,7 +254,7 @@ review.initOptionCards = function() {
 // the whole row visible - the card's own left margin is where it goes.
 review._placeFieldGridHelp = function() {
 
-    $('.mcp-wizard-field-grid label[for], .mcp-wizard-pii-selects label[for]').each(function() {
+    $('.mcp-wizard-field-grid label[for], .mcp-wizard-pii-fields label[for]').each(function() {
         $(this).attr('data-help-anchor', 'label');
         $(this).attr('data-help-placement', 'left');
     });
@@ -264,33 +338,6 @@ review._multiSelectLabels = function(fieldName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What one picker card's summary says - how many badges its assigned
-// zone holds.
-review._pickerSummary = function(pickerAction) {
-
-    var config = review.config;
-
-    var assignedCount = wizard.assignedBadges(pickerAction).length;
-    if(!assignedCount) {
-        return config.noneAssignedLabel;
-    }
-
-    var out = assignedCount + config.assignedLabel;
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-review._safetySummary = function() {
-
-    var config = review.config;
-
-    var out = review._checkedCount(config.safetyFields) + config.ofLabel + config.safetyFields.length + ' on';
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 // What the one line above the folded options says - the shape of each of
 // the cards, counted rather than listed.
 review._optionsSummary = function() {
@@ -302,9 +349,6 @@ review._optionsSummary = function() {
     parts.push(wizard.field('is_audit_log_active').prop('checked') ? config.auditLogOnLabel : config.auditLogOffLabel);
     parts.push(review._checkedCount(config.compactionFields) + config.ofLabel +
         config.compactionFields.length + config.compactionLabel);
-    parts.push(wizard.hooks.countLabel().toLowerCase());
-    parts.push(review._checkedCount(config.safetyFields) + config.ofLabel +
-        config.safetyFields.length + config.safetyChecksLabel);
 
     var out = parts.join(', ');
     return out;
@@ -315,9 +359,7 @@ review._optionsSummary = function() {
 // Recomputes every line and card summary.
 review.refreshSummaries = function() {
 
-    review.pickerCards().forEach(function(card) {
-        review.setSummary('mcp-wizard-summary-' + card.name, review._cardSummary(card));
-    });
+    review.pickerCards().forEach(review._showCardSummary);
 
     review.setSummary('mcp-wizard-summary-size-caps', review._sizeCapsSummary());
     review.setSummary(wizard.alerts.config.summaryId, wizard.alerts.summary());
@@ -327,7 +369,7 @@ review.refreshSummaries = function() {
     review.setSummary('mcp-wizard-summary-hooks', wizard.hooks.summary());
     wizard.dataMasking.refreshSummaries();
     review.setSummary(wizard.pii.config.summaryId, wizard.pii.summary());
-    review.setSummary('mcp-wizard-summary-safety', review._safetySummary());
+    review.setSummary(wizard.contentSafety.config.summaryId, wizard.contentSafety.summary());
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -439,15 +481,9 @@ review._urlPolicySummary = function() {
 // so the answer is there to be changed rather than to be looked for. The
 // Basics group has none - its answers are the top rows of step 1 itself.
 
-// A picker card inside a closed body has nothing to show, so an Edit link
-// opens the card first and reveals it then.
+// A picker card's Edit link opens the popover on the card's section.
 review._openPickerCard = function(name) {
-
-    if(!$('#mcp-wizard-' + name + '-body').hasClass('wizard-option-body-open')) {
-        $('#mcp-wizard-' + name + '-header').trigger('click');
-    }
-
-    wizard.reveal(document.getElementById('mcp-wizard-picker-' + name));
+    wizard.assign.open(name, document.getElementById('mcp-wizard-' + name + '-header'));
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -505,17 +541,6 @@ review._editCompaction = function() {
 
     review._openOptions();
     wizard.forms.open('compaction', document.getElementById('mcp-wizard-card-compaction'));
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-review._editSafety = function() {
-
-    review._openOptions();
-
-    if(!$('#mcp-wizard-safety-body').hasClass('wizard-option-body-open')) {
-        $('#mcp-wizard-safety-header').trigger('click');
-    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -598,10 +623,10 @@ review.render = function() {
 
     // Content safety
     var safetyRows = [
+        ['Secrets', wizard.field('safeguards_secrets_enabled').prop('checked') ? config.onLabel : config.offLabel],
         ['Unicode', review._safetyModeSummary('safeguards_normalize_unicode', 'safeguards_unicode_mode')],
         ['Markup', review._safetyModeSummary('safeguards_sanitize_markup', 'safeguards_markup_mode')],
-        ['URL policy', review._urlPolicySummary()],
-        ['Secrets', wizard.field('safeguards_secrets_enabled').prop('checked') ? config.onLabel : config.offLabel]
+        ['URL policy', review._urlPolicySummary()]
     ];
 
     review.renderGroups([
@@ -615,10 +640,10 @@ review.render = function() {
         {label: groups.shaping,        step: 1, rows: shapingRows, edit: review._editSizeCaps},
         {label: groups.alerts,         step: 1, rows: wizard.alerts.reviewRows(), edit: review._editAlerts},
         {label: groups.pii,            step: 1, rows: review._piiReviewRows(), edit: wizard.pii.edit},
-        {label: groups.gatewayOptions, step: 1, rows: gatewayOptionsRows, edit: review._editGatewayOptions},
-        {label: groups.compaction,     step: 1, rows: compactionRows, edit: review._editCompaction},
         {label: groups.hooks,          step: 1, rows: wizard.hooks.reviewRows(), edit: wizard.hooks.edit},
-        {label: groups.contentSafety,  step: 1, rows: safetyRows, edit: review._editSafety}
+        {label: groups.contentSafety,  step: 1, rows: safetyRows, edit: wizard.contentSafety.edit},
+        {label: groups.gatewayOptions, step: 1, rows: gatewayOptionsRows, edit: review._editGatewayOptions},
+        {label: groups.compaction,     step: 1, rows: compactionRows, edit: review._editCompaction}
     ]);
 };
 

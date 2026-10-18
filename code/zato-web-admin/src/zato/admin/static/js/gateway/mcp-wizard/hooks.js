@@ -2,22 +2,33 @@
 //
 // A hook service is one service the gateway invokes for every MCP request it
 // receives, or for every MCP response it is about to return, independently
-// of the services it exposes as tools. The Hook services card under More
-// options holds one decision line for each, whose chip opens a pick panel
-// listing the deployed services, filtered by typing.
-// The service names come from the Services source the page embeds for the
-// Tools card.
+// of the services it exposes as tools. The Hook services line of step 2
+// opens a popover with one decision line for each, whose chip opens a pick
+// panel listing the deployed services, filtered by typing. The lines are
+// moved into the popover and back to their holder on the step once it
+// closes. The service names come from the Services source the page embeds
+// for the Tools card.
 
 (function($) {
 
 // ////////////////////////////////////////////////////////////////////////
 
 var wizard = $.fn.zato.gateway.mcp.wizard;
+var forms = wizard.forms;
 var hooks = wizard.hooks;
 
 // ////////////////////////////////////////////////////////////////////////
 
 hooks.config = {
+
+    // The popover the lines open in, and the link it opens from
+    descriptorName: 'hooks',
+    kindName: 'hookLines',
+    title: 'Hook services',
+    width: 520,
+    editLinkId: 'mcp-wizard-edit-hooks',
+    holderId: 'mcp-wizard-hooks-holder',
+    bodyId: 'mcp-wizard-hooks-body',
 
     // Where the page embeds the tool sources, and the key of the one holding the services
     dataScriptId: 'mcp-wizard-tool-sources',
@@ -39,9 +50,10 @@ hooks.config = {
         response: 'Response'
     },
 
-    // The panel's starting width and how narrow its corners may drag it
+    // The panel's starting width, how narrow its corners may drag it and the class lifting it over the popover
     panelWidth: 480,
     panelMinWidth: 340,
+    panelClass: 'mcp-wizard-hook-panel',
 
     labels: {
         noService: 'No service',
@@ -50,9 +62,7 @@ hooks.config = {
         services: 'Services',
         remove: 'Remove',
         noServices: 'No services',
-        noMatches: 'No matching services',
-        service: ' service',
-        servicesNoun: ' services'
+        noMatches: 'No matching services'
     }
 };
 
@@ -92,6 +102,8 @@ hooks.init = function() {
     hooks.state.response = stored.responseHook;
 
     hooks.render();
+
+    $('#' + config.editLinkId).on('click', hooks.open);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -114,6 +126,7 @@ hooks.render = function() {
                 title: config.titles[kind],
                 width: config.panelWidth,
                 minWidth: config.panelMinWidth,
+                panelClass: config.panelClass,
                 build: hooks._panelBuilder(kind)
             }
         });
@@ -242,7 +255,7 @@ hooks._picker = function(kind, name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the card and the More options line say - the services picked, or how many there are.
+// What the Hook services line says - the services picked, or that there are none.
 hooks.summary = function() {
 
     var config = hooks.config;
@@ -264,38 +277,35 @@ hooks.summary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-hooks.countLabel = function() {
-
-    var config = hooks.config;
-    var count = 0;
-
-    for(var kindIdx = 0; kindIdx < config.kinds.length; kindIdx++) {
-        if(hooks.state[config.kinds[kindIdx]] !== '') {
-            count++;
-        }
-    }
-
-    if(count === 0) {
-        return config.labels.noServices;
-    }
-
-    var noun = count === 1 ? config.labels.service : config.labels.servicesNoun;
-
-    var out = count + noun;
-    return out;
+hooks.open = function() {
+    forms.open(hooks.config.descriptorName, document.getElementById(hooks.config.editLinkId));
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the review's edit link of the hook services opens - the More options
-// block first, then the card inside it.
+hooks._build = function(fieldSpec, row) {
+
+    row.classList.add('micro-form-field-own');
+    row.appendChild(document.getElementById(hooks.config.bodyId));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A pick panel opened from one of the lines closes with the popover, and the
+// lines return to their holder on the step.
+hooks._putAway = function() {
+
+    var config = hooks.config;
+
+    $.fn.zato.decision_lines.closePanel();
+    document.getElementById(config.holderId).appendChild(document.getElementById(config.bodyId));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The review's edit link of the hook services - the step is already shown, the popover opens on it.
 hooks.edit = function() {
-
-    wizard.review._openOptions();
-
-    if(!$('#mcp-wizard-hooks-body').hasClass('wizard-option-body-open')) {
-        $('#mcp-wizard-hooks-header').trigger('click');
-    }
+    hooks.open();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -317,6 +327,23 @@ hooks.reviewRows = function() {
     }
 
     return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The lines edit the state directly, which is why OK only closes the popover
+forms.registerKind(hooks.config.kindName, {
+    build: hooks._build,
+    save: function() {}
+});
+
+forms.descriptors[hooks.config.descriptorName] = {
+    title: hooks.config.title,
+    width: hooks.config.width + 'px',
+    floating: true,
+    openAt: forms.openUnderSteps(hooks.config.width),
+    pages: [[{kind: hooks.config.kindName}]],
+    onClose: hooks._putAway
 };
 
 // ////////////////////////////////////////////////////////////////////////

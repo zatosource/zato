@@ -1,0 +1,82 @@
+/*
+ * MCP gateway wizard - the content safety popover of step 2.
+ */
+
+/* ------------------------------------------------------------ */
+/* Content safety - tokens                                      */
+/* ------------------------------------------------------------ */
+
+:root {
+    --mcp-safety-cell-padding: 6px 10px;
+    --mcp-safety-switch-gap: 6px;
+    --mcp-safety-hosts-gap: 4px;
+}
+
+/* ------------------------------------------------------------ */
+/* Content safety - the grid                                    */
+/* ------------------------------------------------------------ */
+
+.mcp-safety-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.mcp-safety-grid th,
+.mcp-safety-grid td {
+    padding: var(--mcp-safety-cell-padding);
+    vertical-align: middle;
+    text-align: left;
+    border-bottom: 1px solid var(--wizard-surface-hairline-strong);
+}
+
+.mcp-safety-grid th {
+    font-weight: 600;
+    color: var(--wizard-surface-text-muted);
+}
+
+.mcp-safety-grid-name,
+.mcp-safety-grid-switch {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.mcp-safety-grid-name {
+    padding-right: var(--mcp-safety-switch-gap);
+    color: var(--zato-ui-text);
+}
+
+.mcp-safety-grid-switch {
+    padding-left: 0;
+}
+
+.mcp-safety-grid-switch > input {
+    margin: 0;
+}
+
+.mcp-safety-grid-hosts td {
+    border-bottom: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Content safety - the mode selects                            */
+/* ------------------------------------------------------------ */
+
+.mcp-safety-grid .micro-form-select {
+    width: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Content safety - the allowed hosts                           */
+/* ------------------------------------------------------------ */
+
+.mcp-wizard-safety-hosts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mcp-safety-hosts-gap);
+}
+
+.mcp-wizard-safety-hosts > label {
+    align-self: flex-start;
+    color: var(--zato-ui-text);
+}

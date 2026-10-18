@@ -46,8 +46,13 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-popover.css">
-<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-filters.css">
-<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-pii.css">{% endblock %}
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-search.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-pii.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-assign.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-content-safety.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-surface.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-search-box.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-ledger.css">{% endblock %}
 
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
@@ -75,13 +80,17 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-size-caps.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/search-box.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/tool-sources.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/hooks.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/content-safety.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-sets.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/data-masking.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-popover.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-filters.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/pii.js"></script><script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-search.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/pii.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/assign.js"></script>
 
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
@@ -123,11 +132,11 @@ $(document).ready(function() {
                 <div class="dashboard-tabs wizard-steps" id="mcp-wizard-steps" role="tablist" aria-label="Wizard steps">
                     <button type="button" class="dashboard-tab wizard-step wizard-step-active dashboard-tab-active" data-step="0" role="tab" aria-selected="true">
                         <span class="wizard-step-num">01</span>
-                        <span class="dashboard-tab-label">How do agents connect?</span>
+                        <span class="dashboard-tab-label">Basic config</span>
                     </button>
                     <button type="button" class="dashboard-tab wizard-step" data-step="1" role="tab" aria-selected="false">
                         <span class="wizard-step-num">02</span>
-                        <span class="dashboard-tab-label">What do they receive?</span>
+                        <span class="dashboard-tab-label">More options</span>
                     </button>
                     <button type="button" class="dashboard-tab wizard-step" data-step="2" role="tab" aria-selected="false">
                         <span class="wizard-step-num">03</span>
@@ -156,17 +165,17 @@ $(document).ready(function() {
 
                     <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-tools">
                         <div class="wizard-option-header" id="mcp-wizard-tools-header">
-                            <svg class="wizard-chevron" id="mcp-wizard-tools-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                            <span class="wizard-option-label"><label for="badge-filter-text-wizard">Tools</label></span>
-                            <span class="wizard-option-summary" id="mcp-wizard-summary-tools"></span>
+                            <span class="wizard-option-label"><label for="badge-filter-text-wizard">Tools</label><svg class="wizard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                            <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-tools"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-tools"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         <div class="wizard-option-body" id="mcp-wizard-tools-body">
                         <div class="mcp-tool-sources">
                             <div class="mcp-tool-source-list kit-tree" id="mcp-wizard-tool-source-list"></div>
                             <div class="mcp-tool-picker-pane">
-                                <div class="badge-picker-filter" id="badge-filter-wizard">
-                                    <input type="text" id="badge-filter-text-wizard" placeholder="Filter..." />
-                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-wizard">Clear</button>
+                                <div class="badge-picker-filter mcp-search-box" id="badge-filter-wizard">
+                                    <span class="mcp-search-box-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                                    <input type="text" class="mcp-search-box-input" id="badge-filter-text-wizard" placeholder="Search tools" spellcheck="false" autocomplete="off" />
+                                    <button type="button" class="mcp-search-box-clear" id="badge-filter-clear-wizard" title="Clear"><span class="mcp-search-box-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span></button>
                                 </div>
                                 <div class="badge-picker" id="badge-picker-wizard">
                                     <div class="badge-zone" id="badge-zone-available-wizard">
@@ -186,14 +195,14 @@ $(document).ready(function() {
 
                     <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-skills">
                         <div class="wizard-option-header" id="mcp-wizard-skills-header">
-                            <svg class="wizard-chevron" id="mcp-wizard-skills-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                            <span class="wizard-option-label"><label for="badge-filter-text-skills-wizard">Skills</label></span>
-                            <span class="wizard-option-summary" id="mcp-wizard-summary-skills"></span>
+                            <span class="wizard-option-label"><label for="badge-filter-text-skills-wizard">Skills</label><svg class="wizard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                            <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-skills"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-skills"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         <div class="wizard-option-body" id="mcp-wizard-skills-body">
-                        <div class="badge-picker-filter" id="badge-filter-skills-wizard">
-                            <input type="text" id="badge-filter-text-skills-wizard" placeholder="Filter skills..." />
-                            <button type="button" class="badge-filter-clear" id="badge-filter-clear-skills-wizard">Clear</button>
+                        <div class="badge-picker-filter mcp-search-box" id="badge-filter-skills-wizard">
+                            <span class="mcp-search-box-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                            <input type="text" class="mcp-search-box-input" id="badge-filter-text-skills-wizard" placeholder="Search skills" spellcheck="false" autocomplete="off" />
+                            <button type="button" class="mcp-search-box-clear" id="badge-filter-clear-skills-wizard" title="Clear"><span class="mcp-search-box-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span></button>
                         </div>
                         <div class="badge-picker" id="badge-picker-skills-wizard">
                             <div class="badge-zone" id="badge-zone-available-skills-wizard">
@@ -211,9 +220,8 @@ $(document).ready(function() {
 
                     <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-security">
                         <div class="wizard-option-header" id="mcp-wizard-security-header">
-                            <svg class="wizard-chevron" id="mcp-wizard-security-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                            <span class="wizard-option-label"><label for="badge-filter-text-sec-wizard">Security</label></span>
-                            <span class="wizard-option-summary" id="mcp-wizard-summary-security"></span>
+                            <span class="wizard-option-label"><label for="badge-filter-text-sec-wizard">Security</label><svg class="wizard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                            <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-security"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-security"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         <div class="wizard-option-body" id="mcp-wizard-security-body">
                         <div class="dashboard-tabs mcp-wizard-security-tabs" id="mcp-wizard-security-tabs" role="tablist">
@@ -222,9 +230,10 @@ $(document).ready(function() {
                         </div>
                         <div class="mcp-wizard-security-panes">
                             <div class="mcp-wizard-security-pane mcp-wizard-security-pane-active" data-pane="definitions">
-                                <div class="badge-picker-filter" id="badge-filter-sec-wizard">
-                                    <input type="text" id="badge-filter-text-sec-wizard" placeholder="Filter security..." />
-                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-sec-wizard">Clear</button>
+                                <div class="badge-picker-filter mcp-search-box" id="badge-filter-sec-wizard">
+                                    <span class="mcp-search-box-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                                    <input type="text" class="mcp-search-box-input" id="badge-filter-text-sec-wizard" placeholder="Search security definitions" spellcheck="false" autocomplete="off" />
+                                    <button type="button" class="mcp-search-box-clear" id="badge-filter-clear-sec-wizard" title="Clear"><span class="mcp-search-box-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span></button>
                                 </div>
                                 <div class="badge-picker" id="badge-picker-sec-wizard">
                                     <div class="badge-zone" id="badge-zone-available-sec-wizard">
@@ -240,8 +249,8 @@ $(document).ready(function() {
                             </div>
                             <div class="mcp-wizard-security-pane" data-pane="oauth">
                                 <div class="mcp-wizard-field-grid mcp-wizard-oauth-grid">
-                                    <label for="{{ form.oauth.id_for_label }}">OAuth {{ form.oauth }}</label>
-                                    <label class="mcp-wizard-wide-field mcp-wizard-oauth-scopes" for="{{ form.oauth_scopes.id_for_label }}">Scopes {{ form.oauth_scopes }}</label>
+                                    <label for="{{ form.oauth.id_for_label }}">OAuth sign-in active {{ form.oauth }}</label>
+                                    <div class="mcp-wizard-wide-field mcp-wizard-oauth-scopes"><label for="{{ form.oauth_scopes.id_for_label }}">Scopes</label>{{ form.oauth_scopes }}</div>
                                 </div>
                             </div>
                         </div>
@@ -250,7 +259,7 @@ $(document).ready(function() {
 
                 </div>
 
-                <!-- Step 2 - response shaping, PII and data masking, and the folded options -->
+                <!-- Step 2 - response shaping, data masking, PII, hook services and the folded options -->
                 <div class="wizard-step-body" id="mcp-wizard-step-body-1" hidden>
 
                     <div class="wizard-section">
@@ -277,36 +286,78 @@ $(document).ready(function() {
                     <div class="wizard-section mcp-wizard-pii" id="mcp-wizard-pii">
 
                         <div class="decision-lines mcp-wizard-wide-labels">
-                            <div class="decision-line mcp-wizard-pii-line" id="mcp-wizard-pii-line">
-                                <span class="decision-line-label">PII and data masking</span>
-                                <span class="decision-line-slot"><span class="mcp-wizard-pii-summary" id="mcp-wizard-summary-pii"></span><svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+
+                            <div class="decision-line" id="mcp-wizard-line-data-masking">
+                                <label class="decision-line-label" for="mcp-wizard-edit-data-masking">Data masking</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-data-masking"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-data-masking"></span><span class="zato-soft-hint">Click to edit</span></a></span>
                             </div>
+
+                            <div class="decision-line" id="mcp-wizard-line-pii">
+                                <label class="decision-line-label" for="mcp-wizard-edit-pii">PII</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-pii"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-pii"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                            <div class="decision-line" id="mcp-wizard-line-hooks">
+                                <label class="decision-line-label" for="mcp-wizard-edit-hooks">Hook services</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-hooks"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-hooks"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                            <div class="decision-line" id="mcp-wizard-line-safety">
+                                <label class="decision-line-label" for="mcp-wizard-edit-safety">Content safety</label>
+                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-safety"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-safety"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
                         </div>
 
-                        <div class="mcp-wizard-pii-body" id="mcp-wizard-pii-body" hidden>
+                        <!-- The PII fields open in a popover and are kept here while it is closed -->
+                        <div class="mcp-wizard-pii-holder" id="mcp-wizard-pii-holder" hidden>
+                        <div class="mcp-wizard-pii-body" id="mcp-wizard-pii-body">
 
-                            <div class="mcp-wizard-field-grid mcp-wizard-masking">
-                                <label for="mcp-wizard-edit-data-masking">Data masking <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-data-masking"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-data-masking"></span><span class="zato-soft-hint">Click to edit</span></a></label>
+                            <div class="mcp-wizard-pii-fields">
+                                <label class="mcp-wizard-pii-switch" for="{{ form.safeguards_pii_enabled.id_for_label }}">Remove PII from responses {{ form.safeguards_pii_enabled }}</label>
+                                <div class="mcp-wizard-pii-select">
+                                    <label for="{{ form.safeguards_pii_lands.id_for_label }}">Lands</label>
+                                    {{ form.safeguards_pii_lands }}
+                                </div>
+                                <div class="mcp-wizard-pii-select">
+                                    <label for="{{ form.safeguards_pii_detectors.id_for_label }}">Detectors</label>
+                                    {{ form.safeguards_pii_detectors }}
+                                </div>
+                                <div class="mcp-wizard-pii-select">
+                                    <label for="{{ form.safeguards_pii_exclude.id_for_label }}">Exclude</label>
+                                    {{ form.safeguards_pii_exclude }}
+                                </div>
+                                <label class="mcp-wizard-pii-switch" for="{{ form.safeguards_pii_validate.id_for_label }}">Validate matches with checksums {{ form.safeguards_pii_validate }}</label>
+                                <label class="mcp-wizard-pii-switch" for="{{ form.safeguards_pii_stable_replacements.id_for_label }}">Stable replacements across one response {{ form.safeguards_pii_stable_replacements }}</label>
                             </div>
 
-                            <div class="mcp-wizard-field-grid">
-                                <label for="{{ form.safeguards_pii_enabled.id_for_label }}">Remove PII from responses {{ form.safeguards_pii_enabled }}</label>
-                            </div>
+                        </div>
+                        </div>
 
-                            <div class="mcp-wizard-pii-selects mcp-wizard-pii-dependent">
-                                <label for="{{ form.safeguards_pii_lands.id_for_label }}">Lands</label>
-                                {{ form.safeguards_pii_lands }}
-                                <label for="{{ form.safeguards_pii_detectors.id_for_label }}">Detectors</label>
-                                {{ form.safeguards_pii_detectors }}
-                                <label for="{{ form.safeguards_pii_exclude.id_for_label }}">Exclude</label>
-                                {{ form.safeguards_pii_exclude }}
-                            </div>
+                        <!-- The hook lines open in a popover and are kept here while it is closed -->
+                        <div id="mcp-wizard-hooks-holder" hidden>
+                        <div class="mcp-wizard-hooks-body" id="mcp-wizard-hooks-body">
+                            <div class="decision-lines">
 
-                            <div class="mcp-wizard-field-grid mcp-wizard-pii-dependent">
-                                <label for="{{ form.safeguards_pii_validate.id_for_label }}">Validate matches with checksums {{ form.safeguards_pii_validate }}</label>
-                                <label for="{{ form.safeguards_pii_stable_replacements.id_for_label }}">Stable replacements across one response {{ form.safeguards_pii_stable_replacements }}</label>
-                            </div>
+                                <div class="decision-line" id="mcp-wizard-line-request-hook">
+                                    <label class="decision-line-label" for="mcp-wizard-slot-request-hook-chip">Request</label>
+                                    <span class="decision-line-slot" id="mcp-wizard-slot-request-hook"></span>
+                                </div>
 
+                                <div class="decision-line" id="mcp-wizard-line-response-hook">
+                                    <label class="decision-line-label" for="mcp-wizard-slot-response-hook-chip">Response</label>
+                                    <span class="decision-line-slot" id="mcp-wizard-slot-response-hook"></span>
+                                </div>
+
+                            </div>
+                        </div>
+                        </div>
+
+                        <div id="mcp-wizard-safety-holder" hidden>
+                        <div class="mcp-wizard-safety-hosts" id="mcp-wizard-safety-hosts">
+                            <label for="{{ form.safeguards_url_allow_list.id_for_label }}" data-help-anchor="label">Allowed hosts</label>
+                            {{ form.safeguards_url_allow_list }}
+                        </div>
                         </div>
 
                     </div>
@@ -314,7 +365,7 @@ $(document).ready(function() {
                     <div class="wizard-section">
 
                         <div class="decision-line mcp-wizard-wide-labels" id="mcp-wizard-row-options">
-                            <label class="decision-line-label" for="mcp-wizard-edit-options">More options</label>
+                            <label class="decision-line-label" for="mcp-wizard-edit-options">More options<svg class="wizard-chevron" id="mcp-wizard-options-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></label>
                             <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-options"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-options"></span><span class="zato-soft-hint" id="mcp-wizard-hint-options"></span></a></span>
                         </div>
 
@@ -331,84 +382,6 @@ $(document).ready(function() {
                             <div class="wizard-option-header">
                                 <span class="wizard-option-label">Compaction</span>
                                 <span class="wizard-option-summary" id="mcp-wizard-summary-compaction"></span>
-                            </div>
-                        </div>
-
-                        <div class="wizard-option-card" id="mcp-wizard-card-hooks">
-                            <div class="wizard-option-header" id="mcp-wizard-hooks-header">
-                                <svg class="wizard-chevron" id="mcp-wizard-hooks-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                <span class="wizard-option-label">Hook services</span>
-                                <span class="wizard-option-summary" id="mcp-wizard-summary-hooks"></span>
-                            </div>
-                            <div class="wizard-option-body" id="mcp-wizard-hooks-body">
-                                <div class="decision-lines">
-
-                                    <div class="decision-line" id="mcp-wizard-line-request-hook">
-                                        <label class="decision-line-label" for="mcp-wizard-slot-request-hook-chip">Request</label>
-                                        <span class="decision-line-slot" id="mcp-wizard-slot-request-hook"></span>
-                                    </div>
-
-                                    <div class="decision-line" id="mcp-wizard-line-response-hook">
-                                        <label class="decision-line-label" for="mcp-wizard-slot-response-hook-chip">Response</label>
-                                        <span class="decision-line-slot" id="mcp-wizard-slot-response-hook"></span>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="wizard-option-card" id="mcp-wizard-card-safety">
-                            <div class="wizard-option-header" id="mcp-wizard-safety-header">
-                                <svg class="wizard-chevron" id="mcp-wizard-safety-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                <span class="wizard-option-label">Content safety</span>
-                                <span class="wizard-option-summary" id="mcp-wizard-summary-safety"></span>
-                            </div>
-                            <div class="wizard-option-body" id="mcp-wizard-safety-body">
-
-                                <div class="wizard-collapse-group">
-                                    <div class="wizard-collapse-group-title">
-                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                        Unicode
-                                    </div>
-                                    <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
-                                        <label for="{{ form.safeguards_normalize_unicode.id_for_label }}">Remove hidden control characters {{ form.safeguards_normalize_unicode }}</label>
-                                        <label for="{{ form.safeguards_unicode_mode.id_for_label }}">When found {{ form.safeguards_unicode_mode }}</label>
-                                    </div>
-                                </div>
-
-                                <div class="wizard-collapse-group">
-                                    <div class="wizard-collapse-group-title">
-                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                        Markup
-                                    </div>
-                                    <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
-                                        <label for="{{ form.safeguards_sanitize_markup.id_for_label }}">Remove active HTML and Markdown {{ form.safeguards_sanitize_markup }}</label>
-                                        <label for="{{ form.safeguards_markup_mode.id_for_label }}">When found {{ form.safeguards_markup_mode }}</label>
-                                    </div>
-                                </div>
-
-                                <div class="wizard-collapse-group">
-                                    <div class="wizard-collapse-group-title">
-                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                        URL policy
-                                    </div>
-                                    <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
-                                        <label for="{{ form.safeguards_url_policy_enabled.id_for_label }}">Check URLs in responses {{ form.safeguards_url_policy_enabled }}</label>
-                                        <label class="mcp-wizard-wide-field" for="{{ form.safeguards_url_allow_list.id_for_label }}">Allowed hosts {{ form.safeguards_url_allow_list }}</label>
-                                        <label for="{{ form.safeguards_url_mode.id_for_label }}">When found {{ form.safeguards_url_mode }}</label>
-                                    </div>
-                                </div>
-
-                                <div class="wizard-collapse-group">
-                                    <div class="wizard-collapse-group-title">
-                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                        Secrets
-                                    </div>
-                                    <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
-                                        <label for="{{ form.safeguards_secrets_enabled.id_for_label }}">Remove secrets from responses {{ form.safeguards_secrets_enabled }}</label>
-                                    </div>
-                                </div>
-
                             </div>
                         </div>
 
@@ -455,6 +428,14 @@ $(document).ready(function() {
                     {{ form.safeguards_strip_nulls }}
                     {{ form.safeguards_collapse_whitespace }}
                     {{ form.safeguards_strip_base64 }}
+
+                    {{ form.safeguards_normalize_unicode }}
+                    {{ form.safeguards_unicode_mode }}
+                    {{ form.safeguards_sanitize_markup }}
+                    {{ form.safeguards_markup_mode }}
+                    {{ form.safeguards_secrets_enabled }}
+                    {{ form.safeguards_url_policy_enabled }}
+                    {{ form.safeguards_url_mode }}
 
                     <!-- The alert settings - the Alerts popover's lines take their switches and picks
                          from here and their popovers read and write the rest -->

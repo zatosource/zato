@@ -1,0 +1,332 @@
+/*
+ * MCP gateway wizard - the ledger, the layout of all three steps.
+ *
+ * Each step is set as a statement - a rule above and below, one hairline row
+ * per field, line and section, the names in a column as wide as the longest
+ * name of the step and the values in the column after them. The sections of
+ * step 1 open in the popover of gateway/mcp-wizard/assign.js. What a row of
+ * step 2 unfolds stands under the row, starting in the column of the values.
+ * The review of step 3 reads in the same two columns, one group after another.
+ */
+
+/* ------------------------------------------------------------ */
+/* Ledger - tokens                                              */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard {
+    --ledger-ink: #101c29;
+    --ledger-value-size: 13px;
+    --ledger-rule-outer: 1px solid var(--wizard-surface-field-border);
+    --ledger-rule: 1px solid var(--wizard-surface-hairline-strong);
+    --ledger-label-width-basic: 5.5rem;
+    --ledger-label-width-options: 8.75rem;
+    --ledger-label-width-review: 11.5rem;
+    --ledger-active-gap: 14px;
+    --ledger-row-padding: 11px;
+    --ledger-end-padding: 14px;
+    --ledger-field-width: 24rem;
+    --ledger-field-height: 28px;
+    --ledger-chevron-gap: 6px;
+    --ledger-band: var(--wizard-surface-raised);
+    --ledger-band-bleed: 14px;
+    --ledger-nest-indent: 14px;
+    --ledger-review-row-padding: 5px;
+    --ledger-review-line-height: 1.55;
+    --ledger-tab-ink: #8c95a0;
+}
+
+/* ------------------------------------------------------------ */
+/* Ledger - the step strip                                      */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard-steps {
+    --tab-color: var(--ledger-tab-ink);
+}
+
+#mcp-wizard-step-body-0,
+#mcp-wizard-step-body-1,
+#mcp-wizard-step-body-2 {
+    border-top: var(--ledger-rule-outer);
+    border-bottom: var(--ledger-rule-outer);
+}
+
+/* ------------------------------------------------------------ */
+/* Ledger - labels and values                                   */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard-step-body-0 .wizard-name-field label,
+#mcp-wizard-step-body-0 #mcp-wizard-row-url-path > label,
+#mcp-wizard-step-body-0 .wizard-option-label,
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line > .decision-line-label,
+#mcp-wizard-row-options > .decision-line-label,
+#mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-label,
+#mcp-wizard-review .wizard-review-key {
+    flex: none;
+    box-sizing: border-box;
+    padding: 0;
+    text-align: left;
+}
+
+#mcp-wizard-step-body-0 .wizard-name-field label,
+#mcp-wizard-step-body-0 #mcp-wizard-row-url-path > label,
+#mcp-wizard-step-body-0 .wizard-option-label {
+    width: var(--ledger-label-width-basic);
+}
+
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line > .decision-line-label,
+#mcp-wizard-row-options > .decision-line-label,
+#mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-label {
+    width: var(--ledger-label-width-options);
+}
+
+#mcp-wizard-review .wizard-review-key {
+    width: var(--ledger-label-width-review);
+}
+
+/* A title that unfolds or opens something has its chevron right after it, in its color */
+#mcp-wizard-step-body-0 .wizard-option-label,
+#mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-label,
+#mcp-wizard-row-options > .decision-line-label {
+    display: flex;
+    align-items: center;
+    gap: var(--ledger-chevron-gap);
+}
+
+#mcp-wizard .wizard-option-label > .wizard-chevron,
+#mcp-wizard-row-options > .decision-line-label > .wizard-chevron {
+    color: inherit;
+}
+
+#mcp-wizard-step-body-0 .wizard-option-header .summary-link-text,
+#mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-summary,
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line .summary-link-text,
+#mcp-wizard-row-options .summary-link-text,
+#mcp-wizard-review .wizard-review-value {
+    color: var(--ledger-ink);
+}
+
+#mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-summary {
+    flex: 1 1 auto;
+    margin-left: 0;
+}
+
+/* The answer on a row of step 1 is text to be read and copied, the row around it being the click */
+#mcp-wizard-step-body-0 .wizard-option-header a.summary-link {
+    user-select: text;
+}
+
+/* ------------------------------------------------------------ */
+/* Ledger - step 1, the name and the URL path                   */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard-step-body-0 .wizard-name-row,
+#mcp-wizard-step-body-0 #mcp-wizard-row-url-path {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: none;
+    margin: 0;
+    padding: var(--ledger-row-padding) 0;
+    border-bottom: var(--ledger-rule);
+}
+
+/* The name field is as wide as its label and its input together, so the
+   Active switch after it starts where the input ends */
+#mcp-wizard-step-body-0 .wizard-name-field {
+    flex: 0 0 calc(var(--ledger-label-width-basic) + var(--ledger-field-width));
+    gap: 0;
+}
+
+/* The form widgets set an inline width of 100%, which a flex basis takes precedence over */
+#mcp-wizard-step-body-0 .wizard-name-field input,
+#mcp-wizard-step-body-0 #mcp-wizard-row-url-path input[type="text"] {
+    flex: 0 0 var(--ledger-field-width);
+    box-sizing: border-box;
+    height: var(--ledger-field-height);
+    border-radius: 0;
+    font-size: var(--ledger-value-size);
+}
+
+#mcp-wizard-step-body-0 .wizard-active-field {
+    gap: 10px;
+    height: auto;
+    margin-left: var(--ledger-active-gap);
+}
+
+/* ------------------------------------------------------------ */
+/* Ledger - sections as rows                                    */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard-step-body-0 .wizard-option-card,
+#mcp-wizard-options-body > .wizard-option-card {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+#mcp-wizard-step-body-0 .wizard-option-card:not(:last-child) {
+    border-bottom: var(--ledger-rule);
+}
+
+#mcp-wizard-options-body > .wizard-option-card {
+    border-top: var(--ledger-rule);
+}
+
+#mcp-wizard-step-body-0 .wizard-option-header,
+#mcp-wizard-options-body > .wizard-option-card > .wizard-option-header {
+    gap: 0;
+    margin: 0;
+    padding: var(--ledger-row-padding) var(--ledger-end-padding) var(--ledger-row-padding) 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* ------------------------------------------------------------ */
+/* Ledger - step 2, the lines                                   */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard-step-body-1 > .wizard-section {
+    margin: 0;
+}
+
+#mcp-wizard-step-body-1 > .wizard-section:not(:last-child),
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line:not(:last-child) {
+    border-bottom: var(--ledger-rule);
+}
+
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines {
+    gap: 0;
+    max-width: none;
+}
+
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line,
+#mcp-wizard-row-options {
+    gap: 0;
+    padding: var(--ledger-row-padding) var(--ledger-end-padding) var(--ledger-row-padding) 0;
+}
+
+#mcp-wizard-row-options {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* A summary stays on its one line with the hint after it, however long it grows */
+#mcp-wizard-step-body-0 .wizard-option-header a.summary-link,
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line a.summary-link,
+#mcp-wizard-row-options a.summary-link {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+}
+
+#mcp-wizard-step-body-0 .wizard-option-header .summary-link-text,
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line .summary-link-text,
+#mcp-wizard-row-options .summary-link-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#mcp-wizard-step-body-0 .wizard-option-header .zato-soft-hint,
+#mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line .zato-soft-hint,
+#mcp-wizard-row-options .zato-soft-hint {
+    flex: none;
+}
+
+/* The rows of an open More options say what the summary said, so it gives way to them */
+#mcp-wizard-row-options:has(+ #mcp-wizard-options-body:not([hidden])) .summary-link-text {
+    display: none;
+}
+
+#mcp-wizard-row-options:has(+ #mcp-wizard-options-body:not([hidden])) .zato-soft-hint {
+    margin-left: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Ledger - step 2, what the rows unfold                        */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard-options-body > .wizard-option-card > .wizard-option-body-open {
+    max-width: none;
+    margin: 0;
+    padding: 0 var(--ledger-end-padding) var(--ledger-end-padding) var(--ledger-label-width-options);
+    border-radius: 0;
+    background: transparent;
+}
+
+#mcp-wizard-step-body-1 #mcp-wizard-options-body {
+    margin-top: 0;
+}
+
+/* An open section stands on a band of its own, the row it opened from
+   included, and the band reaches past the column on both sides so the
+   labels and the values stay where every other row has them */
+#mcp-wizard-step-body-1 > .wizard-section:has(> #mcp-wizard-options-body:not([hidden])),
+#mcp-wizard-options-body > .wizard-option-card:has(> .wizard-option-body-open) {
+    margin-right: calc(-1 * var(--ledger-band-bleed));
+    margin-left: calc(-1 * var(--ledger-band-bleed));
+    padding-right: var(--ledger-band-bleed);
+    padding-left: var(--ledger-band-bleed);
+    background: var(--ledger-band);
+}
+
+/* An open card inside the band of More options is set apart from its neighbors once more */
+#mcp-wizard-options-body > .wizard-option-card:has(> .wizard-option-body-open) {
+    background: var(--wizard-surface-panel);
+}
+
+/* The rows under More options stand in from the column of labels, the values staying in theirs */
+#mcp-wizard-options-body > .wizard-option-card > .wizard-option-header > .wizard-option-label {
+    padding-left: var(--ledger-nest-indent);
+}
+
+/* ------------------------------------------------------------ */
+/* Ledger - step 3, the review                                  */
+/* ------------------------------------------------------------ */
+
+#mcp-wizard-review .wizard-review-group {
+    max-width: none;
+    margin: 0;
+    padding: 0 0 var(--ledger-row-padding);
+}
+
+#mcp-wizard-review .wizard-review-group:not(:last-child) {
+    border-bottom: var(--ledger-rule);
+}
+
+#mcp-wizard-review .wizard-review-group-header {
+    height: auto;
+    margin: 0;
+    padding: var(--ledger-row-padding) var(--ledger-end-padding) 6px 0;
+    border-bottom: none;
+}
+
+#mcp-wizard-review .wizard-review-group-label {
+    font-size: var(--ledger-value-size);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ledger-ink);
+}
+
+#mcp-wizard-review .wizard-review-edit {
+    font-size: 12px;
+    color: var(--wizard-surface-accent);
+}
+
+#mcp-wizard-review .wizard-review-row {
+    align-items: baseline;
+    min-height: 0;
+    padding: var(--ledger-review-row-padding) var(--ledger-end-padding) var(--ledger-review-row-padding) 0;
+    line-height: var(--ledger-review-line-height);
+}
+
+#mcp-wizard-review .wizard-review-value {
+    min-width: 0;
+}

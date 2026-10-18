@@ -20,7 +20,7 @@ from _mcp_wizard import accept_popover, open_hooks_card, popover_input_selector
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import anydict, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,14 +51,38 @@ _pane_selector   = _popup_selector + ' .mcp-masking-pane'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def open_pii_section(page:'Page') -> 'None':
-    """ Unfolds the PII and data masking section of step 2, unless it is already open.
+def open_pii_popover(page:'Page') -> 'None':
+    """ Opens the popover of the PII line of step 2, unless it is already open.
     """
-    is_hidden = page.evaluate('document.getElementById("mcp-wizard-pii-body").hidden')
+    is_open = page.evaluate('document.getElementById("mcp-wizard-pii-body").closest(".tippy-box") !== null')
 
-    if is_hidden:
-        page.click('#mcp-wizard-pii-line')
+    if not is_open:
+        page.click('#mcp-wizard-edit-pii')
         _ = page.wait_for_selector('#mcp-wizard-pii-body', state='visible', timeout=_wait_timeout)
+
+# ################################################################################################################################
+
+def get_pii_summary(page:'Page') -> 'str':
+    """ What the PII line of step 2 says.
+    """
+    out = page.inner_text('#mcp-wizard-summary-pii')
+    return out
+
+# ################################################################################################################################
+
+def get_pii_label_widths(page:'Page') -> 'anylist':
+    """ For each label of the PII popover, its width, the width of the row it stands in,
+    and for a label naming a switch, how far the label reaches past the switch.
+    """
+    out = page.evaluate('''Array.from(document.querySelectorAll('#mcp-wizard-pii-body label')).map(label => {
+        const labelRect = label.getBoundingClientRect();
+        const rowRect = label.parentElement.getBoundingClientRect();
+        const input = label.querySelector('input');
+        const pastSwitch = input === null ? 0 : labelRect.right - input.getBoundingClientRect().right;
+        return {text: label.textContent.trim(), width: labelRect.width, rowWidth: rowRect.width, pastSwitch: pastSwitch};
+    })''')
+
+    return out
 
 # ################################################################################################################################
 
@@ -89,10 +113,8 @@ def _field_row_selector(field_name:'str') -> 'str':
 # ################################################################################################################################
 
 def open_masking_popover(page:'Page') -> 'None':
-    """ Opens the data masking popover from the line of the PII and data masking section.
+    """ Opens the data masking popover from its line on step 2.
     """
-    open_pii_section(page)
-
     page.click('#mcp-wizard-edit-data-masking')
     _ = page.wait_for_selector(_layout_selector, state='visible', timeout=_wait_timeout)
 
@@ -140,22 +162,49 @@ def focus_card(page:'Page', key:'str') -> 'None':
 
 # ################################################################################################################################
 
-def filter_fields(page:'Page', text:'str') -> 'None':
-    """ Types into the filter over the list of the focused set.
+def search_fields(page:'Page', text:'str') -> 'None':
+    """ Types into the search heading the cards.
     """
-    page.fill(f'{_pane_selector} .mcp-masking-search-input', text)
+    page.fill(f'{_popup_selector} .mcp-search-box-input', text)
 
 # ################################################################################################################################
 
-def clear_filter(page:'Page') -> 'None':
-    """ Empties the filter with its clear button.
+def clear_search(page:'Page') -> 'None':
+    """ Empties the search with its clear button.
     """
-    page.click(f'{_pane_selector} .mcp-masking-search-clear')
+    page.click(f'{_popup_selector} .mcp-search-box-clear')
+
+# ################################################################################################################################
+
+def get_search_chip(page:'Page') -> 'anydict':
+    """ What the chip of the search box says, whether it says nothing was found, and whether it is shown at all.
+    """
+    out = page.evaluate(f'''(() => {{
+        const chip = document.querySelector('{_popup_selector} .mcp-search-box-result');
+        return {{
+            text: chip.textContent,
+            isNone: chip.classList.contains('mcp-search-box-result-none'),
+            isShown: chip.offsetParent !== null
+        }};
+    }})()''')
+
+    return out
+
+# ################################################################################################################################
+
+def get_shown_cards(page:'Page') -> 'strlist':
+    """ The keys of the cards the search leaves in, in order.
+    """
+    out = page.evaluate(f'''Array.from(document.querySelectorAll(
+        '{_popup_selector} .mcp-masking-card:not(.mcp-masking-card-unmatched)'))
+        .map(card => card.getAttribute('data-key'))''')
+
+    return out
 
 # ################################################################################################################################
 
 def get_shown_fields(page:'Page') -> 'strlist':
-    """ The fields of the focused set the filter shows, in order.
+    """ The fields the pane shows, in order - those of the focused set, or the results of the search across every set.
     """
     out = page.evaluate(f'''Array.from(document.querySelectorAll(
         '{_pane_selector} .mcp-masking-pane-field:not(.mcp-masking-filtered-out)'))
@@ -166,7 +215,7 @@ def get_shown_fields(page:'Page') -> 'strlist':
 # ################################################################################################################################
 
 def is_field_masked(page:'Page', field_name:'str') -> 'bool':
-    """ Whether a field of the focused set has its switch on.
+    """ Whether a field the pane shows has its switch on.
     """
     out = page.evaluate(f'''document.querySelector(
         '{_field_row_selector(field_name)} .mcp-masking-switch').classList.contains('mcp-masking-switch-on')''')
@@ -175,9 +224,16 @@ def is_field_masked(page:'Page', field_name:'str') -> 'bool':
 # ################################################################################################################################
 
 def toggle_field(page:'Page', field_name:'str') -> 'None':
-    """ Flips the switch of one field of the focused set.
+    """ Flips the switch of one field the pane shows.
     """
     page.click(_field_row_selector(field_name))
+
+# ################################################################################################################################
+
+def toggle_show_only_active(page:'Page') -> 'None':
+    """ Flips the switch in the pane's header showing the masked fields alone.
+    """
+    page.click(f'{_pane_selector} .mcp-masking-pane-only')
 
 # ################################################################################################################################
 

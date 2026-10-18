@@ -20,15 +20,45 @@ maskingSets.config = {
     dataScriptId: 'mcp-wizard-masking-sets',
 
     // Filled in by init out of the embedded sets
-    sets: []
+    sets: [],
+
+    // The names of the sets listing each field, by the field's lowercase name
+    setsByField: {}
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 maskingSets.init = function() {
 
-    var dataScript = document.getElementById(maskingSets.config.dataScriptId);
-    maskingSets.config.sets = JSON.parse(dataScript.textContent);
+    var config = maskingSets.config;
+    var dataScript = document.getElementById(config.dataScriptId);
+
+    config.sets = JSON.parse(dataScript.textContent);
+
+    for(var setIdx = 0; setIdx < config.sets.length; setIdx++) {
+
+        var set = config.sets[setIdx];
+
+        for(var fieldIdx = 0; fieldIdx < set.fields.length; fieldIdx++) {
+
+            var fieldKey = set.fields[fieldIdx].toLowerCase();
+
+            if(!config.setsByField.hasOwnProperty(fieldKey)) {
+                config.setsByField[fieldKey] = [];
+            }
+
+            config.setsByField[fieldKey].push(set.name);
+        }
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The names of the sets listing a field, in the order the popover shows them.
+maskingSets.setsListing = function(fieldName) {
+
+    var out = maskingSets.config.setsByField[fieldName.toLowerCase()];
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

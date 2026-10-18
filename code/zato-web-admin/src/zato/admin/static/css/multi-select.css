@@ -205,11 +205,15 @@ label.toggle:hover {
     padding: 7px 10px 7px 5px;
     margin: 0;
     font-size: 12px;
-    cursor: grab;
+    cursor: crosshair;
     user-select: none;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     transition: background 0.1s, opacity 0.12s;
     white-space: nowrap;
+}
+
+.security-badge > * {
+    cursor: grab;
 }
 
 .security-badge:last-child {
@@ -258,10 +262,13 @@ label.toggle:hover {
     flex-shrink: 0;
 }
 
+/* The common width keeps the names after the chips in one column, and a
+   type name longer than it, e.g. Bearer token, widens its own chip */
 .security-badge-type {
     display: inline-block;
-    width: 76px;
+    min-width: 78px;
     padding: 3px 6px;
+    white-space: nowrap;
     font-size: 10px;
     font-weight: 600;
     margin-right: 10px;
@@ -298,8 +305,11 @@ label.toggle:hover {
     border: 1px solid rgba(100, 40, 150, 0.22);
 }
 
+/* The name is as wide as its text, the rest of the row being where a marquee starts */
 .security-badge-name {
-    flex: 1;
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-right: auto;
     overflow: hidden;
     text-overflow: ellipsis;
     color: #1f2937;
@@ -377,7 +387,15 @@ label.toggle:hover {
     cursor: default;
 }
 
-.badge-zone-empty {
+/* A zone with no badges, and no message of its own, says so in the words its picker set */
+.badge-zone-body:not(:has(.security-badge, .badge-zone-empty))::before {
+    content: attr(data-empty-text);
+}
+
+/* The padding is inside the full width, or the zone would scroll sideways */
+.badge-zone-empty,
+.badge-zone-body::before {
+    box-sizing: border-box;
     color: #999;
     font-style: italic;
     font-size: 12px;

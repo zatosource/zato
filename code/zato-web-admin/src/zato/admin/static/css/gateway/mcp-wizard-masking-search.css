@@ -1,0 +1,73 @@
+/*
+ * MCP gateway wizard - the search across the cards of the Data masking popover.
+ * The popover is in gateway/mcp-wizard-masking-popover.css, loaded before this file,
+ * and the box itself in gateway/mcp-wizard-search-box.css.
+ */
+
+/* ------------------------------------------------------------ */
+/* Data masking search - tokens                                 */
+/* ------------------------------------------------------------ */
+
+:root {
+    --mcp-masking-search-gap: 10px;
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking search - the row heading the cards              */
+/* ------------------------------------------------------------ */
+
+/* The row cancels the grid gap under it with its own padding, so the cards scroll under it out of sight */
+.mcp-masking-search-row {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    grid-column: 1 / -1;
+    margin-bottom: calc(-1 * var(--mcp-masking-search-gap));
+    padding-bottom: var(--mcp-masking-search-gap);
+    background: var(--micro-form-body-bg);
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking search - the results                            */
+/* ------------------------------------------------------------ */
+
+.mcp-masking-card-unmatched {
+    display: none;
+}
+
+.mcp-masking-match {
+    padding: 0;
+    font-weight: 700;
+    color: var(--zato-ui-accent);
+    background: none;
+}
+
+.mcp-masking-card-more {
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--zato-ui-text-faint);
+}
+
+.mcp-masking-cards-empty {
+    display: none;
+    grid-column: 1 / -1;
+}
+
+.mcp-masking-cards-empty-on {
+    display: block;
+    padding: 8px 2px;
+    font-size: 12px;
+    color: var(--zato-ui-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Data masking search - fields listed by several sets          */
+/* ------------------------------------------------------------ */
+
+.mcp-masking-pane-shared {
+    flex: 0 0 auto;
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--zato-ui-text-faint);
+    white-space: nowrap;
+}

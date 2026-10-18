@@ -28,6 +28,7 @@ import keycloak_
 # Zato - test helpers
 import _mcp_wizard as wizard_page
 
+from _mcp_tool_sources import close_assign_popover
 from bearer_token import create_dynamic_definition
 from mcp_gateway_live import assert_status, Echo_Service, HTTP_Timeout, Refusal_Wait
 
@@ -175,6 +176,7 @@ def create_oauth_gateway(page:'Page', base_url:'str', gateway_name:'str', url_pa
 def attempt_refused_save(page:'Page', button_selector:'str') -> 'None':
     """ Clicks a save button of a save the server refuses and asserts that the wizard stays on its page.
     """
+    close_assign_popover(page)
     page.click(button_selector)
     page.wait_for_timeout(Refusal_Wait)
 

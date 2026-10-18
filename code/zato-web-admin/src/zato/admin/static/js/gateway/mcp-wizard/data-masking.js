@@ -36,8 +36,9 @@ dataMasking.config = {
         fields: ' fields',
         custom: 'Custom',
         noFields: 'No fields',
-        totalPrefix: ' (',
-        totalSuffix: ')'
+        countOpen: ' (',
+        countClose: ')',
+        separator: ', '
     }
 };
 
@@ -99,7 +100,7 @@ dataMasking.maskedFields = function(state) {
 // ////////////////////////////////////////////////////////////////////////
 
 // The names an editor holds - one per line, trimmed, blank lines left out
-// and a name given twice kept once, where it first appears.
+// and a name given twice, in any case, kept once where it first appears.
 dataMasking.parse = function(text) {
 
     var out = [];
@@ -113,7 +114,7 @@ dataMasking.parse = function(text) {
             continue;
         }
 
-        if(out.indexOf(name) === -1) {
+        if(!maskingSets.holds(out, name)) {
             out.push(name);
         }
     }
@@ -140,8 +141,8 @@ dataMasking.countLabel = function(fieldCount) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the data masking line says - the sets by name, Custom when its fields
-// are masked, and how many fields that comes to.
+// What the data masking line says - each set by name with how many of its
+// fields are masked, then Custom with its own count when its fields are masked.
 dataMasking.summary = function() {
 
     var state = dataMasking.state;
@@ -155,16 +156,18 @@ dataMasking.summary = function() {
     var parts = [];
 
     for(var setIdx = 0; setIdx < state.sets.length; setIdx++) {
-        parts.push(maskingSets.get(state.sets[setIdx]).label);
+
+        var setName = state.sets[setIdx];
+        var setMasked = maskingSets.subtract(maskingSets.allFieldsOf(setName), state.excluded);
+
+        parts.push(maskingSets.get(setName).label + labels.countOpen + setMasked.length + labels.countClose);
     }
 
     if(state.isCustomEnabled && state.customFields.length > 0) {
-        parts.push(labels.custom);
+        parts.push(labels.custom + labels.countOpen + state.customFields.length + labels.countClose);
     }
 
-    var countText = dataMasking.countLabel(masked.length).toLowerCase();
-
-    var out = parts.join(', ') + labels.totalPrefix + countText + labels.totalSuffix;
+    var out = parts.join(labels.separator);
     return out;
 };
 

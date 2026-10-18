@@ -7,7 +7,7 @@
 // overview and the hidden inputs written on save. The micro-forms
 // live in forms.js, the hook services in hooks.js, the PII and data masking
 // section in pii.js, data masking in data-masking.js, masking-sets.js,
-// masking-popover.js and masking-filters.js, and the summaries plus the
+// masking-popover.js and masking-search.js, and the summaries plus the
 // review step in review.js.
 
 (function($) {
@@ -102,7 +102,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-field-row, ' +
-        '.wizard-option-header, .decision-line, .mcp-wizard-field-grid, .mcp-wizard-pii-selects',
+        '.wizard-option-header, .decision-line, .mcp-wizard-field-grid, .mcp-wizard-pii-fields',
 
     // Fields that must not be empty on submit
     requiredFields: [
@@ -147,19 +147,18 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         // The size caps line, the Alerts line, the hook services, the option cards of step 2
         // and the PII and data masking section with its industry sets and its data masking line ..
         wizard.forms.initRows();
+        wizard.searchBox.init();
         wizard.alerts.init();
         wizard.hooks.init();
+        wizard.contentSafety.init();
         wizard.review.initOptionCards();
         wizard.maskingSets.init();
         wizard.dataMasking.init();
         wizard.pii.init();
 
-        // .. the PII multi-selects, the URL allow list chips and the master
-        // toggles enabling the safeguard fields under them - the same wiring
-        // both actions share ..
+        // .. the PII multi-selects and the URL allow list chips - the same wiring both actions share ..
         $.fn.zato.gateway.mcp._init_pii_selects(action);
         $.fn.zato.gateway.mcp._init_host_list(action);
-        $.fn.zato.gateway.mcp._init_safeguard_toggles(action);
 
         // .. the tools the gateway exposes - the services and the outgoing
         // connections, each source of the one Tools card holding its own
@@ -394,18 +393,27 @@ wizard.helpDescriptions = function() {
 
     $.extend(out, wizard.alerts.descriptions());
 
-    // .. the two hooks ..
+    // .. the two hooks and the line they open from ..
+    out[wizard.hooks.config.editLinkId] = 'The services the gateway invokes for every MCP request it receives ' +
+        'and for every MCP response it is about to return.';
     out['mcp-wizard-slot-request-hook-chip'] = 'The service invoked each time the gateway receives an MCP request, ' +
         'before the request is processed. It is independent of the services exposed as tools.';
     out['mcp-wizard-slot-response-hook-chip'] = 'The service invoked each time the gateway is about to return ' +
         'an MCP response. It is independent of the services exposed as tools.';
 
-    // .. the options folded away under the More options line ..
-    out['mcp-wizard-edit-options'] = 'Input validation and the audit log, the compaction of responses, ' +
-        'the hook services and content safety. The line says what is currently set.';
+    out[wizard.contentSafety.config.editLinkId] = 'The checks applied to every tool response - secrets, hidden ' +
+        'control characters, active HTML and Markdown, and URLs outside the allowed hosts - and what happens ' +
+        'to each finding.';
 
-    // .. and the fields the PII and data masking section masks in every response.
+    // .. the options folded away under the More options line ..
+    out['mcp-wizard-edit-options'] = 'Input validation and the audit log, and the compaction of responses. ' +
+        'The line says what is currently set.';
+
+    // .. the fields masked in every response ..
     out[wizard.dataMasking.config.editLinkId] = 'Fields masked in every tool response, whatever the PII detectors find.';
+
+    // .. and the removal of PII from responses.
+    out[wizard.pii.config.editLinkId] = 'Whether the PII detectors remove personal data from tool responses, and which lands and detectors they use.';
     out[wizard.forms.inputId(wizard.maskingPopover.config.customInputField)] = 'Field names masked in addition to the ones selected, one per line.';
 
     return out;

@@ -88,6 +88,11 @@ microForms.installPopover = function(host, forms) {
                         return;
                     }
 
+                    // A panel open over this popover has already closed on the key
+                    if(event.defaultPrevented) {
+                        return;
+                    }
+
                     // A popover open over this one goes first - the key is its
                     if(forms._isCovered(tippyInstance)) {
                         return;

@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
+import re
 import shutil
 import sys
 import time
@@ -70,6 +71,19 @@ _Refusal_Wait = 2000
 
 # How long to wait for a UI element to show, in milliseconds
 _UI_Timeout = 5000
+
+# How long the picker filter waits after a keystroke before it filters, plus a margin, in milliseconds
+_Filter_Settle_Time = 400
+
+# How far the measured gap of the search box may stray from the one it keeps, in pixels
+_Gap_Tolerance = 1.5
+
+# The checks of the content safety popover, in the order it lists them, and what the one with no mode answers
+_Safety_Check_Names = ['Secrets', 'Hidden control characters', 'Active HTML and Markdown', 'URLs']
+_Safety_Fixed_Mode = 'Remove'
+
+# The compaction rows of the review, all on for a new gateway
+_Compaction_Rows = ['Strip null fields', 'Collapse whitespace', 'Strip base64 blobs']
 
 # Log patterns produced by the server while the group membership is still propagating
 _Group_Log_Patterns = (
@@ -344,8 +358,8 @@ class TestMCPWizard:
             wizard_page.set_gateway_options(page, is_audit_log_active=True)
             wizard_page.set_compaction(page, strip_nulls=True)
 
-            # .. PII removal - the master toggle enables the selects under it ..
-            masking_page.open_pii_section(page)
+            # .. PII removal, through the popover of its line ..
+            masking_page.open_pii_popover(page)
             page.check('#id_safeguards_pii_enabled')
 
             wizard_page.pick_from_chosen(page, 'safeguards_pii_lands', 'Poland')
@@ -355,20 +369,17 @@ class TestMCPWizard:
             wizard_page.pick_from_chosen(page, 'safeguards_pii_detectors', 'Mobile equipment identity (IMEI)')
 
             wizard_page.pick_from_chosen(page, 'safeguards_pii_exclude', 'IPv4 address')
+            wizard_page.accept_popover(page)
 
-            # .. content safety - each group opens on its own, each master toggle
-            # enables the fields under it ..
-            wizard_page.open_safety_group(page, 'Unicode')
-            page.check('#id_safeguards_normalize_unicode')
-
-            wizard_page.open_safety_group(page, 'Markup')
-            page.check('#id_safeguards_sanitize_markup')
-
-            wizard_page.open_safety_group(page, 'URL policy')
-            page.check('#id_safeguards_url_policy_enabled')
+            # .. content safety, through the popover of its line ..
+            wizard_page.open_safety_popover(page)
+            page.check(wizard_page.popover_input_selector('safeguards_normalize_unicode'))
+            page.check(wizard_page.popover_input_selector('safeguards_sanitize_markup'))
+            page.check(wizard_page.popover_input_selector('safeguards_url_policy_enabled'))
 
             wizard_page.add_host_chip(page, 'example.com')
             wizard_page.add_host_chip(page, 'zato.io')
+            wizard_page.accept_popover(page)
 
             # The review names every group with the values chosen ..
             wizard_page.go_to_step(page, wizard_page.Review_Step)
@@ -484,10 +495,12 @@ class TestMCPWizard:
 
             # .. the stored comma-separated hosts come back as chips ..
             wizard_page.go_to_step(page, 1)
-            wizard_page.open_safety_group(page, 'URL policy')
+            wizard_page.open_safety_popover(page)
 
             chips = wizard_page.get_host_chip_texts(page)
             assert chips == ['example.com', 'zato.io'], f'Expected the hosts back as chips, got: {chips}'
+
+            wizard_page.accept_popover(page)
 
             # .. switching the cap to block mode through the edit ..
             wizard_page.set_size_caps(page, size_cap_mode='block')
@@ -547,18 +560,18 @@ class TestMCPWizard:
         wizard_page.assign_badge(page, 'services', service_name_1)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '1 Services', f'Expected "1 Services", got: {summary}'
+        assert summary == 'Services (1)', f'Expected "Services (1)", got: {summary}'
 
         wizard_page.assign_badge(page, 'services', service_name_2)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '2 Services', f'Expected "2 Services", got: {summary}'
+        assert summary == 'Services (2)', f'Expected "Services (2)", got: {summary}'
 
         # .. and removing walks it back.
         wizard_page.remove_assigned_badge(page, 'services', service_name_1)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '1 Services', f'Expected "1 Services" after removal, got: {summary}'
+        assert summary == 'Services (1)', f'Expected "Services (1)" after removal, got: {summary}'
 
         # The review's Edit link on the Tools group goes back to step 1 with the card open ..
         wizard_page.go_to_step(page, wizard_page.Review_Step)
@@ -570,14 +583,14 @@ class TestMCPWizard:
             'document.getElementById("mcp-wizard-tools-body").classList.contains("wizard-option-body-open")')
         assert is_open, 'Expected the tools card open after the review edit link'
 
-        # .. and the PII group's link goes to step 2 with the PII and data masking section unfolded.
+        # .. and the PII group's link goes to step 2 with the PII fields open in their popover.
         wizard_page.go_to_step(page, wizard_page.Review_Step)
         _click_review_edit(page, 'PII and data masking')
 
         _ = page.wait_for_selector('#mcp-wizard-step-body-1', state='visible', timeout=_UI_Timeout)
 
-        pii_hidden = page.evaluate('document.getElementById("mcp-wizard-pii-body").hidden')
-        assert not pii_hidden, 'Expected the PII and data masking section unfolded after the review edit link'
+        is_in_popover = page.evaluate('document.getElementById("mcp-wizard-pii-body").closest(".tippy-box") !== null')
+        assert is_in_popover, 'Expected the PII fields in their popover after the review edit link'
 
 # ################################################################################################################################
 
@@ -598,10 +611,10 @@ class TestMCPWizard:
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        # The chips live in the URL policy group and stay disabled until the policy is on ..
+        # The chips are in the content safety popover ..
         wizard_page.go_to_step(page, 1)
-        wizard_page.open_safety_group(page, 'URL policy')
-        page.check('#id_safeguards_url_policy_enabled')
+        wizard_page.open_safety_popover(page)
+        page.check(wizard_page.popover_input_selector('safeguards_url_policy_enabled'))
 
         text_field = f'{wizard_page.Host_List_Selector} .search-field input'
 
@@ -651,23 +664,127 @@ class TestMCPWizard:
         chip = f'{wizard_page.Host_List_Selector} li.search-choice:has-text("blur.example.com")'
         _ = page.wait_for_selector(chip, state='visible', timeout=_UI_Timeout)
 
-        # The underlying input carries the whole list as one comma-separated line ..
+        # The underlying input has the whole list as one comma-separated line ..
         stored_value = page.input_value('#id_safeguards_url_allow_list')
         assert stored_value == 'example.com, zato.io, blur.example.com', \
             f'Expected the comma-separated line, got: {stored_value}'
 
         # .. the save goes through ..
+        wizard_page.accept_popover(page)
         wizard_page.save_create(page)
 
         # .. and the stored value round-trips into chips on edit.
         wizard_page.open_wizard_edit(page, base_url, gateway_name)
 
         wizard_page.go_to_step(page, 1)
-        wizard_page.open_safety_group(page, 'URL policy')
+        wizard_page.open_safety_popover(page)
 
         chips = wizard_page.get_host_chip_texts(page)
         assert chips == ['example.com', 'zato.io', 'blur.example.com'], \
             f'Expected the hosts back as chips on edit, got: {chips}'
+
+# ################################################################################################################################
+
+    def test_the_picker_filters_search_from_their_box(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ The filter of the Tools section shows its clear button only once something is typed, one gap after
+        the words, leaves in only the badges matching them, and its clear button brings every badge back.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        box_selector = '#badge-filter-wizard'
+        input_selector = '#badge-filter-text-wizard'
+        visible_badges = '#badge-zone-available-wizard .badge-zone-body .security-badge:visible'
+
+        wizard_page.open_wizard_create(page, base_url)
+
+        wizard_page.open_picker_card(page, 'services')
+        wizard_page.wait_for_available_badges(page, 'services', 2)
+
+        all_count = page.locator(visible_badges).count()
+
+        # Nothing typed, no clear button ..
+        layout = wizard_page.get_search_box_layout(page, box_selector)
+        assert not layout['isClearShown'], layout
+
+        # .. a name typed leaves in only the badges holding it ..
+        page.fill(input_selector, _Echo_Service)
+        page.wait_for_timeout(_Filter_Settle_Time)
+
+        names = page.locator(visible_badges).evaluate_all('badges => badges.map(badge => badge.getAttribute("data-name"))')
+        assert _Echo_Service in names, names
+
+        for name in names:
+            assert _Echo_Service in name, names
+
+        # .. with the clear button one gap after the words ..
+        layout = wizard_page.get_search_box_layout(page, box_selector)
+
+        assert layout['isClearShown'], layout
+        assert abs(layout['wordsToClear'] - layout['gap']) <= _Gap_Tolerance, layout
+        assert layout['clearLeft'] < layout['boxMiddle'], layout
+
+        # .. and the clear button empties the box and brings every badge back.
+        page.click(f'{box_selector} .mcp-search-box-clear')
+        page.wait_for_timeout(_Filter_Settle_Time)
+
+        value = page.input_value(input_selector)
+        assert value == '', value
+
+        layout = wizard_page.get_search_box_layout(page, box_selector)
+        assert not layout['isClearShown'], layout
+
+        count = page.locator(visible_badges).count()
+        assert count == all_count, f'Expected {all_count} badges back, got: {count}'
+
+# ################################################################################################################################
+
+    def test_the_defaults_and_the_content_safety_popover(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ A new gateway compacts its responses in every way, the content safety popover lists secrets first
+        with a fixed answer, and the content safety line names the modes in lowercase.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        wizard_page.open_wizard_create(page, base_url)
+
+        # Every compaction field is on from the start ..
+        for field_name in ('safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64'):
+            assert page.is_checked(f'#id_{field_name}'), f'Expected {field_name} on by default'
+
+        # .. and the review says so ..
+        wizard_page.go_to_step(page, wizard_page.Review_Step)
+
+        for row_key in _Compaction_Rows:
+            value = _get_review_value(page, 'Compaction', row_key)
+            assert value == 'On', f'Expected {row_key} on the review, got: {value}'
+
+        # .. the content safety popover lists its checks with secrets first ..
+        wizard_page.go_to_step(page, 1)
+        wizard_page.open_safety_popover(page)
+
+        rows = page.evaluate("""() => Array.from(document.querySelectorAll('#mcp-wizard-popup .mcp-safety-grid tr'))
+            .filter(row => row.querySelector('.mcp-safety-grid-name') !== null)
+            .map(row => [row.cells[0].innerText.trim(), row.cells[2].innerText.trim()])""")
+
+        names = [row[0] for row in rows]
+        assert names == _Safety_Check_Names, rows
+
+        secrets_mode = rows[0][1]
+        assert secrets_mode == _Safety_Fixed_Mode, rows
+
+        # .. and with two more checks on, the line names every mode in lowercase.
+        page.check(wizard_page.popover_input_selector('safeguards_normalize_unicode'))
+        page.check(wizard_page.popover_input_selector('safeguards_sanitize_markup'))
+        wizard_page.accept_popover(page)
+
+        summary = page.inner_text('#mcp-wizard-summary-safety')
+        modes = re.findall(r'\(([^)]*)\)', summary)
+
+        assert len(modes) >= 2, summary
+
+        for mode in modes:
+            assert mode == mode.lower(), summary
 
 # ################################################################################################################################
 

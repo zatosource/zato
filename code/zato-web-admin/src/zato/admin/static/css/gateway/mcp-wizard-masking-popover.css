@@ -5,12 +5,12 @@
  * both and the total under them. The popover keeps one size whatever it
  * shows - the grid and the pane scroll inside it, their scrollbars always
  * there, so nothing ever shifts as the cards and the fields change. The
- * tokens, the editor and the controls shared with the PII and data masking section are in
+ * tokens, the editor and the controls shared with the data masking row are in
  * gateway/mcp-wizard-masking.css, loaded before this file.
  */
 
 /* ------------------------------------------------------------ */
-/* Data masking popover - the layout                             */
+/* Data masking popover - the layout                            */
 /* ------------------------------------------------------------ */
 
 .mcp-masking-layout {
@@ -40,7 +40,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Data masking popover - the switches                           */
+/* Data masking popover - the switches                          */
 /* ------------------------------------------------------------ */
 
 .mcp-masking-switch {
@@ -74,7 +74,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Data masking popover - the cards                              */
+/* Data masking popover - the cards                             */
 /* ------------------------------------------------------------ */
 
 .mcp-masking-card {
@@ -159,7 +159,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Data masking popover - the pane                               */
+/* Data masking popover - the pane                              */
 /* ------------------------------------------------------------ */
 
 .mcp-masking-pane {
@@ -188,6 +188,26 @@
 .mcp-masking-pane-count {
     font-size: 11.5px;
     color: var(--zato-ui-accent-soft);
+}
+
+.mcp-masking-pane-only {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: 6px;
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--zato-ui-text-muted);
+    cursor: pointer;
+}
+
+.mcp-masking-pane-only:has(> .mcp-masking-switch-on) {
+    color: var(--zato-ui-text);
+}
+
+.mcp-masking-pane-instant .mcp-masking-pane-control .mcp-masking-switch,
+.mcp-masking-pane-instant .mcp-masking-pane-control .mcp-masking-switch-knob {
+    transition: none;
 }
 
 /* The rows of a list answer a pointer resting on them at once - a delay

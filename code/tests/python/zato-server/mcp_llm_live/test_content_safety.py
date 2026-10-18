@@ -37,7 +37,7 @@ _failure_words = ('cannot', 'could not', "couldn't", 'unable', 'fail', 'error', 
 _reject_kind_unicode = 'unicode'
 _reject_kind_url = 'url'
 
-# What the two disallowed URLs of the customer notes read once they are defanged
+# What the two disallowed URLs of the customer notes read once they are neutralized
 _url_disallowed_neutralized = 'hxxps://tracking[.]invalid/pixel'
 _url_lookalike_neutralized = 'hxxps://notexample[.]com/kb'
 
@@ -237,7 +237,7 @@ class TestContentSafetyModes:
 
     def test_the_two_other_url_modes(self, zato_server:'anydict') -> 'None':
 
-        # The same disallowed URL is defanged under neutralize ..
+        # The same disallowed URL is rewritten under neutralize ..
         body, event_data = _get_customer_call(
             zato_server, _constants.Path_URL_Neutralize, _constants.Gateway_URL_Neutralize)
 
@@ -275,7 +275,7 @@ class TestContentSafetyModes:
         # A subdomain of the allowed host passes untouched ..
         assert _url_subdomain in notes, notes
 
-        # .. while a host that merely ends with the same characters is defanged -
+        # .. while a host that merely ends with the same characters is neutralized -
         # the rule matches suffixes at dot boundaries, not substrings.
         assert _url_lookalike_neutralized in notes, notes
 

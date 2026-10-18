@@ -14,15 +14,15 @@ from zato.common.test.playwright_pubsub import navigate_to_page
 from zato.common.typing_ import cast_
 
 # Zato - test helpers
-from _mcp_tool_sources import _picker_action, assigned_badge_selector, available_badge_selector, select_tool_source, \
-    Tool_Source_Keys, Tools_Card
+from _mcp_tool_sources import _picker_action, assigned_badge_selector, available_badge_selector, close_assign_popover, \
+    select_tool_source, Tool_Source_Keys, Tools_Card
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydictnone, anylistnone, boolnone, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, anylistnone, boolnone, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -159,8 +159,9 @@ def open_wizard_edit(page:'Page', base_url:'str', gateway_name:'str') -> 'None':
 # ################################################################################################################################
 
 def go_to_step(page:'Page', step_index:'int') -> 'None':
-    """ Jumps to one of the wizard's steps through its tab on the step strip.
+    """ Jumps to one of the wizard's steps through its tab on the step strip, which the picker cards' popover covers.
     """
+    close_assign_popover(page)
     page.click(f'#mcp-wizard-steps .wizard-step[data-step="{step_index}"]')
     _ = page.wait_for_selector(f'#mcp-wizard-step-body-{step_index}', state='visible', timeout=_Wizard_Timeout)
 
@@ -198,6 +199,7 @@ def save_edit(page:'Page') -> 'None':
     """ Saves an edit from whichever step is on screen - an edit has one Save button in its footer,
     and the save lands back on the gateway list with the row highlighted.
     """
+    close_assign_popover(page)
     page.click('#mcp-wizard-save')
 
     wait_until_saved(page)
@@ -256,6 +258,7 @@ def open_picker_card(page:'Page', card_name:'str') -> 'None':
         f'document.getElementById("mcp-wizard-{card_name}-body").classList.contains("wizard-option-body-open")')
 
     if not is_open:
+        close_assign_popover(page)
         page.click(f'#mcp-wizard-{card_name}-header')
         _ = page.wait_for_selector(f'#mcp-wizard-{card_name}-body', state='visible', timeout=_Wizard_Timeout)
 
@@ -337,7 +340,7 @@ def get_available_badge_names(page:'Page', card_name:'str') -> 'strlist':
 # ################################################################################################################################
 
 def get_picker_summary(page:'Page', card_name:'str') -> 'str':
-    """ What the card's header summary currently says, e.g. None assigned or 2 assigned.
+    """ What the card's header summary currently says, e.g. None assigned or Services (2).
     Every tool source reads the Tools card's summary, which spans all the sources.
     """
     if card_name in Tool_Source_Keys:
@@ -352,6 +355,36 @@ def get_picker_summary(page:'Page', card_name:'str') -> 'str':
 # The popover micro-forms of step 2
 #
 # ################################################################################################################################
+# ################################################################################################################################
+
+def get_search_box_layout(page:'Page', box_selector:'str') -> 'anydict':
+    """ Where the parts of a search box stand - the gaps from the words typed to the chip and from the chip
+    to the clear button's icon, or from the words straight to the icon when no chip is shown, the gap the box
+    keeps between its parts, and whether the clear button is shown.
+    """
+    out = page.evaluate(f'''(() => {{
+        const box = document.querySelector('{box_selector}');
+        const caretRoom = parseFloat(getComputedStyle(box).getPropertyValue('--mcp-search-box-caret-room'));
+        const wordsRight = box.querySelector('.mcp-search-box-sizer').getBoundingClientRect().right - caretRoom;
+        const chip = box.querySelector('.mcp-search-box-result');
+        const isChipShown = chip !== null && chip.offsetParent !== null;
+        const clear = box.querySelector('.mcp-search-box-clear');
+        const iconLeft = clear.querySelector('svg').getBoundingClientRect().left;
+        const boxRect = box.getBoundingClientRect();
+        const chipRect = isChipShown ? chip.getBoundingClientRect() : null;
+        return {{
+            gap: parseFloat(getComputedStyle(box).columnGap),
+            wordsToChip: isChipShown ? chipRect.left - wordsRight : null,
+            chipToClear: isChipShown ? iconLeft - chipRect.right : null,
+            wordsToClear: isChipShown ? null : iconLeft - wordsRight,
+            boxMiddle: boxRect.left + boxRect.width / 2,
+            clearLeft: iconLeft,
+            isClearShown: clear.offsetParent !== null
+        }};
+    }})()''')
+
+    return out
+
 # ################################################################################################################################
 
 def popover_input_selector(field_name:'str') -> 'str':
@@ -469,53 +502,30 @@ def set_compaction(
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# The hook services and content safety cards of step 2
+# The hook services line and the content safety line of step 2
 #
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _open_option_card(page:'Page', card_name:'str') -> 'None':
-    """ Unfolds one of the collapsible option cards of step 2, unless it is already open.
+def open_hooks_card(page:'Page') -> 'None':
+    """ Opens the popover of the hook services line, unless it is already open.
     """
-    open_more_options(page)
-
-    is_open = page.evaluate(
-        f'document.getElementById("mcp-wizard-{card_name}-body").classList.contains("wizard-option-body-open")')
+    is_open = page.evaluate('document.getElementById("mcp-wizard-hooks-body").closest(".tippy-box") !== null')
 
     if not is_open:
-        page.click(f'#mcp-wizard-{card_name}-header')
-        _ = page.wait_for_selector(f'#mcp-wizard-{card_name}-body', state='visible', timeout=_Wizard_Timeout)
+        page.click('#mcp-wizard-edit-hooks')
+        _ = page.wait_for_selector('#mcp-wizard-hooks-body', state='visible', timeout=_Wizard_Timeout)
 
 # ################################################################################################################################
 
-def open_hooks_card(page:'Page') -> 'None':
-    """ Unfolds the hook services card, unless it is already open.
+def open_safety_popover(page:'Page') -> 'None':
+    """ Opens the popover of the content safety line, unless it is already open.
     """
-    _open_option_card(page, 'hooks')
+    is_open = page.evaluate('document.getElementById("mcp-wizard-safety-hosts").closest(".tippy-box") !== null')
 
-# ################################################################################################################################
-
-def open_safety_card(page:'Page') -> 'None':
-    """ Unfolds the content safety card, unless it is already open.
-    """
-    _open_option_card(page, 'safety')
-
-# ################################################################################################################################
-
-def open_safety_group(page:'Page', group_title:'str') -> 'None':
-    """ Unfolds one of the collapse groups inside the content safety card - Unicode, Markup or URL policy.
-    """
-    open_safety_card(page)
-
-    title_selector = f'#mcp-wizard-safety-body .wizard-collapse-group-title:has-text("{group_title}")'
-    body_selector = f'{title_selector} + .wizard-collapse-group-body'
-
-    body = cast_('any_', page.query_selector(body_selector))
-    is_hidden = body.evaluate('element => element.hidden')
-
-    if is_hidden:
-        page.click(title_selector)
-        _ = page.wait_for_selector(body_selector, state='visible', timeout=_Wizard_Timeout)
+    if not is_open:
+        page.click('#mcp-wizard-edit-safety')
+        _ = page.wait_for_selector('#mcp-wizard-safety-hosts', state='visible', timeout=_Wizard_Timeout)
 
 # ################################################################################################################################
 
@@ -585,7 +595,7 @@ def pick_from_chosen(page:'Page', field_name:'str', option_label:'str', is_edit:
 # ################################################################################################################################
 
 # Where the chip widget standing in for the allowed hosts input lives
-Host_List_Selector = '#mcp-wizard-safety-body .mcp-host-list'
+Host_List_Selector = '#mcp-wizard-safety-hosts .mcp-host-list'
 
 # ################################################################################################################################
 

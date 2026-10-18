@@ -31,7 +31,7 @@ _mode_choices = (
 
 _url_mode_choices = (
     ('remove', 'Remove'),
-    ('neutralize', 'Defang'),
+    ('neutralize', 'Neutralize'),
     ('reject', 'Reject'),
 )
 
@@ -66,10 +66,10 @@ class CreateForm(forms.Form):
     min_size_threshold = forms.IntegerField(required=False, widget=forms.TextInput(attrs={'style':'width:5em'}))
     characters_per_token = forms.FloatField(initial=4.0, widget=forms.TextInput(attrs={'style':'width:3em'}))
 
-    # Response safeguards - compaction
-    safeguards_strip_nulls = forms.BooleanField(required=False)
-    safeguards_collapse_whitespace = forms.BooleanField(required=False)
-    safeguards_strip_base64 = forms.BooleanField(required=False)
+    # Response safeguards - compaction, on by default for new gateways
+    safeguards_strip_nulls = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    safeguards_collapse_whitespace = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    safeguards_strip_base64 = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     # Response safeguards - PII removal
     safeguards_pii_enabled = forms.BooleanField(required=False)
@@ -111,5 +111,8 @@ class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     validate_input = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    safeguards_strip_nulls = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    safeguards_collapse_whitespace = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    safeguards_strip_base64 = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################

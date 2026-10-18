@@ -7,8 +7,10 @@
 // lists every field with a switch of its own under one switching them all.
 // For the custom fields, it is their editor under the switch masking them or
 // not - switched off, the fields stay in the editor and are not masked. The
-// list of a set has a filter over it, from masking-filters.js, and Select all
-// covers the fields the filter shows. OK writes the
+// search of masking-search.js heads the grid and narrows the cards, and the
+// pane shows the fields it matches in every set until a card is clicked.
+// Select all covers the fields the pane shows, and Show only active narrows it to
+// the fields masked at the moment it is switched on. OK writes the
 // working copy of the answers back to dataMasking.state.
 
 (function($) {
@@ -48,10 +50,13 @@ popover.config = {
         title: 'Data masking',
         custom: 'Custom',
         selectAll: 'Select all',
+        maskedOnly: 'Show only active',
         enabled: 'Enabled',
         noMatches: 'No matching fields',
         of: ' of ',
-        masked: ' masked'
+        masked: ' masked',
+        sets: ' sets',
+        separator: ', '
     }
 };
 
@@ -102,9 +107,24 @@ popover.isPicked = function(setName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-popover.isMasked = function(setName, fieldName) {
-    var out = popover.isPicked(setName) && popover.working.excluded.indexOf(fieldName) === -1;
-    return out;
+// A field is masked when a picked set lists it and it is not excluded, whichever set's pane shows it.
+popover.isMasked = function(fieldName) {
+
+    var working = popover.working;
+
+    if(maskingSets.holds(working.excluded, fieldName)) {
+        return false;
+    }
+
+    var listing = maskingSets.setsListing(fieldName);
+
+    for(var setIdx = 0; setIdx < listing.length; setIdx++) {
+        if(popover.isPicked(listing[setIdx])) {
+            return true;
+        }
+    }
+
+    return false;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -123,53 +143,73 @@ popover.maskedCountOf = function(setName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Picks a set with every one of its fields, or lets it go.
+// Picks a set with every one of its fields, or lets it go. An exclusion is of a field, whichever sets list it,
+// so letting a set go keeps the exclusions of the fields the other picked sets still list.
 popover.setPicked = function(setName, isOn) {
 
     var working = popover.working;
 
     working.sets = maskingSets.subtract(working.sets, [setName]);
-    working.excluded = maskingSets.subtract(working.excluded, maskingSets.allFieldsOf(setName));
 
     if(isOn) {
         working.sets.push(setName);
+        working.excluded = maskingSets.subtract(working.excluded, maskingSets.allFieldsOf(setName));
+        return;
     }
+
+    var stillListed = maskingSets.union(working.sets);
+    working.excluded = maskingSets.subtract(working.excluded, maskingSets.subtract(working.excluded, stillListed));
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 popover.setFieldMasked = function(setName, fieldName, isOn) {
 
-    if(popover.isMasked(setName, fieldName) !== isOn) {
+    if(popover.isMasked(fieldName) !== isOn) {
         popover.toggleField(setName, fieldName);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Switches one field of a set. A field of a set not picked picks the set
-// with that field alone, and a set left with no field is let go.
+// Switches one field shown in a set's pane. A field no picked set lists picks the set with that field alone,
+// the set's other fields keeping what they had, and a picked set left with no field is let go.
 popover.toggleField = function(setName, fieldName) {
 
     var working = popover.working;
-    var setFields = maskingSets.allFieldsOf(setName);
 
-    if(!popover.isPicked(setName)) {
-        popover.setPicked(setName, true);
-        working.excluded = maskingSets.merge(working.excluded, maskingSets.subtract(setFields, [fieldName]));
+    if(popover.isMasked(fieldName)) {
+
+        working.excluded.push(fieldName);
+
+        var pickedSets = working.sets.slice();
+
+        for(var setIdx = 0; setIdx < pickedSets.length; setIdx++) {
+            if(popover.maskedCountOf(pickedSets[setIdx]) === 0) {
+                popover.setPicked(pickedSets[setIdx], false);
+            }
+        }
+
         return;
     }
 
-    if(popover.isMasked(setName, fieldName)) {
-        working.excluded.push(fieldName);
-    }
-    else {
-        working.excluded = maskingSets.subtract(working.excluded, [fieldName]);
+    working.excluded = maskingSets.subtract(working.excluded, [fieldName]);
+
+    if(popover.isMasked(fieldName)) {
+        return;
     }
 
-    if(popover.maskedCountOf(setName) === 0) {
-        popover.setPicked(setName, false);
+    var otherFields = maskingSets.subtract(maskingSets.allFieldsOf(setName), [fieldName]);
+    var unmaskedOthers = [];
+
+    for(var fieldIdx = 0; fieldIdx < otherFields.length; fieldIdx++) {
+        if(!popover.isMasked(otherFields[fieldIdx])) {
+            unmaskedOthers.push(otherFields[fieldIdx]);
+        }
     }
+
+    working.sets.push(setName);
+    working.excluded = maskingSets.merge(working.excluded, unmaskedOthers);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -247,74 +287,44 @@ popover._buildCardFrame = function(key, titleText, isOn) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-popover._buildSetCard = function(set) {
-
-    var setFields = set.fields;
-
-    var card = popover._buildCardFrame(set.name, set.label, popover.isPicked(set.name));
-    var preview = card.querySelector('.mcp-masking-card-preview');
-
-    for(var fieldIdx = 0; fieldIdx < popover.config.previewCount; fieldIdx++) {
-
-        var line = document.createElement('div');
-        line.className = 'mcp-masking-card-line mcp-masking-mono';
-        line.setAttribute('data-field', setFields[fieldIdx]);
-        line.textContent = setFields[fieldIdx];
-
-        preview.appendChild(line);
-    }
-
-    var out = card;
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-popover._syncSetCard = function(card) {
+popover._syncSetCard = function(card, terms) {
 
     var setName = card.getAttribute('data-key');
     var isPicked = popover.isPicked(setName);
-    var lines = card.querySelectorAll('.mcp-masking-card-line');
+
+    var isOut = function(fieldName) {
+        var out = isPicked && !popover.isMasked(fieldName);
+        return out;
+    };
 
     card.classList.toggle('mcp-masking-card-on', isPicked);
     card.querySelector('.mcp-masking-card-count').textContent = popover.setCountLabel(setName);
     popover._setSwitch(card, isPicked);
 
-    for(var lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-        var isOut = isPicked && !popover.isMasked(setName, lines[lineIdx].getAttribute('data-field'));
-        lines[lineIdx].classList.toggle('mcp-masking-line-out', isOut);
-    }
+    popover.search.fillPreview(card.querySelector('.mcp-masking-card-preview'), maskingSets.allFieldsOf(setName),
+        terms, popover.config.previewCount, isOut);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-popover._syncCustomCard = function(card) {
+popover._syncCustomCard = function(card, terms) {
 
     var working = popover.working;
-    var preview = card.querySelector('.mcp-masking-card-preview');
-    var shownCount = Math.min(working.customFields.length, popover.config.previewCount);
 
     card.classList.toggle('mcp-masking-card-on', working.isCustomEnabled && working.customFields.length > 0);
     card.classList.toggle('mcp-masking-card-off', !working.isCustomEnabled);
     card.querySelector('.mcp-masking-card-count').textContent = wizard.dataMasking.countLabel(working.customFields.length);
     popover._setSwitch(card, working.isCustomEnabled);
 
-    preview.textContent = '';
-
-    for(var fieldIdx = 0; fieldIdx < shownCount; fieldIdx++) {
-
-        var line = document.createElement('div');
-        line.className = 'mcp-masking-card-line mcp-masking-mono';
-        line.textContent = working.customFields[fieldIdx];
-
-        preview.appendChild(line);
-    }
+    popover.search.fillPreview(card.querySelector('.mcp-masking-card-preview'), working.customFields,
+        terms, popover.config.previewCount, null);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The top of the pane - its title, its count and the row with the switch for all of it.
-popover._buildPaneTop = function(pane, titleText, controlText, isOn) {
+// The top of the pane - its title, its count, the switch showing the masked fields alone unless isMaskedOnly is null,
+// and the row with the switch for all of it.
+popover._buildPaneTop = function(pane, titleText, controlText, isOn, isMaskedOnly) {
 
     var header = document.createElement('div');
     header.className = 'mcp-masking-pane-header';
@@ -328,6 +338,20 @@ popover._buildPaneTop = function(pane, titleText, controlText, isOn) {
 
     header.appendChild(title);
     header.appendChild(count);
+
+    if(isMaskedOnly !== null) {
+
+        var only = document.createElement('span');
+        only.className = 'mcp-masking-pane-only';
+
+        var onlyLabel = document.createElement('span');
+        onlyLabel.textContent = popover.config.labels.maskedOnly;
+
+        only.appendChild(popover._buildSwitch(isMaskedOnly));
+        only.appendChild(onlyLabel);
+        header.appendChild(only);
+    }
+
     pane.appendChild(header);
 
     var control = document.createElement('div');
@@ -343,86 +367,24 @@ popover._buildPaneTop = function(pane, titleText, controlText, isOn) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-popover._fillSetPane = function(pane, setName) {
+popover._fillSetPane = function(pane, setName, isMaskedOnly) {
 
     var set = maskingSets.get(setName);
 
     var isAllMasked = popover.maskedCountOf(setName) === set.fields.length;
-    popover._buildPaneTop(pane, set.label, popover.config.labels.selectAll, isAllMasked);
-
-    var list = document.createElement('div');
-    list.className = 'mcp-masking-pane-list';
-
-    for(var fieldIdx = 0; fieldIdx < set.fields.length; fieldIdx++) {
-
-        var fieldRow = document.createElement('div');
-        fieldRow.className = 'mcp-masking-pane-row mcp-masking-pane-field';
-        fieldRow.setAttribute('data-field', set.fields[fieldIdx]);
-
-        var name = document.createElement('span');
-        name.className = 'mcp-masking-mono';
-        name.textContent = set.fields[fieldIdx];
-
-        fieldRow.appendChild(popover._buildSwitch(popover.isMasked(setName, set.fields[fieldIdx])));
-        fieldRow.appendChild(name);
-        list.appendChild(fieldRow);
-    }
-
-    var empty = document.createElement('div');
-    empty.className = 'mcp-masking-pane-empty';
-    empty.textContent = popover.config.labels.noMatches;
-    list.appendChild(empty);
-
-    pane.appendChild(list);
+    popover._buildPaneTop(pane, set.label, popover.config.labels.selectAll, isAllMasked, isMaskedOnly);
+    popover._buildFieldList(pane, set.fields, false);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Marks the rows a filter does not show, null showing them all, and says so when none is left.
-popover._applyFilter = function(pane, predicate) {
-
-    var fieldRows = pane.querySelectorAll('.mcp-masking-pane-field');
-    var shownCount = 0;
-
-    for(var rowIdx = 0; rowIdx < fieldRows.length; rowIdx++) {
-
-        var fieldName = fieldRows[rowIdx].getAttribute('data-field');
-        var isShown = predicate === null || predicate(fieldName);
-
-        fieldRows[rowIdx].classList.toggle('mcp-masking-filtered-out', !isShown);
-
-        if(isShown) {
-            shownCount++;
-        }
-    }
-
-    pane.querySelector('.mcp-masking-pane-empty').classList.toggle('mcp-masking-pane-empty-on', shownCount === 0);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The fields of the set the filter shows.
-popover._shownFields = function(pane) {
-
-    var fieldRows = pane.querySelectorAll('.mcp-masking-pane-field:not(.mcp-masking-filtered-out)');
-    var out = [];
-
-    for(var rowIdx = 0; rowIdx < fieldRows.length; rowIdx++) {
-        out.push(fieldRows[rowIdx].getAttribute('data-field'));
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Whether every field the filter shows is masked, and there is at least one.
-popover._isAllShownMasked = function(pane, setName) {
+// Whether every field the search shows is masked, and there is at least one.
+popover._isAllShownMasked = function(pane) {
 
     var shown = popover._shownFields(pane);
 
     for(var fieldIdx = 0; fieldIdx < shown.length; fieldIdx++) {
-        if(!popover.isMasked(setName, shown[fieldIdx])) {
+        if(!popover.isMasked(shown[fieldIdx])) {
             return false;
         }
     }
@@ -433,16 +395,16 @@ popover._isAllShownMasked = function(pane, setName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-popover._syncSetPane = function(pane, setName) {
+popover._syncFieldPane = function(pane, countText) {
 
     var fieldRows = pane.querySelectorAll('.mcp-masking-pane-field');
 
-    pane.querySelector('.mcp-masking-pane-count').textContent = popover.setCountLabel(setName);
-    popover._setSwitch(pane.querySelector('.mcp-masking-pane-control'), popover._isAllShownMasked(pane, setName));
+    pane.querySelector('.mcp-masking-pane-count').textContent = countText;
+    popover._setSwitch(pane.querySelector('.mcp-masking-pane-control'), popover._isAllShownMasked(pane));
 
     for(var rowIdx = 0; rowIdx < fieldRows.length; rowIdx++) {
         var fieldName = fieldRows[rowIdx].getAttribute('data-field');
-        popover._setSwitch(fieldRows[rowIdx], popover.isMasked(setName, fieldName));
+        popover._setSwitch(fieldRows[rowIdx], popover.isMasked(fieldName));
     }
 };
 
@@ -480,11 +442,19 @@ popover.build = function(row) {
     var labels = config.labels;
     var working = popover.working;
 
-    // The card the pane shows, a set's name or customKey
+    // The card the pane shows, a set's name or customKey, the terms of the search,
+    // and whether the pane shows the fields they match in every set instead
     var focusKey = maskingSets.all()[0].name;
+    var terms = [];
+    var isResults = false;
 
-    // What the filter of the pane's set shows - a function of a field's name, or null for every field
-    var predicate = null;
+    // The masked-only view keeps the fields masked when it was last asked for, so a field switched off stays in sight
+    var isMaskedOnly = false;
+    var maskedOnlyFields = null;
+
+    var takeMaskedOnly = function() {
+        maskedOnlyFields = isMaskedOnly ? popover.search.maskedInPane(pane) : null;
+    };
 
     var layout = document.createElement('div');
     layout.className = 'mcp-masking-layout';
@@ -502,66 +472,104 @@ popover.build = function(row) {
     total.className = 'mcp-masking-total';
     row.appendChild(total);
 
+    var searchRow = popover.search.build(function(newTerms) {
+        terms = newTerms;
+        isResults = terms.length > 0;
+        renderPane(false);
+    });
+    cards.appendChild(searchRow.element);
+
     var customCard = popover._buildCardFrame(config.customKey, labels.custom, working.isCustomEnabled);
     cards.appendChild(customCard);
 
     var sets = maskingSets.all();
 
     for(var setIdx = 0; setIdx < sets.length; setIdx++) {
-        cards.appendChild(popover._buildSetCard(sets[setIdx]));
+        cards.appendChild(popover._buildCardFrame(sets[setIdx].name, sets[setIdx].label, popover.isPicked(sets[setIdx].name)));
     }
+
+    var cardsEmpty = document.createElement('div');
+    cardsEmpty.className = 'mcp-masking-cards-empty';
+    cardsEmpty.textContent = labels.noMatches;
+    cards.appendChild(cardsEmpty);
+
+    var fieldsOf = function(key) {
+
+        if(key === config.customKey) {
+            return working.customFields;
+        }
+
+        var out = maskingSets.allFieldsOf(key);
+        return out;
+    };
 
     var syncAll = function() {
 
-        var setCards = cards.querySelectorAll('.mcp-masking-card');
+        var allCards = cards.querySelectorAll('.mcp-masking-card');
+        var found = [];
+        var foundSetCount = 0;
 
-        for(var cardIdx = 0; cardIdx < setCards.length; cardIdx++) {
+        for(var cardIdx = 0; cardIdx < allCards.length; cardIdx++) {
 
-            var card = setCards[cardIdx];
-            card.classList.toggle('mcp-masking-card-focused', card.getAttribute('data-key') === focusKey);
+            var card = allCards[cardIdx];
+            var key = card.getAttribute('data-key');
+            var matched = popover.search.matching(fieldsOf(key), terms);
 
-            if(card !== customCard) {
-                popover._syncSetCard(card);
+            card.classList.toggle('mcp-masking-card-focused', !isResults && key === focusKey);
+            card.classList.toggle('mcp-masking-card-unmatched', terms.length > 0 && matched.length === 0);
+
+            if(key === config.customKey) {
+                popover._syncCustomCard(card, terms);
             }
+            else {
+                popover._syncSetCard(card, terms);
+
+                if(matched.length > 0) {
+                    foundSetCount++;
+                }
+            }
+
+            found = maskingSets.merge(found, matched);
         }
 
-        popover._syncCustomCard(customCard);
+        cardsEmpty.classList.toggle('mcp-masking-cards-empty-on', terms.length > 0 && found.length === 0);
+        searchRow.setResult(terms.length === 0 ? '' : popover.search.resultText(found.length, foundSetCount), found.length === 0);
 
-        if(focusKey === config.customKey) {
+        if(isResults) {
+            popover._applyFilter(pane, terms, maskedOnlyFields);
+            popover._syncFieldPane(pane, popover.search.resultsCountLabel(pane));
+        }
+        else if(focusKey === config.customKey) {
             popover._syncCustomPane(pane);
         }
         else {
-            popover._applyFilter(pane, predicate);
-            popover._syncSetPane(pane, focusKey);
+            popover._applyFilter(pane, terms, maskedOnlyFields);
+            popover._syncFieldPane(pane, popover.setCountLabel(focusKey));
         }
 
         popover._syncTotal(total);
     };
 
-    var renderPane = function() {
+    // The editor of the custom fields takes the cursor only when its card was clicked, never away from the search
+    var renderPane = function(isClicked) {
 
-        // Each set opens with its whole list, whatever the previous one was filtered by
         pane.textContent = '';
-        predicate = null;
 
-        if(focusKey !== config.customKey) {
-
-            popover._fillSetPane(pane, focusKey);
-
-            popover.filter({
-                pane: pane,
-                control: pane.querySelector('.mcp-masking-pane-control'),
-                filter: function(newPredicate) {
-                    predicate = newPredicate;
-                    syncAll();
-                }
-            });
-
+        if(isResults) {
+            popover.search.fillResultsPane(pane, terms, isMaskedOnly);
+            takeMaskedOnly();
             syncAll();
             return;
         }
 
-        popover._buildPaneTop(pane, labels.custom, labels.enabled, working.isCustomEnabled);
+        if(focusKey !== config.customKey) {
+            popover._fillSetPane(pane, focusKey, isMaskedOnly);
+            takeMaskedOnly();
+            syncAll();
+            return;
+        }
+
+        popover._buildPaneTop(pane, labels.custom, labels.enabled, working.isCustomEnabled, null);
 
         var editorHost = document.createElement('div');
         editorHost.className = 'mcp-masking-pane-editor';
@@ -574,7 +582,11 @@ popover.build = function(row) {
             syncAll();
         });
 
-        editor.textarea.focus();
+        syncAll();
+
+        if(isClicked) {
+            editor.textarea.focus();
+        }
     };
 
     $(cards).on('click', '.mcp-masking-card', function(event) {
@@ -596,33 +608,56 @@ popover.build = function(row) {
         }
 
         // .. and the rest of the card shows it in the pane.
-        if(key !== focusKey) {
+        if(isResults || key !== focusKey) {
             focusKey = key;
-            renderPane();
+            isResults = false;
+            renderPane(true);
         }
+    });
+
+    // A field of the results switched on picks the first set listing it if no picked set lists it
+    var paneSetOf = function(fieldName) {
+
+        if(isResults) {
+            return maskingSets.setsListing(fieldName)[0];
+        }
+
+        return focusKey;
+    };
+
+    // Select all takes the state of the fields now shown at once, without sliding into it
+    $(pane).on('click', '.mcp-masking-pane-only', function() {
+        isMaskedOnly = !isMaskedOnly;
+        popover._setSwitch(this, isMaskedOnly);
+        takeMaskedOnly();
+        pane.classList.add('mcp-masking-pane-instant');
+        syncAll();
+        pane.getBoundingClientRect();
+        pane.classList.remove('mcp-masking-pane-instant');
     });
 
     $(pane).on('click', '.mcp-masking-pane-row', function() {
 
         if(this.classList.contains('mcp-masking-pane-field')) {
-            popover.toggleField(focusKey, this.getAttribute('data-field'));
+            var fieldName = this.getAttribute('data-field');
+            popover.toggleField(paneSetOf(fieldName), fieldName);
         }
-        else if(focusKey === config.customKey) {
+        else if(!isResults && focusKey === config.customKey) {
             working.isCustomEnabled = !working.isCustomEnabled;
         }
         else {
             var shown = popover._shownFields(pane);
-            var isOn = !popover._isAllShownMasked(pane, focusKey);
+            var isOn = !popover._isAllShownMasked(pane);
 
             for(var fieldIdx = 0; fieldIdx < shown.length; fieldIdx++) {
-                popover.setFieldMasked(focusKey, shown[fieldIdx], isOn);
+                popover.setFieldMasked(paneSetOf(shown[fieldIdx]), shown[fieldIdx], isOn);
             }
         }
 
         syncAll();
     });
 
-    renderPane();
+    renderPane(false);
 };
 
 // ////////////////////////////////////////////////////////////////////////

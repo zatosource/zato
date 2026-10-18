@@ -93,6 +93,18 @@ def assigned_badge_selector(card_name:'str', badge_name:'str') -> 'str':
 
 # ################################################################################################################################
 
+def close_assign_popover(page:'Page') -> 'None':
+    """ Closes the popover the picker cards of step 1 open their sections in, if it is open - it covers
+    the step strip and the cards' headers, and its OK button only closes it, the pickers edit the form directly.
+    """
+    if not page.query_selector('#mcp-wizard-popup .mcp-assign'):
+        return
+
+    page.click('#mcp-wizard-popup .micro-form-buttons button.action-button')
+    _ = page.wait_for_selector('#mcp-wizard-popup', state='detached', timeout=_Wizard_Timeout)
+
+# ################################################################################################################################
+
 def select_tool_source(page:'Page', source_key:'str') -> 'None':
     """ Puts one source's items on the Tools card's picker - opening the card,
     clicking the source's row in the tree and waiting until the row is the active one.
@@ -103,6 +115,7 @@ def select_tool_source(page:'Page', source_key:'str') -> 'None':
         f'document.getElementById("mcp-wizard-{Tools_Card}-body").classList.contains("wizard-option-body-open")')
 
     if not is_open:
+        close_assign_popover(page)
         page.click(f'#mcp-wizard-{Tools_Card}-header')
         _ = page.wait_for_selector(f'#mcp-wizard-{Tools_Card}-body', state='visible', timeout=_Wizard_Timeout)
 

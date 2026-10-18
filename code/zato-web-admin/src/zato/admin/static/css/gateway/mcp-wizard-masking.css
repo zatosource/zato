@@ -1,14 +1,14 @@
 /*
- * MCP gateway wizard - data masking, at the head of the PII and data masking section.
+ * MCP gateway wizard - data masking, a row of step 2.
  *
- * The tokens, the data masking line, the controls the popover shares with it
+ * The tokens, the controls the popover shares with it
  * and the line-numbered editor of field names. The popover itself is in
  * gateway/mcp-wizard-masking-popover.css. It is appended to document.body,
  * so its rules are not scoped to the section.
  */
 
 /* ------------------------------------------------------------ */
-/* Data masking - tokens                                         */
+/* Data masking - tokens                                        */
 /* ------------------------------------------------------------ */
 
 /* The gutter and the text of the editor share one font and one line height,
@@ -42,15 +42,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Data masking - the data masking line                          */
-/* ------------------------------------------------------------ */
-
-.mcp-wizard-masking {
-    margin-bottom: 14px;
-}
-
-/* ------------------------------------------------------------ */
-/* Data masking - controls shared by the popovers                */
+/* Data masking - controls shared by the popovers               */
 /* ------------------------------------------------------------ */
 
 /* A <button> receives the raised look of formalize.css in each of its states,
@@ -74,7 +66,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Data masking - the line-numbered editor                       */
+/* Data masking - the line-numbered editor                      */
 /* ------------------------------------------------------------ */
 
 .mcp-field-list-editor {

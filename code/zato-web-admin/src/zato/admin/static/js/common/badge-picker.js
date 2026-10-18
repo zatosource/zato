@@ -13,6 +13,10 @@ $.fn.zato.badge_picker = {};
 
 $.fn.zato.badge_picker._default_config = {
 
+    // What a zone with no badges in it shows
+    empty_available_text: 'None available',
+    empty_assigned_text: 'None assigned',
+
     // Build a single badge DOM element from an item. Override to change badge layout.
     make_badge: function(item, num) {
         var badge = $('<div/>', { 'class': 'security-badge', 'data-id': item.id, 'data-name': (item.name || '').toLowerCase() });
@@ -71,6 +75,9 @@ $.fn.zato.badge_picker.init = function(action, data, config) {
     available_body.empty();
     assigned_body.empty();
 
+    available_body.attr('data-empty-text', config.empty_available_text);
+    assigned_body.attr('data-empty-text', config.empty_assigned_text);
+
     var assigned_items = [];
     var available_items = [];
 
@@ -85,13 +92,12 @@ $.fn.zato.badge_picker.init = function(action, data, config) {
     assigned_items.sort(config.sort_items);
     available_items.sort(config.sort_items);
 
-    var num = 1;
-
+    // Each zone numbers its own badges from 1
     for (var assigned_idx = 0; assigned_idx < assigned_items.length; assigned_idx++) {
-        assigned_body.append(config.make_badge(assigned_items[assigned_idx], num++));
+        assigned_body.append(config.make_badge(assigned_items[assigned_idx], assigned_idx + 1));
     }
     for (var available_idx = 0; available_idx < available_items.length; available_idx++) {
-        available_body.append(config.make_badge(available_items[available_idx], num++));
+        available_body.append(config.make_badge(available_items[available_idx], available_idx + 1));
     }
 
     $.fn.zato.badge_picker.update_counts(action);
@@ -101,17 +107,30 @@ $.fn.zato.badge_picker.init = function(action, data, config) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// The badges of a zone the filter leaves in it. The filter hides a badge
+// through its own style, which is what is read here rather than :visible -
+// a picker that is not on screen, e.g. in a folded card, would otherwise
+// count no badges at all.
+$.fn.zato.badge_picker._shown_badges = function(action, zone) {
+    var out = $('#badge-zone-' + zone + '-' + action + ' .badge-zone-body .security-badge').filter(function() {
+        return this.style.display !== 'none';
+    });
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.badge_picker.renumber = function(action) {
     var num;
 
     num = 1;
-    $('#badge-zone-available-' + action + ' .badge-zone-body .security-badge:visible').each(function() {
+    $.fn.zato.badge_picker._shown_badges(action, 'available').each(function() {
         $(this).find('.security-badge-number').text(num + '.');
         num++;
     });
 
     num = 1;
-    $('#badge-zone-assigned-' + action + ' .badge-zone-body .security-badge:visible').each(function() {
+    $.fn.zato.badge_picker._shown_badges(action, 'assigned').each(function() {
         $(this).find('.security-badge-number').text(num + '.');
         num++;
     });
@@ -120,7 +139,7 @@ $.fn.zato.badge_picker.renumber = function(action) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.badge_picker.update_counts = function(action) {
-    var available_count = $('#badge-zone-available-' + action + ' .badge-zone-body .security-badge:visible').length;
+    var available_count = $.fn.zato.badge_picker._shown_badges(action, 'available').length;
     var assigned_count = $('#badge-zone-assigned-' + action + ' .badge-zone-body .security-badge').length;
     $('#badge-zone-available-' + action + ' .badge-zone-count').text(available_count);
     $('#badge-zone-assigned-' + action + ' .badge-zone-count').text(assigned_count);
@@ -137,6 +156,11 @@ $.fn.zato.badge_picker.attach_events = function(action, config) {
         // A badge may carry controls of its own, e.g. a switch or a select -
         // those answer to their own clicks, they never move the badge
         if ($(e.target).is('input, select, textarea, button, label, option')) {
+            return;
+        }
+
+        // A marquee drawn within one row ends in a click on that row, which leaves the row where it is
+        if (marquee_state.just_ended) {
             return;
         }
 
@@ -186,6 +210,13 @@ $.fn.zato.badge_picker.attach_events = function(action, config) {
 
         var zone_body = $(this);
         var badge = $(e.target).closest('.security-badge');
+
+        // A full zone has no free space left between its rows, so a press on
+        // a row past its text starts a marquee the way a press on the zone does
+        if (e.target === badge[0]) {
+            badge = $();
+        }
+
         var offset = zone_body.offset();
         var scroll_top = zone_body.scrollTop();
         var scroll_left = zone_body.scrollLeft();
@@ -314,6 +345,12 @@ $.fn.zato.badge_picker.attach_events = function(action, config) {
     $(document).off('mouseup.unified_' + action).on('mouseup.unified_' + action, function(e) {
         if (marquee_state.active) {
             marquee_state.active = false;
+
+            // The click that follows this mouseup is dispatched before the timer runs
+            marquee_state.just_ended = true;
+            setTimeout(function() {
+                marquee_state.just_ended = false;
+            }, 0);
             if (marquee_state.marquee) {
                 marquee_state.marquee.remove();
                 marquee_state.marquee = null;
