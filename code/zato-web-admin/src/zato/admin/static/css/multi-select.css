@@ -258,10 +258,13 @@ label.toggle:hover {
     flex-shrink: 0;
 }
 
+/* The common width keeps the names after the chips in one column, and a
+   type name longer than it, e.g. Bearer token, widens its own chip */
 .security-badge-type {
     display: inline-block;
-    width: 76px;
+    min-width: 78px;
     padding: 3px 6px;
+    white-space: nowrap;
     font-size: 10px;
     font-weight: 600;
     margin-right: 10px;

@@ -47,7 +47,10 @@ a failed one opens when its details are asked for {% endcomment %}
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-popover.css">
 <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-filters.css">
-<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-pii.css">{% endblock %}
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-pii.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-assign.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-surface.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-ledger.css">{% endblock %}
 
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
@@ -81,7 +84,9 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/data-masking.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-popover.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/masking-filters.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/pii.js"></script><script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/pii.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/assign.js"></script>
 
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
@@ -123,11 +128,11 @@ $(document).ready(function() {
                 <div class="dashboard-tabs wizard-steps" id="mcp-wizard-steps" role="tablist" aria-label="Wizard steps">
                     <button type="button" class="dashboard-tab wizard-step wizard-step-active dashboard-tab-active" data-step="0" role="tab" aria-selected="true">
                         <span class="wizard-step-num">01</span>
-                        <span class="dashboard-tab-label">How do agents connect?</span>
+                        <span class="dashboard-tab-label">Basic config</span>
                     </button>
                     <button type="button" class="dashboard-tab wizard-step" data-step="1" role="tab" aria-selected="false">
                         <span class="wizard-step-num">02</span>
-                        <span class="dashboard-tab-label">What do they receive?</span>
+                        <span class="dashboard-tab-label">More options</span>
                     </button>
                     <button type="button" class="dashboard-tab wizard-step" data-step="2" role="tab" aria-selected="false">
                         <span class="wizard-step-num">03</span>
@@ -156,9 +161,8 @@ $(document).ready(function() {
 
                     <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-tools">
                         <div class="wizard-option-header" id="mcp-wizard-tools-header">
-                            <svg class="wizard-chevron" id="mcp-wizard-tools-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                            <span class="wizard-option-label"><label for="badge-filter-text-wizard">Tools</label></span>
-                            <span class="wizard-option-summary" id="mcp-wizard-summary-tools"></span>
+                            <span class="wizard-option-label"><label for="badge-filter-text-wizard">Tools</label><svg class="wizard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                            <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-tools"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-tools"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         <div class="wizard-option-body" id="mcp-wizard-tools-body">
                         <div class="mcp-tool-sources">
@@ -186,9 +190,8 @@ $(document).ready(function() {
 
                     <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-skills">
                         <div class="wizard-option-header" id="mcp-wizard-skills-header">
-                            <svg class="wizard-chevron" id="mcp-wizard-skills-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                            <span class="wizard-option-label"><label for="badge-filter-text-skills-wizard">Skills</label></span>
-                            <span class="wizard-option-summary" id="mcp-wizard-summary-skills"></span>
+                            <span class="wizard-option-label"><label for="badge-filter-text-skills-wizard">Skills</label><svg class="wizard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                            <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-skills"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-skills"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         <div class="wizard-option-body" id="mcp-wizard-skills-body">
                         <div class="badge-picker-filter" id="badge-filter-skills-wizard">
@@ -211,9 +214,8 @@ $(document).ready(function() {
 
                     <div class="wizard-option-card mcp-wizard-picker" id="mcp-wizard-picker-security">
                         <div class="wizard-option-header" id="mcp-wizard-security-header">
-                            <svg class="wizard-chevron" id="mcp-wizard-security-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                            <span class="wizard-option-label"><label for="badge-filter-text-sec-wizard">Security</label></span>
-                            <span class="wizard-option-summary" id="mcp-wizard-summary-security"></span>
+                            <span class="wizard-option-label"><label for="badge-filter-text-sec-wizard">Security</label><svg class="wizard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                            <a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-security"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-security"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                         <div class="wizard-option-body" id="mcp-wizard-security-body">
                         <div class="dashboard-tabs mcp-wizard-security-tabs" id="mcp-wizard-security-tabs" role="tablist">
@@ -278,8 +280,8 @@ $(document).ready(function() {
 
                         <div class="decision-lines mcp-wizard-wide-labels">
                             <div class="decision-line mcp-wizard-pii-line" id="mcp-wizard-pii-line">
-                                <span class="decision-line-label">PII and data masking</span>
-                                <span class="decision-line-slot"><span class="mcp-wizard-pii-summary" id="mcp-wizard-summary-pii"></span><svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                                <span class="decision-line-label">PII and data masking<svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                                <span class="decision-line-slot"><span class="mcp-wizard-pii-summary" id="mcp-wizard-summary-pii"></span></span>
                             </div>
                         </div>
 
@@ -314,7 +316,7 @@ $(document).ready(function() {
                     <div class="wizard-section">
 
                         <div class="decision-line mcp-wizard-wide-labels" id="mcp-wizard-row-options">
-                            <label class="decision-line-label" for="mcp-wizard-edit-options">More options</label>
+                            <label class="decision-line-label" for="mcp-wizard-edit-options">More options<svg class="wizard-chevron" id="mcp-wizard-options-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></label>
                             <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="mcp-wizard-edit-options"><span class="zato-link-face summary-link-text" id="mcp-wizard-summary-options"></span><span class="zato-soft-hint" id="mcp-wizard-hint-options"></span></a></span>
                         </div>
 
@@ -336,8 +338,7 @@ $(document).ready(function() {
 
                         <div class="wizard-option-card" id="mcp-wizard-card-hooks">
                             <div class="wizard-option-header" id="mcp-wizard-hooks-header">
-                                <svg class="wizard-chevron" id="mcp-wizard-hooks-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                <span class="wizard-option-label">Hook services</span>
+                                <span class="wizard-option-label">Hook services<svg class="wizard-chevron" id="mcp-wizard-hooks-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
                                 <span class="wizard-option-summary" id="mcp-wizard-summary-hooks"></span>
                             </div>
                             <div class="wizard-option-body" id="mcp-wizard-hooks-body">
@@ -359,16 +360,14 @@ $(document).ready(function() {
 
                         <div class="wizard-option-card" id="mcp-wizard-card-safety">
                             <div class="wizard-option-header" id="mcp-wizard-safety-header">
-                                <svg class="wizard-chevron" id="mcp-wizard-safety-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                <span class="wizard-option-label">Content safety</span>
+                                <span class="wizard-option-label">Content safety<svg class="wizard-chevron" id="mcp-wizard-safety-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
                                 <span class="wizard-option-summary" id="mcp-wizard-summary-safety"></span>
                             </div>
                             <div class="wizard-option-body" id="mcp-wizard-safety-body">
 
                                 <div class="wizard-collapse-group">
                                     <div class="wizard-collapse-group-title">
-                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                        Unicode
+                                        Unicode<svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                                     </div>
                                     <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
                                         <label for="{{ form.safeguards_normalize_unicode.id_for_label }}">Remove hidden control characters {{ form.safeguards_normalize_unicode }}</label>
@@ -378,8 +377,7 @@ $(document).ready(function() {
 
                                 <div class="wizard-collapse-group">
                                     <div class="wizard-collapse-group-title">
-                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                        Markup
+                                        Markup<svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                                     </div>
                                     <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
                                         <label for="{{ form.safeguards_sanitize_markup.id_for_label }}">Remove active HTML and Markdown {{ form.safeguards_sanitize_markup }}</label>
@@ -389,8 +387,7 @@ $(document).ready(function() {
 
                                 <div class="wizard-collapse-group">
                                     <div class="wizard-collapse-group-title">
-                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                        URL policy
+                                        URL policy<svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                                     </div>
                                     <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
                                         <label for="{{ form.safeguards_url_policy_enabled.id_for_label }}">Check URLs in responses {{ form.safeguards_url_policy_enabled }}</label>
@@ -401,8 +398,7 @@ $(document).ready(function() {
 
                                 <div class="wizard-collapse-group">
                                     <div class="wizard-collapse-group-title">
-                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                        Secrets
+                                        Secrets<svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                                     </div>
                                     <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
                                         <label for="{{ form.safeguards_secrets_enabled.id_for_label }}">Remove secrets from responses {{ form.safeguards_secrets_enabled }}</label>

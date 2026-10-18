@@ -547,18 +547,18 @@ class TestMCPWizard:
         wizard_page.assign_badge(page, 'services', service_name_1)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '1 Services', f'Expected "1 Services", got: {summary}'
+        assert summary == 'Services (1)', f'Expected "Services (1)", got: {summary}'
 
         wizard_page.assign_badge(page, 'services', service_name_2)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '2 Services', f'Expected "2 Services", got: {summary}'
+        assert summary == 'Services (2)', f'Expected "Services (2)", got: {summary}'
 
         # .. and removing walks it back.
         wizard_page.remove_assigned_badge(page, 'services', service_name_1)
 
         summary = wizard_page.get_picker_summary(page, 'services')
-        assert summary == '1 Services', f'Expected "1 Services" after removal, got: {summary}'
+        assert summary == 'Services (1)', f'Expected "Services (1)" after removal, got: {summary}'
 
         # The review's Edit link on the Tools group goes back to step 1 with the card open ..
         wizard_page.go_to_step(page, wizard_page.Review_Step)

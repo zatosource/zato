@@ -25,10 +25,7 @@ toolSources.config = {
     listId: 'mcp-wizard-tool-source-list',
 
     // The action the shared badge picker is registered under
-    pickerAction: 'wizard',
-
-    // What the card summary says while nothing is assigned anywhere
-    noneAssignedLabel: 'None assigned'
+    pickerAction: 'wizard'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -323,12 +320,12 @@ toolSources.syncCounts = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The card's one-line summary - what is assigned per source, e.g.
-// "4 Services, 2 REST", or that nothing is assigned anywhere.
-toolSources.summary = function() {
+// How many items each source has assigned, in tree order, the sources
+// with nothing assigned left out.
+toolSources.assignedCounts = function() {
 
     var state = toolSources.state;
-    var parts = [];
+    var out = [];
 
     for(var sourceIndex = 0; sourceIndex < state.sources.length; sourceIndex++) {
 
@@ -336,15 +333,10 @@ toolSources.summary = function() {
         var assignedCount = toolSources.assignedNames(source.key).length;
 
         if(assignedCount) {
-            parts.push(assignedCount + ' ' + source.full_label);
+            out.push({label: source.full_label, count: assignedCount});
         }
     }
 
-    if(!parts.length) {
-        return toolSources.config.noneAssignedLabel;
-    }
-
-    var out = parts.join(', ');
     return out;
 };
 

@@ -67,9 +67,16 @@ review.config = {
         'safeguards_secrets_enabled'
     ],
 
-    // The words the picker card summaries are written with
-    assignedLabel: ' assigned',
-    noneAssignedLabel: 'None assigned'
+    // What a picker card's summary says while nothing is assigned in it
+    noneAssignedLabel: 'None assigned',
+
+    // The one group the Skills card counts its badges in
+    skillsLabel: 'Skills',
+
+    // How each group of a picker card's summary is written, e.g. Services (3)
+    countOpen: ' (',
+    countClose: ')',
+    groupSeparator: ', '
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -91,33 +98,95 @@ review.pickerCards = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What one picker card's summary says - the Tools card counts its picks
-// per source, the other two count their assigned badges.
-review._cardSummary = function(card) {
+// What one picker card has assigned, counted in groups - per tool source
+// for the Tools card, per security type for the Security card and as one
+// group for the Skills card. A group with nothing assigned is left out.
+review._cardGroups = function(card) {
 
-    var out;
+    var config = review.config;
 
     if(card.name === 'tools') {
         wizard.toolSources.syncCounts();
-        out = wizard.toolSources.summary();
-    } else {
-        out = review._pickerSummary(card.action);
+        return wizard.toolSources.assignedCounts();
     }
+
+    var badges = wizard.assignedBadges(card.action);
+
+    if(card.name === 'skills') {
+        if(badges.length === 0) {
+            return [];
+        }
+        return [{label: config.skillsLabel, count: badges.length}];
+    }
+
+    var out = [];
+    var byType = {};
+
+    // The types are counted in the order the assigned zone lists them
+    badges.each(function() {
+
+        var typeName = $(this).find('.security-badge-type').text();
+
+        if(!(typeName in byType)) {
+            byType[typeName] = {label: typeName, count: 0};
+            out.push(byType[typeName]);
+        }
+
+        byType[typeName].count++;
+    });
 
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
+review._cardCount = function(card) {
+
+    var out = 0;
+
+    review._cardGroups(card).forEach(function(group) {
+        out += group.count;
+    });
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What one picker card's summary says, e.g. Services (3), Microsoft Teams (1).
+review._cardSummary = function(card) {
+
+    var config = review.config;
+    var groups = review._cardGroups(card);
+
+    if(groups.length === 0) {
+        return config.noneAssignedLabel;
+    }
+
+    var out = groups.map(function(group) {
+        return group.label + config.countOpen + group.count + config.countClose;
+    }).join(config.groupSeparator);
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._showCardSummary = function(card) {
+    review.setSummary('mcp-wizard-summary-' + card.name, review._cardSummary(card));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 review.initOptionCards = function() {
 
-    // The picker cards of step 1 expand and collapse in place, and each
-    // summary follows its assigned zone as badges move in and out ..
+    // The picker cards of step 1 open their sections in the popover of assign.js, and each
+    // summary, on the card and in the popover's index, follows its assigned zone
+    // as badges move in and out ..
     review.pickerCards().forEach(function(card) {
 
         $('#mcp-wizard-' + card.name + '-header').on('click', function() {
-            $('#mcp-wizard-' + card.name + '-body').toggleClass('wizard-option-body-open');
-            $('#mcp-wizard-' + card.name + '-chevron').toggleClass('wizard-chevron-open');
+            wizard.assign.open(card.name, this);
         });
 
         // The pickers load after this wiring runs and badges travel between
@@ -126,7 +195,8 @@ review.initOptionCards = function() {
         var assignedZone = document.querySelector('#badge-zone-assigned-' + card.action + ' .badge-zone-body');
 
         var observer = new MutationObserver(function() {
-            review.setSummary('mcp-wizard-summary-' + card.name, review._cardSummary(card));
+            review._showCardSummary(card);
+            wizard.assign.refreshIndex();
         });
 
         observer.observe(assignedZone, {childList: true});
@@ -157,12 +227,15 @@ review.initOptionCards = function() {
 
     review._placeFieldGridHelp();
 
-    // .. the whole options block is folded away behind one line,
-    // its link saying what is inside ..
+    // .. the whole options block is folded away behind one line, the whole
+    // of which opens and closes it, its link saying what is inside ..
     $.fn.zato.wizard_kit.collapse.initSection({
-        toggleId: 'mcp-wizard-edit-options',
+        toggleId: 'mcp-wizard-row-options',
         bodyId: 'mcp-wizard-options-body',
-        hintId: 'mcp-wizard-hint-options'
+        hintId: 'mcp-wizard-hint-options',
+        onToggle: function(isOpen) {
+            $('#mcp-wizard-options-chevron').toggleClass('wizard-chevron-open', isOpen);
+        }
     });
 
     // .. and the summaries follow the inline fields as they change - the
@@ -264,23 +337,6 @@ review._multiSelectLabels = function(fieldName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What one picker card's summary says - how many badges its assigned
-// zone holds.
-review._pickerSummary = function(pickerAction) {
-
-    var config = review.config;
-
-    var assignedCount = wizard.assignedBadges(pickerAction).length;
-    if(!assignedCount) {
-        return config.noneAssignedLabel;
-    }
-
-    var out = assignedCount + config.assignedLabel;
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 review._safetySummary = function() {
 
     var config = review.config;
@@ -315,9 +371,7 @@ review._optionsSummary = function() {
 // Recomputes every line and card summary.
 review.refreshSummaries = function() {
 
-    review.pickerCards().forEach(function(card) {
-        review.setSummary('mcp-wizard-summary-' + card.name, review._cardSummary(card));
-    });
+    review.pickerCards().forEach(review._showCardSummary);
 
     review.setSummary('mcp-wizard-summary-size-caps', review._sizeCapsSummary());
     review.setSummary(wizard.alerts.config.summaryId, wizard.alerts.summary());
@@ -439,15 +493,9 @@ review._urlPolicySummary = function() {
 // so the answer is there to be changed rather than to be looked for. The
 // Basics group has none - its answers are the top rows of step 1 itself.
 
-// A picker card inside a closed body has nothing to show, so an Edit link
-// opens the card first and reveals it then.
+// A picker card's Edit link opens the popover on the card's section.
 review._openPickerCard = function(name) {
-
-    if(!$('#mcp-wizard-' + name + '-body').hasClass('wizard-option-body-open')) {
-        $('#mcp-wizard-' + name + '-header').trigger('click');
-    }
-
-    wizard.reveal(document.getElementById('mcp-wizard-picker-' + name));
+    wizard.assign.open(name, document.getElementById('mcp-wizard-' + name + '-header'));
 };
 
 // ////////////////////////////////////////////////////////////////////////

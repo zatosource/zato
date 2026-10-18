@@ -127,6 +127,7 @@ $.namespace('zato.gateway');
 $.namespace('zato.gateway.mcp');
 $.namespace('zato.gateway.mcp.data_table');
 $.namespace('zato.gateway.mcp.wizard');
+$.namespace('zato.gateway.mcp.wizard.assign');
 $.namespace('zato.gateway.mcp.wizard.dataMasking');
 $.namespace('zato.gateway.mcp.wizard.forms');
 $.namespace('zato.gateway.mcp.wizard.hooks');

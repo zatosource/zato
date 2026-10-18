@@ -115,12 +115,6 @@
     margin-bottom: 18px;
 }
 
-/* One column - the filter above the two zones, the way the gateway
-   list's own popups lay it out */
-.mcp-wizard-picker .badge-picker-filter {
-    margin-bottom: 6px;
-}
-
 /* The two zones of a picker need the row's whole width - the shared card
    width fits the field grids of step 2, not a picker */
 .mcp-wizard-picker.wizard-option-card {
@@ -155,7 +149,6 @@
    The scrollbar is always there, inactive when everything fits */
 .mcp-tool-source-list {
     flex: 0 0 auto;
-    min-width: 190px;
     overflow-y: scroll;
     scrollbar-width: thin;
     scrollbar-color: var(--zato-ui-border) transparent;
@@ -223,8 +216,12 @@
     background: rgba(41, 128, 185, 0.08);
 }
 
+/* The count keeps the room of two digits, so the tree, as wide as its
+   text, does not change its width as items are assigned */
 .mcp-tool-source-count {
+    min-width: 2ch;
     font-size: 11px;
+    text-align: right;
     color: var(--mcp-tool-text-color);
 }
 

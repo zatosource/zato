@@ -337,7 +337,7 @@ def get_available_badge_names(page:'Page', card_name:'str') -> 'strlist':
 # ################################################################################################################################
 
 def get_picker_summary(page:'Page', card_name:'str') -> 'str':
-    """ What the card's header summary currently says, e.g. None assigned or 2 assigned.
+    """ What the card's header summary currently says, e.g. None assigned or Services (2).
     Every tool source reads the Tools card's summary, which spans all the sources.
     """
     if card_name in Tool_Source_Keys:

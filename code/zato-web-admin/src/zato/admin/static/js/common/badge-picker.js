@@ -85,13 +85,12 @@ $.fn.zato.badge_picker.init = function(action, data, config) {
     assigned_items.sort(config.sort_items);
     available_items.sort(config.sort_items);
 
-    var num = 1;
-
+    // Each zone numbers its own badges from 1
     for (var assigned_idx = 0; assigned_idx < assigned_items.length; assigned_idx++) {
-        assigned_body.append(config.make_badge(assigned_items[assigned_idx], num++));
+        assigned_body.append(config.make_badge(assigned_items[assigned_idx], assigned_idx + 1));
     }
     for (var available_idx = 0; available_idx < available_items.length; available_idx++) {
-        available_body.append(config.make_badge(available_items[available_idx], num++));
+        available_body.append(config.make_badge(available_items[available_idx], available_idx + 1));
     }
 
     $.fn.zato.badge_picker.update_counts(action);
@@ -101,17 +100,30 @@ $.fn.zato.badge_picker.init = function(action, data, config) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// The badges of a zone the filter leaves in it. The filter hides a badge
+// through its own style, which is what is read here rather than :visible -
+// a picker that is not on screen, e.g. in a folded card, would otherwise
+// count no badges at all.
+$.fn.zato.badge_picker._shown_badges = function(action, zone) {
+    var out = $('#badge-zone-' + zone + '-' + action + ' .badge-zone-body .security-badge').filter(function() {
+        return this.style.display !== 'none';
+    });
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.badge_picker.renumber = function(action) {
     var num;
 
     num = 1;
-    $('#badge-zone-available-' + action + ' .badge-zone-body .security-badge:visible').each(function() {
+    $.fn.zato.badge_picker._shown_badges(action, 'available').each(function() {
         $(this).find('.security-badge-number').text(num + '.');
         num++;
     });
 
     num = 1;
-    $('#badge-zone-assigned-' + action + ' .badge-zone-body .security-badge:visible').each(function() {
+    $.fn.zato.badge_picker._shown_badges(action, 'assigned').each(function() {
         $(this).find('.security-badge-number').text(num + '.');
         num++;
     });
@@ -120,7 +132,7 @@ $.fn.zato.badge_picker.renumber = function(action) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.badge_picker.update_counts = function(action) {
-    var available_count = $('#badge-zone-available-' + action + ' .badge-zone-body .security-badge:visible').length;
+    var available_count = $.fn.zato.badge_picker._shown_badges(action, 'available').length;
     var assigned_count = $('#badge-zone-assigned-' + action + ' .badge-zone-body .security-badge').length;
     $('#badge-zone-available-' + action + ' .badge-zone-count').text(available_count);
     $('#badge-zone-assigned-' + action + ' .badge-zone-count').text(assigned_count);
