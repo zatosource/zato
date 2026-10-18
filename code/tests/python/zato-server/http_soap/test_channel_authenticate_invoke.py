@@ -1271,6 +1271,27 @@ class LogIncomingRequestTestCase(unittest.TestCase):
         self.assertIn('<no-channel>', call_args)
 
 # ################################################################################################################################
+
+    @patch('zato.server.connection.http_soap.channel.logger')
+    def test_nonprintable_characters_are_escaped(self, mock_logger:'MagicMock') -> 'None':
+        """ Non-printable characters in the URI, user agent and remote address are logged as escape sequences.
+        """
+        ctx = _make_dispatcher()
+        ctx.dispatcher.server.rest_log_ignore = set()
+        channel_item = _make_channel_item()
+        meta = _make_meta(path_info='/api/test', raw_uri='/api/test\x9e\x0e\x1b[2J')
+
+        ctx.dispatcher._log_incoming_request(
+            _test_cid, meta, channel_item, 'test.channel', b'', 'TestAgent/1.0\n', '1.2.3.4\x07')
+
+        call_args = mock_logger.info.call_args[0][0]
+
+        self.assertTrue(call_args.isprintable())
+        self.assertIn('/api/test\\x9e\\x0e\\x1b[2J', call_args)
+        self.assertIn('agent=TestAgent/1.0\\n;', call_args)
+        self.assertIn('remote-addr=1.2.3.4\\x07:', call_args)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ExtractPostDataMutantKillTestCase(unittest.TestCase):

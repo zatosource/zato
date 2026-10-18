@@ -42,7 +42,7 @@ from zato.common.util.api import utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import explain_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
-from zato.common.util.logging_ import current_cid, current_service_name
+from zato.common.util.logging_ import current_cid, current_service_name, escape_nonprintable
 from zato.common.util.url_dispatcher import normalize_path_info, to_internal_accept
 from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.ccda import CCDAFacade
@@ -452,7 +452,11 @@ class RequestDispatcher:
             service_name = channel_item['service_name'] if channel_item else '<no-channel>'
             payload_len = len(payload)
 
-            request_part = f'REST cha \u2192 cid={cid}; {meta.http_method} {meta.raw_uri} name={channel_name};'
+            raw_uri = escape_nonprintable(meta.raw_uri)
+            user_agent = escape_nonprintable(user_agent)
+            remote_addr = escape_nonprintable(remote_addr)
+
+            request_part = f'REST cha \u2192 cid={cid}; {meta.http_method} {raw_uri} name={channel_name};'
             details_part = f' service={service_name}; len={payload_len}; agent={user_agent};'
             remote_part = f' remote-addr={remote_addr}:{meta.remote_port}'
 
