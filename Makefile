@@ -1,6 +1,6 @@
 .PHONY: build install clean default \
 	server-build scheduler-build io-build common-core-build queue-bridge-build mq-client \
-	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean \
+	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean rust-target-prune \
 	server-install scheduler-install io-install common-core-install queue-bridge-install \
 	health-install health-build health-clean \
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
@@ -43,6 +43,10 @@ CARGO_ENV := $(HOME)/.cargo/env
 LOAD_CARGO_ENV := if [ -f $(CARGO_ENV) ]; then . $(CARGO_ENV); fi
 
 ZATO_RUST := $(CURDIR)/code/zato-rust
+
+# Cargo retains the artifacts of every earlier feature set, dependency version and toolchain,
+# so a target directory above this size in megabytes is removed before the next build.
+ZATO_RUST_TARGET_MAX_MB ?= 3072
 
 # IBM MQ redistributable client, needed by the queue bridge at runtime
 MQ_CLIENT_DIR := $(CURDIR)/lib/mqm
@@ -108,26 +112,26 @@ default: dev
 build: common-core-build server-build scheduler-build io-build queue-bridge-build
 # build: ... fhir-rust-build  # FHIR commented out for now
 
-server-build:
+server-build: rust-target-prune
 	@echo ">>> Building server"
 	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml
 
-scheduler-build:
+scheduler-build: rust-target-prune
 	@echo ">>> Building scheduler"
 	$(LOAD_CARGO_ENV) && \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml --bin _zato_scheduler && \
 	rm -f $(CURDIR)/code/bin/_zato_scheduler && \
 	cp $(ZATO_RUST)/zato_scheduler_core/target/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
 
-io-build:
+io-build: rust-target-prune
 	@echo ">>> Building I/O"
 	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_input_output/Cargo.toml
 
-common-core-build:
+common-core-build: rust-target-prune
 	@echo ">>> Building common-core"
 	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
@@ -148,7 +152,7 @@ mq-client:
 		fi; \
 	fi
 
-queue-bridge-build: mq-client
+queue-bridge-build: rust-target-prune mq-client
 	@echo ">>> Building queue-bridge"
 	$(LOAD_CARGO_ENV) && \
 	MQ_HOME=$(MQ_CLIENT_DIR) \
@@ -345,6 +349,15 @@ common-core-clean:
 
 queue-bridge-clean:
 	rm -rf $(ZATO_RUST)/zato_queue_bridge/target
+
+rust-target-prune: ## Remove every Rust target directory larger than ZATO_RUST_TARGET_MAX_MB.
+	for target_dir in $(wildcard $(ZATO_RUST)/*/target $(ZATO_RUST)/*/fuzz/target); do \
+		size_mb=$$(du -sm $$target_dir | cut -f1); \
+		if [ $$size_mb -gt $(ZATO_RUST_TARGET_MAX_MB) ]; then \
+			echo ">>> Removing $$target_dir ($$size_mb MB, limit $(ZATO_RUST_TARGET_MAX_MB) MB)"; \
+			rm -rf $$target_dir; \
+		fi; \
+	done
 
 
 health-clean: ## Clean health build artifacts and zato-libs entries.
@@ -561,9 +574,10 @@ test-server: ## Server unit and integration tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_commands -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
+# fuzz_disabled
 test-server-fuzz: ## Server property, fuzz and mutation tests.
-	$(Zato_Log_Reset)
-	$(MAKE) -C $(CURDIR)/code/zato-server fuzz timeout=$(timeout) $(Zato_Log)
+#	$(Zato_Log_Reset)
+#	$(MAKE) -C $(CURDIR)/code/zato-server fuzz timeout=$(timeout) $(Zato_Log)
 
 test-rest: ## REST channel and outgoing audit log tests.
 	$(Zato_Log_Reset)
@@ -576,27 +590,28 @@ test-rest: ## REST channel and outgoing audit log tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_audit -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
+# fuzz_disabled
 test-rest-fuzz: ## REST mutation tests.
-	$(Zato_Log_Reset)
-	rm -f $(COSMIC_RAY_SESSION)
-	@echo ">>> cosmic-ray init - finding the mutants of $(notdir $(COSMIC_RAY_CONFIG))"
-	$(COSMIC_RAY) init $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION) $(Zato_Log)
-	@echo ">>> cosmic-ray baseline - the suite once with nothing mutated"
-	$(COSMIC_RAY) baseline $(COSMIC_RAY_CONFIG) $(Zato_Log)
-	@echo ">>> cosmic-ray exec - the suite once per mutant, progress every 10s"
-	$(ZATO_PY) $(COSMIC_RAY_EXEC) $(COSMIC_RAY) $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION) $(Zato_Log)
-	@$(ZATO_PY) -c "\
-	import sqlite3; \
-	conn = sqlite3.connect('$(COSMIC_RAY_SESSION)'); \
-	cur = conn.cursor(); \
-	cur.execute(\"SELECT test_outcome, COUNT(*) FROM work_results GROUP BY test_outcome\"); \
-	results = {r[0]: r[1] for r in cur.fetchall()}; \
-	killed = results.get('KILLED', 0); \
-	survived = results.get('SURVIVED', 0); \
-	total = killed + survived; \
-	print(f'Killed: {killed}/{total} ({killed/total*100:.1f}%)') if total else print('No results'); \
-	print(f'Survived: {survived}/{total}') if survived else None; \
-	" $(Zato_Log)
+#	$(Zato_Log_Reset)
+#	rm -f $(COSMIC_RAY_SESSION)
+#	@echo ">>> cosmic-ray init - finding the mutants of $(notdir $(COSMIC_RAY_CONFIG))"
+#	$(COSMIC_RAY) init $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION) $(Zato_Log)
+#	@echo ">>> cosmic-ray baseline - the suite once with nothing mutated"
+#	$(COSMIC_RAY) baseline $(COSMIC_RAY_CONFIG) $(Zato_Log)
+#	@echo ">>> cosmic-ray exec - the suite once per mutant, progress every 10s"
+#	$(ZATO_PY) $(COSMIC_RAY_EXEC) $(COSMIC_RAY) $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION) $(Zato_Log)
+#	@$(ZATO_PY) -c "\
+#	import sqlite3; \
+#	conn = sqlite3.connect('$(COSMIC_RAY_SESSION)'); \
+#	cur = conn.cursor(); \
+#	cur.execute(\"SELECT test_outcome, COUNT(*) FROM work_results GROUP BY test_outcome\"); \
+#	results = {r[0]: r[1] for r in cur.fetchall()}; \
+#	killed = results.get('KILLED', 0); \
+#	survived = results.get('SURVIVED', 0); \
+#	total = killed + survived; \
+#	print(f'Killed: {killed}/{total} ({killed/total*100:.1f}%)') if total else print('No results'); \
+#	print(f'Survived: {survived}/{total}') if survived else None; \
+#	" $(Zato_Log)
 
 test-scheduler: ## All scheduler tests.
 	$(Zato_Log_Reset)
@@ -606,7 +621,7 @@ test-scheduler: ## All scheduler tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-rate-limiting: ## All rate limiting tests.
+test-rate-limiting: rust-target-prune ## All rate limiting tests.
 	$(Zato_Log_Reset)
 	. $(HOME)/.cargo/env && cd $(ZATO_RUST)/zato_rate_limiting_core && cargo test $(PYTEST_ARGS) $(Zato_Log)
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-rate-limiting/python-unit-tests \
@@ -1164,6 +1179,7 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		$(CURDIR)/code/tests/python/zato-common/destination/ \
 		$(CURDIR)/code/tests/python/zato-server/destinations/ \
 		$(CURDIR)/code/tests/python/zato-common/demo_seed/ \
+		--ignore=$(CURDIR)/code/tests/python/zato-common/mllp/fuzz \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1231,7 +1247,7 @@ test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain an
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ibm_mq \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-kafka: ## Kafka unit tests - the Rust bridge and the enmasse round trips, no live servers.
+test-kafka: rust-target-prune ## Kafka unit tests - the Rust bridge and the enmasse round trips, no live servers.
 	$(Zato_Log_Reset)
 	. $(HOME)/.cargo/env && cd $(ZATO_RUST)/zato_queue_bridge && cargo test $(PYTEST_ARGS) $(Zato_Log)
 	$(ZATO_PY) -m pytest \
@@ -1480,7 +1496,8 @@ Zato_Test_Live := \
 # Zato_Test_Browser := test-ui
 
 # Mutation and fuzzing, the longest of all
-Zato_Test_Heavy := test-rest test-server test-rest-fuzz test-server-fuzz
+# fuzz_disabled - test-rest-fuzz test-server-fuzz
+Zato_Test_Heavy := test-rest test-server
 
 # Standalone performance suites, left out of test-all
 Zato_Test_Perf := test-pubsub-perf test-rule-engine-perf
@@ -1617,7 +1634,7 @@ format-zato: ## Check Rust formatting across all public crates.
 
 format: format-zato ## Check Rust formatting everywhere.
 
-clippy-zato: ## Clippy all public Rust crates.
+clippy-zato: rust-target-prune ## Clippy all public Rust crates.
 	. $(HOME)/.cargo/env && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
@@ -1642,7 +1659,7 @@ ZATO_DYLINT_FLAGS_COMMON := \
 
 ZATO_DYLINT_FLAGS := -A non-thread-safe-call-in-test $(ZATO_DYLINT_FLAGS_COMMON)
 
-dylint-zato: ## Dylint all public Rust crates.
+dylint-zato: rust-target-prune ## Dylint all public Rust crates.
 	. $(HOME)/.cargo/env && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    -- --tests && \

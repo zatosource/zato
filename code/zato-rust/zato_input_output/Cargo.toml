@@ -26,5 +26,12 @@ pyo3 = { version = "0.29.2", features = ["auto-initialize"] }
 [lints.rust]
 unsafe_code = "forbid"
 
+[profile.dev]
+incremental = false
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
 [profile.release]
 overflow-checks = true

@@ -34,5 +34,12 @@ tempfile = "3"
 [lints.rust]
 unsafe_code = "deny"
 
+[profile.dev]
+incremental = false
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
 [profile.release]
 overflow-checks = true
