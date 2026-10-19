@@ -1847,7 +1847,7 @@ class MCPTestAllowListB(Service):
         edit_payload = json.dumps({
             'id': gateway_id,
             'name': gateway_name,
-            'public_name': gateway_name,
+            'public_name': gateway_data['public_name'],
             'type_': 'gateway-mcp',
             'is_active': True,
             'is_internal': False,
