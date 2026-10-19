@@ -12,7 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps, loads
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config, Size_Cap_Mode_Block
 from zato.server.connection.mcp.handler import MCPHandler, _mcp_protocol_version
@@ -60,7 +60,7 @@ def _make_handler(invoke_func:'callable_', gateway_config:'stranydict') -> 'MCPH
     safeguard_config = build_safeguard_config(gateway_config)
     token_cap_config = build_token_cap_config(gateway_config)
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', [])) # pyright: ignore[reportArgumentType]
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []), _test_public_name) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################

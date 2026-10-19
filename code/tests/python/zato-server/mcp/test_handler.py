@@ -13,12 +13,12 @@ from unittest import TestCase
 # Zato
 from zato.common.api import MCP
 from zato.common.json_internal import dumps
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_invalid_request, \
     _error_method_not_found, _error_parse, _jsonrpc_version, _mcp_protocol_version, _message_bad_request, \
-    _message_request_too_deep, _server_name, _server_version
+    _message_request_too_deep, _server_version
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 
@@ -113,7 +113,8 @@ def _make_handler(
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []), invoke_timeout=invoke_timeout) # pyright: ignore[reportArgumentType]
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []), # pyright: ignore[reportArgumentType]
+        _test_public_name, invoke_timeout=invoke_timeout)
     return out
 
 # ################################################################################################################################
@@ -161,7 +162,7 @@ class HandleInitialize(TestCase):
         self.assertIsInstance(tools_capability, dict)
 
         server_info = result['serverInfo']
-        self.assertEqual(server_info['name'], _server_name)
+        self.assertEqual(server_info['name'], _test_public_name)
         self.assertEqual(server_info['version'], _server_version)
 
         # Session ID should be set on the response

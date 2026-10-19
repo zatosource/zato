@@ -401,6 +401,7 @@ channel_kafka:
 mcp_gateway:
 
   - name: enmasse.mcp.gateway.1
+    public_name: Enmasse CRM Gateway
     is_active: true
     is_audit_log_active: true
     url_path: /mcp/enmasse-1

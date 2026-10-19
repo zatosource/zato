@@ -14,7 +14,7 @@ from logging import getLogger
 from zato.common.api import MCP
 from zato.server.connection.mcp.common import _error_invalid_params, _error_invalid_request, _error_method_not_found, \
     _jsonrpc_version, _message_invalid_params, _message_missing_jsonrpc_version, _message_missing_method, \
-    _method_tools_call, _server_name, _server_version, make_error_response, make_success_response, MCPResponse, printable
+    _method_tools_call, _server_version, make_error_response, make_success_response, MCPResponse, printable
 from zato.server.connection.mcp.tools_call import add_response_filter_property
 
 # ################################################################################################################################
@@ -98,9 +98,9 @@ def resolve_protocol_version(protocol_version_header:'strnone', message:'anydict
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _decorate_result(body:'stranydict') -> 'None':
+def _decorate_result(handler:'MCPHandler', body:'stranydict') -> 'None':
     """ Adds the fields every result of this protocol revision carries -
-    the resultType marker and the server identity in _meta.
+    the resultType marker and the server identity in _meta, under the gateway's public name.
     Error responses have no result and are returned as they are.
     """
 
@@ -108,7 +108,7 @@ def _decorate_result(body:'stranydict') -> 'None':
         result['resultType'] = _result_type_complete
         result['_meta'] = {
             _meta_key_server_info: {
-                'name': _server_name,
+                'name': handler.public_name,
                 'version': _server_version,
             },
         }
@@ -146,7 +146,7 @@ def _handle_discover(handler:'MCPHandler', request_id:'any_') -> 'stranydict':
         },
         'tools': tools,
         'serverInfo': {
-            'name': _server_name,
+            'name': handler.public_name,
             'version': _server_version,
         },
     }
@@ -255,7 +255,7 @@ def dispatch(
         body = make_error_response(request_id, _error_method_not_found, error_message)
 
     # .. every result carries the resultType marker and the server identity.
-    _decorate_result(body)
+    _decorate_result(handler, body)
 
     out.body = body
     out.status_code = OK

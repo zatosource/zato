@@ -16,7 +16,7 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.bearer_token_identity import Auth_Info_Key
 from zato.common.json_internal import dumps, loads
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.typing_ import cast_
 from zato.common.util.mcp_oauth import Server_Address_Env_Key
 from zato.server.connection.mcp.handler import _error_invalid_request, _mcp_protocol_version, MCPHandler
@@ -98,6 +98,7 @@ class GatewayMCPWrapperBuild(TestCase):
         server.service_store.add_service('crm.get-customer')
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'test-mcp-gateway',
             'services': ['crm.get-customer'],
         })
@@ -115,6 +116,7 @@ class GatewayMCPWrapperBuild(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'empty-gateway',
         })
 
@@ -130,6 +132,7 @@ class GatewayMCPWrapperBuild(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'empty-services-gateway',
             'services': [],
         })
@@ -150,6 +153,7 @@ class GatewayMCPWrapperBuild(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'delete-gateway',
             'services': [],
         })
@@ -177,6 +181,7 @@ class GatewayMCPWrapperInvoke(TestCase):
         server._invoke_responses['crm.get-customer'] = {'name': 'Test Customer'}
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'invoke-gateway',
             'services': ['crm.get-customer'],
         })
@@ -338,6 +343,7 @@ class MCPEndpointOriginValidation(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'origin-gateway',
             'services': [],
         })
@@ -365,6 +371,7 @@ class MCPEndpointOriginValidation(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'origin-gateway',
             'services': [],
         })
@@ -393,6 +400,7 @@ class MCPEndpointOriginValidation(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'origin-gateway',
             'services': [],
             'allowed_origins': ['https://app.example.com'],
@@ -431,6 +439,7 @@ class MCPEndpointNoHandler(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'deleted-gateway',
             'services': [],
         })
@@ -458,6 +467,7 @@ class MCPEndpointNoHandler(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'deleted-gateway',
             'services': [],
         })
@@ -482,6 +492,7 @@ class MCPEndpointNoHandler(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'unbuilt-gateway',
             'services': [],
         })
@@ -506,6 +517,7 @@ class MCPEndpointNoHandler(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'live-gateway',
             'services': [],
         })
@@ -544,6 +556,7 @@ class MCPEndpointServiceDispatch(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'test-gateway',
             'services': [],
         })
@@ -577,6 +590,7 @@ class MCPEndpointServiceDispatch(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'test-gateway',
             'services': [],
         })
@@ -634,6 +648,7 @@ class MCPEndpointWithoutCredentials(TestCase):
         server:'any_' = _MockServer()
 
         config:'any_' = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'no-security-gateway',
             'services': [],
         })
@@ -667,6 +682,7 @@ class MCPEndpointWithoutCredentials(TestCase):
         server:'any_' = _MockServer()
 
         config:'any_' = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'no-security-gateway',
             'services': [],
         })
@@ -695,6 +711,7 @@ class MCPEndpointWithoutCredentials(TestCase):
         server:'any_' = _MockServer()
 
         config:'any_' = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'no-security-gateway',
             'services': [],
             'is_audit_log_active': True,
@@ -753,6 +770,7 @@ class MCPEndpointOAuthChallenge(TestCase):
         server:'any_' = _MockServer()
 
         config:'any_' = _MockBunch({
+            'public_name': _test_public_name,
             'name': 'oauth-gateway',
             'services': [],
             'is_audit_log_active': True,

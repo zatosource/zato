@@ -175,7 +175,7 @@ _object_order['channel_kafka'] = ('name', 'is_active', 'address', 'topics:list',
 # The connections a gateway exposes as tools - each allow list is a YAML list.
 _mcp_connection_list_fields = tuple(f'{key}:list' for key in MCP.Connection_List_Keys)
 
-_object_order['mcp_gateway']   = ('name', 'is_active', 'url_path', 'services:list', 'security_groups:list', \
+_object_order['mcp_gateway']   = ('name', 'public_name', 'is_active', 'url_path', 'services:list', 'security_groups:list', \
     'is_audit_log_active', 'skills:list', 'session_ttl', 'invoke_timeout', 'validate_input', 'allow_agent_filters', \
     'max_response_size', 'size_cap_mode', 'min_size_threshold', 'characters_per_token', \
     'safeguards_strip_nulls', 'safeguards_collapse_whitespace', 'safeguards_strip_base64', \

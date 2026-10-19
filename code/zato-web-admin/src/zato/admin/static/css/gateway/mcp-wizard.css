@@ -21,13 +21,13 @@
 #mcp-wizard {
     --decision-line-label-width: 9.5em;
 
-    /* One width for the Name and URL path labels, so both inputs start
-       in the same column - nowrap below keeps URL path on one line.
+    /* One width for the Name, Public name and URL path labels, so all inputs start
+       in the same column - nowrap below keeps the longest label on one line.
        Both widths are in px so the name field's width below, the sum of
        the two plus the gap, is exact */
     --mcp-wizard-row-label-width: 65px;
 
-    /* One width for the Name and URL path inputs themselves - a fixed
+    /* One width for the Name, Public name and URL path inputs themselves - a fixed
        flex basis, so nothing around them can stretch either one */
     --mcp-wizard-row-input-width: 390px;
 
@@ -86,6 +86,7 @@
 }
 
 #mcp-wizard .wizard-name-field input,
+#mcp-wizard-row-public-name input[type="text"],
 #mcp-wizard-row-url-path input[type="text"] {
     flex: 0 0 var(--mcp-wizard-row-input-width);
 }

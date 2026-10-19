@@ -33,6 +33,15 @@ _demo_echo_service = 'demo.echo'
 # The test service that always raises an exception
 _raise_service = 'test.raise'
 
+# The name the default MCP gateway introduces itself with to MCP clients
+_mcp_public_name = 'Test MCP Live Gateway'
+
+# The gateway imported without a public name, which introduces itself under its own name
+_mcp_without_groups_gateway = 'test.mcp.live.without-groups'
+
+# The version reported next to the public name in every serverInfo
+_server_version = '2.4'
+
 # Header name for the MCP session ID prefix
 _session_id_prefix = 'mcp'
 

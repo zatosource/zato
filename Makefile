@@ -6,7 +6,7 @@
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console openapi-console-demo openapi-console-tutorial \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console openapi-console-demo openapi-console-tutorial mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -203,6 +203,20 @@ openapi-console-tutorial: ## The main tutorial for the OpenAPI console - its ser
 	$(ZATO_PY) -m zato.openapi.console.demo.tutorial --server-dir $(Zato_Server_Dir)
 	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
 	$(MAKE) openapi-console
+
+# The container the MCP healthcare demo runs in and the host ports its Dashboard and its server are published on
+Zato_MCP_Demo_Image          ?= ghcr.io/zatosource/zato-4.1:latest
+Zato_MCP_Demo_Port_Dashboard ?= 8283
+Zato_MCP_Demo_Port_Server    ?= 11323
+
+mcp-demo: ## A Zato container with the MCP healthcare demo - the main tutorial, HL7 MLLP and FHIR, the healthcare analytics services, their SQLite databases and the MCP gateway exposing them.
+	echo "Dashboard:   http://localhost:$(Zato_MCP_Demo_Port_Dashboard)/zato/demo-config/"
+	echo "MCP gateway: http://localhost:$(Zato_MCP_Demo_Port_Server)/mcp/healthcare (Authorization: Bearer healthcare-demo)"
+	docker run --rm --name zato-mcp-demo \
+		-p $(Zato_MCP_Demo_Port_Dashboard):8183 \
+		-p $(Zato_MCP_Demo_Port_Server):11223 \
+		-e Zato_Demo_Config_Sets=tutorial,mcp \
+		$(Zato_MCP_Demo_Image)
 
 # ############################################################################
 # Quickstart dev targets

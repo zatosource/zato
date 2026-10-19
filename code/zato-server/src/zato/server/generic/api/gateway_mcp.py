@@ -139,10 +139,12 @@ class GatewayMCPWrapper:
         if response_hook_service := self.config.get('response_hook_service'):
             response_hook_func = partial(self._invoke_response_hook, response_hook_service)
 
-        # .. build the handler with an invoke function that calls services through the server.
+        # .. build the handler with an invoke function that calls services through the server,
+        # introducing the gateway to MCP clients under its public name.
         self.handler = MCPHandler(
             tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config, validate_input,
-            skill_prompts, allow_agent_filters, invoke_timeout, request_hook_func, response_hook_func)
+            skill_prompts, self.config.public_name, allow_agent_filters, invoke_timeout, request_hook_func,
+            response_hook_func)
 
         service_count_text = count_text(len(allowed_services), 'allowed service', 'allowed services')
         sorted_services = sorted(allowed_services)

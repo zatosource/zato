@@ -18,7 +18,7 @@
     --ledger-value-size: 13px;
     --ledger-rule-outer: 1px solid var(--wizard-surface-field-border);
     --ledger-rule: 1px solid var(--wizard-surface-hairline-strong);
-    --ledger-label-width-basic: 5.5rem;
+    --ledger-label-width-basic: 6.5rem;
     --ledger-label-width-options: 8.75rem;
     --ledger-label-width-review: 11.5rem;
     --ledger-active-gap: 14px;
@@ -55,6 +55,7 @@
 /* ------------------------------------------------------------ */
 
 #mcp-wizard-step-body-0 .wizard-name-field label,
+#mcp-wizard-step-body-0 #mcp-wizard-row-public-name > label,
 #mcp-wizard-step-body-0 #mcp-wizard-row-url-path > label,
 #mcp-wizard-step-body-0 .wizard-option-label,
 #mcp-wizard-step-body-1 > .wizard-section > .decision-lines > .decision-line > .decision-line-label,
@@ -68,6 +69,7 @@
 }
 
 #mcp-wizard-step-body-0 .wizard-name-field label,
+#mcp-wizard-step-body-0 #mcp-wizard-row-public-name > label,
 #mcp-wizard-step-body-0 #mcp-wizard-row-url-path > label,
 #mcp-wizard-step-body-0 .wizard-option-label {
     width: var(--ledger-label-width-basic);
@@ -116,10 +118,11 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Ledger - step 1, the name and the URL path                   */
+/* Ledger - step 1, the name, the public name and the URL path  */
 /* ------------------------------------------------------------ */
 
 #mcp-wizard-step-body-0 .wizard-name-row,
+#mcp-wizard-step-body-0 #mcp-wizard-row-public-name,
 #mcp-wizard-step-body-0 #mcp-wizard-row-url-path {
     display: flex;
     align-items: center;
@@ -139,6 +142,7 @@
 
 /* The form widgets set an inline width of 100%, which a flex basis takes precedence over */
 #mcp-wizard-step-body-0 .wizard-name-field input,
+#mcp-wizard-step-body-0 #mcp-wizard-row-public-name input[type="text"],
 #mcp-wizard-step-body-0 #mcp-wizard-row-url-path input[type="text"] {
     flex: 0 0 var(--ledger-field-width);
     box-sizing: border-box;

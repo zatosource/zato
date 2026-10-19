@@ -98,6 +98,9 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         opaque = parse_instance_opaque_attr(conn)
         self.assertTrue(opaque['is_audit_log_active'])
 
+        # .. so does the public name the YAML states ..
+        self.assertEqual(opaque['public_name'], 'Enmasse CRM Gateway')
+
         # .. the services declared as a YAML list are stored as that list ..
         self.assertEqual(opaque['services'], ['crm.get-customer', 'crm.update-customer'])
 
@@ -139,6 +142,9 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         opaque2 = parse_instance_opaque_attr(conn2)
         self.assertFalse(opaque2['is_audit_log_active'])
 
+        # .. its public name is its own name ..
+        self.assertEqual(opaque2['public_name'], 'enmasse.mcp.gateway.2')
+
         # .. its comma-separated services become the list they always meant to be ..
         self.assertEqual(opaque2['services'], ['billing.get-invoice'])
 
@@ -175,6 +181,10 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
         self.session.commit()
 
         self.assertEqual(updated_instance.name, mcp_def['name'])
+
+        # An update without a public name in the YAML gives the gateway its own name as the public one
+        opaque = parse_instance_opaque_attr(updated_instance)
+        self.assertEqual(opaque['public_name'], mcp_def['name'])
 
 # ################################################################################################################################
 

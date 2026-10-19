@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from json import dumps
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -141,7 +144,11 @@ def ensure_mcp_gateway_exists(session:'any_') -> 'bool':
         generic_conn.is_internal = True
         generic_conn.is_channel = True
         generic_conn.is_outconn = False
-        generic_conn.opaque1 = '{"services": ["demo.echo", "test.raise"], "url_path": "/mcp/demo"}'
+        generic_conn.opaque1 = dumps({
+            'public_name': mcp_gateway_name,
+            'services': ['demo.echo', 'test.raise'],
+            'url_path': mcp_gateway_url_path,
+        })
 
         session.add(generic_conn)
 

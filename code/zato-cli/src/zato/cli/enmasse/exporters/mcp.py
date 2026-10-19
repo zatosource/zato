@@ -40,6 +40,9 @@ logger = logging.getLogger(__name__)
 # so what one environment exports another can import without losing a single option.
 Gateway_Optional_Fields = [
 
+    # The name the gateway introduces itself with to MCP clients
+    'public_name',
+
     # Routing and security
     'url_path', 'services', 'security_groups', 'is_audit_log_active',
 
@@ -204,6 +207,12 @@ class GatewayMCPExporter:
                 if field == 'oauth_scopes':
                     if not row.get('oauth'):
                         continue
+
+                # The public name defaults to the gateway's own name, which is what an import of the export restores
+                if field == 'public_name':
+                    if value != row['name']:
+                        item[field] = value
+                    continue
 
                 if value == _field_defaults[field]:
                     continue

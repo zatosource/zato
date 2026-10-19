@@ -158,6 +158,11 @@ $(document).ready(function() {
                         </label>
                     </div>
 
+                    <div class="wizard-field-row" id="mcp-wizard-row-public-name">
+                        <label for="{{ form.public_name.id_for_label }}">Public name</label>
+                        {{ form.public_name }}
+                    </div>
+
                     <div class="wizard-field-row" id="mcp-wizard-row-url-path">
                         <label for="{{ form.url_path.id_for_label }}">URL path</label>
                         {{ form.url_path }}

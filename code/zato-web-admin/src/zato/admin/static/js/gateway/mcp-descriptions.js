@@ -9,6 +9,8 @@
 $.fn.zato.gateway.mcp.field_descriptions = {
     'id_name': 'A unique name for this gateway. Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this gateway accepts requests. MCP clients cannot reach inactive gateways.',
+    'id_public_name': 'The name this gateway introduces itself with to MCP clients, which AI assistants show ' +
+        'when they ask whether to invoke one of its tools. It does not need to be unique, and it repeats the name until it is edited on its own.',
     'id_url_path': 'URL path the MCP endpoint is exposed under, e.g. /mcp/. This is the address MCP clients, ' +
         'such as AI assistants, connect to in order to discover and invoke the assigned services.',
     'id_validate_input': 'Whether tool call arguments are validated against each tool\'s input schema before the tool runs - ' +

@@ -555,6 +555,7 @@ review.render = function() {
     // Basics
     var basicsRows = [
         ['Name', wizard.field('name').val().trim()],
+        ['Public name', wizard.field('public_name').val().trim()],
         ['Active', wizard.field('is_active').prop('checked') ? config.yesLabel : config.noLabel],
         ['URL path', wizard.field('url_path').val().trim()]
     ];

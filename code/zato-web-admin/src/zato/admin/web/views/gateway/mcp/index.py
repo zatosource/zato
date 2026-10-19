@@ -112,7 +112,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name',
-    input_optional = ('is_active', 'url_path') + _shaping_fields + _alert_field_names
+    input_optional = ('is_active', 'url_path', 'public_name') + _shaping_fields + _alert_field_names
     output_required = 'id', 'name'
 
     def __call__(self, req:'any_', *args:'any_', **kwargs:'any_') -> 'any_':

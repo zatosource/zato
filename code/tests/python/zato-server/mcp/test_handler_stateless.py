@@ -13,11 +13,11 @@ from unittest import TestCase
 # Zato
 from zato.common.api import MCP
 from zato.common.json_internal import dumps
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
-    _server_name, _server_version
+    _server_version
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
 from zato.server.connection.mcp.stateless import _error_header_mismatch, _error_unsupported_protocol_version, \
@@ -88,7 +88,8 @@ def _make_handler(registry:'any_'=None, invoke_func:'callable_'=None) -> 'MCPHan
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []))
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []),
+        _test_public_name)
     return out
 
 # ################################################################################################################################
@@ -234,7 +235,7 @@ class ServerDiscover(TestCase):
         self.assertIsInstance(tools_capability, dict)
 
         server_info = result['serverInfo']
-        self.assertEqual(server_info['name'], _server_name)
+        self.assertEqual(server_info['name'], _test_public_name)
         self.assertEqual(server_info['version'], _server_version)
 
     def test_discover_routes_without_a_version_header(self) -> 'None':
@@ -371,7 +372,7 @@ class StatelessToolsFlow(TestCase):
 
         meta = result['_meta']
         server_info = meta[_meta_key_server_info]
-        self.assertEqual(server_info['name'], _server_name)
+        self.assertEqual(server_info['name'], _test_public_name)
         self.assertEqual(server_info['version'], _server_version)
 
     def test_tools_call_needs_no_session(self) -> 'None':

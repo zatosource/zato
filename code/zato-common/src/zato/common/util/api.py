@@ -82,8 +82,8 @@ import requests
 import yaml
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_snowflake, engine_def_sqlite, MISC, \
-     Secret_Shadow, TRACE1, zato_no_op_marker
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_snowflake, engine_def_sqlite, \
+     engine_display_name, MISC, Secret_Shadow, TRACE1, zato_no_op_marker
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -1432,6 +1432,11 @@ def get_sql_engine_display_name(engine:'str', fs_sql_config:'any_') -> 'str':
         if key == engine:
             display_name = value.get('display_name')
             break
+
+    # SQLite is never served from sql.conf, which is why its display name comes from the built-in names
+    if not display_name:
+        if engine == 'sqlite':
+            display_name = engine_display_name[engine]
 
     if not display_name:
         raise ValueError('Could not find display name for engine `{}` in config `{}`'.format(

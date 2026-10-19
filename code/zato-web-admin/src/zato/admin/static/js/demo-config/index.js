@@ -39,7 +39,12 @@ config.okRemovedLabel = 'OK, removed';
 config.okVisibleMs = 1000;
 
 // One card per demo config set, in the order they are rendered
-config.sets = ['tutorial', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq', 'file_transfer'];
+config.sets = ['tutorial', 'mcp', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq', 'file_transfer'];
+
+// The sets each set builds on, imported together with it when they are not imported yet
+config.requiredSets = {
+    'mcp': ['hl7']
+};
 
 // What the page-wide help badge explains, anchored at the Everything slider
 config.howItWorksText = 'Slide "Everything" to import or remove all demo config, ' +
@@ -61,6 +66,8 @@ config.kinds = {
     'channel-hl7-mllp':    {one: 'MLLP channel', many: 'MLLP channels', url: '/zato/channel/hl7/mllp/', params: '&type_=channel-hl7-mllp'},
     'outconn-hl7-mllp':    {one: 'MLLP outgoing connection', many: 'MLLP outgoing connections', url: '/zato/outgoing/hl7/mllp/', params: '&type_=outconn-hl7-mllp'},
     'outconn-hl7-fhir':    {one: 'FHIR connection', many: 'FHIR connections', url: '/zato/outgoing/hl7/fhir/', params: ''},
+    'gateway-mcp':         {one: 'MCP gateway', many: 'MCP gateways', url: '/zato/gateway/mcp/', params: ''},
+    'security-bearer':     {one: 'bearer token', many: 'bearer tokens', url: '/zato/security/oauth/outconn/client-credentials/', params: ''},
     'outconn-sftp':        {one: 'SFTP connection', many: 'SFTP connections', url: '/zato/outgoing/sftp/', params: '&type_=outconn-sftp'},
     'outconn-ftp':         {one: 'FTP or FTPS connection', many: 'FTP and FTPS connections', url: '/zato/outgoing/ftp/', params: '&type_=outconn-ftp'},
     'outconn-smb':         {one: 'SMB connection', many: 'SMB connections', url: '/zato/outgoing/smb/', params: '&type_=outconn-smb'}
@@ -360,12 +367,15 @@ var apply = function(desiredStates, changedSets, isFromMaster) {
         success: function(response) {
             markDone(changedSets, isFromMaster);
 
-            // Only this change's cards are repainted - the others may have
-            // their own changes still on the way, so they are left alone
-            for(var setIdx = 0; setIdx < changedSets.length; setIdx++) {
-                var changedName = changedSets[setIdx];
-                lastData[changedName] = response.sets[changedName];
-                renderCard(changedName, lastData[changedName]);
+            // A set may import another one it builds on, so every card is repainted,
+            // except for the ones whose own changes are still on the way
+            for(var setIdx = 0; setIdx < config.sets.length; setIdx++) {
+                var repaintName = config.sets[setIdx];
+                if(busySets[repaintName]) {
+                    continue;
+                }
+                lastData[repaintName] = response.sets[repaintName];
+                renderCard(repaintName, lastData[repaintName]);
             }
 
             syncMaster(lastData);
@@ -420,11 +430,33 @@ var apply = function(desiredStates, changedSets, isFromMaster) {
 $.each(config.sets, function(_ignored, setName) {
     field(setName).on('change', function() {
 
-        // The request speaks only for this one slider
-        var desiredStates = {};
-        desiredStates[setName] = field(setName).is(':checked');
+        var isOn = field(setName).is(':checked');
 
-        apply(desiredStates, [setName], false);
+        // The request speaks for this one slider ..
+        var desiredStates = {};
+        var changedSets = [setName];
+        desiredStates[setName] = isOn;
+
+        // .. and, on import, for the sets it builds on that are neither imported nor moving yet.
+        if(isOn && (setName in config.requiredSets)) {
+
+            var requiredSets = config.requiredSets[setName];
+
+            for(var requiredIdx = 0; requiredIdx < requiredSets.length; requiredIdx++) {
+
+                var requiredName = requiredSets[requiredIdx];
+
+                if(busySets[requiredName] || lastData[requiredName].is_present) {
+                    continue;
+                }
+
+                field(requiredName).prop('checked', true);
+                desiredStates[requiredName] = true;
+                changedSets.push(requiredName);
+            }
+        }
+
+        apply(desiredStates, changedSets, false);
     });
 });
 

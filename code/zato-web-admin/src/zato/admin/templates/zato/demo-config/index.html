@@ -64,6 +64,17 @@ its final state and nothing visibly slides at load.
                     <div class="demo-config-set-body" id="demo-config-body-tutorial"></div>
                 </div>
 
+                <div class="dashboard-card demo-config-set-card" id="demo-config-card-mcp">
+                    <div class="demo-config-set-header">
+                        <label class="demo-config-set-title" for="id_demo_config_mcp">MCP</label>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span><span id="demo-config-running-label-mcp">Importing</span></span>
+                        <span class="demo-config-ok" id="demo-config-ok-mcp"></span>
+                        <input type="checkbox" id="id_demo_config_mcp"{% if demo_config_sets.mcp.is_present %} checked{% endif %}>
+                    </div>
+                    <div class="demo-config-set-status" id="demo-config-status-mcp"></div>
+                    <div class="demo-config-set-body" id="demo-config-body-mcp"></div>
+                </div>
+
                 <div class="dashboard-card demo-config-set-card" id="demo-config-card-hl7">
                     <div class="demo-config-set-header">
                         <label class="demo-config-set-title" for="id_demo_config_hl7">HL7 MLLP and FHIR</label>

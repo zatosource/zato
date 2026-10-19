@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from zato.common.api import MCP
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.typing_ import anytuple, cast_, list_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
@@ -339,6 +339,7 @@ def make_gateway_wrapper(config_manager:'StubConfigManager', **config_keys:'any_
 
     config = Bunch()
     config.name = 'test-gateway'
+    config.public_name = _test_public_name
 
     for key, value in config_keys.items():
         config[key] = value
@@ -374,7 +375,7 @@ def make_mcp_handler(wrapper:'GatewayMCPWrapper', invoke_timeout:'int'=MCP.Defau
 
     out = MCPHandler(
         tool_registry, wrapper._invoke_service, session_manager, safeguard_config, token_cap_config,
-        False, SkillPrompts('', []), False, invoke_timeout)
+        False, SkillPrompts('', []), _test_public_name, False, invoke_timeout)
 
     return out
 
