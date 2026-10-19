@@ -11,7 +11,7 @@ import pytest
 
 # local
 from _client import MCPClient, _session_header
-from _constants import _mcp_public_name, _mcp_without_groups_gateway, _server_version, _session_id_prefix
+from _constants import _mcp_no_public_name_gateway, _mcp_public_name, _server_version, _session_id_prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,7 +109,7 @@ class TestInitialize:
         """ A gateway imported without a public name introduces itself under its own name.
         """
 
-        client = MCPClient(zato_server['mcp_url_without_groups'])
+        client = MCPClient(zato_server['mcp_url_no_public_name'], auth=zato_server['mcp_auth'])
 
         response = client.jsonrpc('initialize', params=_initialize_params)
         json_body = response.json()
@@ -118,7 +118,7 @@ class TestInitialize:
         # The server information must report the gateway's own name ..
         server_information = result['serverInfo']
 
-        assert server_information['name'] == _mcp_without_groups_gateway
+        assert server_information['name'] == _mcp_no_public_name_gateway
         assert server_information['version'] == _server_version
 
         # .. clean up the session.
