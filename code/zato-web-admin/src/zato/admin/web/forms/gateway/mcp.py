@@ -47,6 +47,10 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_path = forms.CharField(initial='/mcp/', widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
 
+    # The name the gateway introduces itself with to MCP clients - the wizard keeps it equal to the name
+    # until it is edited on its own
+    public_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+
     # Validation of tools/call arguments against each tool's input schema - on by default for new gateways
     validate_input = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 

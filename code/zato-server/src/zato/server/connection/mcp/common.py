@@ -75,8 +75,7 @@ _message_response_too_large = 'Response too large'
 # Error message returned when params is present but is not an object
 _message_invalid_params = 'Invalid params: expected an object'
 
-# Server metadata returned to clients
-_server_name    = 'Apache'
+# The server version returned to clients next to the gateway's public name
 _server_version = '2.4'
 
 # The longest request-supplied value that is embedded in a log or error message as it is -

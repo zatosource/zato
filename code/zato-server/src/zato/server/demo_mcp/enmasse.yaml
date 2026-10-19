@@ -1,0 +1,34 @@
+security:
+
+  - name: demo.healthcare.mcp
+    type: bearer_token
+    static_token: healthcare-demo
+    static_header: Authorization
+    static_prefix: Bearer
+
+groups:
+
+  - name: mcp.demo.healthcare
+    members:
+      - demo.healthcare.mcp
+
+mcp_gateway:
+
+  - name: demo.healthcare
+    public_name: Healthcare
+    url_path: /mcp/healthcare
+    services:
+      - healthcare.get-network-overview
+      - healthcare.list-facilities
+      - healthcare.get-visit-volume
+      - healthcare.get-supply-alerts
+      - healthcare.get-staffing
+      - healthcare.get-interface-feeds
+    sql_connections:
+      - demo.healthcare.warehouse
+      - demo.healthcare.supplies
+      - demo.healthcare.scheduling
+    security_groups:
+      - mcp.demo.healthcare
+    validate_input: true
+    is_audit_log_active: true

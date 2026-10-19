@@ -39,13 +39,29 @@ _allowed_origin_prefixes = (
 
 # ################################################################################################################################
 
-_header_allow_origin  = 'Access-Control-Allow-Origin'
-_header_allow_methods = 'Access-Control-Allow-Methods'
-_header_allow_headers = 'Access-Control-Allow-Headers'
-_header_max_age       = 'Access-Control-Max-Age'
+_header_allow_origin   = 'Access-Control-Allow-Origin'
+_header_allow_methods  = 'Access-Control-Allow-Methods'
+_header_allow_headers  = 'Access-Control-Allow-Headers'
+_header_expose_headers = 'Access-Control-Expose-Headers'
+_header_max_age        = 'Access-Control-Max-Age'
 
 _allow_methods = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-_allow_headers = 'X-API-Key, Authorization, Content-Type'
+
+# The request headers of MCP clients are listed next to the authentication ones,
+# and the session header is exposed so that a page can return it with each subsequent request.
+_allow_header_list = [
+    'X-API-Key',
+    'Authorization',
+    'Content-Type',
+    'Mcp-Session-Id',
+    'MCP-Protocol-Version',
+    'Mcp-Method',
+    'Mcp-Name',
+    'Last-Event-ID',
+]
+
+_allow_headers  = ', '.join(_allow_header_list)
+_expose_headers = 'Mcp-Session-Id'
 
 # How long a browser may cache the result of a preflight request, in seconds.
 _max_age = '86400'
@@ -78,10 +94,12 @@ def is_allowed_origin(origin:'str') -> 'bool':
 # ################################################################################################################################
 
 def add_cors_response_headers(origin:'str', request_ctx:'stranydict') -> 'None':
-    """ Adds the header that lets a browser expose our response to a page from an allowed origin.
-    Note that the header may carry one origin only, which is why the matched origin is echoed back.
+    """ Adds the headers that let a browser expose our response, and the response headers it names,
+    to a page from an allowed origin. The origin header holds one origin only, which is why the matched origin is echoed back.
     """
-    request_ctx['zato.http.response.headers'][_header_allow_origin] = origin
+    headers = request_ctx['zato.http.response.headers']
+    headers[_header_allow_origin]   = origin
+    headers[_header_expose_headers] = _expose_headers
 
 # ################################################################################################################################
 

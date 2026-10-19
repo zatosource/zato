@@ -47,5 +47,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # an unsafe call - it is the only place in the crate where unsafe code is expected.
 unsafe_code = "deny"
 
+[profile.dev]
+incremental = false
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
 [profile.release]
 overflow-checks = true

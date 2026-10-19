@@ -16,7 +16,7 @@ from hypothesis import strategies as st
 
 # Zato
 from zato.common.json_internal import dumps
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
@@ -85,7 +85,7 @@ def _make_handler(allowed_tools:'any_' = None) -> 'any_':
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    handler = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', [])) # pyright: ignore[reportArgumentType]
+    handler = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []), _test_public_name) # pyright: ignore[reportArgumentType]
     return handler
 
 # ################################################################################################################################

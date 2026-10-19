@@ -12,7 +12,7 @@ from unittest import TestCase
 
 # Zato
 from zato.common.json_internal import dumps, loads
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.typing_ import cast_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
@@ -93,7 +93,7 @@ def _make_handler(
     token_cap_config = build_token_cap_config(gateway_config)
 
     out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, validate_input,
-        SkillPrompts('', []), allow_agent_filters)
+        SkillPrompts('', []), _test_public_name, allow_agent_filters)
     return out
 
 # ################################################################################################################################

@@ -107,6 +107,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // Fields that must not be empty on submit
     requiredFields: [
         'name',
+        'public_name',
         'url_path',
         'characters_per_token'
     ],
@@ -117,6 +118,8 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // refused save points at
     missingTargets: {
         name:                 {group: wizard.config_own.groups.basics, label: 'Name'},
+        public_name:          {group: wizard.config_own.groups.basics, label: 'Public name',
+                               anchorSelector: '#mcp-wizard-row-public-name'},
         url_path:             {group: wizard.config_own.groups.basics, label: 'URL path',
                                anchorSelector: '#mcp-wizard-row-url-path'},
         characters_per_token: {group: wizard.config_own.groups.shaping, label: 'Characters per token',
@@ -176,6 +179,9 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         // has its own check through the kit config above ..
         $.fn.zato.validate_unique(wizard.fieldSelector('url_path'), 'channel', 'url_path');
 
+        // .. the public name follows the name until it is edited on its own ..
+        wizard._initPublicNameMirror();
+
         // .. and the email and LLM connections the Alerts popup picks from stay fresh
         // while the page is open - no reloading to pick up new ones.
         var liveConfigs = $.fn.zato.alerts_tab.live_configs(wizard.config.fieldPrefix);
@@ -231,6 +237,33 @@ wizard._rememberOwnValue = function(fieldName) {
 
     var field = wizard.field(fieldName);
     field.data('zato-original-value', field.val());
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The public name repeats the name as it is typed - on a create from the start,
+// on an edit if the two are equal when the page opens. Once the public name
+// is typed into, it stays as it was typed, whatever the name becomes later.
+wizard._initPublicNameMirror = function() {
+
+    var nameField = wizard.field(wizard.config.nameField);
+    var publicNameField = wizard.field('public_name');
+
+    var isMirroring = true;
+
+    if(wizard.state.isEdit) {
+        isMirroring = publicNameField.val() === nameField.val();
+    }
+
+    nameField.on('input', function() {
+        if(isMirroring) {
+            publicNameField.val(nameField.val());
+        }
+    });
+
+    publicNameField.on('input', function() {
+        isMirroring = false;
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////

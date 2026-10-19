@@ -109,6 +109,11 @@ class TestEnmasseGatewayMCPExport(TestCase):
 
         self.assertTrue(exported_1['is_audit_log_active'])
 
+        # A public name other than the gateway's own name is exported, one equal to it is not,
+        # because an import without the key restores exactly that name.
+        self.assertEqual(exported_1['public_name'], 'Enmasse CRM Gateway')
+        self.assertNotIn('public_name', exported_2)
+
         # The services list is exported as the list it was imported as,
         # whether it arrived as a YAML list or as a comma-separated string.
         self.assertEqual(exported_1['services'], ['crm.get-customer', 'crm.update-customer'])

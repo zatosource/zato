@@ -217,10 +217,14 @@ class GatewayMCPImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def _prepare_definition(self, connection_def:'anydict', session:'SASession') -> 'None':
-        """ Brings a gateway's definition to the form it is stored in - its security groups as ids,
-        which is what the dashboard stores too, and validated for OAuth.
+        """ Brings a gateway's definition to the form it is stored in - its public name stated,
+        its security groups as ids, which is what the dashboard stores too, and validated for OAuth.
         """
         self._normalize_services(connection_def)
+
+        # The name the gateway introduces itself with to MCP clients is the gateway's own name unless the YAML states one
+        if not connection_def.get('public_name'):
+            connection_def['public_name'] = connection_def['name']
 
         connection_def['security_groups'] = self._resolve_security_groups(connection_def, session)
 

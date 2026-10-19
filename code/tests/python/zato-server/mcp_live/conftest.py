@@ -36,6 +36,7 @@ from zato.common.util.config import get_config_object, update_config_file  # noq
 
 # Zato - test helpers
 import keycloak_  # noqa: E402
+from _constants import _mcp_no_public_name_gateway, _mcp_public_name, _mcp_without_groups_gateway  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,7 +97,6 @@ _mcp_group_name = 'mcp.test-live-group'
 
 # The group with no members and the two gateways that carry no security
 _mcp_empty_group_name       = 'mcp.test-live-empty-group'
-_mcp_without_groups_gateway = 'test.mcp.live.without-groups'
 _mcp_empty_group_gateway    = 'test.mcp.live.empty-group'
 
 _reports_directory = os.path.join(_zato_base, 'code', 'tests', 'python', 'zato-server', 'mcp_live', 'reports')
@@ -301,11 +301,19 @@ groups:
 
 mcp_gateway:
   - name: {mcp_gateway_name}
+    public_name: {_mcp_public_name}
     is_active: true
     url_path: /mcp/demo
     services:
       - demo.echo
       - test.raise
+    security_groups:
+      - {_mcp_group_name}
+  - name: {_mcp_no_public_name_gateway}
+    is_active: true
+    url_path: /mcp/no-public-name
+    services:
+      - demo.echo
     security_groups:
       - {_mcp_group_name}
   - name: {_mcp_without_groups_gateway}
@@ -596,6 +604,7 @@ def zato_server(request:'any_') -> 'any_':
 
     mcp_url = f'http://{host}:{port}/mcp/demo'
     mcp_url_without_groups = f'http://{host}:{port}/mcp/without-groups'
+    mcp_url_no_public_name = f'http://{host}:{port}/mcp/no-public-name'
     mcp_url_empty_group = f'http://{host}:{port}/mcp/empty-group'
 
     # .. yield connection details to the tests.
@@ -605,6 +614,7 @@ def zato_server(request:'any_') -> 'any_':
         'password': _password,
         'mcp_url': mcp_url,
         'mcp_url_without_groups': mcp_url_without_groups,
+        'mcp_url_no_public_name': mcp_url_no_public_name,
         'mcp_url_empty_group': mcp_url_empty_group,
         'mcp_auth': (_mcp_username, _mcp_password),
         'mcp_auth_b': (_mcp_username_b, _mcp_password_b),

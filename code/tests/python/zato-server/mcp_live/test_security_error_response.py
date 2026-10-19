@@ -15,7 +15,7 @@ import pytest
 
 # local
 from _client import MCPClient
-from _constants import _raise_service, _zato_internal_prefix
+from _constants import _mcp_public_name, _raise_service, _server_version, _zato_internal_prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,13 +25,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Expected server name that masks the real identity
-_expected_server_name = 'Apache'
-
-# Expected server version returned in initialize
-_expected_server_version = '2.4'
-
 # Standard params for initialize requests in tests
 _initialize_params = {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
 
@@ -95,8 +88,8 @@ class TestErrorResponse:
 
 # ################################################################################################################################
 
-    def test_server_header_masks_identity(self, client:'MCPClient') -> 'None':
-        """ The initialize response must report the masked server name.
+    def test_server_info_reports_the_public_name(self, client:'MCPClient') -> 'None':
+        """ The initialize response reports the gateway's public name and not the server's identity.
         """
 
         response = client.jsonrpc('initialize', params=_initialize_params)
@@ -105,8 +98,8 @@ class TestErrorResponse:
         result = data['result']
         server_info = result['serverInfo']
 
-        assert server_info['name'] == _expected_server_name
-        assert server_info['version'] == _expected_server_version
+        assert server_info['name'] == _mcp_public_name
+        assert server_info['version'] == _server_version
 
         # .. clean up the session.
         session_id = response.headers['Mcp-Session-Id']

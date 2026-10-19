@@ -21,7 +21,7 @@ from zato.server.connection.mcp.common import _error_invalid_params, _error_inva
     _message_invalid_cursor, _message_invalid_params, _message_invalid_request, _message_missing_jsonrpc_version, \
     _message_missing_method, _message_missing_tool_name, _message_parse_error, _message_prompt_not_found, \
     _message_request_rejected, _message_response_rejected, \
-    _method_prompts_get, _method_prompts_list, _method_tools_call, _server_name, _server_version, get_depth, InvalidCursor, \
+    _method_prompts_get, _method_prompts_list, _method_tools_call, _server_version, get_depth, InvalidCursor, \
     make_error_response, make_success_response, MCPResponse, printable
 from zato.server.connection.mcp.session import Session_Invalid_Identity, Session_Valid
 from zato.server.connection.mcp.tools_call import add_response_filter_property, handle_tools_call
@@ -105,6 +105,7 @@ class MCPHandler:
         token_cap_config:'TokenCapConfig',
         validate_input:'bool',
         skill_prompts:'SkillPrompts',
+        public_name:'str',
         allow_agent_filters:'bool' = False,
         invoke_timeout:'int' = MCP.Default_Invoke_Timeout,
         request_hook_func:'callable_ | None' = None,
@@ -125,6 +126,9 @@ class MCPHandler:
         # could not be parsed into one, and the reply body, and returns the body to send.
         self.request_hook_func = request_hook_func
         self.response_hook_func = response_hook_func
+
+        # The name the gateway introduces itself with to MCP clients, in the serverInfo of every result that has one
+        self.public_name = public_name
 
 # ################################################################################################################################
 
@@ -516,7 +520,7 @@ class MCPHandler:
             'protocolVersion': _mcp_protocol_version,
             'capabilities': capabilities,
             'serverInfo': {
-                'name': _server_name,
+                'name': self.public_name,
                 'version': _server_version,
             },
         }

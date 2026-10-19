@@ -12,7 +12,7 @@ runs the same dispatch the MCP gateway runs against the server.
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT
 from zato.common.json_internal import dumps, loads
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.typing_ import cast_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
@@ -89,7 +89,8 @@ class MCPBoundary(Boundary):
         safeguard_config = build_safeguard_config({})
         token_cap_config = build_token_cap_config({})
 
-        handler = MCPHandler(registry, invoke_case_service, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []))
+        handler = MCPHandler(registry, invoke_case_service, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []),
+            _test_public_name)
 
         # Every method other than initialize needs a session.
         session_id = session_manager.create(_mcp_protocol_version, _test_identity)

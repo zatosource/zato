@@ -16,7 +16,7 @@ from gevent import sleep as gevent_sleep
 # Zato
 from zato.common.api import MCP
 from zato.common.json_internal import dumps
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_method_not_found, \
@@ -124,7 +124,8 @@ def _make_handler(
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []), invoke_timeout=invoke_timeout) # pyright: ignore[reportArgumentType]
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False, SkillPrompts('', []), # pyright: ignore[reportArgumentType]
+        _test_public_name, invoke_timeout=invoke_timeout)
     return out
 
 # ################################################################################################################################

@@ -11,7 +11,7 @@ import pytest
 
 # local
 from _client import MCPClient, _session_header
-from _constants import _session_id_prefix
+from _constants import _mcp_no_public_name_gateway, _mcp_public_name, _server_version, _session_id_prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,8 +23,6 @@ if 0:
 # ################################################################################################################################
 
 _expected_protocol_version = '2025-06-18'
-_expected_server_name      = 'Apache'
-_expected_server_version   = '2.4'
 
 # Standard params for initialize requests in tests
 _initialize_params = {'protocolVersion': _expected_protocol_version, 'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1.0'}}
@@ -88,18 +86,40 @@ class TestInitialize:
 # ################################################################################################################################
 
     def test_initialize_returns_server_information(self, client:'MCPClient') -> 'None':
-        """ Initialize reports the masked server identity.
+        """ Initialize reports the public name the gateway was imported with.
         """
 
         response = client.jsonrpc('initialize', params=_initialize_params)
         json_body = response.json()
         result = json_body['result']
 
-        # The server information must report the masked identity ..
+        # The server information must report the public name ..
         server_information = result['serverInfo']
 
-        assert server_information['name'] == _expected_server_name
-        assert server_information['version'] == _expected_server_version
+        assert server_information['name'] == _mcp_public_name
+        assert server_information['version'] == _server_version
+
+        # .. clean up the session.
+        session_id = response.headers[_session_header]
+        _ = client.delete_session(session_id=session_id)
+
+# ################################################################################################################################
+
+    def test_initialize_reports_the_gateway_name_without_a_public_name(self, zato_server:'anydict') -> 'None':
+        """ A gateway imported without a public name introduces itself under its own name.
+        """
+
+        client = MCPClient(zato_server['mcp_url_no_public_name'], auth=zato_server['mcp_auth'])
+
+        response = client.jsonrpc('initialize', params=_initialize_params)
+        json_body = response.json()
+        result = json_body['result']
+
+        # The server information must report the gateway's own name ..
+        server_information = result['serverInfo']
+
+        assert server_information['name'] == _mcp_no_public_name_gateway
+        assert server_information['version'] == _server_version
 
         # .. clean up the session.
         session_id = response.headers[_session_header]

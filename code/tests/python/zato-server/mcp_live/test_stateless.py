@@ -15,7 +15,8 @@ import pytest
 # local
 from _client_stateless import MCPStatelessClient
 from _constants import _demo_echo_service, _error_header_mismatch, _error_method_not_found, \
-    _error_unsupported_protocol_version, _protocol_version_stateless, _raise_service, _zato_internal_prefix
+    _error_unsupported_protocol_version, _mcp_public_name, _protocol_version_stateless, _raise_service, _server_version, \
+    _zato_internal_prefix
 from test_audit_log import _get_demo_gateway, _read_events, _set_audit_log_active, _wait_until_audit_is_on
 
 # Zato
@@ -33,10 +34,6 @@ if 0:
 
 # The session-based protocol revision, advertised by server/discover next to the stateless one
 _protocol_version_sessions = '2025-06-18'
-
-# The identity the server reports
-_expected_server_name    = 'Apache'
-_expected_server_version = '2.4'
 
 # The _meta key naming the server in each result
 _meta_key_server_info = 'io.modelcontextprotocol/serverInfo'
@@ -73,8 +70,8 @@ class TestDiscover:
         assert 'tools' in capabilities
 
         server_info = result['serverInfo']
-        assert server_info['name'] == _expected_server_name
-        assert server_info['version'] == _expected_server_version
+        assert server_info['name'] == _mcp_public_name
+        assert server_info['version'] == _server_version
 
 # ################################################################################################################################
 
@@ -112,8 +109,8 @@ class TestToolsFlow:
 
         meta = result['_meta']
         server_info = meta[_meta_key_server_info]
-        assert server_info['name'] == _expected_server_name
-        assert server_info['version'] == _expected_server_version
+        assert server_info['name'] == _mcp_public_name
+        assert server_info['version'] == _server_version
 
 # ################################################################################################################################
 

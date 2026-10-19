@@ -824,5 +824,8 @@ class CommandLineServiceTestCase(BaseZatoTestCase):
 # Test caller identity used across all MCP tests - the name of the test security definition
 _test_identity = 'test.sec.def'
 
+# The public name of the gateway every MCP test handler introduces itself with
+_test_public_name = 'test.mcp.gateway'
+
 # ################################################################################################################################
 # ################################################################################################################################

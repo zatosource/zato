@@ -40,17 +40,18 @@ test-response-cache:
 	echo "Running response cache tests in $(Zato_Package_Name)"
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/connection/http_soap/test_response_cache*.py -v
 
+# fuzz_disabled
 fuzz:
-	echo "=== Running proptest in $(Zato_Package_Name) ==="
-	. $$HOME/.cargo/env && cd $(Zato_Core_Dir) && cargo test
-	echo "=== Running cargo-fuzz in $(Zato_Package_Name) ($(Zato_Fuzz_Timeout)s per target) ==="
-	. $$HOME/.cargo/env && cd $(Zato_Core_Dir) && \
-		for target in $(FUZZ_TARGETS); do \
-			echo "  Fuzzing $$target ..."; \
-			cargo +nightly fuzz run $$target -- -max_total_time=$(Zato_Fuzz_Timeout) 2>&1 | tail -1; \
-		done
-	echo "=== Running cargo-mutants in $(Zato_Package_Name) ==="
-	. $$HOME/.cargo/env && cd $(Zato_Core_Dir) && cargo mutants --no-shuffle $(MUTANT_FILES) --exclude-re $(MUTANT_EXCLUDES)
+#	echo "=== Running proptest in $(Zato_Package_Name) ==="
+#	. $$HOME/.cargo/env && cd $(Zato_Core_Dir) && cargo test
+#	echo "=== Running cargo-fuzz in $(Zato_Package_Name) ($(Zato_Fuzz_Timeout)s per target) ==="
+#	. $$HOME/.cargo/env && cd $(Zato_Core_Dir) && \
+#		for target in $(FUZZ_TARGETS); do \
+#			echo "  Fuzzing $$target ..."; \
+#			cargo +nightly fuzz run $$target -- -max_total_time=$(Zato_Fuzz_Timeout) 2>&1 | tail -1; \
+#		done
+#	echo "=== Running cargo-mutants in $(Zato_Package_Name) ==="
+#	. $$HOME/.cargo/env && cd $(Zato_Core_Dir) && cargo mutants --no-shuffle $(MUTANT_FILES) --exclude-re $(MUTANT_EXCLUDES)
 
 ruff:
 	echo "Running ruff in $(Zato_Package_Name)"

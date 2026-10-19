@@ -15,7 +15,7 @@ from unittest import main, TestCase
 # Zato
 from zato.common.json_internal import dumps
 from zato.common.skills.api import skill_file_name, skills_directory_name
-from zato.common.test import _test_identity
+from zato.common.test import _test_identity, _test_public_name
 from zato.common.typing_ import cast_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
@@ -96,7 +96,8 @@ def _make_handler(skill_prompts:'SkillPrompts') -> 'MCPHandler':
 
     registry = cast_('ToolRegistry', _MockToolRegistry())
 
-    out = MCPHandler(registry, _invoke_noop, session_manager, safeguard_config, token_cap_config, False, skill_prompts)
+    out = MCPHandler(registry, _invoke_noop, session_manager, safeguard_config, token_cap_config, False, skill_prompts,
+        _test_public_name)
     return out
 
 # ################################################################################################################################

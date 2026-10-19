@@ -9,7 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The registry of the demo config sets - what each one is called, how it is imported,
 # how its presence is checked and how its objects are removed. The Demo config screen
 # saves through it and the first start of a fresh environment - one with no user
-# services to deploy - imports the sets from First_Start_Set_Names through it.
+# services to deploy - imports the sets from First_Start_Set_Names through it,
+# or the sets named in the Env_First_Start_Set_Names environment variable.
 
 # stdlib
 import os
@@ -31,6 +32,9 @@ from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.file_system import get_python_files
 from zato.server.demo import _archive_intake_channel, _archive_outconn
+from zato.server.demo_mcp.common import Gateway_Name as _mcp_gateway_name, Security_Name as _mcp_security_name, \
+    SQL_Connections as _mcp_sql_connections
+from zato.server.demo_mcp.install import import_demo_mcp, remove_demo_mcp
 from zato.server.demo_file_transfer.layout import Feeder_Name as _file_transfer_feeder_name, FTP_Connections, \
     get_connection_names, get_schedule_job_names, SFTP_Connections, SMB_Connections
 
@@ -60,15 +64,21 @@ logger = getLogger(__name__)
 Set_Scheduler = 'scheduler'
 Set_Tutorial  = 'tutorial'
 Set_HL7       = 'hl7'
+Set_MCP       = 'mcp'
 Set_IBM_MQ    = 'ibm_mq'
 Set_Kafka     = 'kafka'
 Set_PubSub    = 'pubsub'
 Set_File_Transfer = 'file_transfer'
 
-Set_Names = [Set_Scheduler, Set_Tutorial, Set_HL7, Set_IBM_MQ, Set_Kafka, Set_PubSub, Set_File_Transfer]
+# The HL7 set comes before the MCP one, which builds on it
+Set_Names = [Set_Scheduler, Set_Tutorial, Set_HL7, Set_MCP, Set_IBM_MQ, Set_Kafka, Set_PubSub, Set_File_Transfer]
 
 # The demo config sets a fresh environment receives on its first start
 First_Start_Set_Names = [Set_Tutorial, Set_HL7]
+
+# The environment variable that names, comma-separated, the demo config sets a first start imports instead,
+# whatever user services or objects the environment already has
+Env_First_Start_Set_Names = 'Zato_Demo_Config_Sets'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,6 +138,11 @@ _manifests = {
         {'kind': 'security-apikey', 'names': [_tutorial_security_name]},
         {'kind': 'job', 'names': [_tutorial_job_name]},
     ],
+    Set_MCP: [
+        {'kind': 'gateway-mcp', 'names': [_mcp_gateway_name]},
+        {'kind': 'sql', 'names': _mcp_sql_connections},
+        {'kind': 'security-bearer', 'names': [_mcp_security_name]},
+    ],
     Set_HL7: [
         {'kind': 'channel-hl7-mllp', 'names': [Channel_Main, Channel_Lab, Channel_Clinic]},
         {'kind': 'outconn-hl7-mllp', 'names': [Outconn_Forward]},
@@ -168,6 +183,7 @@ _generic_conn_types = {
     'outconn-sftp':     GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
     'outconn-ftp':      GENERIC.CONNECTION.TYPE.OUTCONN_FTP,
     'outconn-smb':      GENERIC.CONNECTION.TYPE.OUTCONN_SMB,
+    'gateway-mcp':      GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
 }
 
 # Which side of the http-soap table each REST kind lives on
@@ -334,6 +350,7 @@ _existing_names_funcs = {
     'outconn-rest':     _existing_rest_names,
     'sql':              _existing_sql_names,
     'security-apikey':  _existing_security_names,
+    'security-bearer':  _existing_security_names,
     'security-basic-auth': _existing_security_names,
     'pubsub-topic':     _existing_topic_names,
     'channel-ibm-mq':   _existing_generic_conn_names,
@@ -346,6 +363,7 @@ _existing_names_funcs = {
     'outconn-sftp':     _existing_generic_conn_names,
     'outconn-ftp':      _existing_generic_conn_names,
     'outconn-smb':      _existing_generic_conn_names,
+    'gateway-mcp':      _existing_generic_conn_names,
 }
 
 # ################################################################################################################################
@@ -365,6 +383,12 @@ def _import_tutorial(server:'ParallelServer') -> 'any_':
 
 def _import_hl7(server:'ParallelServer') -> 'any_':
     out = server.import_demo_hl7()
+    return out
+
+# ################################################################################################################################
+
+def _import_mcp(server:'ParallelServer') -> 'any_':
+    out = import_demo_mcp(server)
     return out
 
 # ################################################################################################################################
@@ -610,6 +634,12 @@ def _remove_file_transfer(server:'ParallelServer') -> 'stranydict':
 
 # ################################################################################################################################
 
+def _remove_mcp(server:'ParallelServer') -> 'stranydict':
+    out = remove_demo_mcp(server)
+    return out
+
+# ################################################################################################################################
+
 def _remove_hl7(server:'ParallelServer') -> 'stranydict':
 
     from zato.server.demo import remove_demo_data
@@ -624,6 +654,7 @@ _import_funcs = {
     Set_Scheduler: _import_scheduler,
     Set_Tutorial:  _import_tutorial,
     Set_HL7:       _import_hl7,
+    Set_MCP:       _import_mcp,
     Set_IBM_MQ:    _import_ibm_mq,
     Set_Kafka:     _import_kafka,
     Set_PubSub:    _import_pubsub,
@@ -634,6 +665,7 @@ _remove_funcs = {
     Set_Scheduler: _remove_scheduler,
     Set_Tutorial:  _remove_tutorial,
     Set_HL7:       _remove_hl7,
+    Set_MCP:       _remove_mcp,
     Set_IBM_MQ:    _remove_ibm_mq,
     Set_Kafka:     _remove_kafka,
     Set_PubSub:    _remove_pubsub,
@@ -870,9 +902,34 @@ def _claim_startup_marker(server:'ParallelServer') -> 'bool':
 
 # ################################################################################################################################
 
+def _get_requested_set_names(requested_set_names:'str') -> 'strlist':
+    """ Turns the comma-separated set names from the environment into a list, in the order of Set_Names,
+    so that a set is imported after the sets it builds on.
+    """
+    requested:'strlist' = []
+
+    for name in requested_set_names.split(','):
+        name = name.strip()
+
+        if name not in Set_Names:
+            raise Exception(f'Unknown demo config set `{name}` in {Env_First_Start_Set_Names}, expected one of {Set_Names}')
+
+        requested.append(name)
+
+    out:'strlist' = []
+
+    for set_name in Set_Names:
+        if set_name in requested:
+            out.append(set_name)
+
+    return out
+
+# ################################################################################################################################
+
 def import_demo_config_on_first_start(server:'ParallelServer') -> 'None':
     """ Imports the demo config sets from First_Start_Set_Names when a fresh environment starts
     for the first time - one with no user services to deploy and no user-defined objects yet.
+    The sets named in the Env_First_Start_Set_Names variable are imported instead, whatever the environment has.
     The pass runs once per environment - a marker records that it ran, so removed demo config never
     comes back on a restart.
     """
@@ -881,18 +938,25 @@ def import_demo_config_on_first_start(server:'ParallelServer') -> 'None':
     if not _claim_startup_marker(server):
         return
 
-    # .. an environment that deploys its own user services is never touched ..
-    if has_user_services(server):
+    # .. sets named in the environment are imported in any case ..
+    if requested_set_names := os.environ.get(Env_First_Start_Set_Names):
+        set_names = _get_requested_set_names(requested_set_names)
+
+    # .. otherwise, an environment that deploys its own user services is never touched ..
+    elif has_user_services(server):
         logger.debug('Demo config: user services found, skipping the first-start import')
         return
 
     # .. neither is one that already holds anything user-defined ..
-    if not is_environment_empty(server):
+    elif not is_environment_empty(server):
         logger.debug('Demo config: skipping the first-start import')
         return
 
-    # .. and a fresh one receives the configured demo config sets.
-    for set_name in First_Start_Set_Names:
+    # .. and a fresh one receives the default demo config sets.
+    else:
+        set_names = First_Start_Set_Names
+
+    for set_name in set_names:
 
         import_func = _import_funcs[set_name]
 

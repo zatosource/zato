@@ -40,5 +40,12 @@ missing_panics_doc = "allow"
 module_name_repetitions = "allow"
 option_if_let_else = "allow"
 
+[profile.dev]
+incremental = false
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
 [profile.release]
 overflow-checks = true
