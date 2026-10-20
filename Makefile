@@ -441,7 +441,7 @@ Zato_Pyright_All_Paths := \
 
 pyright-all:
 	@echo "Running Python type checks on every first-party tree from $(CURDIR)/code"
-	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) $(Zato_Pyright_All_Paths)
+	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) --project pyright-all.json $(Zato_Pyright_All_Paths)
 
 test-lint: ## Static analysis only - no test is executed. The first stage of test-all.
 	$(Zato_Log_Reset)
