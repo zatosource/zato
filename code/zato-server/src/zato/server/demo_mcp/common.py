@@ -27,45 +27,43 @@ Security_Token = 'healthcare-demo'
 # The gateway's own security group, which the bearer token is a member of
 Group_Name = get_mcp_group_name(Gateway_Name)
 
-# One SQL connection per data source of the healthcare network
-SQL_Warehouse  = 'demo.healthcare.warehouse'
-SQL_Supplies   = 'demo.healthcare.supplies'
-SQL_Scheduling = 'demo.healthcare.scheduling'
+# One SQL connection per executive reporting data source
+SQL_Warehouse = 'demo.healthcare.warehouse'
+SQL_Finance   = 'demo.healthcare.finance'
+SQL_Workforce = 'demo.healthcare.workforce'
 
-SQL_Connections = [SQL_Warehouse, SQL_Supplies, SQL_Scheduling]
+SQL_Connections = [SQL_Warehouse, SQL_Finance, SQL_Workforce]
 
 # The SQLite database file behind each SQL connection
 Database_Files = {
-    SQL_Warehouse:  'warehouse.db',
-    SQL_Supplies:   'supplies.db',
-    SQL_Scheduling: 'scheduling.db',
+    SQL_Warehouse: 'warehouse.db',
+    SQL_Finance:   'finance.db',
+    SQL_Workforce: 'workforce.db',
 }
 
 # The directory under the server's work directory the database files are created in
 Database_Directory = 'demo-healthcare'
 
-# The services the gateway exposes as tools
-Service_Network_Overview = 'healthcare.get-network-overview'
-Service_List_Facilities     = 'healthcare.list-facilities'
-Service_Visit_Volume     = 'healthcare.get-visit-volume'
-Service_Supply_Alerts    = 'healthcare.get-supply-alerts'
-Service_Staffing         = 'healthcare.get-staffing'
-Service_Interface_Feeds  = 'healthcare.get-interface-feeds'
+# The executive reporting services the gateway exposes as tools
+Service_Scorecard = 'healthcare.get-scorecard'
+Service_Care_Flow = 'healthcare.track-care-flow'
+Service_Quality   = 'healthcare.review-quality'
+Service_Workforce = 'healthcare.assess-workforce'
+Service_Finance   = 'healthcare.track-finance'
 
 Service_Names = [
-    Service_Network_Overview,
-    Service_List_Facilities,
-    Service_Visit_Volume,
-    Service_Supply_Alerts,
-    Service_Staffing,
-    Service_Interface_Feeds,
+    Service_Scorecard,
+    Service_Care_Flow,
+    Service_Quality,
+    Service_Workforce,
+    Service_Finance,
 ]
 
 # The file the services are deployed from in the hot-deployment directory
 Services_File_Name = 'demo_healthcare_mcp.py'
 
 # How many days of history the databases hold, counting back from the day of the import
-History_Days = 28
+History_Days = 56
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -6,9 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The import and the removal of the MCP healthcare demo - the HL7 MLLP and FHIR demo it builds on,
-# the SQLite databases of the healthcare network, the services, the SQL connections, and the bearer token,
-# security group and MCP gateway imported through enmasse.
+# The import and the removal of the MCP healthcare demo - the SQLite reporting databases, services,
+# SQL connections, bearer token, security group and MCP gateway imported through enmasse.
 
 # stdlib
 import os
@@ -19,11 +18,9 @@ from time import sleep
 
 # Zato
 from zato.common.api import GENERIC, Groups
-from zato.common.demo.seed import Channel_Main
 from zato.common.odb.model import GenericConn, GenericObject, SecurityBase, SQLConnectionPool
 from zato.common.typing_ import cast_
 from zato.server.commands import CommandsFacade
-from zato.server.demo import import_demo_data
 from zato.server.demo_mcp.common import Database_Directory, Gateway_Name, Group_Name, Security_Name, Service_Names, \
     Services_File_Name, SQL_Connections
 from zato.server.demo_mcp.warehouse import build_databases
@@ -70,22 +67,6 @@ _wait_step_seconds = 0.05
 def _get_database_directory(server:'ParallelServer') -> 'str':
     out = os.path.join(server.work_dir, Database_Directory)
     return out
-
-# ################################################################################################################################
-
-def _ensure_hl7_demo(server:'ParallelServer') -> 'bool':
-    """ Imports the HL7 MLLP and FHIR demo unless it is already in place. Returns whether it was imported now.
-    """
-    with closing(server.odb.session()) as session:
-        existing = session.query(GenericConn.id).\
-            filter(GenericConn.name==Channel_Main).\
-            first()
-
-    if existing:
-        return False
-
-    _ = import_demo_data(server)
-    return True
 
 # ################################################################################################################################
 
@@ -184,14 +165,11 @@ def _ensure_sql_connections(server:'ParallelServer', database_paths:'strdict') -
 # ################################################################################################################################
 
 def import_demo_mcp(server:'ParallelServer') -> 'stranydict':
-    """ Sets up the MCP healthcare demo - the HL7 MLLP and FHIR demo it builds on, the databases,
-    the services, the SQL connections, and the bearer token, security group and MCP gateway.
+    """ Sets up the MCP healthcare demo - its reporting databases, services, SQL connections,
+    bearer token, security group and MCP gateway.
     """
 
-    # The interface feeds the gateway reports on are the ones of the HL7 MLLP demo, so it goes in first ..
-    hl7_imported = _ensure_hl7_demo(server)
-
-    # .. the databases are built anew ..
+    # The databases are built anew ..
     database_paths = build_databases(_get_database_directory(server))
 
     # .. the gateway names the services, so they are deployed before it ..
@@ -213,7 +191,6 @@ def import_demo_mcp(server:'ParallelServer') -> 'stranydict':
             result.stdout.strip(), result.stderr.strip())
 
     out = {
-        'hl7_imported': hl7_imported,
         'services_deployed': services_deployed,
         'sql_created': sql_created,
         'is_ok': result.is_ok,
@@ -224,8 +201,7 @@ def import_demo_mcp(server:'ParallelServer') -> 'stranydict':
 # ################################################################################################################################
 
 def remove_demo_mcp(server:'ParallelServer') -> 'stranydict':
-    """ Removes what the MCP healthcare demo created. The HL7 MLLP and FHIR demo stays in place,
-    it is a demo config set of its own.
+    """ Removes what the MCP healthcare demo created.
     """
     sql_name_column = cast_('any_', SQLConnectionPool.name)
 

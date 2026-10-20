@@ -6,9 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The SQLite databases of the MCP healthcare demo - the shared data warehouse with the clinics
-# and their visit volumes, the supply chain database and the staff scheduling database. Every import
-# builds them anew, with the history ending on the day of the import.
+# The SQLite databases of the MCP healthcare demo - the reporting warehouse, finance system
+# and workforce system. Every import builds them anew, with the history ending on the day of the import.
 
 # stdlib
 import os
@@ -18,7 +17,7 @@ from datetime import date, timedelta
 from random import Random
 
 # Zato
-from zato.server.demo_mcp.common import Database_Files, History_Days, SQL_Scheduling, SQL_Supplies, SQL_Warehouse
+from zato.server.demo_mcp.common import Database_Files, History_Days, SQL_Finance, SQL_Warehouse, SQL_Workforce
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,80 +31,40 @@ if 0:
 # The seed every database is generated from, so each import produces the same figures
 _seed = 20261019
 
-# The clinics of the network - code, name, city, region, opening year and number of exam rooms
-_clinics:'anytuple' = (
-    ('CL-01', 'Harbor Point Clinic',     'Riverside', 'South',   2009, 6),
-    ('CL-02', 'Maple Street Clinic',     'Riverside', 'South',   2014, 4),
-    ('CL-03', 'Eastgate Family Clinic',  'Eastgate',  'East',    2011, 8),
-    ('CL-04', 'Hillcrest Clinic',        'Hillcrest', 'North',   2017, 5),
-    ('CL-05', 'Lakeside Walk-in Center', 'Lakeside',  'West',    2019, 3),
-    ('CL-06', 'Old Town Clinic',         'Old Town',  'Central', 2006, 7),
-    ('CL-07', 'Westfield Clinic',        'Westfield', 'West',    2021, 4),
-    ('CL-08', 'Northside Clinic',        'Northside', 'North',   2015, 6),
+# The healthcare facilities - code, name, city, region and service capacity
+_facilities:'anytuple' = (
+    ('HC-01', 'Harbor Health Center',   'Riverside', 'South',   120),
+    ('HC-02', 'Maple Health Center',    'Riverside', 'South',    80),
+    ('HC-03', 'Eastgate Care Center',   'Eastgate',  'East',    150),
+    ('HC-04', 'Hillcrest Care Center',  'Hillcrest', 'North',   100),
+    ('HC-05', 'Lakeside Health Center', 'Lakeside',  'West',     70),
+    ('HC-06', 'Old Town Care Center',   'Old Town',  'Central', 130),
+    ('HC-07', 'Westfield Care Center',  'Westfield', 'West',     90),
+    ('HC-08', 'Northside Health Center','Northside', 'North',   110),
 )
 
-# How many visits of each type one exam room sees on a weekday
-_visits_per_room = {
-    'scheduled':  9,
-    'walk-in':    4,
-    'telehealth': 3,
-}
-
-# The share of each visit type's weekday volume seen on Saturdays and Sundays
-_weekend_share = {
-    'scheduled':  (0.4, 0.0),
-    'walk-in':    (0.8, 0.5),
-    'telehealth': (0.5, 0.3),
-}
-
-# The supply items each clinic keeps in stock - SKU, description, unit and reorder level
-_supply_items:'anytuple' = (
-    ('SUP-100', 'Nitrile gloves, medium',      'box of 100',  40),
-    ('SUP-101', 'Nitrile gloves, large',       'box of 100',  30),
-    ('SUP-200', 'Syringes, 5 ml',              'box of 100',  20),
-    ('SUP-300', 'Gauze pads, 4 x 4 in',        'pack of 200', 25),
-    ('SUP-400', 'Face masks',                  'box of 50',   60),
-    ('SUP-500', 'Exam table paper',            'roll',        24),
-    ('SUP-600', 'Hand sanitizer, 500 ml',      'bottle',      36),
-    ('SUP-700', 'Thermometer probe covers',    'box of 200',  15),
-    ('SUP-800', 'Adhesive bandages, assorted', 'box of 100',  30),
-)
-
-# The states a shipment to a clinic goes through
-_shipment_statuses = ('scheduled', 'in transit', 'delivered')
-
-# The roles each clinic schedules shifts for, with how many shifts per exam room a weekday needs
-_shift_roles = {
-    'physician':  0.5,
-    'nurse':      1.0,
-    'reception':  0.5,
-    'technician': 0.3,
-}
-
-# The share of weekday shifts each clinic schedules on Saturdays and Sundays
-_weekend_shift_share = (0.5, 0.2)
+# The share of weekday activity recorded on Saturdays and Sundays
+_weekend_activity_share = (0.55, 0.35)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _warehouse_schema = (
-    'create table clinic (code text primary key, name text, city text, region text, opened_year integer, ' + \
-        'exam_rooms integer)',
-    'create table daily_visits (visit_date text, clinic_code text, visit_type text, visits integer, ' + \
-        'missed_appointments integer, average_wait_minutes real)',
-    'create table satisfaction (month text, clinic_code text, responses integer, average_score real)',
+    'create table facility (code text primary key, name text, city text, region text, service_capacity integer)',
+    'create table care_flow (report_date text, facility_code text, referrals integer, first_appointments integer, ' + \
+        'discharges integer, waiting_patients integer, median_wait_days real, capacity_used_percent real)',
+    'create table quality (report_date text, facility_code text, safety_events integer, complaints integer, ' + \
+        'outcome_assessments integer, positive_outcomes integer, overdue_actions integer)',
 )
 
-_supplies_schema = (
-    'create table supply_item (sku text primary key, description text, unit text)',
-    'create table stock_level (clinic_code text, sku text, on_hand integer, reorder_level integer, ' + \
-        'last_delivery_date text)',
-    'create table shipment (shipment_id text primary key, clinic_code text, sku text, quantity integer, ' + \
-        'ship_date text, status text)',
+_finance_schema = (
+    'create table financial_performance (report_date text, facility_code text, contract_value integer, ' + \
+        'delivered_value integer, registered_value integer, billed_value integer, operating_cost integer)',
 )
 
-_scheduling_schema = (
-    'create table shift (shift_date text, clinic_code text, role text, shifts_planned integer, shifts_filled integer)',
+_workforce_schema = (
+    'create table workforce (report_date text, facility_code text, planned_hours integer, worked_hours integer, ' + \
+        'absence_hours integer, agency_hours integer, vacancies integer)',
 )
 
 # ################################################################################################################################
@@ -143,165 +102,145 @@ def _get_weekend_index(day:'date') -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _build_visit_rows(random:'Random') -> 'anylist':
-    """ Returns one row per day, clinic and visit type, with the visits, the missed appointments
-    and the average wait in minutes.
+def _get_activity_share(day:'date') -> 'float':
+    """ Returns the share of weekday activity expected on the given day.
+    """
+    weekend_index = _get_weekend_index(day)
+
+    if weekend_index >= 0:
+        out = _weekend_activity_share[weekend_index]
+    else:
+        out = 1.0
+
+    return out
+
+# ################################################################################################################################
+
+def _build_care_flow_rows(random:'Random') -> 'anylist':
+    """ Returns one executive care-flow row per day and facility.
     """
     out:'anylist' = []
 
     for day in _get_history_dates():
 
-        weekend_index = _get_weekend_index(day)
+        activity_share = _get_activity_share(day)
 
-        for code, _name, _city, _region, _opened_year, exam_rooms in _clinics:
-            for visit_type, visits_per_room in _visits_per_room.items():
+        for code, _name, _city, _region, capacity in _facilities:
 
-                # The weekday volume of this clinic, with some variation from one day to the next ..
-                expected = exam_rooms * visits_per_room * random.uniform(0.8, 1.2)
+            referrals         = round(capacity * random.uniform(0.025, 0.045) * activity_share)
+            first_appointments = round(capacity * random.uniform(0.020, 0.040) * activity_share)
+            discharges        = round(capacity * random.uniform(0.015, 0.035) * activity_share)
+            waiting_patients  = round(capacity * random.uniform(0.18, 0.42))
+            median_wait_days  = round(random.uniform(7.0, 24.0), 1)
+            capacity_used     = round(random.uniform(82.0, 98.5), 1)
 
-                # .. scaled down on weekends ..
-                if weekend_index >= 0:
-                    expected = expected * _weekend_share[visit_type][weekend_index]
-
-                visits = round(expected)
-
-                # .. only scheduled visits can be missed ..
-                if visit_type == 'scheduled':
-                    missed_appointments = round(visits * random.uniform(0.03, 0.12))
-                else:
-                    missed_appointments = 0
-
-                # .. and walk-ins wait the longest.
-                if visit_type == 'walk-in':
-                    average_wait_minutes = round(random.uniform(18, 55), 1)
-                elif visit_type == 'scheduled':
-                    average_wait_minutes = round(random.uniform(6, 22), 1)
-                else:
-                    average_wait_minutes = round(random.uniform(2, 9), 1)
-
-                if visits == 0:
-                    average_wait_minutes = 0.0
-
-                row = (day.isoformat(), code, visit_type, visits, missed_appointments, average_wait_minutes)
-                out.append(row)
-
-    return out
-
-# ################################################################################################################################
-
-def _build_satisfaction_rows(random:'Random') -> 'anylist':
-    """ Returns one row per clinic for each of the last three months, with the survey responses
-    received and their average score on a scale from 1 to 5.
-    """
-    out:'anylist' = []
-
-    first_of_this_month = date.today().replace(day=1)
-    month_starts = [first_of_this_month]
-
-    for _ in range(2):
-        previous = month_starts[-1] - timedelta(days=1)
-        month_starts.append(previous.replace(day=1))
-
-    for month_start in reversed(month_starts):
-
-        month = month_start.strftime('%Y-%m')
-
-        for code, _name, _city, _region, _opened_year, exam_rooms in _clinics:
-            responses = round(exam_rooms * random.uniform(15, 30))
-            average_score = round(random.uniform(3.6, 4.8), 2)
-            out.append((month, code, responses, average_score))
-
-    return out
-
-# ################################################################################################################################
-
-def _build_stock_rows(random:'Random') -> 'anylist':
-    """ Returns one row per clinic and supply item, a few of them at or below their reorder level.
-    """
-    out:'anylist' = []
-    today = date.today()
-
-    for code, _name, _city, _region, _opened_year, _exam_rooms in _clinics:
-        for sku, _description, _unit, reorder_level in _supply_items:
-
-            # Most items are well stocked, roughly one in six is at or below its reorder level
-            if random.random() < 0.17:
-                on_hand = round(reorder_level * random.uniform(0.2, 1.0))
-            else:
-                on_hand = round(reorder_level * random.uniform(1.2, 3.5))
-
-            last_delivery_date = today - timedelta(days=random.randint(2, 40))
-
-            row = (code, sku, on_hand, reorder_level, last_delivery_date.isoformat())
+            row = (
+                day.isoformat(),
+                code,
+                referrals,
+                first_appointments,
+                discharges,
+                waiting_patients,
+                median_wait_days,
+                capacity_used,
+            )
             out.append(row)
 
     return out
 
 # ################################################################################################################################
 
-def _build_shipment_rows(random:'Random') -> 'anylist':
-    """ Returns the shipments of the last two weeks and the coming one, two or three per clinic.
+def _build_quality_rows(random:'Random') -> 'anylist':
+    """ Returns one quality and safety row per day and facility.
     """
     out:'anylist' = []
-    today = date.today()
-    shipment_number = 5000
 
-    for code, _name, _city, _region, _opened_year, _exam_rooms in _clinics:
-        for _ in range(random.randint(2, 3)):
+    for day in _get_history_dates():
 
-            shipment_number += 1
+        activity_share = _get_activity_share(day)
 
-            sku, _description, _unit, reorder_level = random.choice(_supply_items)
-            quantity = reorder_level * random.randint(2, 4)
-            days_offset = random.randint(-14, 7)
-            ship_date = today + timedelta(days=days_offset)
+        for code, _name, _city, _region, capacity in _facilities:
 
-            # What already left the warehouse a while ago is delivered, a recent one is on its way
-            # and anything dated after today is still scheduled.
-            if days_offset > 0:
-                status = _shipment_statuses[0]
-            elif days_offset > -3:
-                status = _shipment_statuses[1]
-            else:
-                status = _shipment_statuses[2]
+            outcome_assessments = max(round(capacity * random.uniform(0.025, 0.055) * activity_share), 1)
+            positive_outcomes   = round(outcome_assessments * random.uniform(0.72, 0.94))
+            safety_events       = 1 if random.random() < 0.14 else 0
+            complaints          = 1 if random.random() < 0.06 else 0
+            overdue_actions     = random.randint(0, 3)
 
-            row = (f'SHP-{shipment_number}', code, sku, quantity, ship_date.isoformat(), status)
+            row = (
+                day.isoformat(),
+                code,
+                safety_events,
+                complaints,
+                outcome_assessments,
+                positive_outcomes,
+                overdue_actions,
+            )
             out.append(row)
 
     return out
 
 # ################################################################################################################################
 
-def _build_shift_rows(random:'Random') -> 'anylist':
-    """ Returns one row per day, clinic and role, with the shifts planned and the shifts filled.
+def _build_finance_rows(random:'Random') -> 'anylist':
+    """ Returns one financial performance row per day and facility.
     """
     out:'anylist' = []
 
     for day in _get_history_dates():
 
-        weekend_index = _get_weekend_index(day)
+        activity_share = _get_activity_share(day)
 
-        for code, _name, _city, _region, _opened_year, exam_rooms in _clinics:
-            for role, shifts_per_room in _shift_roles.items():
+        for code, _name, _city, _region, capacity in _facilities:
 
-                planned = exam_rooms * shifts_per_room
+            contract_value   = round(capacity * 175 * activity_share)
+            delivered_value  = round(contract_value * random.uniform(0.90, 1.06))
+            registered_value = round(delivered_value * random.uniform(0.94, 0.995))
+            billed_value     = round(registered_value * random.uniform(0.95, 0.995))
+            operating_cost   = round(delivered_value * random.uniform(0.82, 0.98))
 
-                if weekend_index >= 0:
-                    planned = planned * _weekend_shift_share[weekend_index]
+            row = (
+                day.isoformat(),
+                code,
+                contract_value,
+                delivered_value,
+                registered_value,
+                billed_value,
+                operating_cost,
+            )
+            out.append(row)
 
-                shifts_planned = max(round(planned), 1)
+    return out
 
-                # Most shifts are filled, a few stay open
-                shifts_open = 0
+# ################################################################################################################################
 
-                for _ in range(shifts_planned):
-                    if random.random() < 0.08:
-                        shifts_open += 1
+def _build_workforce_rows(random:'Random') -> 'anylist':
+    """ Returns one workforce performance row per day and facility.
+    """
+    out:'anylist' = []
 
-                shifts_filled = shifts_planned - shifts_open
+    for day in _get_history_dates():
 
-                row = (day.isoformat(), code, role, shifts_planned, shifts_filled)
-                out.append(row)
+        activity_share = _get_activity_share(day)
+
+        for code, _name, _city, _region, capacity in _facilities:
+
+            planned_hours = round(capacity * 3.5 * activity_share)
+            worked_hours  = round(planned_hours * random.uniform(0.88, 0.99))
+            absence_hours = round(planned_hours * random.uniform(0.04, 0.10))
+            agency_hours  = round(worked_hours * random.uniform(0.03, 0.14))
+            vacancies     = max(round(capacity * random.uniform(0.015, 0.055)), 1)
+
+            row = (
+                day.isoformat(),
+                code,
+                planned_hours,
+                worked_hours,
+                absence_hours,
+                agency_hours,
+                vacancies,
+            )
+            out.append(row)
 
     return out
 
@@ -332,42 +271,34 @@ def _create_database(path:'str', schema:'anytuple', inserts:'anytuple') -> 'None
 # ################################################################################################################################
 
 def build_databases(directory:'str') -> 'strdict':
-    """ Builds the three databases of the healthcare network in the given directory
+    """ Builds the three executive reporting databases in the given directory
     and returns the path of each, by the name of the SQL connection it is for.
     """
     os.makedirs(directory, exist_ok=True)
 
     random = Random(_seed)
-
-    clinic_rows = list(_clinics)
-
-    supply_item_rows = []
-
-    for sku, description, unit, _reorder_level in _supply_items:
-        supply_item_rows.append((sku, description, unit))
+    facility_rows = list(_facilities)
 
     out:'strdict' = {}
 
     for connection_name, file_name in Database_Files.items():
         out[connection_name] = os.path.join(directory, file_name)
 
-    # The data warehouse shared by the whole network ..
+    # The reporting warehouse contains care flow, quality and facility reference data ..
     _create_database(out[SQL_Warehouse], _warehouse_schema, (
-        ('insert into clinic values (?, ?, ?, ?, ?, ?)', clinic_rows),
-        ('insert into daily_visits values (?, ?, ?, ?, ?, ?)', _build_visit_rows(random)),
-        ('insert into satisfaction values (?, ?, ?, ?)', _build_satisfaction_rows(random)),
+        ('insert into facility values (?, ?, ?, ?, ?)', facility_rows),
+        ('insert into care_flow values (?, ?, ?, ?, ?, ?, ?, ?)', _build_care_flow_rows(random)),
+        ('insert into quality values (?, ?, ?, ?, ?, ?, ?)', _build_quality_rows(random)),
     ))
 
-    # .. the supply chain database ..
-    _create_database(out[SQL_Supplies], _supplies_schema, (
-        ('insert into supply_item values (?, ?, ?)', supply_item_rows),
-        ('insert into stock_level values (?, ?, ?, ?, ?)', _build_stock_rows(random)),
-        ('insert into shipment values (?, ?, ?, ?, ?, ?)', _build_shipment_rows(random)),
+    # .. the finance system provides contract and revenue measures ..
+    _create_database(out[SQL_Finance], _finance_schema, (
+        ('insert into financial_performance values (?, ?, ?, ?, ?, ?, ?)', _build_finance_rows(random)),
     ))
 
-    # .. and the staff scheduling database.
-    _create_database(out[SQL_Scheduling], _scheduling_schema, (
-        ('insert into shift values (?, ?, ?, ?, ?)', _build_shift_rows(random)),
+    # .. and the workforce system provides staffing measures.
+    _create_database(out[SQL_Workforce], _workforce_schema, (
+        ('insert into workforce values (?, ?, ?, ?, ?, ?, ?)', _build_workforce_rows(random)),
     ))
 
     return out

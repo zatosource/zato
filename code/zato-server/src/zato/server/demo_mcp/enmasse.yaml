@@ -18,16 +18,15 @@ mcp_gateway:
     public_name: Healthcare
     url_path: /mcp/healthcare
     services:
-      - healthcare.get-network-overview
-      - healthcare.list-facilities
-      - healthcare.get-visit-volume
-      - healthcare.get-supply-alerts
-      - healthcare.get-staffing
-      - healthcare.get-interface-feeds
+      - healthcare.get-scorecard
+      - healthcare.track-care-flow
+      - healthcare.review-quality
+      - healthcare.assess-workforce
+      - healthcare.track-finance
     sql_connections:
       - demo.healthcare.warehouse
-      - demo.healthcare.supplies
-      - demo.healthcare.scheduling
+      - demo.healthcare.finance
+      - demo.healthcare.workforce
     security_groups:
       - mcp.demo.healthcare
     validate_input: true

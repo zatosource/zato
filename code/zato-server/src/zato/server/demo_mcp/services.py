@@ -6,48 +6,83 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The services of the MCP healthcare demo. The importer deploys this file as it is through
-# the hot-deployment directory, and the demo MCP gateway exposes each service as one tool.
+# The executive reporting services of the MCP healthcare demo. The importer deploys this file
+# through the hot-deployment directory, and the demo MCP gateway exposes each service as one tool.
 
 # stdlib
 from datetime import date, timedelta
 
 # Zato
-from zato.server.demo_mcp.common import Service_Interface_Feeds, Service_List_Facilities, Service_Network_Overview, \
-    Service_Staffing, Service_Supply_Alerts, Service_Visit_Volume, SQL_Scheduling, SQL_Supplies, SQL_Warehouse
-from zato.server.generic.api.channel_hl7_mllp import get_current_state
+from zato.server.demo_mcp.common import Service_Care_Flow, Service_Finance, Service_Quality, Service_Scorecard, \
+    Service_Workforce, SQL_Finance, SQL_Warehouse, SQL_Workforce
 from zato.server.service import Int, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, stranydict
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many days back the figures go unless a request says otherwise
+# How many days each reporting period covers unless a request says otherwise
 _default_days = 7
+_max_days     = 28
+
+# The targets shown with each executive measure
+_target_wait_days                = 14.0
+_target_capacity_used_percent    = 90.0
+_target_positive_outcome_percent = 85.0
+_target_overdue_actions          = 0
+_target_staffing_percent         = 95.0
+_target_absence_percent          = 6.0
+_target_agency_percent           = 10.0
+_target_plan_percent             = 100.0
+_target_registration_percent     = 98.0
+_target_margin_percent           = 8.0
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_since(days:'int') -> 'str':
-    """ Returns the first day of a period of the given number of days that ends today, as an ISO date.
+def _resolve_days(days:'int') -> 'int':
+    """ Returns a valid reporting-period length.
     """
-    first_day = date.today() - timedelta(days=days - 1)
+    if days < 1:
+        raise Exception('The reporting period must contain at least one day')
 
-    out = first_day.isoformat()
+    if days > _max_days:
+        raise Exception(f'The reporting period cannot exceed {_max_days} days')
+
+    out = days
     return out
 
 # ################################################################################################################################
 
-def _get_clinic_filter(clinic_code:'str', column:'str') -> 'str':
-    """ Returns the condition that narrows a query to one clinic, or nothing if no clinic is given.
+def _get_period(days:'int') -> 'anydict':
+    """ Returns the current reporting period and the preceding period of the same length.
     """
-    if clinic_code:
-        out = f' and {column} = :clinic_code'
+    current_until  = date.today()
+    current_since  = current_until - timedelta(days=days - 1)
+    previous_until = current_since - timedelta(days=1)
+    previous_since = previous_until - timedelta(days=days - 1)
+
+    out = {
+        'days': days,
+        'current_since': current_since.isoformat(),
+        'current_until': current_until.isoformat(),
+        'previous_since': previous_since.isoformat(),
+        'previous_until': previous_until.isoformat(),
+    }
+    return out
+
+# ################################################################################################################################
+
+def _get_facility_filter(facility_code:'str', column:'str') -> 'str':
+    """ Returns the condition that narrows a query to one facility.
+    """
+    if facility_code:
+        out = f' and {column} = :facility_code'
     else:
         out = ''
 
@@ -55,357 +90,573 @@ def _get_clinic_filter(clinic_code:'str', column:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _get_fill_rate(planned:'int', filled:'int') -> 'float':
-    """ Returns the percentage of planned shifts that are filled.
+def _get_percentage(numerator:'float', denominator:'float') -> 'float':
+    """ Returns one number as a percentage of another.
     """
-    if planned == 0:
-        return 100.0
+    if denominator == 0:
+        out = 100.0
+    else:
+        out = round(numerator * 100 / denominator, 1)
 
-    out = round(filled * 100 / planned, 1)
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_clinics(warehouse:'any_', region:'str') -> 'anylist':
-    """ Returns the clinics of the network, optionally only those of one region.
+def get_facilities(warehouse:'any_') -> 'stranydict':
+    """ Returns the healthcare facilities by code.
     """
-    query = 'select code, name, city, region, opened_year, exam_rooms from clinic'
+    query = 'select code, name, city, region, service_capacity from facility order by code'
+    rows = warehouse.execute(query)
 
-    if region:
-        query += ' where region = :region'
-
-    query += ' order by code'
-
-    out = warehouse.execute(query, {'region': region})
-    return out
-
-# ################################################################################################################################
-
-def get_visit_volume(warehouse:'any_', clinic_code:'str', days:'int') -> 'anylist':
-    """ Returns, per clinic, the visits of each type in the period, the missed appointments and the average wait.
-    """
-    clinic_filter = _get_clinic_filter(clinic_code, 'clinic_code')
-
-    query = 'select clinic_code, visit_type, sum(visits) as visits, ' + \
-        'sum(missed_appointments) as missed_appointments, ' + \
-        'round(sum(average_wait_minutes * visits) / max(sum(visits), 1), 1) as average_wait_minutes ' + \
-        'from daily_visits where visit_date >= :since' + clinic_filter + ' ' + \
-        'group by clinic_code, visit_type order by clinic_code, visit_type'
-
-    rows = warehouse.execute(query, {'since': _get_since(days), 'clinic_code': clinic_code})
-
-    # The rows come per visit type, each clinic gets them all in one entry ..
-    by_clinic:'anydict' = {}
+    out:'stranydict' = {}
 
     for row in rows:
+        out[row['code']] = row
 
-        if row['clinic_code'] not in by_clinic:
-            by_clinic[row['clinic_code']] = {
-                'clinic_code': row['clinic_code'],
-                'total_visits': 0,
-                'missed_appointments': 0,
-                'by_visit_type': {},
-            }
-
-        entry = by_clinic[row['clinic_code']]
-        entry['total_visits'] += row['visits']
-        entry['missed_appointments'] += row['missed_appointments']
-        entry['by_visit_type'][row['visit_type']] = {
-            'visits': row['visits'],
-            'average_wait_minutes': row['average_wait_minutes'],
-        }
-
-    # .. in the order of their codes.
-    out = list(by_clinic.values())
     return out
 
 # ################################################################################################################################
 
-def get_low_stock(supplies:'any_', clinic_code:'str') -> 'anylist':
-    """ Returns the supply items that are at or below their reorder level, per clinic.
+def get_care_flow(
+    warehouse:'any_',
+    facility_code:'str',
+    since:'str',
+    until:'str',
+    ) -> 'anylist':
+    """ Returns care-flow measures per facility for one reporting period.
     """
-    clinic_filter = _get_clinic_filter(clinic_code, 'stock.clinic_code')
+    facility_filter = _get_facility_filter(facility_code, 'facility_code')
 
-    query = 'select stock.clinic_code, stock.sku, item.description, item.unit, stock.on_hand, ' + \
-        'stock.reorder_level, stock.last_delivery_date ' + \
-        'from stock_level stock join supply_item item on item.sku = stock.sku ' + \
-        'where stock.on_hand <= stock.reorder_level' + clinic_filter + ' ' + \
-        'order by stock.clinic_code, stock.sku'
+    query = 'select facility_code, sum(referrals) as referrals, ' + \
+        'sum(first_appointments) as first_appointments, sum(discharges) as discharges, ' + \
+        'round(avg(waiting_patients), 1) as waiting_patients, ' + \
+        'round(avg(median_wait_days), 1) as median_wait_days, ' + \
+        'round(avg(capacity_used_percent), 1) as capacity_used_percent ' + \
+        'from care_flow where report_date between :since and :until' + facility_filter + ' ' + \
+        'group by facility_code order by facility_code'
 
-    out = supplies.execute(query, {'clinic_code': clinic_code})
+    parameters = {
+        'facility_code': facility_code,
+        'since': since,
+        'until': until,
+    }
+
+    out = warehouse.execute(query, parameters)
     return out
 
 # ################################################################################################################################
 
-def get_open_shipments(supplies:'any_', clinic_code:'str') -> 'anylist':
-    """ Returns the shipments that are scheduled or on their way to the clinics.
+def get_quality(
+    warehouse:'any_',
+    facility_code:'str',
+    since:'str',
+    until:'str',
+    ) -> 'anylist':
+    """ Returns quality and safety measures per facility for one reporting period.
     """
-    clinic_filter = _get_clinic_filter(clinic_code, 'shipment.clinic_code')
+    facility_filter = _get_facility_filter(facility_code, 'facility_code')
 
-    query = 'select shipment.shipment_id, shipment.clinic_code, shipment.sku, item.description, ' + \
-        'shipment.quantity, shipment.ship_date, shipment.status ' + \
-        'from shipment join supply_item item on item.sku = shipment.sku ' + \
-        "where shipment.status != 'delivered'" + clinic_filter + ' ' + \
-        'order by shipment.ship_date'
+    query = 'select facility_code, sum(safety_events) as safety_events, sum(complaints) as complaints, ' + \
+        'sum(outcome_assessments) as outcome_assessments, sum(positive_outcomes) as positive_outcomes, ' + \
+        'round(avg(overdue_actions), 1) as overdue_actions ' + \
+        'from quality where report_date between :since and :until' + facility_filter + ' ' + \
+        'group by facility_code order by facility_code'
 
-    out = supplies.execute(query, {'clinic_code': clinic_code})
+    parameters = {
+        'facility_code': facility_code,
+        'since': since,
+        'until': until,
+    }
+
+    out = warehouse.execute(query, parameters)
     return out
 
 # ################################################################################################################################
 
-def get_staffing(scheduling:'any_', clinic_code:'str', days:'int') -> 'anylist':
-    """ Returns, per clinic and role, the shifts planned and filled in the period and the fill rate.
+def get_workforce(
+    workforce:'any_',
+    facility_code:'str',
+    since:'str',
+    until:'str',
+    ) -> 'anylist':
+    """ Returns workforce measures per facility for one reporting period.
     """
-    clinic_filter = _get_clinic_filter(clinic_code, 'clinic_code')
+    facility_filter = _get_facility_filter(facility_code, 'facility_code')
 
-    query = 'select clinic_code, role, sum(shifts_planned) as shifts_planned, sum(shifts_filled) as shifts_filled ' + \
-        'from shift where shift_date >= :since' + clinic_filter + ' ' + \
-        'group by clinic_code, role order by clinic_code, role'
+    query = 'select facility_code, sum(planned_hours) as planned_hours, sum(worked_hours) as worked_hours, ' + \
+        'sum(absence_hours) as absence_hours, sum(agency_hours) as agency_hours, ' + \
+        'round(avg(vacancies), 1) as vacancies ' + \
+        'from workforce where report_date between :since and :until' + facility_filter + ' ' + \
+        'group by facility_code order by facility_code'
 
-    rows = scheduling.execute(query, {'since': _get_since(days), 'clinic_code': clinic_code})
+    parameters = {
+        'facility_code': facility_code,
+        'since': since,
+        'until': until,
+    }
 
-    # Each clinic gets its roles and its overall fill rate in one entry ..
-    by_clinic:'anydict' = {}
+    out = workforce.execute(query, parameters)
+    return out
+
+# ################################################################################################################################
+
+def get_finance(
+    finance:'any_',
+    facility_code:'str',
+    since:'str',
+    until:'str',
+    ) -> 'anylist':
+    """ Returns financial and contract measures per facility for one reporting period.
+    """
+    facility_filter = _get_facility_filter(facility_code, 'facility_code')
+
+    query = 'select facility_code, sum(contract_value) as contract_value, ' + \
+        'sum(delivered_value) as delivered_value, sum(registered_value) as registered_value, ' + \
+        'sum(billed_value) as billed_value, sum(operating_cost) as operating_cost ' + \
+        'from financial_performance where report_date between :since and :until' + facility_filter + ' ' + \
+        'group by facility_code order by facility_code'
+
+    parameters = {
+        'facility_code': facility_code,
+        'since': since,
+        'until': until,
+    }
+
+    out = finance.execute(query, parameters)
+    return out
+
+# ################################################################################################################################
+
+def _add_facility_details(rows:'anylist', facilities:'stranydict') -> 'anylist':
+    """ Adds facility names and regions to reporting rows.
+    """
+    for row in rows:
+        facility = facilities[row['facility_code']]
+        row['facility_name'] = facility['name']
+        row['region'] = facility['region']
+
+    out = rows
+    return out
+
+# ################################################################################################################################
+
+def _add_care_flow_measures(rows:'anylist') -> 'anylist':
+    """ Adds care-flow percentages to facility rows.
+    """
+    for row in rows:
+        row['referral_conversion_percent'] = _get_percentage(row['first_appointments'], row['referrals'])
+
+    out = rows
+    return out
+
+# ################################################################################################################################
+
+def _add_quality_measures(rows:'anylist') -> 'anylist':
+    """ Adds quality percentages to facility rows.
+    """
+    for row in rows:
+        row['positive_outcome_percent'] = _get_percentage(row['positive_outcomes'], row['outcome_assessments'])
+
+    out = rows
+    return out
+
+# ################################################################################################################################
+
+def _add_workforce_measures(rows:'anylist') -> 'anylist':
+    """ Adds workforce percentages to facility rows.
+    """
+    for row in rows:
+        row['staffing_percent'] = _get_percentage(row['worked_hours'], row['planned_hours'])
+        row['absence_percent'] = _get_percentage(row['absence_hours'], row['planned_hours'])
+        row['agency_percent'] = _get_percentage(row['agency_hours'], row['worked_hours'])
+
+    out = rows
+    return out
+
+# ################################################################################################################################
+
+def _add_finance_measures(rows:'anylist') -> 'anylist':
+    """ Adds financial percentages to facility rows.
+    """
+    for row in rows:
+        margin_value = row['delivered_value'] - row['operating_cost']
+
+        row['plan_percent'] = _get_percentage(row['delivered_value'], row['contract_value'])
+        row['registration_percent'] = _get_percentage(row['registered_value'], row['delivered_value'])
+        row['billing_percent'] = _get_percentage(row['billed_value'], row['registered_value'])
+        row['margin_percent'] = _get_percentage(margin_value, row['delivered_value'])
+
+    out = rows
+    return out
+
+# ################################################################################################################################
+
+def _require_rows(rows:'anylist', facility_code:'str') -> 'None':
+    """ Requires the requested reporting scope to contain data.
+    """
+    if rows:
+        return
+
+    raise Exception(f'No reporting data found for facility code `{facility_code}`')
+
+# ################################################################################################################################
+
+def _sum(rows:'anylist', field_name:'str') -> 'float':
+    """ Returns the sum of one numeric field.
+    """
+    out = 0.0
 
     for row in rows:
-
-        if row['clinic_code'] not in by_clinic:
-            by_clinic[row['clinic_code']] = {
-                'clinic_code': row['clinic_code'],
-                'shifts_planned': 0,
-                'shifts_filled': 0,
-                'by_role': {},
-            }
-
-        entry = by_clinic[row['clinic_code']]
-        entry['shifts_planned'] += row['shifts_planned']
-        entry['shifts_filled'] += row['shifts_filled']
-        entry['by_role'][row['role']] = {
-            'shifts_planned': row['shifts_planned'],
-            'shifts_filled': row['shifts_filled'],
-            'fill_rate_percent': _get_fill_rate(row['shifts_planned'], row['shifts_filled']),
-        }
-
-    # .. with the overall rate computed once all of its roles are in.
-    out = list(by_clinic.values())
-
-    for entry in out:
-        entry['fill_rate_percent'] = _get_fill_rate(entry['shifts_planned'], entry['shifts_filled'])
+        out += row[field_name]
 
     return out
 
 # ################################################################################################################################
 
-def get_interface_feeds() -> 'anylist':
-    """ Returns the live state of each HL7 MLLP feed of this server.
+def _average(rows:'anylist', field_name:'str') -> 'float':
+    """ Returns the average of one numeric field.
     """
-    out:'anylist' = []
+    total = _sum(rows, field_name)
 
-    for channel in get_current_state():
-        out.append({
-            'name': channel['name'],
-            'is_listening': channel['is_listening'],
-            'received': channel['received'],
-            'acknowledged': channel['acked'],
-            'rejected': channel['nacked'],
-            'errored': channel['errored'],
-            'last_message_time': channel['last_message_time_iso'],
-            'silence_seconds': channel['silence_seconds'],
-        })
+    out = round(total / len(rows), 1)
+    return out
 
+# ################################################################################################################################
+
+def _summarize_care_flow(rows:'anylist') -> 'anydict':
+    """ Returns network-level care-flow measures from facility rows.
+    """
+    referrals          = _sum(rows, 'referrals')
+    first_appointments = _sum(rows, 'first_appointments')
+
+    out = {
+        'referrals': referrals,
+        'first_appointments': first_appointments,
+        'referral_conversion_percent': _get_percentage(first_appointments, referrals),
+        'discharges': _sum(rows, 'discharges'),
+        'waiting_patients': _sum(rows, 'waiting_patients'),
+        'median_wait_days': _average(rows, 'median_wait_days'),
+        'capacity_used_percent': _average(rows, 'capacity_used_percent'),
+    }
+    return out
+
+# ################################################################################################################################
+
+def _summarize_quality(rows:'anylist') -> 'anydict':
+    """ Returns network-level quality measures from facility rows.
+    """
+    assessments       = _sum(rows, 'outcome_assessments')
+    positive_outcomes = _sum(rows, 'positive_outcomes')
+
+    out = {
+        'safety_events': _sum(rows, 'safety_events'),
+        'complaints': _sum(rows, 'complaints'),
+        'outcome_assessments': assessments,
+        'positive_outcome_percent': _get_percentage(positive_outcomes, assessments),
+        'overdue_actions': _sum(rows, 'overdue_actions'),
+    }
+    return out
+
+# ################################################################################################################################
+
+def _summarize_workforce(rows:'anylist') -> 'anydict':
+    """ Returns network-level workforce measures from facility rows.
+    """
+    planned_hours = _sum(rows, 'planned_hours')
+    worked_hours  = _sum(rows, 'worked_hours')
+    absence_hours = _sum(rows, 'absence_hours')
+    agency_hours  = _sum(rows, 'agency_hours')
+
+    out = {
+        'planned_hours': planned_hours,
+        'worked_hours': worked_hours,
+        'staffing_percent': _get_percentage(worked_hours, planned_hours),
+        'absence_percent': _get_percentage(absence_hours, planned_hours),
+        'agency_percent': _get_percentage(agency_hours, worked_hours),
+        'vacancies': _sum(rows, 'vacancies'),
+    }
+    return out
+
+# ################################################################################################################################
+
+def _summarize_finance(rows:'anylist') -> 'anydict':
+    """ Returns network-level financial measures from facility rows.
+    """
+    contract_value   = _sum(rows, 'contract_value')
+    delivered_value  = _sum(rows, 'delivered_value')
+    registered_value = _sum(rows, 'registered_value')
+    billed_value     = _sum(rows, 'billed_value')
+    operating_cost   = _sum(rows, 'operating_cost')
+    margin_value     = delivered_value - operating_cost
+
+    out = {
+        'contract_value': contract_value,
+        'delivered_value': delivered_value,
+        'registered_value': registered_value,
+        'billed_value': billed_value,
+        'operating_cost': operating_cost,
+        'plan_percent': _get_percentage(delivered_value, contract_value),
+        'registration_percent': _get_percentage(registered_value, delivered_value),
+        'billing_percent': _get_percentage(billed_value, registered_value),
+        'margin_percent': _get_percentage(margin_value, delivered_value),
+    }
+    return out
+
+# ################################################################################################################################
+
+def _get_period_rows(
+    connection:'any_',
+    getter:'any_',
+    facility_code:'str',
+    period:'anydict',
+    ) -> 'anytuple':
+    """ Returns current and previous reporting rows through the given measure function.
+    """
+    current = getter(
+        connection,
+        facility_code,
+        period['current_since'],
+        period['current_until'],
+    )
+    previous = getter(
+        connection,
+        facility_code,
+        period['previous_since'],
+        period['previous_until'],
+    )
+
+    _require_rows(current, facility_code)
+    _require_rows(previous, facility_code)
+
+    out = current, previous
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ListFacilities(Service):
-    """ Lists the clinics of the network - each clinic's code, name, city, region, opening year
-    and number of exam rooms. The codes it returns are what the other healthcare tools accept as clinic_code.
-    Pass region to list only the clinics of one region - North, South, East, West or Central.
+class GetScorecard(Service):
+    """ Returns the executive healthcare scorecard for the current period and the preceding period,
+    covering care flow, quality, workforce and finance. Pass facility_code for one facility and days
+    for a reporting period from 1 to 28 days.
     """
-    name = Service_List_Facilities
+    name = Service_Scorecard
 
-    input = '-region'
+    input = '-facility_code', Int('-days')
 
     def handle(self) -> 'None':
+
+        days          = _resolve_days(self.request.input.days or _default_days)
+        facility_code = self.request.input.facility_code
+        period        = _get_period(days)
 
         warehouse = self.out.sql[SQL_Warehouse]
-        clinics = get_clinics(warehouse, self.request.input.region)
+        finance   = self.out.sql[SQL_Finance]
+        workforce = self.out.sql[SQL_Workforce]
 
-        self.response.payload = {'clinics': clinics}
+        current_care, previous_care             = _get_period_rows(warehouse, get_care_flow, facility_code, period)
+        current_quality, previous_quality       = _get_period_rows(warehouse, get_quality, facility_code, period)
+        current_workforce, previous_workforce   = _get_period_rows(workforce, get_workforce, facility_code, period)
+        current_finance, previous_finance       = _get_period_rows(finance, get_finance, facility_code, period)
 
-# ################################################################################################################################
-
-class GetVisitVolume(Service):
-    """ Returns the visit volumes of the clinics over the last given number of days, 7 by default -
-    for each clinic, the visits by type (scheduled, walk-in and telehealth), the missed appointments
-    and the average wait in minutes. Pass clinic_code to narrow it to one clinic.
-    """
-    name = Service_Visit_Volume
-
-    input = '-clinic_code', Int('-days')
-
-    def handle(self) -> 'None':
-
-        days = self.request.input.days or _default_days
-
-        warehouse = self.out.sql[SQL_Warehouse]
-        clinics = get_visit_volume(warehouse, self.request.input.clinic_code, days)
-
-        self.response.payload = {'days': days, 'clinics': clinics}
-
-# ################################################################################################################################
-
-class GetSupplyAlerts(Service):
-    """ Returns the supply items that are at or below their reorder level in the clinics, with what is
-    on hand, the reorder level and the last delivery date, along with the shipments that are scheduled
-    or on their way. Pass clinic_code to narrow it to one clinic.
-    """
-    name = Service_Supply_Alerts
-
-    input = '-clinic_code'
-
-    def handle(self) -> 'None':
-
-        clinic_code = self.request.input.clinic_code
-        supplies = self.out.sql[SQL_Supplies]
+        facilities = get_facilities(warehouse)
 
         self.response.payload = {
-            'low_stock': get_low_stock(supplies, clinic_code),
-            'open_shipments': get_open_shipments(supplies, clinic_code),
-        }
-
-# ################################################################################################################################
-
-class GetStaffing(Service):
-    """ Returns how well the clinics' shifts are staffed over the last given number of days, 7 by default -
-    for each clinic and role (physician, nurse, reception and technician), the shifts planned, the shifts
-    filled and the fill rate in percent. Pass clinic_code to narrow it to one clinic.
-    """
-    name = Service_Staffing
-
-    input = '-clinic_code', Int('-days')
-
-    def handle(self) -> 'None':
-
-        days = self.request.input.days or _default_days
-
-        scheduling = self.out.sql[SQL_Scheduling]
-        clinics = get_staffing(scheduling, self.request.input.clinic_code, days)
-
-        self.response.payload = {'days': days, 'clinics': clinics}
-
-# ################################################################################################################################
-
-class GetInterfaceFeeds(Service):
-    """ Returns the live state of the HL7 MLLP feeds the hospital, the laboratory and the clinics
-    send their messages through - for each feed, whether it is listening, how many messages it received,
-    acknowledged, rejected or failed to process, and when the last message arrived.
-    """
-    name = Service_Interface_Feeds
-
-    def handle(self) -> 'None':
-        self.response.payload = {'feeds': get_interface_feeds()}
-
-# ################################################################################################################################
-
-class GetNetworkOverview(Service):
-    """ Returns one view of the whole healthcare network over the last 7 days, combining the data warehouse,
-    the supply chain database, the staff scheduling database and the HL7 MLLP feeds - for each clinic,
-    its visits, missed appointments, low-stock supply items and shift fill rate, followed by the totals
-    for the network and the state of the feeds. Use the other healthcare tools to look into any of the figures.
-    """
-    name = Service_Network_Overview
-
-    def handle(self) -> 'None':
-
-        warehouse = self.out.sql[SQL_Warehouse]
-        supplies = self.out.sql[SQL_Supplies]
-        scheduling = self.out.sql[SQL_Scheduling]
-
-        # Each data source is read once for the whole network ..
-        clinics = get_clinics(warehouse, '')
-        visits = get_visit_volume(warehouse, '', _default_days)
-        low_stock = get_low_stock(supplies, '')
-        staffing = get_staffing(scheduling, '', _default_days)
-        feeds = get_interface_feeds()
-
-        visits_by_clinic:'stranydict' = {}
-        for entry in visits:
-            visits_by_clinic[entry['clinic_code']] = entry
-
-        staffing_by_clinic:'stranydict' = {}
-        for entry in staffing:
-            staffing_by_clinic[entry['clinic_code']] = entry
-
-        low_stock_by_clinic:'stranydict' = {}
-        for row in low_stock:
-            if row['clinic_code'] not in low_stock_by_clinic:
-                low_stock_by_clinic[row['clinic_code']] = []
-            low_stock_by_clinic[row['clinic_code']].append(row['description'])
-
-        # .. each clinic gets one row combining all of them ..
-        clinic_rows:'anylist' = []
-
-        for clinic in clinics:
-
-            code = clinic['code']
-            clinic_visits = visits_by_clinic[code]
-            clinic_staffing = staffing_by_clinic[code]
-
-            if code in low_stock_by_clinic:
-                clinic_low_stock = low_stock_by_clinic[code]
-            else:
-                clinic_low_stock = []
-
-            clinic_rows.append({
-                'clinic_code': code,
-                'name': clinic['name'],
-                'region': clinic['region'],
-                'visits': clinic_visits['total_visits'],
-                'missed_appointments': clinic_visits['missed_appointments'],
-                'walk_in_average_wait_minutes': clinic_visits['by_visit_type']['walk-in']['average_wait_minutes'],
-                'low_stock_items': clinic_low_stock,
-                'shift_fill_rate_percent': clinic_staffing['fill_rate_percent'],
-            })
-
-        # .. and the network as a whole is summed up from the same figures.
-        total_visits = 0
-        total_missed = 0
-        total_planned = 0
-        total_filled = 0
-
-        for entry in visits:
-            total_visits += entry['total_visits']
-            total_missed += entry['missed_appointments']
-
-        for entry in staffing:
-            total_planned += entry['shifts_planned']
-            total_filled += entry['shifts_filled']
-
-        messages_received = 0
-        feeds_listening = 0
-
-        for feed in feeds:
-            messages_received += feed['received']
-            if feed['is_listening']:
-                feeds_listening += 1
-
-        self.response.payload = {
-            'days': _default_days,
-            'clinics': clinic_rows,
-            'network': {
-                'clinics': len(clinics),
-                'visits': total_visits,
-                'missed_appointments': total_missed,
-                'low_stock_items': len(low_stock),
-                'shift_fill_rate_percent': _get_fill_rate(total_planned, total_filled),
+            'period': period,
+            'facility_count': len(current_care),
+            'facilities': facilities,
+            'current': {
+                'care_flow': _summarize_care_flow(current_care),
+                'quality': _summarize_quality(current_quality),
+                'workforce': _summarize_workforce(current_workforce),
+                'finance': _summarize_finance(current_finance),
             },
-            'interface_feeds': {
-                'feeds': len(feeds),
-                'listening': feeds_listening,
-                'messages_received': messages_received,
+            'previous': {
+                'care_flow': _summarize_care_flow(previous_care),
+                'quality': _summarize_quality(previous_quality),
+                'workforce': _summarize_workforce(previous_workforce),
+                'finance': _summarize_finance(previous_finance),
+            },
+            'targets': {
+                'median_wait_days': _target_wait_days,
+                'capacity_used_percent': _target_capacity_used_percent,
+                'positive_outcome_percent': _target_positive_outcome_percent,
+                'overdue_actions': _target_overdue_actions,
+                'staffing_percent': _target_staffing_percent,
+                'absence_percent': _target_absence_percent,
+                'agency_percent': _target_agency_percent,
+                'plan_percent': _target_plan_percent,
+                'registration_percent': _target_registration_percent,
+                'margin_percent': _target_margin_percent,
+            },
+        }
+
+# ################################################################################################################################
+
+class TrackCareFlow(Service):
+    """ Reports referrals, first appointments, discharges, waiting patients, waiting time and capacity use
+    for the current period and the preceding period. Pass facility_code for one facility and days for a
+    reporting period from 1 to 28 days.
+    """
+    name = Service_Care_Flow
+
+    input = '-facility_code', Int('-days')
+
+    def handle(self) -> 'None':
+
+        days          = _resolve_days(self.request.input.days or _default_days)
+        facility_code = self.request.input.facility_code
+        period        = _get_period(days)
+
+        warehouse = self.out.sql[SQL_Warehouse]
+        facilities = get_facilities(warehouse)
+
+        current, previous = _get_period_rows(warehouse, get_care_flow, facility_code, period)
+        current           = _add_facility_details(current, facilities)
+        previous          = _add_facility_details(previous, facilities)
+        current           = _add_care_flow_measures(current)
+        previous          = _add_care_flow_measures(previous)
+
+        self.response.payload = {
+            'period': period,
+            'current': {
+                'summary': _summarize_care_flow(current),
+                'facilities': current,
+            },
+            'previous': {
+                'summary': _summarize_care_flow(previous),
+                'facilities': previous,
+            },
+            'targets': {
+                'median_wait_days': _target_wait_days,
+                'capacity_used_percent': _target_capacity_used_percent,
+            },
+        }
+
+# ################################################################################################################################
+
+class ReviewQuality(Service):
+    """ Reports care outcomes, safety events, complaints and overdue actions for the current period and
+    the preceding period. Pass facility_code for one facility and days for a reporting period from 1 to 28 days.
+    """
+    name = Service_Quality
+
+    input = '-facility_code', Int('-days')
+
+    def handle(self) -> 'None':
+
+        days          = _resolve_days(self.request.input.days or _default_days)
+        facility_code = self.request.input.facility_code
+        period        = _get_period(days)
+
+        warehouse = self.out.sql[SQL_Warehouse]
+        facilities = get_facilities(warehouse)
+
+        current, previous = _get_period_rows(warehouse, get_quality, facility_code, period)
+        current           = _add_facility_details(current, facilities)
+        previous          = _add_facility_details(previous, facilities)
+        current           = _add_quality_measures(current)
+        previous          = _add_quality_measures(previous)
+
+        self.response.payload = {
+            'period': period,
+            'current': {
+                'summary': _summarize_quality(current),
+                'facilities': current,
+            },
+            'previous': {
+                'summary': _summarize_quality(previous),
+                'facilities': previous,
+            },
+            'targets': {
+                'positive_outcome_percent': _target_positive_outcome_percent,
+                'overdue_actions': _target_overdue_actions,
+            },
+        }
+
+# ################################################################################################################################
+
+class AssessWorkforce(Service):
+    """ Reports staffing coverage, absence, agency work and vacancies for the current period and the
+    preceding period. Pass facility_code for one facility and days for a reporting period from 1 to 28 days.
+    """
+    name = Service_Workforce
+
+    input = '-facility_code', Int('-days')
+
+    def handle(self) -> 'None':
+
+        days          = _resolve_days(self.request.input.days or _default_days)
+        facility_code = self.request.input.facility_code
+        period        = _get_period(days)
+
+        warehouse = self.out.sql[SQL_Warehouse]
+        workforce = self.out.sql[SQL_Workforce]
+        facilities = get_facilities(warehouse)
+
+        current, previous = _get_period_rows(workforce, get_workforce, facility_code, period)
+        current           = _add_facility_details(current, facilities)
+        previous          = _add_facility_details(previous, facilities)
+        current           = _add_workforce_measures(current)
+        previous          = _add_workforce_measures(previous)
+
+        self.response.payload = {
+            'period': period,
+            'current': {
+                'summary': _summarize_workforce(current),
+                'facilities': current,
+            },
+            'previous': {
+                'summary': _summarize_workforce(previous),
+                'facilities': previous,
+            },
+            'targets': {
+                'staffing_percent': _target_staffing_percent,
+                'absence_percent': _target_absence_percent,
+                'agency_percent': _target_agency_percent,
+            },
+        }
+
+# ################################################################################################################################
+
+class TrackFinance(Service):
+    """ Reports contract delivery, care registration, billing and operating margin for the current period
+    and the preceding period. Pass facility_code for one facility and days for a reporting period from 1 to 28 days.
+    """
+    name = Service_Finance
+
+    input = '-facility_code', Int('-days')
+
+    def handle(self) -> 'None':
+
+        days          = _resolve_days(self.request.input.days or _default_days)
+        facility_code = self.request.input.facility_code
+        period        = _get_period(days)
+
+        warehouse = self.out.sql[SQL_Warehouse]
+        finance   = self.out.sql[SQL_Finance]
+        facilities = get_facilities(warehouse)
+
+        current, previous = _get_period_rows(finance, get_finance, facility_code, period)
+        current           = _add_facility_details(current, facilities)
+        previous          = _add_facility_details(previous, facilities)
+        current           = _add_finance_measures(current)
+        previous          = _add_finance_measures(previous)
+
+        self.response.payload = {
+            'period': period,
+            'current': {
+                'summary': _summarize_finance(current),
+                'facilities': current,
+            },
+            'previous': {
+                'summary': _summarize_finance(previous),
+                'facilities': previous,
+            },
+            'targets': {
+                'plan_percent': _target_plan_percent,
+                'registration_percent': _target_registration_percent,
+                'margin_percent': _target_margin_percent,
             },
         }
 

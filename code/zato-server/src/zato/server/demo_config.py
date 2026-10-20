@@ -70,7 +70,7 @@ Set_Kafka     = 'kafka'
 Set_PubSub    = 'pubsub'
 Set_File_Transfer = 'file_transfer'
 
-# The HL7 set comes before the MCP one, which builds on it
+# The order in which demo config sets are imported and shown
 Set_Names = [Set_Scheduler, Set_Tutorial, Set_HL7, Set_MCP, Set_IBM_MQ, Set_Kafka, Set_PubSub, Set_File_Transfer]
 
 # The demo config sets a fresh environment receives on its first start
