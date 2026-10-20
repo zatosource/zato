@@ -427,15 +427,15 @@ class TestOutgoingFileTransferSchedules:
             _wizard_next(page)
 
             # .. step 2 - the target service, the rest keeps its defaults, and the arrival
-            # .. expectation line starts out saying no expectation was declared ..
+            # .. monitoring line starts out turned off ..
             _fill_wizard_service(page)
 
-            assert page.is_visible('#file-transfer-wizard-edit-arrival-window'), \
-                'The arrival window line should be on step 2'
+            assert page.is_visible('#file-transfer-wizard-line-arrival-window'), \
+                'The arrival monitoring line should be on step 2'
 
-            arrival_summary = page.inner_text('#file-transfer-wizard-summary-arrival-window')
-            assert arrival_summary == 'No expectation', \
-                f'Expected the resting arrival summary, got: "{arrival_summary}"'
+            arrival_pick = page.inner_text('#file-transfer-wizard-slot-arrival-window .decision-segment-active')
+            assert arrival_pick == 'Off', \
+                f'Expected the arrival monitoring to start out turned off, got: "{arrival_pick}"'
 
             _wizard_next(page)
 

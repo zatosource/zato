@@ -4,31 +4,113 @@
    shared/wizard-kit.css and shared/decision-lines.css. */
 
 /* ------------------------------------------------------------ */
-/* Schedule wizard - the name row                                */
+/* Schedule wizard - the column grid                             */
 /* ------------------------------------------------------------ */
 
-/* No toggle rows follow the name here - the field rows do, so the
-   name row keeps a full row of air below itself */
-#file-transfer-wizard .wizard-name-row {
-    margin-bottom: 16px;
+/* Every row of a step - the name, the field rows and the decision lines -
+   is one line of the same list. The labels of a step share one column, just
+   wide enough for the longest of them, Readiness check on the first step and
+   Daily delivery check on the second, and every control starts at the same
+   distance after it. */
+#file-transfer-wizard-step-body-0 {
+    --file-transfer-wizard-label-width: 110px;
 }
 
-/* ------------------------------------------------------------ */
-/* Schedule wizard - the line labels                             */
-/* ------------------------------------------------------------ */
+#file-transfer-wizard-step-body-1 {
+    --file-transfer-wizard-label-width: 128px;
+}
 
-/* The longest question here - "After a file is processed" - is shorter
-   than the kit default was sized for, so the values move in closer */
 #file-transfer-wizard {
-    --decision-line-label-width: 12.5em;
+    --file-transfer-wizard-column-gap: 12px;
+
+    /* The width of every free-text control - the name, the directory,
+       the file pattern and the service picker */
+    --file-transfer-wizard-input-width: 390px;
+
+    /* The start time holds one timestamp in the user profile's format */
+    --file-transfer-wizard-timestamp-width: 180px;
+
+    /* One height for every row, that of the tallest control a row holds -
+       the option strip - and one gap between any two rows */
+    --file-transfer-wizard-row-height: 32px;
+    --file-transfer-wizard-row-gap: 8px;
+
+    --decision-lines-gap: var(--file-transfer-wizard-row-gap);
+}
+
+.file-transfer-wizard-rows {
+    max-width: none;
+}
+
+.file-transfer-wizard-rows > .wizard-name-row,
+.file-transfer-wizard-rows > .wizard-field-row,
+.file-transfer-wizard-rows > .decision-line {
+    min-height: var(--file-transfer-wizard-row-height);
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.file-transfer-wizard-rows .wizard-name-field,
+.file-transfer-wizard-rows > .wizard-field-row,
+.file-transfer-wizard-rows > .decision-line {
+    gap: var(--file-transfer-wizard-column-gap);
+}
+
+.file-transfer-wizard-rows .wizard-name-field label,
+.file-transfer-wizard-rows > .wizard-field-row > label,
+.file-transfer-wizard-rows .decision-line-label {
+    width: var(--file-transfer-wizard-label-width);
+    white-space: nowrap;
 }
 
 /* ------------------------------------------------------------ */
-/* Schedule wizard - the start time row                          */
+/* Schedule wizard - the controls                                */
 /* ------------------------------------------------------------ */
 
-/* The start time holds one timestamp - no need for the full row width */
-.file-transfer-wizard-start-date-row input[type="text"] {
-    flex: 0 1 220px;
+.file-transfer-wizard-rows .wizard-name-field input,
+.file-transfer-wizard-rows > .wizard-field-row input[type="text"] {
+    flex: 0 0 var(--file-transfer-wizard-input-width);
+}
+
+/* The name field holds only its label and input, so the Active switch
+   follows the input instead of the row's far edge. Its width is stated
+   outright - sized to its content, the field would not count the input's
+   fixed flex basis and the input would slide under the switch. */
+.file-transfer-wizard-rows .wizard-name-field {
+    flex: 0 0 calc(var(--file-transfer-wizard-label-width) + var(--file-transfer-wizard-column-gap) + var(--file-transfer-wizard-input-width));
+}
+
+/* An input is never narrower than its size attribute asks for unless its minimum width is lifted */
+.file-transfer-wizard-rows > .file-transfer-wizard-start-date-row input[type="text"] {
+    flex: 0 0 var(--file-transfer-wizard-timestamp-width);
     min-width: 0;
+}
+
+/* The service picker is one more control of its row, as wide as the inputs above it */
+.file-transfer-wizard-rows .file-transfer-wizard-service-picker {
+    flex: 0 0 var(--file-transfer-wizard-input-width);
+    max-width: none;
+    margin: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Schedule wizard - the popover micro-forms                     */
+/* ------------------------------------------------------------ */
+
+/* A time of day is as short as a count, so it takes the count's width */
+#file-transfer-wizard-popup input#file-transfer-wizard-tippy-expected_by {
+    width: var(--micro-form-number-width);
+}
+
+/* The days of the week are an option strip in which any number of options
+   may be picked, across the popover's whole width, each day equally wide */
+.decision-segments.file-transfer-wizard-weekdays {
+    --tab-padding: 5px 0;
+}
+
+.decision-segments.file-transfer-wizard-weekdays > .dashboard-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    text-align: center;
 }

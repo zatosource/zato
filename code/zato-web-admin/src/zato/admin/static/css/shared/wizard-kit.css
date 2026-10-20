@@ -153,10 +153,9 @@
 }
 
 /* The context badge - a "what this wizard belongs to" slot in the card
-   header, e.g. the connection a schedule is created for. It keeps to the
-   right edge of the header and wears the accent instead of the green. */
+   header, e.g. the connection a schedule is created for. It stands next to
+   the title at the header's own gap and wears the accent instead of the green. */
 .wizard-badge-context {
-    margin-left: auto;
     color: var(--zato-ui-accent);
     background: rgba(20, 87, 138, 0.08);
     border-color: rgba(20, 87, 138, 0.25);

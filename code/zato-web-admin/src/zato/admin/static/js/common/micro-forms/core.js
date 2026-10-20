@@ -20,8 +20,9 @@
 //
 // A spec's keys: field (the Django form field name), label, kind - one of
 // text, number, select, checkbox or a kind the host registered - plus the
-// optional unitField, width, placeholder, hint and labelAbove, and for a
-// number that takes a fraction, fractional with the step it goes by.
+// optional unitField, width, placeholder, hint and labelAbove, for a
+// number that takes a fraction, fractional with the step it goes by, and
+// for a number that goes below the default lowest value, min.
 //
 // A descriptor's keys: title, pages, plus the optional width (a CSS width
 // for the popover) and fitContent (a popover as wide as its content).
