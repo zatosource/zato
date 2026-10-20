@@ -19,9 +19,10 @@ from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
 from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.test.sftp_ import SFTPTestServer
-from zato.common.typing_ import cast_
+from zato.common.typing_ import cast_, optional
 from zato.common.util.tcp import get_free_port
 from zato.server.connection.sftp import SFTPConnection
+from zato.server.demo_file_transfer.files import Invoice_Header
 from zato.server.generic.api.outconn_sftp import SFTPClient
 
 # ################################################################################################################################
@@ -31,6 +32,8 @@ if 0:
     from zato.common.typing_ import any_
     any_ = any_
 
+sftp_server_none = optional[SFTPTestServer]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -39,6 +42,12 @@ class ModuleCtx:
 
     # A key file that is never created.
     Missing_Key_Name = 'missing_key'
+
+    # An invoice as the supplier sends it, without the currency column ..
+    Supplier_Invoice = 'invoice_id,customer,amount\nINV-1001,John Smith,120.50\n'
+
+    # .. and the currency each of its rows is given before it is delivered.
+    Invoice_Currency = 'USD'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,19 +134,29 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_config(self, conn_name:'str', *, use_password:'bool' = False) -> 'Bunch':
+    def get_config(
+        self,
+        conn_name:'str',
+        *,
+        use_password:'bool' = False,
+        server:'sftp_server_none' = None,
+        ) -> 'Bunch':
+
+        # Unless told otherwise, connections point at the server of the whole suite.
+        if server is None:
+            server = self.server
 
         # With a password in use, we authenticate with the encrypted key whose passphrase
         # is the connection's password, going through the askpass helper.
         if use_password:
-            private_key = self.server.client_key_encrypted_path
-            secret = self.server.password
+            private_key = server.client_key_encrypted_path
+            secret = server.password
         else:
-            private_key = self.server.client_key_path
+            private_key = server.client_key_path
             secret = ''
 
-        host = self.server.host
-        port = self.server.port
+        host = server.host
+        port = server.port
         address = f'{host}:{port}'
 
         config = bunchify({
@@ -145,7 +164,7 @@ class OutconnSFTPTestCase(TestCase):
             'name': conn_name,
             'is_active': True,
             'address': address,
-            'username': self.server.username,
+            'username': server.username,
             'secret': secret,
             'private_key': private_key,
 
@@ -169,18 +188,30 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_client(self, conn_name:'str', *, use_password:'bool' = False) -> 'SFTPClient':
+    def get_client(
+        self,
+        conn_name:'str',
+        *,
+        use_password:'bool' = False,
+        server:'sftp_server_none' = None,
+        ) -> 'SFTPClient':
 
-        config = self.get_config(conn_name, use_password=use_password)
+        config = self.get_config(conn_name, use_password=use_password, server=server)
         out = self.make_client(config)
 
         return out
 
 # ################################################################################################################################
 
-    def get_conn(self, conn_name:'str', *, use_password:'bool' = False) -> 'SFTPConnection':
+    def get_conn(
+        self,
+        conn_name:'str',
+        *,
+        use_password:'bool' = False,
+        server:'sftp_server_none' = None,
+        ) -> 'SFTPConnection':
 
-        client = self.get_client(conn_name, use_password=use_password)
+        client = self.get_client(conn_name, use_password=use_password, server=server)
         wrapper = _TestWrapper(client)
         wrapper_typed = cast_('any_', wrapper)
 
@@ -190,12 +221,16 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_remote_path(self, suffix:'str') -> 'str':
+    def get_remote_path(self, suffix:'str', *, server:'sftp_server_none' = None) -> 'str':
+
+        # Unless told otherwise, paths are on the server of the whole suite.
+        if server is None:
+            server = self.server
 
         hex_string = CryptoManager.generate_hex_string()
         file_name = f'test-{hex_string}-{suffix}'
 
-        out = os.path.join(self.server.files_dir, file_name)
+        out = os.path.join(server.files_dir, file_name)
 
         return out
 
@@ -332,6 +367,60 @@ class OutconnSFTPTestCase(TestCase):
             with open(download_file.name, encoding='utf8') as downloaded:
                 downloaded_data = downloaded.read()
                 self.assertEqual(downloaded_data, data)
+
+# ################################################################################################################################
+
+    def test_invoice_transfer_between_servers(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        # The server the supplier leaves invoices on ..
+        supplier_server = SFTPTestServer()
+        supplier_server.start()
+
+        # .. and the one billing reads them from, started only once the first one listens, so their ports differ.
+        billing_server = SFTPTestServer()
+        billing_server.start()
+
+        try:
+            supplier_conn = self.get_conn('test_invoice_supplier', server=supplier_server)
+            billing_conn  = self.get_conn('test_invoice_billing', server=billing_server)
+
+            supplier_path = self.get_remote_path('invoice.csv', server=supplier_server)
+            billing_path  = self.get_remote_path('invoice.csv', server=billing_server)
+
+            # An invoice is waiting on the supplier's server ..
+            supplier_conn.write(ModuleCtx.Supplier_Invoice, supplier_path)
+
+            # .. it is downloaded ..
+            invoice = supplier_conn.read(supplier_path)
+            invoice = invoice.decode('utf8')
+
+            self.assertEqual(invoice, ModuleCtx.Supplier_Invoice)
+
+            # .. each of its rows is given the currency, under the header billing expects ..
+            rows = invoice.splitlines()
+            converted_rows = [Invoice_Header]
+
+            for row in rows[1:]:
+                converted_rows.append(f'{row},{ModuleCtx.Invoice_Currency}')
+
+            converted = '\n'.join(converted_rows)
+            converted += '\n'
+
+            # .. it is uploaded to the billing server ..
+            billing_conn.write(converted, billing_path)
+
+            # .. and that server has the converted invoice.
+            delivered = billing_conn.read(billing_path)
+            delivered = delivered.decode('utf8')
+
+            self.assertEqual(delivered, converted)
+            self.assertIn('INV-1001,John Smith,120.50,USD', delivered)
+
+        finally:
+            billing_server.stop()
+            supplier_server.stop()
 
 # ################################################################################################################################
 
