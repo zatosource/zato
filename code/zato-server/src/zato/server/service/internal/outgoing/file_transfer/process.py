@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from hashlib import sha256
 from time import monotonic
 from traceback import format_exc
 
@@ -266,6 +265,7 @@ def _process_one_file(
     event_extra:'stranydict' = {
         'conn_type': conn_type,
         'last_modified': entry.last_modified_iso,
+        'encoding': schedule['encoding'],
         'attempt': attempt,
         'max_attempts': max_attempts,
     }
@@ -290,26 +290,32 @@ def _process_one_file(
     service_ms = 0
 
     try:
-        # Download the file ..
+        # Download the file to a local spool file, computing its checksum on the way ..
         run.set_phase(Phase_Reading, file_name)
         read_start = monotonic()
-        data = conn.read(current_path)
+        spooled = conn.read_to_spool(current_path)
         read_ms = _elapsed_ms(read_start)
 
-        # .. look up an earlier delivery of the same checksum ..
-        hasher = sha256(data)
-        checksum = hasher.hexdigest()
-        seen_before_since = iso_days_ago(Seen_Before_Window_Days)
-        seen_before = find_seen_before(conn_name, schedule_name, checksum, seen_before_since)
-
-        # .. and invoke the target service under the file's cid.
-        run.set_phase(Phase_Delivering, file_name)
         item = FileTransferItem(conn_type, conn_name, schedule_name, directory, file_name, full_path,
-            entry.size, entry.last_modified_iso, data)
+            spooled.size, entry.last_modified_iso, spooled.path, schedule['encoding'])
 
-        service_start = monotonic()
-        _ = service.invoke(service_name, item, cid=file_cid)
-        service_ms = _elapsed_ms(service_start)
+        # .. the spool file is deleted once the service returns, whatever the outcome ..
+        try:
+
+            # .. look up an earlier delivery of the same checksum ..
+            checksum = spooled.checksum
+            seen_before_since = iso_days_ago(Seen_Before_Window_Days)
+            seen_before = find_seen_before(conn_name, schedule_name, checksum, seen_before_since)
+
+            # .. and invoke the target service under the file's cid.
+            run.set_phase(Phase_Delivering, file_name)
+
+            service_start = monotonic()
+            _ = service.invoke(service_name, item, cid=file_cid)
+            service_ms = _elapsed_ms(service_start)
+
+        finally:
+            item.close()
 
     except Exception:
 

@@ -61,6 +61,9 @@ File_Content = b'code,label\nA1,First\nA2,Second\n'
 # What the failing target service says
 Service_Error = 'The target system is down'
 
+# How many bytes at a time the local client reads a file in, small enough for a test file to take several chunks
+Read_Chunk_Size = 7
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -120,6 +123,11 @@ class LocalDirectoryClient:
             out = file.read()
         return out
 
+    def read_chunks(self, remote_path:'str', callback:'any_') -> 'None':
+        with open(self._full_path(remote_path), 'rb') as file:
+            while chunk := file.read(Read_Chunk_Size):
+                callback(chunk)
+
     def rename(self, from_path:'str', to_path:'str') -> 'None':
         os.rename(self._full_path(from_path), self._full_path(to_path))
 
@@ -162,7 +170,8 @@ class WrapperStub:
 
 class ServiceStub:
     """ Stands in for the dispatch service - it remembers what the schedule handed
-    to the target service where a live server would have invoked it.
+    to the target service where a live server would have invoked it. The bytes of each file
+    are read during the call, because the item's spool file is deleted once the call returns.
     """
 
     def __init__(self, conn:'SMBConnection') -> 'None':
@@ -170,10 +179,39 @@ class ServiceStub:
         self.logger = getLogger('test-file-transfer-schedule')
         self.smb = {Connection_Name: conn}
         self.invoked:'anylist' = []
+        self.contents:'anylist' = []
         self.request_ctx:'stranydict' = {}
 
     def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
         self.invoked.append((service_name, item))
+        self.contents.append(item.data)
+
+# ################################################################################################################################
+
+class TextServiceStub(ServiceStub):
+    """ A dispatch service whose target service reads each file as text in the schedule's encoding,
+    in full and line by line. A file that is not valid in that encoding fails its delivery.
+    """
+
+    def __init__(self, conn:'SMBConnection') -> 'None':
+        super().__init__(conn)
+        self.texts:'anylist' = []
+        self.lines:'anylist' = []
+        self.encodings:'anylist' = []
+
+    def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
+
+        text = item.text
+
+        lines = []
+        for line in item:
+            lines.append(line)
+
+        self.invoked.append((service_name, item))
+        self.contents.append(item.data)
+        self.texts.append(text)
+        self.lines.append(lines)
+        self.encodings.append(item.encoding)
 
 # ################################################################################################################################
 
@@ -194,6 +232,7 @@ def new_environment(
     service_class:'type'=ServiceStub,
     should_store_content:'bool'=False,
     file_names:'anylist | None'=None,
+    file_content:'bytes'=File_Content,
     ) -> 'tuple[ServiceStub, stranydict, str]':
     """ Builds one run's environment - the polled directory with its files on disk,
     the connection over it and the dispatch service around the connection.
@@ -207,7 +246,7 @@ def new_environment(
 
     for file_name in file_names:
         with open(os.path.join(base_dir, Directory, file_name), 'wb') as file:
-            _ = file.write(File_Content)
+            _ = file.write(file_content)
 
     client = client_class(base_dir)
     wrapper = WrapperStub(client, should_store_content=should_store_content)

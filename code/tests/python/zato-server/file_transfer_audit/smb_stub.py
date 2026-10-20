@@ -47,6 +47,9 @@ File_Content = b'code,label\nA1,First\nA2,Second\n'
 # What the failing client says
 Raised_Error = 'The share went away'
 
+# How many bytes at a time the stub sends and receives, small enough for a test file to span many chunks
+Chunk_Size = 7
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -60,12 +63,32 @@ class ClientRecorder:
         self.removed:'anylist' = []
         self.renamed:'anylist' = []
 
+        # The remote paths of the files sent from a local file object, one chunk at a time
+        self.streamed:'anylist' = []
+
         # The bytes of each file written, by its remote path, which is what a stat of the path reports on
         self.data_by_path:'anydict' = {}
 
     def write(self, remote_path:'any_', data:'any_') -> 'None':
         self.written.append((remote_path, data))
         self.data_by_path[remote_path] = data
+
+    def write_from_file(self, remote_path:'any_', source_file:'any_') -> 'None':
+
+        data = b''
+        while chunk := source_file.read(Chunk_Size):
+            data += chunk
+
+        self.streamed.append(remote_path)
+        self.data_by_path[remote_path] = data
+
+    def read_chunks(self, remote_path:'any_', callback:'any_') -> 'None':
+
+        data = self.data_by_path[remote_path]
+
+        for offset in range(0, len(data), Chunk_Size):
+            chunk = data[offset:offset + Chunk_Size]
+            callback(chunk)
 
     def stat(self, remote_path:'any_') -> 'Bunch':
         out = Bunch(st_mode=S_IFREG, st_size=len(self.data_by_path[remote_path]), st_mtime=time())
@@ -91,6 +114,12 @@ class RaisingClient(ClientRecorder):
     """
 
     def write(self, remote_path:'any_', data:'any_') -> 'None':
+        raise Exception(Raised_Error)
+
+    def write_from_file(self, remote_path:'any_', source_file:'any_') -> 'None':
+        raise Exception(Raised_Error)
+
+    def read_chunks(self, remote_path:'any_', callback:'any_') -> 'None':
         raise Exception(Raised_Error)
 
     def remove(self, remote_path:'any_') -> 'None':

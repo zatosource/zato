@@ -12,9 +12,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from io import BytesIO
 
+# pytest
+from pytest import fixture
+
 # Zato
 from zato.common.api import Documents, IMAPAttachment, IMAPMessage
 from zato.common.ext.imbox.parser import Struct
+from zato.common.file_transfer.spool import Env_Spool_Directory
 from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.test.xdm_builder import build_ccd_package, read_sample
 from zato.common.typing_ import cast_
@@ -66,9 +70,17 @@ def _attachment(file_name:'str', content_type:'str', data:'bytes') -> 'IMAPAttac
 
 # ################################################################################################################################
 
+@fixture(autouse=True)
+def spool_directory(tmp_path:'any_', monkeypatch:'any_') -> 'None':
+    """ The spool files of the items each test builds go to that test's own temporary directory.
+    """
+    monkeypatch.setenv(Env_Spool_Directory, str(tmp_path))
+
+# ################################################################################################################################
+
 def _file(file_name:'str', data:'bytes') -> 'FileTransferItem':
-    out = FileTransferItem('sftp', 'Clinic Drop', 'Nightly', '/inbound', file_name, f'/inbound/{file_name}',
-        len(data), '2026-01-14T09:30:00', data)
+    out = FileTransferItem.from_bytes('sftp', 'Clinic Drop', 'Nightly', '/inbound', file_name, f'/inbound/{file_name}',
+        '2026-01-14T09:30:00', data)
     return out
 
 # ################################################################################################################################

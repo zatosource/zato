@@ -16,6 +16,8 @@ $.fn.zato.outgoing.file_transfer.field_descriptions = {
     'id_directory': 'The remote directory polled on each run, e.g. /incoming/invoices.',
     'id_pattern': 'The files of the directory that are processed, as shell-style wildcards, e.g. *.csv or report-*.xml. ' +
         'All other files are ignored.',
+    'id_encoding': 'The encoding the text of each file is read in when the service reads the file as text or line by line. ' +
+        'A file whose bytes are not valid in this encoding fails its delivery and is retried on the next run.',
     'file-transfer-wizard-edit-ready': 'How the schedule determines that an upload is complete, ' +
         'so that no file is read while it is still being written. ' +
         'Stable size reads a file once its size and modification time no longer change between two checks. ' +
@@ -32,7 +34,7 @@ $.fn.zato.outgoing.file_transfer.field_descriptions = {
 
     // Step 2 - the processing
     'id_scheduler_service': 'The service invoked once for each file. ' +
-        'Its input contains the data, name, size and modification time of the file.',
+        'Its input contains the name, size and modification time of the file and gives access to its bytes and its text.',
     'file-transfer-wizard-edit-success': 'What is done with a file after the service processes it. ' +
         'Move keeps the file in the target directory for audit purposes, Delete removes it from the remote system. ' +
         'Either way, no file is processed twice.',

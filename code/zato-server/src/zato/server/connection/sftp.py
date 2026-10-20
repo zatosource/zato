@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from hashlib import sha256
 from logging import getLogger
 from os.path import getsize, isfile
 from posixpath import basename, dirname
@@ -22,6 +21,7 @@ from gevent.fileobject import FileObjectThread
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
     Operation_Store
+from zato.common.file_transfer.spool import delete_spool, new_spool_path, spooled_file_from_path
 from zato.common.util.logging_ import file_transfer_logger_name
 from zato.server.connection.file_transfer_base import ExchangeNotes, Key_Remote_Path, Key_Spool_Path, spool_file_payload, \
     to_file_bytes
@@ -32,6 +32,7 @@ from zato.server.connection.sftp_verify import record_sftp_store
 # ################################################################################################################################
 
 if 0:
+    from zato.common.file_transfer.spool import SpooledFile
     from zato.common.sftp import SFTPOutput
     from zato.common.typing_ import any_, stranydict
     from zato.server.connection.sftp_listing import SFTPInfo, sftp_info_list
@@ -53,9 +54,6 @@ _root_entry_name = '.'
 # means that two runs over one connection take turns instead of one of them failing, and it also covers
 # the window while the pool is still being filled in after the server starts.
 _pool_block_timeout = 60
-
-# How many bytes at a time a local file is read in when its digest is computed
-_hash_chunk_size = 65536
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,6 +145,7 @@ class SFTPConnection(ExchangeNotes):
         to_path:'str' = '',
         checksum:'str' = '',
         content:'any_' = None,
+        content_path:'str' = '',
         status:'str' = '',
         event_type:'str' = AuditEvent.Request_Sent,
         extra:'stranydict | None' = None,
@@ -155,7 +154,8 @@ class SFTPConnection(ExchangeNotes):
         """
         _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
             cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error,
-            to_path=to_path, checksum=checksum, content=content, status=status, event_type=event_type, extra=extra)
+            to_path=to_path, checksum=checksum, content=content, content_path=content_path, status=status,
+            event_type=event_type, extra=extra)
 
 # ################################################################################################################################
 
@@ -560,50 +560,52 @@ class SFTPConnection(ExchangeNotes):
 
     def read(self, remote_path:'str', mode:'str'='r+b', log_level:'int'=0) -> 'any_':
 
-        start = monotonic()
+        # Download the file to a spool file, which records the read with its checksum ..
+        spooled = self.read_to_spool(remote_path, log_level)
 
-        # Download the file to a temporary location ..
-        with NamedTemporaryFile(mode, suffix='zato-sftp-read.txt') as local_path:
-
-            # .. a failed read is recorded too, before the caller learns about it -
-            # .. the event is written here rather than by the download because only
-            # .. this method has the file's bytes in hand once it succeeds ..
-            # .. a get without -r refuses anything other than a regular file on its own ..
-            try:
-                _ = self.download(remote_path, local_path.name, recursive=False, log_level=log_level, _needs_audit=False)
-            except Exception:
-                duration_ms = int((monotonic() - start) * 1000)
-                self._record_transfer(Operation_Read, remote_path,
-                    outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
-                raise
-
-            # .. and read it in using a separate thread so as not to block the event loop.
-            # .. The mode is passed explicitly, otherwise the file would be reopened in text mode,
-            # .. and the descriptor stays open because the temporary file closes it on its own.
-            file_descriptor = local_path.fileno()
-            thread_file = FileObjectThread(file_descriptor, mode, closefd=False)
-            data = thread_file.read()
+        # .. and read it in using a separate thread so as not to block the event loop.
+        try:
+            thread_file = FileObjectThread(spooled.path, mode)
+            out = thread_file.read()
             thread_file.close()
+        finally:
+            delete_spool(spooled.path)
 
-        # A text-mode read hands back a string while the digest and the archive need the bytes
-        if isinstance(data, bytes):
-            payload = data
-        else:
-            payload = data.encode('utf8')
+        return out
+
+# ################################################################################################################################
+
+    def read_to_spool(self, remote_path:'str', log_level:'int'=0) -> 'SpooledFile':
+        """ Downloads a remote file into a new local spool file, so a file of any size is read
+        without being held in memory. The caller deletes the spool file when it is done with it.
+        """
+        start = monotonic()
+        spool_path = new_spool_path()
+
+        # A failed read is recorded too, before the caller learns about it -
+        # a get without -r refuses anything other than a regular file on its own.
+        try:
+            _ = self.download(remote_path, spool_path, recursive=False, log_level=log_level, _needs_audit=False)
+        except Exception:
+            delete_spool(spool_path)
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Read, remote_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        out = spooled_file_from_path(spool_path)
 
         # The bytes themselves are kept only when the connection asked for that
         if self.wrapper.should_store_content:
-            content = payload
+            content_path = spool_path
         else:
-            content = None
-
-        checksum = sha256(payload).hexdigest()
+            content_path = ''
 
         duration_ms = int((monotonic() - start) * 1000)
         self._record_transfer(Operation_Read, remote_path,
-            outcome=AuditOutcome.OK, size=len(payload), duration_ms=duration_ms, checksum=checksum, content=content)
+            outcome=AuditOutcome.OK, size=out.size, duration_ms=duration_ms, checksum=out.checksum, content_path=content_path)
 
-        return data
+        return out
 
 # ################################################################################################################################
 
@@ -645,26 +647,17 @@ class SFTPConnection(ExchangeNotes):
         except OSError:
             size = 0
 
-        # A single file has a digest and, when the connection asked for that,
-        # its bytes travel to the audit log too - a directory has neither.
+        # A single file has a digest, computed one chunk at a time, and, when the connection asked for that,
+        # its bytes travel to the audit log too, read from the local file by its path - a directory has neither.
         checksum = ''
-        content = None
+        content_path = ''
 
         if isfile(local_path):
+            described = spooled_file_from_path(local_path)
+            checksum = described.checksum
 
-            # With the archive on, the bytes are read once and serve both purposes ..
             if self.wrapper.should_store_content:
-                with open(local_path, 'rb') as local_file:
-                    content = local_file.read()
-                checksum = sha256(content).hexdigest()
-
-            # .. and without it, the file is digested chunk by chunk.
-            else:
-                digest = sha256()
-                with open(local_path, 'rb') as local_file:
-                    while chunk := local_file.read(_hash_chunk_size):
-                        digest.update(chunk)
-                checksum = digest.hexdigest()
+                content_path = local_path
 
         start = monotonic()
 
@@ -678,7 +671,7 @@ class SFTPConnection(ExchangeNotes):
             raise
 
         # The store is verified and recorded.
-        record_sftp_store(self, remote_path, size, checksum, content, start)
+        record_sftp_store(self, remote_path, size, checksum, content_path, start)
 
         return out
 

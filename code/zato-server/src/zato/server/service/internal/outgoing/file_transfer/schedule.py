@@ -14,8 +14,8 @@ from posixpath import normpath
 # Zato
 from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
 from zato.common.exception import BadRequest
-from zato.common.file_transfer.api import Default_Expected_By, Default_Expected_Days, Default_Expected_Files, \
-    Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff
+from zato.common.file_transfer.api import Default_Encoding, Default_Expected_By, Default_Expected_Days, \
+    Default_Expected_Files, Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff, Encoding_List
 from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn, Job
 from zato.common.util.file_transfer_scheduler import build_job_extra, get_job_name, get_schedule_list, \
@@ -41,7 +41,7 @@ _scheduler = FileTransfer.Scheduler
 # The switch is optional because an edit that says nothing about it keeps whatever the schedule
 # and its job already agree on, which is how a job switched off by hand stays off.
 _schedule_input = ('name', Boolean('-is_active'), 'directory', '-pattern', 'ready_how', Int('-stability_delay'),
-    '-marker_suffix', Boolean('-should_claim'), 'service', 'on_success', '-move_directory', Int('run_every'),
+    '-marker_suffix', Boolean('-should_claim'), '-encoding', 'service', 'on_success', '-move_directory', Int('run_every'),
     'run_unit', 'start_date', Int('-arrival_window'), Int('-max_attempts'), Int('-retry_backoff'),
     '-quarantine_directory', Int('-expected_files'), '-expected_by', '-expected_days')
 
@@ -119,6 +119,10 @@ def _validate_schedule(service:'Service', input:'any_') -> 'None':
 
     if input.service not in service.server.service_store.name_to_impl_name:
         raise BadRequest(service.cid, f'Service `{input.service}` does not exist')
+
+    if input.encoding not in _not_given:
+        if input.encoding not in Encoding_List:
+            raise BadRequest(service.cid, f'Encoding `{input.encoding}` is not one of `{Encoding_List}`')
 
     # Marker mode makes no sense without knowing what the markers look like
     if input.ready_how == _scheduler.ReadyHow.Marker:
@@ -224,6 +228,10 @@ def _build_schedule_dict(input:'any_', schedule_id:'str', job_id:'int', is_activ
     if expected_by in _not_given:
         expected_by = Default_Expected_By
 
+    encoding = input.encoding
+    if encoding in _not_given:
+        encoding = Default_Encoding
+
     out = {
         'id': schedule_id,
         'name': input.name,
@@ -234,6 +242,7 @@ def _build_schedule_dict(input:'any_', schedule_id:'str', job_id:'int', is_activ
         'stability_delay': stability_delay,
         'marker_suffix': marker_suffix,
         'should_claim': should_claim,
+        'encoding': encoding,
         'service': input.service,
         'on_success': input.on_success,
         'move_directory': input.move_directory,

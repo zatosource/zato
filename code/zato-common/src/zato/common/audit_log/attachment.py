@@ -53,12 +53,9 @@ def get_max_attachment_size() -> 'int':
 
 # ################################################################################################################################
 
-def build_attachment(filename:'str', content_type:'str', content:'bytes') -> 'stranydict':
-    """ Builds one attachment envelope out of a file's name, type and bytes.
-    An attachment bigger than the cap keeps its metadata and loses its bytes,
-    saying so through the is_content_kept flag.
+def _new_envelope(filename:'str', content_type:'str', size:'int') -> 'stranydict':
+    """ Builds the metadata of one attachment envelope, saying whether a file of this size keeps its bytes.
     """
-    size = len(content)
     max_size = get_max_attachment_size()
 
     out:'stranydict' = {
@@ -69,7 +66,36 @@ def build_attachment(filename:'str', content_type:'str', content:'bytes') -> 'st
         'content': '',
     }
 
+    return out
+
+# ################################################################################################################################
+
+def build_attachment(filename:'str', content_type:'str', content:'bytes') -> 'stranydict':
+    """ Builds one attachment envelope out of a file's name, type and bytes.
+    An attachment bigger than the cap keeps its metadata and loses its bytes,
+    saying so through the is_content_kept flag.
+    """
+    size = len(content)
+
+    out = _new_envelope(filename, content_type, size)
+
     if out['is_content_kept']:
+        out['content'] = b64encode(content).decode('ascii')
+
+    return out
+
+# ################################################################################################################################
+
+def build_attachment_from_file(filename:'str', content_type:'str', path:'str', size:'int') -> 'stranydict':
+    """ Builds one attachment envelope out of a local file - its bytes are read only when they fit under the cap.
+    """
+    out = _new_envelope(filename, content_type, size)
+
+    if out['is_content_kept']:
+
+        with open(path, 'rb') as local_file:
+            content = local_file.read()
+
         out['content'] = b64encode(content).decode('ascii')
 
     return out

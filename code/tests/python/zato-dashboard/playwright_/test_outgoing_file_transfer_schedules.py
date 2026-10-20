@@ -16,6 +16,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.file_transfer.api import Default_Encoding, Encoding, Encoding_Human
 
 # Tests
 from file_transfer_schedule import fill_run_every, fill_service, open_create_wizard, open_schedules, wizard_next, \
@@ -560,6 +561,84 @@ class TestOutgoingFileTransferSchedules:
             _delete_connection(page, kind, conn_id)
 
         # A schedule the server will not accept is a request that was understood, never a server error.
+        _assert_no_errors(console_errors, server_errors)
+
+# ################################################################################################################################
+
+    def test_the_encoding_is_picked_reviewed_and_kept(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        kind:'ConnKind',
+        ) -> 'None':
+        """ The encoding picked on the first step is named on the review, saved with the schedule
+        and prefilled on every edit after that.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        console_errors, server_errors = _watch_for_errors(page)
+
+        _navigate_to_list(page, base_url, kind)
+
+        conn_name = _Test_Name_Prefix + kind.label + '.encoding'
+        _create_connection(page, kind, conn_name)
+        conn_id = _get_item_id(page, conn_name)
+
+        try:
+            open_schedules(page, conn_name)
+            open_create_wizard(page)
+
+            # A new schedule reads its files as UTF-8 unless told otherwise ..
+            initial_encoding = page.input_value('#id_encoding')
+            assert initial_encoding == Default_Encoding, f'Expected UTF-8 to start with, got: "{initial_encoding}"'
+
+            # .. step 1 - the name, the directory and a Central European encoding ..
+            schedule_name = 'customers.daily'
+
+            page.fill('#id_name', schedule_name)
+            page.fill('#id_directory', kind.directory)
+            _ = page.select_option('#id_encoding', Encoding.CP1250)
+
+            wizard_next(page)
+
+            # .. step 2 - the target service ..
+            fill_service(page, _Test_Service)
+
+            wizard_next(page)
+
+            # .. step 3 - the review names the encoding by its label ..
+            review_text = page.inner_text('#file-transfer-wizard-review')
+            label = Encoding_Human[Encoding.CP1250]
+
+            assert label in review_text, f'Expected "{label}" in the review, got: "{review_text}"'
+
+            wizard_save(page)
+
+            # .. the edit wizard opens with the encoding that was saved ..
+            page.click(f'#data-table tbody tr:has(td:text-is("{schedule_name}")) a:has-text("Edit")')
+            _ = page.wait_for_selector('#file-transfer-wizard', state='visible')
+
+            prefilled_encoding = page.input_value('#id_encoding')
+            assert prefilled_encoding == Encoding.CP1250, \
+                f'Expected the encoding prefilled, got: "{prefilled_encoding}"'
+
+            # .. an edit changes it to a Greek one ..
+            _ = page.select_option('#id_encoding', Encoding.ISO_8859_7)
+            wizard_save(page)
+
+            # .. and the next edit opens with that one.
+            page.click(f'#data-table tbody tr:has(td:text-is("{schedule_name}")) a:has-text("Edit")')
+            _ = page.wait_for_selector('#file-transfer-wizard', state='visible')
+
+            prefilled_encoding = page.input_value('#id_encoding')
+            assert prefilled_encoding == Encoding.ISO_8859_7, \
+                f'Expected the edited encoding prefilled, got: "{prefilled_encoding}"'
+
+        finally:
+            _navigate_to_list(page, base_url, kind)
+            _delete_connection(page, kind, conn_id)
+
         _assert_no_errors(console_errors, server_errors)
 
 # ################################################################################################################################

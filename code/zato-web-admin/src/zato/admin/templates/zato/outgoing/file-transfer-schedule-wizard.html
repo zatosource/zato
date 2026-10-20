@@ -136,6 +136,11 @@ $(document).ready(function() {
                             {{ form.pattern }}
                         </div>
 
+                        <div class="wizard-field-row" id="file-transfer-wizard-row-encoding">
+                            <label for="id_encoding">Encoding</label>
+                            {{ form.encoding }}
+                        </div>
+
                         <div class="decision-line" id="file-transfer-wizard-line-ready">
                             <label class="decision-line-label" for="file-transfer-wizard-edit-ready">Readiness check</label>
                             <span class="decision-line-slot" id="file-transfer-wizard-slot-ready"></span>

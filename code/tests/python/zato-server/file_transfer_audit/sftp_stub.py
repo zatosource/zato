@@ -75,16 +75,28 @@ class ClientRecorder:
         # The paths an `ls` reports as not found
         self.missing_paths:'anyset' = set()
 
+        # What a `get` of a path writes to the local file, set by a test
+        self.content_by_path:'anydict' = {}
+
     def execute(self, cid:'str', data:'str', log_level:'int') -> 'SFTPOutput':
         self.commands.append(data)
 
-        # A put is remembered by the size of the local file, as a server would hold it now ..
+        # A put is remembered by the size and the bytes of the local file, as a server would hold them now ..
         parts = shlex.split(data)
 
         if parts[0] == 'put':
             local_path = parts[-2]
             remote_path = parts[-1]
             self.size_by_path[remote_path] = os.path.getsize(local_path)
+            with open(local_path, 'rb') as local_file:
+                self.content_by_path[remote_path] = local_file.read()
+
+        # .. a get writes what a test set for the path to the local file ..
+        if parts[0] == 'get':
+            remote_path = parts[-2]
+            local_path = parts[-1]
+            with open(local_path, 'wb') as local_file:
+                _ = local_file.write(self.content_by_path[remote_path])
 
         # .. and an ls of a path lists what a test set for it, or a file put earlier with its very size.
         is_ok = True

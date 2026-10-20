@@ -6,9 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from hashlib import sha256
-
 # Zato
 from zato.common.file_transfer.api import VerifyHow
 
@@ -31,7 +28,7 @@ class FileTransferVerifyError(Exception):
 
 def verify_store(
     get_remote_size:'callable_',
-    read_back:'callable_',
+    get_remote_checksum:'callable_',
     remote_path:'str',
     size:'int',
     checksum:'str',
@@ -54,12 +51,10 @@ def verify_store(
         out['mismatch'] = f'Remote size is {remote_size} instead of {size} for `{remote_path}`'
         return out
 
-    # .. and a read-back check compares the bytes themselves.
+    # .. and a read-back check compares the checksum of the bytes read back one chunk at a time.
     if verify_how == VerifyHow.Read_Back:
 
-        remote_data = read_back(remote_path)
-        remote_hasher = sha256(remote_data)
-        remote_checksum = remote_hasher.hexdigest()
+        remote_checksum = get_remote_checksum(remote_path)
         out['remote_checksum'] = remote_checksum
 
         if remote_checksum != checksum:

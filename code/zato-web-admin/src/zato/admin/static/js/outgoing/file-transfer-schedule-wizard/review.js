@@ -313,6 +313,7 @@ review.render = function() {
             ['Connection', $('#file-transfer-wizard-context-badge').text()],
             ['Directory', review.codeValue(wizard.field('directory').val())],
             ['File pattern', review.codeValue(wizard.field('pattern').val())],
+            ['Encoding', wizard.field('encoding').find('option:selected').text()],
             ['Readiness check', readyText],
             ['File locking', lockingText]
         ]},

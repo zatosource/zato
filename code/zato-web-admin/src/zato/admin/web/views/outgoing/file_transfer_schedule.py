@@ -83,11 +83,11 @@ _shell_escaped_chars = ('\\', '"', "'", ' ')
 
 # The stored fields of a schedule, as the edit service's input names them.
 _schedule_stored_fields = ('name', 'is_active', 'directory', 'pattern', 'ready_how', 'stability_delay', 'marker_suffix',
-    'should_claim', 'service', 'on_success', 'move_directory', 'start_date', 'arrival_window', 'max_attempts',
+    'should_claim', 'encoding', 'service', 'on_success', 'move_directory', 'start_date', 'arrival_window', 'max_attempts',
     'retry_backoff', 'quarantine_directory', 'expected_files', 'expected_by', 'expected_days')
 
 # The stored fields the wizard's form edits.
-_schedule_form_fields = ('arrival_window', 'max_attempts', 'retry_backoff', 'quarantine_directory',
+_schedule_form_fields = ('encoding', 'arrival_window', 'max_attempts', 'retry_backoff', 'quarantine_directory',
     'expected_files', 'expected_by', 'expected_days')
 
 # ################################################################################################################################
@@ -508,6 +508,7 @@ def _schedule_request_from_post(req:'any_') -> 'stranydict':
         'stability_delay': req.POST['stability_delay'],
         'marker_suffix': req.POST['marker_suffix'],
         'should_claim': bool(req.POST.get('should_claim')),
+        'encoding': req.POST['encoding'],
         'service': req.POST['scheduler_service'],
         'on_success': req.POST['on_success'],
         'move_directory': req.POST['move_directory'],

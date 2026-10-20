@@ -11,7 +11,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # linked to the original one. An event with no stored content cannot be reprocessed.
 
 # stdlib
+import os
 from json import loads
+
+# pytest
+from pytest import mark
 
 # SQLAlchemy
 from sqlalchemy import select
@@ -21,6 +25,8 @@ from zato.common.api import FileTransfer
 from zato.common.audit_log.api import event_link_table, get_audit_engine, AuditEvent, AuditSource
 from zato.common.audit_log.resubmit import source_resubmit_actions, is_event_type_resubmittable
 from zato.common.ext.bunch import Bunch
+from zato.common.file_transfer.api import Default_Encoding, Encoding
+from zato.common.test.file_transfer_harness.encoding_samples import sample_bytes, sample_text
 from zato.common.typing_ import cast_
 from zato.server.service.internal.audit_log import ReprocessFileTransfer
 from zato.server.service.internal.outgoing.file_transfer.process import process_files
@@ -55,15 +61,20 @@ Reprocess_Error = 'The target system is still down'
 
 class ServerStub:
     """ Stands in for the server the reprocess service runs on - it remembers
-    what was handed to the target service.
+    what was handed to the target service. The bytes and the text of the file are read during the call,
+    because the item's spool file is deleted once the call returns.
     """
 
     def __init__(self) -> 'None':
         self.name = Server_Name
         self.invoked:'any_' = []
+        self.contents:'any_' = []
+        self.texts:'any_' = []
 
     def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
         self.invoked.append((service_name, item))
+        self.contents.append(item.data)
+        self.texts.append(item.text)
 
 # ################################################################################################################################
 
@@ -93,11 +104,17 @@ def _run_reprocess(event_id:'int', server:'ServerStub') -> 'stranydict':
 
 # ################################################################################################################################
 
-def _run_one_schedule(tmp_path:'any_', *, should_store_content:'bool') -> 'None':
+def _run_one_schedule(
+    tmp_path:'any_',
+    *,
+    should_store_content:'bool',
+    file_content:'bytes'=File_Content,
+    encoding:'str'=Default_Encoding,
+    ) -> 'None':
     """ One schedule run over one file - it writes the events the reprocess reads back.
     """
-    service, context, _ = new_environment(tmp_path, should_store_content=should_store_content)
-    context[_scheduler.Extra_Schedule] = new_schedule()
+    service, context, _ = new_environment(tmp_path, should_store_content=should_store_content, file_content=file_content)
+    context[_scheduler.Extra_Schedule] = new_schedule(encoding=encoding)
 
     process_files(cast_('any_', service), context)
 
@@ -158,9 +175,13 @@ def test_a_reprocess_reinvokes_the_service_with_the_archived_bytes(tmp_path:'any
 
         service_name, item = server.invoked[0]
         assert service_name == Target_Service
-        assert item.data == File_Content
+        assert server.contents[0] == File_Content
         assert item.file_name == File_Name
         assert item.schedule_name == Schedule_Name
+        assert item.encoding == Default_Encoding
+
+        # The spool file the item was read from is gone once the service returned
+        assert not os.path.exists(item.path)
 
         # The new attempt is its own event, sharing the original run's correlation id
         # and naming the original event as its parent
@@ -171,6 +192,33 @@ def test_a_reprocess_reinvokes_the_service_with_the_archived_bytes(tmp_path:'any
         assert new_event['correl_id'] == delivered['cid']
 
         assert _get_parents(new_event['id']) == [delivered['id']]
+
+# ################################################################################################################################
+
+@mark.parametrize('encoding', (Encoding.CP1253, Encoding.CP1255, Encoding.CP1250, Encoding.UTF_16_LE))
+def test_a_reprocess_reads_the_text_in_the_encoding_of_the_original_delivery(tmp_path:'any_', encoding:'str') -> 'None':
+    """ The encoding the schedule read the file in is part of the delivery event,
+    so a reprocess hands the file over with the same encoding.
+    """
+    with audit_db_env(tmp_path):
+
+        _run_one_schedule(tmp_path, should_store_content=True, file_content=sample_bytes(encoding), encoding=encoding)
+
+        delivered = events_of_type(get_events(), AuditEvent.Delivered)[0]
+        assert loads(delivered['data'])['encoding'] == encoding
+
+        server = ServerStub()
+        report = _run_reprocess(delivered['id'], server)
+
+        assert report['is_ok'] is True
+
+        _, item = server.invoked[0]
+        assert item.encoding == encoding
+        assert server.texts[0] == sample_text(encoding)
+
+        # The new attempt says which encoding it read the file in too
+        new_event = events_of_type(get_events(), AuditEvent.Delivered)[1]
+        assert loads(new_event['data'])['encoding'] == encoding
 
 # ################################################################################################################################
 

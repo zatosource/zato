@@ -17,6 +17,7 @@ from traceback import format_exc
 from zato.common.api import FTP as CommonFTP
 from zato.common.audit_log.api import AuditLog
 from zato.common.file_transfer.api import Default_Verify_How
+from zato.common.file_transfer.spool import Chunk_Size
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
 from zato.common.util.logging_ import file_transfer_logger_name
@@ -27,7 +28,7 @@ from zato.server.connection.queue import Wrapper
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.typing_ import any_, anylist, callable_, stranydict
     from zato.server.base.parallel import ParallelServer
     Bunch = Bunch
 
@@ -266,17 +267,23 @@ class FTPClient:
 
 # ################################################################################################################################
 
-    def read(self, remote_path:'str') -> 'bytes':
-
-        buffer = BytesIO()
-
+    def read_chunks(self, remote_path:'str', callback:'callable_') -> 'None':
+        """ Reads a remote file, handing each chunk of its bytes to the callback as soon as it arrives.
+        """
         ftp = self._connect()
 
         command = 'RETR ' + remote_path
         try:
-            _ = ftp.retrbinary(command, buffer.write)
+            _ = ftp.retrbinary(command, callback, blocksize=Chunk_Size)
         finally:
             self._disconnect(ftp)
+
+# ################################################################################################################################
+
+    def read(self, remote_path:'str') -> 'bytes':
+
+        buffer = BytesIO()
+        self.read_chunks(remote_path, buffer.write)
 
         out = buffer.getvalue()
         return out
@@ -285,13 +292,20 @@ class FTPClient:
 
     def write(self, remote_path:'str', data:'bytes') -> 'None':
 
+        buffer = BytesIO(data)
+        self.write_from_file(remote_path, buffer)
+
+# ################################################################################################################################
+
+    def write_from_file(self, remote_path:'str', source_file:'any_') -> 'None':
+        """ Stores the bytes of a local file object, sending them one chunk at a time.
+        """
         ftp = self._connect()
 
         # A store always overwrites, which is what the STOR command does on its own.
         command = 'STOR ' + remote_path
-        buffer = BytesIO(data)
         try:
-            _ = ftp.storbinary(command, buffer)
+            _ = ftp.storbinary(command, source_file, blocksize=Chunk_Size)
         finally:
             self._disconnect(ftp)
 

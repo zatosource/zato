@@ -23,6 +23,7 @@ from humanize import naturalsize
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Move, Operation_Read, \
     Operation_Store, Status_Verified, Status_Verify_Failed
+from zato.common.file_transfer.spool import spooled_file_from_path, FileWriter, SpoolWriter
 from zato.common.json_ import dumps
 from zato.server.connection.file_transfer_verify import verify_store, FileTransferVerifyError
 
@@ -30,9 +31,11 @@ from zato.server.connection.file_transfer_verify import verify_store, FileTransf
 # ################################################################################################################################
 
 if 0:
+    from zato.common.file_transfer.spool import SpooledFile
     from zato.common.typing_ import any_, dictlist, stranydict
     any_ = any_
     dictlist = dictlist
+    SpooledFile = SpooledFile
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,6 +246,7 @@ class FileTransferConnection(ExchangeNotes):
         to_path:'str' = '',
         checksum:'str' = '',
         content:'any_' = None,
+        content_path:'str' = '',
         status:'str' = '',
         event_type:'str' = AuditEvent.Request_Sent,
         extra:'stranydict | None' = None,
@@ -251,7 +255,8 @@ class FileTransferConnection(ExchangeNotes):
         """
         _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
             cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error,
-            to_path=to_path, checksum=checksum, content=content, status=status, event_type=event_type, extra=extra)
+            to_path=to_path, checksum=checksum, content=content, content_path=content_path, status=status,
+            event_type=event_type, extra=extra)
 
 # ################################################################################################################################
 
@@ -434,6 +439,50 @@ class FileTransferConnection(ExchangeNotes):
 
 # ################################################################################################################################
 
+    def read_to_spool(self, remote_path:'str') -> 'SpooledFile':
+        """ Reads a remote file chunk by chunk into a new local spool file, so a file of any size
+        is read without being held in memory. The caller deletes the spool file when it is done with it.
+        """
+        writer = SpoolWriter()
+
+        out = self._read_into(remote_path, writer)
+        return out
+
+# ################################################################################################################################
+
+    def _read_into(self, remote_path:'str', writer:'FileWriter') -> 'SpooledFile':
+        """ Reads a remote file chunk by chunk into the local file of a writer and records the read.
+        """
+        start = monotonic()
+
+        # A failed read is recorded too, before the caller learns about it.
+        try:
+            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
+                client.read_chunks(remote_path, writer.write)
+        except Exception:
+            writer.discard()
+            duration_ms = _elapsed_ms(start)
+            error = format_exc()
+            self._record_transfer(Operation_Read, remote_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=error)
+            raise
+
+        out = writer.finish()
+
+        # The bytes themselves are kept only when the connection asked for that.
+        if self.wrapper.should_store_content:
+            content_path = out.path
+        else:
+            content_path = ''
+
+        duration_ms = _elapsed_ms(start)
+        self._record_transfer(Operation_Read, remote_path,
+            outcome=AuditOutcome.OK, size=out.size, duration_ms=duration_ms, checksum=out.checksum, content_path=content_path)
+
+        return out
+
+# ################################################################################################################################
+
     def write(self, data:'any_', remote_path:'str', encoding:'str' = 'utf8') -> 'None':
 
         # Data to be written out must be always bytes.
@@ -462,6 +511,56 @@ class FileTransferConnection(ExchangeNotes):
         hasher = sha256(data)
         checksum = hasher.hexdigest()
 
+        self._verify_and_record_store(remote_path, size, checksum, start, content=content)
+
+# ################################################################################################################################
+
+    def upload(self, local_path:'str', remote_path:'str') -> 'None':
+        """ Stores a local file, sending its bytes one chunk at a time, so a file of any size
+        is stored without being held in memory.
+        """
+
+        # The size and checksum of the local file are computed one chunk at a time ..
+        described = spooled_file_from_path(local_path)
+        start = monotonic()
+
+        # .. the file is sent one chunk at a time, with each read running in a separate thread
+        # so as not to block the event loop, and a failed store is recorded before the caller learns about it ..
+        try:
+            with FileObjectThread(local_path, 'rb') as local_file:
+                with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
+                    client.write_from_file(remote_path, local_file)
+        except Exception:
+            duration_ms = _elapsed_ms(start)
+            error = format_exc()
+            self._record_transfer(Operation_Store, remote_path,
+                outcome=AuditOutcome.Error, size=described.size, duration_ms=duration_ms, error=error)
+            raise
+
+        # .. the bytes are kept, read from the local file, only when the connection asked for that ..
+        if self.wrapper.should_store_content:
+            content_path = local_path
+        else:
+            content_path = ''
+
+        # .. and the stored file is verified and recorded.
+        self._verify_and_record_store(remote_path, described.size, described.checksum, start, content_path=content_path)
+
+# ################################################################################################################################
+
+    def _verify_and_record_store(
+        self,
+        remote_path:'str',
+        size:'int',
+        checksum:'str',
+        start:'float',
+        *,
+        content:'any_' = None,
+        content_path:'str' = '',
+        ) -> 'None':
+        """ Verifies a stored file and records the store, raising FileTransferVerifyError on a mismatch.
+        """
+
         # The stored file is verified ..
         verify_start = monotonic()
         verification = self._verify_store(remote_path, size, checksum)
@@ -473,7 +572,7 @@ class FileTransferConnection(ExchangeNotes):
         if mismatch := verification['mismatch']:
             self._record_transfer(Operation_Store, remote_path,
                 outcome=AuditOutcome.Error, size=size, duration_ms=duration_ms, checksum=checksum, content=content,
-                status=Status_Verify_Failed, error=mismatch, extra=verification)
+                content_path=content_path, status=Status_Verify_Failed, error=mismatch, extra=verification)
             self._record_transfer(Operation_Store, remote_path,
                 outcome=AuditOutcome.Error, size=size, checksum=checksum, error=mismatch, extra=verification,
                 event_type=AuditEvent.Verify_Failed)
@@ -482,7 +581,7 @@ class FileTransferConnection(ExchangeNotes):
         # .. and a match is recorded on the store's row.
         self._record_transfer(Operation_Store, remote_path,
             outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, checksum=checksum, content=content,
-            status=Status_Verified, extra=verification)
+            content_path=content_path, status=Status_Verified, extra=verification)
 
 # ################################################################################################################################
 
@@ -493,40 +592,32 @@ class FileTransferConnection(ExchangeNotes):
 
 # ################################################################################################################################
 
-    def _read_back(self, remote_path:'str') -> 'bytes':
+    def _get_remote_checksum(self, remote_path:'str') -> 'str':
+        """ The checksum of a remote file, computed one chunk at a time as its bytes are read back.
+        """
+        hasher = sha256()
+
         with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            out = client.read(remote_path)
+            client.read_chunks(remote_path, hasher.update)
+
+        out = hasher.hexdigest()
         return out
 
 # ################################################################################################################################
 
     def _verify_store(self, remote_path:'str', size:'int', checksum:'str') -> 'stranydict':
-        out = verify_store(self._get_remote_size, self._read_back, remote_path, size, checksum, self.wrapper.verify_how)
+        out = verify_store(self._get_remote_size, self._get_remote_checksum, remote_path, size, checksum,
+            self.wrapper.verify_how)
         return out
 
 # ################################################################################################################################
 
-    def upload(self, local_path:'str', remote_path:'str') -> 'None':
-
-        # Read the local file in using a separate thread so as not to block the event loop ..
-        thread_file = FileObjectThread(local_path, 'rb')
-        data = thread_file.read()
-        thread_file.close()
-
-        # .. and write it out to the remote location.
-        self.write(data, remote_path)
-
-# ################################################################################################################################
-
     def download_file(self, remote_path:'str', local_path:'str') -> 'None':
-
-        # Read the remote file in first ..
-        data = self.read(remote_path)
-
-        # .. and write it out locally using a separate thread so as not to block the event loop.
-        thread_file = FileObjectThread(local_path, 'wb')
-        _ = thread_file.write(data)
-        thread_file.close()
+        """ Reads a remote file into a local path one chunk at a time, so a file of any size
+        is downloaded without being held in memory.
+        """
+        writer = FileWriter(local_path)
+        _ = self._read_into(remote_path, writer)
 
     download = download_file
 

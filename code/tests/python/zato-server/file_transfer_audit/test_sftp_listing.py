@@ -39,8 +39,9 @@ _empty_directory = '/documents/empty'
 _directory = '/documents/incoming'
 _parent_directory = '/documents'
 
-# A file to read
+# A file to read and what it holds
 _file_path = '/documents/results.csv'
+_file_content = b'order_id,amount\n1001,250.00\n'
 
 # A path the server does not have
 _missing_path = '/documents/missing.csv'
@@ -228,10 +229,12 @@ def test_a_read_is_a_single_get(tmp_path:'os.PathLike') -> 'None':
     with audit_db_env(tmp_path):
 
         sftp_client = ClientRecorder()
+        sftp_client.content_by_path[_file_path] = _file_content
         conn = new_sftp_connection(sftp_client)
 
-        _ = conn.read(_file_path)
+        data = conn.read(_file_path)
 
+        assert data == _file_content
         assert len(sftp_client.commands) == 1
         assert sftp_client.commands[0].startswith(f'get "{_file_path}" ')
 

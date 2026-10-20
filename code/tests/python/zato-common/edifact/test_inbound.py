@@ -52,14 +52,13 @@ def _imap_message(plain_parts:'strlist') -> 'IMAPMessage':
 # ################################################################################################################################
 
 def _file_transfer_item(conn_type:'str', data:'bytes') -> 'FileTransferItem':
-    out = FileTransferItem(
+    out = FileTransferItem.from_bytes(
         conn_type,
         'Lab results',
         'Every hour',
         '/inbound',
         'orders.edi',
         '/inbound/orders.edi',
-        len(data),
         '2026-07-09T12:00:00',
         data,
     )
@@ -95,6 +94,7 @@ class TestWireTextFrom(unittest.TestCase):
 
     def test_file_transfer_sftp(self) -> None:
         item = _file_transfer_item('sftp', _interchange.encode('ascii'))
+        self.addCleanup(item.close)
 
         text = wire_text_from(item, item)
 
@@ -104,6 +104,7 @@ class TestWireTextFrom(unittest.TestCase):
 
     def test_file_transfer_smb(self) -> None:
         item = _file_transfer_item('smb', _interchange.encode('ascii'))
+        self.addCleanup(item.close)
 
         text = wire_text_from(item, item)
 

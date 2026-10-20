@@ -11,8 +11,8 @@ from json import dumps, loads
 
 # Zato
 from zato.common.api import FileTransfer
-from zato.common.file_transfer.api import Default_Expected_By, Default_Expected_Days, Default_Expected_Files, \
-    Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff
+from zato.common.file_transfer.api import Default_Encoding, Default_Expected_By, Default_Expected_Days, \
+    Default_Expected_Files, Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff
 from zato.common.odb.model import GenericConn
 from zato.common.util.api import new_cid
 
@@ -165,6 +165,7 @@ _optional_field_defaults = {
     'stability_delay': FileTransfer.Scheduler.Default_Stability_Delay,
     'marker_suffix': FileTransfer.Scheduler.Default_Marker_Suffix,
     'should_claim': False,
+    'encoding': Default_Encoding,
     'on_success': FileTransfer.Scheduler.OnSuccess.Move,
     'move_directory': FileTransfer.Scheduler.Default_Move_Directory,
 

@@ -1323,6 +1323,7 @@ test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites agai
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_ftp_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_streamed_transfers.py \
 		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/test_file_delivery_handlers.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp_audit -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
@@ -1342,6 +1343,7 @@ test-sftp: ## SFTP tests - the outconn and scheduler suites against live OpenSSH
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_sftp_audit.py \
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_sftp_listing.py \
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_schedule_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_schedule_encodings.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sftp_audit -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \

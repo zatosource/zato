@@ -23,6 +23,7 @@ from zato.common.documents.xdm import read_xdm
 
 if 0:
     from zato.common.documents.model import doclist
+    from zato.common.typing_ import any_
     doclist = doclist
 
 # ################################################################################################################################
@@ -102,22 +103,25 @@ def _read_zip(zip_file:'ZipFile') -> 'doclist':
 
 # ################################################################################################################################
 
-def read_documents(data:'bytes', *, file_name:'str'='', mime_type:'str'='') -> 'doclist':
-    """ The documents the bytes carry - the bytes themselves as one document unless they are a zip archive,
-    in which case each file inside, or each document the metadata names if the archive is an IHE XDM package.
+def _single_document(data:'bytes', file_name:'str', mime_type:'str') -> 'doclist':
+    """ The bytes of a file that is not an archive, as the one document they are.
     """
-    if not is_zip(data):
-        out = [Document(
-            data=data,
-            file_name=file_name,
-            mime_type=_mime_type(file_name, mime_type),
-            size=len(data),
-            source=_source.Attachment,
-        )]
-        return out
+    out = [Document(
+        data=data,
+        file_name=file_name,
+        mime_type=_mime_type(file_name, mime_type),
+        size=len(data),
+        source=_source.Attachment,
+    )]
+    return out
 
+# ################################################################################################################################
+
+def _read_archive(archive:'any_', file_name:'str') -> 'doclist':
+    """ The documents of a zip archive, given as anything ZipFile opens - a path or a file object.
+    """
     try:
-        zip_file = ZipFile(BytesIO(data))
+        zip_file = ZipFile(archive)
     except BadZipFile as e:
         raise DocumentError(_reason.Bad_Zip, f'Cannot open archive `{file_name}` -> {e}', file_name=file_name)
 
@@ -127,6 +131,43 @@ def read_documents(data:'bytes', *, file_name:'str'='', mime_type:'str'='') -> '
         else:
             out = _read_zip(zip_file)
 
+    return out
+
+# ################################################################################################################################
+
+def read_documents(data:'bytes', *, file_name:'str'='', mime_type:'str'='') -> 'doclist':
+    """ The documents the bytes carry - the bytes themselves as one document unless they are a zip archive,
+    in which case each file inside, or each document the metadata names if the archive is an IHE XDM package.
+    """
+    if not is_zip(data):
+        out = _single_document(data, file_name, mime_type)
+        return out
+
+    archive = BytesIO(data)
+
+    out = _read_archive(archive, file_name)
+    return out
+
+# ################################################################################################################################
+
+def read_documents_from_path(path:'str', *, file_name:'str'='', mime_type:'str'='') -> 'doclist':
+    """ The documents a local file carries, read the same way read_documents reads bytes - an archive
+    is opened from the file itself rather than from a copy of it in memory.
+    """
+    magic_size = len(Documents.Zip_Magic)
+
+    with open(path, 'rb') as local_file:
+        head = local_file.read(magic_size)
+
+    if not is_zip(head):
+
+        with open(path, 'rb') as local_file:
+            data = local_file.read()
+
+        out = _single_document(data, file_name, mime_type)
+        return out
+
+    out = _read_archive(path, file_name)
     return out
 
 # ################################################################################################################################

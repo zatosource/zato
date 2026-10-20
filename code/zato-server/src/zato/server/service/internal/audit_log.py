@@ -18,6 +18,7 @@ from zato.common.audit_log.file_transfer import load_transfer_content, record_sc
 from zato.common.audit_log.resubmit import get_stored_payload, load_event, require_resendable_request, resend_hop, \
     run_once, Action_Reprocess, Action_Resend, DuplicateResubmitException, ResubmitException
 from zato.common.destination.audit import get_hop_entry
+from zato.common.file_transfer.api import Default_Encoding
 from zato.common.hl7.mllp.preprocess import build_channel_tolerance_config
 from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
 from zato.common.json_internal import dumps
@@ -355,11 +356,14 @@ class ReprocessFileTransfer(AdminService):
 
             data = load_transfer_content(event.cid)
 
+            # Events recorded before schedules had an encoding were all read as UTF-8.
+            if 'encoding' in details:
+                encoding = details['encoding']
+            else:
+                encoding = Default_Encoding
+
             # The directory is the part of the path the file's own name leaves out
             directory = full_path.rsplit('/', 1)[0]
-
-            item = FileTransferItem(conn_type, event.object_name, schedule_name, directory, file_name,
-                full_path, len(data), last_modified, data)
 
             audit_log = AuditLog(self.server.name)
 
@@ -368,6 +372,7 @@ class ReprocessFileTransfer(AdminService):
             event_extra = {
                 'conn_type': conn_type,
                 'last_modified': last_modified,
+                'encoding': encoding,
             }
 
             # The actor is a searchable attribute.
@@ -378,7 +383,10 @@ class ReprocessFileTransfer(AdminService):
             def resubmit_one() -> 'int':
 
                 # The file is handed to the target service again under this cid,
-                # a failed attempt being recorded too.
+                # a failed attempt being recorded too, and its spool file is deleted once the service returns.
+                item = FileTransferItem.from_bytes(conn_type, event.object_name, schedule_name, directory, file_name,
+                    full_path, last_modified, data, encoding)
+
                 service_start = monotonic()
 
                 try:
@@ -392,6 +400,8 @@ class ReprocessFileTransfer(AdminService):
                         file_name=file_name, service=service_name, size=len(data), error=error,
                         duration_ms=service_ms, extra=event_extra, attrs_extra=attrs_extra, parents=[event.id])
                     raise
+                finally:
+                    item.close()
 
                 service_ms = _elapsed_ms(service_start)
                 event_extra['service_ms'] = service_ms

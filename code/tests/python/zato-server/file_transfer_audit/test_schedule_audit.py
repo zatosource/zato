@@ -86,7 +86,7 @@ def test_a_processed_file_shares_one_cid_and_carries_the_schedule(tmp_path:'any_
 
         service_name, item = service.invoked[0]
         assert service_name == Target_Service
-        assert item.data == File_Content
+        assert service.contents[0] == File_Content
         assert item.file_name == File_Name
         assert item.schedule_name == Schedule_Name
 

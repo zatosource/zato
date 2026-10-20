@@ -12,8 +12,8 @@ from django import forms
 # Zato
 from zato.admin.web.forms import add_services
 from zato.common.api import FileTransfer
-from zato.common.file_transfer.api import Default_Expected_By, Default_Expected_Days, Default_Expected_Files, \
-    Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff
+from zato.common.file_transfer.api import Default_Encoding, Default_Expected_By, Default_Expected_Days, \
+    Default_Expected_Files, Default_Max_Attempts, Default_Quarantine_Directory, Default_Retry_Backoff, Encoding_Human
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,6 +46,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, initial=True, widget=forms.CheckboxInput())
     directory = forms.CharField(widget=forms.TextInput(attrs={'placeholder':'/incoming/invoices'}))
     pattern = forms.CharField(initial=_scheduler.Default_Pattern, widget=forms.TextInput())
+    encoding = forms.ChoiceField(initial=Default_Encoding, widget=forms.Select())
 
     # When is a file ready - the choice cards write the mode into the hidden field
     ready_how = forms.CharField(initial=_scheduler.ReadyHow.Stability, widget=forms.HiddenInput())
@@ -91,6 +92,13 @@ class CreateForm(forms.Form):
             choices.append([item, item])
 
         self.fields['run_unit'].choices = choices
+
+        # One choice per encoding the text of a file can be read in.
+        encoding_choices = []
+        for encoding, label in Encoding_Human.items():
+            encoding_choices.append([encoding, label])
+
+        self.fields['encoding'].choices = encoding_choices
 
 # ################################################################################################################################
 # ################################################################################################################################

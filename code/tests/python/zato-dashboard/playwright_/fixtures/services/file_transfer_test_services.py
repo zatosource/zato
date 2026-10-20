@@ -34,8 +34,7 @@ class InvoiceTotals(Service):
         item = self.request.input
 
         # The invoice is a header line followed by one row per amount, the amount being the last column ..
-        invoice = item.data.decode('utf8')
-        rows = invoice.splitlines()
+        rows = item.text.splitlines()
         amount_rows = rows[1:]
 
         # .. the amounts are added up ..

@@ -70,8 +70,7 @@ class DemoInvoices(Service):
         protocol = Protocols[item.conn_type]
 
         # A well-formed invoice starts with the expected header ..
-        text = item.data.decode('utf8')
-        header, _, _ = text.partition('\\n')
+        header, _, _ = item.text.partition('\\n')
 
         # .. anything else fails, which makes the schedule retry the file and then quarantine it.
         if header != Invoice_Header:
