@@ -6,7 +6,7 @@
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console openapi-console-demo openapi-console-tutorial mcp-demo \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp openapi-console openapi-console-demo openapi-console-tutorial mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -18,7 +18,7 @@
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-file-transfer test-rule-engine test-rule-engine-perf \
+	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
@@ -188,6 +188,9 @@ queue-bridge:
 
 file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
+
+sftp: ## Three development OpenSSH SFTP servers in containers on ports 33101-33103 for local file transfer work, each logging under its own label.
+	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/sftp_dev/run.py
 
 openapi-console:
 	$(ZATO_PY) -m zato.openapi.app.run
@@ -438,7 +441,7 @@ Zato_Pyright_All_Paths := \
 
 pyright-all:
 	@echo "Running Python type checks on every first-party tree from $(CURDIR)/code"
-	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) $(Zato_Pyright_All_Paths)
+	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) --project pyright-all.json $(Zato_Pyright_All_Paths)
 
 test-lint: ## Static analysis only - no test is executed. The first stage of test-all.
 	$(Zato_Log_Reset)
@@ -1320,6 +1323,7 @@ test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites agai
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_ftp_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_streamed_transfers.py \
 		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/test_file_delivery_handlers.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp_audit -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
@@ -1329,7 +1333,26 @@ test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites agai
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-file-transfer: ## File transfer demo tests - the demo config set, the local SFTP, FTP, FTPS and SMB servers, a live server polling all of them, and the Dashboard card.
+test-sftp: ## SFTP tests - the outconn and scheduler suites against live OpenSSH servers, plus the audit, listing and schedule suites against stubs.
+	$(Zato_Log_Reset)
+	Zato_Test_SFTP=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_sftp.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sftp -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_sftp_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_sftp_listing.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_schedule_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_schedule_encodings.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sftp_audit -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_scheduler/ \
+		-k "SFTP" \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sftp_scheduler -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-file-transfer: test-sftp ## File transfer demo tests - the SFTP suites first, then the demo config set, the local SFTP, FTP, FTPS and SMB servers, a live server polling all of them, and the Dashboard card.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/demo_config/test_demo_config.py \

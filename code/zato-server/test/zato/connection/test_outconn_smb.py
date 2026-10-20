@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from tempfile import mkdtemp, NamedTemporaryFile
+from hashlib import sha256
+from tempfile import mkdtemp, NamedTemporaryFile, TemporaryDirectory
 from unittest import main, TestCase
 
 # Bunch
@@ -20,7 +21,8 @@ import smbclient
 # Zato
 from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
-from zato.common.file_transfer.api import Default_Verify_How
+from zato.common.file_transfer.api import Default_Verify_How, VerifyHow
+from zato.common.test.file_transfer_harness.large_files import checksum_of_path, get_kept_content, new_large_file
 from zato.common.test.smb_ import SMBTestServer
 from zato.common.typing_ import cast_
 from zato.server.connection.smb import SMBConnection
@@ -304,6 +306,40 @@ class OutconnSMBTestCase(TestCase):
             with open(download_file.name, encoding='utf8') as downloaded:
                 downloaded_data = downloaded.read()
                 self.assertEqual(downloaded_data, data)
+
+# ################################################################################################################################
+
+    def test_a_large_file_is_uploaded_verified_kept_and_downloaded(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        conn = self.get_conn('test_a_large_file_is_uploaded_verified_kept_and_downloaded')
+
+        # The stored file is verified by its checksum read back from the share and its bytes are kept ..
+        conn.wrapper.verify_how = VerifyHow.Read_Back
+        conn.wrapper.should_store_content = True
+
+        file_name = self.get_file_name('large.dat')
+        remote_path = self.get_remote_path(file_name)
+
+        with TemporaryDirectory(suffix='-zato-test-smb') as local_dir:
+
+            # .. a local file of several chunks is uploaded ..
+            data = new_large_file(local_dir, 'large.dat')
+            expected = sha256(data).hexdigest()
+
+            upload_path = os.path.join(local_dir, 'large.dat')
+            conn.upload(upload_path, remote_path)
+
+            # .. the share's disk holds the very bytes and the audit log kept them ..
+            self.assertEqual(checksum_of_path(self.get_local_path(file_name)), expected)
+            self.assertEqual(get_kept_content(remote_path), data)
+
+            # .. and a download writes them to a new local path.
+            download_path = os.path.join(local_dir, 'downloaded.dat')
+            conn.download_file(remote_path, download_path)
+
+            self.assertEqual(checksum_of_path(download_path), expected)
 
 # ################################################################################################################################
 

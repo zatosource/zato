@@ -14,7 +14,7 @@ $.fn.zato.outgoing.file_transfer.interval = interval;
 interval.fields = ['run_every', 'run_unit'];
 
 // The title of the popover the two are edited in.
-interval.formTitle = 'How often to look';
+interval.formTitle = 'Polling interval';
 
 // ////////////////////////////////////////////////////////////////////////
 

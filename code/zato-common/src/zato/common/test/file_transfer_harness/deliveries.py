@@ -26,6 +26,7 @@ Service_Always_Raise = 'file-transfer-scheduler-test.always-raise'
 Service_Fail_Selected = 'file-transfer-scheduler-test.fail-selected'
 Service_Slow_Store = 'file-transfer-scheduler-test.slow-store'
 Service_Echo_Item = 'file-transfer-scheduler-test.echo-item'
+Service_Store_Text = 'file-transfer-scheduler-test.store-text'
 
 # A file whose name holds this is the one that Service_Fail_Selected refuses to accept
 Failing_File_Token = 'refused'
@@ -161,6 +162,34 @@ class EchoFileTransferItem(Service):
         _record(item)
 
         self.response.payload = item
+
+
+class StoreFileTransferText(Service):
+    """ Records the text of each file received on input, read in the schedule's encoding
+    in full and line by line. A file that is not valid in that encoding fails its delivery.
+    """
+    name = '{service_store_text}'
+
+    def handle(self):
+
+        item = self.request.input
+
+        lines = []
+        for line in item:
+            lines.append(line)
+
+        entry = dumps({{
+            'schedule_name': item.schedule_name,
+            'file_name': item.file_name,
+            'size': item.size,
+            'encoding': item.encoding,
+            'text': item.text,
+            'lines': lines,
+            'data_digest': sha256(item.data).hexdigest(),
+        }})
+
+        with open(_deliveries_file, 'a') as file_handle:
+            _ = file_handle.write(entry + '\\n')
 '''
 
 # ################################################################################################################################
@@ -179,6 +208,7 @@ def build_test_services_source(deliveries_file:'str') -> 'str':
         service_fail_selected=Service_Fail_Selected,
         service_slow_store=Service_Slow_Store,
         service_echo_item=Service_Echo_Item,
+        service_store_text=Service_Store_Text,
     )
 
     return out

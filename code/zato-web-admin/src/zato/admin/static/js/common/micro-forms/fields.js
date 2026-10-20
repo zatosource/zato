@@ -261,6 +261,11 @@ microForms.installFields = function(host, forms) {
                     input.step = fieldSpec.step;
                     input.min = forms.config.fractionalMin;
                 }
+
+                // A count in which zero is an answer of its own, e.g. no limit, says how low it goes
+                if('min' in fieldSpec) {
+                    input.min = fieldSpec.min;
+                }
             }
             else {
                 input.type = 'text';

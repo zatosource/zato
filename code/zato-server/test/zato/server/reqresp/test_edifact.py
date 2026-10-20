@@ -84,17 +84,18 @@ class TestRequestEdifact(TestCase):
 
     def test_file_transfer(self) -> None:
         data = _interchange.encode('ascii')
-        item = FileTransferItem(
+        item = FileTransferItem.from_bytes(
             'sftp',
             'Lab results',
             'Every hour',
             '/inbound',
             'orders.edi',
             '/inbound/orders.edi',
-            len(data),
             '2026-07-09T12:00:00',
             data,
         )
+
+        self.addCleanup(item.close)
 
         request = _request(item, item)
         interchange = request.edifact

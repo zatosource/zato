@@ -7,7 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import sqlite3
 from unittest import TestCase
+
+# SQLAlchemy
+from sqlalchemy.exc import OperationalError
 
 # Zato
 from zato.server.connection.mcp.connection_tools.sql import definition
@@ -128,6 +132,31 @@ class SQLToolsCall(TestCase):
 
         text = result['content'][0]['text']
         self.assertEqual(text, 'Bad request')
+
+# ################################################################################################################################
+
+    def test_tools_call_database_error_is_reported(self) -> 'None':
+        """ Verifies that a statement the database refuses produces the database's own message with isError true.
+        """
+
+        class _RefusingPoolItem(StubSQLPoolItem):
+            def execute(self, query:'str', params:'any_'=None) -> 'any_':
+                database_error = sqlite3.OperationalError('no such table: facilities')
+                raise OperationalError(query, params, database_error)
+
+        pool_item = _RefusingPoolItem('sqlite', 'localhost', 'warehouse.db')
+
+        config_manager = _make_config_manager(pool_item)
+        wrapper = make_gateway_wrapper(config_manager, sql_connections=['reporting'])
+        handler = make_mcp_handler(wrapper)
+
+        mcp_response = run_tools_call(handler, 'sql.reporting', {'query': 'select * from facilities'})
+
+        result = mcp_response.body['result']
+        self.assertTrue(result['isError'])
+
+        text = result['content'][0]['text']
+        self.assertEqual(text, 'no such table: facilities')
 
 # ################################################################################################################################
 # ################################################################################################################################

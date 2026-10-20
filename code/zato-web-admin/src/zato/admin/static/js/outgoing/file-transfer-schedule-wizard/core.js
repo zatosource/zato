@@ -26,17 +26,16 @@ wizard.config_own = {
     // the missing targets below name them too, which is why they are here rather
     // than in the review module, loaded after this one
     groups: {
-        pickup: 'Pickup',
+        source: 'File source',
         processing: 'Processing',
-        schedule: 'Schedule'
+        schedule: 'Schedule and monitoring'
     },
 
     // The fixed labels of the review step
     labels: {
-        invokedWith: 'One invocation per file - data, name, size and modification time',
-        afterFailure: 'The file stays in place and is retried on the next run',
-        claimYes: 'Yes - renamed to name.processing first',
-        claimNo: 'No - this platform is the only consumer'
+        serviceInput: 'File data, name, size and modification time, one invocation per file',
+        lockingOn: 'On, each file is renamed with the .processing suffix before it is read',
+        lockingOff: 'Off'
     },
 
     // Where the live name check sends its questions, together with the
@@ -62,8 +61,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // The rows the "How does it work?" badge walks through - the card
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
-    helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-field-row, ' +
-        '.wizard-section-title, .decision-line',
+    helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-field-row, .decision-line',
 
     // Fields that must not be empty on submit - the ones edited only in
     // popovers always carry their defaults, so they are safe to require outright
@@ -89,31 +87,31 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // fields edited in popovers are answered where their popover opens, so the
     // line opening it is what a refused save points at
     missingTargets: {
-        name:              {group: wizard.config_own.groups.pickup, label: 'Name'},
-        directory:         {group: wizard.config_own.groups.pickup, label: 'Directory'},
-        pattern:           {group: wizard.config_own.groups.pickup, label: 'File pattern'},
-        stability_delay:   {group: wizard.config_own.groups.pickup, label: 'Check gap',
+        name:              {group: wizard.config_own.groups.source, label: 'Name'},
+        directory:         {group: wizard.config_own.groups.source, label: 'Directory'},
+        pattern:           {group: wizard.config_own.groups.source, label: 'File pattern'},
+        stability_delay:   {group: wizard.config_own.groups.source, label: 'Readiness check',
                             anchorSelector: '#file-transfer-wizard-line-ready'},
-        marker_suffix:     {group: wizard.config_own.groups.pickup, label: 'Marker suffix',
+        marker_suffix:     {group: wizard.config_own.groups.source, label: 'Readiness check',
                             anchorSelector: '#file-transfer-wizard-line-ready'},
         scheduler_service: {group: wizard.config_own.groups.processing, label: 'Service',
                             anchorSelector: '#file-transfer-wizard-service-row'},
-        move_directory:    {group: wizard.config_own.groups.processing, label: 'Move to directory',
+        move_directory:    {group: wizard.config_own.groups.processing, label: 'Post-processing',
                             anchorSelector: '#file-transfer-wizard-line-success'},
-        run_every:         {group: wizard.config_own.groups.schedule, label: 'Run every',
+        max_attempts:      {group: wizard.config_own.groups.processing, label: 'Retry policy',
+                            anchorSelector: '#file-transfer-wizard-line-retries'},
+        retry_backoff:     {group: wizard.config_own.groups.processing, label: 'Retry policy',
+                            anchorSelector: '#file-transfer-wizard-line-retries'},
+        quarantine_directory: {group: wizard.config_own.groups.processing, label: 'Retry policy',
+                            anchorSelector: '#file-transfer-wizard-line-retries'},
+        run_every:         {group: wizard.config_own.groups.schedule, label: 'Polling interval',
                             anchorSelector: '#file-transfer-wizard-line-run-every'},
         start_date:        {group: wizard.config_own.groups.schedule, label: 'Start time'},
-        arrival_window:    {group: wizard.config_own.groups.schedule, label: 'Expects a file',
+        arrival_window:    {group: wizard.config_own.groups.schedule, label: 'Arrival monitoring',
                             anchorSelector: '#file-transfer-wizard-line-arrival-window'},
-        max_attempts:      {group: wizard.config_own.groups.schedule, label: 'A failing file',
-                            anchorSelector: '#file-transfer-wizard-line-retries'},
-        retry_backoff:     {group: wizard.config_own.groups.schedule, label: 'A failing file',
-                            anchorSelector: '#file-transfer-wizard-line-retries'},
-        quarantine_directory: {group: wizard.config_own.groups.schedule, label: 'A failing file',
-                            anchorSelector: '#file-transfer-wizard-line-retries'},
-        expected_files:    {group: wizard.config_own.groups.schedule, label: 'Expects a day',
+        expected_files:    {group: wizard.config_own.groups.schedule, label: 'Daily delivery check',
                             anchorSelector: '#file-transfer-wizard-line-expectation'},
-        expected_days:     {group: wizard.config_own.groups.schedule, label: 'Expects a day',
+        expected_days:     {group: wizard.config_own.groups.schedule, label: 'Daily delivery check',
                             anchorSelector: '#file-transfer-wizard-line-expectation'}
     },
 
@@ -213,30 +211,28 @@ wizard.titleHelp = function() {
     var out =
         '<div class="wizard-title-help">' +
 
-        '<p>This wizard creates a schedule - a recurring task that scans ' +
-        'a directory of this connection and invokes a service with each new file.</p>' +
+        '<p>A schedule polls a directory of this connection at a fixed interval ' +
+        'and invokes a service once for each new file found there.</p>' +
 
-        '<p>On <span class="wizard-title-help-step">01</span> you choose what to pick up - ' +
-        'which directory, which files and when a file counts as ready. ' +
-        'On <span class="wizard-title-help-step">02</span> you pick the service that handles ' +
-        'each file, what happens to it afterwards and how often to look. ' +
-        '<span class="wizard-title-help-step">03</span> is a review before the schedule is created.</p>' +
+        '<p><span class="wizard-title-help-step">01</span> defines the file source - ' +
+        'the directory, the file pattern and the readiness check that determines when an upload is complete. ' +
+        '<span class="wizard-title-help-step">02</span> defines the processing - the service, ' +
+        'the post-processing, the retry policy, the polling interval and the monitoring of deliveries. ' +
+        '<span class="wizard-title-help-step">03</span> lists the configuration before the schedule is saved.</p>' +
 
         '<details class="wizard-title-help-details">' +
-        '<summary>New to file transfer? A 30-second primer</summary>' +
+        '<summary>File transfer overview</summary>' +
         '<div class="wizard-title-help-primer">' +
 
-        '<p>Other systems drop files into a directory - invoices, orders, reports - ' +
-        'and Zato collects them on a schedule, so nothing needs to be ' +
-        'watched by hand.</p>' +
+        '<p>External systems deliver files such as invoices, orders and reports to a directory, ' +
+        'and the schedule collects them at each polling interval.</p>' +
 
-        '<p>The one thing to get right is not reading a file while it is still ' +
-        'being uploaded, which is what the readiness choice on step 01 is for. ' +
-        'Once a file is processed, it is moved away or deleted, so it is never ' +
-        'picked up twice.</p>' +
+        '<p>A file is read only after the readiness check confirms that its upload is complete. ' +
+        'After processing, the file is moved to the target directory or deleted, ' +
+        'so that no file is processed twice.</p>' +
 
-        '<p>Name the schedule, point it at a directory, pick a ' +
-        'service on step 02 and keep the defaults.</p>' +
+        '<p>A schedule requires a name, a directory and a service, ' +
+        'and every other setting has a default value.</p>' +
 
         '</div>' +
         '</details>' +

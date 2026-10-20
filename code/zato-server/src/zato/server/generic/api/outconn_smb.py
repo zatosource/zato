@@ -7,7 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from io import BytesIO
 from logging import getLogger
+from shutil import copyfileobj
 from traceback import format_exc
 
 # smbprotocol
@@ -18,6 +20,7 @@ from smbprotocol.exceptions import SMBOSError
 from zato.common.api import SMB
 from zato.common.audit_log.api import AuditLog
 from zato.common.file_transfer.api import Default_Verify_How
+from zato.common.file_transfer.spool import Chunk_Size
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
 from zato.common.util.logging_ import file_transfer_logger_name
@@ -29,7 +32,7 @@ from zato.server.connection.queue import Wrapper
 if 0:
     from smbprotocol.session import Session
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_, anylist, stranydict
+    from zato.common.typing_ import any_, anylist, callable_, stranydict
     from zato.server.base.parallel import ParallelServer
     Bunch = Bunch
 
@@ -182,6 +185,17 @@ class SMBClient:
 
 # ################################################################################################################################
 
+    def read_chunks(self, remote_path:'str', callback:'callable_') -> 'None':
+        """ Reads a remote file, handing each chunk of its bytes to the callback as soon as it arrives.
+        """
+        unc_path = self.to_unc(remote_path)
+
+        with smbclient.open_file(unc_path, mode='rb', **self.conn_kwargs) as remote_file:
+            while chunk := remote_file.read(Chunk_Size):
+                callback(chunk)
+
+# ################################################################################################################################
+
     def read(self, remote_path:'str') -> 'bytes':
 
         unc_path = self.to_unc(remote_path)
@@ -195,6 +209,14 @@ class SMBClient:
 
     def write(self, remote_path:'str', data:'bytes') -> 'None':
 
+        buffer = BytesIO(data)
+        self.write_from_file(remote_path, buffer)
+
+# ################################################################################################################################
+
+    def write_from_file(self, remote_path:'str', source_file:'any_') -> 'None':
+        """ Stores the bytes of a local file object, sending them one chunk at a time.
+        """
         unc_path = self.to_unc(remote_path)
 
         # Writing always overwrites, which is why any existing file is deleted first ..
@@ -204,7 +226,7 @@ class SMBClient:
         # .. and the file is now created anew - note that the 'x' mode maps to the FILE_CREATE disposition,
         # which, unlike the overwrite-if dispositions, is handled correctly by all the SMB server implementations.
         with smbclient.open_file(unc_path, mode='xb', **self.conn_kwargs) as remote_file:
-            _ = remote_file.write(data)
+            copyfileobj(source_file, remote_file, Chunk_Size)
 
 # ################################################################################################################################
 

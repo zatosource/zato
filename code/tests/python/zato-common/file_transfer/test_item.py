@@ -7,10 +7,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from json import dumps, loads
 
 # Zato
+from zato.common.file_transfer.api import Default_Encoding, Encoding
 from zato.common.model.file_transfer_ import FileTransferItem
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,9 +37,9 @@ _undecodable = b'\xff\xfe'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _item(data:'bytes') -> 'FileTransferItem':
-    out = FileTransferItem(_conn_type, _conn_name, _schedule_name, _directory, _file_name, _full_path,
-        len(data), _last_modified, data)
+def _item(data:'bytes', encoding:'str' = Default_Encoding) -> 'FileTransferItem':
+    out = FileTransferItem.from_bytes(_conn_type, _conn_name, _schedule_name, _directory, _file_name, _full_path,
+        _last_modified, data, encoding)
     return out
 
 # ################################################################################################################################
@@ -54,8 +62,9 @@ class TestFileTransferItem:
         assert item.full_path == _full_path
         assert item.size == len(data)
         assert item.last_modified == _last_modified
+        assert item.encoding == Default_Encoding
 
-        # The contents stay bytes on the item itself
+        # The contents are read as bytes from the spool file
         assert item.data == data
         assert isinstance(item.data, bytes)
 
@@ -75,10 +84,24 @@ class TestFileTransferItem:
             'full_path': _full_path,
             'size': len(data),
             'last_modified': _last_modified,
+            'encoding': Default_Encoding,
             'data': 'Λογαριασμοί, 송장\n',
         }
 
         assert item.to_dict() == expected
+
+# ################################################################################################################################
+
+    def test_to_dict_reads_the_text_in_the_encoding_of_the_item(self) -> 'None':
+
+        text = 'Ψάρι, εγώ\n'
+        data = text.encode(Encoding.ISO_8859_7)
+        item = _item(data, Encoding.ISO_8859_7)
+
+        result = item.to_dict()
+
+        assert result['encoding'] == Encoding.ISO_8859_7
+        assert result['data'] == text
 
 # ################################################################################################################################
 
@@ -136,8 +159,42 @@ class TestFileTransferItem:
         assert 'FileTransferItem' in text
         assert f'full_path:`{_full_path}`' in text
         assert 'size:`3`' in text
+        assert f'encoding:`{Default_Encoding}`' in text
         assert f'conn_name:`{_conn_name}`' in text
         assert f'schedule_name:`{_schedule_name}`' in text
+
+# ################################################################################################################################
+
+    def test_data_is_read_from_the_spool_file_each_time(self) -> 'None':
+
+        item = _item(b'first')
+
+        # The item holds no copy of the bytes, so what the spool file holds is what is read
+        with open(item.path, 'wb') as spool_file:
+            _ = spool_file.write(b'second')
+
+        assert item.data == b'second'
+
+# ################################################################################################################################
+
+    def test_close_deletes_the_spool_file(self, spool_directory:'any_') -> 'None':
+
+        item = _item(b'INVOICE,1,100.00\n')
+        assert os.path.exists(item.path)
+
+        item.close()
+
+        assert not os.path.exists(item.path)
+        assert os.listdir(spool_directory) == []
+
+# ################################################################################################################################
+
+    def test_spool_file_is_in_the_spool_directory(self, spool_directory:'any_') -> 'None':
+
+        item = _item(b'abc')
+
+        directory = os.path.dirname(item.path)
+        assert directory == str(spool_directory)
 
 # ################################################################################################################################
 # ################################################################################################################################

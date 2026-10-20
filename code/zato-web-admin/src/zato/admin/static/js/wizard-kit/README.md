@@ -110,7 +110,7 @@ The namespace must provide:
 
 ## Micro-forms in a wizard
 
-The descriptors, the field kinds and the host contract are the micro-forms kit's own and are written up in the header of `static/js/common/micro-forms.js`. What is the wizard's here is the class its popovers wear - `popupClass: 'wizard-micro-form'` - under which `wizard-kit.css` sizes the switches inside a popover the way it sizes the ones on the card. The HL7 MLLP channel list opens the wizard's Message matchers from its Match column through the same kit, and the file transfer schedule list opens the wizard's How often to look from its Interval column, with the descriptor shared by both pages in `static/js/outgoing/file-transfer-schedule-interval.js`.
+The descriptors, the field kinds and the host contract are the micro-forms kit's own and are written up in the header of `static/js/common/micro-forms.js`. What is the wizard's here is the class its popovers wear - `popupClass: 'wizard-micro-form'` - under which `wizard-kit.css` sizes the switches inside a popover the way it sizes the ones on the card. The HL7 MLLP channel list opens the wizard's Message matchers from its Match column through the same kit, and the file transfer schedule list opens the wizard's Polling interval from its Interval column, with the descriptor shared by both pages in `static/js/outgoing/file-transfer-schedule-interval.js`.
 
 ## Select rows
 

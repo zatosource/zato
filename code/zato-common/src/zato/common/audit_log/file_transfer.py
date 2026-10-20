@@ -24,7 +24,7 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import event_body_table, event_table, get_audit_engine, AuditEvent, AuditSource
-from zato.common.audit_log.attachment import build_attachment
+from zato.common.audit_log.attachment import build_attachment, build_attachment_from_file
 from zato.common.audit_log.common import AuditBody
 from zato.common.audit_log.resubmit import ResubmitException
 
@@ -74,13 +74,15 @@ def record_file_transfer(
     to_path:'str' = '',
     checksum:'str' = '',
     content:'bytesnone' = None,
+    content_path:'str' = '',
     status:'str' = '',
     event_type:'str' = AuditEvent.Request_Sent,
     extra:'strdictnone' = None,
     ) -> 'intnone':
     """ Writes one audit event describing an outgoing file operation. The content is stored
-    only when given, as an attachment envelope under the shared size cap - which is what
-    the per-connection body storage flag hands over when it is on. Returns the event id.
+    only when given, either as bytes or as the local file holding them, as an attachment envelope
+    under the shared size cap - which is what the per-connection body storage flag hands over
+    when it is on. Returns the event id.
     """
 
     # What happened is readable off the event without opening anything else
@@ -126,9 +128,16 @@ def record_file_transfer(
 
     # The file's bytes travel as an attachment when the connection asked for them to be kept -
     # the envelope caps oversized files on its own, keeping their metadata.
+    filename = remote_path.rstrip('/').split('/')[-1]
+
     if content is not None:
-        filename = remote_path.rstrip('/').split('/')[-1]
-        insert_options['attachments'] = [build_attachment(filename, _default_content_type, content)]
+        attachment = build_attachment(filename, _default_content_type, content)
+        insert_options['attachments'] = [attachment]
+
+    # .. a file read into a local spool file is read from there, and only if it fits under the cap.
+    elif content_path:
+        attachment = build_attachment_from_file(filename, _default_content_type, content_path, size)
+        insert_options['attachments'] = [attachment]
 
     # Our response to produce
     out = audit_log.insert(AuditSource.File_Outgoing, event_type, conn_name, **insert_options)

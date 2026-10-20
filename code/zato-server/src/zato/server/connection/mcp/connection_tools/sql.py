@@ -6,7 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
+
 # Zato
+from zato.server.connection.mcp.common import ToolCallFailed
 from zato.server.connection.mcp.connection_tools.common import GroupDefinition
 
 # ################################################################################################################################
@@ -66,12 +70,17 @@ def build_description(connection_name:'str', item:'any_') -> 'str':
 def invoke(cid:'str', item:'any_', arguments:'stranydict') -> 'any_':
     """ Runs the statement from the tool call through the pool's session wrapper,
     which is what also puts the call on the audit record for outgoing pools.
+    A statement the database refuses is reported to the client with the database's own message.
     """
 
     query = arguments['query']
     params = arguments.get('params')
 
-    out = item.execute(query, params)
+    try:
+        out = item.execute(query, params)
+    except DBAPIError as e:
+        raise ToolCallFailed(str(e.orig)) from e
+
     return out
 
 # ################################################################################################################################

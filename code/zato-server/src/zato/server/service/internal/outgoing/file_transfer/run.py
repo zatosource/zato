@@ -12,9 +12,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass, field
 from datetime import datetime, time as datetime_time, timezone
 from hashlib import sha256
+from logging import getLogger
 from time import monotonic
+from traceback import format_exc
 
 # Zato
+from zato.common.api import FileTransfer
 from zato.common.audit_log.common import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_schedule_event
 from zato.common.audit_log.file_transfer_run import count_delivered_since, find_running_runs, Interrupted_Note, \
@@ -22,19 +25,25 @@ from zato.common.audit_log.file_transfer_run import count_delivered_since, find_
     Run_Status_Interrupted, Run_Status_List_Failed, Run_Status_No_Directory, Run_Status_Partial, Run_Status_Running, \
     Run_Status_Unchanged, update_run_event, write_run_error, write_run_exchanges, write_run_ledger
 from zato.common.util.api import utcnow
+from zato.common.util.logging_ import file_transfer_logger_name
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import any_, anylist, intnone, stranydict, strintdict, strlist
+    from zato.common.typing_ import any_, anylist, intnone, stranydict, strintdict, strlist, strset
     from zato.server.service import Service
     AuditLog = AuditLog
     any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = getLogger(file_transfer_logger_name)
+
+# The suffix a claimed file is renamed with
+_claim_suffix = FileTransfer.Scheduler.Claim_Suffix
 
 # The newest listing fingerprint of each schedule, keyed by connection and schedule.
 _last_listing:'stranydict' = {}
@@ -67,6 +76,7 @@ class RunContext:
     skip_reasons:  'strintdict' = field(default_factory=dict)
     fingerprint:   str = ''
     is_unchanged:  bool = False
+    ensured_directories: 'strset' = field(default_factory=set)
 
 # ################################################################################################################################
 
@@ -111,6 +121,7 @@ def _new_run_context() -> 'RunContext':
     out.data = {}
     out.ledger = []
     out.skip_reasons = {}
+    out.ensured_directories = set()
 
     return out
 
@@ -211,12 +222,43 @@ def listing_fingerprint(entries:'anylist') -> 'str':
 
 # ################################################################################################################################
 
-def close_interrupted_runs(audit_log:'AuditLog', conn_name:'str', schedule_name:'str') -> 'None':
-    """ Closes the runs this server left marked as running as interrupted.
+def _release_interrupted_claim(conn:'any_', data:'stranydict', current_file:'str') -> 'None':
+    """ Renames the claim of the file an interrupted run was in the middle of back to the file's own name
+    and records the outcome in the run's data.
+    """
+    full_path = f'{data["remote_path"]}/{current_file}'
+    claim_path = full_path + _claim_suffix
+
+    try:
+
+        # The run may have been interrupted before its claim or after its ack, so there may be no claim at all
+        if not conn.exists(claim_path):
+            return
+
+        _ = conn.move(claim_path, full_path)
+
+    except Exception:
+        release_error = format_exc()
+        logger.info('Could not release the claim on `%s` -> `%s`', claim_path, release_error)
+        data['claim_released'] = False
+        data['release_error'] = error_summary(release_error)
+
+    else:
+        data['claim_released'] = True
+
+# ################################################################################################################################
+
+def close_interrupted_runs(audit_log:'AuditLog', conn_name:'str', schedule_name:'str', conn:'any_') -> 'None':
+    """ Closes the runs this server left marked as running as interrupted,
+    releasing the claim of the file each of them was in the middle of.
     """
     running = find_running_runs(conn_name, schedule_name, audit_log.server_name)
 
     for event_id, data in running:
+
+        if current_file := data.get('current_file'):
+            _release_interrupted_claim(conn, data, current_file)
+
         data['note'] = Interrupted_Note
         data['phase'] = Phase_Done
         update_run_event(event_id, outcome=AuditOutcome.Error, status=Run_Status_Interrupted, data=data)

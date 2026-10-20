@@ -130,25 +130,38 @@ def get_candidates(schedule:'stranydict', entries:'anylist') -> 'Selection':
 # ################################################################################################################################
 
 def keep_stable_entries(conn:'any_', directory:'str', candidates:'anylist', stability_delay:'int') -> 'Selection':
-    """ Keeps the candidates that did not change between the directory listing and a second look
-    picked up after the configured delay - an unchanged size and modification time means the upload is complete.
+    """ Keeps the candidates that did not change between the directory listing and a second listing
+    taken after the configured delay - an unchanged size and modification time means the upload is complete.
+    Both listings come from the same command, so their sizes and times are in the same format and time zone.
     """
 
     # Our response to produce
     out = _new_selection()
 
-    # One wait covers all the candidates - each one is then compared with its listing baseline.
+    # One wait and one listing cover all the candidates ..
     sleep(stability_delay)
+
+    # .. a directory that cannot be listed anymore leaves nothing to compare the candidates with ..
+    try:
+        entries = conn.list(directory)
+    except Exception:
+        for entry in candidates:
+            out.skip(entry, Skip_Vanished)
+        return out
+
+    # .. otherwise, each candidate is compared with what the second listing says about it.
+    current:'anydict' = {}
+
+    for entry in entries:
+        file_name = get_file_name(entry)
+        current[file_name] = entry
 
     for entry in candidates:
 
         file_name = get_file_name(entry)
-        full_path = f'{directory}/{file_name}'
 
         # The file may be gone by now, e.g. another consumer picked it up
-        try:
-            info = conn.get_info(full_path)
-        except Exception:
+        if not (info := current.get(file_name)):
             out.skip(entry, Skip_Vanished)
             continue
 

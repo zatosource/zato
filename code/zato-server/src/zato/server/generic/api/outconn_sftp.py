@@ -140,18 +140,33 @@ class SFTPClient:
 # ################################################################################################################################
 
     def _parse_address(self, address:'str') -> 'tuple[str, int]':
-        """ Splits an address of the form host or host:port into its parts, with a default port of 22.
+        """ Splits an address of the form host, host:port, [ipv6], [ipv6]:port or a bare ipv6
+        into its parts, with a default port of 22.
         """
 
-        # The port, if given at all, follows the last colon ..
-        if ':' in address:
-            host, _, port = address.rpartition(':')
-            port = int(port)
+        # The default port, unless the address has one of its own
+        port = SFTP.DEFAULT.PORT
 
-        # .. otherwise, the whole address is the host and the port is the default one.
+        # An IPv6 address in brackets may be followed by a port ..
+        if address.startswith('['):
+            unbracketed = address[1:]
+            host, _, port_part = unbracketed.partition(']')
+            if port_part:
+                port_info = port_part.removeprefix(':')
+                port = int(port_info)
+
+        # .. while a bare IPv6 address has more than one colon and no port ..
+        elif address.count(':') > 1:
+            host = address
+
+        # .. a single colon means the port follows the host ..
+        elif ':' in address:
+            host, _, port_info = address.rpartition(':')
+            port = int(port_info)
+
+        # .. otherwise, the whole address is the host.
         else:
             host = address
-            port = SFTP.DEFAULT.PORT
 
         return host, port
 
@@ -270,10 +285,17 @@ class SFTPClient:
 
         # Both username and host are optional but if they are provided, they must be the last arguments in the command
         if self.host:
-            if self.username:
-                args.append('{}@{}'.format(self.username, self.host))
+
+            # An IPv6 address is in brackets, otherwise the binary would read its colons as the start of a remote path
+            if ':' in self.host:
+                host = f'[{self.host}]'
             else:
-                args.append(self.host)
+                host = self.host
+
+            if self.username:
+                args.append(f'{self.username}@{host}')
+            else:
+                args.append(host)
 
         out = shlex_join(args)
 

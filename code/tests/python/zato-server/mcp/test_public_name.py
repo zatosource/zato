@@ -43,10 +43,10 @@ if 0:
 # ################################################################################################################################
 
 # The name of the gateway the wrapper tests build
-_gateway_name = 'clinic.analytics'
+_gateway_name = 'healthcare.analytics'
 
 # The public name the tests configure on a gateway
-_public_name = 'Clinic Network Analytics'
+_public_name = 'Healthcare Analytics'
 
 # What an initialize request carries
 _initialize_params = {

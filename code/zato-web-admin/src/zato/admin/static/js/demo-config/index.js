@@ -42,9 +42,7 @@ config.okVisibleMs = 1000;
 config.sets = ['tutorial', 'mcp', 'hl7', 'scheduler', 'pubsub', 'kafka', 'ibm_mq', 'file_transfer'];
 
 // The sets each set builds on, imported together with it when they are not imported yet
-config.requiredSets = {
-    'mcp': ['hl7']
-};
+config.requiredSets = {};
 
 // What the page-wide help badge explains, anchored at the Everything slider
 config.howItWorksText = 'Slide "Everything" to import or remove all demo config, ' +

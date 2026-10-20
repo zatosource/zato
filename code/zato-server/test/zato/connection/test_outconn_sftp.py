@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from tempfile import mkdtemp, NamedTemporaryFile
+from hashlib import sha256
+from tempfile import mkdtemp, NamedTemporaryFile, TemporaryDirectory
 from unittest import main, TestCase
 
 # Bunch
@@ -17,11 +18,13 @@ from zato.common.ext.bunch import Bunch, bunchify
 # Zato
 from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
-from zato.common.file_transfer.api import Default_Verify_How
+from zato.common.file_transfer.api import Default_Verify_How, VerifyHow
+from zato.common.test.file_transfer_harness.large_files import checksum_of_path, get_kept_content, new_large_file
 from zato.common.test.sftp_ import SFTPTestServer
-from zato.common.typing_ import cast_
+from zato.common.typing_ import cast_, optional
 from zato.common.util.tcp import get_free_port
 from zato.server.connection.sftp import SFTPConnection
+from zato.server.demo_file_transfer.files import Invoice_Header
 from zato.server.generic.api.outconn_sftp import SFTPClient
 
 # ################################################################################################################################
@@ -31,6 +34,8 @@ if 0:
     from zato.common.typing_ import any_
     any_ = any_
 
+sftp_server_none = optional[SFTPTestServer]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -39,6 +44,12 @@ class ModuleCtx:
 
     # A key file that is never created.
     Missing_Key_Name = 'missing_key'
+
+    # An invoice as the supplier sends it, without the currency column ..
+    Supplier_Invoice = 'invoice_id,customer,amount\nINV-1001,John Smith,120.50\n'
+
+    # .. and the currency each of its rows is given before it is delivered.
+    Invoice_Currency = 'USD'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,19 +136,29 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_config(self, conn_name:'str', *, use_password:'bool' = False) -> 'Bunch':
+    def get_config(
+        self,
+        conn_name:'str',
+        *,
+        use_password:'bool' = False,
+        server:'sftp_server_none' = None,
+        ) -> 'Bunch':
+
+        # Unless told otherwise, connections point at the server of the whole suite.
+        if server is None:
+            server = self.server
 
         # With a password in use, we authenticate with the encrypted key whose passphrase
         # is the connection's password, going through the askpass helper.
         if use_password:
-            private_key = self.server.client_key_encrypted_path
-            secret = self.server.password
+            private_key = server.client_key_encrypted_path
+            secret = server.password
         else:
-            private_key = self.server.client_key_path
+            private_key = server.client_key_path
             secret = ''
 
-        host = self.server.host
-        port = self.server.port
+        host = server.host
+        port = server.port
         address = f'{host}:{port}'
 
         config = bunchify({
@@ -145,7 +166,7 @@ class OutconnSFTPTestCase(TestCase):
             'name': conn_name,
             'is_active': True,
             'address': address,
-            'username': self.server.username,
+            'username': server.username,
             'secret': secret,
             'private_key': private_key,
 
@@ -169,18 +190,30 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_client(self, conn_name:'str', *, use_password:'bool' = False) -> 'SFTPClient':
+    def get_client(
+        self,
+        conn_name:'str',
+        *,
+        use_password:'bool' = False,
+        server:'sftp_server_none' = None,
+        ) -> 'SFTPClient':
 
-        config = self.get_config(conn_name, use_password=use_password)
+        config = self.get_config(conn_name, use_password=use_password, server=server)
         out = self.make_client(config)
 
         return out
 
 # ################################################################################################################################
 
-    def get_conn(self, conn_name:'str', *, use_password:'bool' = False) -> 'SFTPConnection':
+    def get_conn(
+        self,
+        conn_name:'str',
+        *,
+        use_password:'bool' = False,
+        server:'sftp_server_none' = None,
+        ) -> 'SFTPConnection':
 
-        client = self.get_client(conn_name, use_password=use_password)
+        client = self.get_client(conn_name, use_password=use_password, server=server)
         wrapper = _TestWrapper(client)
         wrapper_typed = cast_('any_', wrapper)
 
@@ -190,12 +223,16 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_remote_path(self, suffix:'str') -> 'str':
+    def get_remote_path(self, suffix:'str', *, server:'sftp_server_none' = None) -> 'str':
+
+        # Unless told otherwise, paths are on the server of the whole suite.
+        if server is None:
+            server = self.server
 
         hex_string = CryptoManager.generate_hex_string()
         file_name = f'test-{hex_string}-{suffix}'
 
-        out = os.path.join(self.server.files_dir, file_name)
+        out = os.path.join(server.files_dir, file_name)
 
         return out
 
@@ -335,6 +372,95 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_a_large_file_is_uploaded_verified_kept_and_downloaded(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        conn = self.get_conn('test_a_large_file_is_uploaded_verified_kept_and_downloaded')
+
+        # The stored file is verified by its checksum read back from the server and its bytes are kept ..
+        conn.wrapper.verify_how = VerifyHow.Read_Back
+        conn.wrapper.should_store_content = True
+
+        remote_path = self.get_remote_path('large.dat')
+
+        with TemporaryDirectory(suffix='-zato-test-sftp') as local_dir:
+
+            # .. a local file of several chunks is uploaded ..
+            data = new_large_file(local_dir, 'large.dat')
+            expected = sha256(data).hexdigest()
+
+            upload_path = os.path.join(local_dir, 'large.dat')
+            out = conn.upload(upload_path, remote_path)
+            self.assertTrue(out.is_ok, out.stderr)
+
+            # .. the server's disk holds the very bytes and the audit log kept them ..
+            self.assertEqual(checksum_of_path(remote_path), expected)
+            self.assertEqual(get_kept_content(remote_path), data)
+
+            # .. and a download writes them to a new local path.
+            download_path = os.path.join(local_dir, 'downloaded.dat')
+            out = conn.download_file(remote_path, download_path)
+            self.assertTrue(out.is_ok, out.stderr)
+
+            self.assertEqual(checksum_of_path(download_path), expected)
+
+# ################################################################################################################################
+
+    def test_invoice_transfer_between_servers(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        # The server the supplier leaves invoices on ..
+        supplier_server = SFTPTestServer()
+        supplier_server.start()
+
+        # .. and the one billing reads them from, started only once the first one listens, so their ports differ.
+        billing_server = SFTPTestServer()
+        billing_server.start()
+
+        try:
+            supplier_conn = self.get_conn('test_invoice_supplier', server=supplier_server)
+            billing_conn  = self.get_conn('test_invoice_billing', server=billing_server)
+
+            supplier_path = self.get_remote_path('invoice.csv', server=supplier_server)
+            billing_path  = self.get_remote_path('invoice.csv', server=billing_server)
+
+            # An invoice is waiting on the supplier's server ..
+            supplier_conn.write(ModuleCtx.Supplier_Invoice, supplier_path)
+
+            # .. it is downloaded ..
+            invoice = supplier_conn.read(supplier_path)
+            invoice = invoice.decode('utf8')
+
+            self.assertEqual(invoice, ModuleCtx.Supplier_Invoice)
+
+            # .. each of its rows is given the currency, under the header billing expects ..
+            rows = invoice.splitlines()
+            converted_rows = [Invoice_Header]
+
+            for row in rows[1:]:
+                converted_rows.append(f'{row},{ModuleCtx.Invoice_Currency}')
+
+            converted = '\n'.join(converted_rows)
+            converted += '\n'
+
+            # .. it is uploaded to the billing server ..
+            billing_conn.write(converted, billing_path)
+
+            # .. and that server has the converted invoice.
+            delivered = billing_conn.read(billing_path)
+            delivered = delivered.decode('utf8')
+
+            self.assertEqual(delivered, converted)
+            self.assertIn('INV-1001,John Smith,120.50,USD', delivered)
+
+        finally:
+            billing_server.stop()
+            supplier_server.stop()
+
+# ################################################################################################################################
+
     def test_upload_with_overwrite_false_onto_existing_path(self) -> 'None':
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
@@ -443,6 +569,93 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_get_info_of_a_directory(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        conn = self.get_conn('test_get_info_of_a_directory')
+        remote_path = self.get_remote_path('info-directory')
+
+        # A directory with a file in it lists the file, which is not what describes the directory itself ..
+        _ = conn.create_directory(remote_path)
+
+        file_path = os.path.join(remote_path, 'file.txt')
+        conn.write('Test data', file_path)
+
+        info = conn.get_info(remote_path)
+        info = cast_('any_', info)
+
+        # .. so the information comes from the directory's own entry in its parent.
+        self.assertTrue(info.is_directory)
+        self.assertEqual(info.name, remote_path)
+
+# ################################################################################################################################
+
+    def test_get_info_of_a_missing_path(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        conn = self.get_conn('test_get_info_of_a_missing_path')
+        remote_path = self.get_remote_path('missing.txt')
+
+        # Without raising, a missing path has no information ..
+        info = conn.get_info(remote_path, raise_on_error=False)
+        self.assertIsNone(info)
+
+        # .. while the checks of its type raise an exception.
+        with self.assertRaises(Exception):
+            _ = conn.is_file(remote_path)
+
+# ################################################################################################################################
+
+    def test_name_with_leading_spaces(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        conn = self.get_conn('test_name_with_leading_spaces')
+        remote_path = self.get_remote_path('leading-spaces')
+
+        _ = conn.create_directory(remote_path)
+
+        file_name = '  leading.txt'
+        file_path = os.path.join(remote_path, file_name)
+        conn.write('Test data', file_path)
+
+        # The listing keeps the spaces the name begins with ..
+        result = conn.list(remote_path)
+
+        names = []
+        for item in result:
+            base_name = os.path.basename(item.name)
+            names.append(base_name)
+
+        self.assertEqual(names, [file_name])
+
+        # .. and so does the information about the file alone.
+        self.assertTrue(conn.is_file(file_path))
+
+# ################################################################################################################################
+
+    def test_create_directory_that_exists(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        conn = self.get_conn('test_create_directory_that_exists')
+        remote_path = self.get_remote_path('existing-directory')
+
+        _ = conn.create_directory(remote_path)
+
+        # A directory that exists already is not an error when that is allowed ..
+        out = conn.create_directory(remote_path, exist_ok=True)
+        self.assertTrue(out.is_ok, out.stderr)
+        self.assertTrue(conn.is_directory(remote_path))
+
+        # .. and it is an error otherwise.
+        with self.assertRaises(Exception):
+            _ = conn.create_directory(remote_path)
+
+# ################################################################################################################################
+
     def test_list(self) -> 'None':
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
@@ -503,6 +716,46 @@ class OutconnSFTPTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_move_onto_an_existing_path(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        conn = self.get_conn('test_move_onto_an_existing_path')
+
+        from_path = self.get_remote_path('move-onto-from.txt')
+        to_path = self.get_remote_path('move-onto-to.txt')
+
+        conn.write('Data to move', from_path)
+        conn.write('Data in place', to_path)
+
+        # A move never replaces what is in place ..
+        with self.assertRaises(Exception):
+            _ = conn.move(from_path, to_path)
+
+        # .. so both files are still there, each with its own data.
+        from_data = conn.read(from_path)
+        to_data = conn.read(to_path)
+
+        self.assertEqual(from_data, b'Data to move')
+        self.assertEqual(to_data, b'Data in place')
+
+# ################################################################################################################################
+
+    def test_read_of_a_directory(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        conn = self.get_conn('test_read_of_a_directory')
+        remote_path = self.get_remote_path('read-directory')
+
+        _ = conn.create_directory(remote_path)
+
+        # Only a regular file can be read
+        with self.assertRaises(Exception):
+            _ = conn.read(remote_path)
+
+# ################################################################################################################################
+
     def test_delete_directory(self) -> 'None':
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
@@ -533,6 +786,70 @@ class OutconnSFTPTestCase(TestCase):
         out = client.ping()
 
         self.assertFalse(out.is_ok)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AddressTestCase(TestCase):
+    """ Tests how the address of a connection becomes the host and port of the sftp command.
+    These tests need no server.
+    """
+
+    def make_client(self, address:'str') -> 'SFTPClient':
+
+        config = bunchify({
+            'id': 1,
+            'name': 'test-address',
+            'is_active': True,
+            'address': address,
+            'username': 'user1',
+            'secret': '',
+            'private_key': '',
+            'strict_host_key_checking': False,
+            'ignore_host_key_changes': True,
+        })
+
+        server = cast_('any_', None)
+        out = SFTPClient(config, server)
+
+        return out
+
+# ################################################################################################################################
+
+    def assert_address(self, address:'str', expected_host:'str', expected_port:'int', expected_destination:'str') -> 'None':
+
+        client = self.make_client(address)
+        command = client._build_command(0)
+        command_parts = command.split()
+
+        self.assertEqual(client.host, expected_host)
+        self.assertEqual(client.port, expected_port)
+        self.assertEqual(command_parts[-1], expected_destination)
+
+# ################################################################################################################################
+
+    def test_host(self) -> 'None':
+        self.assert_address('example.com', 'example.com', 22, 'user1@example.com')
+
+# ################################################################################################################################
+
+    def test_host_and_port(self) -> 'None':
+        self.assert_address('example.com:22022', 'example.com', 22022, 'user1@example.com')
+
+# ################################################################################################################################
+
+    def test_ipv6_in_brackets(self) -> 'None':
+        self.assert_address('[2001:db8::1]', '2001:db8::1', 22, "'user1@[2001:db8::1]'")
+
+# ################################################################################################################################
+
+    def test_ipv6_in_brackets_and_port(self) -> 'None':
+        self.assert_address('[2001:db8::1]:22022', '2001:db8::1', 22022, "'user1@[2001:db8::1]'")
+
+# ################################################################################################################################
+
+    def test_bare_ipv6(self) -> 'None':
+        self.assert_address('2001:db8::1', '2001:db8::1', 22, "'user1@[2001:db8::1]'")
 
 # ################################################################################################################################
 # ################################################################################################################################

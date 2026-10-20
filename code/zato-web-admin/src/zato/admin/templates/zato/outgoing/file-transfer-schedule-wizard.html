@@ -86,8 +86,8 @@ $(document).ready(function() {
                 <!-- The label makes the title a regular "How does it work?"
                      stop - clicking it shows the wizard-wide overview -->
                 <h3 id="file-transfer-wizard-title"><label for="file-transfer-wizard-title">{% if is_edit %}Edit {{ transfer_label }} schedule{% else %}New {{ transfer_label }} schedule{% endif %}</label></h3>
-                <span class="wizard-badge wizard-name-badge" id="file-transfer-wizard-name-badge" hidden></span>
                 <span class="wizard-badge wizard-badge-context" id="file-transfer-wizard-context-badge">{{ transfer_label }} &middot; {{ conn_name }}</span>
+                <span class="wizard-badge wizard-name-badge" id="file-transfer-wizard-name-badge" hidden></span>
             </div>
 
             <form novalidate action="{% if is_edit %}{% url "out-file-transfer-schedule-edit" %}{% else %}{% url "out-file-transfer-schedule-create" %}{% endif %}" method="post" id="create-form">
@@ -97,11 +97,11 @@ $(document).ready(function() {
                 <div class="dashboard-tabs wizard-steps" id="file-transfer-wizard-steps" role="tablist" aria-label="Wizard steps">
                     <button type="button" class="dashboard-tab wizard-step wizard-step-active dashboard-tab-active" data-step="0" role="tab" aria-selected="true">
                         <span class="wizard-step-num">01</span>
-                        <span class="dashboard-tab-label">What to pick up?</span>
+                        <span class="dashboard-tab-label">File source</span>
                     </button>
                     <button type="button" class="dashboard-tab wizard-step" data-step="1" role="tab" aria-selected="false">
                         <span class="wizard-step-num">02</span>
-                        <span class="dashboard-tab-label">What happens next?</span>
+                        <span class="dashboard-tab-label">Processing</span>
                     </button>
                     <button type="button" class="dashboard-tab wizard-step" data-step="2" role="tab" aria-selected="false">
                         <span class="wizard-step-num">03</span>
@@ -109,98 +109,97 @@ $(document).ready(function() {
                     </button>
                 </div>
 
-                <!-- Step 1 - name, directory and readiness -->
+                <!-- Step 1 - name, directory, file pattern, readiness and locking. Every row
+                     of a step is one line of the same list, so the labels share one column,
+                     the controls start in the next one and the rows keep one rhythm -->
                 <div class="wizard-step-body" id="file-transfer-wizard-step-body-0">
+                    <div class="decision-lines file-transfer-wizard-rows">
 
-                    <div class="wizard-name-row">
-                        <div class="wizard-name-field">
-                            <label for="id_name">Name</label>
-                            {{ form.name }}
-                        </div>
-                        <label class="wizard-active-field" for="id_is_active" data-help-placement="top">
-                            Active
-                            {{ form.is_active }}
-                        </label>
-                    </div>
-
-                    <div class="wizard-field-row" id="file-transfer-wizard-row-directory">
-                        <label for="id_directory">Directory</label>
-                        {{ form.directory }}
-                    </div>
-
-                    <div class="wizard-field-row" id="file-transfer-wizard-row-pattern">
-                        <label for="id_pattern">File pattern</label>
-                        {{ form.pattern }}
-                    </div>
-
-                    <!-- One decision per line - the segments say the pick, the link
-                         beside them says its parameter and opens the popover editing it -->
-                    <div class="wizard-section">
-                        <div class="decision-lines">
-
-                            <div class="decision-line" id="file-transfer-wizard-line-ready">
-                                <label class="decision-line-label" for="file-transfer-wizard-edit-ready">A file is ready</label>
-                                <span class="decision-line-slot" id="file-transfer-wizard-slot-ready"></span>
-                                <a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-ready"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-ready"></span><span class="zato-soft-hint">Click to edit</span></a>
+                        <div class="wizard-name-row">
+                            <div class="wizard-name-field">
+                                <label for="id_name">Name</label>
+                                {{ form.name }}
                             </div>
-
-                            <div class="decision-line" id="file-transfer-wizard-line-claim">
-                                <label class="decision-line-label" for="id_should_claim">Claim before processing</label>
-                                <span class="decision-line-slot">{{ form.should_claim }}</span>
-                            </div>
-
+                            <label class="wizard-active-field" for="id_is_active" data-help-placement="top">
+                                Active
+                                {{ form.is_active }}
+                            </label>
                         </div>
-                    </div>
 
+                        <div class="wizard-field-row" id="file-transfer-wizard-row-directory">
+                            <label for="id_directory">Directory</label>
+                            {{ form.directory }}
+                        </div>
+
+                        <div class="wizard-field-row" id="file-transfer-wizard-row-pattern">
+                            <label for="id_pattern">File pattern</label>
+                            {{ form.pattern }}
+                        </div>
+
+                        <div class="wizard-field-row" id="file-transfer-wizard-row-encoding">
+                            <label for="id_encoding">Encoding</label>
+                            {{ form.encoding }}
+                        </div>
+
+                        <div class="decision-line" id="file-transfer-wizard-line-ready">
+                            <label class="decision-line-label" for="file-transfer-wizard-edit-ready">Readiness check</label>
+                            <span class="decision-line-slot" id="file-transfer-wizard-slot-ready"></span>
+                            <a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-ready"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-ready"></span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+
+                        <div class="decision-line" id="file-transfer-wizard-line-claim">
+                            <label class="decision-line-label" for="id_should_claim">File locking</label>
+                            <span class="decision-line-slot">{{ form.should_claim }}</span>
+                        </div>
+
+                    </div>
                 </div>
 
-                <!-- Step 2 - service, post-processing and the schedule -->
+                <!-- Step 2 - service, post-processing, retries, the schedule and the monitoring -->
                 <div class="wizard-step-body" id="file-transfer-wizard-step-body-1" hidden>
+                    <div class="decision-lines file-transfer-wizard-rows">
 
-                    <div class="wizard-section">
-                        <div class="wizard-section-title"><label for="id_scheduler_service">Service</label></div>
-                        <div class="wizard-service-row" id="file-transfer-wizard-service-row">
-                            {{ form.scheduler_service }}
+                        <div class="wizard-field-row" id="file-transfer-wizard-service-row">
+                            <label for="id_scheduler_service">Service</label>
+                            <div class="wizard-service-row file-transfer-wizard-service-picker">
+                                {{ form.scheduler_service }}
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="wizard-section">
-                        <div class="decision-lines">
-
-                            <div class="decision-line" id="file-transfer-wizard-line-success">
-                                <label class="decision-line-label" for="file-transfer-wizard-edit-success">After a file is processed</label>
-                                <span class="decision-line-slot" id="file-transfer-wizard-slot-success"></span>
-                                <a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-success"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-success"></span><span class="zato-soft-hint">Click to edit</span></a>
-                            </div>
-
-                            <div class="decision-line" id="file-transfer-wizard-line-run-every">
-                                <label class="decision-line-label" for="file-transfer-wizard-edit-run-every">Runs</label>
-                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-run-every"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-run-every"></span><span class="zato-soft-hint">Click to edit</span></a></span>
-                            </div>
-
-                            <div class="decision-line" id="file-transfer-wizard-line-arrival-window">
-                                <label class="decision-line-label" for="file-transfer-wizard-edit-arrival-window">Expects a file</label>
-                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-arrival-window"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-arrival-window"></span><span class="zato-soft-hint">Click to edit</span></a></span>
-                            </div>
-
-                            <div class="decision-line" id="file-transfer-wizard-line-expectation">
-                                <label class="decision-line-label" for="file-transfer-wizard-edit-expectation">Expects a day</label>
-                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-expectation"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-expectation"></span><span class="zato-soft-hint">Click to edit</span></a></span>
-                            </div>
-
-                            <div class="decision-line" id="file-transfer-wizard-line-retries">
-                                <label class="decision-line-label" for="file-transfer-wizard-edit-retries">A failing file</label>
-                                <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-retries"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
-                            </div>
-
+                        <div class="decision-line" id="file-transfer-wizard-line-success">
+                            <label class="decision-line-label" for="file-transfer-wizard-edit-success">Post-processing</label>
+                            <span class="decision-line-slot" id="file-transfer-wizard-slot-success"></span>
+                            <a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-success"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-success"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
-                    </div>
 
-                    <div class="wizard-field-row file-transfer-wizard-start-date-row" id="file-transfer-wizard-row-start-date">
-                        <label for="id_start_date">Start time</label>
-                        {{ form.start_date }}
-                    </div>
+                        <div class="decision-line" id="file-transfer-wizard-line-retries">
+                            <label class="decision-line-label" for="file-transfer-wizard-edit-retries">Retry policy</label>
+                            <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-retries"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                        </div>
 
+                        <div class="decision-line" id="file-transfer-wizard-line-run-every">
+                            <label class="decision-line-label" for="file-transfer-wizard-edit-run-every">Polling interval</label>
+                            <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-run-every"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-run-every"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                        </div>
+
+                        <div class="wizard-field-row file-transfer-wizard-start-date-row" id="file-transfer-wizard-row-start-date">
+                            <label for="id_start_date">Start time</label>
+                            {{ form.start_date }}
+                        </div>
+
+                        <div class="decision-line" id="file-transfer-wizard-line-arrival-window">
+                            <label class="decision-line-label" for="file-transfer-wizard-edit-arrival-window">Arrival monitoring</label>
+                            <span class="decision-line-slot" id="file-transfer-wizard-slot-arrival-window"></span>
+                            <a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-arrival-window"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-arrival-window"></span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+
+                        <div class="decision-line" id="file-transfer-wizard-line-expectation">
+                            <label class="decision-line-label" for="file-transfer-wizard-edit-expectation">Daily delivery check</label>
+                            <span class="decision-line-slot" id="file-transfer-wizard-slot-expectation"></span>
+                            <a href="javascript:void(0)" class="summary-link" id="file-transfer-wizard-edit-expectation"><span class="zato-link-face summary-link-text" id="file-transfer-wizard-summary-expectation"></span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+
+                    </div>
                 </div>
 
                 <!-- Step 3 - review -->

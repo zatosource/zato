@@ -131,7 +131,7 @@
 
 .dashboard-run-ledger-name {
     font-family: var(--dashboard-mono);
-    word-break: break-all;
+    overflow-wrap: break-word;
 }
 
 /* The counted columns - the place, the size and the duration - are centred, header and cells alike */

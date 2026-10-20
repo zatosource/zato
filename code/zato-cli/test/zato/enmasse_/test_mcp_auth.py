@@ -677,6 +677,7 @@ mcp_gateway:
         self._invoke_service('zato.generic.connection.edit', {
             'id': conn['id'],
             'name': new_name,
+            'public_name': conn['public_name'],
             'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'is_active': True,
             'is_internal': False,

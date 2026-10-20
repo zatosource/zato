@@ -16,6 +16,11 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.file_transfer.api import Default_Encoding, Encoding, Encoding_Human
+
+# Tests
+from file_transfer_schedule import fill_run_every, fill_service, open_create_wizard, open_schedules, wizard_next, \
+     wizard_save
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,20 +61,11 @@ _Refused_Log_Patterns = (
     'zato.admin.web.views.outgoing.file_transfer_schedule',
 )
 
-# Where a save that went through lands - the schedules list, pointed at the saved row
-_Saved_Redirect_Pattern = '**/zato/outgoing/file-transfer/schedules/**highlight=*'
-
-# The row the list marks as the one just saved
-_Highlighted_Row_Selector = '#data-table tbody tr.updated'
-
 # How long to wait for a dialog, a popup or a wizard element, in milliseconds
 _Dialog_Timeout = 5000
 
 # How long to wait for a dialog to close or a save to complete, in milliseconds
 _Submit_Timeout = 10000
-
-# How long to let the wizard move between steps, in seconds
-_Step_Sleep_Time = 0.2
 
 # How long to let the dashboard settle after a deletion, in seconds
 _Delete_Sleep_Time = 0.5
@@ -226,32 +222,11 @@ def _delete_connection(page:'Page', kind:'ConnKind', item_id:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _open_schedules(page:'Page', conn_name:'str') -> 'None':
-    """ Clicks the Scheduler link of a connection's row and waits for the schedules list page.
-    """
-    row_selector = f'#data-table tbody tr:has(td:text-is("{conn_name}"))'
-    page.click(f'{row_selector} a[href*="/file-transfer/schedules/"]')
-    _ = page.wait_for_selector('#data-table', state='visible')
-
-# ################################################################################################################################
-
 def _return_to_schedules(page:'Page') -> 'None':
     """ Goes back to the schedules list the wizard was opened from.
     """
     _ = page.go_back()
     _ = page.wait_for_selector('#data-table', state='visible')
-
-# ################################################################################################################################
-
-def _open_create_wizard(page:'Page') -> 'None':
-    page.click('#markup .page_prompt a:has-text("Create a new schedule")')
-    _ = page.wait_for_selector('#file-transfer-wizard', state='visible')
-
-# ################################################################################################################################
-
-def _wizard_next(page:'Page') -> 'None':
-    page.click('#file-transfer-wizard-next')
-    time.sleep(_Step_Sleep_Time)
 
 # ################################################################################################################################
 
@@ -263,63 +238,20 @@ def _go_to_step(page:'Page', step_index:'int') -> 'None':
 
 # ################################################################################################################################
 
-def _wizard_save(page:'Page') -> 'None':
-    """ Saves from the button the current action ends in - Save on an edit, the last Next
-    on a create - and waits for the redirect a save that went through makes, to the schedules
-    list with the saved row highlighted.
-    """
-    if page.is_visible('#file-transfer-wizard-save'):
-        page.click('#file-transfer-wizard-save')
-    else:
-        page.click('#file-transfer-wizard-next')
-
-    _ = page.wait_for_url(_Saved_Redirect_Pattern, timeout=_Submit_Timeout)
-    _ = page.wait_for_selector('#data-table', state='visible')
-    _ = page.wait_for_selector(_Highlighted_Row_Selector, state='visible', timeout=_Dialog_Timeout)
-
-# ################################################################################################################################
-
-def _wizard_finish(page:'Page') -> 'None':
-    """ Saves, which lands back on the schedules list on its own.
-    """
-    _wizard_save(page)
-
-# ################################################################################################################################
-
-def _fill_wizard_service(page:'Page') -> 'None':
-    """ Picks the schedule's target service.
-    """
-    _ = page.evaluate(f'$("#id_scheduler_service").val("{_Test_Service}").trigger("chosen:updated")')
-
-# ################################################################################################################################
-
-def _fill_run_every(page:'Page', value:'str') -> 'None':
-    """ Sets the schedule's interval.
-    """
-    page.click('#file-transfer-wizard-edit-run-every')
-    _ = page.wait_for_selector('#file-transfer-wizard-tippy-run_every', state='visible', timeout=_Dialog_Timeout)
-
-    page.fill('#file-transfer-wizard-tippy-run_every', value)
-
-    page.click('.micro-form-buttons button:has-text("OK")')
-    _ = page.wait_for_selector('#file-transfer-wizard-tippy-run_every', state='detached', timeout=_Dialog_Timeout)
-
-# ################################################################################################################################
-
 def _submit_a_schedule_the_server_refuses(page:'Page', kind:'ConnKind') -> 'None':
     """ Walks the wizard to the end with a schedule the server will not accept and clicks Finish.
     """
-    _open_create_wizard(page)
+    open_create_wizard(page)
 
     page.fill('#id_name', _Refused_Schedule_Name)
     page.fill('#id_directory', kind.directory)
 
-    _wizard_next(page)
+    wizard_next(page)
 
-    _fill_wizard_service(page)
-    _fill_run_every(page, _Refused_Run_Every)
+    fill_service(page, _Test_Service)
+    fill_run_every(page, _Refused_Run_Every)
 
-    _wizard_next(page)
+    wizard_next(page)
 
     page.click('#file-transfer-wizard-next')
     _ = page.wait_for_selector('.tippy-box:has-text("Save failed")', timeout=_Submit_Timeout)
@@ -403,7 +335,7 @@ class TestOutgoingFileTransferSchedules:
             assert 'source=file-outgoing' in audit_href, f'Expected the audit log filter in the link, got: `{audit_href}`'
 
             # .. the connection's Schedules link leads to an empty list ..
-            _open_schedules(page, conn_name)
+            open_schedules(page, conn_name)
 
             no_schedules = page.query_selector('#data-table tbody tr td[colspan]')
             assert no_schedules is not None, 'A new connection should have no schedules'
@@ -412,7 +344,7 @@ class TestOutgoingFileTransferSchedules:
             schedules_audit_link = page.query_selector('a:has-text("Audit log")')
             assert schedules_audit_link is not None, 'The schedules page should link to the audit log'
 
-            _open_create_wizard(page)
+            open_create_wizard(page)
 
             # .. the context badge names the connection the schedule belongs to ..
             badge_text = page.inner_text('#file-transfer-wizard-context-badge')
@@ -424,20 +356,20 @@ class TestOutgoingFileTransferSchedules:
             page.fill('#id_name', schedule_name)
             page.fill('#id_directory', kind.directory)
 
-            _wizard_next(page)
+            wizard_next(page)
 
             # .. step 2 - the target service, the rest keeps its defaults, and the arrival
-            # .. expectation line starts out saying no expectation was declared ..
-            _fill_wizard_service(page)
+            # .. monitoring line starts out turned off ..
+            fill_service(page, _Test_Service)
 
-            assert page.is_visible('#file-transfer-wizard-edit-arrival-window'), \
-                'The arrival window line should be on step 2'
+            assert page.is_visible('#file-transfer-wizard-line-arrival-window'), \
+                'The arrival monitoring line should be on step 2'
 
-            arrival_summary = page.inner_text('#file-transfer-wizard-summary-arrival-window')
-            assert arrival_summary == 'No expectation', \
-                f'Expected the resting arrival summary, got: "{arrival_summary}"'
+            arrival_pick = page.inner_text('#file-transfer-wizard-slot-arrival-window .decision-segment-active')
+            assert arrival_pick == 'Off', \
+                f'Expected the arrival monitoring to start out turned off, got: "{arrival_pick}"'
 
-            _wizard_next(page)
+            wizard_next(page)
 
             # .. step 3 - the review shows what was filled in ..
             review_text = page.inner_text('#file-transfer-wizard-review')
@@ -447,7 +379,7 @@ class TestOutgoingFileTransferSchedules:
             assert _Test_Service in review_text, f'Expected "{_Test_Service}" in the review, got: "{review_text}"'
 
             # .. finish - back on the list with the new schedule ..
-            _wizard_finish(page)
+            wizard_save(page)
 
             row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{schedule_name}"))')
             assert row is not None, f'Schedule "{schedule_name}" should be on the list after create'
@@ -470,7 +402,7 @@ class TestOutgoingFileTransferSchedules:
             page.fill('#id_directory', kind.edited_directory)
 
             # .. an edit is saved from the step it is on ..
-            _wizard_finish(page)
+            wizard_save(page)
 
             row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{schedule_name}"))')
             assert row is not None, f'Schedule "{schedule_name}" should still be on the list after edit'
@@ -517,16 +449,16 @@ class TestOutgoingFileTransferSchedules:
 
         try:
 
-            _open_schedules(page, conn_name)
-            _open_create_wizard(page)
+            open_schedules(page, conn_name)
+            open_create_wizard(page)
 
             # The name comes up with the hint the form gives it ..
             placeholder = page.get_attribute('#id_name', 'placeholder')
             assert placeholder == _Name_Placeholder, f'Expected the name hint, got: "{placeholder}"'
 
             # .. and a save asked for with it still empty is refused, the field saying so.
-            _wizard_next(page)
-            _wizard_next(page)
+            wizard_next(page)
+            wizard_next(page)
             page.click('#file-transfer-wizard-next')
 
             _ = page.wait_for_selector('#id_name.zato-validator-attention', state='attached', timeout=_Dialog_Timeout)
@@ -575,7 +507,7 @@ class TestOutgoingFileTransferSchedules:
 
         try:
 
-            _open_schedules(page, conn_name)
+            open_schedules(page, conn_name)
             _submit_a_schedule_the_server_refuses(page, kind)
 
             # The wizard stays open with the reason one click away.
@@ -621,7 +553,7 @@ class TestOutgoingFileTransferSchedules:
         conn_id = _get_item_id(page, conn_name)
 
         try:
-            _open_schedules(page, conn_name)
+            open_schedules(page, conn_name)
             _submit_a_schedule_the_server_refuses(page, kind)
 
         finally:
@@ -629,6 +561,84 @@ class TestOutgoingFileTransferSchedules:
             _delete_connection(page, kind, conn_id)
 
         # A schedule the server will not accept is a request that was understood, never a server error.
+        _assert_no_errors(console_errors, server_errors)
+
+# ################################################################################################################################
+
+    def test_the_encoding_is_picked_reviewed_and_kept(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        kind:'ConnKind',
+        ) -> 'None':
+        """ The encoding picked on the first step is named on the review, saved with the schedule
+        and prefilled on every edit after that.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        console_errors, server_errors = _watch_for_errors(page)
+
+        _navigate_to_list(page, base_url, kind)
+
+        conn_name = _Test_Name_Prefix + kind.label + '.encoding'
+        _create_connection(page, kind, conn_name)
+        conn_id = _get_item_id(page, conn_name)
+
+        try:
+            open_schedules(page, conn_name)
+            open_create_wizard(page)
+
+            # A new schedule reads its files as UTF-8 unless told otherwise ..
+            initial_encoding = page.input_value('#id_encoding')
+            assert initial_encoding == Default_Encoding, f'Expected UTF-8 to start with, got: "{initial_encoding}"'
+
+            # .. step 1 - the name, the directory and a Central European encoding ..
+            schedule_name = 'customers.daily'
+
+            page.fill('#id_name', schedule_name)
+            page.fill('#id_directory', kind.directory)
+            _ = page.select_option('#id_encoding', Encoding.CP1250)
+
+            wizard_next(page)
+
+            # .. step 2 - the target service ..
+            fill_service(page, _Test_Service)
+
+            wizard_next(page)
+
+            # .. step 3 - the review names the encoding by its label ..
+            review_text = page.inner_text('#file-transfer-wizard-review')
+            label = Encoding_Human[Encoding.CP1250]
+
+            assert label in review_text, f'Expected "{label}" in the review, got: "{review_text}"'
+
+            wizard_save(page)
+
+            # .. the edit wizard opens with the encoding that was saved ..
+            page.click(f'#data-table tbody tr:has(td:text-is("{schedule_name}")) a:has-text("Edit")')
+            _ = page.wait_for_selector('#file-transfer-wizard', state='visible')
+
+            prefilled_encoding = page.input_value('#id_encoding')
+            assert prefilled_encoding == Encoding.CP1250, \
+                f'Expected the encoding prefilled, got: "{prefilled_encoding}"'
+
+            # .. an edit changes it to a Greek one ..
+            _ = page.select_option('#id_encoding', Encoding.ISO_8859_7)
+            wizard_save(page)
+
+            # .. and the next edit opens with that one.
+            page.click(f'#data-table tbody tr:has(td:text-is("{schedule_name}")) a:has-text("Edit")')
+            _ = page.wait_for_selector('#file-transfer-wizard', state='visible')
+
+            prefilled_encoding = page.input_value('#id_encoding')
+            assert prefilled_encoding == Encoding.ISO_8859_7, \
+                f'Expected the edited encoding prefilled, got: "{prefilled_encoding}"'
+
+        finally:
+            _navigate_to_list(page, base_url, kind)
+            _delete_connection(page, kind, conn_id)
+
         _assert_no_errors(console_errors, server_errors)
 
 # ################################################################################################################################
