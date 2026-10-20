@@ -51,7 +51,7 @@
     color: var(--zato-table-text);
     vertical-align: middle;
     line-height: 20px;
-    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .zato-table tbody tr {

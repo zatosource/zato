@@ -20,9 +20,14 @@ mcp_gateway:
     services:
       - healthcare.get-scorecard
       - healthcare.track-care-flow
+      - healthcare.get-daily-care-flow
       - healthcare.review-quality
       - healthcare.assess-workforce
       - healthcare.track-finance
+      - healthcare.list-facilities
+      - healthcare.list-regions
+      - healthcare.list-cities
+      - healthcare.list-measures
     sql_connections:
       - demo.healthcare.warehouse
       - demo.healthcare.finance

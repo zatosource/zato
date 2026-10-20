@@ -13,8 +13,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import date, timedelta
 
 # Zato
-from zato.server.demo_mcp.common import Service_Care_Flow, Service_Finance, Service_Quality, Service_Scorecard, \
-    Service_Workforce, SQL_Finance, SQL_Warehouse, SQL_Workforce
+from zato.server.demo_mcp.common import Service_Care_Flow, Service_Daily_Care_Flow, Service_Finance, \
+    Service_List_Cities, Service_List_Facilities, Service_List_Measures, Service_List_Regions, Service_Quality, \
+    Service_Scorecard, Service_Workforce, SQL_Finance, SQL_Warehouse, SQL_Workforce
+from zato.server.demo_mcp.measures import add_daily_statuses, assess, Correlated_Measure, \
+    get_daily_correlations, get_daily_statistics, get_report, list_measures
+from zato.server.demo_mcp.queries import get_care_flow, get_daily_care_flow, get_facilities, get_finance, \
+    get_quality, get_workforce
 from zato.server.service import Int, Service
 
 # ################################################################################################################################
@@ -29,18 +34,6 @@ if 0:
 # How many days each reporting period covers unless a request says otherwise
 _default_days = 7
 _max_days     = 28
-
-# The targets shown with each executive measure
-_target_wait_days                = 14.0
-_target_capacity_used_percent    = 90.0
-_target_positive_outcome_percent = 85.0
-_target_overdue_actions          = 0
-_target_staffing_percent         = 95.0
-_target_absence_percent          = 6.0
-_target_agency_percent           = 10.0
-_target_plan_percent             = 100.0
-_target_registration_percent     = 98.0
-_target_margin_percent           = 8.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,18 +71,6 @@ def _get_period(days:'int') -> 'anydict':
 
 # ################################################################################################################################
 
-def _get_facility_filter(facility_code:'str', column:'str') -> 'str':
-    """ Returns the condition that narrows a query to one facility.
-    """
-    if facility_code:
-        out = f' and {column} = :facility_code'
-    else:
-        out = ''
-
-    return out
-
-# ################################################################################################################################
-
 def _get_percentage(numerator:'float', denominator:'float') -> 'float':
     """ Returns one number as a percentage of another.
     """
@@ -101,131 +82,6 @@ def _get_percentage(numerator:'float', denominator:'float') -> 'float':
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def get_facilities(warehouse:'any_') -> 'stranydict':
-    """ Returns the healthcare facilities by code.
-    """
-    query = 'select code, name, city, region, service_capacity from facility order by code'
-    rows = warehouse.execute(query)
-
-    out:'stranydict' = {}
-
-    for row in rows:
-        out[row['code']] = row
-
-    return out
-
-# ################################################################################################################################
-
-def get_care_flow(
-    warehouse:'any_',
-    facility_code:'str',
-    since:'str',
-    until:'str',
-    ) -> 'anylist':
-    """ Returns care-flow measures per facility for one reporting period.
-    """
-    facility_filter = _get_facility_filter(facility_code, 'facility_code')
-
-    query = 'select facility_code, sum(referrals) as referrals, ' + \
-        'sum(first_appointments) as first_appointments, sum(discharges) as discharges, ' + \
-        'round(avg(waiting_patients), 1) as waiting_patients, ' + \
-        'round(avg(median_wait_days), 1) as median_wait_days, ' + \
-        'round(avg(capacity_used_percent), 1) as capacity_used_percent ' + \
-        'from care_flow where report_date between :since and :until' + facility_filter + ' ' + \
-        'group by facility_code order by facility_code'
-
-    parameters = {
-        'facility_code': facility_code,
-        'since': since,
-        'until': until,
-    }
-
-    out = warehouse.execute(query, parameters)
-    return out
-
-# ################################################################################################################################
-
-def get_quality(
-    warehouse:'any_',
-    facility_code:'str',
-    since:'str',
-    until:'str',
-    ) -> 'anylist':
-    """ Returns quality and safety measures per facility for one reporting period.
-    """
-    facility_filter = _get_facility_filter(facility_code, 'facility_code')
-
-    query = 'select facility_code, sum(safety_events) as safety_events, sum(complaints) as complaints, ' + \
-        'sum(outcome_assessments) as outcome_assessments, sum(positive_outcomes) as positive_outcomes, ' + \
-        'round(avg(overdue_actions), 1) as overdue_actions ' + \
-        'from quality where report_date between :since and :until' + facility_filter + ' ' + \
-        'group by facility_code order by facility_code'
-
-    parameters = {
-        'facility_code': facility_code,
-        'since': since,
-        'until': until,
-    }
-
-    out = warehouse.execute(query, parameters)
-    return out
-
-# ################################################################################################################################
-
-def get_workforce(
-    workforce:'any_',
-    facility_code:'str',
-    since:'str',
-    until:'str',
-    ) -> 'anylist':
-    """ Returns workforce measures per facility for one reporting period.
-    """
-    facility_filter = _get_facility_filter(facility_code, 'facility_code')
-
-    query = 'select facility_code, sum(planned_hours) as planned_hours, sum(worked_hours) as worked_hours, ' + \
-        'sum(absence_hours) as absence_hours, sum(agency_hours) as agency_hours, ' + \
-        'round(avg(vacancies), 1) as vacancies ' + \
-        'from workforce where report_date between :since and :until' + facility_filter + ' ' + \
-        'group by facility_code order by facility_code'
-
-    parameters = {
-        'facility_code': facility_code,
-        'since': since,
-        'until': until,
-    }
-
-    out = workforce.execute(query, parameters)
-    return out
-
-# ################################################################################################################################
-
-def get_finance(
-    finance:'any_',
-    facility_code:'str',
-    since:'str',
-    until:'str',
-    ) -> 'anylist':
-    """ Returns financial and contract measures per facility for one reporting period.
-    """
-    facility_filter = _get_facility_filter(facility_code, 'facility_code')
-
-    query = 'select facility_code, sum(contract_value) as contract_value, ' + \
-        'sum(delivered_value) as delivered_value, sum(registered_value) as registered_value, ' + \
-        'sum(billed_value) as billed_value, sum(operating_cost) as operating_cost ' + \
-        'from financial_performance where report_date between :since and :until' + facility_filter + ' ' + \
-        'group by facility_code order by facility_code'
-
-    parameters = {
-        'facility_code': facility_code,
-        'since': since,
-        'until': until,
-    }
-
-    out = finance.execute(query, parameters)
-    return out
-
 # ################################################################################################################################
 
 def _add_facility_details(rows:'anylist', facilities:'stranydict') -> 'anylist':
@@ -433,12 +289,44 @@ def _get_period_rows(
     return out
 
 # ################################################################################################################################
+
+def _group_facilities(facilities:'stranydict', key:'str', *extra_keys:'str') -> 'anylist':
+    """ Returns the facilities grouped by one of their attributes, each group with the code and name of its facilities.
+    """
+    groups:'stranydict' = {}
+
+    for facility in facilities.values():
+
+        value = facility[key]
+
+        # The first facility of a group creates the group and copies the attributes the group shares ..
+        if value not in groups:
+
+            group:'anydict' = {key: value}
+
+            for extra_key in extra_keys:
+                group[extra_key] = facility[extra_key]
+
+            group['facilities'] = []
+            groups[value] = group
+
+        # .. and each facility is added to its group.
+        group_facilities = groups[value]['facilities']
+        group_facilities.append({'code': facility['code'], 'name': facility['name']})
+
+    out = [groups[value] for value in sorted(groups)]
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetScorecard(Service):
-    """ Returns the executive healthcare scorecard for the current period and the preceding period,
-    covering care flow, quality, workforce and finance. Pass facility_code for one facility and days
-    for a reporting period from 1 to 28 days.
+    """ Returns the executive healthcare scorecard - care flow, quality, workforce and finance - for the current period
+    and the preceding period of the same length. Omit facility_code for the whole network or pass one of the codes
+    HC-01 to HC-08. Pass days for a period from 1 to 28 days, 7 by default. The assessment gives each measure its
+    definition, its current and previous value, the change, whether the change is an improvement and, for a measure
+    with a target, whether the current value meets the target. healthcare.list-facilities returns the code
+    of each facility with its name, city and region.
     """
     name = Service_Scorecard
 
@@ -465,29 +353,11 @@ class GetScorecard(Service):
             'period': period,
             'facility_count': len(current_care),
             'facilities': facilities,
-            'current': {
-                'care_flow': _summarize_care_flow(current_care),
-                'quality': _summarize_quality(current_quality),
-                'workforce': _summarize_workforce(current_workforce),
-                'finance': _summarize_finance(current_finance),
-            },
-            'previous': {
-                'care_flow': _summarize_care_flow(previous_care),
-                'quality': _summarize_quality(previous_quality),
-                'workforce': _summarize_workforce(previous_workforce),
-                'finance': _summarize_finance(previous_finance),
-            },
-            'targets': {
-                'median_wait_days': _target_wait_days,
-                'capacity_used_percent': _target_capacity_used_percent,
-                'positive_outcome_percent': _target_positive_outcome_percent,
-                'overdue_actions': _target_overdue_actions,
-                'staffing_percent': _target_staffing_percent,
-                'absence_percent': _target_absence_percent,
-                'agency_percent': _target_agency_percent,
-                'plan_percent': _target_plan_percent,
-                'registration_percent': _target_registration_percent,
-                'margin_percent': _target_margin_percent,
+            'assessment': {
+                'care_flow': assess(_summarize_care_flow, current_care, previous_care),
+                'quality': assess(_summarize_quality, current_quality, previous_quality),
+                'workforce': assess(_summarize_workforce, current_workforce, previous_workforce),
+                'finance': assess(_summarize_finance, current_finance, previous_finance),
             },
         }
 
@@ -495,8 +365,12 @@ class GetScorecard(Service):
 
 class TrackCareFlow(Service):
     """ Reports referrals, first appointments, discharges, waiting patients, waiting time and capacity use
-    for the current period and the preceding period. Pass facility_code for one facility and days for a
-    reporting period from 1 to 28 days.
+    for the current period and the preceding period of the same length. Omit facility_code for the whole network
+    or pass one of the codes HC-01 to HC-08. Pass days for a period from 1 to 28 days, 7 by default.
+    The assessment gives each measure its definition, its current and previous value, the change, whether the change
+    is an improvement and, for a measure with a target, whether the current value meets the target.
+    For the figures of each day, use healthcare.get-daily-care-flow. healthcare.list-facilities returns the code
+    of each facility with its name, city and region.
     """
     name = Service_Care_Flow
 
@@ -517,27 +391,66 @@ class TrackCareFlow(Service):
         current           = _add_care_flow_measures(current)
         previous          = _add_care_flow_measures(previous)
 
+        self.response.payload = get_report(period, facility_code, facilities, _summarize_care_flow, current, previous)
+
+# ################################################################################################################################
+
+class GetDailyCareFlow(Service):
+    """ Returns one row per day of referrals, first appointments, discharges, waiting patients, median waiting time
+    and capacity use for one facility, with the average, minimum and maximum of each measure, the number of days
+    that meet and miss each target, and the correlation of the median waiting time with each other measure,
+    which names a relationship only when the correlation is statistically significant. Pass facility_code,
+    one of the codes HC-01 to HC-08, and days for a period from 1 to 28 days, 7 by default.
+    healthcare.list-facilities returns the code of each facility with its name, city and region.
+    """
+    name = Service_Daily_Care_Flow
+
+    input = 'facility_code', Int('-days')
+
+    def handle(self) -> 'None':
+
+        days          = _resolve_days(self.request.input.days or _default_days)
+        facility_code = self.request.input.facility_code
+        period        = _get_period(days)
+
+        since = period['current_since']
+        until = period['current_until']
+
+        warehouse  = self.out.sql[SQL_Warehouse]
+        facilities = get_facilities(warehouse)
+
+        # The breakdown covers the current period only ..
+        rows = get_daily_care_flow(warehouse, facility_code, since, until)
+        _require_rows(rows, facility_code)
+
+        # .. its figures are computed from the rows ..
+        statistics   = get_daily_statistics(rows)
+        correlations = get_daily_correlations(rows)
+
+        # .. and each row states whether its own values meet their targets.
+        rows = add_daily_statuses(rows)
+
         self.response.payload = {
-            'period': period,
-            'current': {
-                'summary': _summarize_care_flow(current),
-                'facilities': current,
+            'period': {
+                'days': days,
+                'since': since,
+                'until': until,
             },
-            'previous': {
-                'summary': _summarize_care_flow(previous),
-                'facilities': previous,
-            },
-            'targets': {
-                'median_wait_days': _target_wait_days,
-                'capacity_used_percent': _target_capacity_used_percent,
-            },
+            'facility': facilities[facility_code],
+            'statistics': statistics,
+            f'{Correlated_Measure}_correlations': correlations,
+            'rows': rows,
         }
 
 # ################################################################################################################################
 
 class ReviewQuality(Service):
-    """ Reports care outcomes, safety events, complaints and overdue actions for the current period and
-    the preceding period. Pass facility_code for one facility and days for a reporting period from 1 to 28 days.
+    """ Reports care outcomes, safety events, complaints and overdue actions for the current period
+    and the preceding period of the same length. Omit facility_code for the whole network or pass one of the codes
+    HC-01 to HC-08. Pass days for a period from 1 to 28 days, 7 by default. The assessment gives each measure
+    its definition, its current and previous value, the change, whether the change is an improvement and,
+    for a measure with a target, whether the current value meets the target. healthcare.list-facilities returns
+    the code of each facility with its name, city and region.
     """
     name = Service_Quality
 
@@ -558,27 +471,17 @@ class ReviewQuality(Service):
         current           = _add_quality_measures(current)
         previous          = _add_quality_measures(previous)
 
-        self.response.payload = {
-            'period': period,
-            'current': {
-                'summary': _summarize_quality(current),
-                'facilities': current,
-            },
-            'previous': {
-                'summary': _summarize_quality(previous),
-                'facilities': previous,
-            },
-            'targets': {
-                'positive_outcome_percent': _target_positive_outcome_percent,
-                'overdue_actions': _target_overdue_actions,
-            },
-        }
+        self.response.payload = get_report(period, facility_code, facilities, _summarize_quality, current, previous)
 
 # ################################################################################################################################
 
 class AssessWorkforce(Service):
-    """ Reports staffing coverage, absence, agency work and vacancies for the current period and the
-    preceding period. Pass facility_code for one facility and days for a reporting period from 1 to 28 days.
+    """ Reports staffing coverage, absence, agency work and vacancies for the current period and the preceding period
+    of the same length. Omit facility_code for the whole network or pass one of the codes HC-01 to HC-08.
+    Pass days for a period from 1 to 28 days, 7 by default. The assessment gives each measure its definition,
+    its current and previous value, the change, whether the change is an improvement and, for a measure
+    with a target, whether the current value meets the target. healthcare.list-facilities returns the code
+    of each facility with its name, city and region.
     """
     name = Service_Workforce
 
@@ -600,28 +503,17 @@ class AssessWorkforce(Service):
         current           = _add_workforce_measures(current)
         previous          = _add_workforce_measures(previous)
 
-        self.response.payload = {
-            'period': period,
-            'current': {
-                'summary': _summarize_workforce(current),
-                'facilities': current,
-            },
-            'previous': {
-                'summary': _summarize_workforce(previous),
-                'facilities': previous,
-            },
-            'targets': {
-                'staffing_percent': _target_staffing_percent,
-                'absence_percent': _target_absence_percent,
-                'agency_percent': _target_agency_percent,
-            },
-        }
+        self.response.payload = get_report(period, facility_code, facilities, _summarize_workforce, current, previous)
 
 # ################################################################################################################################
 
 class TrackFinance(Service):
     """ Reports contract delivery, care registration, billing and operating margin for the current period
-    and the preceding period. Pass facility_code for one facility and days for a reporting period from 1 to 28 days.
+    and the preceding period of the same length. Monetary amounts have no currency recorded. Omit facility_code
+    for the whole network or pass one of the codes HC-01 to HC-08. Pass days for a period from 1 to 28 days,
+    7 by default. The assessment gives each measure its definition, its current and previous value, the change,
+    whether the change is an improvement and, for a measure with a target, whether the current value meets the target.
+    healthcare.list-facilities returns the code of each facility with its name, city and region.
     """
     name = Service_Finance
 
@@ -643,21 +535,72 @@ class TrackFinance(Service):
         current           = _add_finance_measures(current)
         previous          = _add_finance_measures(previous)
 
+        self.response.payload = get_report(period, facility_code, facilities, _summarize_finance, current, previous)
+
+# ################################################################################################################################
+
+class ListFacilities(Service):
+    """ Returns every healthcare facility with its code, name, city, region and service capacity. The code is
+    the value the facility_code parameter of the other healthcare tools takes.
+    """
+    name = Service_List_Facilities
+
+    def handle(self) -> 'None':
+
+        warehouse  = self.out.sql[SQL_Warehouse]
+        facilities = get_facilities(warehouse)
+
         self.response.payload = {
-            'period': period,
-            'current': {
-                'summary': _summarize_finance(current),
-                'facilities': current,
-            },
-            'previous': {
-                'summary': _summarize_finance(previous),
-                'facilities': previous,
-            },
-            'targets': {
-                'plan_percent': _target_plan_percent,
-                'registration_percent': _target_registration_percent,
-                'margin_percent': _target_margin_percent,
-            },
+            'facilities': list(facilities.values()),
+        }
+
+# ################################################################################################################################
+
+class ListRegions(Service):
+    """ Returns every region with the code and name of each facility in it. The healthcare tools report
+    by facility code, and a regional figure is obtained by calling them for the facilities of the region.
+    """
+    name = Service_List_Regions
+
+    def handle(self) -> 'None':
+
+        warehouse  = self.out.sql[SQL_Warehouse]
+        facilities = get_facilities(warehouse)
+
+        self.response.payload = {
+            'regions': _group_facilities(facilities, 'region'),
+        }
+
+# ################################################################################################################################
+
+class ListCities(Service):
+    """ Returns every city with its region and the code and name of each facility in it. The healthcare tools
+    report by facility code, and a city figure is obtained by calling them for the facilities of the city.
+    """
+    name = Service_List_Cities
+
+    def handle(self) -> 'None':
+
+        warehouse  = self.out.sql[SQL_Warehouse]
+        facilities = get_facilities(warehouse)
+
+        self.response.payload = {
+            'cities': _group_facilities(facilities, 'city', 'region'),
+        }
+
+# ################################################################################################################################
+
+class ListMeasures(Service):
+    """ Returns every measure the healthcare tools report - its name, its group, the tool that reports it,
+    its definition, whether a higher or a lower value is better and, for a measure with a target, the target
+    and whether the target is a minimum or a maximum.
+    """
+    name = Service_List_Measures
+
+    def handle(self) -> 'None':
+
+        self.response.payload = {
+            'measures': list_measures(),
         }
 
 # ################################################################################################################################

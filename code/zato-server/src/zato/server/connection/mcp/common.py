@@ -160,6 +160,13 @@ class InvalidCursor(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ToolCallFailed(Exception):
+    """ Raised by a connection tool when the system behind it refuses a call - the message is returned to the client.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclasses.dataclass(init=False)
 class MCPResponse:
     """ Wraps a JSON-RPC response body, HTTP status code, and optional session ID.

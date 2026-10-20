@@ -20,7 +20,8 @@ from zato.common.util.safeguards.api import apply_safeguards
 from zato.common.util.safeguards.config import is_safeguards_active
 from zato.common.util.truncate.tokens import apply_token_cap
 from zato.server.connection.mcp.common import _error_invalid_params, _error_method_not_found, _message_bad_request, \
-    _message_missing_tool_name, _message_response_too_large, make_error_response, make_success_response, printable
+    _message_missing_tool_name, _message_response_too_large, make_error_response, make_success_response, printable, \
+    ToolCallFailed
 from zato.server.connection.mcp.validate import _message_not_an_object, validate_arguments
 
 # ################################################################################################################################
@@ -162,6 +163,27 @@ def handle_tools_call(handler:'MCPHandler', request_id:'any_', params:'anydict')
             service_response = handler.invoke_func(tool_name, arguments)
 
         response_text = serialize_service_response(handler, service_response, trace, response_filter)
+
+    # .. the system behind a connection tool refused the call - the message is its own reason ..
+    except ToolCallFailed as e:
+        logger.info('MCP: Tool `%s` failed: %s', tool_name, e)
+
+        error_message = str(e)
+
+        failed_result:'stranydict' = {
+            'content': [
+                {
+                    'type': 'text',
+                    'text': error_message,
+                },
+            ],
+            'isError': True,
+        }
+
+        trace['error_message'] = error_message
+
+        out = make_success_response(request_id, failed_result)
+        return out, _trace_or_none(trace)
 
     # .. a safeguard or size cap refused the response - the message names the reason,
     # unlike a service exception, which is never revealed to the client ..

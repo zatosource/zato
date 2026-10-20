@@ -45,18 +45,30 @@ Database_Files = {
 Database_Directory = 'demo-healthcare'
 
 # The executive reporting services the gateway exposes as tools
-Service_Scorecard = 'healthcare.get-scorecard'
-Service_Care_Flow = 'healthcare.track-care-flow'
-Service_Quality   = 'healthcare.review-quality'
-Service_Workforce = 'healthcare.assess-workforce'
-Service_Finance   = 'healthcare.track-finance'
+Service_Scorecard       = 'healthcare.get-scorecard'
+Service_Care_Flow       = 'healthcare.track-care-flow'
+Service_Daily_Care_Flow = 'healthcare.get-daily-care-flow'
+Service_Quality         = 'healthcare.review-quality'
+Service_Workforce       = 'healthcare.assess-workforce'
+Service_Finance         = 'healthcare.track-finance'
+
+# The lookup services listing the codes and names the reporting services take and return
+Service_List_Facilities = 'healthcare.list-facilities'
+Service_List_Regions    = 'healthcare.list-regions'
+Service_List_Cities     = 'healthcare.list-cities'
+Service_List_Measures   = 'healthcare.list-measures'
 
 Service_Names = [
     Service_Scorecard,
     Service_Care_Flow,
+    Service_Daily_Care_Flow,
     Service_Quality,
     Service_Workforce,
     Service_Finance,
+    Service_List_Facilities,
+    Service_List_Regions,
+    Service_List_Cities,
+    Service_List_Measures,
 ]
 
 # The file the services are deployed from in the hot-deployment directory
