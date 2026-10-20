@@ -3,6 +3,7 @@
 .cr-session.sqlite
 .hypothesis
 .vscode
+.zato-sftp-dev
 code/.installed.cfg
 code/.lock
 code/.Python

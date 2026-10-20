@@ -6,7 +6,7 @@
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console openapi-console-demo openapi-console-tutorial mcp-demo \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp openapi-console openapi-console-demo openapi-console-tutorial mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -188,6 +188,9 @@ queue-bridge:
 
 file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
+
+sftp: ## Three development SFTP servers on ports 33101-33103 for local file transfer work.
+	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/sftp_dev/run.py
 
 openapi-console:
 	$(ZATO_PY) -m zato.openapi.app.run
