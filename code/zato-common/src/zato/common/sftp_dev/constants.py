@@ -21,6 +21,12 @@ if 0:
 # The interface every development SFTP server listens on
 Bind_Host = '0.0.0.0'
 
+# The OpenSSH server image every development SFTP server runs in
+Container_Image = 'atmoz/sftp:alpine'
+
+# What the container of each development server is named, followed by its port
+Container_Name_Prefix = 'zato-sftp-dev-'
+
 # Fixed ports for the three development servers
 Port_Password_User1 = 33101
 Port_Password_User2 = 33102

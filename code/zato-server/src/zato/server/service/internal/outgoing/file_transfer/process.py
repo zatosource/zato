@@ -121,11 +121,20 @@ def _resolve_subdirectory(directory:'str', subdirectory:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _move_out_of_the_way(conn:'any_', destination_directory:'str', file_name:'str', current_path:'str') -> 'str':
+def _move_out_of_the_way(
+    conn,                  # type: any_
+    run,                   # type: RunContext
+    destination_directory, # type: str
+    file_name,             # type: str
+    current_path,          # type: str
+    ) -> 'str':
     """ Moves a file into the directory, creating the directory if needed, and returns the new path.
     """
-    if not conn.exists(destination_directory):
-        _ = conn.create_directory(destination_directory)
+
+    # The directory is created once per run, and creating one that exists already is not an error
+    if destination_directory not in run.ensured_directories:
+        _ = conn.create_directory(destination_directory, exist_ok=True)
+        run.ensured_directories.add(destination_directory)
 
     out = _get_move_destination(conn, destination_directory, file_name)
     _ = conn.move(current_path, out)
@@ -136,6 +145,7 @@ def _move_out_of_the_way(conn:'any_', destination_directory:'str', file_name:'st
 
 def _ack_one_file(
     conn,         # type: any_
+    run,          # type: RunContext
     schedule,     # type: stranydict
     directory,    # type: str
     file_name,    # type: str
@@ -150,7 +160,7 @@ def _ack_one_file(
 
     if schedule['on_success'] == _scheduler.OnSuccess.Move:
         move_directory = _resolve_subdirectory(directory, schedule['move_directory'])
-        out = _move_out_of_the_way(conn, move_directory, file_name, current_path)
+        out = _move_out_of_the_way(conn, run, move_directory, file_name, current_path)
     else:
         _ = conn.delete_file(current_path)
 
@@ -184,6 +194,7 @@ def _release_claim(service:'Service', conn:'any_', full_path:'str', current_path
 def _quarantine_one_file(
     service,       # type: Service
     conn,          # type: any_
+    run,           # type: RunContext
     schedule,      # type: stranydict
     directory,     # type: str
     file_name,     # type: str
@@ -195,7 +206,7 @@ def _quarantine_one_file(
     quarantine_directory = _resolve_subdirectory(directory, schedule['quarantine_directory'])
 
     try:
-        out = _move_out_of_the_way(conn, quarantine_directory, file_name, current_path)
+        out = _move_out_of_the_way(conn, run, quarantine_directory, file_name, current_path)
     except Exception:
         quarantine_error = format_exc()
         service.logger.warning('Could not quarantine `%s` in `%s` -> `%s`', current_path, quarantine_directory,
@@ -318,7 +329,8 @@ def _process_one_file(
             is_last_attempt = attempt >= max_attempts
 
         if is_last_attempt:
-            quarantine_path = _quarantine_one_file(service, conn, schedule, directory, file_name, current_path, failure)
+            quarantine_path = _quarantine_one_file(service, conn, run, schedule, directory, file_name, current_path,
+                failure)
             if quarantine_path:
                 failure['quarantine_path'] = quarantine_path
                 out.status = _status_quarantined
@@ -383,7 +395,7 @@ def _process_one_file(
     ack_start = monotonic()
 
     try:
-        destination = _ack_one_file(conn, schedule, directory, file_name, full_path, current_path)
+        destination = _ack_one_file(conn, run, schedule, directory, file_name, full_path, current_path)
     except Exception:
         ack_ms = _elapsed_ms(ack_start)
         error = format_exc()
@@ -468,6 +480,9 @@ def _note_file_result(run:'RunContext', entry:'any_', result:'FileResult', durat
         reason=result.reason, file_cid=result.file_cid, duration_ms=duration_ms, attempt=result.attempt)
     run.ledger.append(record)
 
+    # The file is no longer in progress, so a run interrupted from now on has no claim of it to release
+    _ = data.pop('current_file', None)
+
     run.update()
 
 # ################################################################################################################################
@@ -541,28 +556,37 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
 
     audit_log:'AuditLog' = conn.wrapper.audit_log
 
-    # Interrupted runs are closed before the new one opens ..
-    close_interrupted_runs(audit_log, conn_name, schedule_name)
+    # Interrupted runs are closed, and their claims released, before the new one opens ..
+    close_interrupted_runs(audit_log, conn_name, schedule_name, conn)
 
     # .. and the new run's row is written before the directory is touched.
     scheduler_context = get_scheduler_context(service)
     run = open_run(audit_log, conn_name, directory, run_cid, schedule, scheduler_context)
 
     # A connection or listing error closes the run as list-failed with the phase it failed in.
-    phase = Phase_Checking_Directory
+    phase = Phase_Listing
+    directory_exists = True
     entries:'anylist' = []
     list_ms = 0
 
     try:
-        run.set_phase(Phase_Checking_Directory)
-        directory_exists = conn.exists(directory)
+        run.set_phase(Phase_Listing)
+        list_start = monotonic()
 
-        if directory_exists:
-            phase = Phase_Listing
-            run.set_phase(Phase_Listing)
-            list_start = monotonic()
+        # The directory is listed straight away, whether it exists is checked only if the listing fails ..
+        try:
             entries = conn.list(directory)
-            list_ms = _elapsed_ms(list_start)
+        except Exception:
+            phase = Phase_Checking_Directory
+            run.set_phase(Phase_Checking_Directory)
+            directory_exists = conn.exists(directory)
+
+            # .. and a directory that exists means that the listing failed for another reason.
+            if directory_exists:
+                phase = Phase_Listing
+                raise
+
+        list_ms = _elapsed_ms(list_start)
 
     except Exception:
         error = format_exc()

@@ -30,7 +30,7 @@ from audit_env import Server_Name
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, anyset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,9 +47,13 @@ Remote_Path = '/documents/results.csv'
 # What the failing client says
 Raised_Error = 'The server went away'
 
+# The exit codes of the sftp binary - a batch that ran through and one in which a command failed
+Exit_Code_OK = 0
+Exit_Code_Command_Failed = 1
+
 # The listing line the stub answers an `ls` with - a regular file of the given size,
-# in the shape the connection's parser expects of a server
-Ls_Line = '-rw-r--r--    1 user1    group1    {size} Mar  3 11:50 {name}'
+# in the shape the sftp binary prints for `ls -ln`
+Ls_Line = '-rw-r--r--    ? 1000     1000     {size} Mar  3 11:50 {name}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,6 +69,12 @@ class ClientRecorder:
         # The size of each file put, by its remote path, which is what an `ls` of the path reports back
         self.size_by_path:'anydict' = {}
 
+        # What an `ls` of a path answers with, set by a test, e.g. the entries of a directory
+        self.listing_by_path:'anydict' = {}
+
+        # The paths an `ls` reports as not found
+        self.missing_paths:'anyset' = set()
+
     def execute(self, cid:'str', data:'str', log_level:'int') -> 'SFTPOutput':
         self.commands.append(data)
 
@@ -76,15 +86,22 @@ class ClientRecorder:
             remote_path = parts[-1]
             self.size_by_path[remote_path] = os.path.getsize(local_path)
 
-        # .. and an ls of a path put earlier lists it back with that very size.
+        # .. and an ls of a path lists what a test set for it, or a file put earlier with its very size.
+        is_ok = True
+        exit_code = Exit_Code_OK
         stdout = ''
 
         if parts[0] == 'ls':
             remote_path = parts[-1]
-            if remote_path in self.size_by_path:
+            if remote_path in self.missing_paths:
+                is_ok = False
+                exit_code = Exit_Code_Command_Failed
+            elif remote_path in self.listing_by_path:
+                stdout = self.listing_by_path[remote_path]
+            elif remote_path in self.size_by_path:
                 stdout = Ls_Line.format(size=self.size_by_path[remote_path], name=remote_path)
 
-        out = SFTPOutput(cid, 1, command=data, is_ok=True, stdout=stdout)
+        out = SFTPOutput(cid, 1, command=data, is_ok=is_ok, stdout=stdout, exit_code=exit_code)
         return out
 
 # ################################################################################################################################

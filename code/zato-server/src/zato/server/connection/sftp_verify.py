@@ -40,7 +40,7 @@ def _elapsed_ms(start:'float') -> 'int':
 # ################################################################################################################################
 
 def _get_remote_size(conn:'SFTPConnection', remote_path:'str') -> 'int':
-    info = conn.get_info(remote_path)
+    info = conn.get_existing_info(remote_path)
     out = info.size
     return out
 

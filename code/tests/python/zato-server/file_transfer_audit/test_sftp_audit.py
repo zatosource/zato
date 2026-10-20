@@ -223,7 +223,7 @@ def test_a_move_writes_one_event_with_both_paths(tmp_path:'os.PathLike') -> 'Non
         _ = conn.move(Remote_Path, to_path)
 
         assert len(sftp_client.commands) == 1
-        assert sftp_client.commands[0].startswith('rename')
+        assert sftp_client.commands[0].startswith('rename -l ')
         assert Remote_Path in sftp_client.commands[0]
         assert to_path in sftp_client.commands[0]
 

@@ -21,14 +21,17 @@ from zato.common.api import FileTransfer
 from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.attachment import list_attachments
 from zato.common.audit_log.file_transfer import Operation_Move, Operation_Read
-from zato.common.audit_log.file_transfer_run import Run_Status_No_Directory
+from zato.common.audit_log.file_transfer_run import Phase_Reading, Run_Status_Interrupted, Run_Status_No_Directory
 from zato.common.typing_ import cast_
+from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
 from zato.server.service.internal.outgoing.file_transfer.process import process_files
+from zato.server.service.internal.outgoing.file_transfer.run import open_run
 
 # Test support
 from audit_env import audit_db_env
 from schedule_stub import events_of_type, get_attrs, get_events, new_environment, new_schedule, ClaimRefusingClient, \
-    Directory, FailingServiceStub, File_Content, File_Name, Run_Cid, Schedule_Name, Service_Error, ServiceStub, Target_Service
+    Connection_Name, Directory, FailingServiceStub, File_Content, File_Name, Run_Cid, Schedule_Name, Service_Error, \
+    ServiceStub, Target_Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,6 +43,12 @@ if 0:
 # ################################################################################################################################
 
 _scheduler = FileTransfer.Scheduler
+
+# The cid of a run that stopped in the middle of a file
+_interrupted_run_cid = 'cid-file-transfer-interrupted-1'
+
+# The scheduler context of a run not fired by the scheduler
+_no_scheduler_context = {'job_id': 0, 'current_run': 0}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -323,6 +332,48 @@ def test_a_missing_directory_leaves_a_run_summary_with_the_note(tmp_path:'any_')
 
         run_summary = loads(run_completed['data'])
         assert run_summary['entries'] == 0
+
+# ################################################################################################################################
+
+def test_a_claim_left_by_an_interrupted_run_is_released(tmp_path:'any_') -> 'None':
+    """ A run that stopped in the middle of a file leaves the file under its claim name,
+    and the next run renames it back before it lists the directory, so the file is delivered.
+    """
+    with audit_db_env(tmp_path):
+
+        service, context, base_dir = new_environment(tmp_path)
+
+        schedule = new_schedule(should_claim=True)
+        apply_schedule_defaults(schedule)
+        context[_scheduler.Extra_Schedule] = schedule
+
+        # A run that was reading the file when it stopped ..
+        audit_log = service.smb[Connection_Name].wrapper.audit_log
+        interrupted = open_run(audit_log, Connection_Name, Directory, _interrupted_run_cid, schedule, _no_scheduler_context)
+        interrupted.set_phase(Phase_Reading, File_Name)
+
+        # .. with the file still under its claim name.
+        file_path = os.path.join(base_dir, Directory, File_Name)
+        claim_path = file_path + _scheduler.Claim_Suffix
+        os.rename(file_path, claim_path)
+
+        process_files(cast_('any_', service), context)
+
+        # The file was released and delivered ..
+        assert len(service.invoked) == 1
+        assert service.invoked[0][1].file_name == File_Name
+        assert not os.path.exists(claim_path)
+
+        # .. and the interrupted run says that its claim was released.
+        events = get_events()
+        run_completed = events_of_type(events, AuditEvent.Run_Completed)
+        interrupted_row = run_completed[0]
+
+        assert interrupted_row['cid'] == _interrupted_run_cid
+        assert interrupted_row['status'] == Run_Status_Interrupted
+
+        interrupted_summary = loads(interrupted_row['data'])
+        assert interrupted_summary['claim_released'] is True
 
 # ################################################################################################################################
 # ################################################################################################################################

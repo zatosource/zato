@@ -7,19 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import date, datetime
 from hashlib import sha256
 from logging import getLogger
 from os.path import getsize, isfile
+from posixpath import basename, dirname
 from tempfile import NamedTemporaryFile
-from time import monotonic, strptime
+from time import monotonic
 from traceback import format_exc
 
 # gevent
 from gevent.fileobject import FileObjectThread
-
-# humanize
-from humanize import naturalsize
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
@@ -28,6 +25,7 @@ from zato.common.audit_log.file_transfer import record_file_transfer, Operation_
 from zato.common.util.logging_ import file_transfer_logger_name
 from zato.server.connection.file_transfer_base import ExchangeNotes, Key_Remote_Path, Key_Spool_Path, spool_file_payload, \
     to_file_bytes
+from zato.server.connection.sftp_listing import EntryType, parse_stdout, quote_path
 from zato.server.connection.sftp_verify import record_sftp_store
 
 # ################################################################################################################################
@@ -36,12 +34,20 @@ from zato.server.connection.sftp_verify import record_sftp_store
 if 0:
     from zato.common.sftp import SFTPOutput
     from zato.common.typing_ import any_, stranydict
+    from zato.server.connection.sftp_listing import SFTPInfo, sftp_info_list
     from zato.server.generic.api.outconn_sftp import OutconnSFTPWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(file_transfer_logger_name)
+
+# The relative path of the directory a session starts in
+_current_directory = '.'
+
+# The root directory, which has no parent and is found as the entry of that name in its own listing
+_root_directory = '/'
+_root_entry_name = '.'
 
 # How many seconds to wait for a client from the connection's pool. Waiting rather than giving up at once
 # means that two runs over one connection take turns instead of one of them failing, and it also covers
@@ -110,135 +116,6 @@ def _reply_text(out:'SFTPOutput') -> 'str':
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-class EntryType:
-    file = 'file'
-    directory = 'directory'
-    symlink = 'symlink'
-    other = 'other'
-
-# ################################################################################################################################
-
-# Maps prefixes of ls output lines to entry types
-_entry_type_map = {
-    '-': EntryType.file,
-    'd': EntryType.directory,
-    'l': EntryType.symlink,
-}
-
-# ################################################################################################################################
-
-def get_entry_type(prefix:'str') -> 'str':
-
-    out = _entry_type_map.get(prefix)
-    if not out:
-        out = EntryType.other
-
-    return out
-
-# ################################################################################################################################
-
-def quote_path(path:'str') -> 'str':
-    """ Returns a path in the shape a batch line accepts it. An unquoted name with a space in it
-    would become several arguments, so every path is quoted, and a name carrying a quote
-    or a backslash of its own has it escaped first.
-    """
-    escaped = path.replace('\\', '\\\\')
-    escaped = escaped.replace('"', '\\"')
-
-    out = f'"{escaped}"'
-    return out
-
-# ################################################################################################################################
-
-_other_types_check = EntryType.file, EntryType.directory, EntryType.symlink
-
-# ################################################################################################################################
-
-sftp_info_list = list['SFTPInfo']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SFTPInfo:
-    __slots__ = 'type', 'name', 'owner', 'group', 'size', 'permissions', 'permissions_oct', 'last_modified'
-
-    def __init__(self) -> 'None':
-        self.type = '' # type: str
-        self.name = '' # type: str
-
-        self.size = 0 # type: int
-
-        self.owner = '' # type: str
-        self.group = '' # type: str
-
-        self.permissions = 0      # type: int
-        self.permissions_oct = '' # type: str
-
-        self.last_modified = None # type: any_
-
-# ################################################################################################################################
-
-    def to_dict(self, skip_last_modified:'bool'=True) -> 'stranydict':
-
-        out = {
-            'type': self.type,
-            'name': self.name,
-            'size': self.size,
-            'size_human': self.size_human,
-            'owner': self.owner,
-            'group': self.group,
-            'permissions': self.permissions,
-            'permissions_oct': self.permissions_oct,
-            'is_file': self.is_file,
-            'is_directory': self.is_directory,
-            'is_symlink': self.is_symlink,
-            'is_other': self.is_other,
-
-            'last_modified_iso': self.last_modified_iso,
-        }
-
-        # We do not return it by default so as not to make JSON serializers wonder what to do with a Python object
-        if not skip_last_modified:
-            out['last_modified'] = self.last_modified
-
-        return out
-
-# ################################################################################################################################
-
-    @property
-    def is_file(self) -> 'bool':
-        return self.type.startswith(EntryType.file)
-
-# ################################################################################################################################
-
-    @property
-    def is_directory(self) -> 'bool':
-        return self.type.startswith(EntryType.directory)
-
-# ################################################################################################################################
-
-    @property
-    def is_symlink(self) -> 'bool':
-        return self.type.startswith(EntryType.symlink)
-
-# ################################################################################################################################
-
-    @property
-    def is_other(self) -> 'bool':
-        return not self.type.startswith(_other_types_check)
-
-# ################################################################################################################################
-
-    @property
-    def last_modified_iso(self) -> 'str':
-        return self.last_modified.isoformat()
-
-# ################################################################################################################################
-
-    @property
-    def size_human(self) -> 'str':
-        return naturalsize(self.size)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -325,197 +202,95 @@ class SFTPConnection(ExchangeNotes):
 
 # ################################################################################################################################
 
-    def _parse_permissions(self, permissions:'str') -> 'int':
+    def _list(self, options:'str', remote_path:'str', log_level:'int', raise_on_error:'bool') -> 'sftp_info_list | None':
+        """ The entries `ls` lists under the path, or None if the path could not be listed.
+        The -n option makes the binary format every line itself, numeric owners and groups included,
+        so the format and the time zone are the same no matter which server is on the other side.
+        """
+        result = self.execute(f'ls {options} {quote_path(remote_path)}', log_level, raise_on_error)
 
-        out = 0
+        if not result.is_ok:
+            return None
 
-        # Read
-        if permissions[0] == 'r':
-            out += 4
-
-        # Write
-        if permissions[1] == 'w':
-            out += 2
-
-        # Execute
-        if permissions[2] == 'x':
-            out += 1
-
+        out = parse_stdout(result)
         return out
 
 # ################################################################################################################################
 
-    def _build_last_modified(self, month:'str', day:'str', year_hour_info:'str') -> 'any_':
-
-        # If there is a colon, it means that it is an hour in the format of HH:mm,
-        # otherwise it will be actually a year.
-        has_year = ':' not in year_hour_info
-
-        # We have a year already so we can immediately build the full date to be parsed
-        if has_year:
-
-            mod_date = '{}-{}-{}'.format(year_hour_info, month, day)
-            mod_date = strptime(mod_date, '%Y-%b-%d')
-
-            out = date(mod_date.tm_year, mod_date.tm_mon, mod_date.tm_mday)
-            return out
-
-        # .. otherwise, we must find that year ourselves
-        else:
-            #
-            # Given a particular month and day, we need to find in which year it was
-            # in relation to current month.
-            #
-            # For instance (simplified, without taking days into account):
-            #
-            # If now is November 2183 and month is March    -> year was 2183
-            # If now is February 2183 and month is December -> year was 2182
-            #
-            today = datetime.today()
-            mod_date = strptime('{}-{}'.format(month, day), '%b-%d')
-
-            hour, minute = year_hour_info.split(':')
-            hour = int(hour)
-            minute = int(minute)
-
-            # If modification month is bigger than current one, it means that it must have been already
-            # in the previous year. Otherwise, it was in the same year we have today.
-            if mod_date.tm_mon > today.month:
-                mod_year = today.year - 1
-            else:
-                mod_year = today.year
-
-            out = datetime(mod_year, mod_date.tm_mon, mod_date.tm_mday, hour, minute)
-            return out
-
-# ################################################################################################################################
-
-    def _parse_ls_line(self, line:'str') -> 'SFTPInfo':
+    def _get_directory_info(self, remote_path:'str', log_level:'int', raise_on_error:'bool') -> 'SFTPInfo | None':
+        """ Information about a directory, which is the entry of its name in the listing of its parent.
+        """
 
         # Our response to produce
-        out = SFTPInfo()
+        out = None
 
-        # Map the prefix found to an entry type
-        prefix = line[0] # type: str
-        entry_type = get_entry_type(prefix)
+        stripped = remote_path.rstrip('/')
+        name = basename(stripped)
+        parent = dirname(stripped)
 
-        permissions = line[1:10] # type: str
+        # The root directory has no parent and is found in its own listing ..
+        if not name:
+            name = _root_entry_name
+            parent = _root_directory
 
-        user_permissions = self._parse_permissions(permissions[:3])   # type: int
-        group_permissions = self._parse_permissions(permissions[3:6]) # type: int
-        other_permissions = self._parse_permissions(permissions[6:])  # type: int
+        # .. while a relative name without any directories is in the current one.
+        elif not parent:
+            parent = _current_directory
 
-        permissions_oct = '{}{}{}'.format(user_permissions, group_permissions, other_permissions)
-        permissions = int(permissions_oct, 8)
+        # The parent's entries include the hidden ones, because the name may begin with a dot ..
+        entries = self._list('-lna', parent, log_level, raise_on_error)
 
-        # Move to other entries now
-        line = line[10:].strip()
+        if entries is None:
+            return out
 
-        # Everything up to the timestamp is a single token separated by runs of spaces whose width
-        # depends on the values themselves. The name is what follows the timestamp, all of it, because
-        # a name may hold spaces of its own and taking only the next token would truncate it.
-        _, owner, group, size, month, day, year_time_info, name = line.split(maxsplit=7)
-
-        # We can now combine all date elements to build a full modification time
-        last_modified = self._build_last_modified(month, day, year_time_info)
-
-        # Populate everything before returning ..
-        out.type = entry_type
-        out.name = name
-        out.permissions = permissions
-        out.permissions_oct = permissions_oct
-        out.owner = owner
-        out.group = group
-        out.size = int(size)
-        out.last_modified = last_modified
-
-        # .. now we can return
-        return out
-
-# ################################################################################################################################
-
-    def _parse_ls_output(self, ls_output:'str') -> 'sftp_info_list':
-
-        # Our response to produce
-        out = []
-
-        #
-        # Sample lines to parse - the output is standardized by The Open Group
-        #
-        # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html
-        #
-        # -rw-------    1 user1    group1         336 Mar  3 11:50 filename.txt
-        # drwx------    2 user1    group1        4096 Mar  3 10:02 directony_name
-        # lrwxrwxrwx    1 user1    group1           5 Mar  3 13:36 symlink.txt
-        # srwxrwxr-x    1 user1    group1           0 Mar  3 11:50 ipc_queue_name
-        #
-        #
-        # Or, if timestamps include the year:
-        #
-        # -rw-rw-r--    1 user1    group1        1822 Oct 24  2017 publish1.py
-        # drwxr-x---+
-        #
-        #
-        # The format that we expect and parse is thus:
-        #
-        # 1) Item type              - one character
-        # 2) Permissions            - nine characters (SFTP does not return getfacl flags)
-        # 3) Hardlinks/dir entries  - we do not parse it
-        # 4) User name              - N characters
-        # 5) Group name             - N characters
-        # 6) Size                   - N characters
-        # 7) Modification date      - Assuming a file system maintains it
-        # 8) Either time or year    - Ditto
-        # 9) File name
-        #
-
-        for line in ls_output.splitlines():
-            parsed = self._parse_ls_line(line)
-            out.append(parsed)
-
-        return out
-
-# ################################################################################################################################
-
-    def _get_info(
-        self,
-        remote_path:'str',
-        log_level:'int'=0,
-        needs_dot_entries:'bool'=True,
-        raise_on_error:'bool'=True
-        ) -> 'sftp_info_list':
-
-        if needs_dot_entries:
-            options = '-la'
-        else:
-            options = '-l'
-
-        result = self.execute('ls {} {}'.format(options, quote_path(remote_path)), log_level, raise_on_error)
-
-        # The echoed prompt is stripped from the output, so an empty directory leaves no output at all
-        out:'sftp_info_list' = []
-
-        if result.stdout:
-            out = self._parse_ls_output(result.stdout)
+        # .. and the entry is reported under the path it was asked about.
+        for entry in entries:
+            entry_name = basename(entry.name)
+            if entry_name == name:
+                entry.name = remote_path
+                out = entry
+                break
 
         return out
 
 # ################################################################################################################################
 
     def get_info(self, remote_path:'str', log_level:'int'=0, raise_on_error:'bool'=True) -> 'SFTPInfo | None':
+        """ Information about one entry, or None if it does not exist. A path that does not exist
+        raises an exception instead, unless raise_on_error is False.
+        """
 
-        result = self._get_info(remote_path, log_level, raise_on_error=raise_on_error)
+        # Our response to produce
+        out = None
 
-        if result:
+        # Anything other than a directory lists as one line under the very path it was given ..
+        entries = self._list('-ln', remote_path, log_level, raise_on_error)
 
-            # Replace resolved '.' directory names with what was given on input
-            # because they must point to the same thing.
-            out = result[0]
-            if out.type == EntryType.directory:
-                if out.name == '.':
-                    out.name = remote_path
-
+        if entries is None:
             return out
+
+        for entry in entries:
+            if entry.name == remote_path:
+                out = entry
+                break
+
+        # .. whereas a directory lists its contents, so it is looked up in its parent instead.
+        else:
+            out = self._get_directory_info(remote_path, log_level, raise_on_error)
+
+        return out
+
+# ################################################################################################################################
+
+    def get_existing_info(self, remote_path:'str', log_level:'int'=0) -> 'SFTPInfo':
+        """ Information about one entry, which must exist.
+        """
+        out = self.get_info(remote_path, log_level)
+
+        if not out:
+            raise Exception(f'Path `{remote_path}` does not exist')
+
+        return out
 
 # ################################################################################################################################
 
@@ -524,14 +299,14 @@ class SFTPConnection(ExchangeNotes):
         # The is_ok flag will be True only if the remote path points to an existing file or directory
         result = self.execute('ls {}'.format(quote_path(remote_path)), log_level, raise_on_error=False)
 
-        out = result.is_ok
+        out = result.is_ok is True
         return out
 
 # ################################################################################################################################
 
     def is_file(self, remote_path:'str', log_level:'int'=0) -> 'bool':
 
-        info = self.get_info(remote_path, log_level)
+        info = self.get_existing_info(remote_path, log_level)
 
         out = info.is_file
         return out
@@ -540,7 +315,7 @@ class SFTPConnection(ExchangeNotes):
 
     def is_directory(self, remote_path:'str', log_level:'int'=0) -> 'bool':
 
-        info = self.get_info(remote_path, log_level)
+        info = self.get_existing_info(remote_path, log_level)
 
         out = info.is_directory
         return out
@@ -549,7 +324,7 @@ class SFTPConnection(ExchangeNotes):
 
     def is_symlink(self, remote_path:'str', log_level:'int'=0) -> 'bool':
 
-        info = self.get_info(remote_path, log_level)
+        info = self.get_existing_info(remote_path, log_level)
 
         out = info.is_symlink
         return out
@@ -558,7 +333,7 @@ class SFTPConnection(ExchangeNotes):
 
     def delete(self, remote_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        info = self.get_info(remote_path, log_level)
+        info = self.get_existing_info(remote_path, log_level)
 
         if info.is_directory:
             out = self.delete_directory(remote_path, log_level, False)
@@ -619,7 +394,7 @@ class SFTPConnection(ExchangeNotes):
 
     def _ensure_entry_type(self, remote_path:'str', expected:'str', log_level:'int') -> 'None':
 
-        info = self.get_info(remote_path, log_level)
+        info = self.get_existing_info(remote_path, log_level)
 
         if not info.type == expected:
             raise Exception('Expected for `{}` to be `{}` instead of `{}` ({})'.format(
@@ -692,16 +467,24 @@ class SFTPConnection(ExchangeNotes):
 
 # ################################################################################################################################
 
-    def create_directory(self, remote_path:'str', log_level:'int'=0) -> 'SFTPOutput':
+    def create_directory(self, remote_path:'str', log_level:'int'=0, exist_ok:'bool'=False) -> 'SFTPOutput':
 
-        out = self.execute('mkdir {}'.format(quote_path(remote_path)), log_level)
+        # A leading dash makes the batch go on when the command fails, which it does when the directory exists already
+        if exist_ok:
+            command = '-mkdir'
+        else:
+            command = 'mkdir'
+
+        out = self.execute(f'{command} {quote_path(remote_path)}', log_level)
         return out
 
 # ################################################################################################################################
 
     def list(self, remote_path:'str', log_level:'int'=0) -> 'sftp_info_list':
 
-        out = self._get_info(remote_path, log_level, needs_dot_entries=False)
+        result = self.execute(f'ls -ln {quote_path(remote_path)}', log_level)
+
+        out = parse_stdout(result)
         return out
 
 # ################################################################################################################################
@@ -712,7 +495,8 @@ class SFTPConnection(ExchangeNotes):
 
         # A failed move is recorded too, before the caller learns about it
         try:
-            out = self.execute('rename {} {}'.format(quote_path(from_path), quote_path(to_path)), log_level)
+            # The -l option sends the plain rename of the protocol, which refuses to replace an existing target
+            out = self.execute('rename -l {} {}'.format(quote_path(from_path), quote_path(to_path)), log_level)
         except Exception:
             duration_ms = int((monotonic() - start) * 1000)
             self._record_transfer(Operation_Move, from_path,
@@ -784,8 +568,9 @@ class SFTPConnection(ExchangeNotes):
             # .. a failed read is recorded too, before the caller learns about it -
             # .. the event is written here rather than by the download because only
             # .. this method has the file's bytes in hand once it succeeds ..
+            # .. a get without -r refuses anything other than a regular file on its own ..
             try:
-                _ = self.download_file(remote_path, local_path.name, log_level, _needs_audit=False)
+                _ = self.download(remote_path, local_path.name, recursive=False, log_level=log_level, _needs_audit=False)
             except Exception:
                 duration_ms = int((monotonic() - start) * 1000)
                 self._record_transfer(Operation_Read, remote_path,
@@ -793,8 +578,10 @@ class SFTPConnection(ExchangeNotes):
                 raise
 
             # .. and read it in using a separate thread so as not to block the event loop.
-            # .. The mode is passed explicitly, otherwise the file would be reopened in text mode.
-            thread_file = FileObjectThread(local_path, mode)
+            # .. The mode is passed explicitly, otherwise the file would be reopened in text mode,
+            # .. and the descriptor stays open because the temporary file closes it on its own.
+            file_descriptor = local_path.fileno()
+            thread_file = FileObjectThread(file_descriptor, mode, closefd=False)
             data = thread_file.read()
             thread_file.close()
 
@@ -917,7 +704,9 @@ class SFTPConnection(ExchangeNotes):
         with NamedTemporaryFile(mode, suffix='zato-sftp-write.txt') as local_path:
 
             # .. wrap the file in separate thread so as not to block the event loop.
-            thread_file = FileObjectThread(local_path, mode=mode)
+            # .. the descriptor stays open because the temporary file closes it on its own.
+            file_descriptor = local_path.fileno()
+            thread_file = FileObjectThread(file_descriptor, mode, closefd=False)
             thread_file.write(data)
             thread_file.flush()
 

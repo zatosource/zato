@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Development SFTP servers for local file transfer work - three listeners on fixed ports,
-# started from the repository Makefile target `make sftp`.
+# Development SFTP servers for local file transfer work - three OpenSSH servers in containers on fixed ports,
+# started from the repository Makefile target `make sftp`, with the output of each logged under its own label.
 
 # stdlib
 import logging
@@ -20,7 +20,7 @@ import time
 from zato.common.sftp_dev.constants import Port_Password_User1, Port_Password_User2, Port_Public_Key_User3, \
     User1_Password, User1_Username, User2_Password, User2_Username, User3_Username, default_data_dir, \
     sample_tree_for_port
-from zato.common.sftp_dev.server import Auth_Mode, DevSFTPServer, load_login_user_public_keys
+from zato.common.sftp_dev.server import Auth_Mode, DevSFTPServer, load_login_user_public_keys, pull_image
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,9 +45,6 @@ def _configure_logging() -> 'None':
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(logging.INFO)
-
-    # Paramiko's own log lines are not prefixed and would mix with the three servers on screen.
-    logging.getLogger('paramiko').setLevel(logging.WARNING)
 
 # ################################################################################################################################
 
@@ -124,6 +121,8 @@ def main() -> 'None':
     os.makedirs(data_dir, exist_ok=True)
 
     servers = _build_servers(data_dir)
+
+    pull_image()
 
     for server in servers:
         server.start()
