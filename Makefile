@@ -15,7 +15,7 @@
 	test-edifact test-soap test-openapi test-openapi-console-live \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
-	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
+	test-hl7 test-ccda test-documents b2b hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-rule-engine test-rule-engine-perf \
@@ -926,6 +926,11 @@ test-documents: ## Documents in attachments, files and IHE XDM packages - the un
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_documents_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
+
+b2b: ## B2B interoperability - the suite in Zato_B2B_Suite runs its agreements and documents against the reference implementations and against Zato. Skipped when Zato_B2B_Suite is not set.
+	$(Zato_Log_Reset)
+	@if [ -z "$(Zato_B2B_Suite)" ]; then echo "Zato_B2B_Suite is not set, the B2B suite is skipped"; exit 0; fi; \
+	$(MAKE) -C $(Zato_B2B_Suite) test-all Zato_Root=$(CURDIR) Zato_Python=$(ZATO_PY) $(Zato_Log)
 
 test-mcp-oauth: ## OAuth for MCP gateways - simulated clients signing in through Keycloak.
 	$(Zato_Log_Reset)

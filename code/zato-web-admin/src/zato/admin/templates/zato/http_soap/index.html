@@ -34,6 +34,11 @@
     {% if connection == 'channel' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
     {% endif %}
+    {% if 0 %}
+    {% if connection == 'channel' and transport == 'soap' %}
+    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/ebms.css">
+    {% endif %}
+    {% endif %}
     {% if has_alerts_tab %}
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
@@ -105,6 +110,11 @@
     {{ delivery_tab_config|json_script:"delivery-tab-config" }}
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/tabs.js"></script>
+    {% if 0 %}
+    {% if connection == 'channel' and transport == 'soap' %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/ebms-tab.js"></script>
+    {% endif %}
+    {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/row.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline.js"></script>
@@ -662,6 +672,11 @@
                     {% if has_channel_tabs %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        {% if 0 %}
+                        {% if transport == 'soap' %}
+                        <button type="button" class="dashboard-tab" data-tab="ebms" role="tab" aria-selected="false">ebMS</button>
+                        {% endif %}
+                        {% endif %}
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         {% if has_delivery_tab %}
                         {% include "zato/include/delivery-tab-button.html" %}
@@ -779,6 +794,20 @@
                             <td style="vertical-align:middle"><label for="id_use_mtom">MTOM</label></td>
                             <td>{{ create_form.use_mtom }}</td>
                         </tr>
+
+                        {% if 0 %}
+                        {% if connection == 'channel' %}
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_messaging">Messaging</label></td>
+                            <td>
+                                <select id="id_messaging">
+                                    <option value="soap">SOAP</option>
+                                    <option value="ebms-2.0">ebMS 2.0</option>
+                                </select>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
                         {% endif %}
 
                         {% if connection == 'outgoing' %}
@@ -928,6 +957,12 @@
 
                     {% if has_channel_tabs %}
                     </div>
+
+                    {% if 0 %}
+                    {% if transport == 'soap' %}
+                    {% include "zato/http_soap/ebms-tab.html" with panel_id="http-soap-create-tab-panel-ebms" %}
+                    {% endif %}
+                    {% endif %}
 
                     {% include "zato/include/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 

@@ -1,0 +1,8 @@
+/* ------------------------------------------------------------ */
+/* ebMS - the popovers                                           */
+/* ------------------------------------------------------------ */
+
+/* The popover is outside the dialog's .ui-widget, so the buttons' font is set here */
+.ebms-tab-popover .micro-form-buttons button {
+    font-family: Verdana, Arial, sans-serif;
+}
