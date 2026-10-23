@@ -6,7 +6,7 @@
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp openapi-console openapi-console-demo openapi-console-tutorial mcp-demo \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp openapi-console openapi-console-demo openapi-console-tutorial b2b-console mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -202,6 +202,10 @@ openapi-console-demo: ## Healthcare demo for the OpenAPI console - services, sec
 	$(ZATO_PY) -m zato.openapi.console.demo.install --server-dir $(Zato_Server_Dir) --zato $(CURDIR)/code/bin/zato
 	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
 	$(MAKE) openapi-console
+
+b2b-console: ## A static mockup of the B2B console, with sample data and no server behind it.
+	echo "B2B console: http://localhost:8186/b2b/console/agreements"
+	$(ZATO_PY) -m zato.common.b2b.console.run
 
 openapi-console-tutorial: export Zato_OpenAPI_Console_Header_Title = Main tutorial
 openapi-console-tutorial: ## The main tutorial for the OpenAPI console - its service, connections, API key, REST channel and scheduler job, then the console itself.

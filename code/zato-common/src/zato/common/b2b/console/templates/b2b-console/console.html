@@ -1,0 +1,134 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en" data-theme="{{ default_theme }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ section.title }} - Zato B2B</title>
+<link rel="icon" type="image/x-icon" href="{% static 'webapp/assets/favicon.ico' %}">
+<link rel="stylesheet" href="{% static 'webapp/fonts.css' %}">
+<link rel="stylesheet" href="{% static 'webapp/css/tokens.css' %}">
+{% include 'webapp/themes.html' %}
+<link rel="stylesheet" href="{% static 'webapp/css/forms.css' %}">
+<link rel="stylesheet" href="{% static 'webapp/css/kit.css' %}">
+<link rel="stylesheet" href="{% static 'b2b-console/b2b-console.css' %}">
+</head>
+<body class="rule-engine-ui">
+
+<nav class="navigation">
+    <div class="navigation-top">
+        <a class="navigation-logo" href="/"></a>
+    </div>
+    {% for each in sections %}
+    <a class="navigation-item{% if each.slug == section.slug %} active{% endif %}" href="/b2b/console/{{ each.slug }}">{{ each.title }}</a>
+    {% endfor %}
+</nav>
+
+<main class="main-column">
+
+    <div class="toolbar">
+        {% if section.form %}
+        <a class="button-ghost b2b-console-new" href="?new">New</a>
+        {% endif %}
+        <input type="text" id="b2b-console-filter" class="b2b-console-filter" placeholder="Filter">
+    </div>
+
+    <div id="b2b-console-frame" class="b2b-console-frame">
+
+        <div id="b2b-console-master" class="b2b-console-master">
+            <table class="b2b-console-table">
+                <thead>
+                    <tr>
+                        {% for column in section.columns %}<th{% if forloop.counter0 in section.centered %} class="b2b-console-centered"{% endif %}>{{ column }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in section.items %}
+                    <tr class="{% if not is_new and row.id == item.id %}b2b-console-row-selected{% endif %}">
+                        {% for cell in row.cells %}
+                        <td{% if forloop.counter0 in section.centered %} class="b2b-console-centered"{% endif %}>
+                            <a class="b2b-console-row-link" href="?id={{ row.id|urlencode }}">
+                                {% if cell.pill %}<span class="pill pill-{{ cell.pill }}">{{ cell.text }}</span>{% else %}{{ cell.text }}{% endif %}
+                            </a>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="b2b-console-split-bar" class="pane-split-bar pane-split-bar-vertical"></div>
+
+        <div id="b2b-console-detail" class="b2b-console-detail">
+
+            {% if is_new %}
+
+            <form class="form-card b2b-console-form" onsubmit="return false">
+                {% for field in section.form %}
+                {% if field.kind == 'checkbox' %}
+                <div class="form-row-checkbox">
+                    <input type="checkbox" id="field-{{ forloop.counter }}" checked>
+                    <label for="field-{{ forloop.counter }}">{{ field.label }}</label>
+                </div>
+                {% else %}
+                <div class="form-row">
+                    <label for="field-{{ forloop.counter }}">{{ field.label }}</label>
+                    {% if field.kind == 'select' %}
+                    <select id="field-{{ forloop.counter }}">
+                        {% for option in field.options %}<option>{{ option }}</option>{% endfor %}
+                    </select>
+                    {% else %}
+                    <input type="{{ field.kind }}" id="field-{{ forloop.counter }}">
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+                <div class="b2b-console-form-actions">
+                    <button type="submit" class="button-primary">Create</button>
+                    <a class="button-ghost" href="/b2b/console/{{ section.slug }}">Cancel</a>
+                </div>
+            </form>
+
+            {% else %}
+
+            <div class="b2b-console-detail-title">{{ item.title }}</div>
+
+            <dl class="b2b-console-fields">
+                {% for label, value in item.fields %}
+                <dt>{{ label }}</dt>
+                <dd>{{ value }}</dd>
+                {% endfor %}
+            </dl>
+
+            {% for table in item.tables %}
+            {% if table.rows %}
+            <div class="b2b-console-detail-subtitle">{{ table.title }}</div>
+            <div class="b2b-console-detail-table">
+            <table class="b2b-console-table">
+                <thead>
+                    <tr>
+                        {% for column in table.columns %}<th{% if forloop.counter0 in table.centered %} class="b2b-console-centered"{% endif %}>{{ column }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table.rows %}
+                    <tr>{% for value in row %}<td{% if forloop.counter0 in table.centered %} class="b2b-console-centered"{% endif %}>{{ value }}</td>{% endfor %}</tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</main>
+
+<script src="{% static 'webapp/js/pane-split.js' %}"></script>
+<script src="{% static 'b2b-console/b2b-console.js' %}"></script>
+</body>
+</html>
