@@ -86,20 +86,15 @@ def next_action(policy:'RetryPolicy', state:'RetryState', now:'datetime') -> 'Re
         out.action = RetryAction.Done
         return out
 
-    # .. the message has expired ..
-    if state.expires_at:
-        if now >= state.expires_at:
-            out.action = RetryAction.Give_Up
-            return out
-
     # .. the current delivery is answered within its interval, or not at all ..
     due_at = state.last_attempt_at + policy.retry_interval
     retry_count = state.attempt_count - 1
     has_retries_left = retry_count < policy.retries
 
+    # .. a message that expires before its next delivery is not sent again, though the answer to the current delivery,
+    # which may be an error reporting the expiry, is awaited for the whole interval ..
     if state.expires_at:
-        if state.expires_at < due_at:
-            due_at = state.expires_at
+        if state.expires_at <= due_at:
             has_retries_left = False
 
     # .. it is still within that interval ..

@@ -342,16 +342,45 @@ class TestRetries:
         options.time_to_live = Start_Time + timedelta(seconds=10)
 
         outbound = send(exchange, None, options)
+        retry_at = Start_Time + timedelta(seconds=_retry_interval_seconds)
 
         decision = next_action(outbound, exchange.clock)
 
         assert decision.action == RetryAction.Wait
-        assert decision.at == options.time_to_live
+        assert decision.at == retry_at
 
+        # The answer to the delivery is awaited past the expiry of the message ..
         exchange.clock.advance(11)
 
         decision = next_action(outbound, exchange.clock)
+
+        assert decision.action == RetryAction.Wait
+        assert decision.at == retry_at
+
+        # .. and once the interval elapses, the message is not sent again.
+        exchange.clock.advance(_retry_interval_seconds)
+
+        decision = next_action(outbound, exchange.clock)
         assert decision.action == RetryAction.Give_Up
+
+    def test_acknowledgment_after_time_to_live(self, parties:'TestParties') -> 'None':
+        settings = _settings(parties)
+        exchange = new_exchange(parties, settings)
+
+        options = SendOptions()
+        options.time_to_live = Start_Time + timedelta(seconds=10)
+
+        outbound = send(exchange, None, options)
+
+        result = deliver(exchange, outbound)
+
+        exchange.clock.advance(11)
+        outcome = answer(exchange, outbound, result)
+
+        assert outcome.delivered
+
+        decision = next_action(outbound, exchange.clock)
+        assert decision.action == RetryAction.Done
 
 # ################################################################################################################################
 # ################################################################################################################################
