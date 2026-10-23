@@ -20,6 +20,7 @@ _all_sources_section_title = 'All sources'
 # Every member of AuditSource is here, in the order the selects offer them.
 _source_label = {
     AuditSource.Certificate: 'Certificate checks',
+    AuditSource.EbMS2: 'ebMS 2.0',
     AuditSource.Email_IMAP: 'IMAP',
     AuditSource.Email_SMTP: 'SMTP',
     AuditSource.Email_SMTP_Health: 'SMTP checks',
@@ -66,6 +67,7 @@ _source_except_label = {
 _source_event_label = {
     AuditSource.Config: 'Log access',
     AuditSource.Certificate: 'Certificate check',
+    AuditSource.EbMS2: 'ebMS 2.0',
     AuditSource.Email_IMAP: 'IMAP',
     AuditSource.Email_SMTP: 'SMTP',
     AuditSource.Email_SMTP_Health: 'SMTP check',
@@ -99,6 +101,7 @@ _source_event_label = {
 _source_object_label = {
     AuditSource.Config: 'Screen',
     AuditSource.Certificate: 'Connection',
+    AuditSource.EbMS2: 'Agreement',
     AuditSource.Email_IMAP: 'Connection',
     AuditSource.Email_SMTP: 'Connection',
     AuditSource.Email_SMTP_Health: 'Connection',
@@ -155,6 +158,7 @@ _source_endpoint_label = {
     AuditSource.LLM: 'Address',
     AuditSource.Microsoft_Cloud: 'Request',
     AuditSource.Certificate: 'Address',
+    AuditSource.EbMS2: 'Address',
 }
 
 # How one event type reads on the screen - every member of AuditEvent is here,
@@ -205,6 +209,8 @@ _event_type_label = {
     AuditEvent.Cert_Checked: 'Certificate checked',
     AuditEvent.Health_Checked: 'Health checked',
     AuditEvent.Test_Transfer_Executed: 'Test transfer executed',
+    AuditEvent.Signal_Received: 'Signal received',
+    AuditEvent.Message_Completed: 'Message completed',
 }
 
 # Per-source page titles - every member of AuditSource has one.
@@ -238,6 +244,7 @@ _source_title = {
     'microsoft-health': 'Microsoft health audit log',
     'certificate': 'Certificate check audit log',
     'test-transfer': 'Test transfer audit log',
+    'ebms2': 'ebMS 2.0 audit log',
 }
 
 # ################################################################################################################################

@@ -319,6 +319,22 @@ _test_transfer_columns = [
     {'key': 'status', 'label': 'Status', 'type': 'text'},
 ]
 
+# An ebMS 2.0 row is named by its agreement, its parties and the delivery attempt it records.
+_ebms2_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Agreement', 'type': 'text'},
+    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
+    {'key': 'from_party', 'label': 'From', 'type': 'text'},
+    {'key': 'to_party', 'label': 'To', 'type': 'text'},
+    {'key': 'action', 'label': 'Action', 'type': 'text'},
+    {'key': 'attempt', 'label': 'Attempt', 'type': 'text'},
+    {'key': 'final_state', 'label': 'Final state', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'status', 'label': 'Status', 'type': 'text'},
+]
+
 _ccda_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -377,6 +393,7 @@ _source_columns = {
     'certificate': _certificate_columns,
     'test-transfer': _test_transfer_columns,
     'ccda': _ccda_columns,
+    'ebms2': _ebms2_columns,
 }
 
 # ################################################################################################################################
