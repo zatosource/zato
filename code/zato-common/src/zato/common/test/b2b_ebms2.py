@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 # Zato
 from zato.common.b2b.common.clock import ManualClock
 from zato.common.b2b.common.keys import LocalKeys
-from zato.common.b2b.common.store import InMemoryMessageStore
+from zato.common.b2b.common.store import new_memory_store
 from zato.common.b2b.ebms2.common import Direction, MSHService, new_party_id
 from zato.common.b2b.ebms2.cpa.parse import parse_cpa
 from zato.common.b2b.ebms2.inbound import receive
@@ -96,7 +96,7 @@ def new_side(settings:'PartySettings', party:'TestParty') -> 'Side':
     out = Side()
     out.settings = settings
     out.local_keys = new_local_keys(party)
-    out.store = InMemoryMessageStore()
+    out.store = new_memory_store()
 
     return out
 

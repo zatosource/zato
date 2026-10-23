@@ -13,7 +13,7 @@ from tempfile import NamedTemporaryFile
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common.b2b.common.duplicates import SQLMessageStore
+from zato.common.b2b.common.store import MessageStore
 from zato.common.b2b.common.outcome import FinalState, SignalKind
 from zato.common.b2b.ebms2.common import ErrorCode, MessageOrderSemantics, PerMessage, SequenceStatus, SyncReplyMode
 from zato.common.b2b.ebms2.outbound import SendOptions
@@ -219,7 +219,7 @@ class TestDuplicateElimination:
         with NamedTemporaryFile(suffix='.db') as database:
 
             engine = create_engine(f'sqlite:///{database.name}')
-            exchange.receiver.store = SQLMessageStore(engine)
+            exchange.receiver.store = MessageStore(engine)
 
             outbound = send(exchange)
 
