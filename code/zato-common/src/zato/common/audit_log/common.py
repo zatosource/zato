@@ -219,6 +219,9 @@ class B2BAttr:
     Signal_Kind = 'signal_kind'
     Error_Code  = 'error_code'
 
+    # The earliest deadline of the business transaction of a message, absent when no deadline applies to it.
+    Deadline_At = 'deadline_at'
+
 # ################################################################################################################################
 
 # The searchable attributes each source's events carry in the event_attr table -
@@ -376,6 +379,12 @@ class AuditEvent:
     # A signal that answers a B2B message the server sent, and the end of the exchange of such a message.
     Signal_Received   = 'signal-received'
     Message_Completed = 'message-completed'
+
+    # A B2B business message sent with the deadlines of its business transaction, a business signal or a response
+    # that refers to it, and the end of its transaction when a deadline passes first.
+    Business_Message_Sent   = 'business-message-sent'
+    Business_Reply_Received = 'business-reply-received'
+    Business_Timed_Out      = 'business-timed-out'
 
 # ################################################################################################################################
 

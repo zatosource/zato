@@ -29,11 +29,12 @@ if 0:
     from cryptography.x509 import Certificate
     from zato.common.b2b.ebms2.common import party_id_list
     from zato.common.test.b2b_pki import TestParties
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strlist
     any_ = any_
     Certificate = Certificate
     datetime = datetime
     party_id_list = party_id_list
+    strlist = strlist
     TestParties = TestParties
 
 # ################################################################################################################################
@@ -166,6 +167,13 @@ class AgreementSettings:
     # Further services, each with one action, that the sender sends to the receiver as well.
     extra_services: 'service_settings_list'
 
+    # The actions of the main service that the receiver sends back to the sender - business signals and responses.
+    reply_actions: 'strlist'
+
+    # The timeToAcknowledgeReceipt and timeToPerform of every action binding, absent when empty.
+    time_to_acknowledge_receipt: str = ''
+    time_to_perform:             str = ''
+
     sender:         'PartySettings'
     receiver:       'PartySettings'
     ca_certificate: 'Certificate'
@@ -218,6 +226,7 @@ def new_settings(parties:'TestParties', now:'datetime') -> 'AgreementSettings':
 
     out = AgreementSettings()
     out.extra_services = []
+    out.reply_actions = []
     out.start = now - validity
     out.end = now + validity
     out.sender = sender
@@ -302,6 +311,12 @@ def _add_action_binding(parent:'any_', kind:'str', binding_id:'str', action:'str
     characteristics = _add(this_party, 'BusinessTransactionCharacteristics')
     _set(characteristics, 'isNonRepudiationRequired', is_non_repudiation_required)
 
+    if settings.time_to_acknowledge_receipt:
+        _set(characteristics, 'timeToAcknowledgeReceipt', settings.time_to_acknowledge_receipt)
+
+    if settings.time_to_perform:
+        _set(characteristics, 'timeToPerform', settings.time_to_perform)
+
     _ = _add(this_party, 'ChannelId', channel_id)
     _ = _add(element, 'OtherPartyActionBinding', other_binding_id)
 
@@ -347,11 +362,30 @@ def _add_collaboration_role(parent:'any_', party:'PartySettings', other:'PartySe
     channel_id = f'{party.name}-business'
     action = service_settings.action
 
-    # The schema has every CanSend before every CanReceive.
+    # The replies belong to the main service only.
+    if index == 0:
+        reply_actions = settings.reply_actions
+    else:
+        reply_actions = []
+
+    # The schema has every CanSend before every CanReceive. The receiver sends the replies and the sender receives them.
     if party.can_send:
         binding_id = f'{party.name}-send-{index}'
         other_binding_id = f'{other.name}-receive-{index}'
         _add_action_binding(service_binding, 'CanSend', binding_id, action, settings, channel_id, other_binding_id)
+
+    if party.can_receive:
+        for reply_index, reply_action in enumerate(reply_actions):
+            binding_id = f'{party.name}-reply-send-{reply_index}'
+            other_binding_id = f'{other.name}-reply-receive-{reply_index}'
+            _add_action_binding(service_binding, 'CanSend', binding_id, reply_action, settings, channel_id, other_binding_id)
+
+    if party.can_send:
+        for reply_index, reply_action in enumerate(reply_actions):
+            binding_id = f'{party.name}-reply-receive-{reply_index}'
+            other_binding_id = f'{other.name}-reply-send-{reply_index}'
+            _add_action_binding(service_binding, 'CanReceive', binding_id, reply_action, settings, channel_id,
+                other_binding_id)
 
     if party.can_receive:
         binding_id = f'{party.name}-receive-{index}'

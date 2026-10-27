@@ -123,6 +123,15 @@ def soap11_schema() -> 'any_':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
+def ebbp_signals_schema() -> 'any_':
+    """ The official ebBP 2.0 business signals schema.
+    """
+    out = load_schema('ebbp-signals-2.0.4.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
 def parties() -> 'TestParties':
     """ The certificate authority and the two parties the agreements of a session are between.
     """

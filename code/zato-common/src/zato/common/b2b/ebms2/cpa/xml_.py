@@ -156,10 +156,19 @@ def parse_duration(element:'any_') -> 'Duration':
     """ Returns the xsd:duration an element holds.
     """
     text = require_text(element)
+    element_name = local_name(element)
 
+    out = parse_duration_text(text, element_name)
+    return out
+
+# ################################################################################################################################
+
+def parse_duration_text(text:'str', where:'str') -> 'Duration':
+    """ Returns the xsd:duration the text of an element or of an attribute holds, the element or the attribute
+    named in the exception raised when the text is not a duration.
+    """
     if not (match := _duration_pattern.match(text)):
-        element_name = local_name(element)
-        raise CPAException(element_name, f'Not a duration -> `{text}`')
+        raise CPAException(where, f'Not a duration -> `{text}`')
 
     # The pattern lets through a designator with no component after it, which xsd:duration does not.
     is_empty = text == 'P'
@@ -167,8 +176,7 @@ def parse_duration(element:'any_') -> 'Duration':
 
     for is_invalid in (is_empty, has_empty_time):
         if is_invalid:
-            element_name = local_name(element)
-            raise CPAException(element_name, f'Duration has a designator without a component -> `{text}`')
+            raise CPAException(where, f'Duration has a designator without a component -> `{text}`')
 
     groups = match.groupdict()
 

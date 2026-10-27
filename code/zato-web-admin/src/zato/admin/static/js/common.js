@@ -419,6 +419,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.data_table.data = {}
+$.fn.zato.data_table.default_change_password_width = '40em';
 $.fn.zato.data_table.on_submit_complete_callback = null;
 $.fn.zato.data_table.on_submit_complete_callback_args = null;
 
@@ -936,9 +937,16 @@ $.fn.zato.data_table.setup_change_password = function() {
     // Cleanup comes first
     $.fn.zato.cleanup_form_css_attention(form_id);
 
-    $('#change_password-div').dialog({
+    var div = $('#change_password-div');
+    var width = div.attr('data-dialog-width');
+
+    if(width === undefined) {
+        width = $.fn.zato.data_table.default_change_password_width;
+    }
+
+    div.dialog({
         autoOpen: false,
-        width: '40em',
+        width: width,
         close: function(e, ui) {
             $.fn.zato.data_table.reset_form(form_id);
         }
@@ -5110,51 +5118,6 @@ $(window).on('keydown.zato-dialog-esc', function(e) {
 
     // .. and close it, unless closeOnEscape is off, e.g. the how-it-works
     // help mode turns it off while active and handles Escape on its own.
-    var content = topmost.find('.ui-dialog-content');
-    if(content.dialog('option', 'closeOnEscape')) {
-        content.dialog('close');
-    }
-});
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-// Clicking outside a jQuery UI dialog closes the topmost one. Clicks on UI that
-// renders outside the dialog's DOM node while belonging to it - tooltips, alert
-// popups, tour popovers, the dashboard kit's dropdown menus or the action
-// runner's details modal - do not close anything.
-$(document).on('mousedown.zato-dialog-outside-close', function(e) {
-
-    // Only the primary button counts as a close request
-    if(e.which !== 1) {
-        return;
-    }
-
-    var ignored_selector = '.ui-dialog, [data-tippy-root], #popup_container, .driver-popover, ' +
-        '.invoker-modal-overlay, .zato-datetime-picker, .zato-dropdown-menu';
-    if($(e.target).closest(ignored_selector).length) {
-        return;
-    }
-
-    // Find the topmost visible dialog by z-index ..
-    var topmost = null;
-    var topmost_z = -1;
-    $('.ui-dialog:visible').each(function() {
-        var z = parseInt($(this).css('z-index'), 10);
-        if(isNaN(z)) {
-            z = 0;
-        }
-        if(z > topmost_z) {
-            topmost_z = z;
-            topmost = $(this);
-        }
-    });
-
-    if(!topmost) {
-        return;
-    }
-
-    // .. and close it, reusing closeOnEscape as the "may be dismissed" flag,
-    // e.g. the how-it-works help mode turns it off while active.
     var content = topmost.find('.ui-dialog-content');
     if(content.dialog('option', 'closeOnEscape')) {
         content.dialog('close');

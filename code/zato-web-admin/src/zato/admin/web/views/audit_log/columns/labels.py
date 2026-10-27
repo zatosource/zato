@@ -211,6 +211,9 @@ _event_type_label = {
     AuditEvent.Test_Transfer_Executed: 'Test transfer executed',
     AuditEvent.Signal_Received: 'Signal received',
     AuditEvent.Message_Completed: 'Message completed',
+    AuditEvent.Business_Message_Sent: 'Business message sent',
+    AuditEvent.Business_Reply_Received: 'Business reply received',
+    AuditEvent.Business_Timed_Out: 'Business transaction timed out',
 }
 
 # Per-source page titles - every member of AuditSource has one.
