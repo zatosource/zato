@@ -163,7 +163,7 @@ class SecurityGroupsCtx(BearerTokenCtx):
     def has_security_id(self, security_id:'int') -> 'bool':
         """ Public membership check - True if the definition belongs to any of this channel's groups,
         no matter whether it is a Basic Auth, API key or Bearer token one. Used by callers whose
-        credentials were already verified elsewhere, e.g. the OpenAPI console's visibility checks.
+        credentials were already verified elsewhere, e.g. the API portal's visibility checks.
         """
         out = self._has_security_id(security_id)
 

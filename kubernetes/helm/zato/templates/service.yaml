@@ -19,10 +19,10 @@ spec:
       port: {{ .Values.service.ports.dashboardSSL }}
       targetPort: dashboard-ssl
     - name: openapi
-      port: {{ .Values.service.ports.openapiConsole }}
+      port: {{ .Values.service.ports.apiPortal }}
       targetPort: openapi
     - name: openapi-ssl
-      port: {{ .Values.service.ports.openapiConsoleSSL }}
+      port: {{ .Values.service.ports.apiPortalSSL }}
       targetPort: openapi-ssl
     - name: lb
       port: {{ .Values.service.ports.loadBalancer }}

@@ -1022,7 +1022,7 @@ class URLData(PyURLData):
             channel_item['sec_type'] = msg['sec_type']
 
             # The Dashboard sends the security definition id as a string, but it is a database id,
-            # so it is kept as an int in the runtime channel data - the OpenAPI console compares it
+            # so it is kept as an int in the runtime channel data - the API portal compares it
             # against the caller's own definition id, which is an int too.
             channel_item['security_id'] = int(msg['security_id'])
             channel_item['security_name'] = msg['security_name']

@@ -22,12 +22,12 @@ import yaml
 
 # Zato
 from zato.common.typing_ import cast_
-from zato.common.webapp.auth.auth_type import ConsoleAuthType
+from zato.common.webapp.auth.auth_type import PortalAuthType
 from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, decrypt_credentials, encrypt_credentials
 from zato.common.webapp.request import client_address
-from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path, \
+from zato.openapi.portal.branding import Branding_Files, get_branding_context, get_branding_file_path, \
     get_logo_content_type, get_logo_file
-from zato.openapi.console.client import OpenAPIConsoleClient
+from zato.openapi.portal.client import APIPortalClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,15 +49,15 @@ _invalid_credentials_message = 'Invalid credentials'
 
 # The auth types of the sign-in form, in the order they are offered
 _auth_types = [
-    (ConsoleAuthType.Basic_Auth, 'Basic Auth'),
-    (ConsoleAuthType.API_Key, 'API Key'),
-    (ConsoleAuthType.Bearer_Token, 'Bearer token'),
+    (PortalAuthType.Basic_Auth, 'Basic Auth'),
+    (PortalAuthType.API_Key, 'API Key'),
+    (PortalAuthType.Bearer_Token, 'Bearer token'),
 ]
 
 # What the header shows for a caller signed in with a secret that has no username next to it
 _secret_only_identities = {
-    ConsoleAuthType.API_Key: 'API key',
-    ConsoleAuthType.Bearer_Token: 'Bearer token',
+    PortalAuthType.API_Key: 'API key',
+    PortalAuthType.Bearer_Token: 'Bearer token',
 }
 
 # The message shown when no server replied in time
@@ -71,15 +71,15 @@ _unauthorized_message = 'Unauthorized'
 _no_such_file_message = 'No such file'
 
 # The base URL under which try-it requests are relayed to the servers - the document's servers
-# entry points here, so the browser only ever talks to the console, never to the servers.
-_relay_url_base = '/openapi/console/relay'
+# entry points here, so the browser only ever talks to the portal, never to the servers.
+_relay_url_base = '/api-portal/relay'
 
 # The only method that the relay accepts from a signed-in caller
 _relay_method = 'POST'
 
 # The response header in which the browser receives the headers that the endpoint's REST channel would respond with,
-# as URL-encoded JSON, apart from the headers of the console's own response
-_relay_response_headers_name = 'X-Zato-Console-Response-Headers'
+# as URL-encoded JSON, apart from the headers of the portal's own response
+_relay_response_headers_name = 'X-Zato-Portal-Response-Headers'
 
 # Maps rejection statuses from the reply stream to the HTTP status and message the browser receives
 _relay_rejections = {
@@ -89,16 +89,16 @@ _relay_rejections = {
     'dropped': (BAD_GATEWAY, _no_server_message),
 }
 
-# Created lazily so that the console starts even when Redis is briefly unavailable
+# Created lazily so that the portal starts even when Redis is briefly unavailable
 _client = None
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_client() -> 'OpenAPIConsoleClient':
+def _get_client() -> 'APIPortalClient':
     global _client
     if _client is None:
-        _client = OpenAPIConsoleClient()
+        _client = APIPortalClient()
 
     return _client
 
@@ -128,14 +128,14 @@ def login_view(req:'any_') -> 'any_':
     """
     # Someone whose session already has credentials has nothing to do on the sign-in page
     if _is_signed_in(req):
-        return redirect('console')
+        return redirect('portal')
 
     context = get_branding_context()
-    context['auth_type'] = ConsoleAuthType.Basic_Auth
+    context['auth_type'] = PortalAuthType.Basic_Auth
     context['auth_types'] = _auth_types
-    context['basic_auth_type'] = ConsoleAuthType.Basic_Auth
-    context['api_key_type'] = ConsoleAuthType.API_Key
-    context['bearer_token_type'] = ConsoleAuthType.Bearer_Token
+    context['basic_auth_type'] = PortalAuthType.Basic_Auth
+    context['api_key_type'] = PortalAuthType.API_Key
+    context['bearer_token_type'] = PortalAuthType.Bearer_Token
 
     if req.method == 'POST':
         auth_type = req.POST['auth_type']
@@ -156,7 +156,7 @@ def login_view(req:'any_') -> 'any_':
                     'username': credentials['username'],
                     'session_token': session_token,
                 })
-                return redirect('console')
+                return redirect('portal')
 
         # .. otherwise, show the sign-in page again with an error message.
         context['error'] = _invalid_credentials_message
@@ -169,7 +169,7 @@ def _build_basic_auth_credentials(form:'any_') -> 'stranydict':
     """ Returns the credentials of a username and password sign-in.
     """
     out = {
-        'auth_type': ConsoleAuthType.Basic_Auth,
+        'auth_type': PortalAuthType.Basic_Auth,
         'username': form['username'],
         'password': form['password'],
     }
@@ -182,7 +182,7 @@ def _build_api_key_credentials(form:'any_') -> 'stranydict':
     """ Returns the credentials of an API key sign-in - the key is the only secret and there is no username.
     """
     out = {
-        'auth_type': ConsoleAuthType.API_Key,
+        'auth_type': PortalAuthType.API_Key,
         'username': '',
         'password': form['key'],
     }
@@ -195,7 +195,7 @@ def _build_bearer_token_credentials(form:'any_') -> 'stranydict':
     """ Returns the credentials of a bearer token sign-in - the token is the only secret and there is no username.
     """
     out = {
-        'auth_type': ConsoleAuthType.Bearer_Token,
+        'auth_type': PortalAuthType.Bearer_Token,
         'username': '',
         'password': form['token'],
     }
@@ -206,9 +206,9 @@ def _build_bearer_token_credentials(form:'any_') -> 'stranydict':
 
 # Maps each auth type of the sign-in form to the function that reads its fields
 _credential_builders = {
-    ConsoleAuthType.Basic_Auth: _build_basic_auth_credentials,
-    ConsoleAuthType.API_Key: _build_api_key_credentials,
-    ConsoleAuthType.Bearer_Token: _build_bearer_token_credentials,
+    PortalAuthType.Basic_Auth: _build_basic_auth_credentials,
+    PortalAuthType.API_Key: _build_api_key_credentials,
+    PortalAuthType.Bearer_Token: _build_bearer_token_credentials,
 }
 
 # ################################################################################################################################
@@ -224,8 +224,8 @@ def logout_view(req:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def console_view(req:'any_') -> 'any_':
-    """ Renders the console page - the actual document is loaded by the browser from the spec endpoint.
+def portal_view(req:'any_') -> 'any_':
+    """ Renders the portal page - the actual document is loaded by the browser from the spec endpoint.
     """
     # A session without credentials that can be read signs in again ..
     auth, error = _get_auth_or_error(req)
@@ -244,7 +244,7 @@ def console_view(req:'any_') -> 'any_':
     else:
         context['identity'] = auth['username']
 
-    out = render(req, 'console.html', context)
+    out = render(req, 'portal.html', context)
 
     return out
 
@@ -258,7 +258,7 @@ def _get_auth_or_error(req:'any_') -> 'any_':
     if not (token := req.session.get(Session_Credentials_Key)):
         return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
-    # .. the token becomes invalid when the console is restarted, in which case the user signs in again ..
+    # .. the token becomes invalid when the portal is restarted, in which case the user signs in again ..
     auth = decrypt_credentials(token)
     if not auth:
         req.session.flush()
@@ -286,7 +286,7 @@ def _get_spec_or_error(req:'any_') -> 'any_':
     if spec is None:
         return None, _text_response(_unauthorized_message, UNAUTHORIZED)
 
-    # Try-it requests go through the console's relay, never directly to the servers
+    # Try-it requests go through the portal's relay, never directly to the servers
     spec['servers'] = [{'url': _relay_url_base}]
 
     return spec, None
@@ -325,7 +325,7 @@ def spec_yaml_view(req:'any_') -> 'any_':
 
 def relay_view(req:'any_') -> 'any_':
     """ Relays a try-it invocation to the servers over Redis Streams and returns the response,
-    so the browser only ever talks to the console. The target service is invoked with the signed-in
+    so the browser only ever talks to the portal. The target service is invoked with the signed-in
     user's own credentials and only if those credentials give access to the endpoint.
     """
     auth, error = _get_auth_or_error(req)
@@ -381,7 +381,7 @@ def relay_view(req:'any_') -> 'any_':
 
 def favicon_view(req:'any_') -> 'any_':
     """ Answers the icon request browsers make at the root path on their own, with whichever
-    icon the console is branded with.
+    icon the portal is branded with.
     """
     branding = get_branding_context()
     out = redirect(branding['favicon_url'])

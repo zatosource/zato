@@ -24,9 +24,9 @@ service:
     # Dashboard, plain and SSL
     dashboard: 8183
     dashboardSSL: 8184
-    # OpenAPI console, plain and SSL - HAProxy fronts it inside the container
-    openapiConsole: 8185
-    openapiConsoleSSL: 8186
+    # API portal, plain and SSL - HAProxy fronts it inside the container
+    apiPortal: 8185
+    apiPortalSSL: 8186
     # Load balancer for external REST and HL7 MLLP clients, plain and SSL
     loadBalancer: 11223
     loadBalancerSSL: 11224

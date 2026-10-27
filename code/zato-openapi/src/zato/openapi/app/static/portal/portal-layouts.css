@@ -1,0 +1,370 @@
+/* ------------------------------------------------------------ */
+/* Portal layout - the group shown                              */
+/* ------------------------------------------------------------ */
+
+.portal-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: calc(100vh - var(--portal-header-height));
+    padding: 1rem var(--portal-page-padding) 0;
+    overflow: hidden;
+}
+
+.portal-group {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.portal-group[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Portal layout - the list of operations and the detail        */
+/* ------------------------------------------------------------ */
+
+.portal-layout-frame {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: var(--portal-layout-master-width) var(--portal-layout-resizer-width) minmax(0, 1fr);
+    min-height: 0;
+}
+
+.portal-layout-master {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-height: 0;
+}
+
+.portal-layout-master-top {
+    display: flex;
+    flex: none;
+    gap: 0.5rem;
+    align-items: center;
+    margin-right: 0.5rem;
+}
+
+/* ------------------------------------------------------------ */
+/* Portal layout - the list of operations collapsed             */
+/* ------------------------------------------------------------ */
+
+.portal-layout-master-collapsed .portal-layout-frame {
+    grid-template-columns: var(--portal-layout-master-collapsed-width) var(--portal-layout-resizer-width) minmax(0, 1fr);
+}
+
+.portal-layout-master-collapsed .portal-layout-master-top {
+    justify-content: center;
+    margin-right: 0;
+}
+
+.portal-layout-master-collapsed .portal-layout-filter,
+.portal-layout-master-collapsed .portal-layout-list {
+    display: none;
+}
+
+.portal-layout-master-collapsed .portal-layout-resizer {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.portal-layout-icon-expand,
+.portal-layout-master-collapsed .portal-layout-icon-collapse {
+    display: none;
+}
+
+.portal-layout-master-collapsed .portal-layout-icon-expand {
+    display: block;
+}
+
+.portal-layout-list,
+.portal-layout-detail {
+    min-height: 0;
+    padding-bottom: var(--portal-layout-end-padding);
+    overflow-y: scroll;
+}
+
+.portal-layout-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding-right: 0.5rem;
+}
+
+.portal-layout-detail {
+    display: flex;
+    flex-direction: column;
+    padding-right: 0.75rem;
+}
+
+.portal-layout-detail .portal-operation:not(.portal-layout-active) {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Portal layout - the rows of the list                         */
+/* ------------------------------------------------------------ */
+
+.portal-layout-row {
+    display: grid;
+    flex: none;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.625rem;
+    align-items: baseline;
+    padding: 0.4375rem 0.625rem;
+    border: 1px solid transparent;
+    border-radius: var(--portal-control-radius);
+    font: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    color: var(--portal-text-muted);
+    background: transparent;
+    cursor: pointer;
+    transition: background var(--portal-hover-duration) ease, color var(--portal-hover-duration) ease;
+}
+
+.portal-layout-row:hover {
+    color: var(--portal-text);
+    background: var(--portal-bg-raised-hover);
+    transition-delay: var(--portal-hover-delay);
+}
+
+.portal-layout-row.portal-layout-active {
+    color: var(--portal-accent-light);
+    background: var(--portal-accent-soft);
+}
+
+.portal-layout-row[hidden],
+.portal-layout-row.portal-layout-excluded {
+    display: none;
+}
+
+.portal-layout-entry-path {
+    font-family: var(--portal-font-mono);
+    font-size: 0.75rem;
+    color: var(--portal-text);
+    overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ */
+/* Portal layout - the handles next to the sidebar and the list */
+/* ------------------------------------------------------------ */
+
+.portal-layout-resizer,
+.portal-sidebar-resizer {
+    display: flex;
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.portal-sidebar-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    z-index: 1;
+    width: var(--portal-layout-resizer-width);
+}
+
+.portal-layout-resizer::before,
+.portal-sidebar-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--portal-border);
+    transform: translateX(-50%);
+    transition: background var(--portal-hover-duration) ease;
+}
+
+.portal-layout-grip,
+.portal-sidebar-grip {
+    position: relative;
+    width: var(--portal-layout-grip-width);
+    height: var(--portal-layout-grip-height);
+    border-radius: var(--portal-layout-grip-width);
+    background: var(--portal-layout-grip-fill);
+    transition: background var(--portal-hover-duration) ease;
+}
+
+.portal-layout-resizer:hover::before,
+.portal-layout-resizer:hover .portal-layout-grip,
+.portal-sidebar-resizer:hover::before,
+.portal-sidebar-resizer:hover .portal-sidebar-grip {
+    background: var(--portal-accent-light);
+    transition-delay: var(--portal-hover-delay);
+}
+
+.portal-resizing-layout .portal-layout-resizer:active::before,
+.portal-resizing-layout .portal-layout-resizer:active .portal-layout-grip,
+.portal-resizing .portal-sidebar-resizer::before,
+.portal-resizing .portal-sidebar-grip {
+    background: var(--portal-accent-light);
+    transition-delay: 0s;
+}
+
+body.portal-resizing-layout {
+    cursor: col-resize;
+    user-select: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Portal layout - the operation shown                          */
+/* ------------------------------------------------------------ */
+
+.portal-layout-detail .portal-operation {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+}
+
+.portal-operation-header,
+.portal-operation-description {
+    flex: none;
+}
+
+.portal-operation-exchange,
+.portal-operation-request,
+.portal-operation-response {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.portal-layout-detail .portal-operation-exchange {
+    flex: 1 1 0;
+    min-height: var(--portal-exchange-minimum-height);
+}
+
+.portal-operation-request {
+    flex: var(--portal-request-share) 1 0;
+    min-height: var(--portal-request-minimum-height);
+}
+
+.portal-operation-response {
+    flex: var(--portal-response-share) 1 0;
+    min-height: var(--portal-response-minimum-height);
+}
+
+/* ------------------------------------------------------------ */
+/* Portal layout - resizer between the request and the response */
+/* ------------------------------------------------------------ */
+
+.portal-exchange-resizer {
+    display: flex;
+    position: relative;
+    flex: none;
+    justify-content: center;
+    align-items: center;
+    height: var(--portal-exchange-resizer-height);
+    cursor: row-resize;
+    touch-action: none;
+}
+
+.portal-exchange-resizer:has(+ .portal-operation-response[hidden]) {
+    display: none;
+}
+
+.portal-exchange-resizer::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--portal-border);
+    transform: translateY(-50%);
+    transition: background var(--portal-hover-duration) ease;
+}
+
+.portal-exchange-grip {
+    position: relative;
+    width: var(--portal-layout-grip-height);
+    height: var(--portal-layout-grip-width);
+    border-radius: var(--portal-layout-grip-width);
+    background: var(--portal-layout-grip-fill);
+    transition: background var(--portal-hover-duration) ease;
+}
+
+.portal-exchange-resizer:hover::before,
+.portal-exchange-resizer:hover .portal-exchange-grip {
+    background: var(--portal-accent-light);
+    transition-delay: var(--portal-hover-delay);
+}
+
+.portal-resizing-exchange .portal-exchange-resizer:active::before,
+.portal-resizing-exchange .portal-exchange-resizer:active .portal-exchange-grip {
+    background: var(--portal-accent-light);
+    transition-delay: 0s;
+}
+
+body.portal-resizing-exchange {
+    cursor: row-resize;
+    user-select: none;
+}
+
+.portal-operation-request .portal-panel-bar,
+.portal-operation-response .portal-panel-bar,
+.portal-path-editor {
+    flex: none;
+}
+
+.portal-editor,
+.portal-raw,
+.portal-response-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Portal layout - narrow screens                               */
+/* ------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    .portal-content {
+        height: auto;
+        padding-bottom: 4rem;
+        overflow: visible;
+    }
+
+    .portal-layout-frame,
+    .portal-layout-master-collapsed .portal-layout-frame {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .portal-layout-toggle {
+        display: none;
+    }
+
+    .portal-layout-master-collapsed .portal-layout-filter,
+    .portal-layout-master-collapsed .portal-layout-list {
+        display: flex;
+    }
+
+    .portal-layout-resizer {
+        display: none;
+    }
+
+    .portal-exchange-resizer {
+        cursor: auto;
+        pointer-events: none;
+    }
+
+    .portal-exchange-grip {
+        visibility: hidden;
+    }
+
+    .portal-layout-list,
+    .portal-layout-detail {
+        overflow-y: visible;
+    }
+}

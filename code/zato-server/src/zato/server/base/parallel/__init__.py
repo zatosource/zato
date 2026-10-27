@@ -1013,7 +1013,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._build_mcp_tool_registries()
 
         # All services are deployed, so the OpenAPI document can be built now.
-        from zato.server.openapi_console.cache import rebuild_spec_cache
+        from zato.server.api_portal.cache import rebuild_spec_cache
         rebuild_spec_cache(self)
 
         # The server is started so we can deploy what we were told to handle on startup.
@@ -1027,7 +1027,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         self._start_queue_bridge()
 
-        self._start_openapi_console_listener()
+        self._start_api_portal_listener()
 
         self._start_rule_engine_change_listener()
 
@@ -1722,14 +1722,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _start_openapi_console_listener(self) -> 'None':
-        """ Starts the greenlet that answers OpenAPI console requests arriving via Redis Streams.
+    def _start_api_portal_listener(self) -> 'None':
+        """ Starts the greenlet that answers API portal requests arriving via Redis Streams.
         """
         try:
-            from zato.server.openapi_console.listener import start_openapi_console_listener
-            start_openapi_console_listener(self)
+            from zato.server.api_portal.listener import start_api_portal_listener
+            start_api_portal_listener(self)
         except Exception:
-            logger.warning('OpenAPI console listener could not be started: %s', format_exc())
+            logger.warning('API portal listener could not be started: %s', format_exc())
 
 # ################################################################################################################################
 
@@ -1953,7 +1953,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # .. the reloaded configuration may hold channels the cached OpenAPI document predates,
         # e.g. ones an enmasse import wrote straight to the ODB, so the document is rebuilt from it now ..
-        from zato.server.openapi_console.cache import rebuild_spec_cache
+        from zato.server.api_portal.cache import rebuild_spec_cache
         rebuild_spec_cache(self)
 
         # .. reload pub/sub permissions from database ..

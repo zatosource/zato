@@ -102,7 +102,7 @@ def _read(model_class:'type') -> 'anydict':
 # ################################################################################################################################
 
 class RuntimeModelTestCase(TestCase):
-    """ The fields of models read at runtime, as the console's document is built out of deployed services.
+    """ The fields of models read at runtime, as the portal's document is built out of deployed services.
     """
 
     def test_the_models_that_fields_refer_to_are_read(self) -> 'None':

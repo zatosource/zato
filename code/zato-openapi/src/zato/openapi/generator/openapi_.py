@@ -578,7 +578,7 @@ class OpenAPIGenerator:
                         request_content = {'schema': request_schema}
 
                         # An example derived from the schema, kept even when empty, because without one
-                        # the console fills in a placeholder for every optional property.
+                        # the portal fills in a placeholder for every optional property.
                         request_content['example'] = self._build_example(request_schema, set(), True, '')
                         request_content[_complete_example_key] = self._build_example(request_schema, set(), False, '')
 

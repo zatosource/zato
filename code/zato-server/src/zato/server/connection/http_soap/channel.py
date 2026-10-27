@@ -158,9 +158,9 @@ _soap_action_header_key = 'HTTP_{}'.format(SOAP_Action_Header.upper())
 # The socket of the connection a request arrived on, as the HTTP server stores it in the request context
 _socket_fd_key = 'zato.socket_fd'
 
-# Present in the request context of a request that the OpenAPI console relays, whose caller the console has identified.
+# Present in the request context of a request that the API portal relays, whose caller the portal has identified.
 # Request headers always reach the request context under keys with the HTTP_ or CONTENT_ prefix, never under this one.
-Console_Caller_Key = 'zato.openapi_console.caller'
+Portal_Caller_Key = 'zato.api_portal.caller'
 
 # The statuses a SOAP fault does not override. A fault's status normally belongs to its fault code,
 # but these four carry HTTP-level meaning of their own that a client acts on before it looks at any
@@ -315,7 +315,7 @@ def _serialize_payload(payload:'any_') -> 'any_':
 
 def serialize_response_payload(payload:'any_', data_format:'str') -> 'any_':
     """ Returns the body that a REST channel of the given data format responds with for what a service
-    assigned to its response. REST channels and the OpenAPI console relay both build response bodies
+    assigned to its response. REST channels and the API portal relay both build response bodies
     through this function, so that the two always produce the same body.
     """
     # Strings go on the wire as they are ..
@@ -491,8 +491,8 @@ class RequestDispatcher:
         """ Validates credentials via sec_def and security groups.
         Both check_security and check_security_via_groups may raise exceptions.
         """
-        # The OpenAPI console identifies its callers and checks their access to the channel before it relays a request
-        if Console_Caller_Key in request_ctx:
+        # The API portal identifies its callers and checks their access to the channel before it relays a request
+        if Portal_Caller_Key in request_ctx:
             return
 
         match_target = channel_item['match_target']
@@ -1387,7 +1387,7 @@ class RequestDispatcher:
         channel_name = channel_item['name']
 
         # Disallowed traffic - silent TCP drop, as if a firewall discarded the packet,
-        # which a request relayed by the OpenAPI console has no connection of its own for ..
+        # which a request relayed by the API portal has no connection of its own for ..
         if rate_limit_result.is_disallowed:
 
             if _socket_fd_key in request_ctx:

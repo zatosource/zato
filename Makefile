@@ -6,13 +6,13 @@
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp openapi-console openapi-console-demo openapi-console-tutorial b2b-console mcp-demo \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-console mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
-	test-edifact test-soap test-openapi test-openapi-console-live \
+	test-edifact test-soap test-openapi test-api-portal-live \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
 	test-hl7 test-ccda test-documents test-b2b hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
@@ -53,7 +53,7 @@ MQ_CLIENT_DIR := $(CURDIR)/lib/mqm
 MQ_CLIENT_URL := https://zato.io/mqclient-linux-x64.tar.gz
 MQ_CLIENT_LIB := $(MQ_CLIENT_DIR)/lib64/libmqm_r.so
 
-# Scalar bundle for the OpenAPI console - the version is pinned in package.json
+# Scalar bundle for the API portal - the version is pinned in package.json
 SCALAR_PACKAGE_JSON := $(CURDIR)/code/zato-openapi/package.json
 SCALAR_BUNDLE := $(CURDIR)/code/zato-openapi/src/zato/openapi/app/static/scalar/scalar.standalone.js
 
@@ -194,24 +194,24 @@ file-listener:
 sftp: ## Three development OpenSSH SFTP servers in containers on ports 33101-33103 for local file transfer work, each logging under its own label.
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/sftp_dev/run.py
 
-openapi-console:
+api-portal:
 	$(ZATO_PY) -m zato.openapi.app.run
 
-openapi-console-demo: export Zato_OpenAPI_Console_Header_Title = Demo console
-openapi-console-demo: ## Healthcare demo for the OpenAPI console - services, security definitions, groups and REST channels, then the console itself.
-	$(ZATO_PY) -m zato.openapi.console.demo.install --server-dir $(Zato_Server_Dir) --zato $(CURDIR)/code/bin/zato
-	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
-	$(MAKE) openapi-console
+api-portal-demo: export Zato_API_Portal_Header_Title = Demo portal
+api-portal-demo: ## Healthcare demo for the API portal - services, security definitions, groups and REST channels, then the portal itself.
+	$(ZATO_PY) -m zato.openapi.portal.demo.install --server-dir $(Zato_Server_Dir) --zato $(CURDIR)/code/bin/zato
+	echo "API portal: http://localhost:$(Zato_Port_API_Portal)/api-portal"
+	$(MAKE) api-portal
 
 b2b-console: ## A static mockup of the B2B console, with sample data and no server behind it.
 	echo "B2B console: http://localhost:8186/b2b/console/agreements"
 	$(ZATO_PY) -m zato.common.b2b.console.run
 
-openapi-console-tutorial: export Zato_OpenAPI_Console_Header_Title = Main tutorial
-openapi-console-tutorial: ## The main tutorial for the OpenAPI console - its service, connections, API key, REST channel and scheduler job, then the console itself.
-	$(ZATO_PY) -m zato.openapi.console.demo.tutorial --server-dir $(Zato_Server_Dir)
-	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
-	$(MAKE) openapi-console
+api-portal-tutorial: export Zato_API_Portal_Header_Title = Main tutorial
+api-portal-tutorial: ## The main tutorial for the API portal - its service, connections, API key, REST channel and scheduler job, then the portal itself.
+	$(ZATO_PY) -m zato.openapi.portal.demo.tutorial --server-dir $(Zato_Server_Dir)
+	echo "API portal: http://localhost:$(Zato_Port_API_Portal)/api-portal"
+	$(MAKE) api-portal
 
 # The container the MCP healthcare demo runs in and the host ports its Dashboard and its server are published on
 Zato_MCP_Demo_Image          ?= ghcr.io/zatosource/zato-4.1:latest
@@ -303,7 +303,7 @@ haproxy:
 		$(HAPROXY_CFG) > $(HAPROXY_DEV_DIR)/haproxy.cfg
 	Zato_Port_Server=$(Zato_Port_Server) \
 	Zato_Port_Dashboard=$(Zato_Port_Dashboard) \
-	Zato_Port_OpenAPI_Console=$(Zato_Port_OpenAPI_Console) \
+	Zato_Port_API_Portal=$(Zato_Port_API_Portal) \
 	Zato_Port_Load_Balancer=$(Zato_Port_Load_Balancer) \
 	Zato_Port_MLLP=$(Zato_Port_MLLP) \
 	Zato_Port_MLLP_SSL=$(Zato_Port_MLLP_SSL) \
@@ -495,7 +495,7 @@ sbom: ## Generate a CycloneDX SBOM of the Python environment.
 	print(f'>>> Wrote {path} ({len(components)} {suffix})'); \
 	"
 
-scalar-update: ## Re-download the Scalar bundle pinned in zato-openapi/package.json into the console's static directory.
+scalar-update: ## Re-download the Scalar bundle pinned in zato-openapi/package.json into the portal's static directory.
 	version=$$($(ZATO_PY) -c "import json; print(json.load(open('$(SCALAR_PACKAGE_JSON)'))['dependencies']['@scalar/api-reference'])") && \
 	echo ">>> Downloading @scalar/api-reference@$$version" && \
 	curl -fL https://cdn.jsdelivr.net/npm/@scalar/api-reference@$$version/dist/browser/standalone.min.js -o $(SCALAR_BUNDLE) && \
@@ -967,21 +967,21 @@ test-audit-export: ## Audit log export to OpenTelemetry - the offline mapping an
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-openapi: ## Offline OpenAPI tests - the type mapping of models and annotations, the generator, the console's document, client and relay.
+test-openapi: ## Offline OpenAPI tests - the type mapping of models and annotations, the generator, the portal's document, client and relay.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-openapi/generator/ \
-		$(CURDIR)/code/tests/python/zato-openapi/console_client/ \
-		$(CURDIR)/code/tests/python/zato-server/openapi_console/ \
+		$(CURDIR)/code/tests/python/zato-openapi/portal_client/ \
+		$(CURDIR)/code/tests/python/zato-server/api_portal/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_openapi -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-openapi-console-live: ## OpenAPI console tests against a live server - the document after a start, after a restart and per channel method.
+test-api-portal-live: ## API portal tests against a live server - the document after a start, after a restart and per channel method.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/openapi_console_live/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_openapi_console_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(CURDIR)/code/tests/python/zato-server/api_portal_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_api_portal_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
@@ -1543,7 +1543,7 @@ Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
-	test-openapi-console-live test-file-transfer
+	test-api-portal-live test-file-transfer
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui
@@ -1789,7 +1789,7 @@ HAPROXY_DEV_DIR := /tmp/zato-haproxy-dev
 # so a dev run supplies the same values the image's own defaults use
 Zato_Port_Server ?= 17010
 Zato_Port_Dashboard ?= 8183
-Zato_Port_OpenAPI_Console ?= 8185
+Zato_Port_API_Portal ?= 8185
 Zato_Port_Load_Balancer ?= 11223
 Zato_Port_MLLP ?= 11553
 Zato_Port_MLLP_SSL ?= 11554
@@ -1811,7 +1811,7 @@ HL7_DEV_HTTP_LB_PORT  := 21225
 HL7_DEV_REST_PORT     := 27010
 HL7_DEV_MLLP_PORT     := 21312
 HL7_DEV_DASH_PORT     := 28183
-HL7_DEV_CONSOLE_PORT  := 28185
+HL7_DEV_PORTAL_PORT   := 28185
 HL7_DEV_STATS_PORT    := 28404
 
 hl7-haproxy: ## Start HAProxy in full debug mode on dev ports.
@@ -1827,7 +1827,7 @@ hl7-haproxy: ## Start HAProxy in full debug mode on dev ports.
 		$(HAPROXY_CFG) > $(HL7_DEV_DIR)/haproxy.cfg
 	Zato_Port_Server=$(HL7_DEV_REST_PORT) \
 	Zato_Port_Dashboard=$(HL7_DEV_DASH_PORT) \
-	Zato_Port_OpenAPI_Console=$(HL7_DEV_CONSOLE_PORT) \
+	Zato_Port_API_Portal=$(HL7_DEV_PORTAL_PORT) \
 	Zato_Port_Load_Balancer=$(HL7_DEV_FRONTEND_PORT) \
 	Zato_Port_MLLP=$(HL7_DEV_MLLP_PORT) \
 	Zato_Load_Balancer_Stats_Password=dev \

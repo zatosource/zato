@@ -2419,7 +2419,7 @@ class ConfigManager(_ConfigManagerBase):
         purge_response_cache(self.cache_api, channel_id)
 
         # The channel change may alter the OpenAPI document, so it is rebuilt now
-        from zato.server.openapi_console.cache import rebuild_spec_cache
+        from zato.server.api_portal.cache import rebuild_spec_cache
         rebuild_spec_cache(self.server)
 
     def on_config_event_CHANNEL_HTTP_SOAP_RATE_LIMITING_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
@@ -2471,7 +2471,7 @@ class ConfigManager(_ConfigManagerBase):
         purge_response_cache(self.cache_api, channel_id)
 
         # The channel is gone, so the OpenAPI document is rebuilt without it now
-        from zato.server.openapi_console.cache import rebuild_spec_cache
+        from zato.server.api_portal.cache import rebuild_spec_cache
         rebuild_spec_cache(self.server)
 
 # ################################################################################################################################

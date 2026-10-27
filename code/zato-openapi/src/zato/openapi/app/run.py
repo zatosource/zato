@@ -23,15 +23,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The console binds on this address unless the environment overrides it
-Env_Host = 'Zato_OpenAPI_Console_Host'
-Env_Port = 'Zato_OpenAPI_Console_Port'
+# The portal binds on this address unless the environment overrides it
+Env_Host = 'Zato_API_Portal_Host'
+Env_Port = 'Zato_API_Portal_Port'
 
 Default_Host = '0.0.0.0'
 Default_Port = '8088'
 
 # The name the startup line reports
-_app_name = 'the OpenAPI console'
+_app_name = 'the API portal'
 
 # The module that configures Django and builds the WSGI application
 _wsgi_module = 'zato.openapi.app.wsgi'
@@ -43,13 +43,13 @@ _thread_count = 32
 # ################################################################################################################################
 
 def main() -> 'None':
-    """ The entry point - serves the console.
+    """ The entry point - serves the portal.
     """
-    parser = ArgumentParser(description='Zato OpenAPI console')
+    parser = ArgumentParser(description='Zato API portal')
     _ = parser.add_argument('--env-file', default='', help='Path to a file with environment variables to use')
     args = parser.parse_args()
 
-    # The console's modules read their environment variables when they are imported,
+    # The portal's modules read their environment variables when they are imported,
     # so the variables from the file are in place before the WSGI module is loaded ..
     _ = populate_environment_from_file(args.env_file)
 

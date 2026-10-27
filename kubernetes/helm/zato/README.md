@@ -48,7 +48,7 @@ The `.py` files are mounted at `/opt/hot-deploy/incoming/services` and hot-deplo
 | `resources` | `{}` | Container resources |
 
 All ports the image publishes are exposed by default: 17010 (server API), 8183/8184 (Dashboard),
-8185/8186 (OpenAPI console), 11223/11224 (load balancer). SSH 22 is off by default - `kubectl exec`
+8185/8186 (API portal), 11223/11224 (load balancer). SSH 22 is off by default - `kubectl exec`
 covers that role on Kubernetes.
 
 ## Exposing Zato outside the cluster

@@ -28,8 +28,8 @@ _env_port = 'Zato_Test_Web_App_Port'
 _default_host = '127.0.0.1'
 _default_port = '8088'
 
-# The thread count the OpenAPI console asks for
-_console_thread_count = 32
+# The thread count the API portal asks for
+_portal_thread_count = 32
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,8 +60,8 @@ class ServeThreadsTestCase(TestCase):
 # ################################################################################################################################
 
     def test_an_application_asks_for_threads(self) -> 'None':
-        options = self._serve(thread_count=_console_thread_count)
-        self.assertEqual(options['threads'], _console_thread_count)
+        options = self._serve(thread_count=_portal_thread_count)
+        self.assertEqual(options['threads'], _portal_thread_count)
 
 # ################################################################################################################################
 # ################################################################################################################################
