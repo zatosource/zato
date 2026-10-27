@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP:Envelope xmlns:xsi="http://www.w3c.org/2001/XML-Schema-Instance" xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/" xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xmlns:ext="urn:zato:b2b:test:extension" xmlns:xlink="http://www.w3.org/1999/xlink">
+<SOAP:Header>
+	<eb:MessageHeader SOAP:mustUnderstand="1" eb:version="2.0">
+		<eb:From>
+			<eb:PartyId eb:type="urn:zato:b2b:test:party-type:node+instance">B70315-4402117</eb:PartyId>
+		</eb:From>
+		<eb:To>
+			<eb:PartyId eb:type="urn:zato:b2b:test:party-type:node+instance">RCV-0000512</eb:PartyId>
+		</eb:To>
+		<eb:CPAId>C1001A0042</eb:CPAId>
+		<eb:ConversationId>376CE5F9-27D4-4D60-8881-A9A915DE725E</eb:ConversationId>
+		<eb:Service>urn:zato:b2b:test:records</eb:Service>
+		<eb:Action>RecordTransfer</eb:Action>
+		<eb:MessageData>
+			<eb:MessageId>376CE5F9-27D4-4D60-8881-A9A915DE725E</eb:MessageId>
+			<eb:Timestamp>2026-01-15T09:29:08Z</eb:Timestamp>
+		</eb:MessageData>
+        <eb:DuplicateElimination/>
+    </eb:MessageHeader>
+    <eb:AckRequested SOAP:mustUnderstand="1" eb:version="2.0" eb:signed="false" SOAP:actor="urn:oasis:names:tc:ebxml-msg:actor:toPartyMSH"/>
+    <eb:SyncReply SOAP:mustUnderstand="1" eb:version="2.0" SOAP:actor="http://schemas.xmlsoap.org/soap/actor/next"/>
+</SOAP:Header>
+<SOAP:Body>
+	<eb:Manifest SOAP:mustUnderstand="1" eb:version="2.0">
+		<eb:Reference xlink:href="cid:376CE5F9-27D4-4D60-8881-A9A915DE725E@b2b.test">
+			<eb:Schema eb:location="http://b2b.test/schemas/record.xsd" eb:version="1.0"/>
+			<eb:Description xml:lang="en">Record payload</eb:Description>
+			<ext:Payload style="record" encoding="XML" version="1.0"/>
+		</eb:Reference>
+        <eb:Reference xlink:href="cid:2F548C4F-A7B5-46CB-A6ED-2FACEC47991F@b2b.test">
+            <eb:Description xml:lang="en">Supporting document</eb:Description>
+        </eb:Reference>
+	</eb:Manifest>
+</SOAP:Body>
+</SOAP:Envelope>

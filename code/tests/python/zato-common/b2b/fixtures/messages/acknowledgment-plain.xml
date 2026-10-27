@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3c.org/2001/XML-Schema-Instance"
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+               xmlns:ext="urn:zato:b2b:test:extension" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <soap:Header>
+        <eb:MessageHeader eb:version="2.0" soap:mustUnderstand="1">
+            <eb:From>
+                <eb:PartyId eb:type="urn:zato:b2b:test:party-type:node+instance">GEN-201324</eb:PartyId>
+            </eb:From>
+            <eb:To>
+                <eb:PartyId eb:type="urn:zato:b2b:test:party-type:node+instance">RCV-0000512</eb:PartyId>
+            </eb:To>
+            <eb:CPAId>C1001A0042</eb:CPAId>
+            <eb:ConversationId>BC9A2E06-FEE5-4C7D-B5DB-41C44FD4ADF0</eb:ConversationId>
+            <eb:Service>urn:oasis:names:tc:ebxml-msg:service</eb:Service>
+            <eb:Action>Acknowledgment</eb:Action>
+            <eb:MessageData>
+                <eb:MessageId>FC550029-9A45-4BF1-BDD6-47948344A0DB</eb:MessageId>
+                <eb:Timestamp>2026-01-15T09:29:09Z</eb:Timestamp>
+                <eb:RefToMessageId>A2AD948E-4091-4686-A8A2-991119B5CC0D</eb:RefToMessageId>
+            </eb:MessageData>
+        </eb:MessageHeader>
+        <eb:Acknowledgment eb:version="2.0" soap:mustUnderstand="1"
+                           soap:actor="urn:oasis:names:tc:ebxml-msg:actor:toPartyMSH">
+            <eb:Timestamp>2026-01-15T09:29:08Z</eb:Timestamp>
+            <eb:RefToMessageId>A2AD948E-4091-4686-A8A2-991119B5CC0D</eb:RefToMessageId>
+            <eb:From>
+                <eb:PartyId eb:type="urn:zato:b2b:test:party-type:node+instance">GEN-201324</eb:PartyId>
+            </eb:From>
+        </eb:Acknowledgment>
+    </soap:Header>
+    <soap:Body/>
+</soap:Envelope>

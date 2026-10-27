@@ -14,8 +14,8 @@ from http.client import INTERNAL_SERVER_ERROR, OK
 from zato.common.b2b.common.exceptions import B2BProtocolException
 from zato.common.b2b.common.outcome import FinalState, Outcome, SignalKind
 from zato.common.b2b.common.store import HeldMessage, MessageIdentity, StoredMessage, StoredResponse
-from zato.common.b2b.ebms2.common import Direction, EbMS2Exception, ErrorCode, MessageStatus, MSHService, \
-    Protocol_Name, Root_Content_Type
+from zato.common.b2b.ebms2.common import Actor, Direction, EbMS2Exception, ErrorCode, MessageStatus, MSHService, \
+    Protocol_Name, Root_Content_Type, Severity
 from zato.common.b2b.ebms2.header import parse_ack_requested, parse_manifest, parse_message_order, parse_sync_reply
 from zato.common.b2b.ebms2.inbound_common import AsyncSignal, Delivery, HTTPResponse, payload_digests, read_message, \
     ReceivedSignal
@@ -27,7 +27,7 @@ from zato.common.b2b.ebms2.replies import build_reply, is_sync_reply, Reply, rep
 from zato.common.b2b.ebms2.security import is_signature_required, verify_message_signature
 from zato.common.b2b.ebms2.signals import Acknowledgment, new_error_list, parse_acknowledgment, parse_error_list, \
     parse_status_request, parse_status_response, StatusResponse
-from zato.common.b2b.ebms2.xml_ import location
+from zato.common.b2b.ebms2.xml_ import get_eb_attribute, location
 from zato.common.soap.common import FaultCode, SOAPVersion
 from zato.common.soap.envelope import build_fault
 
@@ -216,6 +216,31 @@ def _reject(ctx:'_Context', out:'InboundResult', error:'B2BProtocolException') -
     out.outcome.final_state = FinalState.Rejected
 
 # ################################################################################################################################
+
+def _reports_error(ctx:'_Context') -> 'bool':
+    """ Says whether a message is an error message that reports at least one error, which is never answered
+    with another error message.
+    """
+    out = False
+
+    if elements := ctx.elements:
+        if elements.error_list is not None:
+            highest_severity = get_eb_attribute(elements.error_list, 'highestSeverity')
+            out = highest_severity == Severity.Error
+
+    return out
+
+# ################################################################################################################################
+
+def _reject_unanswered(out:'InboundResult', error:'B2BProtocolException') -> 'None':
+    """ Rejects an error message in error with an empty HTTP response.
+    """
+    out.outcome.signal_kind = SignalKind.Error
+    out.outcome.error_code = error.error_code
+    out.outcome.error_severity = Severity.Error
+    out.outcome.final_state = FinalState.Rejected
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _check_agreement(ctx:'_Context') -> 'None':
@@ -262,6 +287,7 @@ def _new_delivery(binding:'Binding', header:'MessageHeader', payloads:'payload_l
     out = Delivery()
     out.message_id = header.message_data.message_id
     out.conversation_id = header.conversation_id
+    out.ref_to_message_id = header.message_data.ref_to_message_id
     out.service = header.service
     out.service_type = header.service_type
     out.action = header.action
@@ -297,9 +323,11 @@ def _acknowledgment(ctx:'_Context', elements:'MessageElements', binding:'Binding
         ack_requested = parse_ack_requested(elements.ack_requested)
         is_requested = True
         is_signed_requested = ack_requested.signed
+        actor = ack_requested.actor
     else:
         is_requested = False
         is_signed_requested = False
+        actor = Actor.To_Party_MSH
 
     if not per_message(characteristics.ack_requested, is_requested):
         out = None
@@ -311,6 +339,9 @@ def _acknowledgment(ctx:'_Context', elements:'MessageElements', binding:'Binding
         acknowledgment.timestamp = ctx.now
         acknowledgment.ref_to_message_id = ctx.header.message_data.message_id
         acknowledgment.from_party = ctx.header.to_party
+
+        # The acknowledgment is addressed to the same actor that requested it.
+        acknowledgment.actor = actor
 
         # A signed acknowledgment of a signed message proves what it acknowledges with the references of that signature.
         if is_signed:
@@ -603,7 +634,8 @@ def receive(
     ctx.header = header
     ctx.payloads = payloads
 
-    # .. and any other message that cannot be processed is answered with an error message.
+    # .. and any other message that cannot be processed is answered with an error message,
+    # unless it is an error message that reports errors itself.
     try:
         elements = collect_elements(envelope)
         ctx.elements = elements
@@ -619,7 +651,11 @@ def receive(
         out.deliveries = []
         out.response = HTTPResponse()
         out.async_signal = None
-        _reject(ctx, out, e)
+
+        if _reports_error(ctx):
+            _reject_unanswered(out, e)
+        else:
+            _reject(ctx, out, e)
 
     return out
 

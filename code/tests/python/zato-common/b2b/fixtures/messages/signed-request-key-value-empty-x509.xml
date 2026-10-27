@@ -1,0 +1,30 @@
+<SOAP:Envelope xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/" xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+<SOAP:Header>
+<eb:MessageHeader SOAP:mustUnderstand="1" eb:version="2.0">
+<eb:From>
+<eb:PartyId eb:type="REG">7130429</eb:PartyId>
+<eb:Role>Practitioner</eb:Role>
+</eb:From>
+<eb:To>
+<eb:PartyId eb:type="REG">60318</eb:PartyId>
+<eb:Role>Payer</eb:Role>
+</eb:To>
+<eb:CPAId>net:test:35066</eb:CPAId>
+<eb:ConversationId>fa21dd08-51f0-400a-b92f-0b704effd03d</eb:ConversationId>
+<eb:Service eb:type="string">PractitionerClaim</eb:Service>
+<eb:Action>SettlementNotice</eb:Action>
+<eb:MessageData>
+<eb:MessageId>379be92a-fe7b-43c2-89a7-77234ac49188</eb:MessageId>
+<eb:Timestamp>2026-01-15T09:29:50.3069479Z</eb:Timestamp>
+</eb:MessageData>
+</eb:MessageHeader>
+<eb:AckRequested SOAP:actor="urn:oasis:names:tc:ebxml-msg:actor:toPartyMSH" SOAP:mustUnderstand="1" eb:signed="true" eb:version="2.0">
+</eb:AckRequested>
+</SOAP:Header>
+<SOAP:Body>
+<eb:Manifest eb:version="2.0">
+<eb:Reference xlink:href="cid:7QWRT2KZPLM5.HXBVNCJEYU4R8@b2b.test" xlink:type="simple">
+</eb:Reference>
+</eb:Manifest>
+</SOAP:Body>
+</SOAP:Envelope>

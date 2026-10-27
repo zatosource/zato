@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap-env:Envelope xmlns:soap-env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <soap-env:Header>
+    <eb:MessageHeader xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" soap-env:mustUnderstand="1" eb:version="2.0">
+      <eb:From>
+        <eb:PartyId eb:type="qq">Remote_node</eb:PartyId>
+      </eb:From>
+      <eb:To>
+        <eb:PartyId eb:type="qq">gateway</eb:PartyId>
+      </eb:To>
+      <eb:CPAId>gateway.relay270</eb:CPAId>
+      <eb:ConversationId>1768469395461</eb:ConversationId>
+      <eb:Service>urn:oasis:names:tc:ebxml-msg:service</eb:Service>
+      <eb:Action>Pong</eb:Action>
+      <eb:MessageData>
+        <eb:MessageId>1768469399078@relay.b2b.test</eb:MessageId>
+        <eb:Timestamp>2026-01-15T09:29:59</eb:Timestamp>
+        <eb:RefToMessageId>40217735@gateway.b2b.test</eb:RefToMessageId>
+      </eb:MessageData>
+    </eb:MessageHeader>
+  </soap-env:Header>
+  <soap-env:Body>
+    <eb:Manifest xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" eb:version="2.0">
+      <eb:Reference xlink:href="cid:statusResponse@relay.b2b.test" xlink:type="simple"/></eb:Manifest>
+  </soap-env:Body>
+</soap-env:Envelope>

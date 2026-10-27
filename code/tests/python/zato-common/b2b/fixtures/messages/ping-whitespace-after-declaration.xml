@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+ <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd">
+ <soap:Header xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+ <eb:MessageHeader eb:id="ID4417093021768469390868northhost" eb:version="2.0"
+soap:mustUnderstand="1">
+ <eb:From>
+ <eb:PartyId eb:type="string">PartyNorth</eb:PartyId>
+ </eb:From>
+ <eb:To>
+ <eb:PartyId eb:type="string">PartySouth</eb:PartyId>
+ </eb:To>
+ <eb:CPAId>PartyNorth-PartySouth-cpa-1</eb:CPAId>
+ <eb:ConversationId>49115ed7-fadc-476e-9ccf-006329c8d305</eb:ConversationId>
+ <eb:Service>urn:oasis:names:tc:ebxml-msg:service</eb:Service>
+ <eb:Action>Ping</eb:Action>
+ <eb:MessageData>
+ <eb:MessageId>M1768469390868.792@northhost7786261718245588383</eb:MessageId>
+ <eb:Timestamp>2026-01-15T09:29:50.868Z</eb:Timestamp>
+ </eb:MessageData>
+ </eb:MessageHeader>
+ </soap:Header>
+ <soap:Body xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"/>
+</soap:Envelope>

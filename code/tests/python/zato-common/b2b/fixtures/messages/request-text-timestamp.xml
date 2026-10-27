@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap-env:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xmlns:soap-env="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap-env:Header>
+    <eb:MessageHeader SOAP-ENV:mustUnderstand="1" eb:version="2.0">
+      <eb:From>
+        <eb:PartyId eb:type="ebTST">N7Q</eb:PartyId>
+      </eb:From>
+      <eb:To>
+        <eb:PartyId eb:type="ebTST">HUBQ</eb:PartyId>
+      </eb:To>
+      <eb:CPAId>hub_agreement</eb:CPAId>
+      <eb:ConversationId>1</eb:ConversationId>
+      <eb:Service>hub:hub</eb:Service>
+      <eb:Action>Process</eb:Action>
+      <eb:MessageData>
+        <eb:MessageId>20260115-162931-55022@192.0.2.144</eb:MessageId>
+        <eb:Timestamp>Thu Jan 15 16:29:31 GMT+07:00 2026</eb:Timestamp>
+      </eb:MessageData>
+      <eb:DuplicateElimination/>
+    </eb:MessageHeader>
+    <eb:SyncReply SOAP-ENV:actor="http://schemas.xmlsoap.org/soap/actor/next" SOAP-ENV:mustUnderstand="1" eb:version="2.0"/>
+    <eb:AckRequested SOAP-ENV:actor="urn:oasis:names:tc:ebxml-msg:actor:toPartyMSH" SOAP-ENV:mustUnderstand="1" eb:signed="false" eb:version="2.0"/>
+  </soap-env:Header>
+  <soap-env:Body>
+    <eb:Manifest xmlns:xlink="http://www.w3.org/1999/xlink" eb:version="2.0">
+      <eb:Reference eb:id="Payload-0" xlink:href="cid:Payload-0" xlink:type="simple"/>
+    </eb:Manifest>
+  </soap-env:Body>
+</soap-env:Envelope>

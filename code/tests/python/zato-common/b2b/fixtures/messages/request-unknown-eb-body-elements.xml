@@ -1,0 +1,62 @@
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+<SOAP-ENV:Header>
+	<eb:MessageHeader xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/"
+			  xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+			  SOAP:mustUnderstand="1" eb:version="2.0">
+	<eb:From>
+	<eb:PartyId eb:type="zz:party1">ZZParty1</eb:PartyId>
+	</eb:From>
+	<eb:To>
+		<eb:PartyId eb:type="zz:party2">ZZParty2</eb:PartyId>
+	</eb:To>
+	<eb:CPAId>20260115:ZZParty1:ZZParty2</eb:CPAId>
+	<eb:ConversationId>125498ZZParty1</eb:ConversationId>
+	<eb:Service>urn:zato:b2b:test:services:orders:NewOrder</eb:Service>
+	<eb:Action>incomingOrder</eb:Action>
+	<eb:MessageData>
+		<eb:MessageId>125-101213498-@party1.b2b.test</eb:MessageId>
+		<eb:Timestamp>2026-01-15T09:29:13</eb:Timestamp>
+	</eb:MessageData>
+	</eb:MessageHeader>
+	<eb:AckRequested xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope"
+			 xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+			 SOAP:actor="urn:oasis:names:tc:ebxml-msg:actor:toPartyMSH" SOAP:mustUnderstand="1"
+			 SOAP:signed="false" eb:version="2.0"/>
+	<eb:SyncReply xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope"
+		      xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+		      SOAP:actor="http://schemas.xmlsoap.org/soap/actor/next/" SOAP:mustUnderstand="1"
+		      eb:id="" eb:version="2.0"/>
+</SOAP-ENV:Header>
+<SOAP-ENV:Body>
+	<eb:cpaId xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+			   20260115:ZZParty1:ZZParty2</eb:cpaId>
+	<eb:service xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+			   urn:zato:b2b:test:services:orders:NewOrder</eb:service>
+	<eb:action xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+			   incomingOrder</eb:action>
+	<eb:convId xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+			   125498ZZParty1</eb:convId>
+	<eb:fromPartyId
+		xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+			   ZZParty1</eb:fromPartyId>
+	<eb:fromPartyType
+		xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+			   zz:party1</eb:fromPartyType>
+	<eb:toPartyId
+		xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+			   ZZParty2</eb:toPartyId>
+	<eb:toPartyType
+	        xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+			   zz:party2</eb:toPartyType>
+	<eb:Manifest
+		xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+		  	   eb:version="2.0">
+	<eb:Reference xmlns:xlink="http://www.w3.org/1999/xlink"
+			   xlink:href="cid:ebxmlpayload@party1.b2b.test" xlink:type="simple">
+	<eb:Description xml:lang="fi">This is a purchase order.</eb:Description>
+	<eb:Schema eb:location="urn:zato:b2b:test:schema:order.xsd"
+	  	           eb:version="1.0"/>
+</eb:Reference>
+	</eb:Manifest>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

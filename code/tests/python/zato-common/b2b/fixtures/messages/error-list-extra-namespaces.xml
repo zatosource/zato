@@ -1,0 +1,27 @@
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+   <soap:Header>
+      <eb:MessageHeader eb:version="2.0" soap:mustUnderstand="1">
+         <eb:From>
+            <eb:PartyId eb:type="urn:zato:b2b:test:party-type:node+instance">B70315-4402117</eb:PartyId>
+         </eb:From>
+         <eb:To>
+            <eb:PartyId eb:type="urn:zato:b2b:test:party-type:node+instance">RCV-0000512</eb:PartyId>
+         </eb:To>
+         <eb:CPAId>C1001A0042</eb:CPAId>
+         <eb:ConversationId>D2C70206-EFD1-4657-96EF-C8AA23017441</eb:ConversationId>
+         <eb:Service>urn:oasis:names:tc:ebxml-msg:service</eb:Service>
+         <eb:Action>MessageError</eb:Action>
+         <eb:MessageData>
+            <eb:MessageId>103221D1-3C7D-4C44-AE0D-98FBAEA4767B</eb:MessageId>
+            <eb:Timestamp>2026-01-15T09:29:16Z</eb:Timestamp>
+            <eb:RefToMessageId>1EE8DE5E-384F-4F8D-A736-0D2C9DF6E58E</eb:RefToMessageId>
+         </eb:MessageData>
+      </eb:MessageHeader>
+      <eb:ErrorList xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:h="urn:zato:b2b:test:records:v1" eb:version="2.0" soap:mustUnderstand="1" eb:highestSeverity="Error">
+         <eb:Error eb:errorCode="ValueNotRecognized" eb:severity="Error">
+            <eb:Description xml:lang="en">501314:Invalid To Party Type attribute</eb:Description>
+         </eb:Error>
+      </eb:ErrorList>
+   </soap:Header>
+   <soap:Body />
+</soap:Envelope>

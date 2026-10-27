@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP:Envelope xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+    <SOAP:Header>
+        <eb:MessageHeader SOAP:mustUnderstand="1" eb:version="2.0">
+            <eb:From>
+                <eb:PartyId eb:type="REG">60318</eb:PartyId>
+                <eb:Role>Registry</eb:Role>
+            </eb:From>
+            <eb:To>
+                <eb:PartyId eb:type="REG">482913507</eb:PartyId>
+                <eb:Role>Practitioner</eb:Role>
+            </eb:To>
+            <eb:CPAId>unknown</eb:CPAId>
+            <eb:ConversationId>20260115-102920-751-0</eb:ConversationId>
+            <eb:Service>urn:oasis:names:tc:ebxml-msg:service</eb:Service>
+            <eb:Action>MessageError</eb:Action>
+            <eb:MessageData>
+                <eb:MessageId>20260115-102920-84523@b2b.test</eb:MessageId>
+                <eb:Timestamp>2026-01-15T09:29:20Z</eb:Timestamp>
+                <eb:RefToMessageId>conformance_tc_4_1_07</eb:RefToMessageId>
+            </eb:MessageData>
+            <eb:Description xml:lang="DE" >
+                {"handler":"Test Handler","handler-version":"1.0.0","application":"Test Application","application-version":"2.0.0"}
+            </eb:Description>
+        </eb:MessageHeader>
+        <eb:ErrorList SOAP:mustUnderstand="1" eb:highestSeverity="Error" eb:version="2.0">
+            <eb:Error eb:errorCode="ValueNotRecognized" eb:location="xpointer(//MessageHeader/CpaId)" eb:severity="Error">
+                <eb:Description xmlns:xml="http://www.w3.org/XML/1998/namespace" xml:lang="en">Message [conformance_tc_4_1_07] has an invalid CpaId [unknown]</eb:Description>
+            </eb:Error>
+        </eb:ErrorList>
+        <eb:SyncReply SOAP:actor="http://schemas.xmlsoap.org/soap/actor/next" SOAP:mustUnderstand="1" eb:version="2.0"/>
+    </SOAP:Header>
+    <SOAP:Body/>
+</SOAP:Envelope>

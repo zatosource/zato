@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd">
+ <SOAP-ENV:Header xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+ <eb:MessageHeader SOAP-ENV:mustUnderstand="1" eb:version="2.0" xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+ <eb:From>
+ <eb:PartyId eb:type="urn:zato:b2b:test:party-id-type:registry">NORTH</eb:PartyId>
+ </eb:From>
+ <eb:To>
+ <eb:PartyId eb:type="urn:zato:b2b:test:party-id-type:registry">SOUTH-C</eb:PartyId>
+ </eb:To>
+ <eb:CPAId>SOUTH_NORTH</eb:CPAId>
+ <eb:ConversationId>conversation</eb:ConversationId>
+ <eb:Service>http://b2b.test/payments/ebxml</eb:Service>
+ <eb:Action>PaymentAddRequest</eb:Action>
+ <eb:MessageData>
+ <eb:MessageId>20260115-102935-20713@127.0.0.1</eb:MessageId>
+ <eb:Timestamp>2026-01-15T10:29:35.207+01:00</eb:Timestamp>
+ </eb:MessageData>
+ <eb:DuplicateElimination/>
+ </eb:MessageHeader>
+ <eb:SyncReply SOAP-ENV:actor="http://schemas.xmlsoap.org/soap/actor/next" SOAP-ENV:mustUnderstand="1" eb:version="2.0" xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"/>
+ <eb:AckRequested SOAP-ENV:actor="urn:oasis:names:tc:ebxml-msg:actor:toPartyMSH" SOAP-ENV:mustUnderstand="1" eb:signed="false" eb:version="2.0" xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"/>
+ </SOAP-ENV:Header>
+ <SOAP-ENV:Body xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"/>
+</SOAP-ENV:Envelope>

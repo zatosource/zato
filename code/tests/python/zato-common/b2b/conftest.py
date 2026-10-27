@@ -16,6 +16,7 @@ import lxml.etree as etree
 import pytest
 
 # Zato
+from zato.common.test.b2b_interoperability import FixtureDirectory
 from zato.common.test.b2b_pki import rsa_parties
 from zato.common.typing_ import cast_
 
@@ -32,6 +33,9 @@ if 0:
 
 # Local copies of the official XSDs
 Schemas_Dir = os.path.join(os.path.dirname(__file__), 'fixtures', 'schemas')
+
+# The SOAP parts of the interoperability tests
+Messages_Dir = os.path.join(os.path.dirname(__file__), 'fixtures', 'messages')
 
 _xsd = 'http://www.w3.org/2001/XMLSchema'
 
@@ -123,6 +127,15 @@ def parties() -> 'TestParties':
     """ The certificate authority and the two parties the agreements of a session are between.
     """
     out = rsa_parties()
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def messages() -> 'FixtureDirectory':
+    """ The SOAP parts that the interoperability tests exchange.
+    """
+    out = FixtureDirectory(Messages_Dir)
     return out
 
 # ################################################################################################################################

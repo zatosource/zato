@@ -51,14 +51,15 @@ _message_header_location = location('MessageHeader')
 class Delivery:
     """ One received business message whose payloads are handed over to the application.
     """
-    message_id:      str
-    conversation_id: str
-    service:         str
-    service_type:    str
-    action:          str
-    from_party:      str
-    to_party:        str
-    payloads:        'payload_list'
+    message_id:        str
+    conversation_id:   str
+    ref_to_message_id: str
+    service:           str
+    service_type:      str
+    action:            str
+    from_party:        str
+    to_party:          str
+    payloads:          'payload_list'
 
 delivery_list = list[Delivery]
 

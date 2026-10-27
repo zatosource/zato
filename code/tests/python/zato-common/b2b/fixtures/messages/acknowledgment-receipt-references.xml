@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP:Envelope xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/" xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd">
+	<SOAP:Header xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd msg-header-2_0.xsd">
+		<eb:MessageHeader SOAP:mustUnderstand="1" eb:version="2.0">
+			<eb:From>
+				<eb:PartyId eb:type="REG">52817</eb:PartyId>
+				<eb:PartyId eb:type="ORG">600418277</eb:PartyId>
+				<eb:Role>SUMMARYreceiver</eb:Role>
+			</eb:From>
+			<eb:To>
+				<eb:PartyId eb:type="REG">31842</eb:PartyId>
+				<eb:PartyId eb:type="ORG">600512834</eb:PartyId>
+				<eb:Role>SUMMARYsender</eb:Role>
+			</eb:To>
+			<eb:CPAId>600418277_600512834_42</eb:CPAId>
+			<eb:ConversationId>bc9a2e06-fee5-4c7d-b5db-41c44fd4adf0</eb:ConversationId>
+			<eb:Service>urn:oasis:names:tc:ebxml-msg:service</eb:Service>
+			<eb:Action>Acknowledgment</eb:Action>
+			<eb:MessageData>
+				<eb:MessageId>0D1C6060-2F12-4F3A-9028-AB3A079A9D52</eb:MessageId>
+				<eb:Timestamp>2026-01-15T09:29:32</eb:Timestamp>
+			</eb:MessageData>
+		</eb:MessageHeader>
+		<eb:Acknowledgment eb:version="2.0" SOAP:mustUnderstand="1">
+			<eb:Timestamp>2026-01-15T09:29:30</eb:Timestamp>
+			<eb:RefToMessageId>5150c999-acb2-4c89-9fd5-dfe4d5e1e119</eb:RefToMessageId>
+			<ds:Reference xmlns:ds="http://www.w3.org/2000/09/xmldsig#" URI="">
+				<ds:Transforms>
+					<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+					<ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+				</ds:Transforms>
+				<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+				<ds:DigestValue></ds:DigestValue>
+			</ds:Reference>
+			<ds:Reference xmlns:ds="http://www.w3.org/2000/09/xmldsig#" URI="cid:recordpayload111@example.com">
+				<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+				<ds:DigestValue></ds:DigestValue>
+			</ds:Reference>
+		</eb:Acknowledgment>
+	</SOAP:Header>
+	<SOAP:Body>
+</SOAP:Body>
+</SOAP:Envelope>

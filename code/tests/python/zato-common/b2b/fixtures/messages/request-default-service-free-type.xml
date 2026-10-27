@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<soap-env:Envelope xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/" xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xmlns:soap-env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <soap-env:Header>
+    <eb:MessageHeader eb:version="2.0" soap-env:mustUnderstand="1">
+      <eb:From>
+        <eb:PartyId eb:type="qq">node0093</eb:PartyId>
+      </eb:From>
+      <eb:To>
+        <eb:PartyId eb:type="qq">NODE0417</eb:PartyId>
+      </eb:To>
+      <eb:CPAId>self</eb:CPAId>
+      <eb:ConversationId>1768469385217</eb:ConversationId>
+      <eb:Service eb:type="string">genericservice</eb:Service>
+      <eb:Action>genericaction</eb:Action>
+      <eb:MessageData>
+        <eb:MessageId>1768469385217@node0093.b2b.test</eb:MessageId>
+        <eb:Timestamp>2026-01-15T09:29:45</eb:Timestamp>
+      </eb:MessageData>
+    </eb:MessageHeader>
+    <eb:AckRequested eb:signed="false" eb:version="2.0" soap-env:actor="urn:oasis:names:tc:ebxml-msg:actor:toPartyMSH" soap-env:mustUnderstand="1">
+    </eb:AckRequested>
+  </soap-env:Header>
+  <soap-env:Body>
+    <eb:Manifest eb:version="2.0">
+      <eb:Reference xlink:href="cid:records/batch/RecordBatch.xml@node0093.b2b.test" xlink:type="simple">
+      </eb:Reference>
+      <MetaData xmlns="urn:zato:b2b:test:extension:storage" soap-env:mustUnderstand="0">
+        <StorageInfo soap-env:mustUnderstand="0">
+          <RecordId soap-env:mustUnderstand="0">sample.table.91</RecordId>
+          <MessageId>SAMPLE_POLLER_9998</MessageId>
+          <Arguments/>
+          <MessageRecipient/>
+        </StorageInfo>
+      </MetaData>
+      <ResponseChunking xmlns="urn:zato:b2b:test:extension:chunking" soap-env:mustUnderstand="0">
+      </ResponseChunking>
+      <PeerVersion xmlns="urn:zato:b2b:test:extension:storage">Test Node 0.1</PeerVersion>
+    </eb:Manifest>
+  </soap-env:Body>
+</soap-env:Envelope>

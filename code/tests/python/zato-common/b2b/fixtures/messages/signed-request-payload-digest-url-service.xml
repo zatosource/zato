@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd">
+<SOAP-ENV:Header
+xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd
+http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+<eb:MessageHeader
+xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" SOAP-ENV:mustUnderstand="1" eb:version="2.0"
+xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+<eb:From>
+<eb:PartyId eb:type="sourcePartyType">sourcePartyId</eb:PartyId>
+</eb:From>
+<eb:To>
+<eb:PartyId
+eb:type="destinationPartyType">destinationPartyId</eb:PartyId>
+</eb:To>
+<eb:CPAId>agreementid</eb:CPAId>
+<eb:ConversationId>conversationId</eb:ConversationId>
+<eb:Service>http://b2b.test/ebms/inbound</eb:Service>
+<eb:Action>action</eb:Action>
+<eb:MessageData>
+<eb:MessageId>20260115-172922-65310@192.0.2.10</eb:MessageId>
+<eb:Timestamp>2026-01-15T17:29:22.653+08:00</eb:Timestamp>
+</eb:MessageData>
+</eb:MessageHeader>
+</SOAP-ENV:Header>
+<SOAP-ENV:Body
+xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+<eb:Manifest
+xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" eb:version="2.0">
+<eb:Reference eb:id="Payload-0"
+xlink:href="cid:Payload-0" xlink:type="simple"/>
+</eb:Manifest>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

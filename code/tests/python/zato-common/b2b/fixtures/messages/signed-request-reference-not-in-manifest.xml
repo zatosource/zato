@@ -1,0 +1,33 @@
+<SOAP:Envelope xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/" xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd">
+	<SOAP:Header xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd msg-header-2_0.xsd">
+		<eb:MessageHeader SOAP:mustUnderstand="1" eb:version="2.0">
+			<eb:From>
+				<eb:PartyId eb:type="REG">31842</eb:PartyId>
+				<eb:PartyId eb:type="ORG">600512834</eb:PartyId>
+				<eb:Role>SUMMARYsender</eb:Role>
+			</eb:From>
+			<eb:To>
+				<eb:PartyId eb:type="REG">52817</eb:PartyId>
+				<eb:PartyId eb:type="ORG">600418277</eb:PartyId>
+				<eb:Role>SUMMARYreceiver</eb:Role>
+			</eb:To>
+			<eb:CPAId>TEST-GenericCPAId</eb:CPAId>
+			<eb:ConversationId>bc9a2e06-fee5-4c7d-b5db-41c44fd4adf0</eb:ConversationId>
+			<eb:Service>SUMMARY-S</eb:Service>
+			<eb:Action>SUMMARY</eb:Action>
+			<eb:MessageData>
+				<eb:MessageId> 5150c999-acb2-4c89-9fd5-dfe4d5e1e119</eb:MessageId>
+				<eb:Timestamp>2026-01-15T09:29:28</eb:Timestamp>
+			</eb:MessageData>
+			<eb:DuplicateElimination/>
+		</eb:MessageHeader>
+		<eb:AckRequested eb:version="2.0" SOAP:mustUnderstand="1" eb:signed="1"/>
+	</SOAP:Header>
+	<SOAP:Body xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd" xsi:schemaLocation="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+		<eb:Manifest eb:version="2.0">
+			<eb:Reference xlink:href="cid:recordpayload111@example.com" xlink:role="XLinkRole" xlink:type="simple">
+				<eb:Description xml:lang="fi">Summary</eb:Description>
+			</eb:Reference>
+		</eb:Manifest>
+	</SOAP:Body>
+</SOAP:Envelope>

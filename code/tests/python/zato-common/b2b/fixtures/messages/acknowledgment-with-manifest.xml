@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap-env:Envelope xmlns:soap-env="http://schemas.xmlsoap.org/soap/envelope/"
+	xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xlink="http://www.w3.org/1999/xlink"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd"
+	xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd">
+	<soap-env:Header>
+		<eb:MessageHeader
+			xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+			soap-env:mustUnderstand="1" eb:version="2.0">
+			<eb:From>
+				<eb:PartyId eb:type="qq">NODE0417</eb:PartyId>
+			</eb:From>
+			<eb:To>
+				<eb:PartyId eb:type="qq">node0093</eb:PartyId>
+			</eb:To>
+			<eb:CPAId>self</eb:CPAId>
+			<eb:ConversationId>1768469385217</eb:ConversationId>
+			<eb:Service>urn:oasis:names:tc:ebxml-msg:service</eb:Service>
+			<eb:Action>Acknowledgment</eb:Action>
+			<eb:MessageData>
+				<eb:MessageId>1768469386455@node0417.b2b.test</eb:MessageId>
+				<eb:Timestamp>2026-01-15T09:29:46</eb:Timestamp>
+				<eb:RefToMessageId>1768469385217@node0093.b2b.test</eb:RefToMessageId>
+			</eb:MessageData>
+		</eb:MessageHeader>
+		<eb:Acknowledgment
+			xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+			soap-env:mustUnderstand="1" eb:version="2.0">
+			<eb:Timestamp>2026-01-15T09:29:46</eb:Timestamp>
+			<eb:RefToMessageId>1768469385217@node0093.b2b.test</eb:RefToMessageId>
+		</eb:Acknowledgment>
+	</soap-env:Header>
+	<soap-env:Body>
+		<eb:Manifest
+			xmlns:eb="http://www.oasis-open.org/committees/ebxml-msg/schema/msg-header-2_0.xsd"
+			eb:version="2.0">
+			<eb:Reference xlink:href="cid:statusResponse@node0417.b2b.test"
+				xlink:type="simple" />
+		</eb:Manifest>
+	</soap-env:Body>
+</soap-env:Envelope>

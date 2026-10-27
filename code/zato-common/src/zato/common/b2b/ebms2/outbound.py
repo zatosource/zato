@@ -489,7 +489,10 @@ def _accept_acknowledgment(outbound:'OutboundMessage', elements:'MessageElements
     -> 'None':
     """ Accepts the acknowledgment of a message, which a signed message requires to be signed and to echo its references.
     """
-    acknowledgment = parse_acknowledgment(elements.acknowledgment)
+    try:
+        acknowledgment = parse_acknowledgment(elements.acknowledgment)
+    except B2BProtocolException:
+        return
 
     # An acknowledgment of another message says nothing about this one.
     if acknowledgment.ref_to_message_id != outbound.message_id:
@@ -541,7 +544,11 @@ def _accept_message(outbound:'OutboundMessage', headers:'strstrdict', body:'byte
         if header.message_data.ref_to_message_id != outbound.message_id:
             return
 
-        error_list = parse_error_list(elements.error_list)
+        try:
+            error_list = parse_error_list(elements.error_list)
+        except B2BProtocolException:
+            return
+
         first_error = error_list.errors[0]
 
         if error_list.highest_severity == Severity.Error:
@@ -560,7 +567,10 @@ def _accept_message(outbound:'OutboundMessage', headers:'strstrdict', body:'byte
 
     elif header.action == MSHService.Status_Response:
         if elements.status_response is not None:
-            outbound.status_response = parse_status_response(elements.status_response)
+            try:
+                outbound.status_response = parse_status_response(elements.status_response)
+            except B2BProtocolException:
+                return
             _complete(outbound, OutboundState.Answered, SignalKind.Status, FinalState.Answered)
 
 # ################################################################################################################################

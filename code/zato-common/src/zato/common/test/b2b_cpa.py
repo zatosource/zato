@@ -27,11 +27,13 @@ from zato.common.util.xml_.core import qname, to_timestamp
 if 0:
     from datetime import datetime
     from cryptography.x509 import Certificate
+    from zato.common.b2b.ebms2.common import party_id_list
     from zato.common.test.b2b_pki import TestParties
     from zato.common.typing_ import any_
     any_ = any_
     Certificate = Certificate
     datetime = datetime
+    party_id_list = party_id_list
     TestParties = TestParties
 
 # ################################################################################################################################
@@ -140,6 +142,9 @@ class PartySettings:
     endpoint:    str
     certificate: 'Certificate'
 
+    # Further identifiers of the same party, each under a naming scheme of its own.
+    other_party_ids: 'party_id_list'
+
     # The business action bindings of the party, by direction.
     can_send:    bool = False
     can_receive: bool = False
@@ -195,6 +200,7 @@ def new_settings(parties:'TestParties', now:'datetime') -> 'AgreementSettings':
     sender.role = Sender_Role
     sender.endpoint = Sender_Endpoint
     sender.certificate = parties.sender.certificate
+    sender.other_party_ids = []
     sender.can_send = True
 
     receiver = PartySettings()
@@ -203,6 +209,7 @@ def new_settings(parties:'TestParties', now:'datetime') -> 'AgreementSettings':
     receiver.role = Receiver_Role
     receiver.endpoint = Receiver_Endpoint
     receiver.certificate = parties.receiver.certificate
+    receiver.other_party_ids = []
     receiver.can_receive = True
 
     msh_channel = ChannelSettings()
@@ -446,6 +453,11 @@ def _add_party(parent:'any_', party:'PartySettings', other:'PartySettings', sett
 
     if party.party_id_type:
         _set(party_id, 'type', party.party_id_type)
+
+    for other_party_id in party.other_party_ids:
+        other_element = _add(element, 'PartyId', other_party_id.value)
+        if other_party_id.id_type:
+            _set(other_element, 'type', other_party_id.id_type)
 
     party_ref = _add(element, 'PartyRef')
     _add_xlink(party_ref, _party_ref_prefix + party.name)
