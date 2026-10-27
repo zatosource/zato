@@ -1,17 +1,17 @@
-zatoPortal.layouts = {};
+zatoApp.layouts = {};
 
-zatoPortal.layouts.config = {
+zatoApp.layouts.config = {
     layoutEntryAttribute: 'data-layout-entry',
-    cardSelector: '.portal-operation',
-    sectionSelector: '.portal-group',
-    masterSelector: '.portal-layout-master',
-    detailSelector: '.portal-layout-detail',
-    activeCardSelector: '.portal-operation.portal-layout-active',
-    activeClass: 'portal-layout-active',
+    cardSelector: '.app-operation',
+    sectionSelector: '.app-group',
+    masterSelector: '.app-layout-master',
+    detailSelector: '.app-layout-detail',
+    activeCardSelector: '.app-operation.app-layout-active',
+    activeClass: 'app-layout-active',
     rowScrollBlock: 'nearest',
-    listSelector: '.portal-layout-list',
-    rowSelector: '.portal-layout-row',
-    excludedClass: 'portal-layout-excluded',
+    listSelector: '.app-layout-list',
+    rowSelector: '.app-layout-row',
+    excludedClass: 'app-layout-excluded',
     filterPlaceholder: 'Filter',
     clearLabel: 'Clear',
     filterIconCircle: {'cx': '11', 'cy': '11', 'r': '7'},
@@ -19,37 +19,37 @@ zatoPortal.layouts.config = {
     clearIconStrokes: ['M18 6 6 18', 'm6 6 12 12'],
     escapeKey: 'Escape',
     enterKey: 'Enter',
-    resizerClass: 'portal-layout-resizer',
-    gripClass: 'portal-layout-grip',
+    resizerClass: 'app-layout-resizer',
+    gripClass: 'app-layout-grip',
     resizeLabel: 'Resize',
-    resizingClass: 'portal-body portal-resizing-layout',
-    idleClass: 'portal-body',
-    storageKey: 'zato.openapi.portal.master.width',
-    widthVariable: '--portal-layout-master-width',
+    resizingClass: 'app-body app-resizing-layout',
+    idleClass: 'app-body',
+    storageKey: 'zato.openapi.app.master.width',
+    widthVariable: '--app-layout-master-width',
     widthUnit: 'px',
     widthMinimum: 240,
     widthMaximumShare: 0.6,
     primaryButton: 0,
-    masterTopClass: 'portal-layout-master-top',
-    toggleClass: 'portal-sidebar-toggle portal-layout-toggle',
-    toggleSelector: '.portal-layout-toggle',
-    contentId: 'portal-content',
-    collapsedContentClass: 'portal-content portal-layout-master-collapsed',
-    expandedContentClass: 'portal-content',
-    collapsedStorageKey: 'zato.openapi.portal.master.collapsed',
+    masterTopClass: 'app-layout-master-top',
+    toggleClass: 'app-sidebar-toggle app-layout-toggle',
+    toggleSelector: '.app-layout-toggle',
+    contentId: 'app-content',
+    collapsedContentClass: 'app-content app-layout-master-collapsed',
+    expandedContentClass: 'app-content',
+    collapsedStorageKey: 'zato.openapi.app.master.collapsed',
     collapsedValue: '1',
     expandedValue: '0',
     collapseLabel: 'Collapse',
     expandLabel: 'Expand',
-    iconCollapseClass: 'portal-sidebar-icon portal-layout-icon-collapse',
-    iconExpandClass: 'portal-sidebar-icon portal-layout-icon-expand',
+    iconCollapseClass: 'app-sidebar-icon app-layout-icon-collapse',
+    iconExpandClass: 'app-sidebar-icon app-layout-icon-expand',
 };
 
-zatoPortal.layouts.collapse = {
+zatoApp.layouts.collapse = {
     isCollapsed: false,
 };
 
-zatoPortal.layouts.drag = {
+zatoApp.layouts.drag = {
     isDragging: false,
     startX: 0,
     startWidth: 0,
@@ -59,9 +59,9 @@ zatoPortal.layouts.drag = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.init = function() {
+zatoApp.layouts.init = function() {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
 
     // The width of an earlier visit applies to every group, localStorage returning null for a key never stored
     var stored = localStorage.getItem(config.storageKey);
@@ -72,17 +72,17 @@ zatoPortal.layouts.init = function() {
 
     // The list is collapsed or not in every group alike, as it was left on an earlier visit
     var storedCollapsed = localStorage.getItem(config.collapsedStorageKey);
-    zatoPortal.layouts.collapse.isCollapsed = storedCollapsed === config.collapsedValue;
+    zatoApp.layouts.collapse.isCollapsed = storedCollapsed === config.collapsedValue;
 
-    zatoPortal.layouts.applyCollapsed();
+    zatoApp.layouts.applyCollapsed();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.applyCollapsed = function() {
+zatoApp.layouts.applyCollapsed = function() {
 
-    var config = zatoPortal.layouts.config;
-    var isCollapsed = zatoPortal.layouts.collapse.isCollapsed;
+    var config = zatoApp.layouts.config;
+    var isCollapsed = zatoApp.layouts.collapse.isCollapsed;
 
     var content = document.getElementById(config.contentId);
     content.className = isCollapsed ? config.collapsedContentClass : config.expandedContentClass;
@@ -90,16 +90,16 @@ zatoPortal.layouts.applyCollapsed = function() {
     var toggles = document.querySelectorAll(config.toggleSelector);
 
     for(var toggleIndex = 0; toggleIndex < toggles.length; toggleIndex++) {
-        zatoPortal.layouts.markToggle(toggles[toggleIndex]);
+        zatoApp.layouts.markToggle(toggles[toggleIndex]);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.markToggle = function(toggle) {
+zatoApp.layouts.markToggle = function(toggle) {
 
-    var config = zatoPortal.layouts.config;
-    var isCollapsed = zatoPortal.layouts.collapse.isCollapsed;
+    var config = zatoApp.layouts.config;
+    var isCollapsed = zatoApp.layouts.collapse.isCollapsed;
     var label = isCollapsed ? config.expandLabel : config.collapseLabel;
 
     toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
@@ -109,50 +109,50 @@ zatoPortal.layouts.markToggle = function(toggle) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.buildToggle = function() {
+zatoApp.layouts.buildToggle = function() {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
 
-    var toggle = zatoPortal.render.createElement('button', config.toggleClass);
+    var toggle = zatoApp.render.createElement('button', config.toggleClass);
     toggle.type = 'button';
-    toggle.addEventListener('click', zatoPortal.layouts.onToggleClick);
+    toggle.addEventListener('click', zatoApp.layouts.onToggleClick);
 
-    var collapseIcon = zatoPortal.sidebar.buildIcon(zatoPortal.sidebar.config.iconCollapseChevron, config.iconCollapseClass);
-    var expandIcon = zatoPortal.sidebar.buildIcon(zatoPortal.sidebar.config.iconExpandChevron, config.iconExpandClass);
+    var collapseIcon = zatoApp.sidebar.buildIcon(zatoApp.sidebar.config.iconCollapseChevron, config.iconCollapseClass);
+    var expandIcon = zatoApp.sidebar.buildIcon(zatoApp.sidebar.config.iconExpandChevron, config.iconExpandClass);
 
     toggle.appendChild(collapseIcon);
     toggle.appendChild(expandIcon);
 
-    zatoPortal.layouts.markToggle(toggle);
+    zatoApp.layouts.markToggle(toggle);
 
     return toggle;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onToggleClick = function() {
+zatoApp.layouts.onToggleClick = function() {
 
-    var config = zatoPortal.layouts.config;
-    var collapse = zatoPortal.layouts.collapse;
+    var config = zatoApp.layouts.config;
+    var collapse = zatoApp.layouts.collapse;
 
     collapse.isCollapsed = !collapse.isCollapsed;
     localStorage.setItem(config.collapsedStorageKey, collapse.isCollapsed ? config.collapsedValue : config.expandedValue);
 
-    zatoPortal.layouts.applyCollapsed();
+    zatoApp.layouts.applyCollapsed();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.apply = function(section, group) {
+zatoApp.layouts.apply = function(section, group) {
 
-    var frame = zatoPortal.render.createElement('div', 'portal-layout-frame');
-    var master = zatoPortal.layouts.buildEntryButtons(group);
-    var resizer = zatoPortal.layouts.buildResizer();
-    var detail = zatoPortal.render.createElement('div', 'portal-layout-detail');
+    var frame = zatoApp.render.createElement('div', 'app-layout-frame');
+    var master = zatoApp.layouts.buildEntryButtons(group);
+    var resizer = zatoApp.layouts.buildResizer();
+    var detail = zatoApp.render.createElement('div', 'app-layout-detail');
 
     // The list of operations stands next to the detail column that holds the cards ..
-    var cards = zatoPortal.layouts.getCards(section);
-    zatoPortal.layouts.moveCards(cards, detail);
+    var cards = zatoApp.layouts.getCards(section);
+    zatoApp.layouts.moveCards(cards, detail);
 
     frame.appendChild(master);
     frame.appendChild(resizer);
@@ -160,18 +160,18 @@ zatoPortal.layouts.apply = function(section, group) {
     section.appendChild(frame);
 
     // .. of which the first one is shown.
-    zatoPortal.layouts.showOnly(section, cards[0]);
+    zatoApp.layouts.showOnly(section, cards[0]);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.activate = function(entryId) {
+zatoApp.layouts.activate = function(entryId) {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
     var card = document.getElementById(entryId);
     var section = card.closest(config.sectionSelector);
 
-    zatoPortal.layouts.showOnly(section, card);
+    zatoApp.layouts.showOnly(section, card);
 
     // A card shown anew starts at its top ..
     var detail = section.querySelector(config.detailSelector);
@@ -182,28 +182,28 @@ zatoPortal.layouts.activate = function(entryId) {
     row.scrollIntoView({block: config.rowScrollBlock});
 
     // .. and the address and the specification window follow it.
-    zatoPortal.layouts.onCardShown(entryId);
+    zatoApp.layouts.onCardShown(entryId);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onGroupShown = function(section) {
+zatoApp.layouts.onGroupShown = function(section) {
 
-    var card = section.querySelector(zatoPortal.layouts.config.activeCardSelector);
-    zatoPortal.layouts.onCardShown(card.id);
+    var card = section.querySelector(zatoApp.layouts.config.activeCardSelector);
+    zatoApp.layouts.onCardShown(card.id);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onCardShown = function(entryId) {
-    zatoPortal.links.update(entryId);
+zatoApp.layouts.onCardShown = function(entryId) {
+    zatoApp.links.update(entryId);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.getCards = function(section) {
+zatoApp.layouts.getCards = function(section) {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
     var found = section.querySelectorAll(config.cardSelector);
     var out = [];
 
@@ -216,9 +216,9 @@ zatoPortal.layouts.getCards = function(section) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.setEntryVisible = function(entryId, isVisible) {
+zatoApp.layouts.setEntryVisible = function(entryId, isVisible) {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
     var selector = '[' + config.layoutEntryAttribute + '="' + entryId + '"]';
     var elements = document.querySelectorAll(selector);
 
@@ -230,17 +230,17 @@ zatoPortal.layouts.setEntryVisible = function(entryId, isVisible) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.buildEntryButton = function(entry) {
+zatoApp.layouts.buildEntryButton = function(entry) {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
 
-    var button = zatoPortal.render.createElement('button', 'portal-layout-row');
+    var button = zatoApp.render.createElement('button', 'app-layout-row');
     button.type = 'button';
     button.setAttribute(config.layoutEntryAttribute, entry.id);
-    button.addEventListener('click', zatoPortal.layouts.onEntryButtonClick);
+    button.addEventListener('click', zatoApp.layouts.onEntryButtonClick);
 
-    var chip = zatoPortal.render.createMethodChip(entry.method);
-    var path = zatoPortal.render.buildPath(entry.path, 'portal-layout-entry-path');
+    var chip = zatoApp.render.createMethodChip(entry.method);
+    var path = zatoApp.render.buildPath(entry.path, 'app-layout-entry-path');
 
     button.appendChild(chip);
     button.appendChild(path);
@@ -250,23 +250,23 @@ zatoPortal.layouts.buildEntryButton = function(entry) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.buildEntryButtons = function(group) {
+zatoApp.layouts.buildEntryButtons = function(group) {
 
-    var config = zatoPortal.layouts.config;
-    var container = zatoPortal.render.createElement('div', 'portal-layout-master');
+    var config = zatoApp.layouts.config;
+    var container = zatoApp.render.createElement('div', 'app-layout-master');
 
     // The filter and the button that collapses the list stay above the rows while they scroll
-    var masterTop = zatoPortal.render.createElement('div', config.masterTopClass);
-    var filter = zatoPortal.layouts.buildFilter();
-    var toggle = zatoPortal.layouts.buildToggle();
-    var list = zatoPortal.render.createElement('div', 'portal-layout-list');
+    var masterTop = zatoApp.render.createElement('div', config.masterTopClass);
+    var filter = zatoApp.layouts.buildFilter();
+    var toggle = zatoApp.layouts.buildToggle();
+    var list = zatoApp.render.createElement('div', 'app-layout-list');
 
     masterTop.appendChild(filter);
     masterTop.appendChild(toggle);
 
     for(var entryIndex = 0; entryIndex < group.entries.length; entryIndex++) {
         var entry = group.entries[entryIndex];
-        var button = zatoPortal.layouts.buildEntryButton(entry);
+        var button = zatoApp.layouts.buildEntryButton(entry);
         list.appendChild(button);
     }
 
@@ -278,36 +278,36 @@ zatoPortal.layouts.buildEntryButtons = function(group) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.buildFilter = function() {
+zatoApp.layouts.buildFilter = function() {
 
-    var config = zatoPortal.layouts.config;
-    var panels = zatoPortal.panels;
+    var config = zatoApp.layouts.config;
+    var panels = zatoApp.panels;
     var viewBox = panels.config.iconViewBox;
 
-    var box = zatoPortal.render.createElement('div', 'portal-filter-box portal-layout-filter');
+    var box = zatoApp.render.createElement('div', 'app-filter-box app-layout-filter');
 
-    var icon = panels.createSvgElement('svg', {'class': 'portal-filter-icon', 'viewBox': viewBox});
+    var icon = panels.createSvgElement('svg', {'class': 'app-filter-icon', 'viewBox': viewBox});
     var circle = panels.createSvgElement('circle', config.filterIconCircle);
     var handle = panels.createSvgElement('path', {'d': config.filterIconHandle});
 
     icon.appendChild(circle);
     icon.appendChild(handle);
 
-    var input = zatoPortal.render.createElement('input', 'portal-filter');
+    var input = zatoApp.render.createElement('input', 'app-filter');
     input.type = 'text';
     input.placeholder = config.filterPlaceholder;
     input.autocomplete = 'off';
     input.spellcheck = false;
-    input.addEventListener('input', zatoPortal.layouts.onFilterInput);
-    input.addEventListener('keydown', zatoPortal.layouts.onFilterKeyDown);
+    input.addEventListener('input', zatoApp.layouts.onFilterInput);
+    input.addEventListener('keydown', zatoApp.layouts.onFilterKeyDown);
 
-    var clear = zatoPortal.render.createElement('button', 'portal-filter-clear');
+    var clear = zatoApp.render.createElement('button', 'app-filter-clear');
     clear.type = 'button';
     clear.hidden = true;
     clear.setAttribute('aria-label', config.clearLabel);
-    clear.addEventListener('click', zatoPortal.layouts.onFilterClearClick);
+    clear.addEventListener('click', zatoApp.layouts.onFilterClearClick);
 
-    var clearIcon = panels.createSvgElement('svg', {'class': 'portal-filter-clear-icon', 'viewBox': viewBox});
+    var clearIcon = panels.createSvgElement('svg', {'class': 'app-filter-clear-icon', 'viewBox': viewBox});
 
     for(var strokeIndex = 0; strokeIndex < config.clearIconStrokes.length; strokeIndex++) {
         var stroke = panels.createSvgElement('path', {'d': config.clearIconStrokes[strokeIndex]});
@@ -325,9 +325,9 @@ zatoPortal.layouts.buildFilter = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onFilterInput = function(event) {
+zatoApp.layouts.onFilterInput = function(event) {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
     var input = event.target;
     var box = input.parentNode;
     var master = input.closest(config.masterSelector);
@@ -342,8 +342,8 @@ zatoPortal.layouts.onFilterInput = function(event) {
     for(var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         var row = rows[rowIndex];
         var entryId = row.getAttribute(config.layoutEntryAttribute);
-        var entry = zatoPortal.state.entriesById[entryId];
-        var searchText = zatoPortal.render.getSearchText(entry);
+        var entry = zatoApp.state.entriesById[entryId];
+        var searchText = zatoApp.render.getSearchText(entry);
 
         row.hidden = !searchText.includes(query);
     }
@@ -351,9 +351,9 @@ zatoPortal.layouts.onFilterInput = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onFilterKeyDown = function(event) {
+zatoApp.layouts.onFilterKeyDown = function(event) {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
     var input = event.target;
 
     // Escape empties the filter ..
@@ -389,7 +389,7 @@ zatoPortal.layouts.onFilterKeyDown = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onFilterClearClick = function(event) {
+zatoApp.layouts.onFilterClearClick = function(event) {
 
     var input = event.currentTarget.parentNode.querySelector('input');
 
@@ -401,20 +401,20 @@ zatoPortal.layouts.onFilterClearClick = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onEntryButtonClick = function(event) {
+zatoApp.layouts.onEntryButtonClick = function(event) {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
     var entryId = event.currentTarget.getAttribute(config.layoutEntryAttribute);
 
-    zatoPortal.layouts.activate(entryId);
+    zatoApp.layouts.activate(entryId);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.showOnly = function(section, card) {
+zatoApp.layouts.showOnly = function(section, card) {
 
-    var config = zatoPortal.layouts.config;
-    var cards = zatoPortal.layouts.getCards(section);
+    var config = zatoApp.layouts.config;
+    var cards = zatoApp.layouts.getCards(section);
     var buttonSelector = '[' + config.layoutEntryAttribute + ']';
     var buttons = section.querySelectorAll(buttonSelector);
 
@@ -432,7 +432,7 @@ zatoPortal.layouts.showOnly = function(section, card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.moveCards = function(cards, target) {
+zatoApp.layouts.moveCards = function(cards, target) {
 
     for(var cardIndex = 0; cardIndex < cards.length; cardIndex++) {
         target.appendChild(cards[cardIndex]);
@@ -441,21 +441,21 @@ zatoPortal.layouts.moveCards = function(cards, target) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.buildResizer = function() {
+zatoApp.layouts.buildResizer = function() {
 
-    var config = zatoPortal.layouts.config;
+    var config = zatoApp.layouts.config;
 
-    var resizer = zatoPortal.render.createElement('div', config.resizerClass);
-    var grip = zatoPortal.render.createElement('span', config.gripClass);
+    var resizer = zatoApp.render.createElement('div', config.resizerClass);
+    var grip = zatoApp.render.createElement('span', config.gripClass);
 
     resizer.setAttribute('role', 'separator');
     resizer.setAttribute('aria-orientation', 'vertical');
     resizer.setAttribute('aria-label', config.resizeLabel);
 
-    resizer.addEventListener('pointerdown', zatoPortal.layouts.onPointerDown);
-    resizer.addEventListener('pointermove', zatoPortal.layouts.onPointerMove);
-    resizer.addEventListener('pointerup', zatoPortal.layouts.onPointerUp);
-    resizer.addEventListener('pointercancel', zatoPortal.layouts.onPointerUp);
+    resizer.addEventListener('pointerdown', zatoApp.layouts.onPointerDown);
+    resizer.addEventListener('pointermove', zatoApp.layouts.onPointerMove);
+    resizer.addEventListener('pointerup', zatoApp.layouts.onPointerUp);
+    resizer.addEventListener('pointercancel', zatoApp.layouts.onPointerUp);
 
     resizer.appendChild(grip);
 
@@ -464,10 +464,10 @@ zatoPortal.layouts.buildResizer = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onPointerDown = function(event) {
+zatoApp.layouts.onPointerDown = function(event) {
 
-    var config = zatoPortal.layouts.config;
-    var drag = zatoPortal.layouts.drag;
+    var config = zatoApp.layouts.config;
+    var drag = zatoApp.layouts.drag;
 
     // Only the primary button starts a drag ..
     if(event.button !== config.primaryButton) {
@@ -496,10 +496,10 @@ zatoPortal.layouts.onPointerDown = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onPointerMove = function(event) {
+zatoApp.layouts.onPointerMove = function(event) {
 
-    var config = zatoPortal.layouts.config;
-    var drag = zatoPortal.layouts.drag;
+    var config = zatoApp.layouts.config;
+    var drag = zatoApp.layouts.drag;
 
     if(!drag.isDragging) {
         return;
@@ -514,10 +514,10 @@ zatoPortal.layouts.onPointerMove = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.onPointerUp = function(event) {
+zatoApp.layouts.onPointerUp = function(event) {
 
-    var config = zatoPortal.layouts.config;
-    var drag = zatoPortal.layouts.drag;
+    var config = zatoApp.layouts.config;
+    var drag = zatoApp.layouts.drag;
 
     if(!drag.isDragging) {
         return;
@@ -533,4 +533,4 @@ zatoPortal.layouts.onPointerUp = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.layouts.init();
+zatoApp.layouts.init();

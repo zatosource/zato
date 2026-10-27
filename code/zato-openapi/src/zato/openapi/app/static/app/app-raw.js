@@ -1,36 +1,36 @@
-zatoPortal.raw = {};
+zatoApp.raw = {};
 
-zatoPortal.raw.config = {
+zatoApp.raw.config = {
     protocol: 'HTTP/1.1',
     headerSeparator: ': ',
     lineSeparator: '\n',
     sectionSeparator: '\n\n',
     querySeparator: '?',
-    cardSelector: '.portal-operation',
-    editorSelector: '.portal-editor',
-    inputSelector: '.portal-editor-input',
-    requestRawSelector: '.portal-raw-request',
-    requestSwitchSelector: '.portal-request-bar .portal-switch-input',
-    responseBodySelector: '.portal-response-body',
-    responseRawSelector: '.portal-raw-response',
-    responseSwitchSelector: '.portal-response-bar .portal-switch-input',
-    headClass: 'portal-raw-head',
-    bodyClass: 'portal-raw-body',
+    cardSelector: '.app-operation',
+    editorSelector: '.app-editor',
+    inputSelector: '.app-editor-input',
+    requestRawSelector: '.app-raw-request',
+    requestSwitchSelector: '.app-request-bar .app-switch-input',
+    responseBodySelector: '.app-response-body',
+    responseRawSelector: '.app-raw-response',
+    responseSwitchSelector: '.app-response-bar .app-switch-input',
+    headClass: 'app-raw-head',
+    bodyClass: 'app-raw-body',
     startSeparator: ' ',
-    methodClassPrefix: 'portal-raw-method portal-raw-method-',
-    targetClass: 'portal-raw-target',
-    protocolClass: 'portal-raw-protocol',
-    statusOkClass: 'portal-raw-status-ok',
-    statusErrorClass: 'portal-raw-status-error',
-    reasonClass: 'portal-raw-reason',
-    headerNameClass: 'portal-raw-header-name',
-    headerSeparatorClass: 'portal-raw-header-separator',
-    headerValueClass: 'portal-raw-header-value',
+    methodClassPrefix: 'app-raw-method app-raw-method-',
+    targetClass: 'app-raw-target',
+    protocolClass: 'app-raw-protocol',
+    statusOkClass: 'app-raw-status-ok',
+    statusErrorClass: 'app-raw-status-error',
+    reasonClass: 'app-raw-reason',
+    headerNameClass: 'app-raw-header-name',
+    headerSeparatorClass: 'app-raw-header-separator',
+    headerValueClass: 'app-raw-header-value',
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.getHeaderObject = function(headers) {
+zatoApp.raw.getHeaderObject = function(headers) {
 
     // Our response to produce
     var out = {};
@@ -50,10 +50,10 @@ zatoPortal.raw.getHeaderObject = function(headers) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.buildRequest = function(entry, text, pathValues, headers) {
+zatoApp.raw.buildRequest = function(entry, text, pathValues, headers) {
 
-    var config = zatoPortal.raw.config;
-    var request = zatoPortal.invoke.buildRequest(entry, text, pathValues);
+    var config = zatoApp.raw.config;
+    var request = zatoApp.invoke.buildRequest(entry, text, pathValues);
     var target = request.path;
 
     if(request.query !== '') {
@@ -62,7 +62,7 @@ zatoPortal.raw.buildRequest = function(entry, text, pathValues, headers) {
 
     var lines = [entry.method.toUpperCase() + ' ' + target + ' ' + config.protocol];
 
-    var headerObject = zatoPortal.invoke.getRequestHeaders(entry.operation, request, headers);
+    var headerObject = zatoApp.invoke.getRequestHeaders(entry.operation, request, headers);
     var names = Object.keys(headerObject);
 
     for(var nameIndex = 0; nameIndex < names.length; nameIndex++) {
@@ -84,12 +84,12 @@ zatoPortal.raw.buildRequest = function(entry, text, pathValues, headers) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.buildResponse = function(result) {
+zatoApp.raw.buildResponse = function(result) {
 
-    var config = zatoPortal.raw.config;
+    var config = zatoApp.raw.config;
 
-    // A request that never reached the portal has no status line and no headers, only the reason
-    if(result.status === zatoPortal.invoke.config.networkErrorStatusCode) {
+    // A request that never reached the app has no status line and no headers, only the reason
+    if(result.status === zatoApp.invoke.config.networkErrorStatusCode) {
         var failure = {head: '', body: result.text, startClasses: []};
         return failure;
     }
@@ -111,9 +111,9 @@ zatoPortal.raw.buildResponse = function(result) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.getText = function(raw) {
+zatoApp.raw.getText = function(raw) {
 
-    var config = zatoPortal.raw.config;
+    var config = zatoApp.raw.config;
 
     if(raw.head === '') {
         return raw.body;
@@ -129,9 +129,9 @@ zatoPortal.raw.getText = function(raw) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.fillStartLine = function(head, line, startClasses) {
+zatoApp.raw.fillStartLine = function(head, line, startClasses) {
 
-    var config = zatoPortal.raw.config;
+    var config = zatoApp.raw.config;
     var rest = line;
 
     // The start line has as many parts as it has classes, and the last part keeps any spaces of its own,
@@ -142,11 +142,11 @@ zatoPortal.raw.fillStartLine = function(head, line, startClasses) {
         var isLast = partIndex === startClasses.length - 1;
 
         if(isLast || separatorIndex === -1) {
-            head.appendChild(zatoPortal.panels.createElement('span', startClasses[partIndex], rest));
+            head.appendChild(zatoApp.panels.createElement('span', startClasses[partIndex], rest));
             return;
         }
 
-        head.appendChild(zatoPortal.panels.createElement('span', startClasses[partIndex], rest.slice(0, separatorIndex)));
+        head.appendChild(zatoApp.panels.createElement('span', startClasses[partIndex], rest.slice(0, separatorIndex)));
         head.appendChild(document.createTextNode(config.startSeparator));
 
         rest = rest.slice(separatorIndex + config.startSeparator.length);
@@ -155,25 +155,25 @@ zatoPortal.raw.fillStartLine = function(head, line, startClasses) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.fillHeaderLine = function(head, line) {
+zatoApp.raw.fillHeaderLine = function(head, line) {
 
-    var config = zatoPortal.raw.config;
+    var config = zatoApp.raw.config;
 
     // A value can hold the separator itself, so only the first one ends the name
     var separatorIndex = line.indexOf(config.headerSeparator);
     var name = line.slice(0, separatorIndex);
     var value = line.slice(separatorIndex + config.headerSeparator.length);
 
-    head.appendChild(zatoPortal.panels.createElement('span', config.headerNameClass, name));
-    head.appendChild(zatoPortal.panels.createElement('span', config.headerSeparatorClass, config.headerSeparator));
-    head.appendChild(zatoPortal.panels.createElement('span', config.headerValueClass, value));
+    head.appendChild(zatoApp.panels.createElement('span', config.headerNameClass, name));
+    head.appendChild(zatoApp.panels.createElement('span', config.headerSeparatorClass, config.headerSeparator));
+    head.appendChild(zatoApp.panels.createElement('span', config.headerValueClass, value));
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.fillHead = function(head, raw) {
+zatoApp.raw.fillHead = function(head, raw) {
 
-    var config = zatoPortal.raw.config;
+    var config = zatoApp.raw.config;
 
     if(raw.head === '') {
         return;
@@ -181,28 +181,28 @@ zatoPortal.raw.fillHead = function(head, raw) {
 
     var lines = raw.head.split(config.lineSeparator);
 
-    zatoPortal.raw.fillStartLine(head, lines[0], raw.startClasses);
+    zatoApp.raw.fillStartLine(head, lines[0], raw.startClasses);
 
     for(var lineIndex = 1; lineIndex < lines.length; lineIndex++) {
         head.appendChild(document.createTextNode(config.lineSeparator));
-        zatoPortal.raw.fillHeaderLine(head, lines[lineIndex]);
+        zatoApp.raw.fillHeaderLine(head, lines[lineIndex]);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.fill = function(element, raw) {
+zatoApp.raw.fill = function(element, raw) {
 
-    var config = zatoPortal.raw.config;
+    var config = zatoApp.raw.config;
 
     element.textContent = '';
 
-    var head = zatoPortal.panels.createElement('span', config.headClass);
-    var body = zatoPortal.panels.createElement('span', config.bodyClass);
+    var head = zatoApp.panels.createElement('span', config.headClass);
+    var body = zatoApp.panels.createElement('span', config.bodyClass);
 
     // The head is colored part by part, and the body as the editor colors it, whether it is valid JSON or not
-    zatoPortal.raw.fillHead(head, raw);
-    zatoPortal.highlight.fill(body, raw.body);
+    zatoApp.raw.fillHead(head, raw);
+    zatoApp.highlight.fill(body, raw.body);
 
     element.appendChild(head);
 
@@ -217,47 +217,47 @@ zatoPortal.raw.fill = function(element, raw) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.getCardRequest = function(card) {
+zatoApp.raw.getCardRequest = function(card) {
 
-    var config = zatoPortal.raw.config;
-    var entry = zatoPortal.state.entriesById[card.id];
-    var exchange = zatoPortal.state.exchanges[card.id];
+    var config = zatoApp.raw.config;
+    var entry = zatoApp.state.entriesById[card.id];
+    var exchange = zatoApp.state.exchanges[card.id];
     var input = card.querySelector(config.inputSelector);
 
-    var pathValues = zatoPortal.invoke.getPathValues(card);
+    var pathValues = zatoApp.invoke.getPathValues(card);
 
-    var out = zatoPortal.raw.buildRequest(entry, input.value, pathValues, exchange.headers);
+    var out = zatoApp.raw.buildRequest(entry, input.value, pathValues, exchange.headers);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.isRequestRaw = function(card) {
-    var out = card.querySelector(zatoPortal.raw.config.requestSwitchSelector).checked;
+zatoApp.raw.isRequestRaw = function(card) {
+    var out = card.querySelector(zatoApp.raw.config.requestSwitchSelector).checked;
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.isResponseRaw = function(card) {
-    var out = card.querySelector(zatoPortal.raw.config.responseSwitchSelector).checked;
+zatoApp.raw.isResponseRaw = function(card) {
+    var out = card.querySelector(zatoApp.raw.config.responseSwitchSelector).checked;
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.refreshRequest = function(card) {
+zatoApp.raw.refreshRequest = function(card) {
 
-    var config = zatoPortal.raw.config;
-    var isRaw = zatoPortal.raw.isRequestRaw(card);
+    var config = zatoApp.raw.config;
+    var isRaw = zatoApp.raw.isRequestRaw(card);
 
     var editor = card.querySelector(config.editorSelector);
     var rawElement = card.querySelector(config.requestRawSelector);
 
     // The raw request is read-only and is built anew from the editor and the headers each time it is shown
     if(isRaw) {
-        var raw = zatoPortal.raw.getCardRequest(card);
-        zatoPortal.raw.fill(rawElement, raw);
+        var raw = zatoApp.raw.getCardRequest(card);
+        zatoApp.raw.fill(rawElement, raw);
     }
 
     editor.hidden = isRaw;
@@ -266,18 +266,18 @@ zatoPortal.raw.refreshRequest = function(card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.refreshResponse = function(card) {
+zatoApp.raw.refreshResponse = function(card) {
 
-    var config = zatoPortal.raw.config;
-    var isRaw = zatoPortal.raw.isResponseRaw(card);
-    var result = zatoPortal.state.exchanges[card.id].result;
+    var config = zatoApp.raw.config;
+    var isRaw = zatoApp.raw.isResponseRaw(card);
+    var result = zatoApp.state.exchanges[card.id].result;
 
     var bodyElement = card.querySelector(config.responseBodySelector);
     var rawElement = card.querySelector(config.responseRawSelector);
 
     if(isRaw) {
-        var raw = zatoPortal.raw.buildResponse(result);
-        zatoPortal.raw.fill(rawElement, raw);
+        var raw = zatoApp.raw.buildResponse(result);
+        zatoApp.raw.fill(rawElement, raw);
     }
 
     // An empty body has nothing to show, while its raw form still has the status line and the headers
@@ -287,45 +287,45 @@ zatoPortal.raw.refreshResponse = function(card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.onRequestSwitchChange = function(event) {
-    var card = event.currentTarget.closest(zatoPortal.raw.config.cardSelector);
-    zatoPortal.raw.refreshRequest(card);
+zatoApp.raw.onRequestSwitchChange = function(event) {
+    var card = event.currentTarget.closest(zatoApp.raw.config.cardSelector);
+    zatoApp.raw.refreshRequest(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.onResponseSwitchChange = function(event) {
-    var card = event.currentTarget.closest(zatoPortal.raw.config.cardSelector);
-    zatoPortal.raw.refreshResponse(card);
+zatoApp.raw.onResponseSwitchChange = function(event) {
+    var card = event.currentTarget.closest(zatoApp.raw.config.cardSelector);
+    zatoApp.raw.refreshResponse(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.getRequestCopyText = function(button) {
+zatoApp.raw.getRequestCopyText = function(button) {
 
-    var card = button.closest(zatoPortal.raw.config.cardSelector);
+    var card = button.closest(zatoApp.raw.config.cardSelector);
 
-    if(zatoPortal.raw.isRequestRaw(card)) {
-        var raw = zatoPortal.raw.getCardRequest(card);
-        var rawText = zatoPortal.raw.getText(raw);
+    if(zatoApp.raw.isRequestRaw(card)) {
+        var raw = zatoApp.raw.getCardRequest(card);
+        var rawText = zatoApp.raw.getText(raw);
         return rawText;
     }
 
-    var out = card.querySelector(zatoPortal.raw.config.inputSelector).value;
+    var out = card.querySelector(zatoApp.raw.config.inputSelector).value;
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.raw.getResponseCopyText = function(button) {
+zatoApp.raw.getResponseCopyText = function(button) {
 
-    var config = zatoPortal.raw.config;
+    var config = zatoApp.raw.config;
     var card = button.closest(config.cardSelector);
 
     // The response is copied as it is shown, with any edits made to it
     var selector = config.responseBodySelector;
 
-    if(zatoPortal.raw.isResponseRaw(card)) {
+    if(zatoApp.raw.isResponseRaw(card)) {
         selector = config.responseRawSelector;
     }
 

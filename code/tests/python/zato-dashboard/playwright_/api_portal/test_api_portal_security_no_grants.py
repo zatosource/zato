@@ -78,7 +78,7 @@ class TestAPIPortalSecurityNoGrants:
             return out
 
         with page.expect_response(is_login_post) as response_info:
-            page.click('.portal-login-button')
+            page.click('.app-login-button')
 
         response = response_info.value
         assert response.status == FOUND, f'Expected a redirect after a valid sign-in, got {response.status}'

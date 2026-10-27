@@ -1,9 +1,9 @@
-zatoPortal.links = {};
+zatoApp.links = {};
 
-zatoPortal.links.config = {
+zatoApp.links.config = {
     hashPrefix: '#',
-    storageKey: 'zato.openapi.portal.link',
-    inputSelector: '.portal-editor-input',
+    storageKey: 'zato.openapi.link',
+    inputSelector: '.app-editor-input',
     requestSeparator: '?',
     requestKey: 'request',
     headerPrefix: 'header.',
@@ -15,7 +15,7 @@ zatoPortal.links.config = {
     },
 };
 
-zatoPortal.links.state = {
+zatoApp.links.state = {
     entryIdsByOperation: {},
     pendingEntryId: '',
     isUpdatePending: false,
@@ -23,16 +23,16 @@ zatoPortal.links.state = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getOperation = function(entry) {
-    var out = zatoPortal.links.config.hashPrefix + entry.method + entry.path;
+zatoApp.links.getOperation = function(entry) {
+    var out = zatoApp.links.config.hashPrefix + entry.method + entry.path;
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.escapePath = function(path) {
+zatoApp.links.escapePath = function(path) {
 
-    var escapes = zatoPortal.links.config.pathEscapes;
+    var escapes = zatoApp.links.config.pathEscapes;
 
     // A path keeps its characters in a link apart from those that would end it or be read as an escape
     var out = '';
@@ -53,23 +53,23 @@ zatoPortal.links.escapePath = function(path) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getHash = function(entry) {
+zatoApp.links.getHash = function(entry) {
 
-    var path = zatoPortal.links.escapePath(entry.path);
+    var path = zatoApp.links.escapePath(entry.path);
 
-    var out = zatoPortal.links.config.hashPrefix + entry.method + path;
+    var out = zatoApp.links.config.hashPrefix + entry.method + path;
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getDefaults = function(entry) {
+zatoApp.links.getDefaults = function(entry) {
 
-    var sample = zatoPortal.invoke.buildSample(entry, false);
+    var sample = zatoApp.invoke.buildSample(entry, false);
 
     var out = {
-        requestText: zatoPortal.highlight.format(sample),
-        pathValues: zatoPortal.invoke.getPathExamples(entry.operation),
+        requestText: zatoApp.highlight.format(sample),
+        pathValues: zatoApp.invoke.getPathExamples(entry.operation),
     };
 
     return out;
@@ -77,9 +77,9 @@ zatoPortal.links.getDefaults = function(entry) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getCompactText = function(text) {
+zatoApp.links.getCompactText = function(text) {
 
-    var parsed = zatoPortal.invoke.parse(text);
+    var parsed = zatoApp.invoke.parse(text);
 
     // A JSON request is compared and linked to without its indentation, and any other one as it was typed
     if(parsed === undefined) {
@@ -92,23 +92,23 @@ zatoPortal.links.getCompactText = function(text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getRequestQuery = function(card) {
+zatoApp.links.getRequestQuery = function(card) {
 
-    var config = zatoPortal.links.config;
-    var entry = zatoPortal.state.entriesById[card.id];
-    var defaults = zatoPortal.links.getDefaults(entry);
+    var config = zatoApp.links.config;
+    var entry = zatoApp.state.entriesById[card.id];
+    var defaults = zatoApp.links.getDefaults(entry);
     var params = new URLSearchParams();
 
     // A link carries only what differs from what the card starts with, beginning with the request ..
-    var text = zatoPortal.links.getCompactText(card.querySelector(config.inputSelector).value);
-    var defaultText = zatoPortal.links.getCompactText(defaults.requestText);
+    var text = zatoApp.links.getCompactText(card.querySelector(config.inputSelector).value);
+    var defaultText = zatoApp.links.getCompactText(defaults.requestText);
 
     if(text !== defaultText) {
         params.append(config.requestKey, text);
     }
 
     // .. followed by the path parameters ..
-    var pathValues = zatoPortal.invoke.getPathValues(card);
+    var pathValues = zatoApp.invoke.getPathValues(card);
     var pathNames = Object.keys(pathValues);
 
     for(var nameIndex = 0; nameIndex < pathNames.length; nameIndex++) {
@@ -120,7 +120,7 @@ zatoPortal.links.getRequestQuery = function(card) {
     }
 
     // .. and the headers that have a name.
-    var headers = zatoPortal.state.exchanges[card.id].headers;
+    var headers = zatoApp.state.exchanges[card.id].headers;
 
     for(var headerIndex = 0; headerIndex < headers.length; headerIndex++) {
         var header = headers[headerIndex];
@@ -137,15 +137,15 @@ zatoPortal.links.getRequestQuery = function(card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getCardHash = function(card) {
+zatoApp.links.getCardHash = function(card) {
 
-    var entry = zatoPortal.state.entriesById[card.id];
-    var query = zatoPortal.links.getRequestQuery(card);
+    var entry = zatoApp.state.entriesById[card.id];
+    var query = zatoApp.links.getRequestQuery(card);
 
-    var out = zatoPortal.links.getHash(entry);
+    var out = zatoApp.links.getHash(entry);
 
     if(query !== '') {
-        out += zatoPortal.links.config.requestSeparator + query;
+        out += zatoApp.links.config.requestSeparator + query;
     }
 
     return out;
@@ -153,7 +153,7 @@ zatoPortal.links.getCardHash = function(card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getAddressHash = function(hash) {
+zatoApp.links.getAddressHash = function(hash) {
 
     // The address keeps any characters outside of ASCII percent-encoded, e.g. those of a path in Greek
     var out = new URL(hash, window.location.href).hash;
@@ -162,10 +162,10 @@ zatoPortal.links.getAddressHash = function(hash) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getUrl = function(card) {
+zatoApp.links.getUrl = function(card) {
 
     var address = window.location;
-    var hash = zatoPortal.links.getCardHash(card);
+    var hash = zatoApp.links.getCardHash(card);
 
     var out = address.origin + address.pathname + address.search + hash;
     return out;
@@ -173,9 +173,9 @@ zatoPortal.links.getUrl = function(card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.splitHash = function(hash) {
+zatoApp.links.splitHash = function(hash) {
 
-    var config = zatoPortal.links.config;
+    var config = zatoApp.links.config;
     var separatorIndex = hash.indexOf(config.requestSeparator);
 
     // The operation comes first, and the request, if any, follows the separator
@@ -190,33 +190,33 @@ zatoPortal.links.splitHash = function(hash) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.applyRequest = function(entryId, query) {
+zatoApp.links.applyRequest = function(entryId, query) {
 
-    var config = zatoPortal.links.config;
+    var config = zatoApp.links.config;
     var card = document.getElementById(entryId);
     var params = new URLSearchParams(query);
 
     // A card that already holds the request linked to is left as it is, with the caret where it was ..
-    if(zatoPortal.links.getRequestQuery(card) === params.toString()) {
+    if(zatoApp.links.getRequestQuery(card) === params.toString()) {
         return;
     }
 
     // .. otherwise, what the link leaves out is what the card starts with, and the request is shown
     // the way the editor formats it ..
-    var defaults = zatoPortal.links.getDefaults(zatoPortal.state.entriesById[entryId]);
+    var defaults = zatoApp.links.getDefaults(zatoApp.state.entriesById[entryId]);
     var text = defaults.requestText;
 
     if(params.has(config.requestKey)) {
         text = params.get(config.requestKey);
     }
 
-    var parsed = zatoPortal.invoke.parse(text);
+    var parsed = zatoApp.invoke.parse(text);
 
     if(parsed !== undefined) {
-        text = zatoPortal.highlight.format(parsed);
+        text = zatoApp.highlight.format(parsed);
     }
 
-    zatoPortal.invoke.setRequestText(card, text);
+    zatoApp.invoke.setRequestText(card, text);
 
     // .. the path parameters it names replace the ones the operation has ..
     var pathValues = defaults.pathValues;
@@ -240,51 +240,51 @@ zatoPortal.links.applyRequest = function(entryId, query) {
         }
     }
 
-    zatoPortal.invoke.setPathValues(card, pathValues);
+    zatoApp.invoke.setPathValues(card, pathValues);
 
     // .. and its headers replace the ones on the card.
-    zatoPortal.state.exchanges[card.id].headers = headers;
-    zatoPortal.options.refresh(card);
+    zatoApp.state.exchanges[card.id].headers = headers;
+    zatoApp.options.refresh(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.init = function() {
+zatoApp.links.init = function() {
 
-    var entriesById = zatoPortal.state.entriesById;
+    var entriesById = zatoApp.state.entriesById;
     var entryIds = Object.keys(entriesById);
 
     for(var entryIndex = 0; entryIndex < entryIds.length; entryIndex++) {
         var entryId = entryIds[entryIndex];
-        var operation = zatoPortal.links.getOperation(entriesById[entryId]);
+        var operation = zatoApp.links.getOperation(entriesById[entryId]);
 
-        zatoPortal.links.state.entryIdsByOperation[operation] = entryId;
+        zatoApp.links.state.entryIdsByOperation[operation] = entryId;
     }
 
-    window.addEventListener('hashchange', zatoPortal.links.onHashChange);
+    window.addEventListener('hashchange', zatoApp.links.onHashChange);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.remember = function() {
+zatoApp.links.remember = function() {
 
     var hash = window.location.hash;
 
-    // A link opened before signing in is followed once the portal is shown again
+    // A link opened before signing in is followed once the app is shown again
     if(hash !== '') {
-        sessionStorage.setItem(zatoPortal.links.config.storageKey, hash);
+        sessionStorage.setItem(zatoApp.links.config.storageKey, hash);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.getEntryId = function(hash) {
+zatoApp.links.getEntryId = function(hash) {
 
-    var entryIdsByOperation = zatoPortal.links.state.entryIdsByOperation;
-    var operation = zatoPortal.links.splitHash(hash).operation;
+    var entryIdsByOperation = zatoApp.links.state.entryIdsByOperation;
+    var operation = zatoApp.links.splitHash(hash).operation;
     var decoded = '';
 
-    // A link comes from outside the portal, and its escapes can be malformed
+    // A link comes from outside the app, and its escapes can be malformed
     try {
         decoded = decodeURIComponent(operation);
     }
@@ -301,9 +301,9 @@ zatoPortal.links.getEntryId = function(hash) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.showInitial = function(firstGroup) {
+zatoApp.links.showInitial = function(firstGroup) {
 
-    var config = zatoPortal.links.config;
+    var config = zatoApp.links.config;
     var hash = window.location.hash;
 
     // A link that led to the sign-in page is the one followed, unless the address has a link of its own ..
@@ -316,34 +316,34 @@ zatoPortal.links.showInitial = function(firstGroup) {
         }
     }
 
-    var entryId = zatoPortal.links.getEntryId(hash);
+    var entryId = zatoApp.links.getEntryId(hash);
 
     // .. an operation linked to is shown as it would be when chosen in the navigation, with the request linked to ..
     if(entryId !== '') {
-        zatoPortal.links.showEntry(entryId);
-        zatoPortal.links.applyRequest(entryId, zatoPortal.links.splitHash(hash).query);
+        zatoApp.links.showEntry(entryId);
+        zatoApp.links.applyRequest(entryId, zatoApp.links.splitHash(hash).query);
         return;
     }
 
     // .. and without one the first group is shown.
-    zatoPortal.render.selectGroup(firstGroup.name);
+    zatoApp.render.selectGroup(firstGroup.name);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.showEntry = function(entryId) {
+zatoApp.links.showEntry = function(entryId) {
 
-    var entry = zatoPortal.state.entriesById[entryId];
+    var entry = zatoApp.state.entriesById[entryId];
 
-    zatoPortal.render.selectGroup(entry.group);
-    zatoPortal.layouts.activate(entryId);
+    zatoApp.render.selectGroup(entry.group);
+    zatoApp.layouts.activate(entryId);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.update = function(entryId) {
+zatoApp.links.update = function(entryId) {
 
-    var state = zatoPortal.links.state;
+    var state = zatoApp.links.state;
     state.pendingEntryId = entryId;
 
     // A group and then a card in it can be shown in one step, which is a single entry in the browser's history,
@@ -353,29 +353,29 @@ zatoPortal.links.update = function(entryId) {
     }
 
     state.isUpdatePending = true;
-    queueMicrotask(zatoPortal.links.flushUpdate);
+    queueMicrotask(zatoApp.links.flushUpdate);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.flushUpdate = function() {
+zatoApp.links.flushUpdate = function() {
 
-    var state = zatoPortal.links.state;
+    var state = zatoApp.links.state;
     var entryId = state.pendingEntryId;
     var current = window.location.hash;
 
     state.isUpdatePending = false;
 
     var card = document.getElementById(entryId);
-    var hash = zatoPortal.links.getCardHash(card);
+    var hash = zatoApp.links.getCardHash(card);
 
-    if(current === zatoPortal.links.getAddressHash(hash)) {
+    if(current === zatoApp.links.getAddressHash(hash)) {
         return;
     }
 
     // Going to another operation is an entry in the browser's history, while the first operation shown,
     // an address that names no operation and a change to the operation's own request replace the entry ..
-    var currentEntryId = zatoPortal.links.getEntryId(current);
+    var currentEntryId = zatoApp.links.getEntryId(current);
 
     if(currentEntryId === '') {
         history.replaceState(null, '', hash);
@@ -393,35 +393,35 @@ zatoPortal.links.flushUpdate = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.refresh = function(card) {
+zatoApp.links.refresh = function(card) {
 
     // The address follows the request as it is edited, but only on the card it names
-    if(zatoPortal.links.getEntryId(window.location.hash) !== card.id) {
+    if(zatoApp.links.getEntryId(window.location.hash) !== card.id) {
         return;
     }
 
-    var hash = zatoPortal.links.getCardHash(card);
+    var hash = zatoApp.links.getCardHash(card);
 
-    if(window.location.hash !== zatoPortal.links.getAddressHash(hash)) {
+    if(window.location.hash !== zatoApp.links.getAddressHash(hash)) {
         history.replaceState(null, '', hash);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.onCardInput = function(event) {
-    zatoPortal.links.refresh(event.currentTarget);
+zatoApp.links.onCardInput = function(event) {
+    zatoApp.links.refresh(event.currentTarget);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.links.onHashChange = function() {
+zatoApp.links.onHashChange = function() {
 
     var hash = window.location.hash;
-    var entryId = zatoPortal.links.getEntryId(hash);
+    var entryId = zatoApp.links.getEntryId(hash);
 
     if(entryId !== '') {
-        zatoPortal.links.showEntry(entryId);
-        zatoPortal.links.applyRequest(entryId, zatoPortal.links.splitHash(hash).query);
+        zatoApp.links.showEntry(entryId);
+        zatoApp.links.applyRequest(entryId, zatoApp.links.splitHash(hash).query);
     }
 };

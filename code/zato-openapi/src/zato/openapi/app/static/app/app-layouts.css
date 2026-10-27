@@ -1,0 +1,370 @@
+/* ------------------------------------------------------------ */
+/* App layout - the group shown                                 */
+/* ------------------------------------------------------------ */
+
+.app-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: calc(100vh - var(--app-header-height));
+    padding: 1rem var(--app-page-padding) 0;
+    overflow: hidden;
+}
+
+.app-group {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.app-group[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* App layout - the list of operations and the detail           */
+/* ------------------------------------------------------------ */
+
+.app-layout-frame {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: var(--app-layout-master-width) var(--app-layout-resizer-width) minmax(0, 1fr);
+    min-height: 0;
+}
+
+.app-layout-master {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-height: 0;
+}
+
+.app-layout-master-top {
+    display: flex;
+    flex: none;
+    gap: 0.5rem;
+    align-items: center;
+    margin-right: 0.5rem;
+}
+
+/* ------------------------------------------------------------ */
+/* App layout - the list of operations collapsed                */
+/* ------------------------------------------------------------ */
+
+.app-layout-master-collapsed .app-layout-frame {
+    grid-template-columns: var(--app-layout-master-collapsed-width) var(--app-layout-resizer-width) minmax(0, 1fr);
+}
+
+.app-layout-master-collapsed .app-layout-master-top {
+    justify-content: center;
+    margin-right: 0;
+}
+
+.app-layout-master-collapsed .app-layout-filter,
+.app-layout-master-collapsed .app-layout-list {
+    display: none;
+}
+
+.app-layout-master-collapsed .app-layout-resizer {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.app-layout-icon-expand,
+.app-layout-master-collapsed .app-layout-icon-collapse {
+    display: none;
+}
+
+.app-layout-master-collapsed .app-layout-icon-expand {
+    display: block;
+}
+
+.app-layout-list,
+.app-layout-detail {
+    min-height: 0;
+    padding-bottom: var(--app-layout-end-padding);
+    overflow-y: scroll;
+}
+
+.app-layout-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding-right: 0.5rem;
+}
+
+.app-layout-detail {
+    display: flex;
+    flex-direction: column;
+    padding-right: 0.75rem;
+}
+
+.app-layout-detail .app-operation:not(.app-layout-active) {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* App layout - the rows of the list                            */
+/* ------------------------------------------------------------ */
+
+.app-layout-row {
+    display: grid;
+    flex: none;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.625rem;
+    align-items: baseline;
+    padding: 0.4375rem 0.625rem;
+    border: 1px solid transparent;
+    border-radius: var(--app-control-radius);
+    font: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    color: var(--app-text-muted);
+    background: transparent;
+    cursor: pointer;
+    transition: background var(--app-hover-duration) ease, color var(--app-hover-duration) ease;
+}
+
+.app-layout-row:hover {
+    color: var(--app-text);
+    background: var(--app-bg-raised-hover);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-layout-row.app-layout-active {
+    color: var(--app-accent-light);
+    background: var(--app-accent-soft);
+}
+
+.app-layout-row[hidden],
+.app-layout-row.app-layout-excluded {
+    display: none;
+}
+
+.app-layout-entry-path {
+    font-family: var(--app-font-mono);
+    font-size: 0.75rem;
+    color: var(--app-text);
+    overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ */
+/* App layout - the handles next to the sidebar and the list    */
+/* ------------------------------------------------------------ */
+
+.app-layout-resizer,
+.app-sidebar-resizer {
+    display: flex;
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.app-sidebar-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    z-index: 1;
+    width: var(--app-layout-resizer-width);
+}
+
+.app-layout-resizer::before,
+.app-sidebar-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--app-border);
+    transform: translateX(-50%);
+    transition: background var(--app-hover-duration) ease;
+}
+
+.app-layout-grip,
+.app-sidebar-grip {
+    position: relative;
+    width: var(--app-layout-grip-width);
+    height: var(--app-layout-grip-height);
+    border-radius: var(--app-layout-grip-width);
+    background: var(--app-layout-grip-fill);
+    transition: background var(--app-hover-duration) ease;
+}
+
+.app-layout-resizer:hover::before,
+.app-layout-resizer:hover .app-layout-grip,
+.app-sidebar-resizer:hover::before,
+.app-sidebar-resizer:hover .app-sidebar-grip {
+    background: var(--app-accent-light);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-resizing-layout .app-layout-resizer:active::before,
+.app-resizing-layout .app-layout-resizer:active .app-layout-grip,
+.app-resizing .app-sidebar-resizer::before,
+.app-resizing .app-sidebar-grip {
+    background: var(--app-accent-light);
+    transition-delay: 0s;
+}
+
+body.app-resizing-layout {
+    cursor: col-resize;
+    user-select: none;
+}
+
+/* ------------------------------------------------------------ */
+/* App layout - the operation shown                             */
+/* ------------------------------------------------------------ */
+
+.app-layout-detail .app-operation {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+}
+
+.app-operation-header,
+.app-operation-description {
+    flex: none;
+}
+
+.app-operation-exchange,
+.app-operation-request,
+.app-operation-response {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.app-layout-detail .app-operation-exchange {
+    flex: 1 1 0;
+    min-height: var(--app-exchange-minimum-height);
+}
+
+.app-operation-request {
+    flex: var(--app-request-share) 1 0;
+    min-height: var(--app-request-minimum-height);
+}
+
+.app-operation-response {
+    flex: var(--app-response-share) 1 0;
+    min-height: var(--app-response-minimum-height);
+}
+
+/* ------------------------------------------------------------ */
+/* App layout - resizer between the request and the response    */
+/* ------------------------------------------------------------ */
+
+.app-exchange-resizer {
+    display: flex;
+    position: relative;
+    flex: none;
+    justify-content: center;
+    align-items: center;
+    height: var(--app-exchange-resizer-height);
+    cursor: row-resize;
+    touch-action: none;
+}
+
+.app-exchange-resizer:has(+ .app-operation-response[hidden]) {
+    display: none;
+}
+
+.app-exchange-resizer::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--app-border);
+    transform: translateY(-50%);
+    transition: background var(--app-hover-duration) ease;
+}
+
+.app-exchange-grip {
+    position: relative;
+    width: var(--app-layout-grip-height);
+    height: var(--app-layout-grip-width);
+    border-radius: var(--app-layout-grip-width);
+    background: var(--app-layout-grip-fill);
+    transition: background var(--app-hover-duration) ease;
+}
+
+.app-exchange-resizer:hover::before,
+.app-exchange-resizer:hover .app-exchange-grip {
+    background: var(--app-accent-light);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-resizing-exchange .app-exchange-resizer:active::before,
+.app-resizing-exchange .app-exchange-resizer:active .app-exchange-grip {
+    background: var(--app-accent-light);
+    transition-delay: 0s;
+}
+
+body.app-resizing-exchange {
+    cursor: row-resize;
+    user-select: none;
+}
+
+.app-operation-request .app-panel-bar,
+.app-operation-response .app-panel-bar,
+.app-path-editor {
+    flex: none;
+}
+
+.app-editor,
+.app-raw,
+.app-response-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* App layout - narrow screens                                  */
+/* ------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    .app-content {
+        height: auto;
+        padding-bottom: 4rem;
+        overflow: visible;
+    }
+
+    .app-layout-frame,
+    .app-layout-master-collapsed .app-layout-frame {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-layout-toggle {
+        display: none;
+    }
+
+    .app-layout-master-collapsed .app-layout-filter,
+    .app-layout-master-collapsed .app-layout-list {
+        display: flex;
+    }
+
+    .app-layout-resizer {
+        display: none;
+    }
+
+    .app-exchange-resizer {
+        cursor: auto;
+        pointer-events: none;
+    }
+
+    .app-exchange-grip {
+        visibility: hidden;
+    }
+
+    .app-layout-list,
+    .app-layout-detail {
+        overflow-y: visible;
+    }
+}

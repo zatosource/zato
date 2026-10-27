@@ -20,7 +20,7 @@ _csrf_trusted_origins_env_key = 'Zato_API_Portal_CSRF_Trusted_Origins'
 
 globals().update(build_settings(
     root_urlconf='zato.openapi.app.urls',
-    cookie_name='zato-api-portal',
+    cookie_name='zato-session',
     extra_apps=['zato.openapi.app', 'zato.common.webapp.ui'],
     extra_middleware=[],
 ))

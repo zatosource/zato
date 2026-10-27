@@ -42,12 +42,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-Portal_Path        = '/api-portal'
-Portal_Login_Path  = '/api-portal/login'
-Portal_Logout_Path = '/api-portal/logout'
-Spec_JSON_Path     = '/api-portal/openapi.json'
-Spec_YAML_Path     = '/api-portal/openapi.yaml'
-Relay_Base_Path    = '/api-portal/relay'
+Portal_Path        = '/'
+Portal_Login_Path  = '/login'
+Portal_Logout_Path = '/logout'
+Spec_JSON_Path     = '/openapi.json'
+Spec_YAML_Path     = '/openapi.yaml'
+Relay_Base_Path    = '/relay'
 
 # The relay receives every try-it as a POST of one JSON document
 Relay_Method        = 'POST'
@@ -55,7 +55,7 @@ Content_Type_Header = 'Content-Type'
 Content_Type_JSON   = 'application/json'
 
 # The relay accepts a POST only with the token from the portal's CSRF cookie
-CSRF_Cookie_Name  = 'zato-api-portal-csrf'
+CSRF_Cookie_Name  = 'zato-session-csrf'
 CSRF_Token_Header = 'X-CSRFToken'
 
 # The portal's admin is the Dashboard's own admin user, with the same username and password
@@ -199,11 +199,11 @@ def _submit_login_form(
 
         # .. submit the form - a success redirects to the portal page,
         # a failure re-renders the form with an error message ..
-        page.click('.portal-login-button')
-        _ = page.wait_for_selector('.portal-header, .portal-login-error', state='visible', timeout=_Render_Timeout_MS)
+        page.click('.app-login-button')
+        _ = page.wait_for_selector('.app-header, .app-login-error', state='visible', timeout=_Render_Timeout_MS)
 
         # .. the portal header renders only after a successful sign-in ..
-        if page.query_selector('.portal-header'):
+        if page.query_selector('.app-header'):
             return
 
         # .. otherwise, the credentials may not have reached the server yet, so try again.

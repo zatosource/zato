@@ -1,0 +1,658 @@
+/* ------------------------------------------------------------ */
+/* App - workspace                                              */
+/* ------------------------------------------------------------ */
+
+.app-workspace {
+    display: grid;
+    grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
+    min-height: calc(100vh - var(--app-header-height));
+}
+
+.app-workspace[hidden] {
+    display: none;
+}
+
+.app-workspace.app-sidebar-collapsed {
+    grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr);
+}
+
+/* ------------------------------------------------------------ */
+/* App - navigation                                             */
+/* ------------------------------------------------------------ */
+
+.app-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: var(--app-header-height);
+    height: calc(100vh - var(--app-header-height));
+    background: var(--app-bg-panel);
+}
+
+.app-sidebar-top {
+    display: flex;
+    flex: none;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 1.25rem var(--app-sidebar-padding) 1rem;
+}
+
+.app-sidebar-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0 var(--app-sidebar-padding) 2rem;
+    overflow-y: scroll;
+}
+
+.app-sidebar-collapsed .app-sidebar-top {
+    justify-content: center;
+    padding: 1.25rem 0 0;
+}
+
+.app-sidebar-collapsed .app-filter-box,
+.app-sidebar-collapsed .app-sidebar-scroll,
+.app-sidebar-collapsed .app-sidebar-resizer {
+    display: none;
+}
+
+.app-navigation-section {
+    margin: 1.25rem 0 0.375rem;
+    padding: 0 0.5rem;
+    font-family: ZatoMainFontMedium, sans-serif;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--app-text-faint);
+}
+
+.app-navigation-section:first-child {
+    margin-top: 0;
+}
+
+.app-navigation-section[hidden] {
+    display: none;
+}
+
+.app-navigation-group {
+    margin-bottom: 0.125rem;
+}
+
+.app-navigation-group[hidden] {
+    display: none;
+}
+
+.app-navigation-chevron {
+    flex: none;
+    width: var(--app-navigation-chevron-size);
+    height: var(--app-navigation-chevron-size);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.15s ease;
+}
+
+.app-navigation-group.app-selected .app-navigation-chevron,
+.app-navigation-filtering .app-navigation-chevron {
+    transform: rotate(90deg);
+}
+
+.app-navigation-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.app-navigation-count {
+    flex: none;
+    font-family: var(--app-font-mono);
+    font-size: 0.6875rem;
+    color: var(--app-text-faint);
+}
+
+.app-navigation-group:not(.app-selected) .app-navigation-list {
+    display: none;
+}
+
+.app-navigation-filtering .app-navigation-group .app-navigation-list {
+    display: block;
+}
+
+.app-navigation-group.app-selected .app-navigation-list {
+    margin-bottom: 0.625rem;
+}
+
+.app-navigation-group.app-selected.app-navigation-collapsed .app-navigation-list {
+    display: none;
+}
+
+.app-navigation-group.app-selected.app-navigation-collapsed .app-navigation-chevron {
+    transform: none;
+}
+
+.app-navigation-heading,
+.app-navigation-link {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+    border: none;
+    border-radius: var(--app-control-radius);
+    text-align: left;
+    text-decoration: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background var(--app-hover-duration) ease, color var(--app-hover-duration) ease;
+}
+
+.app-navigation-heading {
+    padding: 0.4375rem 0.5rem;
+    font-family: ZatoMainFont, sans-serif;
+    font-size: 0.875rem;
+    color: var(--app-text);
+}
+
+.app-navigation-group.app-selected .app-navigation-heading {
+    color: var(--app-accent-light);
+    background: var(--app-accent-soft);
+}
+
+.app-navigation-list {
+    margin: 0.125rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.app-navigation-item[hidden] {
+    display: none;
+}
+
+.app-navigation-link {
+    padding: 0.3125rem 0.5rem 0.3125rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--app-text-muted);
+}
+
+.app-navigation-heading:hover,
+.app-navigation-link:hover {
+    color: var(--app-text);
+    background: var(--app-bg-raised-hover);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-navigation-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ */
+/* App - chips                                                  */
+/* ------------------------------------------------------------ */
+
+.app-chip {
+    display: inline-block;
+    flex: none;
+    padding: 1px 6px;
+    border-radius: var(--app-chip-radius);
+    font-family: ZatoMainFontMedium, sans-serif;
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.app-method {
+    min-width: 3.25rem;
+    font-family: var(--app-font-mono);
+    font-weight: 600;
+    text-align: center;
+}
+
+.app-chip-neutral,
+.app-method-head,
+.app-method-options {
+    color: var(--app-chip-neutral-text);
+    background: var(--app-chip-neutral-fill);
+}
+
+.app-method-get {
+    color: var(--app-chip-blue-text);
+    background: var(--app-chip-blue-fill);
+}
+
+.app-method-post,
+.app-chip-success {
+    color: var(--app-chip-green-text);
+    background: var(--app-chip-green-fill);
+}
+
+.app-method-put,
+.app-chip-warning {
+    color: var(--app-chip-yellow-text);
+    background: var(--app-chip-yellow-fill);
+}
+
+.app-method-patch {
+    color: var(--app-chip-purple-text);
+    background: var(--app-chip-purple-fill);
+}
+
+.app-method-delete,
+.app-chip-error {
+    color: var(--app-chip-red-text);
+    background: var(--app-chip-red-fill);
+}
+
+/* ------------------------------------------------------------ */
+/* App - groups                                                 */
+/* ------------------------------------------------------------ */
+
+.app-group-header {
+    display: flex;
+    flex: none;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.625rem;
+    border-bottom: 1px solid var(--app-border-strong);
+}
+
+.app-group-section {
+    padding: 3px 10px;
+    border: 1px solid var(--app-chip-amber-border);
+    font-family: ZatoMainFont, sans-serif;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    color: var(--app-chip-amber-text);
+    background: var(--app-chip-amber-fill);
+}
+
+.app-group-name {
+    margin: 0;
+    font-family: ZatoMainFontMedium, sans-serif;
+    font-size: 0.75rem;
+    font-weight: normal;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--app-text);
+}
+
+.app-group-count,
+.app-response-time {
+    font-family: var(--app-font-mono);
+    font-size: 0.75rem;
+    color: var(--app-text-faint);
+}
+
+/* ------------------------------------------------------------ */
+/* App - operations                                             */
+/* ------------------------------------------------------------ */
+
+.app-operation {
+    border: 1px solid var(--app-border-strong);
+    background: var(--app-bg-panel);
+}
+
+.app-operation[hidden] {
+    display: none;
+}
+
+.app-operation-header {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 0.875rem 1.125rem;
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-bg-raised);
+}
+
+.app-operation-heading {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    align-items: center;
+    min-width: 0;
+    min-height: 2rem;
+}
+
+.app-operation-tools {
+    flex: none;
+}
+
+.app-operation-path {
+    font-family: var(--app-font-mono);
+    font-size: 0.9375rem;
+    color: var(--app-text);
+    overflow-wrap: anywhere;
+}
+
+.app-operation-path-parameter {
+    color: var(--app-accent-light);
+}
+
+.app-operation-description {
+    margin: 0;
+    padding: 0.875rem 1.125rem 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--app-text);
+}
+
+.app-operation-exchange {
+    padding: 1rem 1.125rem 1.125rem;
+}
+
+.app-panel-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    align-items: center;
+    min-height: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.app-panel-title {
+    font-family: var(--app-font-mono);
+    font-size: 0.6875rem;
+    color: var(--app-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.app-play {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: var(--app-chip-radius);
+    color: var(--app-text);
+    background: var(--app-glass-fill);
+    box-shadow: inset 0 1px 0 var(--app-glass-rim);
+    cursor: pointer;
+    transition: background var(--app-hover-duration) ease;
+}
+
+.app-play:hover {
+    background: var(--app-glass-fill-hover);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-play:focus-visible {
+    outline: 2px solid var(--app-accent-light);
+    outline-offset: 2px;
+}
+
+.app-play:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.app-play-icon {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+}
+
+.app-operation-response[hidden],
+.app-response-body[hidden],
+.app-editor[hidden],
+.app-raw[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* App - path parameters                                        */
+/* ------------------------------------------------------------ */
+
+.app-path-editor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 0;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border: 1px solid var(--app-border-strong);
+    font-family: var(--app-font-mono);
+    font-size: var(--app-code-font-size);
+    line-height: var(--app-code-line-height);
+    color: var(--app-text-muted);
+    background: var(--app-bg);
+}
+
+.app-path-input {
+    margin: 0 1px;
+    padding: 0 0.3125rem;
+    border: 1px solid var(--app-border-strong);
+    border-radius: var(--app-control-radius);
+    outline: none;
+    font-family: var(--app-font-mono);
+    font-size: var(--app-code-font-size);
+    line-height: var(--app-code-line-height);
+    color: var(--app-code-string);
+    background: var(--app-bg-raised);
+    transition: border-color var(--app-hover-duration) ease;
+}
+
+.app-path-input::placeholder {
+    color: var(--app-text-faint);
+}
+
+.app-path-input:focus {
+    border-color: var(--app-accent-light);
+}
+
+/* ------------------------------------------------------------ */
+/* App - code and the request editor                            */
+/* ------------------------------------------------------------ */
+
+.app-code,
+.app-editor-input {
+    margin: 0;
+    padding: 0.75rem 0.875rem;
+    font-family: var(--app-font-mono);
+    font-size: var(--app-code-font-size);
+    line-height: var(--app-code-line-height);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    tab-size: 2;
+}
+
+.app-code {
+    color: var(--app-text);
+}
+
+.app-editor,
+.app-response-body,
+.app-raw {
+    border: 1px solid var(--app-border-strong);
+    background: var(--app-bg);
+}
+
+.app-editor {
+    display: grid;
+    overflow-y: auto;
+    transition: border-color var(--app-hover-duration) ease;
+}
+
+.app-editor:focus-within {
+    border-color: var(--app-accent-light);
+}
+
+.app-response-body:focus,
+.app-raw-response:focus {
+    outline: none;
+    border-color: var(--app-accent-light);
+}
+
+.app-editor.app-editor-invalid {
+    border-color: var(--app-chip-red-text);
+}
+
+.app-editor-highlight,
+.app-editor-input {
+    grid-area: 1 / 1;
+}
+
+.app-editor-highlight {
+    min-height: 4.5rem;
+}
+
+.app-editor-input {
+    width: 100%;
+    overflow: hidden;
+    border: none;
+    outline: none;
+    color: transparent;
+    background: transparent;
+    caret-color: var(--app-text);
+    resize: none;
+}
+
+.app-editor-input::selection {
+    color: var(--app-selection-text);
+    background: var(--app-accent-soft-strong);
+}
+
+.app-raw,
+.app-response-body {
+    overflow: auto;
+}
+
+.app-code-key {
+    color: var(--app-code-key);
+}
+
+.app-code-string {
+    color: var(--app-code-string);
+}
+
+.app-code-number {
+    color: var(--app-code-number);
+}
+
+.app-code-boolean {
+    color: var(--app-code-boolean);
+}
+
+.app-code-null {
+    color: var(--app-code-null);
+}
+
+.app-code-punctuation {
+    color: var(--app-code-punctuation);
+}
+
+/* ------------------------------------------------------------ */
+/* App - input and output fields                                */
+/* ------------------------------------------------------------ */
+
+.app-operation-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+}
+
+.app-fields-title {
+    display: flex;
+    align-items: center;
+    min-height: 2rem;
+    margin-bottom: 0.25rem;
+}
+
+.app-fields-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+}
+
+.app-fields-table td {
+    padding: 0.375rem 0.5rem 0.375rem 0;
+    border-bottom: 1px solid var(--app-border);
+    vertical-align: top;
+}
+
+.app-fields-title {
+    color: var(--app-accent-light);
+}
+
+.app-fields-name-text {
+    margin-right: 0.5rem;
+    font-family: var(--app-font-mono);
+    color: var(--app-code-key);
+    overflow-wrap: anywhere;
+}
+
+.app-fields-required {
+    color: var(--app-chip-yellow-text);
+    background: var(--app-chip-yellow-fill);
+}
+
+.app-fields-type {
+    font-family: var(--app-font-mono);
+    overflow-wrap: anywhere;
+}
+
+.app-fields-type-string {
+    color: var(--app-code-string);
+}
+
+.app-fields-type-number {
+    color: var(--app-code-number);
+}
+
+.app-fields-type-boolean {
+    color: var(--app-code-boolean);
+}
+
+.app-fields-type-model {
+    color: var(--app-chip-blue-text);
+}
+
+.app-fields-type-other {
+    color: var(--app-code-null);
+}
+
+/* ------------------------------------------------------------ */
+/* App - narrow screens and operations                          */
+/* ------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    .app-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-sidebar {
+        position: static;
+        height: auto;
+    }
+
+    .app-sidebar-toggle,
+    .app-sidebar-resizer {
+        display: none;
+    }
+
+    .app-workspace.app-sidebar-collapsed {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-sidebar-collapsed .app-sidebar-top {
+        padding: 1.25rem var(--app-sidebar-padding) 1rem;
+    }
+
+    .app-sidebar-collapsed .app-filter-box {
+        display: flex;
+    }
+
+    .app-sidebar-collapsed .app-sidebar-scroll {
+        display: block;
+    }
+}

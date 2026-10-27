@@ -1,6 +1,6 @@
-var zatoPortal = {};
+var zatoApp = {};
 
-zatoPortal.state = {
+zatoApp.state = {
     relayBase: '',
     components: {},
     groups: [],
@@ -9,24 +9,24 @@ zatoPortal.state = {
     selectedGroup: '',
 };
 
-zatoPortal.highlight = {};
+zatoApp.highlight = {};
 
-zatoPortal.highlight.config = {
+zatoApp.highlight.config = {
     indent: 2,
 
     // Strings, with the colon that makes a string a key, then literals, numbers and punctuation
     tokenPattern: /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*")(\s*:)?|\b(true|false)\b|\b(null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|([{}\[\],])/g,
 
-    keyClass: 'portal-code-key',
-    stringClass: 'portal-code-string',
-    booleanClass: 'portal-code-boolean',
-    nullClass: 'portal-code-null',
-    numberClass: 'portal-code-number',
-    punctuationClass: 'portal-code-punctuation',
+    keyClass: 'app-code-key',
+    stringClass: 'app-code-string',
+    booleanClass: 'app-code-boolean',
+    nullClass: 'app-code-null',
+    numberClass: 'app-code-number',
+    punctuationClass: 'app-code-punctuation',
 
-    editorClass: 'portal-editor',
-    editorHighlightClass: 'portal-code portal-editor-highlight',
-    editorInputClass: 'portal-editor-input',
+    editorClass: 'app-editor',
+    editorHighlightClass: 'app-code app-editor-highlight',
+    editorInputClass: 'app-editor-input',
 
     // A trailing newline in a textarea opens a line that a pre element only shows when another follows
     editorTrailer: '\n',
@@ -34,14 +34,14 @@ zatoPortal.highlight.config = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.highlight.format = function(value) {
-    var out = JSON.stringify(value, null, zatoPortal.highlight.config.indent);
+zatoApp.highlight.format = function(value) {
+    var out = JSON.stringify(value, null, zatoApp.highlight.config.indent);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.highlight.appendToken = function(fragment, text, className) {
+zatoApp.highlight.appendToken = function(fragment, text, className) {
 
     var span = document.createElement('span');
     span.className = className;
@@ -52,9 +52,9 @@ zatoPortal.highlight.appendToken = function(fragment, text, className) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.highlight.classify = function(match) {
+zatoApp.highlight.classify = function(match) {
 
-    var config = zatoPortal.highlight.config;
+    var config = zatoApp.highlight.config;
 
     if(match[3] !== undefined) {
         return config.booleanClass;
@@ -73,9 +73,9 @@ zatoPortal.highlight.classify = function(match) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.highlight.fill = function(element, text) {
+zatoApp.highlight.fill = function(element, text) {
 
-    var config = zatoPortal.highlight.config;
+    var config = zatoApp.highlight.config;
     var pattern = new RegExp(config.tokenPattern.source, 'g');
     var fragment = document.createDocumentFragment();
     var position = 0;
@@ -93,18 +93,18 @@ zatoPortal.highlight.fill = function(element, text) {
         // .. a string followed by a colon is a key, and the colon itself is punctuation ..
         if(match[1] !== undefined) {
             if(match[2] !== undefined) {
-                zatoPortal.highlight.appendToken(fragment, match[1], config.keyClass);
-                zatoPortal.highlight.appendToken(fragment, match[2], config.punctuationClass);
+                zatoApp.highlight.appendToken(fragment, match[1], config.keyClass);
+                zatoApp.highlight.appendToken(fragment, match[2], config.punctuationClass);
             }
             else {
-                zatoPortal.highlight.appendToken(fragment, match[1], config.stringClass);
+                zatoApp.highlight.appendToken(fragment, match[1], config.stringClass);
             }
         }
 
         // .. and every other token is classified by the group it matched.
         else {
-            var className = zatoPortal.highlight.classify(match);
-            zatoPortal.highlight.appendToken(fragment, match[0], className);
+            var className = zatoApp.highlight.classify(match);
+            zatoApp.highlight.appendToken(fragment, match[0], className);
         }
 
         position = pattern.lastIndex;
@@ -121,9 +121,9 @@ zatoPortal.highlight.fill = function(element, text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.highlight.createEditor = function(text) {
+zatoApp.highlight.createEditor = function(text) {
 
-    var config = zatoPortal.highlight.config;
+    var config = zatoApp.highlight.config;
 
     var container = document.createElement('div');
     container.className = config.editorClass;
@@ -137,34 +137,34 @@ zatoPortal.highlight.createEditor = function(text) {
     input.className = config.editorInputClass;
     input.spellcheck = false;
     input.value = text;
-    input.addEventListener('input', zatoPortal.highlight.onEditorInput);
+    input.addEventListener('input', zatoApp.highlight.onEditorInput);
 
     container.appendChild(highlighted);
     container.appendChild(input);
 
     // .. and both start with the same text.
-    zatoPortal.highlight.refreshEditor(input);
+    zatoApp.highlight.refreshEditor(input);
 
     return container;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.highlight.onEditorInput = function(event) {
-    zatoPortal.highlight.refreshEditor(event.target);
+zatoApp.highlight.onEditorInput = function(event) {
+    zatoApp.highlight.refreshEditor(event.target);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.highlight.refreshEditor = function(input) {
+zatoApp.highlight.refreshEditor = function(input) {
 
     var highlighted = input.previousSibling;
-    var text = input.value + zatoPortal.highlight.config.editorTrailer;
+    var text = input.value + zatoApp.highlight.config.editorTrailer;
 
-    if(zatoPortal.keyValue.isKeyValue(input.value)) {
-        zatoPortal.keyValue.fill(highlighted, text);
+    if(zatoApp.keyValue.isKeyValue(input.value)) {
+        zatoApp.keyValue.fill(highlighted, text);
         return;
     }
 
-    zatoPortal.highlight.fill(highlighted, text);
+    zatoApp.highlight.fill(highlighted, text);
 };

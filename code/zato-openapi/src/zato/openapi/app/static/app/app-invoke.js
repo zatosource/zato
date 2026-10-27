@@ -1,6 +1,6 @@
-zatoPortal.invoke = {};
+zatoApp.invoke = {};
 
-zatoPortal.invoke.config = {
+zatoApp.invoke.config = {
     contentType: 'application/json',
     xmlContentType: 'application/xml',
     textContentType: 'text/plain',
@@ -8,34 +8,34 @@ zatoPortal.invoke.config = {
     contentTypeHeader: 'Content-Type',
     acceptHeader: 'Accept',
     placeholderPattern: /\{([^}]+)\}/g,
-    cardSelector: '.portal-operation',
+    cardSelector: '.app-operation',
     relayMethod: 'POST',
     csrfTokenSelector: 'meta[name="csrf-token"]',
     csrfTokenHeader: 'X-CSRFToken',
-    serverHeadersName: 'X-Zato-Portal-Response-Headers',
+    serverHeadersName: 'X-Zato-Response-Headers',
     pathParameterLocation: 'path',
-    pathInputSelector: '.portal-path-input',
+    pathInputSelector: '.app-path-input',
     pathParameterAttribute: 'data-parameter',
     pathInputMinimumSize: 4,
-    inputSelector: '.portal-editor-input',
-    editorSelector: '.portal-editor',
-    playSelector: '.portal-play',
-    invalidClass: 'portal-editor-invalid',
+    inputSelector: '.app-editor-input',
+    editorSelector: '.app-editor',
+    playSelector: '.app-play',
+    invalidClass: 'app-editor-invalid',
     exampleKey: 'example',
     completeExampleKey: 'x-complete-example',
     invokeKey: 'Enter',
     indicatorMinimumMs: 60,
-    invokingSelector: '.portal-invoking',
-    responseSelector: '.portal-operation-response',
-    statusSelector: '.portal-response-status',
-    timeSelector: '.portal-response-time',
-    bodySelector: '.portal-response-body',
-    statusOkClass: 'portal-chip portal-response-status portal-chip-success',
-    statusErrorClass: 'portal-chip portal-response-status portal-chip-error',
+    invokingSelector: '.app-invoking',
+    responseSelector: '.app-operation-response',
+    statusSelector: '.app-response-status',
+    timeSelector: '.app-response-time',
+    bodySelector: '.app-response-body',
+    statusOkClass: 'app-chip app-response-status app-chip-success',
+    statusErrorClass: 'app-chip app-response-status app-chip-error',
     statusOkMinimum: 200,
     statusOkMaximum: 299,
     statusUnauthorized: 401,
-    networkErrorText: 'The portal could not be reached',
+    networkErrorText: 'The server could not be reached',
     networkErrorStatus: 'Error',
     networkErrorStatusCode: 0,
     timeSuffix: ' ms',
@@ -43,7 +43,7 @@ zatoPortal.invoke.config = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.isObject = function(value) {
+zatoApp.invoke.isObject = function(value) {
 
     if(value === null) {
         return false;
@@ -55,11 +55,11 @@ zatoPortal.invoke.isObject = function(value) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getExample = function(holder, isComplete) {
+zatoApp.invoke.getExample = function(holder, isComplete) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
 
-    // The complete example, with every optional property, is there only in documents that the portal's own generator builds ..
+    // The complete example, with every optional property, is there only in documents that the app's own generator builds ..
     if(isComplete) {
         if(config.completeExampleKey in holder) {
             return holder[config.completeExampleKey];
@@ -76,23 +76,23 @@ zatoPortal.invoke.getExample = function(holder, isComplete) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getBodyExample = function(operation, isComplete) {
+zatoApp.invoke.getBodyExample = function(operation, isComplete) {
 
     if(!('requestBody' in operation)) {
         return undefined;
     }
 
-    var content = operation.requestBody.content[zatoPortal.invoke.config.contentType];
+    var content = operation.requestBody.content[zatoApp.invoke.config.contentType];
 
-    var out = zatoPortal.invoke.getExample(content, isComplete);
+    var out = zatoApp.invoke.getExample(content, isComplete);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.buildSample = function(entry, isComplete) {
+zatoApp.invoke.buildSample = function(entry, isComplete) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
     var operation = entry.operation;
     var sample = {};
 
@@ -106,7 +106,7 @@ zatoPortal.invoke.buildSample = function(entry, isComplete) {
                 continue;
             }
 
-            var parameterExample = zatoPortal.invoke.getExample(parameter, isComplete);
+            var parameterExample = zatoApp.invoke.getExample(parameter, isComplete);
 
             if(parameterExample !== undefined) {
                 sample[parameter.name] = parameterExample;
@@ -114,14 +114,14 @@ zatoPortal.invoke.buildSample = function(entry, isComplete) {
         }
     }
 
-    var bodyExample = zatoPortal.invoke.getBodyExample(operation, isComplete);
+    var bodyExample = zatoApp.invoke.getBodyExample(operation, isComplete);
 
     if(bodyExample === undefined) {
         return sample;
     }
 
     // .. followed by the body's own properties ..
-    if(zatoPortal.invoke.isObject(bodyExample)) {
+    if(zatoApp.invoke.isObject(bodyExample)) {
         Object.assign(sample, bodyExample);
         return sample;
     }
@@ -132,85 +132,85 @@ zatoPortal.invoke.buildSample = function(entry, isComplete) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.setRequestText = function(card, text) {
+zatoApp.invoke.setRequestText = function(card, text) {
 
-    var input = card.querySelector(zatoPortal.invoke.config.inputSelector);
+    var input = card.querySelector(zatoApp.invoke.config.inputSelector);
 
     input.value = text;
-    zatoPortal.highlight.refreshEditor(input);
-    zatoPortal.invoke.markInvalid(card, false);
-    zatoPortal.raw.refreshRequest(card);
-    zatoPortal.links.refresh(card);
+    zatoApp.highlight.refreshEditor(input);
+    zatoApp.invoke.markInvalid(card, false);
+    zatoApp.raw.refreshRequest(card);
+    zatoApp.links.refresh(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.markInvalid = function(card, isInvalid) {
-    var editor = card.querySelector(zatoPortal.invoke.config.editorSelector);
-    editor.classList.toggle(zatoPortal.invoke.config.invalidClass, isInvalid);
+zatoApp.invoke.markInvalid = function(card, isInvalid) {
+    var editor = card.querySelector(zatoApp.invoke.config.editorSelector);
+    editor.classList.toggle(zatoApp.invoke.config.invalidClass, isInvalid);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.onExampleClick = function(event) {
+zatoApp.invoke.onExampleClick = function(event) {
 
-    var card = event.currentTarget.closest(zatoPortal.invoke.config.cardSelector);
-    var entry = zatoPortal.state.entriesById[card.id];
+    var card = event.currentTarget.closest(zatoApp.invoke.config.cardSelector);
+    var entry = zatoApp.state.entriesById[card.id];
 
     // The example has every property of the request, and the path parameters return to their sample values
-    var sample = zatoPortal.invoke.buildSample(entry, true);
-    var text = zatoPortal.highlight.format(sample);
+    var sample = zatoApp.invoke.buildSample(entry, true);
+    var text = zatoApp.highlight.format(sample);
 
-    var pathExamples = zatoPortal.invoke.getPathExamples(entry.operation);
-    zatoPortal.invoke.setPathValues(card, pathExamples);
+    var pathExamples = zatoApp.invoke.getPathExamples(entry.operation);
+    zatoApp.invoke.setPathValues(card, pathExamples);
 
-    zatoPortal.invoke.setRequestText(card, text);
+    zatoApp.invoke.setRequestText(card, text);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.onPrettyPrintClick = function(event) {
+zatoApp.invoke.onPrettyPrintClick = function(event) {
 
-    var card = event.currentTarget.closest(zatoPortal.invoke.config.cardSelector);
-    var input = card.querySelector(zatoPortal.invoke.config.inputSelector);
+    var card = event.currentTarget.closest(zatoApp.invoke.config.cardSelector);
+    var input = card.querySelector(zatoApp.invoke.config.inputSelector);
 
     // Key=value lines are aligned on their separators ..
-    if(zatoPortal.keyValue.isKeyValue(input.value)) {
-        var aligned = zatoPortal.keyValue.format(input.value);
+    if(zatoApp.keyValue.isKeyValue(input.value)) {
+        var aligned = zatoApp.keyValue.format(input.value);
 
         if(aligned === null) {
-            zatoPortal.invoke.markInvalid(card, true);
+            zatoApp.invoke.markInvalid(card, true);
             return;
         }
 
-        zatoPortal.invoke.setRequestText(card, aligned);
+        zatoApp.invoke.setRequestText(card, aligned);
         return;
     }
 
     // .. and any other request is JSON, which stays as it was typed when it does not parse, with the editor showing it
-    var parsed = zatoPortal.invoke.parse(input.value);
+    var parsed = zatoApp.invoke.parse(input.value);
 
     if(parsed === undefined) {
-        zatoPortal.invoke.markInvalid(card, true);
+        zatoApp.invoke.markInvalid(card, true);
         return;
     }
 
-    var text = zatoPortal.highlight.format(parsed);
-    zatoPortal.invoke.setRequestText(card, text);
+    var text = zatoApp.highlight.format(parsed);
+    zatoApp.invoke.setRequestText(card, text);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.onEditorInput = function(event) {
-    var card = event.target.closest(zatoPortal.invoke.config.cardSelector);
-    zatoPortal.invoke.markInvalid(card, false);
+zatoApp.invoke.onEditorInput = function(event) {
+    var card = event.target.closest(zatoApp.invoke.config.cardSelector);
+    zatoApp.invoke.markInvalid(card, false);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.onCardKeyDown = function(event) {
+zatoApp.invoke.onCardKeyDown = function(event) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
 
     // Only Enter sends a request ..
     if(event.key !== config.invokeKey) {
@@ -236,7 +236,7 @@ zatoPortal.invoke.onCardKeyDown = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.parse = function(text) {
+zatoApp.invoke.parse = function(text) {
 
     try {
         var out = JSON.parse(text);
@@ -249,20 +249,20 @@ zatoPortal.invoke.parse = function(text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.parseRequest = function(text) {
+zatoApp.invoke.parseRequest = function(text) {
 
     // A request is JSON or key=value lines, the same as in the Dashboard
-    var parsed = zatoPortal.invoke.parse(text);
+    var parsed = zatoApp.invoke.parse(text);
 
     if(parsed !== undefined) {
         return parsed;
     }
 
-    if(!zatoPortal.keyValue.isKeyValue(text)) {
+    if(!zatoApp.keyValue.isKeyValue(text)) {
         return undefined;
     }
 
-    var pairs = zatoPortal.keyValue.parse(text);
+    var pairs = zatoApp.keyValue.parse(text);
 
     if(pairs === null) {
         return undefined;
@@ -273,9 +273,9 @@ zatoPortal.invoke.parseRequest = function(text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.fillPath = function(path, values) {
+zatoApp.invoke.fillPath = function(path, values) {
 
-    var pattern = new RegExp(zatoPortal.invoke.config.placeholderPattern.source, 'g');
+    var pattern = new RegExp(zatoApp.invoke.config.placeholderPattern.source, 'g');
     var out = path;
     var match = pattern.exec(path);
 
@@ -297,9 +297,9 @@ zatoPortal.invoke.fillPath = function(path, values) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getPathExamples = function(operation) {
+zatoApp.invoke.getPathExamples = function(operation) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
 
     // Our response to produce
     var out = {};
@@ -321,9 +321,9 @@ zatoPortal.invoke.getPathExamples = function(operation) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getPathValues = function(card) {
+zatoApp.invoke.getPathValues = function(card) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
     var inputs = card.querySelectorAll(config.pathInputSelector);
 
     // Our response to produce
@@ -341,9 +341,9 @@ zatoPortal.invoke.getPathValues = function(card) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.setPathValues = function(card, values) {
+zatoApp.invoke.setPathValues = function(card, values) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
     var inputs = card.querySelectorAll(config.pathInputSelector);
 
     for(var inputIndex = 0; inputIndex < inputs.length; inputIndex++) {
@@ -351,39 +351,39 @@ zatoPortal.invoke.setPathValues = function(card, values) {
         var name = input.getAttribute(config.pathParameterAttribute);
 
         input.value = values[name];
-        zatoPortal.invoke.sizePathInput(input);
+        zatoApp.invoke.sizePathInput(input);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.sizePathInput = function(input) {
+zatoApp.invoke.sizePathInput = function(input) {
 
     // An input is as wide as its value, or as its parameter's name while it is empty
     var length = Math.max(input.value.length, input.placeholder.length);
-    input.size = Math.max(length, zatoPortal.invoke.config.pathInputMinimumSize);
+    input.size = Math.max(length, zatoApp.invoke.config.pathInputMinimumSize);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.onPathInput = function(event) {
+zatoApp.invoke.onPathInput = function(event) {
 
     var input = event.target;
-    var card = input.closest(zatoPortal.invoke.config.cardSelector);
+    var card = input.closest(zatoApp.invoke.config.cardSelector);
 
-    zatoPortal.invoke.sizePathInput(input);
-    zatoPortal.raw.refreshRequest(card);
+    zatoApp.invoke.sizePathInput(input);
+    zatoApp.raw.refreshRequest(card);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.buildRequest = function(entry, text, pathValues) {
+zatoApp.invoke.buildRequest = function(entry, text, pathValues) {
 
-    var config = zatoPortal.invoke.config;
-    var parsed = zatoPortal.invoke.parseRequest(text);
+    var config = zatoApp.invoke.config;
+    var parsed = zatoApp.invoke.parseRequest(text);
 
     // Our response to produce, with the path parameters from their own inputs
-    var out = {path: zatoPortal.invoke.fillPath(entry.path, pathValues), query: '', body: null, contentType: null};
+    var out = {path: zatoApp.invoke.fillPath(entry.path, pathValues), query: '', body: null, contentType: null};
 
     // An empty editor sends no body ..
     if(text.trim() === '') {
@@ -391,7 +391,7 @@ zatoPortal.invoke.buildRequest = function(entry, text, pathValues) {
     }
 
     // .. an object is sent as the JSON body it is in the editor, whatever the method ..
-    if(zatoPortal.invoke.isObject(parsed)) {
+    if(zatoApp.invoke.isObject(parsed)) {
         out.body = JSON.stringify(parsed);
         out.contentType = config.contentType;
         return out;
@@ -399,16 +399,16 @@ zatoPortal.invoke.buildRequest = function(entry, text, pathValues) {
 
     // .. while anything else is the body as it was typed, whatever the method, in the content type its text has.
     out.body = text;
-    out.contentType = zatoPortal.invoke.getTextContentType(text, parsed);
+    out.contentType = zatoApp.invoke.getTextContentType(text, parsed);
 
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getTextContentType = function(text, parsed) {
+zatoApp.invoke.getTextContentType = function(text, parsed) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
 
     if(parsed !== undefined) {
         return config.contentType;
@@ -423,13 +423,13 @@ zatoPortal.invoke.getTextContentType = function(text, parsed) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getRequestHeaders = function(operation, request, headers) {
+zatoApp.invoke.getRequestHeaders = function(operation, request, headers) {
 
-    var config = zatoPortal.invoke.config;
-    var callerHeaders = zatoPortal.raw.getHeaderObject(headers);
+    var config = zatoApp.invoke.config;
+    var callerHeaders = zatoApp.raw.getHeaderObject(headers);
     var contentTypeName = config.contentTypeHeader.toLowerCase();
     var acceptName = config.acceptHeader.toLowerCase();
-    var mediaType = zatoPortal.fields.getResponseMediaType(operation);
+    var mediaType = zatoApp.fields.getResponseMediaType(operation);
 
     // Our response to produce
     var out = {};
@@ -467,19 +467,19 @@ zatoPortal.invoke.getRequestHeaders = function(operation, request, headers) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.onPlayClick = function(event) {
+zatoApp.invoke.onPlayClick = function(event) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
     var button = event.currentTarget;
     var card = button.closest(config.cardSelector);
-    var entry = zatoPortal.state.entriesById[card.id];
-    var exchange = zatoPortal.state.exchanges[card.id];
+    var entry = zatoApp.state.entriesById[card.id];
+    var exchange = zatoApp.state.exchanges[card.id];
     var input = card.querySelector(config.inputSelector);
     var invoking = card.querySelector(config.invokingSelector);
 
     var requestText = input.value;
-    var pathValues = zatoPortal.invoke.getPathValues(card);
-    var request = zatoPortal.invoke.buildRequest(entry, requestText, pathValues);
+    var pathValues = zatoApp.invoke.getPathValues(card);
+    var request = zatoApp.invoke.buildRequest(entry, requestText, pathValues);
 
     // The method, the path, the query string, the caller's own headers and the body travel to the endpoint as one JSON document,
     // apart from the headers the browser adds on its own, clear of the size limits that proxies put on headers
@@ -488,7 +488,7 @@ zatoPortal.invoke.onPlayClick = function(event) {
         method: entry.method.toUpperCase(),
         path: request.path,
         query: request.query,
-        headers: zatoPortal.invoke.getRequestHeaders(entry.operation, request, exchange.headers),
+        headers: zatoApp.invoke.getRequestHeaders(entry.operation, request, exchange.headers),
         body: request.body,
     };
 
@@ -515,19 +515,19 @@ zatoPortal.invoke.onPlayClick = function(event) {
         headers: JSON.parse(JSON.stringify(exchange.headers)),
     };
 
-    var onResponse = zatoPortal.invoke.onResponse.bind(null, pending);
-    var onNetworkError = zatoPortal.invoke.onNetworkError.bind(null, pending);
+    var onResponse = zatoApp.invoke.onResponse.bind(null, pending);
+    var onNetworkError = zatoApp.invoke.onNetworkError.bind(null, pending);
 
-    fetch(zatoPortal.state.relayBase, options).then(onResponse, onNetworkError);
+    fetch(zatoApp.state.relayBase, options).then(onResponse, onNetworkError);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getServerHeaders = function(response) {
+zatoApp.invoke.getServerHeaders = function(response) {
 
-    var value = response.headers.get(zatoPortal.invoke.config.serverHeadersName);
+    var value = response.headers.get(zatoApp.invoke.config.serverHeadersName);
 
-    // The relay sends the endpoint's own headers only when the endpoint was invoked, and not when the portal rejected the request
+    // The relay sends the endpoint's own headers only when the endpoint was invoked, and not when the app rejected the request
     if(value === null) {
         return [];
     }
@@ -540,15 +540,15 @@ zatoPortal.invoke.getServerHeaders = function(response) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.onResponse = function(pending, response) {
+zatoApp.invoke.onResponse = function(pending, response) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
     var hasServerHeaders = response.headers.has(config.serverHeadersName);
 
     // A session that has ended signs in again, which a 401 from the endpoint itself does not mean
     if(response.status === config.statusUnauthorized) {
         if(!hasServerHeaders) {
-            zatoPortal.signOut();
+            zatoApp.signOut();
             return;
         }
     }
@@ -559,23 +559,23 @@ zatoPortal.invoke.onResponse = function(pending, response) {
         isOk = response.status <= config.statusOkMaximum;
     }
 
-    var headers = zatoPortal.invoke.getServerHeaders(response);
+    var headers = zatoApp.invoke.getServerHeaders(response);
 
-    var finish = zatoPortal.invoke.finish.bind(null, pending, response.status, response.statusText, isOk, headers);
+    var finish = zatoApp.invoke.finish.bind(null, pending, response.status, response.statusText, isOk, headers);
     response.text().then(finish);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.onNetworkError = function(pending) {
+zatoApp.invoke.onNetworkError = function(pending) {
 
-    var config = zatoPortal.invoke.config;
-    zatoPortal.invoke.finish(pending, config.networkErrorStatusCode, '', false, [], config.networkErrorText);
+    var config = zatoApp.invoke.config;
+    zatoApp.invoke.finish(pending, config.networkErrorStatusCode, '', false, [], config.networkErrorText);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.finish = function(pending, status, statusText, isOk, headers, text) {
+zatoApp.invoke.finish = function(pending, status, statusText, isOk, headers, text) {
 
     var elapsed = performance.now() - pending.startedAt;
 
@@ -590,26 +590,26 @@ zatoPortal.invoke.finish = function(pending, status, statusText, isOk, headers, 
 
     // The indicator stays on screen a moment past the response, as in the Dashboard's IDE,
     // so that a fast call does not make it a barely visible blip
-    var complete = zatoPortal.invoke.complete.bind(null, pending, result);
-    setTimeout(complete, zatoPortal.invoke.config.indicatorMinimumMs);
+    var complete = zatoApp.invoke.complete.bind(null, pending, result);
+    setTimeout(complete, zatoApp.invoke.config.indicatorMinimumMs);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.complete = function(pending, result) {
+zatoApp.invoke.complete = function(pending, result) {
 
     pending.button.disabled = false;
     pending.invoking.hidden = true;
 
-    zatoPortal.invoke.showResult(pending.card, result);
-    zatoPortal.history.record(pending.card, pending.requestText, pending.pathValues, pending.headers, result);
+    zatoApp.invoke.showResult(pending.card, result);
+    zatoApp.history.record(pending.card, pending.requestText, pending.pathValues, pending.headers, result);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getStatusText = function(result) {
+zatoApp.invoke.getStatusText = function(result) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
 
     if(result.status === config.networkErrorStatusCode) {
         return config.networkErrorStatus;
@@ -623,45 +623,45 @@ zatoPortal.invoke.getStatusText = function(result) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.getDisplayText = function(text) {
+zatoApp.invoke.getDisplayText = function(text) {
 
-    var parsed = zatoPortal.invoke.parse(text);
+    var parsed = zatoApp.invoke.parse(text);
 
     // A JSON body is shown formatted and anything else as it arrived
     if(parsed === undefined) {
         return text;
     }
 
-    var out = zatoPortal.highlight.format(parsed);
+    var out = zatoApp.highlight.format(parsed);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.invoke.showResult = function(card, result) {
+zatoApp.invoke.showResult = function(card, result) {
 
-    var config = zatoPortal.invoke.config;
+    var config = zatoApp.invoke.config;
 
     var response = card.querySelector(config.responseSelector);
     var statusElement = card.querySelector(config.statusSelector);
     var timeElement = card.querySelector(config.timeSelector);
     var bodyElement = card.querySelector(config.bodySelector);
 
-    zatoPortal.state.exchanges[card.id].result = result;
+    zatoApp.state.exchanges[card.id].result = result;
 
-    statusElement.textContent = zatoPortal.invoke.getStatusText(result);
+    statusElement.textContent = zatoApp.invoke.getStatusText(result);
     statusElement.className = result.isOk ? config.statusOkClass : config.statusErrorClass;
     timeElement.textContent = result.durationMs + config.timeSuffix;
 
-    var displayText = zatoPortal.invoke.getDisplayText(result.text);
+    var displayText = zatoApp.invoke.getDisplayText(result.text);
 
-    if(zatoPortal.invoke.parse(result.text) === undefined) {
+    if(zatoApp.invoke.parse(result.text) === undefined) {
         bodyElement.textContent = displayText;
     }
     else {
-        zatoPortal.highlight.fill(bodyElement, displayText);
+        zatoApp.highlight.fill(bodyElement, displayText);
     }
 
     response.hidden = false;
-    zatoPortal.raw.refreshResponse(card);
+    zatoApp.raw.refreshResponse(card);
 };

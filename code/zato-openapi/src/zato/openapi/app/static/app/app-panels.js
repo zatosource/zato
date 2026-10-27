@@ -1,6 +1,6 @@
-zatoPortal.panels = {};
+zatoApp.panels = {};
 
-zatoPortal.panels.config = {
+zatoApp.panels.config = {
     svgNamespace: 'http://www.w3.org/2000/svg',
     iconViewBox: '0 0 24 24',
     playIconPath: 'M8 5v14l11-7z',
@@ -14,14 +14,14 @@ zatoPortal.panels.config = {
     copiedText: 'Copied',
     copiedPlacement: 'top',
     copiedLayer: 400,
-    bareTheme: 'portal-bare',
-    countClass: 'portal-chip portal-chip-neutral portal-tool-count',
-    countEmptyClass: 'portal-tool-count-empty',
+    bareTheme: 'app-bare',
+    countClass: 'app-chip app-chip-neutral app-tool-count',
+    countEmptyClass: 'app-tool-count-empty',
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.createElement = function(tagName, className, text) {
+zatoApp.panels.createElement = function(tagName, className, text) {
 
     var element = document.createElement(tagName);
     element.className = className;
@@ -35,9 +35,9 @@ zatoPortal.panels.createElement = function(tagName, className, text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.createSvgElement = function(tagName, attributes) {
+zatoApp.panels.createSvgElement = function(tagName, attributes) {
 
-    var element = document.createElementNS(zatoPortal.panels.config.svgNamespace, tagName);
+    var element = document.createElementNS(zatoApp.panels.config.svgNamespace, tagName);
     var names = Object.keys(attributes);
 
     for(var nameIndex = 0; nameIndex < names.length; nameIndex++) {
@@ -50,10 +50,10 @@ zatoPortal.panels.createSvgElement = function(tagName, attributes) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.buildBar = function(title) {
+zatoApp.panels.buildBar = function(title) {
 
-    var bar = zatoPortal.panels.createElement('div', 'portal-panel-bar');
-    var titleElement = zatoPortal.panels.createElement('span', 'portal-panel-title', title);
+    var bar = zatoApp.panels.createElement('div', 'app-panel-bar');
+    var titleElement = zatoApp.panels.createElement('span', 'app-panel-title', title);
 
     bar.appendChild(titleElement);
 
@@ -62,25 +62,25 @@ zatoPortal.panels.buildBar = function(title) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.buildTools = function() {
-    var out = zatoPortal.panels.createElement('div', 'portal-panel-tools');
+zatoApp.panels.buildTools = function() {
+    var out = zatoApp.panels.createElement('div', 'app-panel-tools');
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.buildPlayButton = function(onClick) {
+zatoApp.panels.buildPlayButton = function(onClick) {
 
-    var config = zatoPortal.panels.config;
+    var config = zatoApp.panels.config;
 
-    var button = zatoPortal.panels.createElement('button', 'portal-play');
+    var button = zatoApp.panels.createElement('button', 'app-play');
     button.type = 'button';
     button.title = config.playLabel;
     button.setAttribute('aria-label', config.playLabel);
     button.addEventListener('click', onClick);
 
-    var icon = zatoPortal.panels.createSvgElement('svg', {'class': 'portal-play-icon', 'viewBox': config.iconViewBox});
-    var shape = zatoPortal.panels.createSvgElement('path', {'d': config.playIconPath});
+    var icon = zatoApp.panels.createSvgElement('svg', {'class': 'app-play-icon', 'viewBox': config.iconViewBox});
+    var shape = zatoApp.panels.createSvgElement('path', {'d': config.playIconPath});
 
     icon.appendChild(shape);
     button.appendChild(icon);
@@ -90,23 +90,23 @@ zatoPortal.panels.buildPlayButton = function(onClick) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.buildInvoking = function() {
+zatoApp.panels.buildInvoking = function() {
 
-    var config = zatoPortal.panels.config;
+    var config = zatoApp.panels.config;
 
-    var container = zatoPortal.panels.createElement('span', 'portal-invoking');
+    var container = zatoApp.panels.createElement('span', 'app-invoking');
     container.hidden = true;
 
-    var text = zatoPortal.panels.createElement('span', 'portal-invoking-text', config.invokingText);
+    var text = zatoApp.panels.createElement('span', 'app-invoking-text', config.invokingText);
 
-    var spinner = zatoPortal.panels.createSvgElement('svg', {'class': 'portal-spinner portal-invoking-spinner', 'viewBox': config.spinnerViewBox});
+    var spinner = zatoApp.panels.createSvgElement('svg', {'class': 'app-spinner app-invoking-spinner', 'viewBox': config.spinnerViewBox});
     var circleAttributes = {'cx': config.spinnerCenter, 'cy': config.spinnerCenter, 'r': config.spinnerRadius};
 
-    var track = zatoPortal.panels.createSvgElement('circle', circleAttributes);
-    track.setAttribute('class', 'portal-spinner-track');
+    var track = zatoApp.panels.createSvgElement('circle', circleAttributes);
+    track.setAttribute('class', 'app-spinner-track');
 
-    var arc = zatoPortal.panels.createSvgElement('circle', circleAttributes);
-    arc.setAttribute('class', 'portal-spinner-arc');
+    var arc = zatoApp.panels.createSvgElement('circle', circleAttributes);
+    arc.setAttribute('class', 'app-spinner-arc');
 
     spinner.appendChild(track);
     spinner.appendChild(arc);
@@ -119,9 +119,9 @@ zatoPortal.panels.buildInvoking = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.buildToolButton = function(text, className, onClick) {
+zatoApp.panels.buildToolButton = function(text, className, onClick) {
 
-    var button = zatoPortal.panels.createElement('button', 'portal-tool ' + className, text);
+    var button = zatoApp.panels.createElement('button', 'app-tool ' + className, text);
     button.type = 'button';
     button.addEventListener('click', onClick);
 
@@ -130,13 +130,13 @@ zatoPortal.panels.buildToolButton = function(text, className, onClick) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.setCount = function(button, count) {
+zatoApp.panels.setCount = function(button, count) {
 
-    var config = zatoPortal.panels.config;
-    var chip = button.querySelector('.portal-tool-count');
+    var config = zatoApp.panels.config;
+    var chip = button.querySelector('.app-tool-count');
 
     if(chip === null) {
-        chip = zatoPortal.panels.createElement('span', config.countClass);
+        chip = zatoApp.panels.createElement('span', config.countClass);
         button.appendChild(chip);
     }
 
@@ -148,18 +148,18 @@ zatoPortal.panels.setCount = function(button, count) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.buildRawSwitch = function(onChange) {
+zatoApp.panels.buildRawSwitch = function(onChange) {
 
-    var config = zatoPortal.panels.config;
+    var config = zatoApp.panels.config;
 
-    var label = zatoPortal.panels.createElement('label', 'portal-switch');
+    var label = zatoApp.panels.createElement('label', 'app-switch');
 
-    var input = zatoPortal.panels.createElement('input', 'portal-switch-input');
+    var input = zatoApp.panels.createElement('input', 'app-switch-input');
     input.type = 'checkbox';
     input.addEventListener('change', onChange);
 
-    var track = zatoPortal.panels.createElement('span', 'portal-switch-track');
-    var text = zatoPortal.panels.createElement('span', 'portal-switch-text', config.rawText);
+    var track = zatoApp.panels.createElement('span', 'app-switch-track');
+    var text = zatoApp.panels.createElement('span', 'app-switch-text', config.rawText);
 
     label.appendChild(input);
     label.appendChild(track);
@@ -170,37 +170,37 @@ zatoPortal.panels.buildRawSwitch = function(onChange) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.buildCopyButton = function(getText, text) {
+zatoApp.panels.buildCopyButton = function(getText, text) {
 
-    var button = zatoPortal.panels.createElement('button', 'portal-copy', text);
+    var button = zatoApp.panels.createElement('button', 'app-copy', text);
     button.type = 'button';
 
-    button.addEventListener('click', zatoPortal.panels.onCopyClick.bind(null, getText));
+    button.addEventListener('click', zatoApp.panels.onCopyClick.bind(null, getText));
 
     return button;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.onCopyClick = function(getText, event) {
+zatoApp.panels.onCopyClick = function(getText, event) {
 
     var button = event.currentTarget;
     var text = getText(button);
 
-    navigator.clipboard.writeText(text).then(zatoPortal.panels.showCopied.bind(null, button));
+    navigator.clipboard.writeText(text).then(zatoApp.panels.showCopied.bind(null, button));
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.panels.showCopied = function(button) {
+zatoApp.panels.showCopied = function(button) {
 
-    var config = zatoPortal.panels.config;
+    var config = zatoApp.panels.config;
 
     // The tooltip is placed on the page itself, above the button it confirms, so no panel that scrolls
     // or clips its content cuts it off, and its anchor is an element of its own, which leaves the button
     // free for a menu ..
     var anchor = document.createElement('span');
-    var tooltip = zatoPortal.panels.createElement('span', 'portal-copy-tooltip', config.copiedText);
+    var tooltip = zatoApp.panels.createElement('span', 'app-copy-tooltip', config.copiedText);
 
     var instance = tippy(anchor, {
         content: tooltip,

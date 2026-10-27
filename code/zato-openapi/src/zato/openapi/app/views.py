@@ -72,14 +72,14 @@ _no_such_file_message = 'No such file'
 
 # The base URL under which try-it requests are relayed to the servers - the document's servers
 # entry points here, so the browser only ever talks to the portal, never to the servers.
-_relay_url_base = '/api-portal/relay'
+_relay_url_base = '/relay'
 
 # The only method that the relay accepts from a signed-in caller
 _relay_method = 'POST'
 
 # The response header in which the browser receives the headers that the endpoint's REST channel would respond with,
 # as URL-encoded JSON, apart from the headers of the portal's own response
-_relay_response_headers_name = 'X-Zato-Portal-Response-Headers'
+_relay_response_headers_name = 'X-Zato-Response-Headers'
 
 # Maps rejection statuses from the reply stream to the HTTP status and message the browser receives
 _relay_rejections = {

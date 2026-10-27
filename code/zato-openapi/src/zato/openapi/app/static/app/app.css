@@ -1,0 +1,559 @@
+/* ------------------------------------------------------------ */
+/* App - fonts and tokens                                       */
+/* ------------------------------------------------------------ */
+
+@font-face {
+    font-family: ZatoMainFontLight;
+    src: url("/static/app/fonts/Jost-Light.ttf");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: ZatoMainFont;
+    src: url("/static/app/fonts/Jost-Regular.ttf");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: ZatoMainFontMedium;
+    src: url("/static/app/fonts/Jost-Medium.ttf");
+    font-display: swap;
+}
+
+:root {
+    --app-bg: #0a0e1a;
+    --app-bg-panel: rgba(13, 17, 23, 0.82);
+    --app-bg-raised: #111827;
+    --app-bg-raised-hover: #1e293b;
+    --app-border: rgba(255, 255, 255, 0.06);
+    --app-border-strong: rgba(255, 255, 255, 0.12);
+    --app-accent: #3b82f6;
+    --app-accent-light: #60a5fa;
+    --app-accent-cyan: #06b6d4;
+    --app-accent-soft: rgba(59, 130, 246, 0.08);
+    --app-accent-soft-strong: rgba(96, 165, 250, 0.18);
+    --app-selection-text: #ffff55;
+    --app-green: #6fae84;
+    --app-red: #ef4444;
+    --app-red-soft: rgba(239, 68, 68, 0.08);
+    --app-red-border: rgba(239, 68, 68, 0.28);
+    --app-orange: #f59e0b;
+    --app-orange-soft: rgba(245, 158, 11, 0.08);
+    --app-yellow: #facc15;
+    --app-purple: #a78bfa;
+    --app-text: #f1f5f9;
+    --app-text-muted: #94a3b8;
+    --app-text-faint: #8391a7;
+    --app-text-on-accent: #ffffff;
+    --app-grid-line: rgba(255, 255, 255, 0.025);
+    --app-glow-accent: rgba(59, 130, 246, 0.11);
+    --app-glow-green: rgba(111, 174, 132, 0.07);
+    --app-shadow-small: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --app-shadow-large: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
+    --app-font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    --app-header-height: 3.5rem;
+    --app-page-padding: 2rem;
+    --app-hover-delay: 120ms;
+    --app-hover-duration: 0.2s;
+    --app-spinner-size: 3rem;
+    --app-spinner-duration: 1.4s;
+    --app-loading-delay: 0.2s;
+    --app-chip-radius: 3px;
+    --app-control-radius: 2px;
+    --app-sidebar-width: 19rem;
+    --app-sidebar-padding: 0.875rem;
+    --app-sidebar-collapsed-width: 2.75rem;
+    --app-navigation-chevron-size: 0.75rem;
+    --app-login-logo-height: 2rem;
+    --app-header-logo-max-width: 16rem;
+    --app-layout-master-width: 28rem;
+    --app-layout-resizer-width: 1.5rem;
+    --app-layout-master-collapsed-width: 2.75rem;
+    --app-layout-grip-height: 2.5rem;
+    --app-layout-grip-width: 4px;
+    --app-layout-grip-fill: rgba(255, 255, 255, 0.14);
+    --app-layout-end-padding: 1.5rem;
+    --app-exchange-minimum-height: 26rem;
+    --app-request-minimum-height: 10rem;
+    --app-response-minimum-height: 8rem;
+    --app-request-share: 1;
+    --app-response-share: 1;
+    --app-exchange-resizer-height: 1rem;
+    --app-specification-minimum-width: 20rem;
+    --app-specification-minimum-height: 12rem;
+    --app-glass-fill: rgba(255, 255, 255, 0.08);
+    --app-glass-fill-hover: rgba(255, 255, 255, 0.14);
+    --app-glass-rim: rgba(255, 255, 255, 0.08);
+    --app-copy-border: rgba(255, 255, 255, 0.16);
+    --app-copy-fill: rgba(255, 255, 255, 0.04);
+    --app-copy-fill-hover: rgba(255, 255, 255, 0.1);
+    --app-tooltip-text: #f1f5f9;
+    --app-tooltip-fill: #1e293b;
+    --app-tooltip-border: rgba(255, 255, 255, 0.16);
+    --app-tooltip-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.5);
+    --app-tooltip-arrow-size: 8px;
+    --app-switch-track: rgba(255, 255, 255, 0.16);
+    --app-switch-knob: #cbd5e1;
+    --app-popover-width: 30rem;
+    --app-popover-max-height: 24rem;
+    --app-code-font-size: 0.8125rem;
+    --app-code-line-height: 1.55;
+    --app-secret-toggle-width: 4rem;
+
+    --app-chip-neutral-text: #c8c8d6;
+    --app-chip-neutral-fill: rgba(255, 255, 255, 0.1);
+    --app-chip-blue-text: #6fb6e8;
+    --app-chip-blue-fill: rgba(111, 182, 232, 0.18);
+    --app-chip-green-text: #7fd1a0;
+    --app-chip-green-fill: rgba(127, 209, 160, 0.18);
+    --app-chip-yellow-text: #e8c46f;
+    --app-chip-yellow-fill: rgba(232, 196, 111, 0.18);
+    --app-chip-purple-text: #cfa9ea;
+    --app-chip-purple-fill: rgba(207, 169, 234, 0.18);
+    --app-chip-red-text: #ff8a80;
+    --app-chip-red-fill: rgba(255, 138, 128, 0.18);
+    --app-chip-amber-text: #dcb98a;
+    --app-chip-amber-border: rgba(220, 175, 110, 0.22);
+    --app-chip-amber-fill: rgba(220, 175, 110, 0.08);
+
+    --app-code-key: #93c5fd;
+    --app-code-string: #a7d7a9;
+    --app-code-number: #f0b86e;
+    --app-code-boolean: #cfa9ea;
+    --app-code-null: #94a3b8;
+    --app-code-punctuation: #64748b;
+
+    color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+::selection {
+    color: var(--app-selection-text);
+    background: var(--app-accent-soft-strong);
+}
+
+/* ------------------------------------------------------------ */
+/* App - base layout                                            */
+/* ------------------------------------------------------------ */
+
+body.app-body,
+body.app-login-body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: ZatoMainFont, sans-serif;
+    color: var(--app-text);
+    background:
+        radial-gradient(900px circle at 88% -12%, var(--app-glow-accent), transparent 60%),
+        radial-gradient(720px circle at -8% 112%, var(--app-glow-green), transparent 60%),
+        var(--app-bg);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+}
+
+.app-backdrop {
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(var(--app-grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--app-grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 50% 28%, #000 18%, transparent 72%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 28%, #000 18%, transparent 72%);
+    pointer-events: none;
+}
+
+/* ------------------------------------------------------------ */
+/* App - header bar                                             */
+/* ------------------------------------------------------------ */
+
+.app-header {
+    display: flex;
+    gap: 1.625rem;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--app-header-height);
+    padding: 0 var(--app-page-padding) 0 var(--app-sidebar-padding);
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-bg);
+}
+
+.app-header-brand {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    text-decoration: none;
+}
+
+.app-header-logo {
+    flex: none;
+    width: auto;
+    max-width: var(--app-header-logo-max-width);
+    height: 1.5rem;
+    object-fit: contain;
+}
+
+.app-brand-text {
+    overflow: hidden;
+    font-family: ZatoMainFontMedium, sans-serif;
+    color: var(--app-text);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.app-header-brand-text {
+    font-size: 1.125rem;
+}
+
+.app-header-title {
+    min-width: 0;
+    overflow: hidden;
+    font-family: ZatoMainFont, sans-serif;
+    font-size: 0.9375rem;
+    color: var(--app-text-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.app-header-links {
+    display: flex;
+    gap: 1.25rem;
+    margin-left: auto;
+}
+
+.app-header-link,
+.app-header-logout,
+.app-header-user {
+    font-family: var(--app-font-mono);
+    font-size: 0.8125rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.app-header-link,
+.app-header-logout {
+    color: var(--app-text-faint);
+    transition: color var(--app-hover-duration) ease;
+}
+
+.app-header-link:hover,
+.app-header-logout:hover {
+    color: var(--app-text);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-header-user {
+    margin-left: 0.875rem;
+    color: var(--app-accent-light);
+}
+
+/* ------------------------------------------------------------ */
+/* App - empty and error states                                 */
+/* ------------------------------------------------------------ */
+
+.app-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    inset: var(--app-header-height) 0 0 0;
+    padding: var(--app-page-padding);
+}
+
+.app-status[hidden] {
+    display: none;
+}
+
+.app-status-text {
+    font-family: ZatoMainFontLight, sans-serif;
+    font-size: 2.25rem;
+    letter-spacing: -0.025em;
+}
+
+.app-status-text {
+    position: relative;
+    max-width: 40rem;
+    line-height: 1.2;
+    color: var(--app-text-muted);
+    text-align: center;
+}
+
+/* ------------------------------------------------------------ */
+/* App - loading state                                          */
+/* ------------------------------------------------------------ */
+
+.app-loading {
+    animation: app-loading-appear 0.3s ease var(--app-loading-delay) both;
+}
+
+.app-spinner {
+    display: block;
+    position: relative;
+    width: var(--app-spinner-size);
+    height: var(--app-spinner-size);
+    fill: none;
+    stroke-width: 4;
+    animation: app-spinner-rotate var(--app-spinner-duration) linear infinite;
+}
+
+.app-spinner-track {
+    stroke: var(--app-accent-soft-strong);
+}
+
+.app-spinner-arc {
+    stroke: var(--app-accent-light);
+    stroke-linecap: butt;
+    stroke-dasharray: 1 150;
+    animation: app-spinner-dash var(--app-spinner-duration) ease-in-out infinite;
+}
+
+@keyframes app-loading-appear {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes app-spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes app-spinner-dash {
+    0% {
+        stroke-dasharray: 1 150;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 90 150;
+        stroke-dashoffset: -35;
+    }
+    100% {
+        stroke-dasharray: 90 150;
+        stroke-dashoffset: -124;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-spinner,
+    .app-spinner-arc {
+        animation-duration: 6s;
+    }
+}
+
+/* ------------------------------------------------------------ */
+/* App - sign-in page                                           */
+/* ------------------------------------------------------------ */
+
+.app-login-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 100vh;
+    padding: var(--app-page-padding);
+}
+
+.app-login-card {
+    display: flex;
+    flex-direction: column;
+    width: 23rem;
+    max-width: 100%;
+    padding: 2.5rem;
+    border: 1px solid var(--app-border);
+    background: var(--app-bg-panel);
+    box-shadow: var(--app-shadow-large);
+}
+
+.app-login-brand {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+    margin-bottom: 1.5rem;
+}
+
+/* A logo of any size takes the same height, a wide one shrinks to the width of the card, and none is distorted */
+
+.app-login-logo {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: var(--app-login-logo-height);
+    object-fit: contain;
+}
+
+.app-login-brand-text {
+    font-size: 1.75rem;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Every auth type's fields occupy the same cell, so the card keeps the height of the tallest set */
+
+.app-login-stack {
+    display: grid;
+}
+
+.app-login-fields {
+    display: flex;
+    flex-direction: column;
+    grid-area: 1 / 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.app-login-fields[hidden] {
+    display: flex;
+    visibility: hidden;
+}
+
+.app-login-label {
+    margin: 1rem 0 0.5rem;
+    font-family: var(--app-font-mono);
+    font-size: 0.75rem;
+    color: var(--app-text-faint);
+}
+
+.app-login-input {
+    width: 100%;
+    padding: 0.6875rem 0.875rem;
+    border: 1px solid var(--app-border-strong);
+    border-radius: var(--app-control-radius);
+    outline: none;
+    font-family: ZatoMainFont, sans-serif;
+    font-size: 0.9375rem;
+    color: var(--app-text);
+    background: var(--app-bg-raised);
+    transition: border-color var(--app-hover-duration) ease, box-shadow var(--app-hover-duration) ease;
+}
+
+.app-login-input:focus {
+    border-color: var(--app-accent-light);
+    box-shadow: 0 0 0 3px var(--app-accent-soft-strong);
+}
+
+.app-login-input:-webkit-autofill {
+    -webkit-text-fill-color: var(--app-text);
+    box-shadow: 0 0 0 100px var(--app-bg-raised) inset;
+    caret-color: var(--app-text);
+}
+
+.app-login-button {
+    margin-top: 1.75rem;
+    padding: 0.75rem;
+    border: none;
+    border-radius: var(--app-control-radius);
+    font-family: ZatoMainFontMedium, sans-serif;
+    font-size: 0.9375rem;
+    color: var(--app-text-on-accent);
+    background: linear-gradient(90deg, var(--app-accent), var(--app-accent-cyan));
+    cursor: pointer;
+    transition: filter var(--app-hover-duration) ease;
+}
+
+.app-login-button:hover {
+    filter: brightness(1.12);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-login-button:focus-visible {
+    outline: 2px solid var(--app-accent-light);
+    outline-offset: 2px;
+}
+
+.app-login-select {
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    cursor: pointer;
+    appearance: none;
+}
+
+.app-secret {
+    position: relative;
+}
+
+.app-secret-input {
+    padding-right: var(--app-secret-toggle-width);
+}
+
+.app-secret-input::-ms-reveal {
+    display: none;
+}
+
+.app-secret-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: var(--app-secret-toggle-width);
+    height: 100%;
+    padding: 0;
+    border: none;
+    font-family: var(--app-font-mono);
+    font-size: 0.65rem;
+    color: var(--app-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: transparent;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: color var(--app-hover-duration) ease;
+}
+
+.app-secret-toggle:hover {
+    color: var(--app-text);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-secret-toggle:focus-visible {
+    outline: 2px solid var(--app-accent-light);
+    outline-offset: -2px;
+}
+
+.app-login-error {
+    margin-bottom: 0.375rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--app-red-border);
+    font-family: var(--app-font-mono);
+    font-size: 0.8125rem;
+    color: var(--app-red);
+    background: var(--app-red-soft);
+}
+
+/* ------------------------------------------------------------ */
+/* App - narrow screens                                         */
+/* ------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+    :root {
+        --app-page-padding: 1.125rem;
+    }
+
+    .app-header-links,
+    .app-header-user {
+        display: none;
+    }
+
+    .app-header-logout {
+        margin-left: auto;
+    }
+
+    .app-status-text {
+        font-size: 1.75rem;
+    }
+}

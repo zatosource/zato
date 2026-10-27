@@ -1,12 +1,12 @@
-zatoPortal.specification = {};
+zatoApp.specification = {};
 
-zatoPortal.specification.config = {
-    storageKey: 'zato.openapi.portal.specification.size',
-    positionStorageKey: 'zato.openapi.portal.specification.window',
-    cardSelector: '.portal-operation',
-    sidebarSelector: '.portal-sidebar',
-    buttonSelector: '.portal-tool-specification',
-    activeClass: 'portal-tool-active',
+zatoApp.specification.config = {
+    storageKey: 'zato.openapi.app.specification.size',
+    positionStorageKey: 'zato.openapi.app.specification.window',
+    cardSelector: '.app-operation',
+    sidebarSelector: '.app-sidebar',
+    buttonSelector: '.app-tool-specification',
+    activeClass: 'app-tool-active',
     placement: 'bottom-start',
     animation: 'fade',
     strategy: 'fixed',
@@ -32,7 +32,7 @@ zatoPortal.specification.config = {
     primaryButton: 0,
 };
 
-zatoPortal.specification.state = {
+zatoApp.specification.state = {
 
     // The windows in the order they were opened, which is the order Escape closes them in reverse ..
     windows: [],
@@ -43,9 +43,9 @@ zatoPortal.specification.state = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.loadSize = function() {
+zatoApp.specification.loadSize = function() {
 
-    var config = zatoPortal.specification.config;
+    var config = zatoApp.specification.config;
 
     // localStorage returns null for a key that was never stored, and the window then opens with its default size
     var stored = localStorage.getItem(config.storageKey);
@@ -61,25 +61,25 @@ zatoPortal.specification.loadSize = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.saveSize = function(specWindow) {
+zatoApp.specification.saveSize = function(specWindow) {
 
     var size = {width: specWindow.width, height: specWindow.height};
-    localStorage.setItem(zatoPortal.specification.config.storageKey, JSON.stringify(size));
+    localStorage.setItem(zatoApp.specification.config.storageKey, JSON.stringify(size));
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.savePosition = function(specWindow) {
+zatoApp.specification.savePosition = function(specWindow) {
 
     var position = {left: specWindow.left, top: specWindow.top};
-    localStorage.setItem(zatoPortal.specification.config.positionStorageKey, JSON.stringify(position));
+    localStorage.setItem(zatoApp.specification.config.positionStorageKey, JSON.stringify(position));
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.clampPosition = function(left, top, width) {
+zatoApp.specification.clampPosition = function(left, top, width) {
 
-    var config = zatoPortal.specification.config;
+    var config = zatoApp.specification.config;
 
     // The bar never leaves the page, so the window can always be dragged back
     var leftMinimum = config.minimumVisible - width;
@@ -96,9 +96,9 @@ zatoPortal.specification.clampPosition = function(left, top, width) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.getStartPosition = function(card, size) {
+zatoApp.specification.getStartPosition = function(card, size) {
 
-    var config = zatoPortal.specification.config;
+    var config = zatoApp.specification.config;
 
     // localStorage returns null until the first window is moved, and the window then opens at its default place ..
     var stored = localStorage.getItem(config.positionStorageKey);
@@ -106,7 +106,7 @@ zatoPortal.specification.getStartPosition = function(card, size) {
     // .. while a place it was moved to is kept, within a page that may have become smaller since.
     if(stored !== null) {
         var position = JSON.parse(stored);
-        var kept = zatoPortal.specification.clampPosition(position.left, position.top, size.width);
+        var kept = zatoApp.specification.clampPosition(position.left, position.top, size.width);
         return kept;
     }
 
@@ -121,11 +121,11 @@ zatoPortal.specification.getStartPosition = function(card, size) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.getNextPosition = function(card, size) {
+zatoApp.specification.getNextPosition = function(card, size) {
 
-    var config = zatoPortal.specification.config;
-    var windows = zatoPortal.specification.state.windows;
-    var start = zatoPortal.specification.getStartPosition(card, size);
+    var config = zatoApp.specification.config;
+    var windows = zatoApp.specification.state.windows;
+    var start = zatoApp.specification.getStartPosition(card, size);
 
     // The first window opens at its start position ..
     if(windows.length === 0) {
@@ -152,7 +152,7 @@ zatoPortal.specification.getNextPosition = function(card, size) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.getReferenceRect = function(specWindow) {
+zatoApp.specification.getReferenceRect = function(specWindow) {
 
     // The window hangs from a point of its own, which moves with every drag
     var out = {
@@ -171,31 +171,31 @@ zatoPortal.specification.getReferenceRect = function(specWindow) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.build = function(specWindow) {
+zatoApp.specification.build = function(specWindow) {
 
-    var config = zatoPortal.specification.config;
-    var render = zatoPortal.render;
+    var config = zatoApp.specification.config;
+    var render = zatoApp.render;
 
-    var element = render.createElement('div', 'portal-specification');
+    var element = render.createElement('div', 'app-specification');
     element.style.width = specWindow.width + config.unit;
     element.style.height = specWindow.height + config.unit;
-    element.addEventListener('pointerdown', zatoPortal.specification.raise.bind(null, specWindow), true);
+    element.addEventListener('pointerdown', zatoApp.specification.raise.bind(null, specWindow), true);
 
     // The bar moves the window, with the operation's method and path in it ..
-    var bar = render.createElement('div', 'portal-specification-bar');
-    bar.addEventListener('pointerdown', zatoPortal.specification.onPointerDown.bind(null, specWindow));
-    bar.addEventListener('pointermove', zatoPortal.specification.onPointerMove.bind(null, specWindow));
-    bar.addEventListener('pointerup', zatoPortal.specification.onPointerUp.bind(null, specWindow));
-    bar.addEventListener('pointercancel', zatoPortal.specification.onPointerUp.bind(null, specWindow));
+    var bar = render.createElement('div', 'app-specification-bar');
+    bar.addEventListener('pointerdown', zatoApp.specification.onPointerDown.bind(null, specWindow));
+    bar.addEventListener('pointermove', zatoApp.specification.onPointerMove.bind(null, specWindow));
+    bar.addEventListener('pointerup', zatoApp.specification.onPointerUp.bind(null, specWindow));
+    bar.addEventListener('pointercancel', zatoApp.specification.onPointerUp.bind(null, specWindow));
 
-    var title = render.createElement('span', 'portal-specification-title');
+    var title = render.createElement('span', 'app-specification-title');
 
-    var tools = zatoPortal.panels.buildTools();
-    var copyAs = render.createElement('button', 'portal-tool portal-specification-copy', config.copyAsText);
+    var tools = zatoApp.panels.buildTools();
+    var copyAs = render.createElement('button', 'app-tool app-specification-copy', config.copyAsText);
     copyAs.type = 'button';
 
-    var onCloseClick = zatoPortal.specification.close.bind(null, specWindow);
-    var close = zatoPortal.panels.buildToolButton(config.closeText, 'portal-specification-close', onCloseClick);
+    var onCloseClick = zatoApp.specification.close.bind(null, specWindow);
+    var close = zatoApp.panels.buildToolButton(config.closeText, 'app-specification-close', onCloseClick);
 
     tools.appendChild(copyAs);
     tools.appendChild(close);
@@ -204,7 +204,7 @@ zatoPortal.specification.build = function(specWindow) {
     bar.appendChild(tools);
 
     // .. and what goes in and what comes out below it.
-    var body = render.createElement('div', 'portal-specification-body');
+    var body = render.createElement('div', 'app-specification-body');
 
     element.appendChild(bar);
     element.appendChild(body);
@@ -213,22 +213,22 @@ zatoPortal.specification.build = function(specWindow) {
     specWindow.title = title;
     specWindow.body = body;
     specWindow.copyAs = copyAs;
-    specWindow.menu = zatoPortal.specification.buildMenu(specWindow);
+    specWindow.menu = zatoApp.specification.buildMenu(specWindow);
 
     // A size changed with the corner of the window is the size the next window opens with
-    specWindow.observer = new ResizeObserver(zatoPortal.specification.onResize.bind(null, specWindow));
+    specWindow.observer = new ResizeObserver(zatoApp.specification.onResize.bind(null, specWindow));
     specWindow.observer.observe(element);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.open = function(card) {
+zatoApp.specification.open = function(card) {
 
-    var config = zatoPortal.specification.config;
-    var state = zatoPortal.specification.state;
+    var config = zatoApp.specification.config;
+    var state = zatoApp.specification.state;
 
-    var size = zatoPortal.specification.loadSize();
-    var position = zatoPortal.specification.getNextPosition(card, size);
+    var size = zatoApp.specification.loadSize();
+    var position = zatoApp.specification.getNextPosition(card, size);
 
     var specWindow = {
         entryId: card.id,
@@ -243,8 +243,8 @@ zatoPortal.specification.open = function(card) {
         startTop: 0,
     };
 
-    zatoPortal.specification.build(specWindow);
-    zatoPortal.specification.fill(specWindow);
+    zatoApp.specification.build(specWindow);
+    zatoApp.specification.fill(specWindow);
 
     // Each window hangs from an anchor of its own, outside the page, and is placed by its own point,
     // so neither flipping nor keeping it in view applies ..
@@ -260,11 +260,11 @@ zatoPortal.specification.open = function(card) {
         offset: [0, 0],
         maxWidth: 'none',
         appendTo: document.body,
-        theme: zatoPortal.panels.config.bareTheme,
+        theme: zatoApp.panels.config.bareTheme,
         zIndex: config.layer,
         animation: config.animation,
-        getReferenceClientRect: zatoPortal.specification.getReferenceRect.bind(null, specWindow),
-        onHidden: zatoPortal.specification.onHidden.bind(null, specWindow),
+        getReferenceClientRect: zatoApp.specification.getReferenceRect.bind(null, specWindow),
+        onHidden: zatoApp.specification.onHidden.bind(null, specWindow),
         popperOptions: {
             strategy: config.strategy,
             modifiers: [
@@ -279,15 +279,15 @@ zatoPortal.specification.open = function(card) {
 
     // .. and a new window always opens above the ones already open.
     specWindow.instance.show();
-    zatoPortal.specification.restack();
-    zatoPortal.specification.markButtons();
+    zatoApp.specification.restack();
+    zatoApp.specification.markButtons();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.getWindow = function(entryId) {
+zatoApp.specification.getWindow = function(entryId) {
 
-    var windows = zatoPortal.specification.state.windows;
+    var windows = zatoApp.specification.state.windows;
 
     for(var windowIndex = 0; windowIndex < windows.length; windowIndex++) {
         var specWindow = windows[windowIndex];
@@ -302,25 +302,25 @@ zatoPortal.specification.getWindow = function(entryId) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.onButtonClick = function(event) {
+zatoApp.specification.onButtonClick = function(event) {
 
-    var card = event.currentTarget.closest(zatoPortal.specification.config.cardSelector);
-    var specWindow = zatoPortal.specification.getWindow(card.id);
+    var card = event.currentTarget.closest(zatoApp.specification.config.cardSelector);
+    var specWindow = zatoApp.specification.getWindow(card.id);
 
     // The button of an operation with a window open closes that window, and otherwise it opens one more
     if(specWindow === null) {
-        zatoPortal.specification.open(card);
+        zatoApp.specification.open(card);
     }
     else {
-        zatoPortal.specification.close(specWindow);
+        zatoApp.specification.close(specWindow);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.close = function(specWindow) {
+zatoApp.specification.close = function(specWindow) {
 
-    var state = zatoPortal.specification.state;
+    var state = zatoApp.specification.state;
 
     state.windows.splice(state.windows.indexOf(specWindow), 1);
     state.stacking.splice(state.stacking.indexOf(specWindow), 1);
@@ -328,12 +328,12 @@ zatoPortal.specification.close = function(specWindow) {
     specWindow.menu.hide();
     specWindow.instance.hide();
 
-    zatoPortal.specification.markButtons();
+    zatoApp.specification.markButtons();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.onHidden = function(specWindow) {
+zatoApp.specification.onHidden = function(specWindow) {
 
     // A closed window is never shown again, so nothing of it is kept once it fades out
     specWindow.observer.disconnect();
@@ -343,22 +343,22 @@ zatoPortal.specification.onHidden = function(specWindow) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.raise = function(specWindow) {
+zatoApp.specification.raise = function(specWindow) {
 
-    var stacking = zatoPortal.specification.state.stacking;
+    var stacking = zatoApp.specification.state.stacking;
 
     stacking.splice(stacking.indexOf(specWindow), 1);
     stacking.push(specWindow);
 
-    zatoPortal.specification.restack();
+    zatoApp.specification.restack();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.restack = function() {
+zatoApp.specification.restack = function() {
 
-    var config = zatoPortal.specification.config;
-    var stacking = zatoPortal.specification.state.stacking;
+    var config = zatoApp.specification.config;
+    var stacking = zatoApp.specification.state.stacking;
 
     // The layers are counted from the bottom window up, so they stay below the menus whatever the number of clicks
     for(var stackIndex = 0; stackIndex < stacking.length; stackIndex++) {
@@ -369,10 +369,10 @@ zatoPortal.specification.restack = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.onDocumentKeyDown = function(event) {
+zatoApp.specification.onDocumentKeyDown = function(event) {
 
-    var config = zatoPortal.specification.config;
-    var windows = zatoPortal.specification.state.windows;
+    var config = zatoApp.specification.config;
+    var windows = zatoApp.specification.state.windows;
 
     if(event.key !== config.escapeKey) {
         return;
@@ -383,7 +383,7 @@ zatoPortal.specification.onDocumentKeyDown = function(event) {
         return;
     }
 
-    if(zatoPortal.popover.state.anchor !== null) {
+    if(zatoApp.popover.state.anchor !== null) {
         return;
     }
 
@@ -403,36 +403,36 @@ zatoPortal.specification.onDocumentKeyDown = function(event) {
 
     // .. and the windows close from the most recently opened one back to the first.
     var latest = windows[windows.length - 1];
-    zatoPortal.specification.close(latest);
+    zatoApp.specification.close(latest);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.fill = function(specWindow) {
+zatoApp.specification.fill = function(specWindow) {
 
-    var entry = zatoPortal.state.entriesById[specWindow.entryId];
+    var entry = zatoApp.state.entriesById[specWindow.entryId];
 
-    var chip = zatoPortal.render.createMethodChip(entry.method);
-    var path = zatoPortal.render.buildPath(entry.path, 'portal-specification-path');
+    var chip = zatoApp.render.createMethodChip(entry.method);
+    var path = zatoApp.render.buildPath(entry.path, 'app-specification-path');
 
     specWindow.title.appendChild(chip);
     specWindow.title.appendChild(path);
 
-    var fields = zatoPortal.fields.build(entry.operation);
+    var fields = zatoApp.fields.build(entry.operation);
     specWindow.body.appendChild(fields);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.markButtons = function() {
+zatoApp.specification.markButtons = function() {
 
-    var config = zatoPortal.specification.config;
+    var config = zatoApp.specification.config;
     var buttons = document.querySelectorAll(config.buttonSelector);
 
     for(var buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
         var button = buttons[buttonIndex];
         var card = button.closest(config.cardSelector);
-        var isOpen = zatoPortal.specification.getWindow(card.id) !== null;
+        var isOpen = zatoApp.specification.getWindow(card.id) !== null;
 
         button.classList.toggle(config.activeClass, isOpen);
     }
@@ -440,18 +440,18 @@ zatoPortal.specification.markButtons = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.buildMenu = function(specWindow) {
+zatoApp.specification.buildMenu = function(specWindow) {
 
-    var config = zatoPortal.specification.config;
-    var menu = zatoPortal.render.createElement('div', 'portal-menu');
+    var config = zatoApp.specification.config;
+    var menu = zatoApp.render.createElement('div', 'app-menu');
 
     for(var formatIndex = 0; formatIndex < config.copyFormats.length; formatIndex++) {
         var format = config.copyFormats[formatIndex];
-        var item = zatoPortal.render.createElement('button', 'portal-menu-item', format.label);
+        var item = zatoApp.render.createElement('button', 'app-menu-item', format.label);
 
         item.type = 'button';
         item.setAttribute(config.formatAttribute, format.name);
-        item.addEventListener('click', zatoPortal.specification.onCopyFormatClick.bind(null, specWindow));
+        item.addEventListener('click', zatoApp.specification.onCopyFormatClick.bind(null, specWindow));
 
         menu.appendChild(item);
     }
@@ -467,7 +467,7 @@ zatoPortal.specification.buildMenu = function(specWindow) {
         offset: config.menuOffset,
         maxWidth: 'none',
         appendTo: document.body,
-        theme: zatoPortal.panels.config.bareTheme,
+        theme: zatoApp.panels.config.bareTheme,
         zIndex: config.menuLayer,
         animation: config.animation,
     });
@@ -477,28 +477,28 @@ zatoPortal.specification.buildMenu = function(specWindow) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.onCopyFormatClick = function(specWindow, event) {
+zatoApp.specification.onCopyFormatClick = function(specWindow, event) {
 
-    var config = zatoPortal.specification.config;
+    var config = zatoApp.specification.config;
 
     var format = event.currentTarget.getAttribute(config.formatAttribute);
-    var operation = zatoPortal.state.entriesById[specWindow.entryId].operation;
+    var operation = zatoApp.state.entriesById[specWindow.entryId].operation;
     var text = '';
 
     if(format === config.jsonFormat) {
-        text = zatoPortal.fields.toJson(operation);
+        text = zatoApp.fields.toJson(operation);
     }
     else {
-        text = zatoPortal.fields.toText(operation);
+        text = zatoApp.fields.toText(operation);
     }
 
     specWindow.menu.hide();
-    navigator.clipboard.writeText(text).then(zatoPortal.panels.showCopied.bind(null, specWindow.copyAs));
+    navigator.clipboard.writeText(text).then(zatoApp.panels.showCopied.bind(null, specWindow.copyAs));
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.onResize = function(specWindow) {
+zatoApp.specification.onResize = function(specWindow) {
 
     // A window fading out is taken out of the page and has no size of its own to keep
     if(!specWindow.element.isConnected) {
@@ -508,14 +508,14 @@ zatoPortal.specification.onResize = function(specWindow) {
     specWindow.width = specWindow.element.offsetWidth;
     specWindow.height = specWindow.element.offsetHeight;
 
-    zatoPortal.specification.saveSize(specWindow);
+    zatoApp.specification.saveSize(specWindow);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.onPointerDown = function(specWindow, event) {
+zatoApp.specification.onPointerDown = function(specWindow, event) {
 
-    var config = zatoPortal.specification.config;
+    var config = zatoApp.specification.config;
 
     // Only the primary button starts a drag, and the buttons in the bar keep their own clicks ..
     if(event.button !== config.primaryButton) {
@@ -542,7 +542,7 @@ zatoPortal.specification.onPointerDown = function(specWindow, event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.onPointerMove = function(specWindow, event) {
+zatoApp.specification.onPointerMove = function(specWindow, event) {
 
     if(!specWindow.isDragging) {
         return;
@@ -550,7 +550,7 @@ zatoPortal.specification.onPointerMove = function(specWindow, event) {
 
     var requestedLeft = specWindow.startLeft + event.clientX - specWindow.startX;
     var requestedTop = specWindow.startTop + event.clientY - specWindow.startY;
-    var position = zatoPortal.specification.clampPosition(requestedLeft, requestedTop, specWindow.width);
+    var position = zatoApp.specification.clampPosition(requestedLeft, requestedTop, specWindow.width);
 
     specWindow.left = position.left;
     specWindow.top = position.top;
@@ -560,7 +560,7 @@ zatoPortal.specification.onPointerMove = function(specWindow, event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.specification.onPointerUp = function(specWindow, event) {
+zatoApp.specification.onPointerUp = function(specWindow, event) {
 
     if(!specWindow.isDragging) {
         return;
@@ -570,11 +570,11 @@ zatoPortal.specification.onPointerUp = function(specWindow, event) {
     event.currentTarget.releasePointerCapture(event.pointerId);
 
     // Only the first window open sets where the first window opens the next time, the others step off from it
-    if(zatoPortal.specification.state.windows[0] === specWindow) {
-        zatoPortal.specification.savePosition(specWindow);
+    if(zatoApp.specification.state.windows[0] === specWindow) {
+        zatoApp.specification.savePosition(specWindow);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-document.addEventListener('keydown', zatoPortal.specification.onDocumentKeyDown);
+document.addEventListener('keydown', zatoApp.specification.onDocumentKeyDown);

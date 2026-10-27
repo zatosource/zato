@@ -6,78 +6,78 @@
     <meta name="robots" content="noindex">
     <title>{{ title }} - Sign in</title>
     <link rel="icon" href="{{ favicon_url }}">
-    <link rel="stylesheet" href="/static/portal/portal.css">
-    {% if has_custom_css %}<link rel="stylesheet" href="/api-portal/branding/custom.css">{% endif %}
+    <link rel="stylesheet" href="/static/app/app.css">
+    {% if has_custom_css %}<link rel="stylesheet" href="/branding/custom.css">{% endif %}
 </head>
-<body class="portal-login-body">
+<body class="app-login-body">
 
-    <div class="portal-backdrop"></div>
+    <div class="app-backdrop"></div>
 
-    <main class="portal-login-main">
-        <form class="portal-login-card" method="post" action="/api-portal/login">
+    <main class="app-login-main">
+        <form class="app-login-card" method="post" action="/login">
             {% csrf_token %}
 
-            <div class="portal-login-brand">
+            <div class="app-login-brand">
                 {% if logo_url %}
-                <img src="{{ logo_url }}" alt="Logo" class="portal-login-logo">
+                <img src="{{ logo_url }}" alt="Logo" class="app-login-logo">
                 {% else %}
-                <span class="portal-brand-text portal-login-brand-text">{{ logo_text }}</span>
+                <span class="app-brand-text app-login-brand-text">{{ logo_text }}</span>
                 {% endif %}
             </div>
 
             {% if error %}
-            <div class="portal-login-error">{{ error }}</div>
+            <div class="app-login-error">{{ error }}</div>
             {% endif %}
 
-            <label class="portal-login-label" for="auth-type">Auth. type</label>
-            <select class="portal-login-input portal-login-select" id="auth-type" name="auth_type">
+            <label class="app-login-label" for="auth-type">Auth. type</label>
+            <select class="app-login-input app-login-select" id="auth-type" name="auth_type">
                 {% for value, label in auth_types %}
                 <option value="{{ value }}"{% if value == auth_type %} selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
 
-            <div class="portal-login-stack">
+            <div class="app-login-stack">
 
-            <fieldset class="portal-login-fields" data-auth-type="{{ basic_auth_type }}"{% if auth_type != basic_auth_type %} hidden disabled{% endif %}>
+            <fieldset class="app-login-fields" data-auth-type="{{ basic_auth_type }}"{% if auth_type != basic_auth_type %} hidden disabled{% endif %}>
 
-                <label class="portal-login-label" for="username">Username</label>
-                <input class="portal-login-input" type="text" id="username" name="username" autocomplete="username" autofocus required>
+                <label class="app-login-label" for="username">Username</label>
+                <input class="app-login-input" type="text" id="username" name="username" autocomplete="username" autofocus required>
 
-                <label class="portal-login-label" for="password">Password</label>
-                <div class="portal-secret">
-                    <input class="portal-login-input portal-secret-input" type="password" id="password" name="password" autocomplete="current-password" required>
-                    <button class="portal-secret-toggle" type="button">Show</button>
+                <label class="app-login-label" for="password">Password</label>
+                <div class="app-secret">
+                    <input class="app-login-input app-secret-input" type="password" id="password" name="password" autocomplete="current-password" required>
+                    <button class="app-secret-toggle" type="button">Show</button>
                 </div>
 
             </fieldset>
 
-            <fieldset class="portal-login-fields" data-auth-type="{{ api_key_type }}"{% if auth_type != api_key_type %} hidden disabled{% endif %}>
+            <fieldset class="app-login-fields" data-auth-type="{{ api_key_type }}"{% if auth_type != api_key_type %} hidden disabled{% endif %}>
 
-                <label class="portal-login-label" for="key">Key</label>
-                <div class="portal-secret">
-                    <input class="portal-login-input portal-secret-input" type="password" id="key" name="key" autocomplete="off" required>
-                    <button class="portal-secret-toggle" type="button">Show</button>
+                <label class="app-login-label" for="key">Key</label>
+                <div class="app-secret">
+                    <input class="app-login-input app-secret-input" type="password" id="key" name="key" autocomplete="off" required>
+                    <button class="app-secret-toggle" type="button">Show</button>
                 </div>
 
             </fieldset>
 
-            <fieldset class="portal-login-fields" data-auth-type="{{ bearer_token_type }}"{% if auth_type != bearer_token_type %} hidden disabled{% endif %}>
+            <fieldset class="app-login-fields" data-auth-type="{{ bearer_token_type }}"{% if auth_type != bearer_token_type %} hidden disabled{% endif %}>
 
-                <label class="portal-login-label" for="token">Token</label>
-                <div class="portal-secret">
-                    <input class="portal-login-input portal-secret-input" type="password" id="token" name="token" autocomplete="off" required>
-                    <button class="portal-secret-toggle" type="button">Show</button>
+                <label class="app-login-label" for="token">Token</label>
+                <div class="app-secret">
+                    <input class="app-login-input app-secret-input" type="password" id="token" name="token" autocomplete="off" required>
+                    <button class="app-secret-toggle" type="button">Show</button>
                 </div>
 
             </fieldset>
 
             </div>
 
-            <button class="portal-login-button" type="submit">Sign in</button>
+            <button class="app-login-button" type="submit">Sign in</button>
         </form>
     </main>
 
-    <script src="/static/portal/login.js"></script>
+    <script src="/static/app/login.js"></script>
 
 </body>
 </html>

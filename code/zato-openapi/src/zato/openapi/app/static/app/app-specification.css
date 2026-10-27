@@ -1,0 +1,112 @@
+/* ------------------------------------------------------------ */
+/* App - elements placed on the page itself                     */
+/* ------------------------------------------------------------ */
+
+.tippy-box[data-theme~='app-bare'] {
+    border-radius: 0;
+    background: transparent;
+}
+
+.tippy-box[data-theme~='app-bare'] > .tippy-content {
+    padding: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* App specification - the window                               */
+/* ------------------------------------------------------------ */
+
+.app-specification {
+    display: flex;
+    flex-direction: column;
+    min-width: var(--app-specification-minimum-width);
+    max-width: 100vw;
+    min-height: var(--app-specification-minimum-height);
+    max-height: calc(100vh - var(--app-header-height));
+    overflow: hidden;
+    border: 1px solid var(--app-border-strong);
+    border-radius: var(--app-chip-radius);
+    color: var(--app-text);
+    background: var(--app-bg-raised);
+    box-shadow: var(--app-shadow-large);
+    resize: both;
+}
+
+.app-specification-bar {
+    display: flex;
+    flex: none;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--app-border);
+    cursor: move;
+    touch-action: none;
+    user-select: none;
+}
+
+.app-specification-title {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.app-specification-path {
+    font-family: var(--app-font-mono);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
+
+.app-specification-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0.75rem 1rem 1rem;
+    overflow: auto;
+    background: var(--app-bg-panel);
+}
+
+/* ------------------------------------------------------------ */
+/* App specification - the menu of formats to copy as           */
+/* ------------------------------------------------------------ */
+
+.app-menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 8rem;
+    padding: 0.25rem;
+    border: 1px solid var(--app-border-strong);
+    border-radius: var(--app-chip-radius);
+    background: var(--app-bg-raised);
+    box-shadow: var(--app-shadow-large);
+}
+
+.app-menu-item {
+    padding: 0.4375rem 0.625rem;
+    border: none;
+    border-radius: var(--app-control-radius);
+    font: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    color: var(--app-text);
+    background: transparent;
+    cursor: pointer;
+    transition: background var(--app-hover-duration) ease;
+}
+
+.app-menu-item:hover {
+    background: var(--app-bg-raised-hover);
+    transition-delay: var(--app-hover-delay);
+}
+
+.app-menu-item:focus-visible {
+    outline: 2px solid var(--app-accent-light);
+    outline-offset: -2px;
+}
+
+/* ------------------------------------------------------------ */
+/* App specification - the button that opens it                 */
+/* ------------------------------------------------------------ */
+
+.app-tool.app-tool-active {
+    border-color: var(--app-accent-light);
+    color: var(--app-accent-light);
+}

@@ -200,7 +200,7 @@ api-portal:
 api-portal-demo: export Zato_API_Portal_Header_Title = Demo portal
 api-portal-demo: ## Healthcare demo for the API portal - services, security definitions, groups and REST channels, then the portal itself.
 	$(ZATO_PY) -m zato.openapi.portal.demo.install --server-dir $(Zato_Server_Dir) --zato $(CURDIR)/code/bin/zato
-	echo "API portal: http://localhost:$(Zato_Port_API_Portal)/api-portal"
+	echo "API portal: http://localhost:$(Zato_Port_API_Portal)"
 	$(MAKE) api-portal
 
 b2b-console: ## A static mockup of the B2B console, with sample data and no server behind it.
@@ -210,7 +210,7 @@ b2b-console: ## A static mockup of the B2B console, with sample data and no serv
 api-portal-tutorial: export Zato_API_Portal_Header_Title = Main tutorial
 api-portal-tutorial: ## The main tutorial for the API portal - its service, connections, API key, REST channel and scheduler job, then the portal itself.
 	$(ZATO_PY) -m zato.openapi.portal.demo.tutorial --server-dir $(Zato_Server_Dir)
-	echo "API portal: http://localhost:$(Zato_Port_API_Portal)/api-portal"
+	echo "API portal: http://localhost:$(Zato_Port_API_Portal)"
 	$(MAKE) api-portal
 
 # The container the MCP healthcare demo runs in and the host ports its Dashboard and its server are published on

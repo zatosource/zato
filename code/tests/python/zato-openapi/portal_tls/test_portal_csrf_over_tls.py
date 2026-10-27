@@ -35,7 +35,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_login_path = '/api-portal/login'
+_login_path = '/login'
 
 _host_name = 'zato.example.com'
 _host_tls = _host_name + ':8186'
@@ -56,14 +56,14 @@ _proto_http = f'http-request set-header {_proto_header} http if !{{ ssl_fc }}'
 _portal_frontend = 'frontend portal'
 
 # A try-it request as the relay receives it
-_relay_path = '/api-portal/relay'
+_relay_path = '/relay'
 _relay_body = '{"method":"POST","path":"/api/orders","query":"","headers":{},"body":"{}"}'
 _relay_content_type = 'text/plain'
 
 # Another port of the portal's host
 _origin_same_host = 'http://' + _host_name + ':11223'
 
-_csrf_cookie_name = 'zato-api-portal-csrf'
+_csrf_cookie_name = 'zato-session-csrf'
 
 # A CSRF secret is 32 characters, which is 128 bits in hex
 _csrf_secret_bits = 128

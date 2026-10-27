@@ -2,16 +2,16 @@ var zatoLogin = {};
 
 zatoLogin.config = {
     authTypeId: 'auth-type',
-    fieldsSelector: '.portal-login-fields',
-    toggleSelector: '.portal-secret-toggle',
+    fieldsSelector: '.app-login-fields',
+    toggleSelector: '.app-secret-toggle',
     inputSelector: 'input',
     authTypeAttribute: 'data-auth-type',
     passwordType: 'password',
     textType: 'text',
     showText: 'Show',
     hideText: 'Hide',
-    linkStorageKey: 'zato.openapi.portal.link',
-    historyKeyPrefix: 'zato.openapi.portal.history.',
+    linkStorageKey: 'zato.openapi.link',
+    historyKeyPrefix: 'zato.openapi.history.',
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -36,7 +36,7 @@ zatoLogin.init = function() {
     // Whoever signs in next starts with no invocations of anyone signed in before in this tab
     zatoLogin.clearHistory();
 
-    // The redirect to this page keeps the link to an operation, which the portal follows after signing in
+    // The redirect to this page keeps the link to an operation, which the app follows after signing in
     var hash = window.location.hash;
 
     if(hash !== '') {

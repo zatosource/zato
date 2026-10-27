@@ -7,91 +7,91 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{{ title }}</title>
     <link rel="icon" href="{{ favicon_url }}">
-    <link rel="stylesheet" href="/static/portal/portal.css">
-    <link rel="stylesheet" href="/static/portal/portal-operations.css">
-    <link rel="stylesheet" href="/static/portal/portal-tools.css">
-    <link rel="stylesheet" href="/static/portal/portal-layouts.css">
-    <link rel="stylesheet" href="/static/portal/portal-specification.css">
-    {% if has_custom_css %}<link rel="stylesheet" href="/api-portal/branding/custom.css">{% endif %}
+    <link rel="stylesheet" href="/static/app/app.css">
+    <link rel="stylesheet" href="/static/app/app-operations.css">
+    <link rel="stylesheet" href="/static/app/app-tools.css">
+    <link rel="stylesheet" href="/static/app/app-layouts.css">
+    <link rel="stylesheet" href="/static/app/app-specification.css">
+    {% if has_custom_css %}<link rel="stylesheet" href="/branding/custom.css">{% endif %}
 </head>
-<body class="portal-body">
+<body class="app-body">
 
-    <header class="portal-header">
-        <a class="portal-header-brand" href="/api-portal">
+    <header class="app-header">
+        <a class="app-header-brand" href="/">
             {% if logo_url %}
-            <img src="{{ logo_url }}" alt="Logo" class="portal-header-logo">
+            <img src="{{ logo_url }}" alt="Logo" class="app-header-logo">
             {% else %}
-            <span class="portal-brand-text portal-header-brand-text">{{ logo_text }}</span>
+            <span class="app-brand-text app-header-brand-text">{{ logo_text }}</span>
             {% endif %}
         </a>
-        {% if header_title %}<span class="portal-header-title">{{ header_title }}</span>{% endif %}
-        <nav class="portal-header-links">
-            <a href="/api-portal/openapi.json" class="portal-header-link">openapi.json</a>
-            <a href="/api-portal/openapi.yaml" class="portal-header-link">openapi.yaml</a>
+        {% if header_title %}<span class="app-header-title">{{ header_title }}</span>{% endif %}
+        <nav class="app-header-links">
+            <a href="/openapi.json" class="app-header-link">openapi.json</a>
+            <a href="/openapi.yaml" class="app-header-link">openapi.yaml</a>
         </nav>
-        <span class="portal-header-user">{{ identity }}</span>
-        <a href="/api-portal/logout" class="portal-header-logout" id="portal-logout">Sign out</a>
+        <span class="app-header-user">{{ identity }}</span>
+        <a href="/logout" class="app-header-logout" id="app-logout">Sign out</a>
     </header>
 
-    <div class="portal-status portal-loading" id="portal-loading">
-        <div class="portal-backdrop"></div>
-        <svg class="portal-spinner" viewBox="0 0 50 50">
-            <circle class="portal-spinner-track" cx="25" cy="25" r="20"></circle>
-            <circle class="portal-spinner-arc" cx="25" cy="25" r="20"></circle>
+    <div class="app-status app-loading" id="app-loading">
+        <div class="app-backdrop"></div>
+        <svg class="app-spinner" viewBox="0 0 50 50">
+            <circle class="app-spinner-track" cx="25" cy="25" r="20"></circle>
+            <circle class="app-spinner-arc" cx="25" cy="25" r="20"></circle>
         </svg>
     </div>
 
-    <div class="portal-status" id="portal-status" hidden>
-        <div class="portal-backdrop"></div>
-        <div class="portal-status-text" id="portal-status-text"></div>
+    <div class="app-status" id="app-status" hidden>
+        <div class="app-backdrop"></div>
+        <div class="app-status-text" id="app-status-text"></div>
     </div>
 
-    <div class="portal-workspace" id="portal-workspace" hidden>
-        <aside class="portal-sidebar" id="portal-sidebar">
-            <div class="portal-sidebar-top">
-                <div class="portal-filter-box">
-                    <svg class="portal-filter-icon" viewBox="0 0 24 24">
+    <div class="app-workspace" id="app-workspace" hidden>
+        <aside class="app-sidebar" id="app-sidebar">
+            <div class="app-sidebar-top">
+                <div class="app-filter-box">
+                    <svg class="app-filter-icon" viewBox="0 0 24 24">
                         <circle cx="11" cy="11" r="7"></circle>
                         <path d="m20 20-3.5-3.5"></path>
                     </svg>
-                    <input class="portal-filter" id="portal-filter" type="text" placeholder="Filter" autocomplete="off" spellcheck="false">
-                    <button class="portal-filter-clear" id="portal-filter-clear" type="button" aria-label="Clear" hidden>
-                        <svg class="portal-filter-clear-icon" viewBox="0 0 24 24">
+                    <input class="app-filter" id="app-filter" type="text" placeholder="Filter" autocomplete="off" spellcheck="false">
+                    <button class="app-filter-clear" id="app-filter-clear" type="button" aria-label="Clear" hidden>
+                        <svg class="app-filter-clear-icon" viewBox="0 0 24 24">
                             <path d="M18 6 6 18"></path>
                             <path d="m6 6 12 12"></path>
                         </svg>
                     </button>
                 </div>
-                <button class="portal-sidebar-toggle" id="portal-sidebar-toggle" type="button"></button>
+                <button class="app-sidebar-toggle" id="app-sidebar-toggle" type="button"></button>
             </div>
-            <div class="portal-sidebar-scroll">
-                <nav class="portal-navigation" id="portal-navigation"></nav>
+            <div class="app-sidebar-scroll">
+                <nav class="app-navigation" id="app-navigation"></nav>
             </div>
-            <div class="portal-sidebar-resizer" id="portal-sidebar-resizer"><span class="portal-sidebar-grip"></span></div>
+            <div class="app-sidebar-resizer" id="app-sidebar-resizer"><span class="app-sidebar-grip"></span></div>
         </aside>
-        <main class="portal-content" id="portal-content"></main>
+        <main class="app-content" id="app-content"></main>
     </div>
 
-    <div class="portal-popover" id="portal-popover" hidden></div>
+    <div class="app-popover" id="app-popover" hidden></div>
 
     <script src="/static/webapp/vendor/popper.min.js"></script>
     <script src="/static/webapp/vendor/tippy-bundle.umd.min.js"></script>
-    <script src="/static/portal/portal-highlight.js"></script>
-    <script src="/static/portal/portal-key-value.js"></script>
-    <script src="/static/portal/portal-sidebar.js"></script>
-    <script src="/static/portal/portal-panels.js"></script>
-    <script src="/static/portal/portal-popover.js"></script>
-    <script src="/static/portal/portal-layouts.js"></script>
-    <script src="/static/portal/portal-exchange.js"></script>
-    <script src="/static/portal/portal-links.js"></script>
-    <script src="/static/portal/portal-specification.js"></script>
-    <script src="/static/portal/portal-render.js"></script>
-    <script src="/static/portal/portal-fields.js"></script>
-    <script src="/static/portal/portal-raw.js"></script>
-    <script src="/static/portal/portal-options.js"></script>
-    <script src="/static/portal/portal-history.js"></script>
-    <script src="/static/portal/portal-invoke.js"></script>
-    <script src="/static/portal/portal.js"></script>
+    <script src="/static/app/app-highlight.js"></script>
+    <script src="/static/app/app-key-value.js"></script>
+    <script src="/static/app/app-sidebar.js"></script>
+    <script src="/static/app/app-panels.js"></script>
+    <script src="/static/app/app-popover.js"></script>
+    <script src="/static/app/app-layouts.js"></script>
+    <script src="/static/app/app-exchange.js"></script>
+    <script src="/static/app/app-links.js"></script>
+    <script src="/static/app/app-specification.js"></script>
+    <script src="/static/app/app-render.js"></script>
+    <script src="/static/app/app-fields.js"></script>
+    <script src="/static/app/app-raw.js"></script>
+    <script src="/static/app/app-options.js"></script>
+    <script src="/static/app/app-history.js"></script>
+    <script src="/static/app/app-invoke.js"></script>
+    <script src="/static/app/app.js"></script>
 
 </body>
 </html>

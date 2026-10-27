@@ -1,6 +1,6 @@
-zatoPortal.keyValue = {};
+zatoApp.keyValue = {};
 
-zatoPortal.keyValue.config = {
+zatoApp.keyValue.config = {
     objectMarker: '{',
     separator: '=',
     commentMarker: '#',
@@ -21,9 +21,9 @@ zatoPortal.keyValue.config = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.keyValue.isKeyValue = function(text) {
+zatoApp.keyValue.isKeyValue = function(text) {
 
-    var config = zatoPortal.keyValue.config;
+    var config = zatoApp.keyValue.config;
     var trimmed = text.trim();
 
     // The text is a list of key=value lines when it is not an object and its first line assigns a value to a name,
@@ -44,9 +44,9 @@ zatoPortal.keyValue.isKeyValue = function(text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.keyValue.split = function(text) {
+zatoApp.keyValue.split = function(text) {
 
-    var config = zatoPortal.keyValue.config;
+    var config = zatoApp.keyValue.config;
     var lines = text.split(config.linePattern);
     var pairs = [];
 
@@ -80,9 +80,9 @@ zatoPortal.keyValue.split = function(text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.keyValue.parse = function(text) {
+zatoApp.keyValue.parse = function(text) {
 
-    var pairs = zatoPortal.keyValue.split(text);
+    var pairs = zatoApp.keyValue.split(text);
 
     if(pairs === null) {
         return null;
@@ -92,7 +92,7 @@ zatoPortal.keyValue.parse = function(text) {
 
     for(var pairIndex = 0; pairIndex < pairs.length; pairIndex++) {
         var pair = pairs[pairIndex];
-        out[pair.key] = zatoPortal.keyValue.convert(pair.value);
+        out[pair.key] = zatoApp.keyValue.convert(pair.value);
     }
 
     return out;
@@ -100,9 +100,9 @@ zatoPortal.keyValue.parse = function(text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.keyValue.convert = function(value) {
+zatoApp.keyValue.convert = function(value) {
 
-    var config = zatoPortal.keyValue.config;
+    var config = zatoApp.keyValue.config;
 
     // Values are read as the Dashboard reads them, numbers and literals first, everything else as a string
     if(config.numberPattern.test(value)) {
@@ -120,7 +120,7 @@ zatoPortal.keyValue.convert = function(value) {
     }
 
     if(value.startsWith(config.listMarker)) {
-        var list = zatoPortal.invoke.parse(value);
+        var list = zatoApp.invoke.parse(value);
 
         if(list !== undefined) {
             return list;
@@ -132,10 +132,10 @@ zatoPortal.keyValue.convert = function(value) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.keyValue.format = function(text) {
+zatoApp.keyValue.format = function(text) {
 
-    var config = zatoPortal.keyValue.config;
-    var pairs = zatoPortal.keyValue.split(text);
+    var config = zatoApp.keyValue.config;
+    var pairs = zatoApp.keyValue.split(text);
 
     if(pairs === null) {
         return null;
@@ -163,10 +163,10 @@ zatoPortal.keyValue.format = function(text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.keyValue.classify = function(value) {
+zatoApp.keyValue.classify = function(value) {
 
-    var config = zatoPortal.keyValue.config;
-    var classes = zatoPortal.highlight.config;
+    var config = zatoApp.keyValue.config;
+    var classes = zatoApp.highlight.config;
     var trimmed = value.trim();
 
     if(config.numberPattern.test(trimmed)) {
@@ -188,11 +188,11 @@ zatoPortal.keyValue.classify = function(value) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.keyValue.fill = function(element, text) {
+zatoApp.keyValue.fill = function(element, text) {
 
-    var config = zatoPortal.keyValue.config;
-    var classes = zatoPortal.highlight.config;
-    var highlight = zatoPortal.highlight;
+    var config = zatoApp.keyValue.config;
+    var classes = zatoApp.highlight.config;
+    var highlight = zatoApp.highlight;
 
     // The separators are kept, so the highlighted copy has exactly the characters of the text
     var segments = text.split(config.segmentPattern);
@@ -224,7 +224,7 @@ zatoPortal.keyValue.fill = function(element, text) {
         // .. and a complete line is its key, the separator and its value.
         var key = segment.slice(0, separatorIndex);
         var value = segment.slice(separatorIndex + 1);
-        var valueClass = zatoPortal.keyValue.classify(value);
+        var valueClass = zatoApp.keyValue.classify(value);
 
         highlight.appendToken(fragment, key, classes.keyClass);
         highlight.appendToken(fragment, config.separator, classes.punctuationClass);

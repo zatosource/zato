@@ -399,7 +399,7 @@ def zato_dashboard() -> 'any_':
         _wait_for_http(f'http://{host}:{dashboard_port}/accounts/login/')
         logger.info(f'[TIMING] dashboard ready: {time.monotonic() - time_after_server_start:.1f}s')
 
-        _wait_for_http(f'http://{host}:{portal_port}/api-portal/login')
+        _wait_for_http(f'http://{host}:{portal_port}/login')
         logger.info(f'[TIMING] portal ready: {time.monotonic() - time_after_server_start:.1f}s')
 
     except Exception:

@@ -1,6 +1,6 @@
-zatoPortal.fields = {};
+zatoApp.fields = {};
 
-zatoPortal.fields.config = {
+zatoApp.fields.config = {
     inputTitle: 'Input',
     outputTitle: 'Output',
     requiredText: 'required',
@@ -21,8 +21,8 @@ zatoPortal.fields.config = {
     blockSeparator: '\n\n',
     inputKey: 'input',
     outputKey: 'output',
-    requiredClass: 'portal-chip portal-fields-required',
-    typeClassPrefix: 'portal-fields-type portal-fields-type-',
+    requiredClass: 'app-chip app-fields-required',
+    typeClassPrefix: 'app-fields-type app-fields-type-',
     typeKinds: {
         'integer': 'number',
         'number': 'number',
@@ -40,21 +40,21 @@ zatoPortal.fields.config = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.build = function(operation) {
+zatoApp.fields.build = function(operation) {
 
-    var config = zatoPortal.fields.config;
-    var container = zatoPortal.render.createElement('div', 'portal-operation-fields');
+    var config = zatoApp.fields.config;
+    var container = zatoApp.render.createElement('div', 'app-operation-fields');
 
-    var inputRows = zatoPortal.fields.collectInput(operation);
-    var outputRows = zatoPortal.fields.collectOutput(operation);
+    var inputRows = zatoApp.fields.collectInput(operation);
+    var outputRows = zatoApp.fields.collectOutput(operation);
 
     if(inputRows.length > 0) {
-        var inputTable = zatoPortal.fields.buildTable(config.inputTitle, inputRows);
+        var inputTable = zatoApp.fields.buildTable(config.inputTitle, inputRows);
         container.appendChild(inputTable);
     }
 
     if(outputRows.length > 0) {
-        var outputTable = zatoPortal.fields.buildTable(config.outputTitle, outputRows);
+        var outputTable = zatoApp.fields.buildTable(config.outputTitle, outputRows);
         container.appendChild(outputTable);
     }
 
@@ -63,9 +63,9 @@ zatoPortal.fields.build = function(operation) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.collectInput = function(operation) {
+zatoApp.fields.collectInput = function(operation) {
 
-    var config = zatoPortal.fields.config;
+    var config = zatoApp.fields.config;
     var rows = [];
     var parameterNames = {};
 
@@ -73,7 +73,7 @@ zatoPortal.fields.collectInput = function(operation) {
     if('parameters' in operation) {
         for(var parameterIndex = 0; parameterIndex < operation.parameters.length; parameterIndex++) {
             var parameter = operation.parameters[parameterIndex];
-            var parameterType = zatoPortal.fields.describe(parameter.schema);
+            var parameterType = zatoApp.fields.describe(parameter.schema);
 
             rows.push({name: parameter.name, type: parameterType, isRequired: parameter.required, depth: 0});
             parameterNames[parameter.name] = true;
@@ -83,7 +83,7 @@ zatoPortal.fields.collectInput = function(operation) {
     // .. followed by the body, whose properties already listed as path parameters are not repeated.
     if('requestBody' in operation) {
         var content = operation.requestBody.content[config.contentType];
-        zatoPortal.fields.collectProperties(content.schema, rows, 0, parameterNames, {});
+        zatoApp.fields.collectProperties(content.schema, rows, 0, parameterNames, {});
     }
 
     return rows;
@@ -91,9 +91,9 @@ zatoPortal.fields.collectInput = function(operation) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.getResponseMediaType = function(operation) {
+zatoApp.fields.getResponseMediaType = function(operation) {
 
-    var response = operation.responses[zatoPortal.fields.config.successStatus];
+    var response = operation.responses[zatoApp.fields.config.successStatus];
 
     // An operation without output that requires no media type of its own documents no response content ..
     if(!('content' in response)) {
@@ -107,11 +107,11 @@ zatoPortal.fields.getResponseMediaType = function(operation) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.collectOutput = function(operation) {
+zatoApp.fields.collectOutput = function(operation) {
 
-    var config = zatoPortal.fields.config;
+    var config = zatoApp.fields.config;
     var rows = [];
-    var mediaType = zatoPortal.fields.getResponseMediaType(operation);
+    var mediaType = zatoApp.fields.getResponseMediaType(operation);
 
     if(mediaType === null) {
         return rows;
@@ -122,7 +122,7 @@ zatoPortal.fields.collectOutput = function(operation) {
 
     // A media type that the endpoint requires has a schema only if the service has output
     if('schema' in content) {
-        zatoPortal.fields.collectProperties(content.schema, rows, 0, {}, {});
+        zatoApp.fields.collectProperties(content.schema, rows, 0, {}, {});
     }
 
     return rows;
@@ -130,21 +130,21 @@ zatoPortal.fields.collectOutput = function(operation) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.getReferenceName = function(schema) {
+zatoApp.fields.getReferenceName = function(schema) {
 
     var reference = schema.$ref;
 
-    var out = reference.slice(zatoPortal.fields.config.referencePrefix.length);
+    var out = reference.slice(zatoApp.fields.config.referencePrefix.length);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.getModelName = function(schema) {
+zatoApp.fields.getModelName = function(schema) {
 
     // A model is reached directly or as the element of an array
     if('$ref' in schema) {
-        var out = zatoPortal.fields.getReferenceName(schema);
+        var out = zatoApp.fields.getReferenceName(schema);
         return out;
     }
 
@@ -152,7 +152,7 @@ zatoPortal.fields.getModelName = function(schema) {
         var items = schema.items;
 
         if('$ref' in items) {
-            var itemsName = zatoPortal.fields.getReferenceName(items);
+            var itemsName = zatoApp.fields.getReferenceName(items);
             return itemsName;
         }
     }
@@ -162,14 +162,14 @@ zatoPortal.fields.getModelName = function(schema) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.collectProperties = function(schema, rows, depth, skippedNames, visited) {
+zatoApp.fields.collectProperties = function(schema, rows, depth, skippedNames, visited) {
 
-    var config = zatoPortal.fields.config;
-    var components = zatoPortal.state.components;
+    var config = zatoApp.fields.config;
+    var components = zatoApp.state.components;
     var resolved = schema;
 
     if('$ref' in schema) {
-        var referenceName = zatoPortal.fields.getReferenceName(schema);
+        var referenceName = zatoApp.fields.getReferenceName(schema);
         resolved = components[referenceName];
     }
 
@@ -194,13 +194,13 @@ zatoPortal.fields.collectProperties = function(schema, rows, depth, skippedNames
         }
 
         var propertySchema = resolved.properties[name];
-        var propertyType = zatoPortal.fields.describe(propertySchema);
+        var propertyType = zatoApp.fields.describe(propertySchema);
         var isRequired = required.includes(name);
 
         rows.push({name: name, type: propertyType, isRequired: isRequired, depth: depth});
 
         // A nested model is listed under the property that holds it, once per branch and to a limited depth
-        var modelName = zatoPortal.fields.getModelName(propertySchema);
+        var modelName = zatoApp.fields.getModelName(propertySchema);
 
         if(modelName === '') {
             continue;
@@ -218,18 +218,18 @@ zatoPortal.fields.collectProperties = function(schema, rows, depth, skippedNames
         branchVisited[modelName] = true;
 
         var modelSchema = components[modelName];
-        zatoPortal.fields.collectProperties(modelSchema, rows, depth + 1, {}, branchVisited);
+        zatoApp.fields.collectProperties(modelSchema, rows, depth + 1, {}, branchVisited);
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.describe = function(schema) {
+zatoApp.fields.describe = function(schema) {
 
-    var config = zatoPortal.fields.config;
+    var config = zatoApp.fields.config;
 
     if('$ref' in schema) {
-        var out = zatoPortal.fields.getReferenceName(schema);
+        var out = zatoApp.fields.getReferenceName(schema);
         return out;
     }
 
@@ -245,7 +245,7 @@ zatoPortal.fields.describe = function(schema) {
 
         for(var alternativeIndex = 0; alternativeIndex < alternatives.length; alternativeIndex++) {
             var alternative = alternatives[alternativeIndex];
-            var alternativeName = zatoPortal.fields.describe(alternative);
+            var alternativeName = zatoApp.fields.describe(alternative);
             names.push(alternativeName);
         }
 
@@ -272,14 +272,14 @@ zatoPortal.fields.describe = function(schema) {
     var type = schema.type;
 
     if(Array.isArray(type)) {
-        var types = type.filter(zatoPortal.fields.isNotNullType);
+        var types = type.filter(zatoApp.fields.isNotNullType);
         type = types[0];
     }
 
     // .. and an array is described by its elements.
     if(type === 'array') {
         if('items' in schema) {
-            var itemsType = zatoPortal.fields.describe(schema.items);
+            var itemsType = zatoApp.fields.describe(schema.items);
             var arrayType = config.arrayPrefix + itemsType;
             return arrayType;
         }
@@ -290,44 +290,44 @@ zatoPortal.fields.describe = function(schema) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.isNotNullType = function(type) {
-    var out = type !== zatoPortal.fields.config.nullType;
+zatoApp.fields.isNotNullType = function(type) {
+    var out = type !== zatoApp.fields.config.nullType;
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.buildTable = function(title, rows) {
+zatoApp.fields.buildTable = function(title, rows) {
 
-    var config = zatoPortal.fields.config;
-    var container = zatoPortal.render.createElement('div', 'portal-fields');
+    var config = zatoApp.fields.config;
+    var container = zatoApp.render.createElement('div', 'app-fields');
 
-    var titleElement = zatoPortal.render.createElement('div', 'portal-panel-title portal-fields-title', title);
+    var titleElement = zatoApp.render.createElement('div', 'app-panel-title app-fields-title', title);
     container.appendChild(titleElement);
 
-    var table = zatoPortal.render.createElement('table', 'portal-fields-table');
+    var table = zatoApp.render.createElement('table', 'app-fields-table');
     var body = document.createElement('tbody');
 
     for(var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         var row = rows[rowIndex];
         var tableRow = document.createElement('tr');
 
-        var nameCell = zatoPortal.render.createElement('td', 'portal-fields-name');
+        var nameCell = zatoApp.render.createElement('td', 'app-fields-name');
 
         // Properties of nested models are indented under the property that holds them
-        var name = zatoPortal.render.createElement('span', 'portal-fields-name-text', row.name);
+        var name = zatoApp.render.createElement('span', 'app-fields-name-text', row.name);
         var indent = row.depth * config.indentStepRem;
         name.style.marginLeft = indent + config.indentUnit;
         nameCell.appendChild(name);
 
         if(row.isRequired) {
-            var required = zatoPortal.render.createElement('span', config.requiredClass, config.requiredText);
+            var required = zatoApp.render.createElement('span', config.requiredClass, config.requiredText);
             nameCell.appendChild(required);
         }
 
         // Each type has the color its values have in the request and the response
-        var typeKind = zatoPortal.fields.getTypeKind(row.type);
-        var typeCell = zatoPortal.render.createElement('td', config.typeClassPrefix + typeKind, row.type);
+        var typeKind = zatoApp.fields.getTypeKind(row.type);
+        var typeCell = zatoApp.render.createElement('td', config.typeClassPrefix + typeKind, row.type);
 
         tableRow.appendChild(nameCell);
         tableRow.appendChild(typeCell);
@@ -342,9 +342,9 @@ zatoPortal.fields.buildTable = function(title, rows) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.getTypeKind = function(type) {
+zatoApp.fields.getTypeKind = function(type) {
 
-    var config = zatoPortal.fields.config;
+    var config = zatoApp.fields.config;
     var elementType = type;
 
     // An array is of the kind of its elements ..
@@ -367,20 +367,20 @@ zatoPortal.fields.getTypeKind = function(type) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.toText = function(operation) {
+zatoApp.fields.toText = function(operation) {
 
-    var config = zatoPortal.fields.config;
+    var config = zatoApp.fields.config;
     var blocks = [];
 
-    var inputRows = zatoPortal.fields.collectInput(operation);
-    var outputRows = zatoPortal.fields.collectOutput(operation);
+    var inputRows = zatoApp.fields.collectInput(operation);
+    var outputRows = zatoApp.fields.collectOutput(operation);
 
     if(inputRows.length > 0) {
-        blocks.push(zatoPortal.fields.buildTextBlock(config.inputTitle, inputRows));
+        blocks.push(zatoApp.fields.buildTextBlock(config.inputTitle, inputRows));
     }
 
     if(outputRows.length > 0) {
-        blocks.push(zatoPortal.fields.buildTextBlock(config.outputTitle, outputRows));
+        blocks.push(zatoApp.fields.buildTextBlock(config.outputTitle, outputRows));
     }
 
     var out = blocks.join(config.blockSeparator);
@@ -389,9 +389,9 @@ zatoPortal.fields.toText = function(operation) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.buildTextBlock = function(title, rows) {
+zatoApp.fields.buildTextBlock = function(title, rows) {
 
-    var config = zatoPortal.fields.config;
+    var config = zatoApp.fields.config;
     var names = [];
     var width = 0;
 
@@ -422,24 +422,24 @@ zatoPortal.fields.buildTextBlock = function(title, rows) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.toJson = function(operation) {
+zatoApp.fields.toJson = function(operation) {
 
-    var config = zatoPortal.fields.config;
+    var config = zatoApp.fields.config;
 
-    var inputRows = zatoPortal.fields.collectInput(operation);
-    var outputRows = zatoPortal.fields.collectOutput(operation);
+    var inputRows = zatoApp.fields.collectInput(operation);
+    var outputRows = zatoApp.fields.collectOutput(operation);
 
     var value = {};
-    value[config.inputKey] = zatoPortal.fields.nest(inputRows);
-    value[config.outputKey] = zatoPortal.fields.nest(outputRows);
+    value[config.inputKey] = zatoApp.fields.nest(inputRows);
+    value[config.outputKey] = zatoApp.fields.nest(outputRows);
 
-    var out = zatoPortal.highlight.format(value);
+    var out = zatoApp.highlight.format(value);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-zatoPortal.fields.nest = function(rows) {
+zatoApp.fields.nest = function(rows) {
 
     // Our response to produce
     var out = [];

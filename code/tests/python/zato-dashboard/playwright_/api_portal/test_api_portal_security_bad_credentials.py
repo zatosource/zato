@@ -46,7 +46,7 @@ def _submit_login_form(page:'Page', portal_url:'str', username:'str', password:'
         return out
 
     with page.expect_response(is_login_post) as response_info:
-        page.click('.portal-login-button')
+        page.click('.app-login-button')
 
     out = response_info.value
 
@@ -77,7 +77,7 @@ class TestAPIPortalSecurityBadCredentials:
             response = _submit_login_form(page, portal_url, Admin_Username, 'not.the.right.password')
             assert response.status == OK, f'Expected the form re-rendered, got {response.status}'
 
-            error = page.wait_for_selector('.portal-login-error', state='visible', timeout=5000)
+            error = page.wait_for_selector('.app-login-error', state='visible', timeout=5000)
             error_text = error.inner_text().strip()
             assert error_text == _Invalid_Credentials_Message, f'Unexpected error message: {error_text}'
 
@@ -85,7 +85,7 @@ class TestAPIPortalSecurityBadCredentials:
             response = _submit_login_form(page, portal_url, 'no.such.user.anywhere', 'password.whatever')
             assert response.status == OK, f'Expected the form re-rendered, got {response.status}'
 
-            error = page.wait_for_selector('.portal-login-error', state='visible', timeout=5000)
+            error = page.wait_for_selector('.app-login-error', state='visible', timeout=5000)
             error_text = error.inner_text().strip()
             assert error_text == _Invalid_Credentials_Message, f'Unexpected error message: {error_text}'
 

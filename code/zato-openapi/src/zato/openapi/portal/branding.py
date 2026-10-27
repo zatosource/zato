@@ -34,13 +34,13 @@ class ModuleCtx:
     Env_Branding_Dir = 'Zato_API_Portal_Branding_Dir'
 
     Default_Branding_Dir      = '/opt/hot-deploy/api-portal/branding'
-    Default_Logo_URL          = '/static/portal/zato-logo.svg'
+    Default_Logo_URL          = '/static/app/zato-logo.svg'
     Default_Logo_Content_Type = 'application/octet-stream'
-    Default_Favicon_URL       = '/static/portal/favicon.ico'
+    Default_Favicon_URL       = '/static/app/favicon.ico'
     Default_Title             = 'Zato'
 
-    Logo_URL           = '/api-portal/branding/logo'
-    Custom_Favicon_URL = '/api-portal/branding/favicon.ico'
+    Logo_URL           = '/branding/logo'
+    Custom_Favicon_URL = '/branding/favicon.ico'
 
 # ################################################################################################################################
 # ################################################################################################################################
