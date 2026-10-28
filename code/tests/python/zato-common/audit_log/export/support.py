@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime, timezone
 from threading import Lock
 from time import monotonic, sleep, time_ns
 
@@ -44,6 +45,9 @@ Endpoint = 'http://collector.test:4318/v1/logs'
 
 # How long a test waits for the worker before giving up
 Wait_Timeout = 5.0
+
+# The time of every queued event a test does not give a time of its own
+Default_Event_Time = datetime(2026, 3, 1, 10, 20, 30, 123456, tzinfo=timezone.utc)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -310,8 +314,8 @@ def build_queued(**overrides:'any_') -> 'QueuedEvent':
         'msg_id': '',
         'correl_id': '',
         'ext_client_id': '',
-        'pub_time_iso': '',
-        'event_time_iso': '2026-03-01T10:20:30.123456+00:00',
+        'pub_time': None,
+        'event_time': Default_Event_Time,
         'server_name': Server_Name,
         'endpoint': 'test.service',
         'sub_key': '',

@@ -269,7 +269,7 @@ class TestRejection:
         headers = {'Content-Type': Root_Content_Type}
 
         receiver = exchange.receiver
-        result = receive(exchange.agreement, receiver.local_keys, headers, envelope, receiver.store, exchange.clock)
+        result = receive(exchange.agreement, receiver.local_keys, headers, envelope, receiver.receive_log, exchange.clock)
 
         _assert_rejected(result, ErrorCode.MIME_Problem)
 

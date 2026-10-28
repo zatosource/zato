@@ -112,19 +112,12 @@ def _parse_outcome_filter(outcomes:'any_') -> 'strlist | None':
 
 # ################################################################################################################################
 
-def _parse_iso_ms(value:'str') -> 'int':
-    """ Parses an ISO timestamp into milliseconds since the epoch, 0 when it cannot be parsed.
+def _to_ms(value:'datetime') -> 'int':
+    """ Converts an aware datetime into milliseconds since the epoch.
     """
-    try:
-        parsed = datetime.fromisoformat(value)
-    except ValueError:
-        return 0
+    seconds = value.timestamp()
 
-    # A timestamp with no timezone is taken to be UTC
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-
-    out = int(parsed.timestamp() * 1000)
+    out = int(seconds * 1000)
     return out
 
 # ################################################################################################################################
@@ -226,8 +219,8 @@ def _rows_to_records(connection:'any_', rows:'anylist', job_id:'intnone'=None) -
         out.append({
             'job_id': record_job_id,
             'job_name': row.object_name,
-            'planned_fire_time_iso': row.pub_time_iso,
-            'actual_fire_time_iso': row.event_time_iso,
+            'planned_fire_time_iso': row.pub_time.isoformat(),
+            'actual_fire_time_iso': row.event_time.isoformat(),
             'delay_ms': int(event_attrs[Attr_Delay_Ms]),
             'outcome': row.outcome,
             'current_run': int(event_attrs[Attr_Current_Run]),
@@ -253,7 +246,7 @@ def get_history_page(
     offset:'int',
     limit:'int',
     outcomes:'any_',
-    since_iso:'str' = '',
+    since:'datetime | None' = None,
     ) -> 'anydict':
     """ Returns one page of a job's execution records, newest first, along with the total
     count of completed records matching the filter.
@@ -268,16 +261,16 @@ def get_history_page(
         event_table.c.object_name == job_name).where(
         event_table.c.outcome != SCHEDULER.OUTCOME.RUNNING)
 
-    if since_iso:
-        rows_query = rows_query.where(event_table.c.event_time_iso >= since_iso)
-        total_query = total_query.where(event_table.c.event_time_iso >= since_iso)
+    if since:
+        rows_query = rows_query.where(event_table.c.event_time >= since)
+        total_query = total_query.where(event_table.c.event_time >= since)
 
     if allowed:
         rows_query = rows_query.where(event_table.c.outcome.in_(allowed))
         total_query = total_query.where(event_table.c.outcome.in_(allowed))
 
     rows_query = rows_query.order_by(
-        event_table.c.event_time_iso.desc(), event_table.c.id.desc()).offset(offset).limit(limit)
+        event_table.c.event_time.desc(), event_table.c.id.desc()).offset(offset).limit(limit)
 
     with engine.connect() as connection:
         rows = connection.execute(rows_query).fetchall()
@@ -292,10 +285,10 @@ def get_history_page(
 def get_history_since(
     job_id:'int',
     job_name:'str',
-    since_iso:'str',
+    since:'datetime',
     outcomes:'any_',
     running_runs:'intlistnone' = None,
-    range_since_iso:'str' = '',
+    range_since:'datetime | None' = None,
     ) -> 'anydict':
     """ Returns a job's records added since the given timestamp, newest first. Runs named
     in running_runs are always included so a poll can watch them complete no matter the filter.
@@ -304,7 +297,7 @@ def get_history_since(
     allowed = _parse_outcome_filter(outcomes)
 
     # The rows a poll asks for - everything new enough and allowed through the filter ..
-    new_enough = event_table.c.event_time_iso >= since_iso
+    new_enough = event_table.c.event_time >= since
 
     if allowed:
         matches_filter = new_enough & event_table.c.outcome.in_(allowed)
@@ -319,7 +312,7 @@ def get_history_since(
         matches_filter = or_(matches_filter, event_table.c.id.in_(run_match))
 
     rows_query = _job_events(job_name).where(matches_filter).order_by(
-        event_table.c.event_time_iso.desc(), event_table.c.id.desc())
+        event_table.c.event_time.desc(), event_table.c.id.desc())
 
     total_query = select(func.count()).where(
         event_table.c.source == AuditSource.Scheduler).where(
@@ -330,8 +323,8 @@ def get_history_since(
     if allowed:
         total_query = total_query.where(event_table.c.outcome.in_(allowed))
 
-    if range_since_iso:
-        total_query = total_query.where(event_table.c.event_time_iso >= range_since_iso)
+    if range_since:
+        total_query = total_query.where(event_table.c.event_time >= range_since)
 
     with engine.connect() as connection:
         rows = connection.execute(rows_query).fetchall()
@@ -425,25 +418,24 @@ def get_log_entries(job_name:'str', current_run:'int', since_idx:'int') -> 'dict
 
 # ################################################################################################################################
 
-def get_chart_data(since_iso:'str' = '', until_iso:'str' = '') -> 'anydict':
+def get_chart_data(since:'datetime | None' = None, until:'datetime | None' = None) -> 'anydict':
     """ Returns all jobs' executions pre-aggregated into fixed time buckets with per-outcome
     counts. With both boundaries given the bucket grid spans exactly that window, so the chart
     never shifts between polls - without them the grid spans the data itself.
     """
     engine = get_audit_engine()
 
-    # A fixed window needs both boundaries, parseable and the right way around
+    # A fixed window needs both boundaries, the right way around
     fixed_window = None
 
-    if since_iso and until_iso:
-        since_ms = _parse_iso_ms(since_iso)
-        until_ms = _parse_iso_ms(until_iso)
+    if since and until:
+        since_ms = _to_ms(since)
+        until_ms = _to_ms(until)
 
-        if since_ms > 0:
-            if until_ms > since_ms:
-                fixed_window = (since_ms, until_ms)
+        if until_ms > since_ms:
+            fixed_window = (since_ms, until_ms)
 
-    events_query = select(event_table.c.event_time_iso, event_table.c.outcome).where(
+    events_query = select(event_table.c.event_time, event_table.c.outcome).where(
         event_table.c.source == AuditSource.Scheduler).where(
         event_table.c.event_type == AuditEvent.Job_Executed).where(
         event_table.c.outcome.in_(_chart_outcomes))
@@ -453,7 +445,7 @@ def get_chart_data(since_iso:'str' = '', until_iso:'str' = '') -> 'anydict':
 
     with engine.connect() as connection:
         for event_row in connection.execute(events_query):
-            event_ms = _parse_iso_ms(event_row.event_time_iso)
+            event_ms = _to_ms(event_row.event_time)
 
             if fixed_window:
                 window_since, window_until = fixed_window
@@ -534,7 +526,7 @@ def get_chart_data(since_iso:'str' = '', until_iso:'str' = '') -> 'anydict':
 
 # ################################################################################################################################
 
-def get_timeline_events_since(since_iso:'str' = '', limit:'int' = 0) -> 'dictlist':
+def get_timeline_events_since(since:'datetime | None' = None, limit:'int' = 0) -> 'dictlist':
     """ Returns every job's executions strictly after the given timestamp, newest first,
     for the dashboard's recent activity table.
     """
@@ -544,10 +536,10 @@ def get_timeline_events_since(since_iso:'str' = '', limit:'int' = 0) -> 'dictlis
         event_table.c.source == AuditSource.Scheduler).where(
         event_table.c.event_type == AuditEvent.Job_Executed)
 
-    if since_iso:
-        events_query = events_query.where(event_table.c.event_time_iso > since_iso)
+    if since:
+        events_query = events_query.where(event_table.c.event_time > since)
 
-    events_query = events_query.order_by(event_table.c.event_time_iso.desc(), event_table.c.id.desc())
+    events_query = events_query.order_by(event_table.c.event_time.desc(), event_table.c.id.desc())
 
     if limit:
         events_query = events_query.limit(limit)
@@ -619,11 +611,11 @@ def get_job_aggregates() -> 'anydict':
         for job_name, aggregate in out.items():
 
             recent_query = select(
-                event_table.c.outcome, event_table.c.duration_ms, event_table.c.event_time_iso).where(
+                event_table.c.outcome, event_table.c.duration_ms, event_table.c.event_time).where(
                 event_table.c.source == AuditSource.Scheduler).where(
                 event_table.c.event_type == AuditEvent.Job_Executed).where(
                 event_table.c.object_name == job_name).order_by(
-                event_table.c.event_time_iso.desc(), event_table.c.id.desc()).limit(_recent_outcome_count)
+                event_table.c.event_time.desc(), event_table.c.id.desc()).limit(_recent_outcome_count)
 
             recent_rows = connection.execute(recent_query).fetchall()
 
@@ -632,7 +624,7 @@ def get_job_aggregates() -> 'anydict':
 
             newest = recent_rows[0]
             aggregate['last_outcome'] = newest.outcome
-            aggregate['last_run_utc'] = newest.event_time_iso
+            aggregate['last_run_utc'] = newest.event_time.isoformat()
 
             # The newest completed run is the one whose duration the dashboard shows
             for recent_row in recent_rows:

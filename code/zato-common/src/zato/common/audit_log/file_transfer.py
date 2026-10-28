@@ -16,7 +16,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # stdlib
-from base64 import b64decode
 from json import dumps, loads
 
 # SQLAlchemy
@@ -267,7 +266,7 @@ def load_transfer_content(cid:'str') -> 'bytes':
         raise ResubmitException(f'Cid `{cid}` has no read event to take the file from')
 
     # The bytes travel as the read event's attachment
-    body_statement = select(event_body_table.c.data
+    body_statement = select(event_body_table.c.data, event_body_table.c.content
     ).where(event_body_table.c.event_id == read_event_id
     ).where(event_body_table.c.kind == AuditBody.Attachment)
 
@@ -279,13 +278,13 @@ def load_transfer_content(cid:'str') -> 'bytes':
         error_message = f'Cid `{cid}` stored no file content - turn on content storage on the connection to make files reprocessable'
         raise ResubmitException(error_message)
 
-    envelope = loads(body_row[0])
+    metadata = loads(body_row.data)
 
     # An attachment over the size cap keeps its metadata but not its bytes
-    if not envelope['is_content_kept']:
+    if not metadata['is_content_kept']:
         raise ResubmitException(f'Cid `{cid}` stored no file content - the file was over the attachment size cap')
 
-    out = b64decode(envelope['content'])
+    out = body_row.content
 
     return out
 

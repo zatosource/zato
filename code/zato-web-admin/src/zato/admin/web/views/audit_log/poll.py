@@ -25,6 +25,7 @@ from zato.admin.web.views.audit_log.trace import attach_trace_lines
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditSource
 from zato.common.audit_log.flow import get_flow_ids, resolve_seed
 from zato.common.audit_log.search import build_search_conditions
+from zato.common.util.time_ import parse_utc
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,8 +74,8 @@ def poll(req:'any_') -> 'HttpResponse':
     outcomes = body['outcomes']
     query = body['query']
     status = body['status']
-    time_from = body['time_from']
-    time_to = body['time_to']
+    time_from = _parse_time(body['time_from'])
+    time_to = _parse_time(body['time_to'])
     event_types = body['event_types']
     statuses_excluded = body['statuses_excluded']
 
@@ -87,8 +88,10 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
+    engine = get_audit_engine()
+
     where_conditions = build_search_conditions(
-        sources, object_names, outcomes, query, status, time_from, time_to, event_types,
+        engine.dialect.name, sources, object_names, outcomes, query, status, time_from, time_to, event_types,
         sources_excluded=sources_excluded, object_names_excluded=object_names_excluded,
         statuses_excluded=statuses_excluded)
 
@@ -108,9 +111,9 @@ def poll(req:'any_') -> 'HttpResponse':
     # and the window it is read through agree on what newest means. Two events of the same
     # moment are told apart by their ids.
     if status == _status_outstanding:
-        order_by = [event_table.c.event_time_iso.asc(), event_table.c.id.asc()]
+        order_by = [event_table.c.event_time.asc(), event_table.c.id.asc()]
     else:
-        order_by = [event_table.c.event_time_iso.desc(), event_table.c.id.desc()]
+        order_by = [event_table.c.event_time.desc(), event_table.c.id.desc()]
 
     # Build both queries upfront ..
     event_count = func.count()
@@ -128,8 +131,6 @@ def poll(req:'any_') -> 'HttpResponse':
     page_query = page_query.offset(offset)
 
     # .. and run them against the shared audit log database.
-    engine = get_audit_engine()
-
     with engine.connect() as connection:
 
         count_result = connection.execute(count_query)
@@ -204,9 +205,20 @@ _strip_min_span_ms = 60 * 60 * 1000
 
 # ################################################################################################################################
 
+def _parse_time(value:'str | None') -> 'datetime | None':
+    """ A time filter of the request as a moment, None when the browser sent no filter.
+    """
+    if value:
+        out = parse_utc(value)
+    else:
+        out = None
+
+    return out
+
+# ################################################################################################################################
+
 def _strip_edge_iso(epoch_ms:'float') -> 'str':
-    """ An epoch-ms moment as an ISO string of the very format the event times are stored in,
-    so a bucket's edges can serve as time filters over them.
+    """ An epoch-ms moment as an ISO 8601 string, so a bucket's edges can serve as time filters.
     """
     moment = datetime.fromtimestamp(epoch_ms / 1000, timezone.utc)
 
@@ -230,8 +242,8 @@ def strip(req:'any_') -> 'HttpResponse':
     outcomes = body['outcomes']
     query = body['query']
     status = body['status']
-    time_from = body['time_from']
-    time_to = body['time_to']
+    time_from = _parse_time(body['time_from'])
+    time_to = _parse_time(body['time_to'])
     event_types = body['event_types']
     statuses_excluded = body['statuses_excluded']
 
@@ -244,15 +256,15 @@ def strip(req:'any_') -> 'HttpResponse':
     if bucket_count < _strip_min_buckets:
         bucket_count = _strip_min_buckets
 
+    engine = get_audit_engine()
+
     where_conditions = build_search_conditions(
-        sources, object_names, outcomes, query, status, time_from, time_to, event_types,
+        engine.dialect.name, sources, object_names, outcomes, query, status, time_from, time_to, event_types,
         sources_excluded=sources_excluded, object_names_excluded=object_names_excluded,
         statuses_excluded=statuses_excluded)
 
-    events_query = select(event_table.c.event_time_iso, event_table.c.outcome)
+    events_query = select(event_table.c.event_time, event_table.c.outcome)
     events_query = events_query.where(*where_conditions)
-
-    engine = get_audit_engine()
 
     # Each matching event as its moment in epoch ms and its outcome
     events:'anylist' = []
@@ -260,9 +272,8 @@ def strip(req:'any_') -> 'HttpResponse':
     with engine.connect() as connection:
         result = connection.execute(events_query)
 
-        for event_time_iso, outcome in result:
-            moment = datetime.fromisoformat(event_time_iso)
-            event_ms = moment.timestamp() * 1000
+        for event_time, outcome in result:
+            event_ms = event_time.timestamp() * 1000
 
             events.append((event_ms, outcome))
 
@@ -349,7 +360,7 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
     # apart by where they stand among the others of their correlation id - a request and the
     # response to it are written down within the same millisecond often enough for that to matter.
     order_by = [
-        event_table.c.event_time_iso.desc(),
+        event_table.c.event_time.desc(),
         event_table.c.cid_sequence.desc(),
         event_table.c.id.desc(),
     ]

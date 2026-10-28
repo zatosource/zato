@@ -155,14 +155,13 @@ def get_scheduler_context(service:'Service') -> 'stranydict':
 
 # ################################################################################################################################
 
-def local_day_start_utc_iso(now_local:'datetime') -> 'str':
-    """ The local day's midnight as a UTC ISO timestamp.
+def local_day_start_utc(now_local:'datetime') -> 'datetime':
+    """ The local day's midnight in UTC.
     """
     today = now_local.date()
     day_start_local = datetime.combine(today, datetime_time.min, tzinfo=now_local.tzinfo)
-    day_start_utc = day_start_local.astimezone(timezone.utc)
 
-    out = day_start_utc.isoformat()
+    out = day_start_local.astimezone(timezone.utc)
     return out
 
 # ################################################################################################################################
@@ -181,8 +180,8 @@ def get_delivered_today(conn_name:'str', schedule_name:'str') -> 'int':
             out = counter['count']
             return out
 
-    since_iso = local_day_start_utc_iso(now_local)
-    count = count_delivered_since(conn_name, schedule_name, since_iso)
+    since = local_day_start_utc(now_local)
+    count = count_delivered_since(conn_name, schedule_name, since)
 
     _delivered_today[key] = {'day': today, 'count': count}
 
@@ -345,8 +344,7 @@ def note_exchanges(run:'RunContext', conn:'any_') -> 'None':
     exchanges = conn.take_exchanges()
 
     now = utcnow()
-    now_iso = now.isoformat()
-    write_run_exchanges(run.event_id, now_iso, exchanges)
+    write_run_exchanges(run.event_id, now, exchanges)
 
 # ################################################################################################################################
 
@@ -437,8 +435,7 @@ def close_run(run:'RunContext') -> 'None':
             data['ledger_overflow'] = ledger_count - Run_Ledger_Max_Entries
 
         now = utcnow()
-        now_iso = now.isoformat()
-        write_run_ledger(run.event_id, now_iso, run.ledger)
+        write_run_ledger(run.event_id, now, run.ledger)
 
     update_run_event(run.event_id, outcome=outcome, status=status, duration_ms=duration_ms, data=data)
     remember_listing(run)
@@ -467,8 +464,7 @@ def close_run_list_failed(run:'RunContext', phase:'str', error:'str') -> 'None':
         duration_ms=duration_ms, data=run.data)
 
     now = utcnow()
-    now_iso = now.isoformat()
-    write_run_error(run.event_id, now_iso, error)
+    write_run_error(run.event_id, now, error)
 
 # ################################################################################################################################
 # ################################################################################################################################

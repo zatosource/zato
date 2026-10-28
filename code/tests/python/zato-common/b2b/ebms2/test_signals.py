@@ -20,7 +20,7 @@ from zato.common.b2b.ebms2.signals import Acknowledgment, add_acknowledgment, ad
     parse_status_response, StatusRequest, StatusResponse
 from zato.common.b2b.ebms2.xml_ import eb_tag
 from zato.common.test.b2b_cpa import new_settings, Party_Id_Type, Receiver_Name, Sender_Endpoint
-from zato.common.test.b2b_ebms2 import answer, deliver, new_exchange, resolve, send, Start_Time
+from zato.common.test.b2b_ebms2 import answer, confirm, deliver, new_exchange, resolve, send, Start_Time
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -211,7 +211,8 @@ class TestMessageServiceHandler:
         exchange = new_exchange(parties, settings)
 
         business = send(exchange)
-        _ = deliver(exchange, business)
+        delivered = deliver(exchange, business)
+        confirm(exchange, delivered)
 
         options = SendOptions()
         options.status_request_ref = business.message_id

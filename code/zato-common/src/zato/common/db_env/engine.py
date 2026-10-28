@@ -25,7 +25,6 @@ from sqlalchemy.pool import QueuePool
 # Zato
 from zato.common.db_env.common import get_env_values, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, set_sqlite_pragmas
-from zato.common.db_env.schema import ensure_column_types, ensure_columns, ensure_indexes
 from zato.common.defaults import default_env_base_dir
 
 # ################################################################################################################################
@@ -93,13 +92,8 @@ def get_sqlite_file_engine(db_path:'str', metadata:'MetaData', *, needs_pool:'bo
     out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
     sa_event.listen(out, 'connect', set_sqlite_pragmas)
 
-    # .. create and update the schema ..
+    # .. create the schema ..
     metadata.create_all(out)
-
-    for table in metadata.tables.values():
-        ensure_columns(out, table)
-        ensure_indexes(out, table)
-        ensure_column_types(out, table)
 
     # .. and retain the engine for subsequent callers.
     _sqlite_file_engine_cache[cache_key] = out
@@ -190,13 +184,6 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
 
     # .. make sure the schema exists - this is idempotent ..
     config.metadata.create_all(out)
-
-    # .. tables created by older releases may be missing newly declared columns and indexes,
-    # .. and their id columns may still be 32-bit ..
-    for table in config.metadata.tables.values():
-        ensure_columns(out, table)
-        ensure_indexes(out, table)
-        ensure_column_types(out, table)
 
     # .. and cache the engine for all future callers.
     _engine_cache[cache_key] = out

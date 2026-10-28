@@ -23,6 +23,7 @@ from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, 
     Interrupt_Paused
 from zato.common.util.api import utcnow
 from zato.common.util.retry import RetryPolicy
+from zato.common.util.time_ import parse_utc
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -396,12 +397,15 @@ class PushDelivery:
         if correl_id is None:
             correl_id = ''
 
+        # .. the publication time arrives from the broker as an ISO 8601 string ..
+        pub_time = parse_utc(message['pub_time_iso'])
+
         # .. now, write out the event.
         self.backend.audit_log.insert(AuditSource.PubSub, event_type, message['topic_name'],
             cid=message_cid,
             msg_id=message['msg_id'],
             correl_id=correl_id,
-            pub_time_iso=message['pub_time_iso'],
+            pub_time=pub_time,
             endpoint=endpoint,
             sub_key=sub_key,
             size=message['data_size'],

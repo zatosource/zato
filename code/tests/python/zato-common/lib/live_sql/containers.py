@@ -63,6 +63,9 @@ class ModuleCtx:
     # How long a single MS SQL login attempt may take
     MSSQL_Login_Timeout = 3
 
+    # The largest statement MySQL accepts, as the audit log documentation requires
+    MySQL_Max_Allowed_Packet = '--max-allowed-packet=128M'
+
 
     # The queries the readiness checks run
     Ping_Query        = 'select 1'
@@ -239,12 +242,14 @@ def start_mysql(
     ]
 
     # The TLS-required variant mounts the certificates and refuses unencrypted TCP connections.
-    # Both variants allow LOAD DATA LOCAL INFILE - the bulk-seeding path of the perf tests.
+    # Both variants allow LOAD DATA LOCAL INFILE - the bulk-seeding path of the perf tests -
+    # and accept statements of the size the audit log documents as its requirement.
     if needs_ssl:
         command.extend(['-v', f'{ssl_certificates.directory}:/certs-in:ro'])
         command.append(ModuleCtx.MySQL_Image)
         command.extend([
             '--local-infile=1',
+            ModuleCtx.MySQL_Max_Allowed_Packet,
             '--ssl-ca=/certs-in/ca.crt',
             '--ssl-cert=/certs-in/server.crt',
             '--ssl-key=/certs-in/server.key',
@@ -253,6 +258,7 @@ def start_mysql(
     else:
         command.append(ModuleCtx.MySQL_Image)
         command.append('--local-infile=1')
+        command.append(ModuleCtx.MySQL_Max_Allowed_Packet)
 
     _ = subprocess.run(command, check=True, capture_output=True)
 

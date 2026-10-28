@@ -80,7 +80,7 @@ class TestExplainLiveChannelMLLP:
         acks = _get_acks_sent()
 
         for row in acks:
-            trace(Channel_Channel, Received, f'ack audit log: {row["event_time_iso"]} {row["application_outcome"]!r} ' +
+            trace(Channel_Channel, Received, f'ack audit log: {row["event_time"]} {row["application_outcome"]!r} ' +
                 f'{row["ext_client_id"]!r}')
 
         separator(Channel_Channel)

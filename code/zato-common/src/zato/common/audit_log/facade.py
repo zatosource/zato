@@ -20,18 +20,21 @@ from zato.common.audit_log.service import to_body_text
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anynone, dictlist, stranydict, strnone, strorlist, strstrdict
+    from datetime import datetime
+    from zato.common.typing_ import strdatetimedict
+    from zato.common.typing_ import any_, anynone, dictlist, stranydict, strnone, strorlist
     from zato.server.service import Service
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anynone = anynone
+    datetime = datetime
     dictlist = dictlist
     Service = Service
     stranydict = stranydict
+    strdatetimedict = strdatetimedict
     strnone = strnone
     strorlist = strorlist
-    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,8 +115,8 @@ class AuditFacade:
         event_type:'strorlist' = '',
         query:'str' = '',
         status:'str' = '',
-        time_from:'str' = '',
-        time_to:'str' = '',
+        time_from:'datetime | None' = None,
+        time_to:'datetime | None' = None,
         page:'int' = Default_Page,
         page_size:'int' = Default_Page_Size,
         ) -> 'dictlist':
@@ -145,9 +148,9 @@ class AuditFacade:
 
 # ################################################################################################################################
 
-    def last_seen(self, source:'str') -> 'strstrdict':
+    def last_seen(self, source:'str') -> 'strdatetimedict':
         """ Returns the newest event time of each of one source's objects - a dict mapping
-        each object name, e.g. each MLLP channel, to an ISO timestamp.
+        each object name, e.g. each MLLP channel, to a datetime in UTC.
         """
         engine = get_audit_engine()
 

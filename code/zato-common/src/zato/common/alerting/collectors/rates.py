@@ -59,10 +59,9 @@ def collect_error_rate_facts(
     out:'dictlist' = []
 
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     conditions = [
-        event_table.c.event_time_iso >= window_start_iso,
+        event_table.c.event_time >= window_start,
     ]
 
     # The optional criteria narrow the measures only when set
@@ -116,7 +115,7 @@ def collect_error_rate_facts(
     # The newest failing event of each pair within the same window, read once
     # for every pair rather than once per fact
     newest_errors = collect_newest_error_events(
-        engine, window_start_iso=window_start_iso, source=source, object_name=object_name)
+        engine, window_start=window_start, source=source, object_name=object_name)
 
     for row_source, row_object_name, total, errors in rows:
 
@@ -267,10 +266,9 @@ def collect_latency_facts(
     out:'dictlist' = []
 
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     conditions = [
-        event_table.c.event_time_iso >= window_start_iso,
+        event_table.c.event_time >= window_start,
         event_table.c.duration_ms > 0,
         is_outcome_row(),
         not_(is_unanswered_row()),
@@ -321,10 +319,9 @@ def collect_auth_failure_facts(
     out:'dictlist' = []
 
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     conditions = [
-        event_table.c.event_time_iso >= window_start_iso,
+        event_table.c.event_time >= window_start,
         event_table.c.event_type == AuditEvent.Auth_Failed,
     ]
 

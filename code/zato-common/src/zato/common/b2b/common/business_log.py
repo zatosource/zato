@@ -20,7 +20,7 @@ from zato.common.b2b.common.business_state import business_attrs, business_data,
 from zato.common.b2b.common.commit_group import get_writer
 from zato.common.b2b.common.commit_sql import EventWrite
 from zato.common.b2b.common.exceptions import B2BException
-from zato.common.b2b.common.recovery import read_attrs, read_events, read_open
+from zato.common.b2b.common.recovery import page_of, read_attrs, read_events, read_open_page, Recovery_Page_Size
 from zato.common.b2b.common.schema import OpenKind
 from zato.common.json_internal import dumps, loads
 
@@ -31,12 +31,14 @@ if 0:
     from sqlalchemy.engine import Connection
     from zato.common.b2b.common.business_state import BusinessOutcome
     from zato.common.b2b.common.commit_group import CommitTicket, GroupCommitWriter
+    from zato.common.b2b.common.recovery import RecoveredPage
     from zato.common.typing_ import anylist, stranydict, strlist
     anylist = anylist
     BusinessOutcome = BusinessOutcome
     CommitTicket = CommitTicket
     Connection = Connection
     GroupCommitWriter = GroupCommitWriter
+    RecoveredPage = RecoveredPage
     stranydict = stranydict
     strlist = strlist
 
@@ -455,27 +457,53 @@ class BusinessLog:
 
 # ################################################################################################################################
 
-    def _recover(self) -> 'business_message_list':
+    def _recover_page(self, after_id:'int', limit:'int') -> 'RecoveredPage':
+
         with self.writer.engine.connect() as connection:
-            open_records = read_open(connection, OpenKind.Transaction, self.source, self.server_name)
-            message_ids = list(open_records)
-            out = self._read_stored(connection, message_ids)
+            records = read_open_page(connection, OpenKind.Transaction, self.source, self.server_name, after_id, limit)
+
+            message_ids:'strlist' = []
+
+            for record in records:
+                message_ids.append(record.message_id)
+
+            messages = self._read_stored(connection, message_ids)
+
+        out = page_of(messages, records, after_id, limit)
+        return out
+
+# ################################################################################################################################
+
+    def recover_page(self, limit:'int', after_id:'int'=0) -> 'RecoveredPage':
+        """ Reads, up to the limit, the transactions that have not ended from the audit log into memory, in the order
+        they were opened and starting after the open record with the given identifier, so that signal matching
+        and expiry continue from them.
+        """
+        out = self.writer.call(self._recover_page, after_id, limit)
+
+        for message in out.items:
+            if message.state not in Final_States:
+                self.track(message)
 
         return out
 
 # ################################################################################################################################
 
-    def recover(self) -> 'int':
-        """ Reads the transactions that have not ended from the audit log into memory, so that signal matching
-        and expiry continue from them, and returns how many there are.
+    def recover(self, page_size:'int'=Recovery_Page_Size) -> 'int':
+        """ Reads every transaction that has not ended from the audit log into memory, page by page,
+        and returns how many there are.
         """
-        messages = self.writer.call(self._recover)
+        out = 0
+        after_id = 0
 
-        for message in messages:
-            if message.state not in Final_States:
-                self.track(message)
+        while True:
+            page = self.recover_page(page_size, after_id)
+            out += len(page.items)
+            after_id = page.last_id
 
-        out = len(messages)
+            if page.is_last:
+                break
+
         return out
 
 # ################################################################################################################################

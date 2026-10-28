@@ -75,9 +75,6 @@ Error_Sources = (ErrorSource.Auth, ErrorSource.Rate_Limit, ErrorSource.Upstream,
 # What a caller that authenticated with no security definition is reported as
 Caller_Anonymous = 'Anonymous'
 
-# An ISO timestamp cut to this many characters is an hourly period, e.g. 2026-07-16T14
-Period_Len = 13
-
 # ################################################################################################################################
 # ################################################################################################################################
 

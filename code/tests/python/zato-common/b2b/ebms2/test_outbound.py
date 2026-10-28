@@ -243,7 +243,7 @@ class TestResponses:
 
         receiver = exchange.receiver
         headers = {'Content-Type': Root_Content_Type}
-        result = receive(exchange.agreement, receiver.local_keys, headers, b'not xml', receiver.store, exchange.clock)
+        result = receive(exchange.agreement, receiver.local_keys, headers, b'not xml', receiver.receive_log, exchange.clock)
 
         response = result.response
         assert response.status_code == INTERNAL_SERVER_ERROR

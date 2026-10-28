@@ -56,9 +56,10 @@ class _Detail:
 
 # The state of an exchange that ended, by the final state it ended in.
 _completed_states = {
-    FinalState.Delivered: OutboundState.Acknowledged,
-    FinalState.Answered:  OutboundState.Answered,
-    FinalState.Failed:    OutboundState.Failed,
+    FinalState.Delivered:  OutboundState.Acknowledged,
+    FinalState.Answered:   OutboundState.Answered,
+    FinalState.Failed:     OutboundState.Failed,
+    FinalState.Superseded: OutboundState.Failed,
 }
 
 # ################################################################################################################################

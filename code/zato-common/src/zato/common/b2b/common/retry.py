@@ -23,10 +23,12 @@ if 0:
 # ################################################################################################################################
 
 class RetryAction:
-    """ What a sender does next with a message that expects a receipt.
+    """ What a sender does next with a message that expects a receipt. A held message waits for its address
+    to be resumed, without its retries being consumed.
     """
     Resend  = 'resend'
     Wait    = 'wait'
+    Hold    = 'hold'
     Give_Up = 'give-up'
     Done    = 'done'
 
@@ -73,8 +75,9 @@ class RetryDecision:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def next_action(policy:'RetryPolicy', state:'RetryState', now:'datetime') -> 'RetryDecision':
-    """ Returns what is to happen next with a message that expects a receipt.
+def next_action(policy:'RetryPolicy', state:'RetryState', now:'datetime', is_suspended:'bool'=False) -> 'RetryDecision':
+    """ Returns what is to happen next with a message that expects a receipt. A message to a suspended address
+    is held until the address is resumed, and it is given up on once it expires.
     """
 
     # Our response to produce
@@ -84,6 +87,18 @@ def next_action(policy:'RetryPolicy', state:'RetryState', now:'datetime') -> 'Re
     # The receipt for the current or for an earlier delivery has arrived ..
     if state.is_answered:
         out.action = RetryAction.Done
+        return out
+
+    # .. its address is suspended, so the message is held, unless it has expired in the meantime ..
+    if is_suspended:
+        out.action = RetryAction.Hold
+
+        if state.expires_at:
+            if state.expires_at <= now:
+                out.action = RetryAction.Give_Up
+            else:
+                out.at = state.expires_at
+
         return out
 
     # .. the current delivery is answered within its interval, or not at all ..

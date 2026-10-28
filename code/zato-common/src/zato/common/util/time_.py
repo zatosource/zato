@@ -64,6 +64,19 @@ def native_to_utc(dt):
 
 # ################################################################################################################################
 
+def parse_utc(value:'str') -> 'datetime':
+    """ Parses an ISO 8601 timestamp received from outside the process into an aware datetime,
+    with a timestamp that carries no offset taken to be in UTC.
+    """
+    out = datetime.fromisoformat(value)
+
+    if out.tzinfo is None:
+        out = out.replace(tzinfo=timezone.utc)
+
+    return out
+
+# ################################################################################################################################
+
 def datetime_to_ms(dt):
     """ Converts a datetime object to a number of milliseconds since UNIX epoch.
     """

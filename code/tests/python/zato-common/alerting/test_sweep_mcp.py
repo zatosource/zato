@@ -130,11 +130,11 @@ def _backdate(engine:'Engine', now:'datetime', seconds_back:'int') -> 'None':
     with engine.connect() as connection:
         event_id = connection.execute(event_table.select().order_by(event_table.c.id.desc()).limit(1)).fetchone()[0]
 
-    event_time_iso = (now - timedelta(seconds=seconds_back)).isoformat()
+    event_time = now - timedelta(seconds=seconds_back)
 
     statement = update(event_table)
     statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time_iso=event_time_iso)
+    statement = statement.values(event_time=event_time)
 
     with engine.begin() as connection:
         _ = connection.execute(statement)

@@ -275,8 +275,8 @@ class _ResubmitSource:
     # Filled in by the chain writer - the chain's cid, its stamped moments
     # and who asked for the resubmit
     chain_cid:'str' = ''
-    chain_created_iso:'str' = ''
-    chain_completed_iso:'str' = ''
+    chain_created_at:'datetime | None' = None
+    chain_completed_at:'datetime | None' = None
     chain_actor:'str' = ''
 
 # ################################################################################################################################
@@ -321,14 +321,14 @@ class _BulkAuditLog(AuditLog):
         self.written_count = 0
 
         # What the collected events are stamped with instead of the wall clock
-        self.event_time_iso = ''
+        self.event_time:'datetime | None' = None
 
 # ################################################################################################################################
 
     def set_event_time(self, when:'datetime') -> 'None':
         """ Sets the moment the next collected events are stamped with.
         """
-        self.event_time_iso = when.isoformat()
+        self.event_time = when
 
 # ################################################################################################################################
 
@@ -343,7 +343,7 @@ class _BulkAuditLog(AuditLog):
         for pending in batch:
 
             # The planned moment replaces the wall-clock time assigned by insert
-            pending.values['event_time_iso'] = self.event_time_iso
+            pending.values['event_time'] = self.event_time
 
             self.pending_events.append(pending)
             out = len(self.pending_events)
@@ -396,7 +396,7 @@ class _BulkAuditLog(AuditLog):
                 body_rows.append({
                     'event_id': event_id,
                     'kind': kind,
-                    'event_time_iso': pending.values['event_time_iso'],
+                    'event_time': pending.values['event_time'],
                     'data': body_data,
                 })
 
@@ -956,8 +956,8 @@ def _write_resubmit_chains(
 
         # The chain's own moments and actor, which its dedup ledger row reports
         source.chain_cid = chain_cid
-        source.chain_created_iso = chain_when.isoformat()
-        source.chain_completed_iso = completed_when.isoformat()
+        source.chain_created_at = chain_when
+        source.chain_completed_at = completed_when
         source.chain_actor = actor
 
 # ################################################################################################################################
@@ -988,22 +988,23 @@ def _build_dedup_rows(
             'cid': source.chain_cid,
             'action': 'reprocess',
             'actor': source.chain_actor,
-            'created_iso': source.chain_created_iso,
+            'created_at': source.chain_created_at,
             'outcome': AuditOutcome.OK,
-            'completed_iso': source.chain_completed_iso,
+            'completed_at': source.chain_completed_at,
         })
 
     # A completed resend claim from earlier today
     resend_when = now - timedelta(minutes=rng.randrange(30, 240)) + _draw_fraction(rng)
+    resend_duration = timedelta(milliseconds=rng.randrange(20, 250))
 
     out.append({
         'dedup_key': build_dedup_key('resend', 2, 'demo-resend-payload'),
         'cid': f'{Cid_Prefix}dd-00000001',
         'action': 'resend',
         'actor': rng.choice(Actors),
-        'created_iso': resend_when.isoformat(),
+        'created_at': resend_when,
         'outcome': AuditOutcome.OK,
-        'completed_iso': (resend_when + timedelta(milliseconds=rng.randrange(20, 250))).isoformat(),
+        'completed_at': resend_when + resend_duration,
     })
 
     # A claim that never completed - the in-doubt screen's demo case
@@ -1014,9 +1015,9 @@ def _build_dedup_rows(
         'cid': f'{Cid_Prefix}dd-00000002',
         'action': 'resend',
         'actor': rng.choice(Actors),
-        'created_iso': in_doubt_when.isoformat(),
+        'created_at': in_doubt_when,
         'outcome': '',
-        'completed_iso': '',
+        'completed_at': None,
     })
 
     return out
@@ -1043,8 +1044,8 @@ def _build_alert_row(
         'message': finding.message,
         'link': finding.link,
         'count': count,
-        'first_raised_iso': first_raised.isoformat(),
-        'last_raised_iso': last_raised.isoformat(),
+        'first_raised_at': first_raised,
+        'last_raised_at': last_raised,
     }
 
     return out

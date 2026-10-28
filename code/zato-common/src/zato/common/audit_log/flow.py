@@ -121,7 +121,7 @@ def _newest_event_id(connection:'any_', column:'any_', term:'str') -> 'int':
     """
     statement = select(event_table.c.id)
     statement = statement.where(column == term)
-    statement = statement.order_by(event_table.c.event_time_iso.desc(), event_table.c.id.desc())
+    statement = statement.order_by(event_table.c.event_time.desc(), event_table.c.id.desc())
     statement = statement.limit(1)
 
     row = connection.execute(statement).fetchone()

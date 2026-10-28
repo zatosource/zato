@@ -23,7 +23,7 @@ from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table, topic_sub_table
 from zato.common.util.api import new_msg_id, utcnow
-from zato.common.util.time_ import datetime_to_ms
+from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
 
 # ################################################################################################################################
@@ -278,12 +278,14 @@ class SQLPubSubBackend(SQLAdminAPI):
                 if publisher is None:
                     publisher = ''
 
+                audit_pub_time = parse_utc(pub_time_iso)
+
                 self.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
                     cid=cid,
                     msg_id=message_id,
                     correl_id=correl_id,
                     ext_client_id=ext_client_id,
-                    pub_time_iso=pub_time_iso,
+                    pub_time=audit_pub_time,
                     endpoint=publisher,
                     size=data_size,
                     priority=priority,
@@ -541,10 +543,12 @@ class SQLPubSubBackend(SQLAdminAPI):
                     if message_cid is None:
                         message_cid = ''
 
+                    audit_pub_time = parse_utc(pub_time_iso)
+
                     self.audit_log.insert(AuditSource.PubSub, AuditEvent.Received, message['topic_name'],
                         cid=message_cid,
                         msg_id=message['msg_id'],
-                        pub_time_iso=pub_time_iso,
+                        pub_time=audit_pub_time,
                         sub_key=sub_key,
                         size=data_size,
                         priority=message['priority'],

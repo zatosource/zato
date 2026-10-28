@@ -13,7 +13,7 @@ is enriched with before it reaches the browser.
 from sqlalchemy import and_, func, or_, select
 
 # Zato
-from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_numeric_columns, \
+from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_numeric_columns, _row_time_columns, \
     _source_attr_columns, _source_body_preview
 from zato.admin.web.views.audit_log.sources import _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
@@ -42,8 +42,8 @@ _checksum_attr = 'checksum'
 # ################################################################################################################################
 
 def _normalize_row(row:'anydict') -> 'None':
-    """ Turns the NULLs of one row's text columns into empty strings, so that every cell
-    the frontend reads is a value of the type its column says it is.
+    """ Turns the NULLs of one row's text columns into empty strings and its timestamps into
+    their ISO 8601 form, so that every cell the frontend reads is a value of the type its column says it is.
     """
     for key, value in row.items():
 
@@ -54,6 +54,9 @@ def _normalize_row(row:'anydict') -> 'None':
 
         if value is None:
             row[key] = ''
+
+        elif key in _row_time_columns:
+            row[key] = value.isoformat()
 
 # ################################################################################################################################
 
@@ -370,21 +373,25 @@ def _attach_checksum_counts(connection:'any_', rows:'anylist') -> 'None':
 
     attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
     delivered_count = func.count(event_table.c.id)
-    last_delivered_iso = func.max(event_table.c.event_time_iso)
+    last_delivered = func.max(event_table.c.event_time)
 
     is_same_source = event_table.c.source == AuditSource.File_Outgoing
     is_delivered = event_table.c.event_type == AuditEvent.Delivered
     is_checksum_attr = event_attr_table.c.name == _checksum_attr
     is_wanted_checksum = event_attr_table.c.value.in_(rows_by_checksum)
 
-    statement = select(event_attr_table.c.value, delivered_count, last_delivered_iso)
+    statement = select(event_attr_table.c.value, delivered_count, last_delivered)
     statement = statement.select_from(attr_join)
     statement = statement.where(and_(is_same_source, is_delivered, is_checksum_attr, is_wanted_checksum))
     statement = statement.group_by(event_attr_table.c.value)
 
     result = connection.execute(statement)
 
-    for checksum, delivered_count, last_delivered_iso in result:
+    for checksum, delivered_count, last_delivered in result:
+
+        # The browser receives the time in ISO 8601 form
+        last_delivered_iso = last_delivered.isoformat()
+
         for row in rows_by_checksum[checksum]:
             row['delivered_count_for_checksum'] = delivered_count
             row['last_delivered_iso_for_checksum'] = last_delivered_iso

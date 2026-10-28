@@ -83,7 +83,7 @@ class TestExplainLiveGatewayMCP:
         calls = _get_tool_calls()
 
         for row in calls:
-            trace(Channel_MCP, Received, f'tool call audit log: {row["event_time_iso"]} {row["endpoint"]!r} ' +
+            trace(Channel_MCP, Received, f'tool call audit log: {row["event_time"]} {row["endpoint"]!r} ' +
                 f'{row["outcome"]!r} {row["sub_key"]!r} {row["ext_client_id"]!r}')
 
         separator(Channel_MCP)

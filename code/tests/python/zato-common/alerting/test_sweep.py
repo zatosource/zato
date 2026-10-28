@@ -559,7 +559,7 @@ class TestRunSweep:
 
         statement = update(event_table)
         statement = statement.where(event_table.c.id == event_id)
-        statement = statement.values(event_time_iso=(now - timedelta(seconds=600)).isoformat())
+        statement = statement.values(event_time=now - timedelta(seconds=600))
 
         with engine.begin() as connection:
             _ = connection.execute(statement)
@@ -596,7 +596,7 @@ class TestRunSweep:
 
         statement = update(event_table)
         statement = statement.where(event_table.c.id == event_id)
-        statement = statement.values(event_time_iso=(now - timedelta(seconds=7200)).isoformat())
+        statement = statement.values(event_time=now - timedelta(seconds=7200))
 
         with engine.begin() as connection:
             _ = connection.execute(statement)
@@ -654,7 +654,7 @@ def _seed_transfer_failure(audit_log:'AuditLog', engine:'Engine', now:'datetime'
     if seconds_back:
         statement = update(event_table)
         statement = statement.where(event_table.c.id == event_id)
-        statement = statement.values(event_time_iso=(now - timedelta(seconds=seconds_back)).isoformat())
+        statement = statement.values(event_time=now - timedelta(seconds=seconds_back))
 
         with engine.begin() as connection:
             _ = connection.execute(statement)

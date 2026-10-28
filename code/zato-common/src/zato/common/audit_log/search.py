@@ -16,19 +16,22 @@ from sqlalchemy import func, or_, select
 from zato.common.audit_log.api import event_attr_table, event_table
 from zato.common.audit_log.common import source_attr_names, Status_Outstanding
 from zato.common.audit_log.query import outstanding_conditions, source_outstanding
+from zato.common.audit_log.search_index import narrow_attr_search, narrow_event_search, search_columns
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import anylist, dictlist, strorlist, strstrdict
+    from zato.common.typing_ import anylist, dictlist, strdatetimedict, strorlist
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
+    datetime = datetime
     dictlist = dictlist
+    strdatetimedict = strdatetimedict
     strorlist = strorlist
-    strstrdict = strstrdict
     Engine = Engine
 
 # ################################################################################################################################
@@ -40,13 +43,9 @@ Default_Page = 1
 # How many events one page of results holds
 Default_Page_Size = 50
 
-# The columns the free-text search covers.
-search_columns = ('data', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id',
-    'status', 'classification', 'sub_key')
-
 # The columns a search returns for each event.
 result_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'msg_id', 'correl_id',
-    'ext_client_id', 'event_time_iso', 'endpoint', 'size', 'outcome', 'classification', 'status',
+    'ext_client_id', 'event_time', 'endpoint', 'size', 'outcome', 'classification', 'status',
     'duration_ms', 'data')
 
 # ################################################################################################################################
@@ -77,13 +76,14 @@ def _as_list(value:'strorlist') -> 'anylist':
 # ################################################################################################################################
 
 def build_search_conditions(
+    dialect_name:'str',
     sources:'anylist' = [],
     object_names:'anylist' = [],
     outcomes:'anylist' = [],
     query:'str' = '',
     status:'str' = '',
-    time_from:'str' = '',
-    time_to:'str' = '',
+    time_from:'datetime | None' = None,
+    time_to:'datetime | None' = None,
     event_types:'anylist' = [],
     sources_excluded:'anylist' = [],
     object_names_excluded:'anylist' = [],
@@ -123,13 +123,12 @@ def build_search_conditions(
     if event_types:
         out.append(event_table.c.event_type.in_(event_types))
 
-    # The search can be scoped down to a time window -
-    # event times are ISO timestamps, so string prefixes compare correctly.
+    # The search can be scoped down to a time window.
     if time_from:
-        out.append(event_table.c.event_time_iso >= time_from)
+        out.append(event_table.c.event_time >= time_from)
 
     if time_to:
-        out.append(event_table.c.event_time_iso < time_to)
+        out.append(event_table.c.event_time < time_to)
 
     # The free-text search covers several columns, matching wildcards literally
     if query:
@@ -143,6 +142,12 @@ def build_search_conditions(
             is_like_pattern = column.like(pattern, escape='\\')
 
             like_parts.append(is_like_pattern)
+
+        # The native text index of the database finds the candidate rows and LIKE confirms them.
+        any_column_like = or_(*like_parts)
+        any_column_like = narrow_event_search(dialect_name, event_table, query, any_column_like)
+
+        matching_parts:'anylist' = [any_column_like]
 
         # Sources with searchable attributes also search through them, with the attr-to-cid
         # shape - the cids of the events whose attr matches, then every event on those cids,
@@ -158,6 +163,7 @@ def build_search_conditions(
 
             is_wanted_attr = event_attr_table.c.name.in_(attr_names)
             is_matching_attr = event_attr_table.c.value.like(pattern, escape='\\')
+            is_matching_attr = narrow_attr_search(dialect_name, event_attr_table, query, is_matching_attr)
 
             attr_event_ids = select(event_attr_table.c.event_id)
             attr_event_ids = attr_event_ids.where(is_wanted_attr)
@@ -167,10 +173,10 @@ def build_search_conditions(
             matching_cids = select(event_table.c.cid).where(is_matching_event)
 
             is_matching_cid = event_table.c.cid.in_(matching_cids)
-            like_parts.append(is_matching_cid)
+            matching_parts.append(is_matching_cid)
 
-        any_like_part = or_(*like_parts)
-        out.append(any_like_part)
+        any_matching_part = or_(*matching_parts)
+        out.append(any_matching_part)
 
     # The outstanding filter narrows the search down to the open exchanges of one source -
     # the sent messages or interchanges whose acknowledgment has not arrived. Each source
@@ -209,8 +215,8 @@ def search_events(
     event_type:'strorlist' = '',
     query:'str' = '',
     status:'str' = '',
-    time_from:'str' = '',
-    time_to:'str' = '',
+    time_from:'datetime | None' = None,
+    time_to:'datetime | None' = None,
     page:'int' = Default_Page,
     page_size:'int' = Default_Page_Size,
     ) -> 'dictlist':
@@ -228,6 +234,7 @@ def search_events(
 
     # .. so everything the filters narrow the log down to ..
     conditions = build_search_conditions(
+        engine.dialect.name,
         sources=sources,
         object_names=object_names,
         outcomes=outcomes,
@@ -250,7 +257,7 @@ def search_events(
 
     # .. ordered by event time, newest first, with ids breaking ties between events
     # of the same moment ..
-    newest_first = event_table.c.event_time_iso.desc()
+    newest_first = event_table.c.event_time.desc()
     then_by_id = event_table.c.id.desc()
     statement = statement.order_by(newest_first, then_by_id)
 
@@ -272,11 +279,11 @@ def search_events(
 
 # ################################################################################################################################
 
-def last_seen(engine:'Engine', source:'str') -> 'strstrdict':
+def last_seen(engine:'Engine', source:'str') -> 'strdatetimedict':
     """ Returns the newest event time of each of one source's objects - a dict mapping
-    each object name to an ISO timestamp.
+    each object name to a datetime in UTC.
     """
-    newest = func.max(event_table.c.event_time_iso)
+    newest = func.max(event_table.c.event_time)
 
     statement = select(event_table.c.object_name, newest)
     statement = statement.where(event_table.c.source == source)
@@ -286,10 +293,10 @@ def last_seen(engine:'Engine', source:'str') -> 'strstrdict':
         result = connection.execute(statement)
         rows = result.all()
 
-    out:'strstrdict' = {}
+    out:'strdatetimedict' = {}
 
-    for object_name, newest_time_iso in rows:
-        out[object_name] = newest_time_iso
+    for object_name, newest_time in rows:
+        out[object_name] = newest_time
 
     return out
 

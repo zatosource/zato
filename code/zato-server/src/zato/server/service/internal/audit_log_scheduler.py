@@ -99,7 +99,7 @@ def run_job(
     """
     cid = service.cid
     service_name = job.service_name
-    planned_fire_time_iso = utcnow().isoformat()
+    planned_fire_time = utcnow()
 
     # The run's record opens now - its cid is the very cid the service runs under, so everything
     # the service touches downstream shares it and the run seeds the message flow ..
@@ -109,7 +109,7 @@ def run_job(
         cid=cid,
         job_id=job.id,
         current_run=_manual_run_number,
-        planned_fire_time_iso=planned_fire_time_iso,
+        planned_fire_time=planned_fire_time,
         delay_ms=_manual_delay_ms,
         service=service_name,
         correl_id=event.cid,

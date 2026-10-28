@@ -92,17 +92,16 @@ def _insert_event_at(
         cid=f'cid-retention-{age_days}-{outcome}', outcome=outcome, data=data, attrs=attrs, bodies=bodies)
 
     event_time = utcnow() - timedelta(days=age_days)
-    event_time_iso = event_time.isoformat()
 
     engine = get_audit_engine()
 
     backdate_event = event_table.update()
     backdate_event = backdate_event.where(event_table.c.id == event_id)
-    backdate_event = backdate_event.values(event_time_iso=event_time_iso)
+    backdate_event = backdate_event.values(event_time=event_time)
 
     backdate_bodies = event_body_table.update()
     backdate_bodies = backdate_bodies.where(event_body_table.c.event_id == event_id)
-    backdate_bodies = backdate_bodies.values(event_time_iso=event_time_iso)
+    backdate_bodies = backdate_bodies.values(event_time=event_time)
 
     with engine.begin() as connection:
         _ = connection.execute(backdate_event)
@@ -300,13 +299,12 @@ def _run_chunk_order_checks(audit_log:'AuditLog') -> 'None':
 
     # Every exchange is older than the retention window
     event_time = utcnow() - timedelta(days=_row_expired_age_days)
-    event_time_iso = event_time.isoformat()
 
     engine = get_audit_engine()
 
     backdate_events = event_table.update()
     backdate_events = backdate_events.where(event_table.c.source == AuditSource.MLLP_Outgoing)
-    backdate_events = backdate_events.values(event_time_iso=event_time_iso)
+    backdate_events = backdate_events.values(event_time=event_time)
 
     with engine.begin() as connection:
         _ = connection.execute(backdate_events)

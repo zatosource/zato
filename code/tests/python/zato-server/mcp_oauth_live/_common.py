@@ -19,6 +19,7 @@ import requests
 # Zato
 from zato.common.api import MCP
 from zato.common.audit_log.api import AuditSource
+from zato.common.util.time_ import parse_utc
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,7 +115,7 @@ class InitializeResult(NamedTuple):
 # ################################################################################################################################
 
 # The columns the audit assertions read, in the order the select below returns them
-_event_columns = ('id', 'event_time_iso', 'event_type', 'object_name', 'cid', 'endpoint', 'ext_client_id', 'sub_key',
+_event_columns = ('id', 'event_time', 'event_type', 'object_name', 'cid', 'endpoint', 'ext_client_id', 'sub_key',
     'size', 'outcome', 'data')
 
 # ################################################################################################################################
@@ -282,6 +283,7 @@ def read_events(audit_db_path:'str', gateway_name:'str', min_id:'int'=0) -> 'dic
 
         for db_row in db_rows:
             row:'anydict' = dict(zip(_event_columns, db_row))
+            row['event_time'] = parse_utc(row['event_time'])
             row['data'] = loads(row['data'])
 
             attrs:'anydict' = {}

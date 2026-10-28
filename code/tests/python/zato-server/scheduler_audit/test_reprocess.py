@@ -181,7 +181,7 @@ def _seed_original_run(*, outcome:'str') -> 'int':
     """
     audit_log = AuditLog(Server_Name)
 
-    planned_fire_time_iso = utcnow().isoformat()
+    planned_fire_time = utcnow()
 
     event_id = cast_('int', record_job_start(
         audit_log,
@@ -189,7 +189,7 @@ def _seed_original_run(*, outcome:'str') -> 'int':
         cid=Original_Cid,
         job_id=Job_Id,
         current_run=Original_Run,
-        planned_fire_time_iso=planned_fire_time_iso,
+        planned_fire_time=planned_fire_time,
         delay_ms=5,
         service=Job_Service,
     ))

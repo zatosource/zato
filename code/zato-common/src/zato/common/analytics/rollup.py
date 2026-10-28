@@ -21,8 +21,9 @@ from sqlalchemy import and_, select, update
 
 # Zato
 from zato.common.analytics.api import get_analytics_engine, get_error_source, get_latency_bucket_index, get_status_class, \
-    ErrorSource, Latency_Bucket_Count, Period_Len, usage_table, watermark_table
+    ErrorSource, Latency_Bucket_Count, usage_table, watermark_table
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditSource
+from zato.common.db_env.common import hour_period
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -115,7 +116,7 @@ def _load_new_events(last_event_id:'int') -> 'list':
         event_table.c.source,
         event_table.c.object_name,
         event_table.c.ext_client_id,
-        event_table.c.event_time_iso,
+        hour_period(event_table.c.event_time),
         event_table.c.status,
         event_table.c.duration_ms,
         event_table.c.size,
@@ -141,7 +142,8 @@ def _aggregate_events(events:'list') -> 'group_dict':
     # Our response to produce
     out:'group_dict' = {}
 
-    for _, source, object_name, ext_client_id, event_time_iso, status, duration_ms, size in events:
+    # Each event arrives with the hourly period it belongs to
+    for _, source, object_name, ext_client_id, period, status, duration_ms, size in events:
 
         # An event recorded by a release that did not know the status yet counts as a success
         if status is None:
@@ -149,9 +151,6 @@ def _aggregate_events(events:'list') -> 'group_dict':
 
         if duration_ms is None:
             duration_ms = 0
-
-        # The hourly period this event belongs to
-        period = event_time_iso[:Period_Len]
 
         status_class = get_status_class(status)
 

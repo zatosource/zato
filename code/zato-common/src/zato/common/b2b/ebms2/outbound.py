@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
-from datetime import timedelta
 
 # Zato
 from zato.common.b2b.common.exceptions import B2BProtocolException
@@ -22,7 +21,7 @@ from zato.common.b2b.ebms2.header import AckRequested, MessageOrder
 from zato.common.b2b.ebms2.inbound_common import payload_digests, read_message
 from zato.common.b2b.ebms2.message import collect_elements, parse_envelope
 from zato.common.b2b.ebms2.packaging import Package, Payload, unpack
-from zato.common.b2b.ebms2.reliability import is_order_guaranteed, per_message
+from zato.common.b2b.ebms2.reliability import is_order_guaranteed, per_message, retry_policy
 from zato.common.b2b.ebms2.replies import reply_endpoint, wants_sync_reply
 from zato.common.b2b.ebms2.security import is_signature_required, sender_non_repudiation, verify_message_signature
 from zato.common.b2b.ebms2.signals import parse_acknowledgment, parse_error_list, parse_status_response, StatusRequest
@@ -147,24 +146,6 @@ def _per_message_option(setting:'str', option:'boolnone', default:'bool') -> 'bo
 
 # ################################################################################################################################
 
-def _retry_policy(binding:'Binding') -> 'RetryPolicy':
-    """ Returns how often and how frequently a message that is not acknowledged is sent again.
-    """
-    out = RetryPolicy()
-    out.retries = 0
-    out.retry_interval = timedelta(seconds=Default.Retry_Interval_Seconds)
-
-    if sender_binding := binding.sender_binding:
-        if reliable := sender_binding.reliable_messaging:
-            if reliable.retries is not None:
-                out.retries = reliable.retries
-            if reliable.retry_interval:
-                out.retry_interval = reliable.retry_interval.value
-
-    return out
-
-# ################################################################################################################################
-
 def build(
     agreement:'Agreement',
     local_keys:'LocalKeys',
@@ -283,7 +264,7 @@ def build(
     out.is_ack_requested = is_ack_requested
     out.is_ack_signature_requested = is_ack_signature_requested
     out.is_sync_reply = composition.sync_reply
-    out.policy = _retry_policy(binding)
+    out.policy = retry_policy(binding)
     out.retry_state = retry_state
     out.outcome = outcome
 
@@ -507,12 +488,13 @@ def accept_signal(outbound:'OutboundMessage', headers:'strstrdict', body:'bytes'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def next_action(outbound:'OutboundMessage', clock:'Clock') -> 'RetryDecision':
-    """ Returns whether a message is to be sent again, waited on or given up on, and when.
+def next_action(outbound:'OutboundMessage', clock:'Clock', is_suspended:'bool'=False) -> 'RetryDecision':
+    """ Returns whether a message is to be sent again, waited on, held while its address is suspended
+    or given up on, and when.
     """
     now = clock.now()
 
-    out = next_retry_action(outbound.policy, outbound.retry_state, now)
+    out = next_retry_action(outbound.policy, outbound.retry_state, now, is_suspended)
     return out
 
 # ################################################################################################################################
@@ -542,6 +524,16 @@ def give_up(outbound:'OutboundMessage') -> 'None':
 
     if not outbound.outcome.failure_cause:
         outbound.outcome.failure_cause = FailureCause.No_Answer
+
+# ################################################################################################################################
+
+def expire_suspended(outbound:'OutboundMessage') -> 'None':
+    """ Ends the exchange of a message that expired while its address was suspended, with the suspension as the cause.
+    """
+    _fail(outbound, ErrorCode.Delivery_Failure)
+
+    outbound.outcome.failure_cause = FailureCause.Address_Suspended
+    outbound.outcome.failure_detail = ''
 
 # ################################################################################################################################
 # ################################################################################################################################

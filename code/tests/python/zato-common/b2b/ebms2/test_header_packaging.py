@@ -233,7 +233,7 @@ class TestUnreadableMessages:
 
     def _receive(self, exchange:'Exchange', headers:'any_', body:'bytes') -> 'any_':
         receiver = exchange.receiver
-        out = receive(exchange.agreement, receiver.local_keys, headers, body, receiver.store, exchange.clock)
+        out = receive(exchange.agreement, receiver.local_keys, headers, body, receiver.receive_log, exchange.clock)
         return out
 
     def test_missing_message_header(self, parties:'TestParties') -> 'None':

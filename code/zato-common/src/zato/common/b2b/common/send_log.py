@@ -7,23 +7,24 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from copy import deepcopy
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 from threading import Lock
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, is_audit_log_enabled, ModuleCtx as AuditLogCtx
-from zato.common.audit_log.attachment import build_attachment, Env_Max_Attachment_Size, get_max_attachment_size
-from zato.common.audit_log.common import B2BAttr
+from zato.common.audit_log.attachment import build_attachment
+from zato.common.audit_log.common import AuditLink, B2BAttr
 from zato.common.b2b.common.business_state import business_data, business_sent_attrs, Data_Business
 from zato.common.b2b.common.commit_group import get_writer
 from zato.common.b2b.common.commit_sql import EventWrite
 from zato.common.b2b.common.exceptions import B2BException
-from zato.common.b2b.common.outcome import FinalState, outcome_from_dict, outcome_to_dict
-from zato.common.b2b.common.recovery import read_attrs, read_bodies, read_events, read_open
-from zato.common.b2b.common.retry import RetryPolicy, RetryState
+from zato.common.b2b.common.limits import Limits
+from zato.common.b2b.common.outcome import FinalState, outcome_to_dict
+from zato.common.b2b.common.recovery import page_of, read_bodies, read_open_page, Recovery_Page_Size
 from zato.common.b2b.common.schema import OpenKind
-from zato.common.json_internal import dumps, loads
+from zato.common.b2b.common.send_record import read_stored, SentData, SentMessage, sent_message_list
+from zato.common.json_internal import dumps
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +36,7 @@ if 0:
     from zato.common.b2b.common.clock import Clock
     from zato.common.b2b.common.commit_group import GroupCommitWriter
     from zato.common.b2b.common.outcome import Outcome
+    from zato.common.b2b.common.recovery import RecoveredPage
     from zato.common.typing_ import anydict, anylist, stranydict, strlist, strstrdict
     anydict = anydict
     anylist = anylist
@@ -45,32 +47,10 @@ if 0:
     Engine = Engine
     GroupCommitWriter = GroupCommitWriter
     Outcome = Outcome
+    RecoveredPage = RecoveredPage
     stranydict = stranydict
     strlist = strlist
     strstrdict = strstrdict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-sent_message_list = list['SentMessage']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _Data:
-    """ The keys of the data documents the events of a sent message have.
-    """
-    Retries        = 'retries'
-    Retry_Interval = 'retry_interval_seconds'
-    Expires_At     = 'expires_at'
-    Headers        = 'headers'
-    Details        = 'details'
-    Outcome        = 'outcome'
-    Severity       = 'severity'
-    Attempts       = 'attempts'
-    Signals        = 'signals'
-    Signal_Kind    = 'signal_kind'
-    Error_Code     = 'error_code'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,42 +59,6 @@ class _Data:
 _wire_file_name     = 'message'
 _signal_file_name   = 'signal'
 _body_content_type  = 'application/octet-stream'
-
-# The event types that make up the record of one sent message.
-_message_event_types = (AuditEvent.Message_Sent, AuditEvent.Message_Completed)
-
-# The attributes the first delivery of every message has, whatever its protocol.
-_common_attr_names = {B2BAttr.From_Party, B2BAttr.To_Party, B2BAttr.Attempt, B2BAttr.Attempt_At, B2BAttr.Deadline_At}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class SentMessage:
-    """ One outgoing message as its send log records it - who it is from and to, how it is retried,
-    where its delivery stands and what went on the wire.
-    """
-    message_id: str
-    cpa_id:     str
-    from_party: str
-    to_party:   str
-    endpoint:   str
-
-    # The protocol's own searchable attributes of the message.
-    attrs: 'stranydict'
-
-    policy:      'RetryPolicy'
-    retry_state: 'RetryState'
-    outcome:     'Outcome'
-
-    # The protocol's own data that rebuilding the message requires.
-    details: 'stranydict'
-
-    # The wire form of the message. The bytes are held only until the first delivery takes them,
-    # and are read again by the identifier of the event they are stored with.
-    wire_headers:  'strstrdict'
-    wire_body:     bytes
-    wire_event_id: int = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -221,20 +165,30 @@ class SendLog:
 
 # ################################################################################################################################
 
-    def record_first_attempt(self, sent:'SentMessage', business:'BusinessMessage | None'=None) -> 'None':
+    def record_first_attempt(
+        self,
+        sent:'SentMessage',
+        business:'BusinessMessage | None'=None,
+        resubmit_of:'int'=0,
+        ) -> 'None':
         """ Records the first delivery of a message together with everything its later deliveries and the rebuilding
         of the message require - the retry policy, the expiry, the protocol's details and the wire form itself.
         A business message is recorded as sent with its business transaction in the same event. A delivery is recorded
         before it is made, so that a signal which answers it before its response arrives finds the message, and the call
         returns once the record is committed. A first delivery under a MessageId that is open already starts the record anew.
+        A message that reprocesses another one is linked to the first delivery of that one, given by its event.
         """
-        wire_size = len(sent.wire_body)
-        max_size = get_max_attachment_size()
+        parents:'list[int]' = []
 
-        # A resend sends the same bytes again, which is possible only if they are stored.
+        if resubmit_of:
+            parents.append(resubmit_of)
+
+        wire_size = len(sent.wire_body)
+        max_size = Limits.Max_Message_Size_Bytes
+
+        # A resend sends the same bytes again, so they are always stored, up to the size a message may have.
         if wire_size > max_size:
-            raise B2BException(f'Message `{sent.message_id}` has {wire_size} bytes, ' +
-                f'more than the {max_size} that `{Env_Max_Attachment_Size}` allows to be stored')
+            raise B2BException(f'Message `{sent.message_id}` has {wire_size} bytes, more than the {max_size} a message may have')
 
         if business and not self.business_log:
             raise B2BException(f'Message `{sent.message_id}` is a business message and the send log has no business log')
@@ -247,12 +201,12 @@ class SendLog:
         initial_outcome = outcome_to_dict(sent.outcome)
 
         data:'stranydict' = {
-            _Data.Retries: sent.policy.retries,
-            _Data.Retry_Interval: sent.policy.retry_interval.total_seconds(),
-            _Data.Expires_At: expires_at,
-            _Data.Headers: sent.wire_headers,
-            _Data.Details: sent.details,
-            _Data.Outcome: initial_outcome,
+            SentData.Retries: sent.policy.retries,
+            SentData.Retry_Interval: sent.policy.retry_interval.total_seconds(),
+            SentData.Expires_At: expires_at,
+            SentData.Headers: sent.wire_headers,
+            SentData.Details: sent.details,
+            SentData.Outcome: initial_outcome,
         }
 
         now = self.clock.now()
@@ -275,11 +229,11 @@ class SendLog:
             attrs.update(business_sent_attrs(business))
             write.opens.append(OpenKind.Transaction)
 
-        attachment = build_attachment(_wire_file_name, _body_content_type, sent.wire_body)
+        attachment = build_attachment(_wire_file_name, _body_content_type, sent.wire_body, max_size=max_size)
 
         write.pending = self.audit_log.new_pending_event(self.source, AuditEvent.Message_Sent, sent.cpa_id,
             cid=sent.message_id, msg_id=sent.message_id, endpoint=sent.endpoint, size=wire_size, outcome=AuditOutcome.OK,
-            data=dumps(data), attrs=attrs, attachments=[attachment])
+            data=dumps(data), attrs=attrs, attachments=[attachment], parents=parents, parent_link_type=AuditLink.Resubmit_Of)
 
         event_id = self._write(write)
 
@@ -356,6 +310,67 @@ class SendLog:
 
 # ################################################################################################################################
 
+    def resend(self, message_id:'str') -> 'SentMessage':
+        """ Sends a message again on behalf of an operator, with the bytes and the MessageId of its first delivery.
+        The exchange starts a new retry budget, and an exchange that ended is reopened. The resend is recorded before
+        it is made, and the message is returned as its record stands once the record is committed.
+        """
+        is_open = self.is_open(message_id)
+        sent = self.get(message_id)
+
+        now = self.clock.now()
+        attempt_at = now.isoformat()
+
+        attrs = self._party_attrs(sent)
+        attrs[B2BAttr.Attempt_At] = attempt_at
+
+        data = dumps({SentData.Attempt_At: attempt_at})
+
+        write = EventWrite()
+        write.pending = self.audit_log.new_pending_event(self.source, AuditEvent.Message_Resent, sent.cpa_id,
+            cid=message_id, msg_id=message_id, endpoint=sent.endpoint, outcome=AuditOutcome.OK, data=data, attrs=attrs)
+
+        # An exchange that ended is open again from its resend.
+        if not is_open:
+            write.opens.append(OpenKind.Exchange)
+
+        _ = self._write(write)
+
+        # The message is read as the resend left it, and the signals that did not end an open exchange stay with it.
+        with self._lock:
+            previous = self._open.pop(message_id, None)
+
+        out = self.get(message_id)
+
+        exchange = _Exchange()
+        exchange.sent = out
+        exchange.attempts.append(attempt_at)
+
+        if previous:
+            exchange.signals = previous.signals
+            exchange.signal_bodies = previous.signal_bodies
+
+        with self._lock:
+            self._open[message_id] = exchange
+
+        return out
+
+# ################################################################################################################################
+
+    def record_reprocess(self, original:'SentMessage', sent:'SentMessage') -> 'None':
+        """ Records the first delivery of a message that sends the payloads of another one again under a new MessageId,
+        linked to the first delivery of the other one. An exchange of the other one that has not ended ends as superseded.
+        """
+        self.record_first_attempt(sent, resubmit_of=original.wire_event_id)
+
+        if self.is_open(original.message_id):
+            outcome = deepcopy(original.outcome)
+            outcome.final_state = FinalState.Superseded
+
+            self.record_completion(original, outcome)
+
+# ################################################################################################################################
+
     def record_attempt_failure(self, sent:'SentMessage', failure_cause:'str', failure_detail:'str') -> 'None':
         """ Records in memory why the latest delivery of a message failed. The cause is recorded in the audit log
         with the end of the exchange.
@@ -380,10 +395,10 @@ class SendLog:
         and recorded with the end of the exchange, and one that arrives after the end is recorded in an event of its own.
         """
         signal:'stranydict' = {
-            _Data.Headers: headers,
-            _Data.Signal_Kind: signal_kind,
-            _Data.Error_Code: error_code,
-            _Data.Severity: severity,
+            SentData.Headers: headers,
+            SentData.Signal_Kind: signal_kind,
+            SentData.Error_Code: error_code,
+            SentData.Severity: severity,
         }
 
         with self._lock:
@@ -402,7 +417,7 @@ class SendLog:
         attrs[B2BAttr.Signal_Kind] = signal_kind
         attrs[B2BAttr.Error_Code] = error_code
 
-        attachment = build_attachment(_signal_file_name, _body_content_type, body)
+        attachment = build_attachment(_signal_file_name, _body_content_type, body, max_size=Limits.Max_Message_Size_Bytes)
         body_size = len(body)
 
         write = EventWrite()
@@ -438,9 +453,9 @@ class SendLog:
         attrs[B2BAttr.Error_Code] = outcome.error_code
 
         data = dumps({
-            _Data.Outcome: outcome_to_dict(outcome),
-            _Data.Attempts: attempts,
-            _Data.Signals: signals,
+            SentData.Outcome: outcome_to_dict(outcome),
+            SentData.Attempts: attempts,
+            SentData.Signals: signals,
         })
 
         if outcome.error_code:
@@ -451,7 +466,8 @@ class SendLog:
         attachments:'anylist' = []
 
         for signal_body in signal_bodies:
-            attachment = build_attachment(_signal_file_name, _body_content_type, signal_body)
+            attachment = build_attachment(_signal_file_name, _body_content_type, signal_body,
+                max_size=Limits.Max_Message_Size_Bytes)
             attachments.append(attachment)
 
         write = EventWrite()
@@ -476,110 +492,9 @@ class SendLog:
 
 # ################################################################################################################################
 
-    def _new_sent_message(self, events:'anylist', attrs:'stranydict') -> 'SentMessage':
-        """ Builds a message out of its events, the first of which is its first delivery.
-        """
-        first = events[0]
-        first_data = loads(first.data)
-
-        completion = None
-
-        for event in events[1:]:
-            if event.event_type == AuditEvent.Message_Completed:
-                completion = event
-                break
-
-        # The searchable attributes of the protocol are those the record has on top of the ones every message has.
-        protocol_attrs:'stranydict' = {}
-
-        for name, value in attrs.items():
-            if name not in _common_attr_names:
-                protocol_attrs[name] = value
-
-        policy = RetryPolicy()
-        policy.retries = first_data[_Data.Retries]
-        policy.retry_interval = timedelta(seconds=first_data[_Data.Retry_Interval])
-
-        retry_state = RetryState()
-        retry_state.attempt_count = 1
-        retry_state.last_attempt_at = datetime.fromisoformat(attrs[B2BAttr.Attempt_At])
-
-        if expires_at := first_data[_Data.Expires_At]:
-            retry_state.expires_at = datetime.fromisoformat(expires_at)
-
-        # A completed message has the outcome its exchange ended with and the deliveries it was made in ..
-        if completion:
-            completion_data = loads(completion.data)
-            outcome = outcome_from_dict(completion_data[_Data.Outcome])
-
-            if attempts := completion_data[_Data.Attempts]:
-                retry_state.attempt_count = len(attempts)
-                retry_state.last_attempt_at = datetime.fromisoformat(attempts[-1])
-
-            retry_state.is_answered = True
-
-        # .. while a pending one has the outcome it was sent with.
-        else:
-            outcome = outcome_from_dict(first_data[_Data.Outcome])
-
-        out = SentMessage()
-        out.message_id = first.msg_id
-        out.cpa_id = first.object_name
-        out.from_party = attrs[B2BAttr.From_Party]
-        out.to_party = attrs[B2BAttr.To_Party]
-        out.endpoint = first.endpoint
-        out.attrs = protocol_attrs
-        out.policy = policy
-        out.retry_state = retry_state
-        out.outcome = outcome
-        out.details = first_data[_Data.Details]
-        out.wire_headers = first_data[_Data.Headers]
-        out.wire_body = b''
-        out.wire_event_id = first.id
-
-        return out
-
-# ################################################################################################################################
-
-    def _read_stored(self, connection:'Connection', message_ids:'strlist') -> 'sent_message_list':
-        """ Reads the given messages from the audit log, each from its latest first delivery onwards.
-        """
-        events_by_message = read_events(connection, self.source, self.server_name, message_ids, _message_event_types)
-
-        message_events:'dict[str, anylist]' = {}
-        first_event_ids:'list[int]' = []
-
-        for message_id, events in events_by_message.items():
-
-            current:'anylist' = []
-
-            # A first delivery starts the record anew, and everything recorded after it belongs to it.
-            for event in events:
-                if event.event_type == AuditEvent.Message_Sent:
-                    current = []
-                current.append(event)
-
-            if current:
-                message_events[message_id] = current
-                first_event_ids.append(current[0].id)
-
-        attrs_by_event = read_attrs(connection, first_event_ids)
-
-        out:'sent_message_list' = []
-
-        for events in message_events.values():
-            first = events[0]
-            attrs = attrs_by_event[first.id]
-            sent = self._new_sent_message(events, attrs)
-            out.append(sent)
-
-        return out
-
-# ################################################################################################################################
-
     def _read_one(self, message_id:'str') -> 'SentMessage | None':
         with self.engine.connect() as connection:
-            messages = self._read_stored(connection, [message_id])
+            messages = read_stored(connection, self.source, self.server_name, [message_id])
 
         if messages:
             out = messages[0]
@@ -643,30 +558,56 @@ class SendLog:
 
 # ################################################################################################################################
 
-    def _recover(self) -> 'sent_message_list':
-        with self.engine.connect() as connection:
-            open_records = read_open(connection, OpenKind.Exchange, self.source, self.server_name)
-            message_ids = list(open_records)
-            out = self._read_stored(connection, message_ids)
+    def _recover_page(self, after_id:'int', limit:'int') -> 'RecoveredPage':
 
+        with self.engine.connect() as connection:
+            records = read_open_page(connection, OpenKind.Exchange, self.source, self.server_name, after_id, limit)
+
+            message_ids:'strlist' = []
+
+            for record in records:
+                message_ids.append(record.message_id)
+
+            messages = read_stored(connection, self.source, self.server_name, message_ids)
+
+        out = page_of(messages, records, after_id, limit)
         return out
 
 # ################################################################################################################################
 
-    def recover(self) -> 'int':
-        """ Reads the exchanges that have not ended from the audit log into memory, so that their deliveries
-        and the matching of their signals continue from them, and returns how many there are.
+    def recover_page(self, limit:'int', after_id:'int'=0) -> 'RecoveredPage':
+        """ Reads, up to the limit, the exchanges that have not ended from the audit log into memory, in the order
+        they were opened and starting after the open record with the given identifier, so that their deliveries
+        and the matching of their signals continue from them.
         """
-        messages = self.writer.call(self._recover)
+        out = self.writer.call(self._recover_page, after_id, limit)
 
         with self._lock:
-            for sent in messages:
+            for sent in out.items:
                 exchange = _Exchange()
                 exchange.sent = sent
                 exchange.attempts.append(sent.retry_state.last_attempt_at.isoformat())
                 self._open[sent.message_id] = exchange
 
-        out = len(messages)
+        return out
+
+# ################################################################################################################################
+
+    def recover(self, page_size:'int'=Recovery_Page_Size) -> 'int':
+        """ Reads every exchange that has not ended from the audit log into memory, page by page,
+        and returns how many there are.
+        """
+        out = 0
+        after_id = 0
+
+        while True:
+            page = self.recover_page(page_size, after_id)
+            out += len(page.items)
+            after_id = page.last_id
+
+            if page.is_last:
+                break
+
         return out
 
 # ################################################################################################################################

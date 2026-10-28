@@ -18,6 +18,8 @@ from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, St
 from sqlalchemy.dialects.mysql import LONGTEXT
 
 # Zato
+from zato.common.audit_log.search_index import register_search_indexes
+from zato.common.db_env.common import Binary_Type, UTC_DateTime
 from zato.common.exception import BackendInvocationError
 
 # ################################################################################################################################
@@ -379,6 +381,23 @@ class AuditEvent:
     Signal_Received   = 'signal-received'
     Message_Completed = 'message-completed'
 
+    # A B2B message sent again with its stored bytes, and a received one that the application confirmed
+    # or that was handed to it again.
+    Message_Resent      = 'message-resent'
+    Message_Delivered   = 'message-delivered'
+    Message_Redelivered = 'message-redelivered'
+
+    # A received B2B message of an ordered conversation held after a sequence gap, the gap passing its deadline,
+    # the release of the held messages, and the discarding of the conversation.
+    Message_Held           = 'message-held'
+    Sequence_Gap_Timed_Out = 'sequence-gap-timed-out'
+    Sequence_Gap_Released  = 'sequence-gap-released'
+    Conversation_Discarded = 'conversation-discarded'
+
+    # The deliveries to one B2B address suspended after consecutive transport failures, and resumed.
+    Delivery_Suspended = 'delivery-suspended'
+    Delivery_Resumed   = 'delivery-resumed'
+
     # A B2B business message sent with the deadlines of its business transaction, a business signal or a response
     # that refers to it, the end of its transaction when a deadline passes first, and when its delivery fails.
     Business_Message_Sent    = 'business-message-sent'
@@ -505,6 +524,7 @@ def _new_id_column() -> 'Column':
 _short_column = String(_short_column_len)
 _endpoint_column = String(_endpoint_column_len)
 _attr_number_column = Numeric(20, 6, asdecimal=False)
+_time_column = UTC_DateTime()
 
 # How much of a short column an index spans when a whole one would not fit. MySQL caps a key
 # at 3072 bytes, which four full-width utf8mb4 columns overrun, and rule, source, object
@@ -523,8 +543,8 @@ _event_columns = [
     Column('msg_id', _short_column),
     Column('correl_id', _short_column),
     Column('ext_client_id', _short_column),
-    Column('pub_time_iso', _short_column),
-    Column('event_time_iso', _short_column),
+    Column('pub_time', _time_column),
+    Column('event_time', _time_column),
     Column('server_name', _short_column),
     Column('endpoint', _endpoint_column),
     Column('sub_key', _short_column),
@@ -546,7 +566,7 @@ _event_columns = [
     # One object's events are read newest first by the time they happened rather than by the
     # order they were written in, and a page of them is one window of that order - without
     # this the whole of an object's history would be sorted to answer for a single page.
-    Index('idx_event_source_object_time', 'source', 'object_name', 'event_time_iso'),
+    Index('idx_event_source_object_time', 'source', 'object_name', 'event_time'),
 
     Index('idx_event_cid', 'cid', 'id'),
     Index('idx_event_msg_id', 'msg_id', 'id'),
@@ -559,7 +579,7 @@ _event_columns = [
     # The outstanding queries ask for the open events of one source before a moment in time -
     # every message whose receipt has not arrived - and the msg_id index above covers only the
     # lookup of the closing event, leaving the outer half of that question a full scan.
-    Index('idx_event_source_type_time', 'source', 'event_type', 'event_time_iso'),
+    Index('idx_event_source_type_time', 'source', 'event_type', 'event_time'),
 
     Index('idx_event_commit_id', 'commit_id', 'id'),
 ]
@@ -584,19 +604,23 @@ _event_attr_columns = [
 
 event_attr_table = Table('event_attr', metadata, *_event_attr_columns)
 
+register_search_indexes(event_table, event_attr_table)
+
 # ################################################################################################################################
 
 # Message bodies live in their own table referenced from event rows - metadata inserts stay small
 # and pruning content is a bulk delete here rather than column surgery on the event table.
-# The event time is denormalized so pruning never needs a join.
+# The event time is denormalized so pruning never needs a join. An attachment keeps its file name,
+# content type and size in data and its bytes in content.
 _event_body_columns = [
     _new_id_column(),
     Column('event_id', BigInteger),
     Column('kind', _short_column),
-    Column('event_time_iso', _short_column),
+    Column('event_time', _time_column),
     Column('data', _body_data_type),
+    Column('content', Binary_Type),
     Index('idx_event_body_event', 'event_id'),
-    Index('idx_event_body_time', 'event_time_iso'),
+    Index('idx_event_body_time', 'event_time'),
 ]
 
 event_body_table = Table('event_body', metadata, *_event_body_columns)
@@ -627,9 +651,9 @@ _event_dedup_columns = [
     Column('cid', _short_column),
     Column('action', _short_column),
     Column('actor', _short_column),
-    Column('created_iso', _short_column),
+    Column('created_at', _time_column),
     Column('outcome', _short_column),
-    Column('completed_iso', _short_column),
+    Column('completed_at', _time_column),
     Index('idx_event_dedup_key', 'dedup_key', unique=True),
     Index('idx_event_dedup_outcome', 'outcome'),
 ]
@@ -652,8 +676,8 @@ _alert_columns = [
     Column('message', Text),
     Column('link', _endpoint_column),
     Column('count', Integer),
-    Column('first_raised_iso', _short_column),
-    Column('last_raised_iso', _short_column),
+    Column('first_raised_at', _time_column),
+    Column('last_raised_at', _time_column),
     Index('idx_alert_rule_object', 'rule_name', 'source', 'object_name', 'kind', mysql_length={
         'rule_name': _index_prefix_len,
         'source': _index_prefix_len,

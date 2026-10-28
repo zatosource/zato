@@ -27,7 +27,9 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from zato.common.typing_ import anydict, anylist, dictlist, intnone, stranydict
+    datetime = datetime
     anydict = anydict
     anylist = anylist
     dictlist = dictlist
@@ -127,13 +129,12 @@ _attr_schedule = 'schedule'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def iso_days_ago(days:'int') -> 'str':
-    """ The ISO timestamp of the given number of days ago.
+def days_ago(days:'int') -> 'datetime':
+    """ The moment the given number of days ago.
     """
     now = utcnow()
-    then = now - timedelta(days=days)
 
-    out = then.isoformat()
+    out = now - timedelta(days=days)
     return out
 
 # ################################################################################################################################
@@ -213,7 +214,7 @@ def update_run_event(
 
 # ################################################################################################################################
 
-def write_run_ledger(event_id:'intnone', event_time_iso:'str', records:'anylist') -> 'None':
+def write_run_ledger(event_id:'intnone', event_time:'datetime', records:'anylist') -> 'None':
     """ Stores the first Run_Ledger_Max_Entries records as the run's ledger body.
     """
     if event_id is None:
@@ -222,11 +223,11 @@ def write_run_ledger(event_id:'intnone', event_time_iso:'str', records:'anylist'
     kept = records[:Run_Ledger_Max_Entries]
     data = dumps(kept)
 
-    _write_body(event_id, AuditBody.Run_Ledger, event_time_iso, data)
+    _write_body(event_id, AuditBody.Run_Ledger, event_time, data)
 
 # ################################################################################################################################
 
-def write_run_exchanges(event_id:'intnone', event_time_iso:'str', exchanges:'dictlist') -> 'None':
+def write_run_exchanges(event_id:'intnone', event_time:'datetime', exchanges:'dictlist') -> 'None':
     """ Stores what the run said to the server as its request body and what the server
     said back as its response body - one block per exchange on either side.
     """
@@ -240,24 +241,24 @@ def write_run_exchanges(event_id:'intnone', event_time_iso:'str', exchanges:'dic
     commands = [exchange['command'] for exchange in exchanges]
     replies = [exchange['reply'] for exchange in exchanges]
 
-    _write_body(event_id, AuditBody.Request, event_time_iso, Run_Exchange_Separator.join(commands))
-    _write_body(event_id, AuditBody.Response, event_time_iso, Run_Exchange_Separator.join(replies))
+    _write_body(event_id, AuditBody.Request, event_time, Run_Exchange_Separator.join(commands))
+    _write_body(event_id, AuditBody.Response, event_time, Run_Exchange_Separator.join(replies))
 
 # ################################################################################################################################
 
-def write_run_error(event_id:'intnone', event_time_iso:'str', error:'str') -> 'None':
+def write_run_error(event_id:'intnone', event_time:'datetime', error:'str') -> 'None':
     """ Stores the traceback of a run as its error body.
     """
     if event_id is None:
         return
 
-    _write_body(event_id, AuditBody.Error, event_time_iso, error)
+    _write_body(event_id, AuditBody.Error, event_time, error)
 
 # ################################################################################################################################
 
-def _write_body(event_id:'int', kind:'str', event_time_iso:'str', data:'str') -> 'None':
+def _write_body(event_id:'int', kind:'str', event_time:'datetime', data:'str') -> 'None':
     statement = event_body_table.insert()
-    statement = statement.values(event_id=event_id, kind=kind, event_time_iso=event_time_iso, data=data)
+    statement = statement.values(event_id=event_id, kind=kind, event_time=event_time, data=data)
 
     engine = get_audit_engine()
 
@@ -266,7 +267,7 @@ def _write_body(event_id:'int', kind:'str', event_time_iso:'str', data:'str') ->
 
 # ################################################################################################################################
 
-def load_attempt_memory(conn_name:'str', schedule_name:'str', since_iso:'str') -> 'anydict':
+def load_attempt_memory(conn_name:'str', schedule_name:'str', since:'datetime') -> 'anydict':
     """ The failures of each file name of a schedule since the given moment, keyed by file name.
     A File_Retried event resets the file's count.
     """
@@ -279,9 +280,9 @@ def load_attempt_memory(conn_name:'str', schedule_name:'str', since_iso:'str') -
     is_source = event_table.c.source == AuditSource.File_Outgoing
     is_conn = event_table.c.object_name == conn_name
     is_remembered = event_table.c.event_type.in_(remembered_types)
-    is_recent = event_table.c.event_time_iso >= since_iso
+    is_recent = event_table.c.event_time >= since
 
-    statement = select(event_table.c.event_type, event_table.c.event_time_iso, event_table.c.data)
+    statement = select(event_table.c.event_type, event_table.c.event_time, event_table.c.data)
     statement = statement.where(and_(is_source, is_conn, is_remembered, is_recent))
     statement = statement.order_by(event_table.c.id)
 
@@ -291,7 +292,7 @@ def load_attempt_memory(conn_name:'str', schedule_name:'str', since_iso:'str') -
         result = connection.execute(statement)
         rows = result.fetchall()
 
-    for event_type, event_time_iso, data in rows:
+    for event_type, event_time, data in rows:
 
         details = loads(data)
 
@@ -309,19 +310,19 @@ def load_attempt_memory(conn_name:'str', schedule_name:'str', since_iso:'str') -
         # .. and every failure adds to the count.
         if memory := out.get(file_name):
             memory['attempts'] += 1
-            memory['last_failed_iso'] = event_time_iso
+            memory['last_failed'] = event_time
         else:
             out[file_name] = {
                 'attempts': 1,
-                'first_failed_iso': event_time_iso,
-                'last_failed_iso': event_time_iso,
+                'first_failed': event_time,
+                'last_failed': event_time,
             }
 
     return out
 
 # ################################################################################################################################
 
-def find_seen_before(conn_name:'str', schedule_name:'str', checksum:'str', since_iso:'str') -> 'stranydict | None':
+def find_seen_before(conn_name:'str', schedule_name:'str', checksum:'str', since:'datetime') -> 'stranydict | None':
     """ The newest delivery of the same checksum by the same schedule since the given moment, or None.
     """
     attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
@@ -329,13 +330,13 @@ def find_seen_before(conn_name:'str', schedule_name:'str', checksum:'str', since
     is_source = event_table.c.source == AuditSource.File_Outgoing
     is_conn = event_table.c.object_name == conn_name
     is_delivered = event_table.c.event_type == AuditEvent.Delivered
-    is_recent = event_table.c.event_time_iso >= since_iso
+    is_recent = event_table.c.event_time >= since
     is_checksum_attr = event_attr_table.c.name == _attr_checksum
     is_same_checksum = event_attr_table.c.value == checksum
 
     newest_first = event_table.c.id.desc()
 
-    statement = select(event_table.c.id, event_table.c.event_time_iso, event_table.c.data)
+    statement = select(event_table.c.id, event_table.c.event_time, event_table.c.data)
     statement = statement.select_from(attr_join)
     statement = statement.where(and_(is_source, is_conn, is_delivered, is_recent, is_checksum_attr, is_same_checksum))
     statement = statement.order_by(newest_first)
@@ -346,14 +347,14 @@ def find_seen_before(conn_name:'str', schedule_name:'str', checksum:'str', since
         result = connection.execute(statement)
         rows = result.fetchall()
 
-    for event_id, event_time_iso, data in rows:
+    for event_id, event_time, data in rows:
 
         details = loads(data)
 
         if details['schedule'] == schedule_name:
             out = {
                 'event_id': event_id,
-                'event_time_iso': event_time_iso,
+                'event_time': event_time,
                 'file_name': details['file_name'],
             }
             break
@@ -364,7 +365,7 @@ def find_seen_before(conn_name:'str', schedule_name:'str', checksum:'str', since
 
 # ################################################################################################################################
 
-def count_delivered_since(conn_name:'str', schedule_name:'str', since_iso:'str') -> 'int':
+def count_delivered_since(conn_name:'str', schedule_name:'str', since:'datetime') -> 'int':
     """ How many files a schedule delivered since the given moment.
     """
     attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
@@ -373,7 +374,7 @@ def count_delivered_since(conn_name:'str', schedule_name:'str', since_iso:'str')
     is_source = event_table.c.source == AuditSource.File_Outgoing
     is_conn = event_table.c.object_name == conn_name
     is_delivered = event_table.c.event_type == AuditEvent.Delivered
-    is_recent = event_table.c.event_time_iso >= since_iso
+    is_recent = event_table.c.event_time >= since
     is_schedule_attr = event_attr_table.c.name == _attr_schedule
     is_same_schedule = event_attr_table.c.value == schedule_name
 

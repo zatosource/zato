@@ -17,7 +17,9 @@ import pytest
 
 # Zato
 from zato.common.b2b.common.exceptions import B2BException
-from zato.common.b2b.common.store import HeldMessage, MessageIdentity, new_memory_store, StoredMessage, StoredResponse
+from zato.common.b2b.common.sequence import earliest_held, held_messages, hold, HeldRow, is_held, set_next_sequence, \
+    take_held
+from zato.common.b2b.common.store import MessageIdentity, new_memory_store, StoredMessage, StoredResponse
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +37,10 @@ _to_party = 'b2b-host'
 _conversation = 'b2b-conversation'
 
 _persist_seconds = 60
+
+# The event that recorded the receipt of a held message, and how long its sender retries it, in milliseconds.
+_held_event_id = 1
+_retry_window_ms = 30_000
 
 _greenlet_count = 20
 
@@ -65,10 +71,14 @@ def _message(received_at:'datetime') -> 'StoredMessage':
 
 # ################################################################################################################################
 
-def _held(body:'bytes') -> 'HeldMessage':
-    out = HeldMessage()
-    out.content_type = 'text/xml'
-    out.body = body
+def _held(message_id:'str', sequence_number:'int', event_id:'int') -> 'HeldRow':
+    out = HeldRow()
+    out.conversation = _conversation
+    out.sequence_number = sequence_number
+    out.message_id = message_id
+    out.event_id = event_id
+    out.held_at = _now
+    out.retry_window_ms = _retry_window_ms
 
     return out
 
@@ -118,25 +128,53 @@ class TestMessageStore:
         with pytest.raises(B2BException):
             store.set_status(identity, 'Processed')
 
-    def test_held_message_keeps_first_copy(self) -> 'None':
+    def test_held_message_is_taken_once(self) -> 'None':
         store = new_memory_store()
 
-        store.hold(_conversation, 2, _held(b'first'))
-        store.hold(_conversation, 2, _held(b'second'))
+        with store.engine.begin() as connection:
+            hold(connection, _held('message-2', 2, _held_event_id))
 
-        released = store.release(_conversation, 2)
+        with store.engine.begin() as connection:
+            assert is_held(connection, _conversation, 2)
 
-        assert released is not None
-        assert released.body == b'first'
-        assert store.release(_conversation, 2) is None
+            first_held = earliest_held(connection, _conversation)
+
+            assert first_held is not None
+            assert first_held.held_at == _now
+            assert first_held.reported_at is None
+
+            released = take_held(connection, _conversation, 2)
+
+            assert released is not None
+            assert released.message_id == 'message-2'
+            assert released.event_id == _held_event_id
+            assert released.held_at == _now
+            assert released.retry_window_ms == _retry_window_ms
+
+            assert take_held(connection, _conversation, 2) is None
+            assert not is_held(connection, _conversation, 2)
+
+    def test_held_messages_in_sequence_order(self) -> 'None':
+        store = new_memory_store()
+
+        with store.engine.begin() as connection:
+            hold(connection, _held('message-5', 5, _held_event_id))
+            hold(connection, _held('message-3', 3, _held_event_id))
+
+        with store.engine.connect() as connection:
+            held = held_messages(connection, _conversation)
+
+        assert held[0].sequence_number == 3
+        assert held[1].sequence_number == 5
 
     def test_next_sequence(self) -> 'None':
         store = new_memory_store()
 
         assert store.get_next_sequence(_conversation) is None
 
-        store.set_next_sequence(_conversation, 1)
-        store.set_next_sequence(_conversation, 2)
+        with store.engine.begin() as connection:
+            set_next_sequence(connection, _conversation, 1)
+            set_next_sequence(connection, _conversation, 2)
 
         assert store.get_next_sequence(_conversation) == 2
 

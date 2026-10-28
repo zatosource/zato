@@ -17,7 +17,7 @@ from zato.common.b2b.ebms2.message import collect_elements, parse_envelope
 from zato.common.b2b.ebms2.outbound import accept_response, accept_signal, OutboundState, SendOptions
 from zato.common.b2b.ebms2.signals import parse_acknowledgment, parse_error_list
 from zato.common.test.b2b_cpa import Sender_Endpoint
-from zato.common.test.b2b_ebms2 import answer, deliver, new_exchange, resolve, send
+from zato.common.test.b2b_ebms2 import answer, confirm, deliver, new_exchange, resolve, send
 from zato.common.test.b2b_interoperability import outbound_answered, package_message, read_header, receive_message, \
     reply_elements, settings_for
 
@@ -208,7 +208,8 @@ class TestPingAndPong:
         exchange = new_exchange(parties, settings)
 
         business = send(exchange)
-        _ = deliver(exchange, business)
+        delivered = deliver(exchange, business)
+        confirm(exchange, delivered)
 
         outbound, result = self._status_request(exchange, business.message_id)
         outcome = answer(exchange, outbound, result)
@@ -235,7 +236,8 @@ class TestPingAndPong:
         exchange = new_exchange(parties, settings)
 
         business = send(exchange)
-        _ = deliver(exchange, business)
+        delivered = deliver(exchange, business)
+        confirm(exchange, delivered)
 
         outbound, result = self._status_request(exchange, business.message_id)
 

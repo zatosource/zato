@@ -50,7 +50,7 @@ def backdate(event_id:'int', event_time:'datetime') -> 'None':
 
     statement = update(event_table)
     statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time_iso=event_time.isoformat())
+    statement = statement.values(event_time=event_time)
 
     with engine.begin() as connection:
         _ = connection.execute(statement)

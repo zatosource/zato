@@ -183,7 +183,7 @@ def _respond(exchange:'Exchange', request:'OutboundMessage') -> 'InboundResult':
     response = build(exchange.agreement, receiver.local_keys, binding, payloads, exchange.clock, options)
     wire = response.package
 
-    out = receive(exchange.agreement, sender.local_keys, wire.headers, wire.body, sender.store, exchange.clock)
+    out = receive(exchange.agreement, sender.local_keys, wire.headers, wire.body, sender.receive_log, exchange.clock)
     return out
 
 # ################################################################################################################################
@@ -211,7 +211,7 @@ def _deliver_changed(exchange:'Exchange', outbound:'OutboundMessage', envelope:'
     wire = package(data, payloads)
     receiver = exchange.receiver
 
-    out = receive(exchange.agreement, receiver.local_keys, wire.headers, wire.body, receiver.store, exchange.clock)
+    out = receive(exchange.agreement, receiver.local_keys, wire.headers, wire.body, receiver.receive_log, exchange.clock)
     return out
 
 # ################################################################################################################################

@@ -35,19 +35,22 @@ class SignalKind:
 class FinalState:
     """ Where the exchange of one message ended.
     """
-    Delivered = 'delivered'
-    Held      = 'held'
-    Rejected  = 'rejected'
-    Duplicate = 'duplicate'
-    Failed    = 'failed'
-    Answered  = 'answered'
+    Delivered  = 'delivered'
+    Held       = 'held'
+    Rejected   = 'rejected'
+    Duplicate  = 'duplicate'
+    Failed     = 'failed'
+    Answered   = 'answered'
+    Superseded = 'superseded'
 
 class FailureCause:
-    """ Why a delivery of a message failed - no answer within the timeout, an HTTP error status, or a protocol error.
+    """ Why a delivery of a message failed - no answer within the timeout, an HTTP error status, a protocol error,
+    or an address that stayed suspended until the message expired.
     """
-    No_Answer      = 'no-answer'
-    HTTP_Error     = 'http-error'
-    Protocol_Error = 'protocol-error'
+    No_Answer         = 'no-answer'
+    HTTP_Error        = 'http-error'
+    Protocol_Error    = 'protocol-error'
+    Address_Suspended = 'address-suspended'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -12,17 +12,20 @@ from http.client import INTERNAL_SERVER_ERROR, OK
 
 # Zato
 from zato.common.b2b.common.exceptions import B2BProtocolException
+from zato.common.audit_log.common import B2BAttr
+from zato.common.b2b.common.commit_sql import ClaimWrite
 from zato.common.b2b.common.outcome import FinalState, Outcome, SignalKind
-from zato.common.b2b.common.store import HeldMessage, MessageIdentity, StoredMessage, StoredResponse
+from zato.common.b2b.common.store import MessageIdentity, StoredMessage, StoredResponse
 from zato.common.b2b.ebms2.common import Actor, Direction, EbMS2Exception, ErrorCode, MessageStatus, MSHService, \
     Protocol_Name, Root_Content_Type, Severity
 from zato.common.b2b.ebms2.header import parse_ack_requested, parse_manifest, parse_message_order, parse_sync_reply
-from zato.common.b2b.ebms2.inbound_common import AsyncSignal, Delivery, HTTPResponse, payload_digests, read_message, \
-    ReceivedSignal
+from zato.common.b2b.ebms2.inbound_common import AsyncSignal, delivery_of, HTTPResponse, new_delivery, payload_digests, \
+    read_message, ReceivedSignal
 from zato.common.b2b.ebms2.message import collect_elements, serialize
 from zato.common.b2b.ebms2.packaging import normalize_content_id, Package
-from zato.common.b2b.ebms2.reliability import conversation_key, decide_order, is_duplicate_elimination, \
-    is_order_guaranteed, message_identity, OrderAction, per_message, persist_duration
+from zato.common.b2b.ebms2.reliability import claim_ordered, conversation_key, is_duplicate_elimination, \
+    is_order_guaranteed, message_identity, OrderAction, OrderedClaim, per_message, persist_duration, require_message_order, \
+    retry_window
 from zato.common.b2b.ebms2.replies import build_reply, is_sync_reply, Reply, reply_binding, reply_endpoint
 from zato.common.b2b.ebms2.security import is_signature_required, verify_message_signature
 from zato.common.b2b.ebms2.signals import Acknowledgment, new_error_list, parse_acknowledgment, parse_error_list, \
@@ -38,7 +41,7 @@ if 0:
     from datetime import datetime
     from zato.common.b2b.common.clock import Clock
     from zato.common.b2b.common.keys import LocalKeys
-    from zato.common.b2b.common.store import MessageStore
+    from zato.common.b2b.common.receive_log import ReceiveLog
     from zato.common.b2b.ebms2.agreement import Agreement, Binding
     from zato.common.b2b.ebms2.header import MessageHeader
     from zato.common.b2b.ebms2.inbound_common import delivery_list
@@ -54,8 +57,8 @@ if 0:
     LocalKeys = LocalKeys
     MessageElements = MessageElements
     MessageHeader = MessageHeader
-    MessageStore = MessageStore
     payload_list = payload_list
+    ReceiveLog = ReceiveLog
     strstrdict = strstrdict
     VerifiedSignature = VerifiedSignature
 
@@ -101,10 +104,10 @@ class InboundResult:
 class _Context:
     """ The state of one message as it passes through the steps of receive.
     """
-    agreement:  'Agreement'
-    local_keys: 'LocalKeys'
-    store:      'MessageStore'
-    now:        'datetime'
+    agreement:   'Agreement'
+    local_keys:  'LocalKeys'
+    receive_log: 'ReceiveLog'
+    now:         'datetime'
 
     content_type: str
     body:         bytes
@@ -283,36 +286,6 @@ def _check_manifest(elements:'MessageElements', payloads:'payload_list') -> 'Non
 
 # ################################################################################################################################
 
-def _new_delivery(binding:'Binding', header:'MessageHeader', payloads:'payload_list') -> 'Delivery':
-    out = Delivery()
-    out.message_id = header.message_data.message_id
-    out.conversation_id = header.conversation_id
-    out.ref_to_message_id = header.message_data.ref_to_message_id
-    out.service = header.service
-    out.service_type = header.service_type
-    out.action = header.action
-    out.from_party = binding.from_party.party_name
-    out.to_party = binding.to_party.party_name
-    out.payloads = payloads
-
-    return out
-
-# ################################################################################################################################
-
-def _deliver_released(ctx:'_Context', binding:'Binding', held:'HeldMessage', out:'InboundResult') -> 'None':
-    """ Delivers a held message of an ordered conversation that the message just received made next in line.
-    """
-    held_headers = {'Content-Type': held.content_type}
-    _, header, payloads = read_message(held_headers, held.body)
-
-    delivery = _new_delivery(binding, header, payloads)
-    out.deliveries.append(delivery)
-
-    identity = message_identity(binding, header)
-    ctx.store.set_status(identity, MessageStatus.Processed)
-
-# ################################################################################################################################
-
 def _acknowledgment(ctx:'_Context', elements:'MessageElements', binding:'Binding', verified:'VerifiedSignature | None') -> \
     'Reply | None':
     """ Returns the acknowledgment a business message is answered with, if it is to be acknowledged.
@@ -365,7 +338,7 @@ def _answer_duplicate(ctx:'_Context', out:'InboundResult', identity:'MessageIden
     out.outcome.duplicate = True
     out.outcome.final_state = FinalState.Duplicate
 
-    if stored := ctx.store.get(identity, ctx.now):
+    if stored := ctx.receive_log.store.get(identity, ctx.now):
 
         response = stored.response
 
@@ -441,30 +414,41 @@ def _receive_business(ctx:'_Context', elements:'MessageElements', out:'InboundRe
 
     identity = message_identity(binding, header)
     duration = persist_duration(binding)
+    cpa_id = ctx.agreement.cpa_id
 
+    # The message stays Received until the application confirms its delivery through the receive log.
     stored = StoredMessage()
     stored.status = MessageStatus.Received
     stored.received_at = ctx.now
     stored.expires_at = ctx.now + duration
     stored.response = stored_response
 
-    # Only the copy that records the message first is delivered, unless duplicates are not eliminated ..
-    is_claimed = ctx.store.claim(identity, stored)
+    protocol_attrs = {
+        B2BAttr.Service: header.service,
+        B2BAttr.Action: header.action,
+    }
+    received_event = ctx.receive_log.received_event(identity, cpa_id, ctx.content_type, ctx.body, protocol_attrs)
 
-    if not is_claimed:
-        if is_duplicate_elimination(binding, header):
-            _answer_duplicate(ctx, out, identity)
-            return
-
-    # .. a message of an ordered conversation waits for the ones before it ..
+    # A message of an ordered conversation is claimed and waits for the ones before it in one transaction ..
     if is_order_guaranteed(binding):
 
-        held = HeldMessage()
-        held.content_type = ctx.content_type
-        held.body = ctx.body
+        claim = ClaimWrite()
+        claim.identity = identity
+        claim.message = stored
 
-        key = conversation_key(binding, header)
-        decision = decide_order(ctx.store, key, message_order, held)
+        order = OrderedClaim()
+        order.key = conversation_key(binding, header)
+        order.cpa_id = cpa_id
+        order.conversation_id = header.conversation_id
+        order.message_order = require_message_order(message_order)
+        order.received_event = received_event
+        order.retry_window = retry_window(binding)
+
+        decision = claim_ordered(ctx.receive_log, claim, order)
+
+        if decision.action == OrderAction.Duplicate:
+            _answer_duplicate(ctx, out, identity)
+            return
 
         if decision.action == OrderAction.Hold:
             out.outcome.final_state = FinalState.Held
@@ -477,16 +461,24 @@ def _receive_business(ctx:'_Context', elements:'MessageElements', out:'InboundRe
 
         released = decision.released
 
+    # .. while only the copy that records any other message first is delivered, unless duplicates are not eliminated.
     else:
+        is_claimed = ctx.receive_log.claim(identity, stored, received_event)
+
+        if not is_claimed:
+            if is_duplicate_elimination(binding, header):
+                _answer_duplicate(ctx, out, identity)
+                return
+
         released = []
 
-    # .. and any other message is delivered, followed by the held ones it released.
-    delivery = _new_delivery(binding, header, ctx.payloads)
+    # The message is delivered, followed by the held ones it released.
+    delivery = new_delivery(identity, cpa_id, header, ctx.payloads, False)
     out.deliveries.append(delivery)
-    ctx.store.set_status(identity, MessageStatus.Processed)
 
-    for held_message in released:
-        _deliver_released(ctx, binding, held_message, out)
+    for received in released:
+        released_delivery = delivery_of(received, False)
+        out.deliveries.append(released_delivery)
 
     out.outcome.delivered = True
     out.outcome.payload_digests = payload_digests(ctx.payloads)
@@ -536,7 +528,7 @@ def _answer_status_request(ctx:'_Context', elements:'MessageElements', binding:'
     status_response = StatusResponse()
     status_response.ref_to_message_id = status_request.ref_to_message_id
 
-    if stored := ctx.store.get(identity, ctx.now):
+    if stored := ctx.receive_log.store.get(identity, ctx.now):
         status_response.message_status = stored.status
         status_response.timestamp = stored.received_at
     else:
@@ -602,12 +594,13 @@ def receive(
     local_keys:'LocalKeys',
     headers:'strstrdict',
     body:'bytes',
-    store:'MessageStore',
+    receive_log:'ReceiveLog',
     clock:'Clock',
     ) -> 'InboundResult':
     """ Receives one ebMS 2.0 message that arrived over HTTP and returns what is to be delivered and what is to be answered.
     The steps run in this order - packaging, envelope and header, binding resolution, the CanReceive check,
-    time to live, signature, duplicate elimination, message order, delivery and the reply signals.
+    time to live, signature, duplicate elimination, message order, delivery and the reply signals. Each delivered
+    message is confirmed by the application through the receive log once it has processed it.
     """
 
     # Our response to produce
@@ -627,7 +620,7 @@ def receive(
     ctx = _Context()
     ctx.agreement = agreement
     ctx.local_keys = local_keys
-    ctx.store = store
+    ctx.receive_log = receive_log
     ctx.now = now
     ctx.content_type = _content_type(headers)
     ctx.body = body

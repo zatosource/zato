@@ -94,8 +94,8 @@ class UsageRow:
     source:     str = ''
     caller:     str = ''
     calls:      int = 0
-    first_call: str = ''
-    last_call:  str = ''
+    first_call: 'datetime'
+    last_call:  'datetime'
 
     # What the object's source is called on the page - the view fills it in
     type_label: str = ''
@@ -110,10 +110,10 @@ class _UsageState:
     """ The aggregation state of one usage row in the making.
     """
 
-    def __init__(self) -> 'None':
+    def __init__(self, first_call:'datetime') -> 'None':
         self.calls:'int' = 0
-        self.first_call:'str' = ''
-        self.last_call:'str' = ''
+        self.first_call:'datetime' = first_call
+        self.last_call:'datetime' = first_call
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,12 +162,12 @@ def _completed_exchange_matches(sources:'strlist') -> 'any_':
 
 # ################################################################################################################################
 
-def _load_usage_events(cutoff_iso:'str', sources:'strlist', objects:'strlist') -> 'anylist':
+def _load_usage_events(cutoff:'datetime', sources:'strlist', objects:'strlist') -> 'anylist':
     """ Reads all the completed exchanges recorded after the cutoff, oldest first -
     channel responses are audited after authentication, so each one knows its caller.
     """
     exchange_matches = _completed_exchange_matches(sources)
-    cutoff_matches = event_table.c.event_time_iso >= cutoff_iso
+    cutoff_matches = event_table.c.event_time >= cutoff
 
     conditions = and_(
         exchange_matches,
@@ -183,14 +183,14 @@ def _load_usage_events(cutoff_iso:'str', sources:'strlist', objects:'strlist') -
         event_table.c.source,
         event_table.c.object_name,
         event_table.c.ext_client_id,
-        event_table.c.event_time_iso,
+        event_table.c.event_time,
     )
     statement = statement.where(conditions)
 
     # Ordered by the moment rather than by the id - a resubmit is recorded after the traffic
     # it reprocesses, so its id is higher while its exchange is older, and the first and last
     # call of a row are read off this order
-    statement = statement.order_by(event_table.c.event_time_iso, event_table.c.id)
+    statement = statement.order_by(event_table.c.event_time, event_table.c.id)
 
     engine = get_audit_engine()
 
@@ -212,16 +212,16 @@ def get_usage(
     """ Call counts per object and caller over the range - one row per object
     and security definition, with the first and last call times of each pair.
     """
-    cutoff_iso = get_range_cutoff(now, time_range)
+    cutoff = get_range_cutoff(now, time_range)
 
     sources = normalize_sources(sources)
-    events = _load_usage_events(cutoff_iso, sources, objects)
+    events = _load_usage_events(cutoff, sources, objects)
 
     # Call counts and call times per object and caller - the source is part of
     # the key because one name can exist both as a channel and as a connection
     groups:'usage_state_dict' = {}
 
-    for source, object_name, ext_client_id, event_time_iso in events:
+    for source, object_name, ext_client_id, event_time in events:
 
         # An exchange with no identity on it is an outgoing connection's own call, which has
         # no caller at all, or a channel response that authenticated with no security definition
@@ -233,19 +233,16 @@ def get_usage(
 
         key = (object_name, source, ext_client_id)
 
+        # Events arrive oldest first, so the first one seen is the first call ..
         if group := groups.get(key):
             pass
         else:
-            group = _UsageState()
+            group = _UsageState(event_time)
             groups[key] = group
-
-        # Events arrive oldest first, so the first one seen is the first call ..
-        if not group.first_call:
-            group.first_call = event_time_iso
 
         # .. and every later one moves the last call forward.
         group.calls += 1
-        group.last_call = event_time_iso
+        group.last_call = event_time
 
     # Our response to produce
     out:'usage_row_list' = []

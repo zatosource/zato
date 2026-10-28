@@ -49,7 +49,7 @@ _window_seconds = 3600
 def _backdate(event_id:'int', event_time:'datetime') -> 'None':
     engine = get_audit_engine()
 
-    statement = update(event_table).where(event_table.c.id == event_id).values(event_time_iso=event_time.isoformat())
+    statement = update(event_table).where(event_table.c.id == event_id).values(event_time=event_time)
 
     with engine.begin() as connection:
         _ = connection.execute(statement)

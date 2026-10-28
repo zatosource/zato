@@ -17,10 +17,10 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.sql.compiler import InsertmanyvaluesSentinelOpts
 
 # Zato
-from zato.common.audit_log.api import build_attr_rows, event_attr_table, event_body_table, event_table
+from zato.common.audit_log.api import build_attr_rows, event_attr_table, event_body_table, event_link_table, event_table
 from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.b2b.common.exceptions import B2BException
-from zato.common.b2b.common.records import MessageIdentity, to_iso
+from zato.common.b2b.common.records import MessageIdentity
 from zato.common.b2b.common.schema import message_table, open_table
 
 # ################################################################################################################################
@@ -56,13 +56,13 @@ _identity_columns = ('protocol', 'from_party', 'to_party', 'message_id')
 # the assignments of ON DUPLICATE KEY UPDATE in order, and each of them compares against the expiry time of the old record.
 _replaced_columns = (
     'status',
-    'received_iso',
+    'received_at',
     'response_status_code',
     'response_content_type',
     'response_body',
     'response_is_synchronous',
     'commit_id',
-    'expires_iso',
+    'expires_at',
 )
 
 # ################################################################################################################################
@@ -81,23 +81,37 @@ class WriteKind:
 @dataclass(init=False)
 class ClaimWrite:
     """ Records a received message under its identity, unless an unexpired record of it exists.
-    The result of the write is True for the copy that recorded it.
+    The result of the write is True for the copy that recorded it. The event of the write, if any,
+    is inserted in the same transaction, and only for the copy that recorded the message.
     """
     identity: 'MessageIdentity'
     message:  'StoredMessage'
+    event:    'EventWrite | None' = None
 
     kind = WriteKind.Claim
+
+    @property
+    def row_count(self) -> 'int':
+        out = _row_count_with_event(self.event)
+        return out
 
 # ################################################################################################################################
 
 @dataclass(init=False)
 class StatusWrite:
-    """ Updates the status of a claimed message.
+    """ Updates the status of a claimed message. The event of the write, if any, is inserted in the same transaction,
+    and only if the message has a record.
     """
     identity: 'MessageIdentity'
     status:   'str'
+    event:    'EventWrite | None' = None
 
     kind = WriteKind.Status
+
+    @property
+    def row_count(self) -> 'int':
+        out = _row_count_with_event(self.event)
+        return out
 
 # ################################################################################################################################
 
@@ -134,6 +148,18 @@ class EventWrite:
         return out
 
 # ################################################################################################################################
+
+def _row_count_with_event(event:'EventWrite | None') -> 'int':
+    """ How many rows a claim or a status update writes - its own row and the rows of the event it carries.
+    """
+    out = 1
+
+    if event:
+        out += event.row_count
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _message_row(identity:'MessageIdentity', message:'StoredMessage', commit_id:'str') -> 'stranydict':
@@ -145,8 +171,8 @@ def _message_row(identity:'MessageIdentity', message:'StoredMessage', commit_id:
         'to_party': identity.to_party,
         'message_id': identity.message_id,
         'status': message.status,
-        'received_iso': to_iso(message.received_at),
-        'expires_iso': to_iso(message.expires_at),
+        'received_at': message.received_at,
+        'expires_at': message.expires_at,
         'response_status_code': response.status_code,
         'response_content_type': response.content_type,
         'response_body': response.body,
@@ -198,7 +224,7 @@ def _upsert_returning(connection:'Connection', rows:'anylist') -> 'set[MessageId
     for name in _replaced_columns:
         replaced[name] = excluded[name]
 
-    is_expired = message_table.c.expires_iso <= excluded.received_iso
+    is_expired = message_table.c.expires_at <= excluded.received_at
 
     statement = statement.on_conflict_do_update(index_elements=list(_identity_columns), set_=replaced, where=is_expired)
     statement = statement.returning(message_table.c.protocol, message_table.c.from_party, message_table.c.to_party,
@@ -221,7 +247,7 @@ def _upsert_mysql(connection:'Connection', rows:'anylist', commit_id:'str') -> '
     statement = mysql_insert(message_table)
     inserted = statement.inserted
 
-    is_expired = message_table.c.expires_iso <= inserted.received_iso
+    is_expired = message_table.c.expires_at <= inserted.received_at
 
     assignments:'anylist' = []
 
@@ -419,6 +445,7 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
 
     attr_rows:'anylist' = []
     body_rows:'anylist' = []
+    link_rows:'anylist' = []
     close_rows:'anylist' = []
     open_rows:'anylist' = []
 
@@ -428,23 +455,32 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
         pending.event_id = event_id
 
         values = pending.values
-        event_time_iso = values['event_time_iso']
+        event_time = values['event_time']
 
         if pending.attrs:
             rows = build_attr_rows(event_id, pending.attrs)
             attr_rows.extend(rows)
 
+        # All the body rows go in one statement, so a body that is not an attachment has an empty content column.
         for kind, body_data in pending.bodies.items():
             body_rows.append({
                 'event_id': event_id,
                 'kind': kind,
-                'event_time_iso': event_time_iso,
+                'event_time': event_time,
                 'data': body_data,
+                'content': None,
             })
 
         if pending.attachments:
-            rows = build_attachment_rows(event_id, event_time_iso, pending.attachments)
+            rows = build_attachment_rows(event_id, event_time, pending.attachments)
             body_rows.extend(rows)
+
+        for parent_event_id in pending.parents:
+            link_rows.append({
+                'child_event_id': event_id,
+                'parent_event_id': parent_event_id,
+                'link_type': pending.parent_link_type,
+            })
 
         for kind in write.closes:
             close_rows.append({
@@ -468,6 +504,9 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
 
     if body_rows:
         _ = connection.execute(insert(event_body_table), body_rows)
+
+    if link_rows:
+        _ = connection.execute(insert(event_link_table), link_rows)
 
     # A record is closed before one is opened, so that a message sent anew under the same identifier has one record.
     if close_rows:

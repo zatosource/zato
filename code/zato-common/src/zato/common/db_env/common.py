@@ -11,6 +11,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import timezone
+
+# SQLAlchemy
+from sqlalchemy import DateTime, LargeBinary, String
+from sqlalchemy.dialects.mysql import DATETIME as MySQLDateTime, LONGBLOB
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.functions import FunctionElement
+from sqlalchemy.types import TypeDecorator
 
 # Zato
 from zato.common.defaults import default_env_base_dir
@@ -20,11 +28,20 @@ from zato.common.util.api import as_bool
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy import MetaData
-    from zato.common.typing_ import stranydict
+    from sqlalchemy.engine import Dialect
+    from sqlalchemy.sql.compiler import SQLCompiler
+    from sqlalchemy.types import TypeEngine
+    from zato.common.typing_ import any_, stranydict
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
+    datetime = datetime
+    Dialect = Dialect
     MetaData = MetaData
+    SQLCompiler = SQLCompiler
+    TypeEngine = TypeEngine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,6 +59,130 @@ Default_SSL = False
 
 # When SSL is on, the server certificate is verified unless turned off explicitly
 Default_SSL_Verify = True
+
+# Binary content, raw bytes on every database - a BLOB of MySQL holds 64 KB and LONGBLOB holds 4 GB.
+Binary_Type = LargeBinary().with_variant(LONGBLOB(), Type_MySQL)
+
+# The number of fractional digits of a second MySQL keeps in a DATETIME column.
+_mysql_datetime_precision = 6
+
+# The hour a timestamp falls in, in the form YYYY-MM-DDTHH, as Python and each database format it.
+Hour_Period_Format = '%Y-%m-%dT%H'
+_sqlite_hour_format = '%Y-%m-%dT%H'
+_mysql_hour_format = '%Y-%m-%dT%H'
+_postgresql_hour_format = 'YYYY-MM-DD"T"HH24'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UTC_DateTime(TypeDecorator):
+    """ A point in time in UTC. It accepts timezone-aware datetimes, keeps them in UTC and returns them timezone-aware
+    in UTC on every database. PostgreSQL stores a timestamp with a time zone, MySQL stores a DATETIME with microseconds
+    and SQLite stores the text form SQLAlchemy defines for its DATETIME type.
+    """
+    impl = DateTime
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect:'Dialect') -> 'TypeEngine':
+
+        if dialect.name == Type_MySQL:
+            datetime_type = MySQLDateTime(fsp=_mysql_datetime_precision)
+        else:
+            datetime_type = DateTime(timezone=True)
+
+        out = dialect.type_descriptor(datetime_type)
+        return out
+
+# ################################################################################################################################
+
+    def process_bind_param(self, value:'datetime | None', dialect:'Dialect') -> 'datetime | None':
+
+        # A column that is not set stays NULL ..
+        if value is None:
+            return None
+
+        # .. every value is stored in UTC ..
+        out = value.astimezone(timezone.utc)
+
+        # .. and the databases whose type has no time zone receive it without one.
+        if dialect.name != Type_PostgreSQL:
+            out = out.replace(tzinfo=None)
+
+        return out
+
+# ################################################################################################################################
+
+    def process_result_value(self, value:'datetime | None', dialect:'Dialect') -> 'datetime | None':
+
+        # A column that is not set is returned as None ..
+        if value is None:
+            return None
+
+        # .. PostgreSQL returns the time in the time zone of the session ..
+        if dialect.name == Type_PostgreSQL:
+            out = value.astimezone(timezone.utc)
+
+        # .. while the other databases return it in UTC without a time zone.
+        else:
+            out = value.replace(tzinfo=timezone.utc)
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _HourPeriod(FunctionElement):
+    """ The hour a timestamp column falls in, as the text YYYY-MM-DDTHH, compiled to the date function of each database.
+    """
+    type = String()
+    name = 'hour_period'
+    inherit_cache = True
+
+# ################################################################################################################################
+
+def hour_period(column:'any_') -> '_HourPeriod':
+    """ The SQL expression of the hour the given timestamp column falls in, in the form of Hour_Period_Format.
+    """
+    out = _HourPeriod(column)
+    return out
+
+# ################################################################################################################################
+
+def to_hour_period(value:'datetime') -> 'str':
+    """ The hour the given moment falls in, in UTC and in the form the hour_period expression returns.
+    """
+    value_utc = value.astimezone(timezone.utc)
+
+    out = value_utc.strftime(Hour_Period_Format)
+    return out
+
+# ################################################################################################################################
+
+@compiles(_HourPeriod, Type_SQLite)
+def compile_hour_period_sqlite(element:'_HourPeriod', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+    column = compiler.process(element.clauses, **kwargs)
+    out = f"strftime('{_sqlite_hour_format}', {column})"
+    return out
+
+# ################################################################################################################################
+
+@compiles(_HourPeriod, Type_MySQL)
+def compile_hour_period_mysql(element:'_HourPeriod', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+
+    # The driver interpolates parameters with percent signs, so the format's own signs are escaped.
+    column = compiler.process(element.clauses, **kwargs)
+    hour_format = compiler.post_process_text(_mysql_hour_format)
+
+    out = f"DATE_FORMAT({column}, '{hour_format}')"
+    return out
+
+# ################################################################################################################################
+
+@compiles(_HourPeriod, Type_PostgreSQL)
+def compile_hour_period_postgresql(element:'_HourPeriod', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+    column = compiler.process(element.clauses, **kwargs)
+    out = f"to_char({column} AT TIME ZONE 'UTC', '{_postgresql_hour_format}')"
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

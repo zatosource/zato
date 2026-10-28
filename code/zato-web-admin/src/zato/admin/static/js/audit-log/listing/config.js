@@ -178,7 +178,7 @@ listing.config = {
     // The columns the list draws places of its own for, so the neutral presenter knows
     // which of a source's columns are left to become chips
     coreColumnKeys: {
-        'event_time_iso': true,
+        'event_time': true,
         'cid': true,
         'msg_id': true,
         'event_type': true,
@@ -193,7 +193,7 @@ listing.config = {
     nonAttrColumnKeys: {
         'data': true,
         'action': true,
-        'event_time_iso': true,
+        'event_time': true,
         'cid': true,
         'size': true
     },

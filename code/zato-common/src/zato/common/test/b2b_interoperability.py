@@ -263,7 +263,7 @@ def receive_message(exchange:'Exchange', message:'Package') -> 'InboundResult':
     """
     receiver = exchange.receiver
 
-    out = receive(exchange.agreement, receiver.local_keys, message.headers, message.body, receiver.store, exchange.clock)
+    out = receive(exchange.agreement, receiver.local_keys, message.headers, message.body, receiver.receive_log, exchange.clock)
     return out
 
 # ################################################################################################################################

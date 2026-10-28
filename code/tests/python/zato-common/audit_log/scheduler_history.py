@@ -22,8 +22,10 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from zato.common.typing_ import anydict
     anydict = anydict
+    datetime = datetime
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,7 +51,6 @@ def _start_run(audit_log:'AuditLog', job_name:'str', job_id:'int', current_run:'
     """ Records the start of one run, returning its event id.
     """
     now = utcnow()
-    planned_fire_time_iso = now.isoformat()
 
     out = record_job_start(
         audit_log,
@@ -57,7 +58,7 @@ def _start_run(audit_log:'AuditLog', job_name:'str', job_id:'int', current_run:'
         cid=f'cid-scheduler-{job_id}-{current_run}',
         job_id=job_id,
         current_run=current_run,
-        planned_fire_time_iso=planned_fire_time_iso,
+        planned_fire_time=now,
         delay_ms=delay_ms,
         service=_service_name,
     )
@@ -105,9 +106,9 @@ def _run_log_entry_checks(event_id:'int') -> 'None':
     now = utcnow()
     timestamp_iso = now.isoformat()
 
-    append_job_log_entry(event_id, timestamp_iso, 'INFO', 'Processing the input file')
-    append_job_log_entry(event_id, timestamp_iso, 'WARNING', 'The input file is unusually large')
-    append_job_log_entry(event_id, timestamp_iso, 'ERROR', 'Could not reach the downstream system')
+    append_job_log_entry(event_id, now, 'INFO', 'Processing the input file')
+    append_job_log_entry(event_id, now, 'WARNING', 'The input file is unusually large')
+    append_job_log_entry(event_id, now, 'ERROR', 'Could not reach the downstream system')
 
     # The opening system line comes first, then the three appended above ..
     entries = get_log_entries(_job_name, 1, 0)
@@ -219,10 +220,10 @@ def _run_detail_checks() -> 'None':
 
 # ################################################################################################################################
 
-def _run_history_since_checks(since_iso:'str') -> 'None':
+def _run_history_since_checks(since:'datetime') -> 'None':
     """ Confirms an incremental poll returns only the records added since its marker.
     """
-    result = get_history_since(_job_id, _job_name, since_iso, '')
+    result = get_history_since(_job_id, _job_name, since, '')
     rows = result['rows']
 
     # Only the two runs recorded after the marker come back, newest first
@@ -296,7 +297,7 @@ def _run_chart_and_timeline_checks() -> 'None':
 
     # A marker set after everything ran returns nothing new
     now = utcnow()
-    timeline = get_timeline_events_since(now.isoformat())
+    timeline = get_timeline_events_since(now)
 
     assert timeline == []
 
@@ -319,7 +320,7 @@ def _run_enabled_switch_checks(audit_log:'AuditLog') -> 'None':
             cid='cid-scheduler-switched-off',
             job_id=_job_id,
             current_run=4,
-            planned_fire_time_iso=now.isoformat(),
+            planned_fire_time=now,
             delay_ms=0,
             service=_service_name,
         )
@@ -355,13 +356,12 @@ def run_scheduler_history_scenario() -> 'None':
     _run_completion_checks(event_id)
 
     # The marker for the incremental poll checks - the failed and the timed-out runs follow it
-    now = utcnow()
-    since_iso = now.isoformat()
+    since = utcnow()
 
     _run_error_and_timeout_checks(audit_log)
     _run_outcome_filter_checks()
     _run_detail_checks()
-    _run_history_since_checks(since_iso)
+    _run_history_since_checks(since)
     _run_other_job_and_aggregate_checks(audit_log)
     _run_chart_and_timeline_checks()
     _run_enabled_switch_checks(audit_log)

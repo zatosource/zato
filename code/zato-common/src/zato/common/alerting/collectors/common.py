@@ -24,9 +24,11 @@ from zato.common.audit_log.resubmit import is_event_type_resubmittable
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.typing_ import any_, anylist, intnone, stranydict
     any_ = any_
+    datetime = datetime
     Engine = Engine
     intnone = intnone
     stranydict = stranydict
@@ -200,10 +202,10 @@ def is_failed() -> 'any_':
 
 # ################################################################################################################################
 
-def is_recent(window_start_iso:'str') -> 'any_':
+def is_recent(window_start:'datetime') -> 'any_':
     """ The predicate picking the rows from the start of a window onwards.
     """
-    out = event_table.c.event_time_iso >= window_start_iso
+    out = event_table.c.event_time >= window_start
     return out
 
 # ################################################################################################################################
@@ -397,7 +399,7 @@ def new_fact(source:'str', object_name:'str') -> 'stranydict':
 def collect_newest_error_events(
     engine:'Engine',
     *,
-    window_start_iso:'str' = '',
+    window_start:'datetime | None' = None,
     source:'str' = '',
     object_name:'str' = '',
     ) -> 'dict':
@@ -414,8 +416,8 @@ def collect_newest_error_events(
     ]
 
     # The optional criteria narrow the measures only when set
-    if window_start_iso:
-        conditions.append(event_table.c.event_time_iso >= window_start_iso)
+    if window_start:
+        conditions.append(event_table.c.event_time >= window_start)
 
     if source:
         conditions.append(event_table.c.source == source)

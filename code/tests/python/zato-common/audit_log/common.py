@@ -8,9 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import contextmanager
+from datetime import datetime, timezone
 
 # SQLAlchemy
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 
 # Zato
 from live_sql.asserts import assert_mysql_connection_encrypted as assert_mysql_engine_encrypted, \
@@ -19,6 +20,7 @@ from live_sql.env import database_env
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import event_dedup_table
+from zato.common.audit_log.search import build_search_conditions
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -43,7 +45,7 @@ _channel_name = 'audit.test.channel'
 _other_channel_name = 'audit.test.other-channel'
 
 # An event time old enough for retention to always delete it
-_expired_event_time_iso = '2020-01-01T00:00:00+00:00'
+_expired_event_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
 # The prefix all the audit log database environment variables share
 _env_prefix = 'Zato_Audit_Log_DB_'
@@ -74,35 +76,12 @@ def delete_all_events() -> 'None':
 
 # ################################################################################################################################
 
-def _escape_like(query:'str') -> 'str':
-    """ The same LIKE escaping the web-admin reader applies to user queries.
-    """
-    out = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
-    return out
-
-# ################################################################################################################################
-
 def _count_events(source:'str', object_name:'str', query:'str'='') -> 'int':
     """ Runs the same count query the web-admin poll view runs.
     """
     engine = get_audit_engine()
 
-    where_conditions:'anylist' = [
-        event_table.c.source == source,
-        event_table.c.object_name == object_name,
-    ]
-
-    if query:
-        escaped = _escape_like(query)
-        like_value = f'%{escaped}%'
-
-        like_parts:'anylist' = []
-
-        for column_name in ('data', 'msg_id', 'correl_id', 'endpoint'):
-            column = event_table.c[column_name]
-            like_parts.append(column.like(like_value, escape='\\'))
-
-        where_conditions.append(or_(*like_parts))
+    where_conditions = build_search_conditions(engine.dialect.name, [source], [object_name], query=query)
 
     count_query = select(func.count())
     count_query = count_query.select_from(event_table)
@@ -211,8 +190,7 @@ def run_audit_log_scenario() -> 'None':
         msg_id='',
         correl_id='',
         ext_client_id='',
-        pub_time_iso='',
-        event_time_iso=_expired_event_time_iso,
+        event_time=_expired_event_time,
         server_name=_server_name,
         endpoint='/billing/invoices',
         sub_key='',

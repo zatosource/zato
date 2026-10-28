@@ -63,10 +63,9 @@ def _window_conditions(window_seconds:'int', now:'datetime', object_name:'str', 
     the moment, the type and, when asked about one gateway, its name.
     """
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     out = [
-        event_table.c.event_time_iso >= window_start_iso,
+        event_table.c.event_time >= window_start,
         event_table.c.source == MCP_Source,
         event_table.c.event_type == event_type,
     ]

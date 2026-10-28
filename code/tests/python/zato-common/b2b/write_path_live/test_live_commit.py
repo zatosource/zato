@@ -33,7 +33,7 @@ from zato.common.b2b.common.send_log import SendLog
 from zato.common.b2b.common.store import MessageStore
 from zato.common.b2b.ebms2.common import SyncReplyMode
 from zato.common.test.b2b_cpa import new_settings
-from zato.common.test.b2b_ebms2 import deliver, new_exchange, send
+from zato.common.test.b2b_ebms2 import deliver, new_exchange, send, use_store
 from zato.common.test.b2b_write_path import CommitGate, CommitRefused, FailingCommit, FakeMonotonic, new_identity, \
     new_sent_message, new_stored_message, Server, Source, Start_Time, StatementRecorder, Wire_Body
 
@@ -146,7 +146,7 @@ class TestCommitBeforeConfirmation:
 
     def test_receive(self, database:'LiveDB', writer:'GroupCommitWriter', parties:'TestParties') -> 'None':
         exchange = new_exchange(parties, _settings(parties))
-        exchange.receiver.store = MessageStore(writer)
+        use_store(exchange.receiver, MessageStore(writer))
         outbound = send(exchange)
 
         gate = CommitGate(database.engine)
@@ -228,7 +228,7 @@ class TestDuplicateClaims:
 
     def test_one_delivery(self, database:'LiveDB', writer:'GroupCommitWriter', parties:'TestParties') -> 'None':
         exchange = new_exchange(parties, _settings(parties))
-        exchange.receiver.store = MessageStore(writer)
+        use_store(exchange.receiver, MessageStore(writer))
         outbound = send(exchange)
 
         first = deliver(exchange, outbound)

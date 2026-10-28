@@ -27,11 +27,12 @@ from zato.common.audit_log.file_transfer_run import Run_Status_Interrupted, Run_
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import anydict, dictlist, stranydict, strintdict, strlist, strstrdict
+    from zato.common.typing_ import anydict, dictlist, stranydict, strdatetimedict, strintdict, strlist, strstrdict
     anydict = anydict
     dictlist = dictlist
     Engine = Engine
     stranydict = stranydict
+    strdatetimedict = strdatetimedict
     strintdict = strintdict
     strlist = strlist
     strstrdict = strstrdict
@@ -108,7 +109,7 @@ def _collect_arrival_facts(engine:'Engine', now:'datetime', arrival_windows:'str
     # carries its schedule's name as a searchable attr.
     query = select(
         event_attr_table.c.value,
-        func.max(event_table.c.event_time_iso),
+        func.max(event_table.c.event_time),
     ).select_from(
         event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id),
     ).where(and_(
@@ -120,12 +121,11 @@ def _collect_arrival_facts(engine:'Engine', now:'datetime', arrival_windows:'str
     with engine.connect() as connection:
         rows = connection.execute(query).fetchall()
 
-    for schedule_name, last_arrival_iso in rows:
+    for schedule_name, last_arrival_time in rows:
 
         # A schedule with no window on record declares no expectation and is skipped
         if window := arrival_windows.get(schedule_name):
 
-            last_arrival_time = datetime.fromisoformat(last_arrival_iso)
             since_last_arrival = (now - last_arrival_time).total_seconds()
 
             fact = new_fact(AuditSource.File_Outgoing, schedule_name)
@@ -177,7 +177,6 @@ def _collect_expectation_facts(engine:'Engine', now:'datetime', schedule_expecta
     today = now_local.date()
     day_start_local = datetime.combine(today, datetime_time.min, tzinfo=now_local.tzinfo)
     day_start_utc = day_start_local.astimezone(timezone.utc)
-    day_start_iso = day_start_utc.isoformat()
 
     # How many files each schedule delivered today.
     attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
@@ -185,7 +184,7 @@ def _collect_expectation_facts(engine:'Engine', now:'datetime', schedule_expecta
 
     is_source = event_table.c.source == AuditSource.File_Outgoing
     is_delivered = event_table.c.event_type == AuditEvent.Delivered
-    is_today = event_table.c.event_time_iso >= day_start_iso
+    is_today = event_table.c.event_time >= day_start_utc
     is_schedule_attr = event_attr_table.c.name == Attr_Schedule
 
     query = select(event_attr_table.c.value, delivered_count)
@@ -248,25 +247,23 @@ def _collect_run_facts(
     read_window_seconds = max(Run_Facts_Window_Seconds, run_window_seconds, *run_window_seconds_by_object.values())
 
     since = now - timedelta(seconds=read_window_seconds)
-    since_iso = since.isoformat()
 
     # Where each schedule's window starts - the type's window unless the schedule has one of its own
     window_start = now - timedelta(seconds=run_window_seconds)
-    window_start_iso = window_start.isoformat()
 
-    window_start_iso_by_object:'strstrdict' = {}
+    window_start_by_object:'strdatetimedict' = {}
 
     for object_name, object_window in run_window_seconds_by_object.items():
         object_window_start = now - timedelta(seconds=object_window)
-        window_start_iso_by_object[object_name] = object_window_start.isoformat()
+        window_start_by_object[object_name] = object_window_start
 
     # The run rows of every schedule, newest first.
     is_source = event_table.c.source == AuditSource.File_Outgoing
     is_run = event_table.c.event_type == AuditEvent.Run_Completed
-    is_recent = event_table.c.event_time_iso >= since_iso
+    is_recent = event_table.c.event_time >= since
     newest_first = event_table.c.id.desc()
 
-    query = select(event_table.c.status, event_table.c.outcome, event_table.c.event_time_iso, event_table.c.data)
+    query = select(event_table.c.status, event_table.c.outcome, event_table.c.event_time, event_table.c.data)
     query = query.where(and_(is_source, is_run, is_recent))
     query = query.order_by(newest_first)
 
@@ -284,7 +281,7 @@ def _collect_run_facts(
     files_failed:'strintdict' = {}
     runs_interrupted:'strintdict' = {}
 
-    for status, outcome, event_time_iso, data in rows:
+    for status, outcome, event_time, data in rows:
 
         details = loads(data)
         schedule_name = details['schedule']
@@ -298,12 +295,12 @@ def _collect_run_facts(
             runs_interrupted[schedule_name] = 0
 
         # The in-window counts, over the schedule's own window when it has one.
-        if schedule_name in window_start_iso_by_object:
-            schedule_window_start_iso = window_start_iso_by_object[schedule_name]
+        if schedule_name in window_start_by_object:
+            schedule_window_start = window_start_by_object[schedule_name]
         else:
-            schedule_window_start_iso = window_start_iso
+            schedule_window_start = window_start
 
-        if event_time_iso >= schedule_window_start_iso:
+        if event_time >= schedule_window_start:
 
             if outcome == AuditOutcome.Error:
                 runs_failed[schedule_name] += 1
@@ -349,14 +346,13 @@ def _collect_connection_facts(engine:'Engine', now:'datetime') -> 'dictlist':
     out:'dictlist' = []
 
     since = now - timedelta(seconds=Quarantine_Window_Seconds)
-    since_iso = since.isoformat()
 
     counted_types = [AuditEvent.File_Quarantined, AuditEvent.Verify_Failed]
     event_count = func.count(event_table.c.id)
 
     is_source = event_table.c.source == AuditSource.File_Outgoing
     is_counted = event_table.c.event_type.in_(counted_types)
-    is_recent = event_table.c.event_time_iso >= since_iso
+    is_recent = event_table.c.event_time >= since
 
     query = select(event_table.c.object_name, event_table.c.event_type, event_count)
     query = query.where(and_(is_source, is_counted, is_recent))

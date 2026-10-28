@@ -17,6 +17,7 @@ from zato.common.b2b.common.store import new_memory_store
 from zato.common.b2b.ebms2.common import Direction, MSHService, new_party_id
 from zato.common.b2b.ebms2.cpa.parse import parse_cpa
 from zato.common.b2b.ebms2.inbound import receive
+from zato.common.b2b.ebms2.inbound_common import new_receive_log
 from zato.common.b2b.ebms2.outbound import accept_response, accept_signal, build
 from zato.common.b2b.ebms2.packaging import Payload
 from zato.common.test.b2b_cpa import build_cpa
@@ -26,6 +27,7 @@ from zato.common.test.b2b_cpa import build_cpa
 
 if 0:
     from zato.common.b2b.common.outcome import Outcome
+    from zato.common.b2b.common.receive_log import ReceiveLog
     from zato.common.b2b.common.store import MessageStore
     from zato.common.b2b.ebms2.agreement import Agreement, Binding
     from zato.common.b2b.ebms2.inbound import InboundResult
@@ -42,6 +44,7 @@ if 0:
     OutboundMessage = OutboundMessage
     PartySettings = PartySettings
     payload_list = payload_list
+    ReceiveLog = ReceiveLog
     SendOptions = SendOptions
     TestParties = TestParties
     TestParty = TestParty
@@ -52,6 +55,9 @@ if 0:
 # The moment every exchange starts at, unless a test moves its clock.
 Start_Time = datetime(2026, 1, 15, 9, 30, tzinfo=timezone.utc)
 
+# The server whose receive log records what each party receives.
+Server_Name = 'b2b-test-server'
+
 Payload_Content_Type = 'application/xml'
 Payload_Data = b'<Order xmlns="urn:zato:b2b:test"><Id>1</Id></Order>'
 
@@ -60,11 +66,11 @@ Payload_Data = b'<Order xmlns="urn:zato:b2b:test"><Id>1</Id></Order>'
 
 @dataclass(init=False)
 class Side:
-    """ One party of an exchange with its own keys and its own message store.
+    """ One party of an exchange with its own keys and the receive log over its own message store.
     """
-    settings:   'PartySettings'
-    local_keys: 'LocalKeys'
-    store:      'MessageStore'
+    settings:    'PartySettings'
+    local_keys:  'LocalKeys'
+    receive_log: 'ReceiveLog'
 
 # ################################################################################################################################
 
@@ -92,11 +98,20 @@ def new_local_keys(party:'TestParty') -> 'LocalKeys':
 
 # ################################################################################################################################
 
+def use_store(side:'Side', store:'MessageStore') -> 'None':
+    """ Makes a party record what it receives in the given message store.
+    """
+    side.receive_log = new_receive_log(store, Server_Name)
+
+# ################################################################################################################################
+
 def new_side(settings:'PartySettings', party:'TestParty') -> 'Side':
     out = Side()
     out.settings = settings
     out.local_keys = new_local_keys(party)
-    out.store = new_memory_store()
+
+    store = new_memory_store()
+    use_store(out, store)
 
     return out
 
@@ -191,8 +206,18 @@ def deliver(exchange:'Exchange', outbound:'OutboundMessage', body:'bytes | None'
 
     receiver = exchange.receiver
 
-    out = receive(exchange.agreement, receiver.local_keys, outbound.package.headers, data, receiver.store, exchange.clock)
+    out = receive(exchange.agreement, receiver.local_keys, outbound.package.headers, data, receiver.receive_log, exchange.clock)
     return out
+
+# ################################################################################################################################
+
+def confirm(exchange:'Exchange', result:'InboundResult') -> 'None':
+    """ Confirms, as the application of the receiver does, that it processed each message a receipt delivered.
+    """
+    receive_log = exchange.receiver.receive_log
+
+    for delivery in result.deliveries:
+        receive_log.confirm(delivery.identity, delivery.cpa_id)
 
 # ################################################################################################################################
 

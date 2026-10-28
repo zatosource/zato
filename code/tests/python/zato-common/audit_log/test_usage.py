@@ -206,9 +206,9 @@ class TestGetUsage:
                 cid='cid-mllp-2', ext_client_id=_mllp_facility, outcome=AuditOutcome.OK)
 
             now = utcnow()
-            older_iso = (now - timedelta(hours=1)).isoformat()
+            older = now - timedelta(hours=1)
 
-            statement = update(event_table).where(event_table.c.id == event_id).values(event_time_iso=older_iso)
+            statement = update(event_table).where(event_table.c.id == event_id).values(event_time=older)
 
             engine = get_audit_engine()
 
@@ -220,8 +220,8 @@ class TestGetUsage:
             row = rows[0]
 
             assert row.calls == 2
-            assert row.first_call == older_iso
-            assert row.last_call > older_iso
+            assert row.first_call == older
+            assert row.last_call > older
 
 # ################################################################################################################################
 

@@ -96,7 +96,7 @@ def _signed(parties:'TestParties', settings:'AgreementSettings | None'=None) -> 
 
 def _receive_package(exchange:'Exchange', package:'Package') -> 'InboundResult':
     receiver = exchange.receiver
-    out = receive(exchange.agreement, receiver.local_keys, package.headers, package.body, receiver.store, exchange.clock)
+    out = receive(exchange.agreement, receiver.local_keys, package.headers, package.body, receiver.receive_log, exchange.clock)
     return out
 
 # ################################################################################################################################

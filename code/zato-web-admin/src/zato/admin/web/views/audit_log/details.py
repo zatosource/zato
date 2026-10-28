@@ -111,12 +111,12 @@ def details(req:'any_') -> 'HttpResponse':
     data = ''
     source = ''
     object_name = ''
-    event_time_iso = ''
+    event_time = None
 
     # Read the full payload of this one event from the shared audit log database.
     details_query = select(
         event_table.c.source, event_table.c.object_name, event_table.c.data,
-        event_table.c.event_time_iso).where(event_table.c.id == event_id)
+        event_table.c.event_time).where(event_table.c.id == event_id)
     engine = get_audit_engine()
 
     with engine.connect() as connection:
@@ -128,7 +128,7 @@ def details(req:'any_') -> 'HttpResponse':
             source = row[0]
             object_name = row[1]
             data = row[2]
-            event_time_iso = row[3]
+            event_time = row[3]
 
     # Whoever is reading this message is recorded - the event exists, so there is content to see
     if row:
@@ -161,7 +161,7 @@ def details(req:'any_') -> 'HttpResponse':
     # The sources in _source_render_by_event_id resolve against the database the same way.
     else:
         if source == AuditSource.Config:
-            parsed = render_view_record(engine, data, event_time_iso)
+            parsed = render_view_record(engine, data, event_time)
         elif event_renderer := _source_render_by_event_id.get(source):
             parsed = event_renderer(engine, event_id, kind)
         elif renderer := _source_parse.get(source):

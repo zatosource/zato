@@ -8,15 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from dataclasses import dataclass
 from logging import getLogger
 from threading import Condition, Event, Lock, Thread
 from time import monotonic
 from uuid import uuid4
 
 # Zato
-from zato.common.audit_log.api import get_audit_engine
+from zato.common.audit_log.api import get_audit_engine, metadata as audit_metadata
 from zato.common.audit_log.export.api import get_audit_export
-from zato.common.b2b.common.commit_retention import delete_expired_messages, delete_old_events, RetentionResult
+from zato.common.b2b.common.commit_retention import delete_expired_messages, delete_old_events, delete_old_held, \
+    RetentionResult
 from zato.common.b2b.common.commit_sql import write_claims, write_events, write_statuses, WriteKind
 from zato.common.b2b.common.schema import create_tables
 from zato.common.db_env.engine import call_database
@@ -28,9 +30,10 @@ from zato.common.util.api import utcnow
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, anylist, callable_, floatnone
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, floatnone
     any_ = any_
     anylist = anylist
+    anytuple = anytuple
     callable_ = callable_
     Connection = Connection
     datetime = datetime
@@ -86,6 +89,21 @@ def get_commit_max_rows() -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
+class TransactionResult:
+    """ What a function run in a transaction of its own returns - its value for the caller,
+    and the event writes it inserted.
+    """
+    value:        'any_'
+    event_writes: 'anylist'
+
+    def __init__(self) -> 'None':
+        self.value = None
+        self.event_writes = []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CommitTicket:
     """ One write waiting for the commit of the transaction that holds it.
     """
@@ -122,9 +140,9 @@ class CommitTicket:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def write_transaction(connection:'Connection', tickets:'ticket_list', commit_id:'str') -> 'None':
+def write_transaction(connection:'Connection', tickets:'ticket_list', commit_id:'str') -> 'anylist':
     """ Writes the pending writes of one transaction, one statement for each table, in the order that the references
-    between the tables require, and assigns its result to each ticket.
+    between the tables require, assigns its result to each ticket, and returns the event writes it inserted.
     """
     claims:'ticket_list' = []
     statuses:'ticket_list' = []
@@ -140,17 +158,35 @@ def write_transaction(connection:'Connection', tickets:'ticket_list', commit_id:
         else:
             events.append(ticket)
 
+    # The events that claims and status updates carry are inserted after the events of their own tickets ..
+    carried:'anylist' = []
+
     if claims:
         results = write_claims(connection, _writes_of(claims), commit_id)
         _assign_results(claims, results)
+
+        # .. a claim carries its event only into the transaction in which it recorded the message ..
+        for ticket in claims:
+            if ticket.write.event and ticket.result:
+                carried.append(ticket.write.event)
 
     if statuses:
         results = write_statuses(connection, _writes_of(statuses))
         _assign_results(statuses, results)
 
-    if events:
-        results = write_events(connection, _writes_of(events), commit_id)
+        # .. and a status update only if the message has a record.
+        for ticket in statuses:
+            if ticket.write.event and not ticket.error:
+                carried.append(ticket.write.event)
+
+    out = _writes_of(events)
+    out.extend(carried)
+
+    if out:
+        results = write_events(connection, out, commit_id)
         _assign_results(events, results)
+
+    return out
 
 # ################################################################################################################################
 
@@ -194,7 +230,8 @@ class GroupCommitWriter:
 
         self.engine = engine
 
-        # The tables are created in the database of the writer, idempotently.
+        # The audit log tables and the B2B tables are created in the database of the writer, idempotently.
+        audit_metadata.create_all(engine)
         create_tables(engine)
 
         if interval_ms is None:
@@ -346,15 +383,17 @@ class GroupCommitWriter:
 
 # ################################################################################################################################
 
-    def _execute(self, tickets:'ticket_list', commit_id:'str') -> 'None':
-        """ Writes and commits one transaction.
+    def _execute(self, tickets:'ticket_list', commit_id:'str') -> 'anylist':
+        """ Writes and commits one transaction, and returns the event writes it inserted.
         """
         with self.engine.begin() as connection:
-            write_transaction(connection, tickets, commit_id)
+            out = write_transaction(connection, tickets, commit_id)
+
+        return out
 
 # ################################################################################################################################
 
-    def _export(self, tickets:'ticket_list') -> 'None':
+    def _export(self, event_writes:'anylist') -> 'None':
         """ Hands the committed audit events to the OTLP export of the process, if it has one.
         """
         if not (export := get_audit_export()):
@@ -362,9 +401,8 @@ class GroupCommitWriter:
 
         batch:'anylist' = []
 
-        for ticket in tickets:
-            if ticket.write.kind == WriteKind.Event:
-                batch.append(ticket.write.pending)
+        for write in event_writes:
+            batch.append(write.pending)
 
         if batch:
             try:
@@ -381,13 +419,13 @@ class GroupCommitWriter:
 
         with self._db_lock:
             try:
-                _ = self._call_database(self._execute, tickets, commit_id)
+                event_writes = self._call_database(self._execute, tickets, commit_id)
             except Exception as e:
                 logger.warning('B2B commit of %d writes failed: %s', len(tickets), e)
                 for ticket in tickets:
                     ticket.error = e
             else:
-                self._export(tickets)
+                self._export(event_writes)
 
         # The callers are released from the thread of the writer, never from the thread pool.
         for ticket in tickets:
@@ -406,6 +444,30 @@ class GroupCommitWriter:
 
 # ################################################################################################################################
 
+    def _execute_function(self, func:'callable_', commit_id:'str', args:'anytuple') -> 'TransactionResult':
+        with self.engine.begin() as connection:
+            out = func(connection, commit_id, *args)
+
+        return out
+
+# ################################################################################################################################
+
+    def run_transaction(self, func:'callable_', *args:'any_') -> 'any_':
+        """ Runs a function of several dependent statements in one transaction of its own, serialized with the commits
+        of this writer. The function receives the connection and an identifier of the transaction, and returns
+        a TransactionResult whose committed events are exported like those of a group commit.
+        """
+        commit_id = uuid4().hex
+
+        with self._db_lock:
+            result = self._call_database(self._execute_function, func, commit_id, args)
+            self._export(result.event_writes)
+
+        out = result.value
+        return out
+
+# ################################################################################################################################
+
     def _call_database(self, func:'callable_', *args:'any_') -> 'any_':
         """ Runs one database call of this writer, in the thread pool of the gevent hub if the engine needs it.
         """
@@ -418,13 +480,16 @@ class GroupCommitWriter:
         """ Deletes in one transaction what retention deletes, each kind of row up to the row limit.
         """
         out = RetentionResult()
+        out.held = 0
         out.events = 0
 
         with self.engine.begin() as connection:
 
             out.messages = delete_expired_messages(connection, now, self.max_rows)
 
+            # A held message goes before the events of its receipt, which are kept while it is held.
             for source in sources:
+                out.held += delete_old_held(connection, source, now, self.max_rows)
                 out.events += delete_old_events(connection, source, now, self.max_rows)
 
         return out
@@ -442,8 +507,9 @@ class GroupCommitWriter:
 
         self._last_retention_at = self.clock()
 
-        if out.messages or out.events:
-            logger.info('B2B retention deleted %d message records and %d events', out.messages, out.events)
+        if out.messages or out.held or out.events:
+            logger.info('B2B retention deleted %d message records, %d held messages and %d events', out.messages, out.held,
+                out.events)
 
         return out
 

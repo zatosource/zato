@@ -439,7 +439,7 @@ def _get_channel_responses(channel:'_ChannelDescription') -> 'anylist':
 
     for row in out:
         trace(Channel_Channel, Received,
-            f'{channel.label} audit log: {row["event_time_iso"]} {row["status"]} caller={row["ext_client_id"]!r}')
+            f'{channel.label} audit log: {row["event_time"]} {row["status"]} caller={row["ext_client_id"]!r}')
 
     separator(Channel_Channel)
 

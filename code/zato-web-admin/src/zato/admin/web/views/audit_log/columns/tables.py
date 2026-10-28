@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.api import SCHEDULER
 from zato.common.audit_log.common import source_attr_names, AuditOutcome, Status_Outstanding
-from zato.common.audit_log.search import search_columns
+from zato.common.audit_log.search_index import search_columns
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +35,7 @@ _data_preview_length = 200
 _preview_length = 4000
 
 # The columns returned to the frontend, in the order they appear in the select below.
-_row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time_iso', 'msg_id', 'correl_id',
+_row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time', 'msg_id', 'correl_id',
     'endpoint', 'ext_client_id', 'outcome', 'status', 'classification', 'size', 'duration_ms', 'data')
 
 # A flow row also carries the event's position among the others of its own cid.
@@ -43,6 +43,9 @@ _flow_columns = _row_columns + ('cid_sequence',)
 
 # The row columns holding numbers.
 _row_numeric_columns = ('id', 'size', 'duration_ms', 'cid_sequence')
+
+# The row columns holding timestamps, which the frontend receives in ISO 8601 form.
+_row_time_columns = ('event_time',)
 
 # The columns the free-text search covers.
 _search_columns = search_columns
@@ -56,7 +59,7 @@ _status_outstanding = Status_Outstanding
 # Each column tells the frontend which row key to read, what header label to show
 # and how to render the cell - the types are implemented in audit-log.js.
 _pubsub_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
@@ -66,7 +69,7 @@ _pubsub_columns = [
 ]
 
 _rest_channel_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Service', 'type': 'text'},
@@ -77,7 +80,7 @@ _rest_channel_columns = [
 ]
 
 _soap_channel_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Service', 'type': 'text'},
@@ -88,7 +91,7 @@ _soap_channel_columns = [
 ]
 
 _rest_outgoing_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Address', 'type': 'text'},
@@ -99,7 +102,7 @@ _rest_outgoing_columns = [
 ]
 
 _soap_outgoing_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Address', 'type': 'text'},
@@ -110,7 +113,7 @@ _soap_outgoing_columns = [
 ]
 
 _email_imap_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Folder', 'type': 'text'},
@@ -121,7 +124,7 @@ _email_imap_columns = [
 ]
 
 _file_outgoing_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'operation', 'label': 'Operation', 'type': 'text'},
@@ -136,7 +139,7 @@ _file_outgoing_columns = [
 ]
 
 _sql_outgoing_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
@@ -147,7 +150,7 @@ _sql_outgoing_columns = [
 ]
 
 _mcp_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Tool', 'type': 'text'},
@@ -161,7 +164,7 @@ _mcp_columns = [
 ]
 
 _mllp_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'msg_id', 'label': 'Control id', 'type': 'text'},
@@ -176,7 +179,7 @@ _mllp_columns = [
 ]
 
 _scheduler_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'object_name', 'label': 'Job', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Service', 'type': 'text'},
@@ -188,7 +191,7 @@ _scheduler_columns = [
 
 # Service invocations.
 _service_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'object_name', 'label': 'Service', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Invoked by', 'type': 'text'},
@@ -199,7 +202,7 @@ _service_columns = [
 ]
 
 _fhir_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Request', 'type': 'text'},
@@ -211,7 +214,7 @@ _fhir_columns = [
 ]
 
 _kafka_channel_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Channel', 'type': 'text'},
@@ -224,7 +227,7 @@ _kafka_channel_columns = [
 ]
 
 _kafka_outgoing_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
@@ -236,7 +239,7 @@ _kafka_outgoing_columns = [
 ]
 
 _llm_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
@@ -247,7 +250,7 @@ _llm_columns = [
 ]
 
 _email_smtp_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Address', 'type': 'text'},
@@ -259,7 +262,7 @@ _email_smtp_columns = [
 
 # A log access record is named by who read what rather than by a message.
 _config_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'actor', 'label': 'Actor', 'type': 'text'},
@@ -268,7 +271,7 @@ _config_columns = [
 ]
 
 _odoo_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
@@ -279,7 +282,7 @@ _odoo_columns = [
 ]
 
 _microsoft_cloud_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
@@ -290,7 +293,7 @@ _microsoft_cloud_columns = [
 ]
 
 _microsoft_health_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Service', 'type': 'text'},
@@ -300,7 +303,7 @@ _microsoft_health_columns = [
 ]
 
 _certificate_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
@@ -311,7 +314,7 @@ _certificate_columns = [
 ]
 
 _test_transfer_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Connection', 'type': 'text'},
@@ -321,7 +324,7 @@ _test_transfer_columns = [
 
 # An ebMS 2.0 row is named by its agreement, its parties and the delivery attempt it records.
 _ebms2_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'object_name', 'label': 'Agreement', 'type': 'text'},
@@ -336,7 +339,7 @@ _ebms2_columns = [
 ]
 
 _ccda_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'object_name', 'label': 'Service', 'type': 'text'},
     {'key': 'root_template', 'label': 'Document', 'type': 'text'},
@@ -349,7 +352,7 @@ _ccda_columns = [
 
 # The columns of the all-events page - the ones every source shares, plus the source itself.
 _all_sources_columns = [
-    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'event_time', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'source', 'label': 'Source', 'type': 'text'},

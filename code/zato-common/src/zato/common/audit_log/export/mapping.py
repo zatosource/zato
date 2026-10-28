@@ -51,8 +51,10 @@ class ModuleCtx:
 _columns = (
     'source', 'event_type', 'object_name', 'cid', 'cid_sequence', 'msg_id', 'correl_id', 'ext_client_id', 'endpoint',
     'sub_key', 'size', 'priority', 'outcome', 'status', 'application_outcome', 'classification', 'duration_ms',
-    'pub_time_iso',
 )
+
+# The timestamp columns that become attributes in ISO 8601 form
+_time_columns = ('pub_time',)
 
 _info  = (SEVERITY_NUMBER_INFO,  ModuleCtx.Severity_Info)
 _warn  = (SEVERITY_NUMBER_WARN,  ModuleCtx.Severity_Warn)
@@ -93,13 +95,12 @@ class QueuedEvent:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _iso_to_ns(value:'str') -> 'int':
-    """ Turns an event's UTC time in ISO format into nanoseconds since the epoch.
+def _to_ns(value:'datetime') -> 'int':
+    """ Turns an event's time into nanoseconds since the epoch.
     """
-    parsed = datetime.fromisoformat(value)
-    seconds = timegm(parsed.utctimetuple())
+    seconds = timegm(value.utctimetuple())
 
-    out = seconds * _nanoseconds_per_second + parsed.microsecond * _nanoseconds_per_microsecond
+    out = seconds * _nanoseconds_per_second + value.microsecond * _nanoseconds_per_microsecond
     return out
 
 # ################################################################################################################################
@@ -192,6 +193,13 @@ def build_attributes(event:'QueuedEvent', max_payload_size:'int') -> 'stranydict
             continue
         out[f'{ModuleCtx.Prefix}.{name}'] = value
 
+    # .. timestamp columns that are set, in ISO 8601 form ..
+    for name in _time_columns:
+        value = values[name]
+        if value is None:
+            continue
+        out[f'{ModuleCtx.Prefix}.{name}'] = value.isoformat()
+
     # .. attrs with their original types, except that a missing value is not an attribute ..
     for name, value in event.attrs.items():
         if value is None:
@@ -229,7 +237,7 @@ def build_log_record(event:'QueuedEvent', max_payload_size:'int') -> 'LogRecord'
 
     attributes = build_attributes(event, max_payload_size)
     key_values = to_key_values(attributes)
-    time_unix_nano = _iso_to_ns(values['event_time_iso'])
+    time_unix_nano = _to_ns(values['event_time'])
     event_name = f'{ModuleCtx.Prefix}.' + values['event_type']
 
     out = LogRecord(

@@ -24,6 +24,15 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anylist
+
+    # Dummy assignments to satisfy type checkers
+    anylist = anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The server name all the test events are written under
 _server_name = 'test-audit-log-server'
 
@@ -44,6 +53,16 @@ _small_cap = 10
 
 # An event this old is past the default retention window
 _row_expired_age_days = 40
+
+# The raw content round trip - file names in three scripts, sizes of 0 bytes, 1 byte and 5 MB
+_japanese_name = '請求書_二〇二六年.pdf'
+_greek_name    = 'τιμολόγιο_Ιανουάριος.bin'
+_polish_name   = 'zażółć_gęślą_jaźń.dat'
+_binary_type   = 'application/octet-stream'
+_one_byte      = b'\x00'
+
+_byte_values = 256
+_five_megabytes_size = 5 * 1024 * 1024
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,7 +153,7 @@ def run_attachment_scenario() -> 'None':
 
     assert oversized['size'] == len(_pdf_content)
     assert oversized['is_content_kept'] is False
-    assert oversized['content'] == ''
+    assert oversized['content'] == b''
 
     oversized_event_id = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Message_Sent, _conn_name,
         cid='cid-attachment-2', outcome=AuditOutcome.OK, attachments=[oversized])
@@ -153,15 +172,14 @@ def run_attachment_scenario() -> 'None':
         attachments=[build_attachment(_csv_name, _csv_type, _csv_content)])
 
     expired_time = utcnow() - timedelta(days=_row_expired_age_days)
-    expired_time_iso = expired_time.isoformat()
 
     backdate_event = event_table.update()
     backdate_event = backdate_event.where(event_table.c.id == expired_event_id)
-    backdate_event = backdate_event.values(event_time_iso=expired_time_iso)
+    backdate_event = backdate_event.values(event_time=expired_time)
 
     backdate_bodies = event_body_table.update()
     backdate_bodies = backdate_bodies.where(event_body_table.c.event_id == expired_event_id)
-    backdate_bodies = backdate_bodies.values(event_time_iso=expired_time_iso)
+    backdate_bodies = backdate_bodies.values(event_time=expired_time)
 
     with engine.begin() as connection:
         _ = connection.execute(backdate_event)
@@ -175,6 +193,71 @@ def run_attachment_scenario() -> 'None':
 
     # .. while the event within the window keeps its own.
     assert _count_attachment_rows(event_id) == 2
+
+    run_raw_content_scenario()
+
+# ################################################################################################################################
+
+def _five_megabytes() -> 'bytes':
+    """ Five megabytes holding every byte value, so no value is lost or altered on the way.
+    """
+    values = range(_byte_values)
+    pattern = bytes(values)
+    repetitions = _five_megabytes_size // _byte_values
+
+    out = pattern * repetitions
+    return out
+
+# ################################################################################################################################
+
+def run_raw_content_scenario() -> 'None':
+    """ Attachments of 0 bytes, 1 byte and 5 MB, with file names in Japanese, Greek and Polish,
+    come back byte for byte, and the stored column holds the raw bytes rather than an encoding of them.
+    """
+    engine = get_audit_engine()
+    audit_log = AuditLog(_server_name)
+
+    large_content = _five_megabytes()
+    large_cap = len(large_content)
+
+    expected = [
+        (_japanese_name, b''),
+        (_greek_name, _one_byte),
+        (_polish_name, large_content),
+    ]
+
+    envelopes:'anylist' = []
+
+    for filename, content in expected:
+        envelope = build_attachment(filename, _binary_type, content, max_size=large_cap)
+        envelopes.append(envelope)
+
+    event_id = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Message_Sent, _conn_name,
+        cid='cid-attachment-raw', outcome=AuditOutcome.OK, attachments=envelopes)
+
+    items = list_attachments(engine, event_id)
+
+    assert len(items) == len(expected)
+
+    for item, (filename, content) in zip(items, expected):
+
+        # The metadata keeps the name exactly as given ..
+        assert item['filename'] == filename
+        assert item['size'] == len(content)
+        assert item['is_content_kept'] is True
+
+        # .. the bytes read back are the bytes written ..
+        attachment = get_attachment(engine, item['id'])
+        assert attachment['content'] == content
+
+        # .. and the column itself holds them as they are.
+        content_query = select(event_body_table.c.content)
+        content_query = content_query.where(event_body_table.c.id == item['id'])
+
+        with engine.connect() as connection:
+            stored = connection.execute(content_query).scalar()
+
+        assert bytes(stored) == content
 
 # ################################################################################################################################
 # ################################################################################################################################

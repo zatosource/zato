@@ -278,7 +278,7 @@ class AuditLog:
         msg_id:'str' = '',
         correl_id:'str' = '',
         ext_client_id:'str' = '',
-        pub_time_iso:'str' = '',
+        pub_time:'datetime | None' = None,
         endpoint:'str' = '',
         sub_key:'str' = '',
         size:'int' = 0,
@@ -311,7 +311,7 @@ class AuditLog:
             return None
 
         pending = self.new_pending_event(source, event_type, object_name, cid=cid, msg_id=msg_id, correl_id=correl_id,
-            ext_client_id=ext_client_id, pub_time_iso=pub_time_iso, endpoint=endpoint, sub_key=sub_key, size=size,
+            ext_client_id=ext_client_id, pub_time=pub_time, endpoint=endpoint, sub_key=sub_key, size=size,
             priority=priority, outcome=outcome, application_outcome=application_outcome, classification=classification,
             status=status, duration_ms=duration_ms, data=data, attrs=attrs, bodies=bodies, attachments=attachments,
             parents=parents, parent_link_type=parent_link_type, is_export_payload_active=is_export_payload_active)
@@ -338,7 +338,7 @@ class AuditLog:
         msg_id:'str' = '',
         correl_id:'str' = '',
         ext_client_id:'str' = '',
-        pub_time_iso:'str' = '',
+        pub_time:'datetime | None' = None,
         endpoint:'str' = '',
         sub_key:'str' = '',
         size:'int' = 0,
@@ -361,8 +361,7 @@ class AuditLog:
         """
 
         # The event time is always assigned here so all rows share one clock ..
-        now = utcnow()
-        event_time_iso = now.isoformat()
+        event_time = utcnow()
 
         # .. events sharing a cid carry an explicit sequence so their order is never ambiguous ..
         if cid:
@@ -406,8 +405,8 @@ class AuditLog:
             'msg_id': msg_id,
             'correl_id': correl_id,
             'ext_client_id': ext_client_id,
-            'pub_time_iso': pub_time_iso,
-            'event_time_iso': event_time_iso,
+            'pub_time': pub_time,
+            'event_time': event_time,
             'server_name': self.server_name,
             'endpoint': endpoint,
             'sub_key': sub_key,
@@ -590,7 +589,7 @@ class AuditLog:
                         body_rows.append({
                             'event_id': event_id,
                             'kind': kind,
-                            'event_time_iso': pending.values['event_time_iso'],
+                            'event_time': pending.values['event_time'],
                             'data': body_data,
                         })
 
@@ -602,7 +601,7 @@ class AuditLog:
                 if pending.attachments:
 
                     attachment_rows = build_attachment_rows(
-                        event_id, pending.values['event_time_iso'], pending.attachments)
+                        event_id, pending.values['event_time'], pending.attachments)
                     attachment_insert = event_body_table.insert()
 
                     _ = connection.execute(attachment_insert, attachment_rows)

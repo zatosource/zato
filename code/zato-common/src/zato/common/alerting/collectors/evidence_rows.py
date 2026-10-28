@@ -44,7 +44,7 @@ Max_Rows_Per_Measure = 200
 # The columns every evidence row carries.
 row_columns = (
     event_table.c.id,
-    event_table.c.event_time_iso,
+    event_table.c.event_time,
     event_table.c.event_type,
     event_table.c.endpoint,
     event_table.c.outcome,
@@ -58,7 +58,7 @@ row_columns = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-def window_start_iso(fact:'stranydict', now:'datetime') -> 'str':
+def window_start(fact:'stranydict', now:'datetime') -> 'datetime':
     """ Where the fact's window starts - a fact measured without a window, e.g. a probe's
     point-in-time reading, is read over the default window instead.
     """
@@ -67,9 +67,7 @@ def window_start_iso(fact:'stranydict', now:'datetime') -> 'str':
     if not window_seconds:
         window_seconds = Default_Window_Seconds
 
-    start = now - timedelta(seconds=window_seconds)
-    out = start.isoformat()
-
+    out = now - timedelta(seconds=window_seconds)
     return out
 
 # ################################################################################################################################
@@ -81,8 +79,11 @@ def rows_from(result:'anylist') -> 'dictlist':
     # Our response to produce
     out:'dictlist' = []
 
-    for event_id, event_time_iso, event_type, endpoint, outcome, status, duration_ms, data, ext_client_id, \
+    for event_id, event_time, event_type, endpoint, outcome, status, duration_ms, data, ext_client_id, \
         application_outcome in result:
+
+        # The evidence document carries its times in ISO 8601 form
+        event_time_iso = event_time.isoformat()
 
         row:'stranydict' = {
             'id': event_id,

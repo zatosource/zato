@@ -145,11 +145,11 @@ def _seed_message(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'st
         facility=_facility, duration_ms=duration_ms)
 
     if seconds_back:
-        event_time_iso = (now - timedelta(seconds=seconds_back)).isoformat()
+        event_time = now - timedelta(seconds=seconds_back)
 
         statement = update(event_table)
         statement = statement.where(event_table.c.id.in_([message_id, ack_id]))
-        statement = statement.values(event_time_iso=event_time_iso)
+        statement = statement.values(event_time=event_time)
 
         with engine.begin() as connection:
             _ = connection.execute(statement)

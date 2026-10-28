@@ -90,7 +90,7 @@ class TestExplainLiveOutgoingMLLP:
 
             for row in acks:
                 trace(Channel_Outgoing, Received,
-                    f'ack audit log: {row["event_time_iso"]} {row["application_outcome"]!r} ' +
+                    f'ack audit log: {row["event_time"]} {row["application_outcome"]!r} ' +
                     f'{row["msg_id"]!r}')
 
             separator(Channel_Outgoing)

@@ -15,10 +15,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import func, select
 
 # Zato
-from zato.common.analytics.api import Period_Len
-from zato.common.analytics.query import get_range_cutoff, get_window_periods, period_to_ms, Default_Range, Range_Day, \
-    Range_Hours, Range_Label, Range_Month, Range_Quarter, Range_Week
+from zato.common.analytics.query import get_range_cutoff, get_window_periods, period_to_datetime, period_to_ms, \
+    Default_Range, Range_Day, Range_Hours, Range_Label, Range_Month, Range_Quarter, Range_Week
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.common import hour_period
 from zato.common.monitoring.health import derive_health, EndpointMetrics, HealthThresholds
 
 # ################################################################################################################################
@@ -75,9 +75,10 @@ def get_channel_dashboard(engine:'Engine', now:'datetime', time_range:'str') -> 
     how the message fared.
     """
     cutoff_period = get_range_cutoff(now, time_range)
+    cutoff_start = period_to_datetime(cutoff_period)
     window_periods = get_window_periods(now, cutoff_period)
 
-    period_column = func.substr(event_table.c.event_time_iso, 1, Period_Len)
+    period_column = hour_period(event_table.c.event_time)
 
     # One query carries everything - per channel, per hour, per outcome
     query = select(
@@ -85,23 +86,23 @@ def get_channel_dashboard(engine:'Engine', now:'datetime', time_range:'str') -> 
         period_column,
         event_table.c.outcome,
         func.count(),
-        func.max(event_table.c.event_time_iso),
+        func.max(event_table.c.event_time),
     )
     query = query.where(event_table.c.source == AuditSource.MLLP_Channel)
     query = query.where(event_table.c.event_type == AuditEvent.Ack_Sent)
-    query = query.where(period_column >= cutoff_period)
+    query = query.where(event_table.c.event_time >= cutoff_start)
     query = query.group_by(event_table.c.object_name, period_column, event_table.c.outcome)
 
     with engine.connect() as connection:
         db_rows = connection.execute(query).fetchall()
 
     # The timeline and the per-channel aggregates are folded out of the same rows
-    timeline_counts:'stranydict' = {}
+    timeline_counts:'dict[tuple[str, str], int]' = {}
     channel_aggregates:'stranydict' = {}
 
     totals = _new_totals()
 
-    for object_name, period, outcome, count, last_event_iso in db_rows:
+    for object_name, period, outcome, count, last_event in db_rows:
 
         # Anything that is not a success is an error on the chart
         if outcome == AuditOutcome.OK:
@@ -122,7 +123,7 @@ def get_channel_dashboard(engine:'Engine', now:'datetime', time_range:'str') -> 
                 'name': object_name,
                 'received': 0,
                 'errored': 0,
-                'last_event_iso': '',
+                'last_event': last_event,
                 'period_counts': {},
             }
 
@@ -132,8 +133,8 @@ def get_channel_dashboard(engine:'Engine', now:'datetime', time_range:'str') -> 
         if series == 'error':
             aggregate['errored'] += count
 
-        if last_event_iso > aggregate['last_event_iso']:
-            aggregate['last_event_iso'] = last_event_iso
+        if last_event > aggregate['last_event']:
+            aggregate['last_event'] = last_event
 
         period_counts = aggregate['period_counts']
         period_counts[period] = period_counts.get(period, 0) + count
@@ -154,6 +155,11 @@ def get_channel_dashboard(engine:'Engine', now:'datetime', time_range:'str') -> 
     for aggregate in sorted(channel_aggregates.values(), key=lambda item: -item['received']):
 
         period_counts = aggregate.pop('period_counts')
+
+        # The page receives the time of the newest event in ISO 8601 form
+        last_event = aggregate.pop('last_event')
+        aggregate['last_event_iso'] = last_event.isoformat()
+
         aggregate['spark'] = [period_counts.get(period, 0) for period in window_periods]
 
         received = aggregate['received']

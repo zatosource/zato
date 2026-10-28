@@ -154,7 +154,7 @@ def _to_sender(exchange:'Exchange', outbound:'OutboundMessage') -> 'InboundResul
     sender = exchange.sender
     package = outbound.package
 
-    out = receive(exchange.agreement, sender.local_keys, package.headers, package.body, sender.store, exchange.clock)
+    out = receive(exchange.agreement, sender.local_keys, package.headers, package.body, sender.receive_log, exchange.clock)
     return out
 
 # ################################################################################################################################

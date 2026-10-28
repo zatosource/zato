@@ -30,12 +30,14 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.typing_ import intlistnone, intnone
 
     # Dummy assignments to satisfy type checkers
     AuditLog = AuditLog
+    datetime = datetime
     Engine = Engine
     intlistnone = intlistnone
     intnone = intnone
@@ -108,7 +110,7 @@ def record_job_start(
     cid:'str',
     job_id:'int',
     current_run:'int',
-    planned_fire_time_iso:'str',
+    planned_fire_time:'datetime',
     delay_ms:'int',
     service:'str',
     correl_id:'str' = '',
@@ -135,7 +137,7 @@ def record_job_start(
         job_name,
         cid=cid,
         correl_id=correl_id,
-        pub_time_iso=planned_fire_time_iso,
+        pub_time=planned_fire_time,
         endpoint=service,
         outcome=SCHEDULER.OUTCOME.RUNNING,
         attrs=attrs,
@@ -146,7 +148,7 @@ def record_job_start(
     if out:
         delay_human = format_duration_ms(delay_ms)
         now = utcnow()
-        append_job_log_entry(out, now.isoformat(), Log_Level_System, f'Job started, delay: {delay_human}')
+        append_job_log_entry(out, now, Log_Level_System, f'Job started, delay: {delay_human}')
 
     return out
 
@@ -168,7 +170,7 @@ def record_job_complete(event_id:'int', *, outcome:'str', duration_ms:'int', err
     # The run closes with its own system entry, mirroring the one it opened with.
     duration_human = format_duration_ms(duration_ms)
     now = utcnow()
-    append_job_log_entry(event_id, now.isoformat(), Log_Level_System, f'Job completed, outcome: {outcome}, duration: {duration_human}')
+    append_job_log_entry(event_id, now, Log_Level_System, f'Job completed, outcome: {outcome}, duration: {duration_human}')
 
     # The collector sees the finished run as a second record of the same event
     _emit_updated_row(engine, event_id)
@@ -213,7 +215,7 @@ def record_job_timeout(job_id:'int', current_run:'int', *, elapsed_ms:'int', err
 
     elapsed_human = format_duration_ms(elapsed_ms)
     now = utcnow()
-    append_job_log_entry(event_id, now.isoformat(), Log_Level_System, f'Job timed out after {elapsed_human}')
+    append_job_log_entry(event_id, now, Log_Level_System, f'Job timed out after {elapsed_human}')
 
     # The collector sees the timed out run as a second record of the same event
     _emit_updated_row(engine, event_id)
@@ -228,23 +230,24 @@ def _emit_updated_row(engine:'Engine', event_id:'int') -> 'None':
 
 # ################################################################################################################################
 
-def append_job_log_entry(event_id:'int', timestamp_iso:'str', level:'str', message:'str') -> 'None':
+def append_job_log_entry(event_id:'int', timestamp:'datetime', level:'str', message:'str') -> 'None':
     """ Stores one log line a service emitted during a run, as an event body row keyed
     by the run's event id.
     """
     engine = get_audit_engine()
 
     kind = _get_log_kind(level)
+    timestamp_iso = timestamp.isoformat()
 
     body = {
         'timestamp_iso': timestamp_iso,
         'level': level,
         'message': message,
     }
+    body_json = dumps(body)
 
     insert_statement = event_body_table.insert()
-    insert_statement = insert_statement.values(
-        event_id=event_id, kind=kind, event_time_iso=timestamp_iso, data=dumps(body))
+    insert_statement = insert_statement.values(event_id=event_id, kind=kind, event_time=timestamp, data=body_json)
 
     with engine.begin() as connection:
         _ = connection.execute(insert_statement)

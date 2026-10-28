@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from base64 import b64decode, b64encode
 from json import dumps, loads
 
 # SQLAlchemy
@@ -21,13 +20,16 @@ from zato.common.audit_log.common import event_body_table, AuditBody
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import anydictnone, anylist, stranydict
+    from zato.common.typing_ import anydictnone, anylist, intnone, stranydict
 
     # Dummy assignments to satisfy type checkers
     anydictnone = anydictnone
     anylist = anylist
+    datetime = datetime
     Engine = Engine
+    intnone = intnone
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -53,34 +55,35 @@ def get_max_attachment_size() -> 'int':
 
 # ################################################################################################################################
 
-def _new_envelope(filename:'str', content_type:'str', size:'int') -> 'stranydict':
+def _new_envelope(filename:'str', content_type:'str', size:'int', max_size:'int') -> 'stranydict':
     """ Builds the metadata of one attachment envelope, saying whether a file of this size keeps its bytes.
     """
-    max_size = get_max_attachment_size()
-
     out:'stranydict' = {
         'filename': filename,
         'content_type': content_type,
         'size': size,
         'is_content_kept': size <= max_size,
-        'content': '',
+        'content': b'',
     }
 
     return out
 
 # ################################################################################################################################
 
-def build_attachment(filename:'str', content_type:'str', content:'bytes') -> 'stranydict':
+def build_attachment(filename:'str', content_type:'str', content:'bytes', *, max_size:'intnone'=None) -> 'stranydict':
     """ Builds one attachment envelope out of a file's name, type and bytes.
     An attachment bigger than the cap keeps its metadata and loses its bytes,
-    saying so through the is_content_kept flag.
+    saying so through the is_content_kept flag. A caller with a cap of its own gives it in max_size.
     """
     size = len(content)
 
-    out = _new_envelope(filename, content_type, size)
+    if max_size is None:
+        max_size = get_max_attachment_size()
+
+    out = _new_envelope(filename, content_type, size, max_size)
 
     if out['is_content_kept']:
-        out['content'] = b64encode(content).decode('ascii')
+        out['content'] = content
 
     return out
 
@@ -89,31 +92,45 @@ def build_attachment(filename:'str', content_type:'str', content:'bytes') -> 'st
 def build_attachment_from_file(filename:'str', content_type:'str', path:'str', size:'int') -> 'stranydict':
     """ Builds one attachment envelope out of a local file - its bytes are read only when they fit under the cap.
     """
-    out = _new_envelope(filename, content_type, size)
+    max_size = get_max_attachment_size()
+    out = _new_envelope(filename, content_type, size, max_size)
 
     if out['is_content_kept']:
 
         with open(path, 'rb') as local_file:
-            content = local_file.read()
-
-        out['content'] = b64encode(content).decode('ascii')
+            out['content'] = local_file.read()
 
     return out
 
 # ################################################################################################################################
 
-def build_attachment_rows(event_id:'int', event_time_iso:'str', attachments:'anylist') -> 'anylist':
-    """ Turns attachment envelopes into event_body rows - one row per attachment,
-    stamped with the event's own time so pruning never needs a join.
+def build_attachment_rows(event_id:'int', event_time:'datetime', attachments:'anylist') -> 'anylist':
+    """ Turns attachment envelopes into event_body rows - one row per attachment, with the metadata in data
+    and the bytes in content, stamped with the event's own time so pruning never needs a join.
     """
     out:'anylist' = []
 
     for attachment in attachments:
+
+        metadata = {
+            'filename': attachment['filename'],
+            'content_type': attachment['content_type'],
+            'size': attachment['size'],
+            'is_content_kept': attachment['is_content_kept'],
+        }
+
+        # An attachment whose bytes were not kept has no content at all
+        if attachment['is_content_kept']:
+            content = attachment['content']
+        else:
+            content = None
+
         out.append({
             'event_id': event_id,
             'kind': AuditBody.Attachment,
-            'event_time_iso': event_time_iso,
-            'data': dumps(attachment),
+            'event_time': event_time,
+            'data': dumps(metadata),
+            'content': content,
         })
 
     return out
@@ -134,14 +151,14 @@ def list_attachments(engine:'Engine', event_id:'int') -> 'anylist':
     with engine.connect() as connection:
         for row in connection.execute(query):
 
-            envelope = loads(row[1])
+            metadata = loads(row[1])
 
             out.append({
                 'id': row[0],
-                'filename': envelope['filename'],
-                'content_type': envelope['content_type'],
-                'size': envelope['size'],
-                'is_content_kept': envelope['is_content_kept'],
+                'filename': metadata['filename'],
+                'content_type': metadata['content_type'],
+                'size': metadata['size'],
+                'is_content_kept': metadata['is_content_kept'],
             })
 
     return out
@@ -149,12 +166,12 @@ def list_attachments(engine:'Engine', event_id:'int') -> 'anylist':
 # ################################################################################################################################
 
 def get_attachment(engine:'Engine', body_row_id:'int') -> 'anydictnone':
-    """ Returns one attachment by its body-row id, its bytes decoded, or None
+    """ Returns one attachment by its body-row id, with its bytes, or None
     when there is no such row or the row is not an attachment. The id of the event
     the attachment belongs to comes along, so access to it can be recorded
     against that event.
     """
-    query = select(event_body_table.c.data, event_body_table.c.event_id)
+    query = select(event_body_table.c.data, event_body_table.c.content, event_body_table.c.event_id)
     query = query.where(event_body_table.c.id == body_row_id)
     query = query.where(event_body_table.c.kind == AuditBody.Attachment)
 
@@ -165,15 +182,21 @@ def get_attachment(engine:'Engine', body_row_id:'int') -> 'anydictnone':
     if not row:
         return None
 
-    envelope = loads(row[0])
+    metadata = loads(row.data)
+
+    # An attachment whose bytes were not kept has no content at all
+    if metadata['is_content_kept']:
+        content = row.content
+    else:
+        content = b''
 
     out:'stranydict' = {
-        'event_id': row[1],
-        'filename': envelope['filename'],
-        'content_type': envelope['content_type'],
-        'size': envelope['size'],
-        'is_content_kept': envelope['is_content_kept'],
-        'content': b64decode(envelope['content']),
+        'event_id': row.event_id,
+        'filename': metadata['filename'],
+        'content_type': metadata['content_type'],
+        'size': metadata['size'],
+        'is_content_kept': metadata['is_content_kept'],
+        'content': content,
     }
 
     return out

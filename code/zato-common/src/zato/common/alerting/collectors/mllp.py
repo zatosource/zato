@@ -69,12 +69,11 @@ def collect_ack_code_facts(
         sources = list(ack_sources)
 
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     for row_source in sources:
 
         conditions = [
-            event_table.c.event_time_iso >= window_start_iso,
+            event_table.c.event_time >= window_start,
             event_table.c.source == row_source,
             event_table.c.event_type == response_event_type_by_source[row_source],
             event_table.c.application_outcome != '',
@@ -142,10 +141,9 @@ def collect_mllp_connection_failure_facts(
             return out
 
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     conditions = [
-        event_table.c.event_time_iso >= window_start_iso,
+        event_table.c.event_time >= window_start,
         event_table.c.source == Connection_Failure_Source,
         event_table.c.event_type == response_event_type_by_source[Connection_Failure_Source],
         event_table.c.outcome == AuditOutcome.Error,

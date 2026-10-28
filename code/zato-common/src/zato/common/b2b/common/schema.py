@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, Index, Integer, LargeBinary, MetaData, String, Table, \
-    UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, Index, Integer, MetaData, String, Table, UniqueConstraint
+
+# Zato
+from zato.common.db_env.common import Binary_Type, UTC_DateTime
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,11 +23,12 @@ if 0:
 # ################################################################################################################################
 
 class OpenKind:
-    """ What an open record stands for - an exchange whose delivery has not ended,
-    or a business transaction that awaits a signal or a response.
+    """ What an open record stands for - an exchange whose delivery has not ended, a business transaction
+    that awaits a signal or a response, or a received message that the application has not confirmed yet.
     """
     Exchange    = 'exchange'
     Transaction = 'transaction'
+    Delivery    = 'delivery'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +42,12 @@ _identity_column_len = 191
 
 _identity_column = String(_identity_column_len)
 
+# The length of an address column, which a unique key spans alone - 700 characters of utf8mb4 stay within
+# the 3072 bytes of a MySQL key.
+_address_column_len = 700
+
+_address_column = String(_address_column_len)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -50,6 +59,7 @@ _sqlite_id_column_type = Integer()
 _id_column_type = BigInteger().with_variant(_sqlite_id_column_type, 'sqlite')
 
 _short_column = String(_short_column_len)
+_time_column = UTC_DateTime()
 
 # ################################################################################################################################
 
@@ -68,11 +78,11 @@ message_table = Table('b2b_message', metadata,
     Column('to_party', _identity_column, nullable=False),
     Column('message_id', _identity_column, nullable=False),
     Column('status', _short_column, nullable=False),
-    Column('received_iso', _short_column, nullable=False),
-    Column('expires_iso', _short_column, nullable=False),
+    Column('received_at', _time_column, nullable=False),
+    Column('expires_at', _time_column, nullable=False),
     Column('response_status_code', Integer, nullable=False),
     Column('response_content_type', _short_column, nullable=False),
-    Column('response_body', LargeBinary, nullable=False),
+    Column('response_body', Binary_Type, nullable=False),
     Column('response_is_synchronous', Boolean, nullable=False),
 
     # The transaction that claimed the row, on the databases whose claim statement returns no rows.
@@ -81,7 +91,7 @@ message_table = Table('b2b_message', metadata,
     UniqueConstraint('protocol', 'from_party', 'to_party', 'message_id', name='uq_b2b_message_identity'),
 
     # Retention deletes on the expiry time, which without this index means reading the whole table on every run.
-    Index('idx_b2b_message_expires', 'expires_iso'),
+    Index('idx_b2b_message_expires', 'expires_at'),
 
     Index('idx_b2b_message_commit', 'commit_id'),
 )
@@ -91,13 +101,37 @@ sequence_table = Table('b2b_sequence', metadata,
     Column('next_sequence', BigInteger, nullable=False),
 )
 
+# A received message of an ordered conversation that waits for the messages before it. Its bytes are those
+# of the audit event that recorded its receipt, which its delivery record points to once it is released.
+# The retry window is how long the sender keeps sending the missing messages, and the time of the report
+# is set on the earliest held message of a gap once the timeout of that gap is recorded.
 held_message_table = Table('b2b_held_message', metadata,
     _new_id_column(),
     Column('conversation', _short_column, nullable=False),
     Column('sequence_number', BigInteger, nullable=False),
-    Column('content_type', _short_column, nullable=False),
-    Column('body', LargeBinary, nullable=False),
+    Column('message_id', _short_column, nullable=False),
+    Column('event_id', BigInteger, nullable=False),
+    Column('held_at', _time_column, nullable=False),
+    Column('retry_window_ms', BigInteger, nullable=False),
+    Column('reported_at', _time_column, nullable=True),
     UniqueConstraint('conversation', 'sequence_number', name='uq_b2b_held_message'),
+    Index('idx_b2b_held_message_time', 'held_at'),
+    Index('idx_b2b_held_message_event', 'event_id'),
+
+    # Retention keeps the events of a held message, which it finds by the MessageId of each event.
+    Index('idx_b2b_held_message_id', 'message_id'),
+)
+
+# The delivery state of each address messages are sent to. An address with no row is active,
+# and the consecutive failures are those of the transport, which a response of any other kind resets.
+address_state_table = Table('b2b_address_state', metadata,
+    _new_id_column(),
+    Column('address', _address_column, nullable=False),
+    Column('state', _short_column, nullable=False),
+    Column('consecutive_failures', Integer, nullable=False),
+    Column('changed_at', _time_column, nullable=False),
+    Column('reason', _short_column, nullable=False),
+    UniqueConstraint('address', name='uq_b2b_address_state'),
 )
 
 # One row for each exchange and each business transaction that has not ended, pointing at the audit event

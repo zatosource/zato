@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from shutil import rmtree
 from tempfile import mkdtemp
 from unittest import TestCase
@@ -44,6 +44,9 @@ if 0:
 
 # The prefix all the audit log database environment variables share
 _env_prefix = 'Zato_Audit_Log_DB_'
+
+# When every scheduler job of the tests was planned to fire
+_planned_fire_time = datetime(2026, 3, 1, 2, 0, 0, tzinfo=timezone.utc)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,7 +201,7 @@ class TestHandOff(_HookTestCase):
             self.assertNotIn(_column('classification'), first)
 
             # .. the record's time is the row's time ..
-            event_time = datetime.fromisoformat(row['event_time_iso'])
+            event_time = row['event_time']
             expected_ns = int(event_time.timestamp()) * 1_000_000_000 + event_time.microsecond * 1000
             self.assertEqual(records[0].time_unix_nano, expected_ns)
 
@@ -372,7 +375,7 @@ class TestUpdatedRows(_HookTestCase):
     def test_scheduler_completion_hands_the_row_off_again(self) -> 'None':
 
         event_id = record_job_start(self.audit_log, 'nightly.cleanup',
-            cid='cid-job-1', job_id=12, current_run=3, planned_fire_time_iso='2026-03-01T02:00:00+00:00',
+            cid='cid-job-1', job_id=12, current_run=3, planned_fire_time=_planned_fire_time,
             delay_ms=15, service='demo.cleanup')
 
         self.assertIsNotNone(event_id)
@@ -410,7 +413,7 @@ class TestUpdatedRows(_HookTestCase):
     def test_scheduler_timeout_hands_the_row_off_again(self) -> 'None':
 
         event_id = record_job_start(self.audit_log, 'nightly.cleanup',
-            cid='cid-job-2', job_id=21, current_run=7, planned_fire_time_iso='2026-03-01T02:00:00+00:00',
+            cid='cid-job-2', job_id=21, current_run=7, planned_fire_time=_planned_fire_time,
             delay_ms=0, service='demo.cleanup')
 
         self.assertIsNotNone(event_id)
@@ -473,7 +476,7 @@ class TestUpdatedRows(_HookTestCase):
         self.export = self.build_export(batch_size=1, flush_interval_ms=20, sources={AuditSource.MCP})
 
         event_id = record_job_start(self.audit_log, 'nightly.cleanup',
-            cid='cid-job-3', job_id=31, current_run=1, planned_fire_time_iso='2026-03-01T02:00:00+00:00',
+            cid='cid-job-3', job_id=31, current_run=1, planned_fire_time=_planned_fire_time,
             delay_ms=0, service='demo.cleanup')
 
         if event_id:

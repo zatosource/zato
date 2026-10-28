@@ -18,7 +18,8 @@ from sqlalchemy import delete, func, select
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, metadata as audit_metadata
 from zato.common.b2b.common.commit_sql import EventWrite
-from zato.common.b2b.common.schema import create_tables, held_message_table, message_table, open_table, sequence_table
+from zato.common.b2b.common.schema import address_state_table, create_tables, held_message_table, message_table, \
+    open_table, sequence_table
 from zato.common.test.b2b_write_path import Server, Source
 
 # ################################################################################################################################
@@ -54,6 +55,7 @@ Child_Program = os.path.join(os.path.dirname(__file__), 'child.py')
 Line_Ready      = 'ready'
 Line_Committing = 'committing'
 Line_Claimed    = 'claimed'
+Line_Delivered  = 'delivered'
 
 # The tables whose statistics the query planners read.
 _planned_tables = ('event', 'event_attr', 'event_body', 'b2b_open')
@@ -84,7 +86,7 @@ def clear_tables(engine:'Engine') -> 'None':
 
     with engine.begin() as connection:
 
-        for table in (open_table, message_table, sequence_table, held_message_table):
+        for table in (open_table, message_table, sequence_table, held_message_table, address_state_table):
             _ = connection.execute(delete(table))
 
         for table in reversed(audit_metadata.sorted_tables):

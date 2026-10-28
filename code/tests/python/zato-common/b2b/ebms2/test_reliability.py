@@ -23,7 +23,7 @@ from zato.common.b2b.ebms2.common import ErrorCode, MessageOrderSemantics, PerMe
 from zato.common.b2b.ebms2.outbound import SendOptions
 from zato.common.b2b.ebms2.reliability import next_sequence_number
 from zato.common.test.b2b_cpa import new_settings
-from zato.common.test.b2b_ebms2 import deliver, new_exchange, new_payload, send, Start_Time
+from zato.common.test.b2b_ebms2 import deliver, new_exchange, new_payload, send, Start_Time, use_store
 from zato.common.test.b2b_write_path import CommitRefused, FailingCommit, new_memory_engine
 
 # ################################################################################################################################
@@ -225,7 +225,7 @@ class TestDuplicateElimination:
 
             engine = create_engine(f'sqlite:///{database.name}')
             writer = GroupCommitWriter(engine)
-            exchange.receiver.store = MessageStore(writer)
+            use_store(exchange.receiver, MessageStore(writer))
 
             outbound = send(exchange)
 
@@ -244,7 +244,7 @@ class TestDuplicateElimination:
         exchange = new_exchange(parties, settings)
 
         writer = GroupCommitWriter(new_memory_engine(), interval_ms=0, is_started=False)
-        exchange.receiver.store = MessageStore(writer)
+        use_store(exchange.receiver, MessageStore(writer))
 
         outbound = send(exchange)
 

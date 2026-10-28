@@ -1308,7 +1308,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             cid=cid,
             job_id=job_id,
             current_run=current_run,
-            planned_fire_time_iso=planned_fire_time_iso,
+            planned_fire_time=planned_fire_dt,
             delay_ms=delay_ms,
             service=ctx['service'],
         )
