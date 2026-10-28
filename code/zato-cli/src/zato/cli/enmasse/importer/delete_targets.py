@@ -22,6 +22,7 @@ from zato.common.api import AMQP_Subtype_Azure_Service_Bus, AMQP_Subtype_Plain, 
 from zato.common.odb.model import ChannelAMQP, GenericConn, GenericObject, HTTPSOAP, IMAP, Job, OutgoingAMQP, OutgoingOdoo, \
     PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase, SMTP, SQLConnectionPool
 from zato.common.odb.query import channel_amqp_list, out_amqp_list
+from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
@@ -335,7 +336,8 @@ def _resolve_http_soap(section:'str', key:'str', session:'SASession') -> 'delete
     out:'delete_target_list' = []
 
     if row is not None:
-        out.append(_new_target(section, key, row.id, Service_HTTP_SOAP, HTTPSOAP))
+        row_id = cast_('int', row.id)
+        out.append(_new_target(section, key, row_id, Service_HTTP_SOAP, HTTPSOAP))
 
     return out
 
@@ -353,7 +355,8 @@ def _resolve_generic(section:'str', key:'str', session:'SASession') -> 'delete_t
     out:'delete_target_list' = []
 
     if row is not None:
-        out.append(_new_target(section, key, row.id, Service_Generic, GenericConn))
+        row_id = cast_('int', row.id)
+        out.append(_new_target(section, key, row_id, Service_Generic, GenericConn))
 
     return out
 
@@ -372,7 +375,8 @@ def _resolve_generic_object(section:'str', key:'str', session:'SASession') -> 'd
     out:'delete_target_list' = []
 
     if row is not None:
-        out.append(_new_target(section, key, row.id, service, GenericObject))
+        row_id = cast_('int', row.id)
+        out.append(_new_target(section, key, row_id, service, GenericObject))
 
     return out
 
@@ -385,7 +389,8 @@ def _resolve_model(section:'str', key:'str', session:'SASession') -> 'delete_tar
     out:'delete_target_list' = []
 
     if row is not None:
-        out.append(_new_target(section, key, row.id, service, model))
+        row_id = cast_('int', row.id)
+        out.append(_new_target(section, key, row_id, service, model))
 
     return out
 
@@ -414,7 +419,10 @@ def _resolve_security(section:'str', key:'str', session:'SASession') -> 'delete_
     out:'delete_target_list' = []
 
     if row is not None:
-        out.append(_new_target(section, key, row.id, security_services[row.sec_type], SecurityBase))
+        row_id = cast_('int', row.id)
+        sec_type = cast_('str', row.sec_type)
+        service = security_services[sec_type]
+        out.append(_new_target(section, key, row_id, service, SecurityBase))
 
     return out
 
@@ -440,7 +448,8 @@ def _resolve_security_keyed(section:'str', key:'str', session:'SASession') -> 'd
     rows = session.query(model).filter_by(sec_base_id=security.id).all()
 
     for row in rows:
-        out.append(_new_target(section, key, row.id, service, model))
+        row_id = cast_('int', row.id)
+        out.append(_new_target(section, key, row_id, service, model))
 
     return out
 
@@ -488,14 +497,17 @@ def _log_security_dependents(target:'DeleteTarget', session:'SASession') -> 'Non
 
     # Every HTTPSOAP row that uses the definition goes with it ..
     for row in session.query(HTTPSOAP).filter_by(security_id=target.id).all():
-        _log_dependent(target, f'{row.connection} {row.transport}', row.name)
+        name = cast_('str', row.name)
+        _log_dependent(target, f'{row.connection} {row.transport}', name)
 
     # .. and so do its pub/sub permissions and subscriptions.
     for row in session.query(PubSubPermission).filter_by(sec_base_id=target.id).all():
-        _log_dependent(target, 'pub/sub permission', row.pattern)
+        pattern = cast_('str', row.pattern)
+        _log_dependent(target, 'pub/sub permission', pattern)
 
     for row in session.query(PubSubSubscription).filter_by(sec_base_id=target.id).all():
-        _log_dependent(target, 'pub/sub subscription', row.sub_key)
+        sub_key = cast_('str', row.sub_key)
+        _log_dependent(target, 'pub/sub subscription', sub_key)
 
 # ################################################################################################################################
 
@@ -509,7 +521,8 @@ def _log_group_dependents(target:'DeleteTarget', session:'SASession') -> 'None':
         security_groups:'anylist' = opaque.get('security_groups') or []
 
         if target.id in security_groups:
-            _log_dependent(target, 'channel', channel.name)
+            channel_name = cast_('str', channel.name)
+            _log_dependent(target, 'channel', channel_name)
 
 # ################################################################################################################################
 
@@ -530,7 +543,8 @@ def _log_http_soap_dependents(target:'DeleteTarget', session:'SASession') -> 'No
 
     # A subscription pushing to this endpoint goes with it
     for row in session.query(PubSubSubscription).filter_by(rest_push_endpoint_id=target.id).all():
-        _log_dependent(target, 'pub/sub subscription', row.sub_key)
+        sub_key = cast_('str', row.sub_key)
+        _log_dependent(target, 'pub/sub subscription', sub_key)
 
 # ################################################################################################################################
 

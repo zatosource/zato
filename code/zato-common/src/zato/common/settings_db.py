@@ -18,7 +18,7 @@ from logging import getLogger
 
 # SQLAlchemy
 from sqlalchemy import Column, create_engine, Integer, Sequence, String, Text, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 # ################################################################################################################################
 

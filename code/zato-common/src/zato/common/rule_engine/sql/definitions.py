@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.common.rule_engine.changes import Change_Definition_Archived, Change_Definition_Created, \
     Change_Definition_Renamed
-from zato.common.typing_ import cast_
+from zato.common.typing_ import anytuple, cast_
 
 # Local
 from .constants import Definition_Type_Ruleset, Definition_Types, Event_Type_Definition_Archived, \
@@ -109,7 +109,7 @@ class DefinitionStore:
                 statement = insert(rule_definition_table)
                 result = session.execute(statement, definition_values)
                 result = cast_(CursorResult, result)
-                primary_key = result.inserted_primary_key
+                primary_key = cast_(anytuple, result.inserted_primary_key)
                 definition_id = primary_key[0]
 
                 # .. preserve the first immutable full snapshot ..

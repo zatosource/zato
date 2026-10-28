@@ -105,8 +105,8 @@ def build_ssl_context_from_values(values:'stranydict') -> 'SSLContext':
 # ################################################################################################################################
 
 def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stranydict':
-    """ Returns driver-specific connection arguments, including SSL ones if SSL is enabled,
-    all built out of a dict of connection values.
+    """ Returns driver-specific connection arguments, including SSL ones if SSL is enabled
+    and an explicit opt-out of TLS for PostgreSQL if it is not, all built out of a dict of connection values.
     """
 
     # Our response to produce
@@ -116,8 +116,11 @@ def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stran
     if db_type == Type_SQLite:
         return out
 
-    # .. it is off unless requested explicitly ..
+    # .. it is off unless requested explicitly, which pg8000 needs to be told about,
+    # .. because without a context it attempts an unverified TLS connection first ..
     if not values['ssl']:
+        if db_type == Type_PostgreSQL:
+            out['ssl_context'] = False
         return out
 
     # .. each driver receives the same SSL context under its own keyword ..
@@ -127,9 +130,9 @@ def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stran
     if db_type == Type_MySQL:
         out['ssl'] = ssl_context
 
-    # .. so does pg8000 ..
+    # .. pg8000 under its own keyword ..
     elif db_type == Type_PostgreSQL:
-        out['ssl'] = ssl_context
+        out['ssl_context'] = ssl_context
 
     # .. and Oracle DB additionally needs the TCPS protocol.
     else:

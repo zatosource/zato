@@ -82,7 +82,7 @@ import requests
 import yaml
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_snowflake, engine_def_sqlite, \
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, \
      engine_display_name, MISC, Secret_Shadow, TRACE1, zato_no_op_marker
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
@@ -1272,10 +1272,6 @@ def get_engine_url(args:'any_') -> 'str':
     # Pick the URL template for the engine ..
     if is_sqlite:
         template = engine_def_sqlite
-
-    # .. Snowflake keeps the account identifier in the host field and has no port segment ..
-    elif attrs['engine'] == 'snowflake':
-        template = engine_def_snowflake
 
     # .. anything else uses the standard host:port template.
     else:

@@ -18,6 +18,7 @@ from typing_extensions import TypeAlias
 # Local
 from zato.common.rule_engine.sql.schema import metadata, rule_decision_table, rule_definition_table, rule_event_table, \
     rule_version_table
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +38,7 @@ def _dialects() -> 'dialect_list':
     postgresql_dialect = postgresql.dialect()
 
     # .. and return them in the stable test order.
-    out = [sqlite_dialect, mysql_dialect, postgresql_dialect]
+    out:'dialect_list' = [sqlite_dialect, mysql_dialect, postgresql_dialect]
     return out
 
 # ################################################################################################################################
@@ -110,7 +111,8 @@ def test_every_table_and_index_compiles_for_required_dialects() -> 'None':
                 create_index = CreateIndex(index)
                 compiled_index = create_index.compile(dialect=dialect)
                 index_sql = str(compiled_index)
-                assert index.name in index_sql
+                index_name = cast_('str', index.name)
+                assert index_name in index_sql
 
 # ################################################################################################################################
 # ################################################################################################################################

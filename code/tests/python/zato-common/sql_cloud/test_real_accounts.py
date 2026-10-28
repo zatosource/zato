@@ -34,68 +34,7 @@ logger = logging.getLogger(__name__)
 
 # Real-account tests only run when the environment provides the credentials -
 # regular test runs never enter them.
-_snowflake_account = os.environ.get('Zato_Test_Snowflake_Account', '')
 _redshift_host = os.environ.get('Zato_Test_Redshift_Host', '')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.mark.skipif(not _snowflake_account, reason='Zato_Test_Snowflake_Account is not set')
-class TestSnowflakeRealAccount:
-
-    def _get_pool(self) -> 'SQLConnectionPool':
-
-        extra_parts = []
-
-        if warehouse := os.environ.get('Zato_Test_Snowflake_Warehouse'):
-            extra_parts.append(f'warehouse={warehouse}')
-
-        if role := os.environ.get('Zato_Test_Snowflake_Role'):
-            extra_parts.append(f'role={role}')
-
-        if schema := os.environ.get('Zato_Test_Snowflake_Schema'):
-            extra_parts.append(f'schema={schema}')
-
-        config:'strdict' = {
-            'engine': 'snowflake',
-            'username': os.environ['Zato_Test_Snowflake_User'],
-            'password': os.environ['Zato_Test_Snowflake_Password'],
-            'host': _snowflake_account,
-            'port': '',
-            'db_name': os.environ['Zato_Test_Snowflake_Database'],
-            'pool_size': 1,
-            'extra': ';'.join(extra_parts),
-        }
-
-        out = SQLConnectionPool('test.snowflake.real', config, config)
-        return out
-
-# ################################################################################################################################
-
-    def test_ping(self) -> 'None':
-        """ The real Snowflake account answers a ping.
-        """
-        pool = self._get_pool()
-
-        response_time = cast_('any_', pool.ping({'snowflake': {'ping_query': 'SELECT 1'}}))
-        assert response_time > 0
-
-        _ = cast_('any_', pool.engine).dispose()
-
-# ################################################################################################################################
-
-    def test_select(self) -> 'None':
-        """ The real Snowflake account answers a query.
-        """
-        pool = self._get_pool()
-
-        with cast_('any_', pool.engine).connect() as connection:
-            result = connection.execute(text('select current_version()'))
-            version = result.scalar()
-
-        assert version
-
-        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 # ################################################################################################################################

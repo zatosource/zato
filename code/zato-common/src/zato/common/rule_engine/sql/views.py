@@ -11,7 +11,7 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.engine import CursorResult
 
 # Zato
-from zato.common.typing_ import cast_
+from zato.common.typing_ import anytuple, cast_
 
 # Local
 from .constants import Default_Recent_Limit
@@ -115,7 +115,7 @@ class ViewStore:
                     statement = insert(rule_view_table)
                     result = session.execute(statement, values)
                     result = cast_(CursorResult, result)
-                    primary_key = result.inserted_primary_key
+                    primary_key = cast_(anytuple, result.inserted_primary_key)
                     view_id = primary_key[0]
 
                     out = RuleViewRecord(

@@ -1038,7 +1038,7 @@ test-llm: ## Every outgoing LLM test - the offline simulator, browser lifecycle,
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-sql: ## Every SQL test - Snowflake and Redshift against local protocol simulators, offline and through a live Zato server.
+test-sql: ## Every SQL test - Redshift against a local protocol simulator, offline and through a live Zato server.
 	$(Zato_Log_Reset)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/sql_cloud/ \

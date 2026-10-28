@@ -25,7 +25,7 @@ from zato.common.audit_log.resubmit import is_event_type_resubmittable
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, intnone, stranydict
+    from zato.common.typing_ import any_, anylist, intnone, stranydict
     any_ = any_
     Engine = Engine
     intnone = intnone
@@ -215,7 +215,7 @@ def is_outcome_row() -> 'any_':
     """
     response_sources = list(response_event_type_by_source)
 
-    alternatives = [event_table.c.source.not_in(response_sources)]
+    alternatives:'anylist' = [event_table.c.source.not_in(response_sources)]
 
     for response_source, response_event_type in response_event_type_by_source.items():
         alternatives.append(and_(
@@ -251,7 +251,7 @@ def is_streak_row() -> 'any_':
     """
     streak_sources = list(streak_event_type_by_source)
 
-    alternatives = [event_table.c.source.not_in(streak_sources)]
+    alternatives:'anylist' = [event_table.c.source.not_in(streak_sources)]
 
     for streak_source, streak_event_type in streak_event_type_by_source.items():
         alternatives.append(and_(

@@ -46,7 +46,6 @@ SQL_TYPE_MAP = {
     'oracle': 'oracle',
     'postgresql': 'postgresql+pg8000',
     'redshift': 'redshift+redshift_connector',
-    'snowflake': 'snowflake',
 }
 
 # How many connections an SQL pool holds unless its definition says otherwise.

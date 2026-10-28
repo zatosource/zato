@@ -77,23 +77,6 @@ class TestSQLCloudExecute:
 
 # ################################################################################################################################
 
-    def test_execute_snowflake(self, zato_server:'anydict') -> 'None':
-        """ A query through the Snowflake connection returns the simulator's canned rows.
-        """
-        client = self._get_client(zato_server)
-        result = client.invoke('test.sql.cloud.execute', {
-            'conn_name': 'test.sql.snowflake',
-            'query': _flights_query,
-        })
-
-        assert len(result) == 3
-
-        first_row = result[0]
-        assert first_row['id'] == 1
-        assert first_row['flight_number'] == 'ZA-101'
-
-# ################################################################################################################################
-
     def test_execute_redshift(self, zato_server:'anydict') -> 'None':
         """ A query through the Redshift connection returns the simulator's canned rows.
         """
@@ -108,30 +91,6 @@ class TestSQLCloudExecute:
         first_row = result[0]
         assert first_row['id'] == 1
         assert first_row['flight_number'] == 'ZA-101'
-
-# ################################################################################################################################
-
-    def test_snowflake_received_wire_requests(self, zato_server:'anydict') -> 'None':
-        """ The Snowflake simulator saw the login and the query on the wire.
-        """
-        snowflake_server = zato_server['snowflake_server']
-
-        login_requests = []
-        query_requests = []
-
-        for request in snowflake_server.recorded_requests:
-            if request['path'] == '/session/v1/login-request':
-                login_requests.append(request)
-            elif request['path'] == '/queries/v1/query-request':
-                query_requests.append(request)
-
-        assert len(login_requests) >= 1
-
-        query_sql = []
-        for request in query_requests:
-            query_sql.append(request['body']['sqlText'])
-
-        assert _flights_query in query_sql
 
 # ################################################################################################################################
 
@@ -161,18 +120,6 @@ class TestSQLCloudPing:
 
     def _get_client(self, zato_server:'anydict') -> '_AdminClient':
         return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
-
-# ################################################################################################################################
-
-    def test_ping_snowflake(self, zato_server:'anydict') -> 'None':
-        """ A ping through the Snowflake connection completes and reports its response time.
-        """
-        client = self._get_client(zato_server)
-        result = client.invoke('test.sql.cloud.ping', {
-            'conn_name': 'test.sql.snowflake',
-        })
-
-        assert result['response_time'] > 0
 
 # ################################################################################################################################
 

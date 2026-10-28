@@ -150,7 +150,7 @@ def connect_native(database:'PerfDatabase') -> 'any_':
             host=details['host'],
             port=port,
             database=details['name'],
-            ssl=ssl_context,
+            ssl_context=ssl_context,
         )
 
     return connection

@@ -639,16 +639,6 @@ sql:
       - connect_timeout=10
     pool_size: 10
 
-  - name: enmasse.sql.3
-    type: snowflake
-    host: myorg-myaccount
-    port: 443
-    db_name: MYDB_01
-    username: enmasse.3
-    password: Zato_Enmasse_Env.SQL_Password_3
-    extra:
-      - warehouse=COMPUTE_WH;role=ANALYST;schema=PUBLIC
-
   - name: enmasse.sql.4
     type: redshift
     host: examplecluster.abc123xyz789.us-west-2.redshift.amazonaws.com

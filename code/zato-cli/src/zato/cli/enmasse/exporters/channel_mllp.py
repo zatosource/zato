@@ -18,6 +18,7 @@ from zato.common.hl7.mllp.fields import Channel_Destinations_Key, Channel_Fields
     Channel_Security_Name_Key
 from zato.common.odb.model import SecurityBase, to_json
 from zato.common.odb.query.generic import connection_list
+from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
@@ -60,7 +61,7 @@ class ChannelMLLPExporter:
             logger.info('No security definition with id %s, exporting the channel without one', security_id)
             return ''
 
-        out = sec_def.name
+        out = cast_('str', sec_def.name)
         return out
 
 # ################################################################################################################################

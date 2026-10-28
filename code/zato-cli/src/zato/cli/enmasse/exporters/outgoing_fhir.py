@@ -17,6 +17,7 @@ from zato.common.api import GENERIC, HTTP_SOAP
 from zato.common.hl7.fhir.fields import Outgoing_Fields, Outgoing_Security_Id_Key, Outgoing_Security_Name_Key
 from zato.common.odb.model import SecurityBase, to_json
 from zato.common.odb.query.generic import connection_list
+from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
@@ -61,7 +62,7 @@ class OutgoingFHIRExporter:
             logger.info('No security definition with id %s, exporting the connection without one', security_id)
             return ''
 
-        out = sec_def.name
+        out = cast_('str', sec_def.name)
         return out
 
 # ################################################################################################################################

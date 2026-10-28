@@ -11,7 +11,6 @@ import copy
 from sqlalchemy import inspect
 from sqlalchemy.ext.associationproxy import _AssociationList
 
-from sqlalchemy.orm.dynamic import AppenderMixin
 from sqlalchemy.orm.query import Query
 
 from zato.common.ext.dictalchemy import constants
@@ -157,7 +156,7 @@ def asdict(model, exclude=None, exclude_underscore=None, exclude_pk=None,
                     except ValueError:
                         rel_data[child_key] = copy.copy(child)
 
-        elif isinstance(rel, (AppenderMixin, Query)):
+        elif isinstance(rel, Query):
             rel_data = []
 
             for child in rel.all():

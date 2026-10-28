@@ -52,10 +52,10 @@ class ChannelExporter:
 
         # The session belongs to the caller, which goes on to list the channels with it,
         # so this method must not close it.
-        query = select([
+        query = select(
             GenericObject.id,
             GenericObject.name
-        ]).where(and_(
+        ).where(and_(
             GenericObject.type_ == Groups.Type.Group_Parent,
             GenericObject.subtype == Groups.Type.API_Clients,
         ))

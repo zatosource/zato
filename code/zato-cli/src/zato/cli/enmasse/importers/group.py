@@ -54,10 +54,10 @@ class GroupImporter:
         # Use a single query to get all groups
         with closing(session) as session:
             # Build a query for all groups - explicitly select columns
-            query = select([
+            query = select(
                 GenericObject.id,
                 GenericObject.name
-                ]).where(and_(
+                ).where(and_(
                     GenericObject.type_ == Groups.Type.Group_Parent,
                     GenericObject.subtype == Groups.Type.API_Clients,
                 ))
@@ -67,10 +67,9 @@ class GroupImporter:
 
             # Map the results
             for group in groups:
-                # SQLAlchemy result row needs to be accessed like a dict
-                name = group['name']
+                name = group.name
                 out[name] = {
-                    'id': group['id'],
+                    'id': group.id,
                     'name': name,
                     'members': []
                 }
@@ -81,11 +80,11 @@ class GroupImporter:
                 group_ids = [group_data['id'] for group_data in out.values()]
 
                 # Build a query for all members of these groups - explicitly select columns
-                member_query = select([
+                member_query = select(
                     GenericObject.id,
                     GenericObject.name,
                     GenericObject.parent_object_id
-                    ]).where(and_(
+                    ).where(and_(
                         GenericObject.type_ == Groups.Type.Group_Member,
                         GenericObject.subtype == Groups.Type.API_Clients,
                         GenericObject.parent_object_id.in_(group_ids),
@@ -96,13 +95,13 @@ class GroupImporter:
 
                 # Process members and add them to their respective groups
                 for member in members:
-                    parent_id = member['parent_object_id']
+                    parent_id = member.parent_object_id
 
                     # Find which group this member belongs to
                     for group_data in out.values():
                         if group_data['id'] == parent_id:
                             # Extract member name from composite name (member_id-group_id)
-                            composite_name = member['name']
+                            composite_name = member.name
                             parts = composite_name.split('-')
 
                             # Member names must be in the expected format
@@ -251,7 +250,7 @@ class GroupImporter:
             _ = session.execute(insert)
 
             # Get the new group ID - need to query the database since create_many doesn't return it
-            query = select([GenericObject.id]).where(
+            query = select(GenericObject.id).where(
                 and_(
                     GenericObject.name == group_name,
                     GenericObject.type_ == Groups.Type.Group_Parent,
@@ -262,7 +261,7 @@ class GroupImporter:
             if not group_id_result:
                 raise ValueError(f'Could not find newly created group: {group_name}')
 
-            group_id = group_id_result['id']
+            group_id = group_id_result.id
 
             # Add members if there are any
             self._add_members(wrapper, group_name, group_id, members, session)

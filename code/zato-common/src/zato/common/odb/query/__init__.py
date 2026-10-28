@@ -56,7 +56,7 @@ _gen_attr = GENERIC.ATTR_NAME
 # ################################################################################################################################
 
 def count(session, q):
-    _q = q.statement.with_only_columns([func.count()]).order_by(None)
+    _q = q.statement.with_only_columns(func.count(), maintain_column_froms=True).order_by(None)
     return session.execute(_q).scalar()
 
 # ################################################################################################################################
@@ -112,7 +112,7 @@ class _SearchWrapper:
                     q = q.filter(combine_criteria_using(*filters))
 
         # Total number of results
-        total_q = q.statement.with_only_columns([func.count()]).order_by(None)
+        total_q = q.statement.with_only_columns(func.count(), maintain_column_froms=True).order_by(None)
         self.total = q.session.execute(total_q).scalar()
 
         # Pagination
@@ -508,11 +508,11 @@ def _http_soap(session):
         HTTPSOAP.security_id,
         HTTPSOAP.connection,
         HTTPSOAP.content_type,
-        case([(HTTPSOAP.ping_method != None, HTTPSOAP.ping_method)], else_=MISC.DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
-        case([(HTTPSOAP.pool_size != None, HTTPSOAP.pool_size)], else_=MISC.DEFAULT_HTTP_POOL_SIZE).label('pool_size'), # noqa: E711
-        case([(HTTPSOAP.merge_url_params_req != None, HTTPSOAP.merge_url_params_req)], else_=True).label('merge_url_params_req'), # noqa: E711
-        case([(HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri)], else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'), # noqa: E711
-        case([(HTTPSOAP.params_pri != None, HTTPSOAP.params_pri)], else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'), # noqa: E711
+        case((HTTPSOAP.ping_method != None, HTTPSOAP.ping_method), else_=MISC.DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
+        case((HTTPSOAP.pool_size != None, HTTPSOAP.pool_size), else_=MISC.DEFAULT_HTTP_POOL_SIZE).label('pool_size'), # noqa: E711
+        case((HTTPSOAP.merge_url_params_req != None, HTTPSOAP.merge_url_params_req), else_=True).label('merge_url_params_req'), # noqa: E711
+        case((HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri), else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'), # noqa: E711
+        case((HTTPSOAP.params_pri != None, HTTPSOAP.params_pri), else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'), # noqa: E711
         HTTPSOAP.timeout,
         HTTPSOAP.opaque1,
         SecurityBase.sec_type,

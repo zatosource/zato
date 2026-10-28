@@ -166,12 +166,13 @@ def _create_mssql_database(port:'int', password:'str', db_name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _get_ssl_connect_args(certificates:'CertificatePaths') -> 'stranydict':
-    """ Builds the SSL context that readiness checks use with TLS-required databases.
+def _get_ssl_connect_args(certificates:'CertificatePaths', ssl_keyword:'str') -> 'stranydict':
+    """ Builds the SSL context that readiness checks use with TLS-required databases,
+    under the keyword the database driver accepts it with.
     """
     ssl_context = ssl.create_default_context(cafile=certificates.ca_cert)
 
-    out:'stranydict' = {'ssl': ssl_context}
+    out:'stranydict' = {ssl_keyword: ssl_context}
     return out
 
 # ################################################################################################################################
@@ -259,7 +260,7 @@ def start_mysql(
     engine_url = f'mysql+pymysql://{username}:{password}@localhost:{port}/{db_name}'
 
     if needs_ssl:
-        connect_args = _get_ssl_connect_args(ssl_certificates)
+        connect_args = _get_ssl_connect_args(ssl_certificates, 'ssl')
     else:
         connect_args = {}
 
@@ -324,7 +325,7 @@ def start_postgresql(
     engine_url = f'postgresql+pg8000://{username}:{password}@localhost:{port}/{db_name}'
 
     if needs_ssl:
-        connect_args = _get_ssl_connect_args(ssl_certificates)
+        connect_args = _get_ssl_connect_args(ssl_certificates, 'ssl_context')
     else:
         connect_args = {}
 

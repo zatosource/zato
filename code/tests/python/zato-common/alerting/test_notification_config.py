@@ -21,6 +21,7 @@ from zato.common.alerting.notification_config import notification_keys, parse_ex
     set_notification_config
 from zato.common.api import Alerting
 from zato.common.odb.model import Base, IntervalBasedJob, Job, Service
+from zato.common.typing_ import cast_
 from zato.common.util.scheduler import ensure_alerting_job_exists
 
 # ################################################################################################################################
@@ -200,7 +201,9 @@ class TestSetNotificationConfig:
         odb_session.commit()
 
         # An extra with nothing left is stored as empty text, not as an empty object
-        assert _get_sweep_job(odb_session).extra == ''
+        sweep_job = _get_sweep_job(odb_session)
+        extra = cast_('str', sweep_job.extra)
+        assert extra == ''
 
 # ################################################################################################################################
 

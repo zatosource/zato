@@ -12,7 +12,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common.typing_ import cast_
+from zato.common.typing_ import anytuple, cast_
 
 # Local
 from .constants import Default_Allow_Self_Approval, Default_Approval_Gate_Enabled, Event_Type_Approval_Gate_Off, \
@@ -190,7 +190,7 @@ class ApprovalStore:
                 statement = insert(rule_approval_table)
                 result = session.execute(statement, values)
                 result = cast_(CursorResult, result)
-                primary_key = result.inserted_primary_key
+                primary_key = cast_(anytuple, result.inserted_primary_key)
                 approval_id = primary_key[0]
 
                 # .. append its history event in the same commit ..
@@ -390,7 +390,7 @@ class ApprovalStore:
                     statement = insert(rule_approval_config_table)
                     result = session.execute(statement, insert_values)
                     result = cast_(CursorResult, result)
-                    primary_key = result.inserted_primary_key
+                    primary_key = cast_(anytuple, result.inserted_primary_key)
                     config_id = primary_key[0]
 
                 else:

@@ -12,7 +12,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common.typing_ import cast_
+from zato.common.typing_ import anytuple, cast_
 
 # Local
 from .constants import Chat_Kinds, Delivery_Status_Delivered, Delivery_Status_Error
@@ -187,7 +187,7 @@ class NotificationStore:
                 statement = insert(rule_notify_destination_table)
                 result = session.execute(statement, values)
                 result = cast_(CursorResult, result)
-                primary_key = result.inserted_primary_key
+                primary_key = cast_(anytuple, result.inserted_primary_key)
                 destination_id = primary_key[0]
 
                 out = RuleNotifyDestinationRecord(

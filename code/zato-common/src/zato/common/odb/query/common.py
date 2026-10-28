@@ -39,11 +39,13 @@ def get_object_list_by_columns(
     """ Returns all ODB objects from a given table.
     """
 
-    q = select(columns)
+    q = select(*columns)
     if order_by is not None:
         q = q.order_by(order_by)
 
-    result:'anylist' = session.execute(q).fetchall()
+    rows = session.execute(q).fetchall()
+
+    result = list(rows)
     return result
 
 # ################################################################################################################################
@@ -74,13 +76,15 @@ def get_object_list_by_where_impl(
     where_list = where_list if where_list is not None else []
     where_list = where_list if isinstance(where_list, list) else [where_list]
 
-    q = select([
+    q = select(
         table.c.id,
         table.c.name,
-        ]).\
+        ).\
         where(and_(*where_list))
 
-    result:'anylist' = session.execute(q).fetchall()
+    rows = session.execute(q).fetchall()
+
+    result = list(rows)
     return result
 
 # ################################################################################################################################
