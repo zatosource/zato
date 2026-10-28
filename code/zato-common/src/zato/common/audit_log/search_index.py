@@ -8,14 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The native text indexes behind the free-text search of the audit log. SQLite keeps FTS5 tables
 # with the trigram tokenizer, maintained by triggers in the transaction that writes the event.
-# PostgreSQL keeps pg_trgm GIN indexes, which serve LIKE patterns directly. MySQL keeps FULLTEXT
+# PostgreSQL keeps pg_trgm GIN indexes, one over the searched event columns joined into a single text
+# and one over attribute values, which serve LIKE patterns directly. MySQL keeps FULLTEXT
 # indexes with the ngram parser, read through MATCH ... AGAINST. A search narrows the rows through
 # the index and confirms each one with LIKE, so every database returns what LIKE alone would return.
 
 from __future__ import annotations
 
 # SQLAlchemy
-from sqlalchemy import and_, column, DDL, event, select, table
+from sqlalchemy import and_, column, DDL, event, literal_column, select, table
 from sqlalchemy.dialects.mysql import match as mysql_match
 
 # Zato
@@ -46,6 +47,12 @@ SQLite_Min_Term_Length = 3
 
 # The shortest term the ngram parser of MySQL indexes, which is its default ngram_token_size
 MySQL_Min_Term_Length = 2
+
+# The trigram index of PostgreSQL over the searched event columns
+_postgresql_event_index = 'idx_event_search'
+
+# What separates two columns in the text the trigram index of PostgreSQL covers
+_postgresql_column_separator = "' '"
 
 # The FULLTEXT indexes of MySQL
 _mysql_event_index = 'idx_event_search'
@@ -98,12 +105,42 @@ def _sqlite_statements(table_name:'str', search_table:'str', columns:'strtuple')
 
 # ################################################################################################################################
 
-def _postgresql_statements(table_name:'str', columns:'strtuple') -> 'strlist':
-    """ One trigram GIN index per searched column of one table.
+def _postgresql_search_text(prefix:'str') -> 'str':
+    """ The searched event columns joined into one text, with each column name preceded by the given prefix.
+    The index is created over this expression and a search matches the same expression, so that PostgreSQL
+    finds the index for it.
+    """
+    parts:'strlist' = []
+
+    for name in search_columns:
+        parts.append(f"coalesce({prefix}{name}, '')")
+
+    separator = f' || {_postgresql_column_separator} || '
+    joined = separator.join(parts)
+
+    out = f'({joined})'
+    return out
+
+# ################################################################################################################################
+
+def _postgresql_event_statements(table_name:'str') -> 'strlist':
+    """ One trigram GIN index over the searched columns of the event table. One index instead of one per column,
+    because each GIN index adds its entries and its pending list to the log of every insert.
+    """
+    search_text = _postgresql_search_text('')
+    create_index = f'CREATE INDEX {_postgresql_event_index} ON {table_name} USING gin ({search_text} gin_trgm_ops)'
+
+    out = [create_index]
+    return out
+
+# ################################################################################################################################
+
+def _postgresql_attr_statements(table_name:'str') -> 'strlist':
+    """ One trigram GIN index over the attribute values.
     """
     out:'strlist' = []
 
-    for name in columns:
+    for name in _attr_search_columns:
         out.append(f'CREATE INDEX idx_{table_name}_search_{name} ON {table_name} USING gin ({name} gin_trgm_ops)')
 
     return out
@@ -149,8 +186,8 @@ def register_search_indexes(event_table:'Table', event_attr_table:'Table') -> 'N
 
     # .. PostgreSQL, which needs its trigram extension before any of the indexes ..
     extension = ['CREATE EXTENSION IF NOT EXISTS pg_trgm']
-    event_postgresql = _postgresql_statements(event_table_name, search_columns)
-    attr_postgresql = _postgresql_statements(attr_table_name, _attr_search_columns)
+    event_postgresql = _postgresql_event_statements(event_table_name)
+    attr_postgresql = _postgresql_attr_statements(attr_table_name)
 
     _listen(event_table, 'before_create', extension, Type_PostgreSQL)
     _listen(event_table, 'after_create', event_postgresql, Type_PostgreSQL)
@@ -232,9 +269,23 @@ def _mysql_narrowed(columns:'any_', query:'str', condition:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def narrow_event_search(dialect_name:'str', event_table:'Table', query:'str', condition:'any_') -> 'any_':
+def _postgresql_narrowed(event_table:'Table', pattern:'str', condition:'any_') -> 'any_':
+    """ The condition, narrowed down to the rows whose joined searched columns the trigram index finds the pattern in.
+    The joined text can match across two columns, which is why the condition confirms each row.
+    """
+    prefix = f'{event_table.name}.'
+    search_text = _postgresql_search_text(prefix)
+    search_column = literal_column(search_text)
+
+    is_indexed_match = search_column.like(pattern, escape='\\')
+
+    out = and_(is_indexed_match, condition)
+    return out
+
+# ################################################################################################################################
+
+def narrow_event_search(dialect_name:'str', event_table:'Table', query:'str', pattern:'str', condition:'any_') -> 'any_':
     """ The LIKE condition over the searched event columns, served by the native index of the database.
-    PostgreSQL needs no narrowing, because its trigram indexes serve the LIKE patterns themselves.
     """
     if dialect_name == Type_SQLite:
         out = _sqlite_narrowed(Event_Search_Table, query, condition, event_table.c.id)
@@ -246,7 +297,7 @@ def narrow_event_search(dialect_name:'str', event_table:'Table', query:'str', co
         out = _mysql_narrowed(columns, query, condition)
 
     else:
-        out = condition
+        out = _postgresql_narrowed(event_table, pattern, condition)
 
     return out
 

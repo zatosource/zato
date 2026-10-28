@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, case, delete, insert, select, update
+from sqlalchemy import case, delete, insert, select, tuple_, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -39,6 +39,9 @@ if 0:
     StoredMessage = StoredMessage
     stranydict = stranydict
     strlist = strlist
+
+identity_status_dict = dict[MessageIdentity, str]
+status_keys_dict     = dict[str, list[tuple[str, str, str, str]]]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -332,33 +335,37 @@ def _existing_identities(connection:'Connection', identities:'list[MessageIdenti
 # ################################################################################################################################
 
 def write_statuses(connection:'Connection', writes:'anylist') -> 'anylist':
-    """ Updates the statuses of claimed messages in one statement and returns the result of each write in their order,
-    an exception for a message that has no record.
+    """ Updates the statuses of claimed messages, one statement for all the messages that end up with the same status,
+    and returns the result of each write in their order, an exception for a message that has no record.
     """
-    conditions = and_(
-        message_table.c.protocol == bindparam('b_protocol'),
-        message_table.c.from_party == bindparam('b_from_party'),
-        message_table.c.to_party == bindparam('b_to_party'),
-        message_table.c.message_id == bindparam('b_message_id'),
-    )
-    statement = update(message_table).where(conditions).values(status=bindparam('b_status'))
-
-    rows:'anylist' = []
+    # The last write of a message decides its status ..
+    status_of:'identity_status_dict' = {}
 
     for write in writes:
-        identity = write.identity
-        rows.append({
-            'b_protocol': identity.protocol,
-            'b_from_party': identity.from_party,
-            'b_to_party': identity.to_party,
-            'b_message_id': identity.message_id,
-            'b_status': write.status,
-        })
+        status_of[write.identity] = write.status
 
-    result = connection.execute(statement, rows)
+    # .. the messages that end up with the same status are updated together ..
+    keys_of:'status_keys_dict' = {}
 
-    # Every write updated one row, unless a message has no record, which only a select tells apart.
-    if result.rowcount == len(writes):
+    for identity, status in status_of.items():
+        keys = keys_of.setdefault(status, [])
+        keys.append((identity.protocol, identity.from_party, identity.to_party, identity.message_id))
+
+    message_key = tuple_(message_table.c.protocol, message_table.c.from_party, message_table.c.to_party,
+        message_table.c.message_id)
+
+    updated = 0
+
+    for status, keys in keys_of.items():
+        for start in range(0, len(keys), _in_list_size):
+            chunk = keys[start:start + _in_list_size]
+            is_updated = message_key.in_(chunk)
+            statement = update(message_table).where(is_updated).values(status=status)
+            result = connection.execute(statement)
+            updated += result.rowcount
+
+    # .. and every message has one updated row, unless a message has no record, which only a select tells apart.
+    if updated == len(status_of):
         existing = None
     else:
         identities:'list[MessageIdentity]' = []
@@ -483,12 +490,7 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
             })
 
         for kind in write.closes:
-            close_rows.append({
-                'b_kind': kind,
-                'b_source': values['source'],
-                'b_server_name': values['server_name'],
-                'b_message_id': values['msg_id'],
-            })
+            close_rows.append((kind, values['source'], values['server_name'], values['msg_id']))
 
         for kind in write.opens:
             open_rows.append({
@@ -509,15 +511,12 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
         _ = connection.execute(insert(event_link_table), link_rows)
 
     # A record is closed before one is opened, so that a message sent anew under the same identifier has one record.
-    if close_rows:
-        conditions = and_(
-            open_table.c.kind == bindparam('b_kind'),
-            open_table.c.source == bindparam('b_source'),
-            open_table.c.server_name == bindparam('b_server_name'),
-            open_table.c.message_id == bindparam('b_message_id'),
-        )
-        statement = delete(open_table).where(conditions)
-        _ = connection.execute(statement, close_rows)
+    open_key = tuple_(open_table.c.kind, open_table.c.source, open_table.c.server_name, open_table.c.message_id)
+
+    for start in range(0, len(close_rows), _in_list_size):
+        chunk = close_rows[start:start + _in_list_size]
+        is_closed = open_key.in_(chunk)
+        _ = connection.execute(delete(open_table).where(is_closed))
 
     if open_rows:
         _ = connection.execute(insert(open_table), open_rows)

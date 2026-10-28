@@ -145,7 +145,7 @@ def build_search_conditions(
 
         # The native text index of the database finds the candidate rows and LIKE confirms them.
         any_column_like = or_(*like_parts)
-        any_column_like = narrow_event_search(dialect_name, event_table, query, any_column_like)
+        any_column_like = narrow_event_search(dialect_name, event_table, query, pattern, any_column_like)
 
         matching_parts:'anylist' = [any_column_like]
 

@@ -23,8 +23,9 @@ from sqlalchemy import event as sa_event
 from sqlalchemy.pool import QueuePool
 
 # Zato
-from zato.common.db_env.common import get_env_values, Type_SQLite
-from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, set_sqlite_pragmas
+from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
+    set_postgresql_no_delay, set_sqlite_pragmas
 from zato.common.defaults import default_env_base_dir
 
 # ################################################################################################################################
@@ -178,9 +179,17 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
 
     out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
 
-    # .. SQLite needs its pragmas applied to every new connection in the pool ..
+    # .. SQLite needs its pragmas applied to every new connection in the pool,
+    # .. and PostgreSQL needs each socket to send its segments without delay ..
     if db_type == Type_SQLite:
         sa_event.listen(out, 'connect', set_sqlite_pragmas)
+
+    elif db_type == Type_PostgreSQL:
+        sa_event.listen(out, 'connect', set_postgresql_no_delay)
+
+        # .. pg8000 sends each row of a multi-row insert as a statement of its own, one round trip per row,
+        # .. which SQLAlchemy replaces with multi-row statements only for the dialects that ask for it ..
+        out.dialect.use_insertmanyvalues_wo_returning = True
 
     # .. make sure the schema exists - this is idempotent ..
     config.metadata.create_all(out)

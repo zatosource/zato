@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # SSL contexts, driver-specific connection arguments and SQLAlchemy URLs.
 
 # stdlib
+import socket
 import ssl
 
 # SQLAlchemy
@@ -64,6 +65,16 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     _ = cursor.execute('pragma synchronous=normal')
     _ = cursor.execute(f'pragma busy_timeout={_sqlite_busy_timeout_ms}')
     cursor.close()
+
+# ################################################################################################################################
+
+def set_postgresql_no_delay(dbapi_connection:'any_', connection_record:'any_') -> 'None':
+    """ Turns off the delay of small TCP segments on the socket of a pg8000 connection. The driver writes a statement
+    through a buffered file, so a parameter larger than its buffer leaves a final partial segment that the kernel
+    holds until the server acknowledges the previous one, and the server delays that acknowledgment by up to 40 ms,
+    which adds that much to each row of a multi-row insert of message bodies.
+    """
+    dbapi_connection._usock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
 # ################################################################################################################################
 

@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from dataclasses import dataclass
 from logging import getLogger
+from queue import Queue
 from threading import Condition, Event, Lock, Thread
 from time import monotonic
 from uuid import uuid4
@@ -21,6 +22,7 @@ from zato.common.b2b.common.commit_retention import delete_expired_messages, del
     RetentionResult
 from zato.common.b2b.common.commit_sql import write_claims, write_events, write_statuses, WriteKind
 from zato.common.b2b.common.schema import create_tables
+from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.engine import call_database
 from zato.common.util.api import utcnow
 
@@ -49,6 +51,8 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 ticket_list = list['CommitTicket']
+queue_list  = list[Queue]
+thread_list = list[Thread]
 
 # The environment variables that configure the group commit.
 Env_Commit_Interval_Ms = 'Zato_B2B_Commit_Interval_Ms'
@@ -60,6 +64,9 @@ Default_Commit_Max_Rows    = 1000
 
 # How often retention runs between two commits.
 Retention_Interval_Seconds = 60
+
+# How many groups a pipelined writer holds at a time - one being committed and one executing its statements.
+_lane_count = 2
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,6 +143,17 @@ class CommitTicket:
 
         out = self.result
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GroupProgress:
+    """ One group of writes of a pipelined writer, and whether its statements are executed.
+    """
+
+    def __init__(self, tickets:'ticket_list') -> 'None':
+        self.tickets = tickets
+        self.statements_done = Event()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,6 +261,10 @@ class GroupCommitWriter:
         self.interval_ms = interval_ms
         self.max_rows = max_rows
 
+        # A database with concurrent writers executes the statements of the next group while the previous one
+        # is being committed. SQLite has one writer, so its groups are committed one after another.
+        self.is_pipelined = engine.dialect.name != Type_SQLite
+
         # The monotonic clock the interval is measured with.
         self.clock = clock
 
@@ -263,7 +285,20 @@ class GroupCommitWriter:
 
         self.is_started = is_started
 
+        # The queues and the threads of the lanes of a pipelined writer, each committing its groups one after another.
+        self._lanes:'queue_list' = []
+        self._lane_threads:'thread_list' = []
+
         if is_started:
+
+            if self.is_pipelined:
+                for idx in range(_lane_count):
+                    lane = Queue()
+                    lane_thread = Thread(target=self._run_lane, args=(lane,), name=f'b2b-commit-lane-{idx}', daemon=True)
+                    lane_thread.start()
+                    self._lanes.append(lane)
+                    self._lane_threads.append(lane_thread)
+
             thread = Thread(target=self._run, name='b2b-commit-group', daemon=True)
             thread.start()
 
@@ -433,6 +468,58 @@ class GroupCommitWriter:
 
 # ################################################################################################################################
 
+    def _execute_pipelined(self, commit_id:'str', progress:'GroupProgress') -> 'anylist':
+        """ Writes one transaction while holding the database lock of this writer, and commits it without the lock,
+        so that the next group executes its statements during the commit. Returns the event writes it inserted.
+        """
+        with self.engine.connect() as connection:
+
+            # A transaction whose statements fail is rolled back when its connection is closed ..
+            with self._db_lock:
+                transaction = connection.begin()
+                out = write_transaction(connection, progress.tickets, commit_id)
+
+            # .. and once they are executed, the next group may execute its own.
+            progress.statements_done.set()
+            transaction.commit()
+
+        return out
+
+# ################################################################################################################################
+
+    def _commit_pipelined(self, progress:'GroupProgress') -> 'None':
+        """ Commits one group of a pipelined writer and releases the caller of each write in it, with the error
+        of the commit if it failed.
+        """
+        commit_id = uuid4().hex
+        tickets = progress.tickets
+
+        try:
+            event_writes = self._execute_pipelined(commit_id, progress)
+        except Exception as e:
+            logger.warning('B2B commit of %d writes failed: %s', len(tickets), e)
+            for ticket in tickets:
+                ticket.error = e
+        else:
+            self._export(event_writes)
+
+        # A group whose statements failed does not hold up the next one ..
+        progress.statements_done.set()
+
+        # .. and its callers are released.
+        for ticket in tickets:
+            ticket.release()
+
+# ################################################################################################################################
+
+    def _run_lane(self, lane:'Queue') -> 'None':
+        """ Commits the groups of one lane in the order they were handed to it, until it receives None.
+        """
+        while progress := lane.get():
+            self._commit_pipelined(progress)
+
+# ################################################################################################################################
+
     def call(self, func:'callable_', *args:'any_') -> 'any_':
         """ Runs a database call outside the group commit, such as a read, serialized with the commits of this writer
         and in the thread pool of the gevent hub if the engine needs it.
@@ -530,8 +617,12 @@ class GroupCommitWriter:
 # ################################################################################################################################
 
     def _run(self) -> 'None':
-        """ Commits the pending writes whenever they are due, until the writer is stopped.
+        """ Commits the pending writes whenever they are due, until the writer is stopped. A pipelined writer hands
+        its groups to its lanes in turn, each group once the statements of the previous one are executed.
         """
+        # The lane the next group goes to.
+        lane_idx = 0
+
         while True:
 
             with self._condition:
@@ -545,9 +636,25 @@ class GroupCommitWriter:
                 tickets = self._take()
 
             if tickets:
-                self._commit(tickets)
+                if self.is_pipelined:
+                    progress = GroupProgress(tickets)
+                    self._lanes[lane_idx].put(progress)
+                    lane_idx = (lane_idx + 1) % _lane_count
+
+                    # The next group is taken once the statements of this one are executed.
+                    _ = progress.statements_done.wait()
+                else:
+                    self._commit(tickets)
 
             if is_stopped:
+
+                # A stopped writer ends once its lanes committed every group they hold.
+                for lane in self._lanes:
+                    lane.put(None)
+
+                for lane_thread in self._lane_threads:
+                    lane_thread.join()
+
                 break
 
             self._run_retention_if_due()

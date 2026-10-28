@@ -98,7 +98,7 @@ _indexed_term = 'ORDER-2026'
 _index_plan_markers = {
     Type_SQLite: 'VIRTUAL TABLE INDEX',
     Type_MySQL: 'fulltext',
-    Type_PostgreSQL: 'idx_event_search_',
+    Type_PostgreSQL: 'idx_event_search',
 }
 
 # ################################################################################################################################
