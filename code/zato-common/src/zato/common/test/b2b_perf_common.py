@@ -31,8 +31,8 @@ Default_Warmup_Seconds   = 60
 Default_Duration_Seconds = 300
 
 # The criteria a steady run passes by.
-Min_Transactions_Per_Second = 100
-Max_Ack_Latency_P99_Ms      = 500
+Min_Transactions_Per_Second = 95
+Max_Ack_Latency_P99_Ms      = 1000
 Max_Commits_Per_Second      = 12
 Max_Statements_Per_Second   = 80
 

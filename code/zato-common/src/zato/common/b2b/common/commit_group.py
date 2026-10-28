@@ -18,9 +18,8 @@ from uuid import uuid4
 # Zato
 from zato.common.audit_log.api import get_audit_engine, metadata as audit_metadata
 from zato.common.audit_log.export.api import get_audit_export
-from zato.common.b2b.common.commit_retention import delete_expired_messages, delete_old_events, delete_old_held, \
-    RetentionResult
-from zato.common.b2b.common.commit_sql import write_claims, write_events, write_statuses, WriteKind
+from zato.common.b2b.common.commit_retention import delete_retained, RetentionResult
+from zato.common.b2b.common.commit_sql import write_transaction
 from zato.common.b2b.common.schema import create_tables
 from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.engine import call_database
@@ -31,16 +30,16 @@ from zato.common.util.api import utcnow
 
 if 0:
     from datetime import datetime
-    from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, floatnone
+    from sqlalchemy.engine import Engine
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, floatnone, strlist
     any_ = any_
     anylist = anylist
     anytuple = anytuple
     callable_ = callable_
-    Connection = Connection
     datetime = datetime
     Engine = Engine
     floatnone = floatnone
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,8 +61,9 @@ Env_Commit_Max_Rows    = 'Zato_B2B_Commit_Max_Rows'
 Default_Commit_Interval_Ms = 100
 Default_Commit_Max_Rows    = 1000
 
-# How often retention runs between two commits.
+# How often retention runs between two commits, and how many rows of each kind one batch of it deletes.
 Retention_Interval_Seconds = 60
+Retention_Batch_Rows       = 250
 
 # How many groups a pipelined writer holds at a time - one being committed and one executing its statements.
 _lane_count = 2
@@ -158,78 +158,6 @@ class GroupProgress:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def write_transaction(connection:'Connection', tickets:'ticket_list', commit_id:'str') -> 'anylist':
-    """ Writes the pending writes of one transaction, one statement for each table, in the order that the references
-    between the tables require, assigns its result to each ticket, and returns the event writes it inserted.
-    """
-    claims:'ticket_list' = []
-    statuses:'ticket_list' = []
-    events:'ticket_list' = []
-
-    for ticket in tickets:
-        kind = ticket.write.kind
-
-        if kind == WriteKind.Claim:
-            claims.append(ticket)
-        elif kind == WriteKind.Status:
-            statuses.append(ticket)
-        else:
-            events.append(ticket)
-
-    # The events that claims and status updates carry are inserted after the events of their own tickets ..
-    carried:'anylist' = []
-
-    if claims:
-        results = write_claims(connection, _writes_of(claims), commit_id)
-        _assign_results(claims, results)
-
-        # .. a claim carries its event only into the transaction in which it recorded the message ..
-        for ticket in claims:
-            if ticket.write.event and ticket.result:
-                carried.append(ticket.write.event)
-
-    if statuses:
-        results = write_statuses(connection, _writes_of(statuses))
-        _assign_results(statuses, results)
-
-        # .. and a status update only if the message has a record.
-        for ticket in statuses:
-            if ticket.write.event and not ticket.error:
-                carried.append(ticket.write.event)
-
-    out = _writes_of(events)
-    out.extend(carried)
-
-    if out:
-        results = write_events(connection, out, commit_id)
-        _assign_results(events, results)
-
-    return out
-
-# ################################################################################################################################
-
-def _writes_of(tickets:'ticket_list') -> 'anylist':
-    out:'anylist' = []
-
-    for ticket in tickets:
-        out.append(ticket.write)
-
-    return out
-
-# ################################################################################################################################
-
-def _assign_results(tickets:'ticket_list', results:'anylist') -> 'None':
-    for ticket, result in zip(tickets, results):
-
-        # A write that the transaction refused on its own carries its exception as the result.
-        if isinstance(result, Exception):
-            ticket.error = result
-        else:
-            ticket.result = result
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class GroupCommitWriter:
     """ Commits the writes of the B2B protocols - duplicate claims, status updates and audit events - in one transaction
     per interval, or sooner once the pending rows reach a limit. Each caller waits until the transaction that holds
@@ -261,6 +189,9 @@ class GroupCommitWriter:
         self.interval_ms = interval_ms
         self.max_rows = max_rows
 
+        # One batch of retention deletes no more rows of each kind than one transaction of the writer holds.
+        self.retention_batch_rows = min(max_rows, Retention_Batch_Rows)
+
         # A database with concurrent writers executes the statements of the next group while the previous one
         # is being committed. SQLite has one writer, so its groups are committed one after another.
         self.is_pipelined = engine.dialect.name != Type_SQLite
@@ -282,6 +213,9 @@ class GroupCommitWriter:
 
         self._last_retention_at = self.clock()
         self._is_stopped = False
+
+        # Whether the last batch of retention reached the row limit, so that the next batch is due without the interval.
+        self._has_retention_backlog = False
 
         self.is_started = is_started
 
@@ -563,34 +497,22 @@ class GroupCommitWriter:
 
 # ################################################################################################################################
 
-    def _run_retention_transaction(self, now:'datetime', sources:'list[str]') -> 'RetentionResult':
-        """ Deletes in one transaction what retention deletes, each kind of row up to the row limit.
-        """
-        out = RetentionResult()
-        out.held = 0
-        out.events = 0
-
+    def _execute_retention(self, now:'datetime', sources:'strlist') -> 'RetentionResult':
         with self.engine.begin() as connection:
-
-            out.messages = delete_expired_messages(connection, now, self.max_rows)
-
-            # A held message goes before the events of its receipt, which are kept while it is held.
-            for source in sources:
-                out.held += delete_old_held(connection, source, now, self.max_rows)
-                out.events += delete_old_events(connection, source, now, self.max_rows)
+            out = delete_retained(connection, now, sources, self.retention_batch_rows)
 
         return out
 
 # ################################################################################################################################
 
     def run_retention(self, now:'datetime') -> 'RetentionResult':
-        """ Runs one retention, in a transaction of its own.
+        """ Runs one batch of retention, in a transaction of its own.
         """
         with self._condition:
             sources = sorted(self._event_sources)
 
         with self._db_lock:
-            out = self._call_database(self._run_retention_transaction, now, sources)
+            out = self._call_database(self._execute_retention, now, sources)
 
         self._last_retention_at = self.clock()
 
@@ -603,16 +525,43 @@ class GroupCommitWriter:
 # ################################################################################################################################
 
     def _run_retention_if_due(self) -> 'None':
-        """ Runs retention between two commits once its interval elapsed.
+        """ Runs one batch of retention between two commits once its interval elapsed, and the next batch after
+        the next commit for as long as each batch reaches the row limit.
         """
-        since_last = self.clock() - self._last_retention_at
+        if self._has_retention_backlog:
+            is_due = True
+        else:
+            since_last = self.clock() - self._last_retention_at
+            is_due = since_last >= Retention_Interval_Seconds
 
-        if since_last >= Retention_Interval_Seconds:
+        if is_due:
             now = utcnow()
             try:
-                _ = self.run_retention(now)
+                result = self.run_retention(now)
             except Exception:
+                self._has_retention_backlog = False
                 logger.exception('B2B retention failed')
+            else:
+                self._has_retention_backlog = result.is_at_limit(self.retention_batch_rows)
+
+# ################################################################################################################################
+
+    def _has_work(self) -> 'bool':
+        """ Says whether the commit thread is to stop waiting - the writer is stopped, the pending writes are due,
+        or there are none and a batch of retention is due after the previous one. The condition is held by the caller.
+        """
+        if self._is_stopped:
+            out = True
+
+        # Pending writes are committed first, and the next batch of retention follows their commit ..
+        elif self._pending:
+            out = self._is_due()
+
+        # .. while without them, the batches follow one another.
+        else:
+            out = self._has_retention_backlog
+
+        return out
 
 # ################################################################################################################################
 
@@ -627,7 +576,7 @@ class GroupCommitWriter:
 
             with self._condition:
 
-                while not self._is_stopped and not self._is_due():
+                while not self._has_work():
                     timeout = self._time_to_due()
                     _ = self._condition.wait(timeout)
 

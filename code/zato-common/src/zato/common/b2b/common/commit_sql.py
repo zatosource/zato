@@ -29,10 +29,12 @@ from zato.common.b2b.common.schema import message_table, open_table
 if 0:
     from sqlalchemy.engine import Connection, Dialect
     from zato.common.audit_log.buffer import PendingEvent
+    from zato.common.b2b.common.commit_group import CommitTicket
     from zato.common.b2b.common.records import StoredMessage
     from zato.common.typing_ import any_, anylist, stranydict, strlist
     any_ = any_
     anylist = anylist
+    CommitTicket = CommitTicket
     Connection = Connection
     Dialect = Dialect
     PendingEvent = PendingEvent
@@ -42,6 +44,7 @@ if 0:
 
 identity_status_dict = dict[MessageIdentity, str]
 status_keys_dict     = dict[str, list[tuple[str, str, str, str]]]
+ticket_list          = list['CommitTicket']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -522,6 +525,77 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
         _ = connection.execute(insert(open_table), open_rows)
 
     return event_ids
+
+# ################################################################################################################################
+
+def write_transaction(connection:'Connection', tickets:'ticket_list', commit_id:'str') -> 'anylist':
+    """ Writes the pending writes of one transaction, one statement for each table, in the order that the references
+    between the tables require, assigns its result to each ticket, and returns the event writes it inserted.
+    """
+    claims:'ticket_list' = []
+    statuses:'ticket_list' = []
+    events:'ticket_list' = []
+
+    for ticket in tickets:
+        kind = ticket.write.kind
+
+        if kind == WriteKind.Claim:
+            claims.append(ticket)
+        elif kind == WriteKind.Status:
+            statuses.append(ticket)
+        else:
+            events.append(ticket)
+
+    # The events that claims and status updates carry are inserted after the events of their own tickets ..
+    carried:'anylist' = []
+
+    if claims:
+        results = write_claims(connection, _writes_of(claims), commit_id)
+        _assign_results(claims, results)
+
+        # .. a claim carries its event only into the transaction in which it recorded the message ..
+        for ticket in claims:
+            if ticket.write.event and ticket.result:
+                carried.append(ticket.write.event)
+
+    if statuses:
+        results = write_statuses(connection, _writes_of(statuses))
+        _assign_results(statuses, results)
+
+        # .. and a status update only if the message has a record.
+        for ticket in statuses:
+            if ticket.write.event and not ticket.error:
+                carried.append(ticket.write.event)
+
+    out = _writes_of(events)
+    out.extend(carried)
+
+    if out:
+        results = write_events(connection, out, commit_id)
+        _assign_results(events, results)
+
+    return out
+
+# ################################################################################################################################
+
+def _writes_of(tickets:'ticket_list') -> 'anylist':
+    out:'anylist' = []
+
+    for ticket in tickets:
+        out.append(ticket.write)
+
+    return out
+
+# ################################################################################################################################
+
+def _assign_results(tickets:'ticket_list', results:'anylist') -> 'None':
+    for ticket, result in zip(tickets, results):
+
+        # A write that the transaction refused on its own carries its exception as the result.
+        if isinstance(result, Exception):
+            ticket.error = result
+        else:
+            ticket.result = result
 
 # ################################################################################################################################
 # ################################################################################################################################

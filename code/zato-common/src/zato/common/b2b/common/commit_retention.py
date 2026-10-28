@@ -23,11 +23,12 @@ from zato.common.b2b.common.schema import held_message_table, message_table, ope
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Connection
-    from zato.common.typing_ import any_, intlist
+    from zato.common.typing_ import any_, intlist, strlist
     any_ = any_
     Connection = Connection
     datetime = datetime
     intlist = intlist
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,6 +67,17 @@ class RetentionResult:
     messages: int
     held:     int
     events:   int
+
+    def is_at_limit(self, limit:'int') -> 'bool':
+        """ Says whether one kind of row reached the row limit, so that more rows of it may be due for deletion.
+        """
+        out = False
+
+        for count in (self.messages, self.held, self.events):
+            if count >= limit:
+                out = True
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -173,6 +185,24 @@ def delete_old_events(connection:'Connection', source:'str', now:'datetime', lim
     _delete_by_ids(connection, event_table.c.id, ids)
 
     out = len(ids)
+    return out
+
+# ################################################################################################################################
+
+def delete_retained(connection:'Connection', now:'datetime', sources:'strlist', limit:'int') -> 'RetentionResult':
+    """ Deletes what retention deletes, each kind of row up to the row limit, and returns how many rows it deleted.
+    """
+    out = RetentionResult()
+    out.held = 0
+    out.events = 0
+
+    out.messages = delete_expired_messages(connection, now, limit)
+
+    # A held message goes before the events of its receipt, which are kept while it is held.
+    for source in sources:
+        out.held += delete_old_held(connection, source, now, limit)
+        out.events += delete_old_events(connection, source, now, limit)
+
     return out
 
 # ################################################################################################################################
