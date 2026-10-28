@@ -34,8 +34,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many values one IN list holds.
-In_List_Size = 500
+# How many values one IN list holds. The driver parses the rows of one list without yielding to other greenlets,
+# so a list stays small enough for its rows to be parsed well within 100 ms.
+In_List_Size = 250
 
 # How many open records one page of a recovery reads.
 Recovery_Page_Size = 1000

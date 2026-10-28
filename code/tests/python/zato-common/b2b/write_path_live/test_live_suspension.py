@@ -15,6 +15,9 @@ from threading import Thread
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+# pytest
+import pytest
+
 # Zato
 from certificates import generate_certificates
 from live_db import start_child
@@ -25,7 +28,7 @@ from zato.common.b2b.common.clock import SystemClock
 from zato.common.b2b.common.commit_group import GroupCommitWriter
 from zato.common.b2b.ebms2.common import MSHService
 from zato.common.b2b.ebms2.inbound import receive
-from zato.common.b2b.ebms2.outbound import accept_response
+from zato.common.b2b.ebms2.outbound import accept_response, accept_signal
 from zato.common.b2b.ebms2.probe import build_ping, is_pong
 from zato.common.test.b2b_cpa import new_settings
 from zato.common.test.b2b_ebms2 import new_exchange, resolve, Start_Time
@@ -35,18 +38,22 @@ from zato.common.test.b2b_write_path import Server
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
+    from _pytest.tmpdir import TempPathFactory
+    from certificates import CertificatePaths
     from live_db import LiveDB
+    from zato.common.b2b.ebms2.inbound_common import AsyncSignal
     from zato.common.b2b.ebms2.outbound import OutboundMessage
+    AsyncSignal = AsyncSignal
     from zato.common.test.b2b_ebms2 import Exchange
     from zato.common.test.b2b_pki import TestParties
     from zato.common.typing_ import strlist, strstrdict
     Exchange = Exchange
     LiveDB = LiveDB
+    CertificatePaths = CertificatePaths
     OutboundMessage = OutboundMessage
-    Path = Path
     strlist = strlist
     strstrdict = strstrdict
+    TempPathFactory = TempPathFactory
     TestParties = TestParties
 
 # ################################################################################################################################
@@ -73,6 +80,9 @@ class _Partner:
         self.exchange = exchange
         self.is_available = False
 
+        # The asynchronous signal that answers the latest message received, if any.
+        self.async_signal:'AsyncSignal | None' = None
+
         partner = self
 
         class _Handler(BaseHTTPRequestHandler):
@@ -95,6 +105,7 @@ class _Partner:
                     partner.exchange.clock)
 
                 response = result.response
+                partner.async_signal = result.async_signal
 
                 self.send_response(response.status_code)
                 self.send_header('Content-Type', response.content_type)
@@ -126,8 +137,9 @@ class _Partner:
 # ################################################################################################################################
 
 def _post_ping(partner:'_Partner', ping:'OutboundMessage', ca_cert:'str') -> 'None':
-    """ Sends a Ping to the partner and passes the response back to it.
+    """ Sends a Ping to the partner and passes back what it answered - the HTTP response, then the asynchronous signal if any.
     """
+    partner.async_signal = None
     context = ssl.create_default_context(cafile=ca_cert)
 
     package = ping.package
@@ -146,6 +158,10 @@ def _post_ping(partner:'_Partner', ping:'OutboundMessage', ca_cert:'str') -> 'No
 
     _ = accept_response(ping, status_code, headers, body, partner.exchange.clock)
 
+    if async_signal := partner.async_signal:
+        package = async_signal.package
+        _ = accept_signal(ping, package.headers, package.body, partner.exchange.clock)
+
 # ################################################################################################################################
 
 def _event_types(database:'LiveDB') -> 'strlist':
@@ -162,12 +178,24 @@ def _event_types(database:'LiveDB') -> 'strlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.fixture(scope='module')
+def certificates(tmp_path_factory:'TempPathFactory') -> 'CertificatePaths':
+    """ The certificates of the listener of the partner, generated once for all databases.
+    """
+    directory = tmp_path_factory.mktemp('certificates')
+
+    out = generate_certificates(str(directory))
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestSuspension:
     """ An address that answers with 503 is suspended, stays suspended across a restart, and is resumed by a probe.
     """
 
-    def test_suspend_and_resume(self, database:'LiveDB', parties:'TestParties', tmp_path:'Path') -> 'None':
-        paths = generate_certificates(str(tmp_path))
+    def test_suspend_and_resume(self, database:'LiveDB', parties:'TestParties', certificates:'CertificatePaths') -> 'None':
+        paths = certificates
 
         exchange = new_exchange(parties, new_settings(parties, Start_Time))
 
