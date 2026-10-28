@@ -71,7 +71,7 @@ def _identifiers(partner:'Partner') -> 'anylist':
 
     rows = [
         [mono(partner.duns), mono(DUNS_Type), mono(Partner_Role)],
-        [mono(partner.host), mono('urn:lorem-ipsum:partyid-type:host'), mono(Partner_Role)],
+        [mono(partner.host), mono('urn:pinecrest-telecom:partyid-type:host'), mono(Partner_Role)],
     ]
 
     out = [table('', ['PartyId', 'Type', 'Role'], rows, is_editable=True)]

@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.b2b.portal.config import Local_Host, Local_Party_ID, Local_Role
 from zato.common.b2b.portal.sample.common import envelope_timestamp
-from zato.common.b2b.portal.sample.parties import DUNS_Type, Partner_By_Key, Partner_Role
+from zato.common.b2b.portal.sample.parties import Complaints_Product, DUNS_Type, Partner_By_Key, Partner_Role, Service_By_Name
 from zato.common.b2b.portal.sample.traffic import Kind
 
 # ################################################################################################################################
@@ -21,7 +21,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_business_namespace = 'urn:lorem-ipsum:b2b:v5'
+_business_namespace = 'urn:pinecrest-telecom:b2b:v2'
 _signals_namespace  = 'http://www.ebxml.org/bpss/signals'
 
 # HTTP and MIME end each line with a carriage return and a line feed
@@ -29,14 +29,15 @@ _crlf = '\r\n'
 
 # What each business response and notification reports back, by its service
 _outcomes = {
-    'bcRequestOrderv5':                ('OrderStatus', 'Order Pending'),
-    'bcRequestOrderAmendmentv5':       ('OrderStatus', 'Order Amend Pending'),
-    'bcRequestOrderCancellationv5':    ('OrderStatus', 'Order Cancel Pending'),
-    'bcRequestAppointmentv5':          ('AppointmentStatus', 'Appointment Accepted'),
-    'bcRequestTroubleReportv4':        ('TroubleReportStatus', 'Trouble Report Acknowledged'),
-    'bcQueryOrderDetailsv5':           ('OrderStatus', 'Order Committed'),
-    'bcNotifyOfOrderStatusv5':         ('OrderStatus', 'Order Committed'),
-    'bcNotifyOfTroubleReportStatusv4': ('TroubleReportStatus', 'Engineer Dispatched'),
+    'SubmitOrderv2':             ('OrderStatus', 'Order Pending'),
+    'ChangeOrderv2':             ('OrderStatus', 'Order Change Pending'),
+    'CancelOrderv2':             ('OrderStatus', 'Order Cancellation Pending'),
+    'ScheduleInstallationv2':    ('InstallationStatus', 'Installation Scheduled'),
+    'QueryOrderDetailsv2':       ('OrderStatus', 'Order Confirmed'),
+    'NotifyOfOrderStatusv2':     ('OrderStatus', 'Order Confirmed'),
+    'FileComplaintv2':           ('ComplaintStatus', 'Complaint Received'),
+    'EscalateComplaintv2':       ('ComplaintStatus', 'Complaint Escalated'),
+    'NotifyOfComplaintStatusv2': ('ComplaintStatus', 'Technician Assigned'),
 }
 
 # ################################################################################################################################
@@ -169,13 +170,29 @@ def _business(message:'anydict') -> 'str':
     ]
 
     if message['kind'] == Kind.Document:
-        lines.append('  <b2b:Product>FTTP 330/50</b2b:Product>')
-        lines.append('  <b2b:InstallationAddress>')
-        lines.append('    <b2b:Line>42 Harbor Street</b2b:Line>')
-        lines.append('    <b2b:City>Portland</b2b:City>')
-        lines.append('    <b2b:PostalCode>97201</b2b:PostalCode>')
-        lines.append('  </b2b:InstallationAddress>')
-        lines.append('  <b2b:RequiredDate>' + stamp[:10] + '</b2b:RequiredDate>')
+
+        # A complaint describes the problem, an order what is being bought and where it is installed
+        if Service_By_Name[message['service']].product == Complaints_Product:
+            lines.append('  <b2b:Category>Intermittent connectivity</b2b:Category>')
+            lines.append('  <b2b:Severity>Major</b2b:Severity>')
+            lines.append('  <b2b:ServiceAddress>')
+            lines.append('    <b2b:Line>42 Harbor Street</b2b:Line>')
+            lines.append('    <b2b:City>Portland</b2b:City>')
+            lines.append('    <b2b:State>OR</b2b:State>')
+            lines.append('    <b2b:PostalCode>97201</b2b:PostalCode>')
+            lines.append('  </b2b:ServiceAddress>')
+            lines.append('  <b2b:Reported>' + stamp[:10] + '</b2b:Reported>')
+
+        else:
+            lines.append('  <b2b:Product>Business Fiber 500</b2b:Product>')
+            lines.append('  <b2b:InstallationAddress>')
+            lines.append('    <b2b:Line>42 Harbor Street</b2b:Line>')
+            lines.append('    <b2b:City>Portland</b2b:City>')
+            lines.append('    <b2b:State>OR</b2b:State>')
+            lines.append('    <b2b:PostalCode>97201</b2b:PostalCode>')
+            lines.append('  </b2b:InstallationAddress>')
+            lines.append('  <b2b:RequiredDate>' + stamp[:10] + '</b2b:RequiredDate>')
+
     else:
         element, status = _outcomes[message['service']]
         lines.append(f'  <b2b:{element}>{status}</b2b:{element}>')

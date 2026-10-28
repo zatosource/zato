@@ -25,13 +25,13 @@ Static_URL = '/assets/'
 Server_Name = 'server'
 
 # The organization the portal is operated by, shown above the navigation
-Local_Organization = 'Lorem Ipsum'
+Local_Organization = 'Pinecrest Telecom'
 
 Local_Party_ID = '232510151'
 
 Local_Role = 'WholesaleProvider'
 
-Local_Host = 'b2b.lorem-ipsum.example.com'
+Local_Host = 'b2b.pinecrest-telecom.example.com'
 
 # ################################################################################################################################
 # ################################################################################################################################

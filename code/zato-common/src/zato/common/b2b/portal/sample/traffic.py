@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import timedelta
 
 # Zato
+from zato.common.b2b.portal.config import Local_Host
 from zato.common.b2b.portal.sample.agreements import Agreements
 from zato.common.b2b.portal.sample.common import minutes_ago, Tone
 from zato.common.b2b.portal.sample.parties import Partner_By_Key, Service_By_Name
@@ -30,8 +31,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-Local_Host = 'b2b.lorem-ipsum.example.com'
 
 # The service and the actions of the messages the messaging layer itself exchanges
 Messaging_Service      = 'urn:oasis:names:tc:ebxml-msg:service'
@@ -72,23 +71,23 @@ _retry_minutes = 5
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Minutes ago, partner, product, service, scenario, the partner's order reference
+# Minutes ago, partner, product, service, scenario, the partner's order or complaint reference
 _seeds = [
-    (4,    'dolor', 'wBC', 'bcRequestOrderv5',                Scenario.Answered,           'NWT-PO-55102'),
-    (11,   'amet', 'wBC', 'bcRequestOrderv5',                Scenario.Pending,            '88231'),
-    (19,   'dolor', 'T2R', 'bcRequestAppointmentv5',          Scenario.Answered,           'NWT-FLT-20417'),
-    (27,   'adipiscing',    'wBC', 'bcNotifyOfOrderStatusv5',         Scenario.Notify_Retrying,    'SMC-ORD-7712'),
-    (38,   'amet', 'wBC', 'bcRequestOrderCancellationv5',    Scenario.Acceptance_Refused, '88190'),
-    (52,   'dolor', 'wBC', 'bcNotifyOfOrderStatusv5',         Scenario.Notify,             'NWT-PO-55087'),
-    (75,   'tempor', 'wBC', 'bcRequestOrderv5',                Scenario.Signature_Failed,   '100421'),
-    (96,   'dolor', 'wBC', 'bcRequestOrderAmendmentv5',       Scenario.Duplicate,          'NWT-PO-55064'),
-    (140,  'dolor', 'T2R', 'bcRequestTroubleReportv4',        Scenario.Receipt_Refused,    'NWT-FLT-20398'),
-    (260,  'amet', 'wBC', 'bcNotifyOfOrderStatusv5',         Scenario.Notify_Failed,      '88102'),
-    (410,  'adipiscing',    'wBC', 'bcRequestOrderv5',                Scenario.Answered,           'SMC-ORD-7698'),
-    (900,  'dolor', 'T2R', 'bcNotifyOfTroubleReportStatusv4', Scenario.Receipt_Overdue,    'NWT-FLT-20366'),
-    (1500, 'dolor', 'wBC', 'bcQueryOrderDetailsv5',           Scenario.Answered,           'NWT-PO-54980'),
-    (2900, 'adipiscing',    'wBC', 'bcRequestAppointmentv5',          Scenario.Answered,           'SMC-ORD-7640'),
-    (5200, 'amet', 'wBC', 'bcRequestOrderv5',                Scenario.Answered,           '87911'),
+    (4,    'harborlight', 'Orders',     'SubmitOrderv2',              Scenario.Answered,           'HLW-PO-55102'),
+    (11,   'redwood',     'Orders',     'SubmitOrderv2',              Scenario.Pending,            '88231'),
+    (19,   'harborlight', 'Complaints', 'FileComplaintv2',            Scenario.Answered,           'HLW-CMP-20417'),
+    (27,   'lakeshore',   'Orders',     'NotifyOfOrderStatusv2',      Scenario.Notify_Retrying,    'LKC-ORD-7712'),
+    (38,   'redwood',     'Orders',     'CancelOrderv2',              Scenario.Acceptance_Refused, '88190'),
+    (52,   'harborlight', 'Orders',     'NotifyOfOrderStatusv2',      Scenario.Notify,             'HLW-PO-55087'),
+    (75,   'prairie',     'Orders',     'SubmitOrderv2',              Scenario.Signature_Failed,   '100421'),
+    (96,   'harborlight', 'Orders',     'ChangeOrderv2',              Scenario.Duplicate,          'HLW-PO-55064'),
+    (140,  'harborlight', 'Complaints', 'FileComplaintv2',            Scenario.Receipt_Refused,    'HLW-CMP-20398'),
+    (260,  'redwood',     'Orders',     'NotifyOfOrderStatusv2',      Scenario.Notify_Failed,      '88102'),
+    (410,  'lakeshore',   'Orders',     'SubmitOrderv2',              Scenario.Answered,           'LKC-ORD-7698'),
+    (900,  'harborlight', 'Complaints', 'NotifyOfComplaintStatusv2',  Scenario.Receipt_Overdue,    'HLW-CMP-20366'),
+    (1500, 'harborlight', 'Orders',     'QueryOrderDetailsv2',        Scenario.Answered,           'HLW-PO-54980'),
+    (2900, 'lakeshore',   'Orders',     'ScheduleInstallationv2',     Scenario.Answered,           'LKC-ORD-7640'),
+    (5200, 'redwood',     'Orders',     'SubmitOrderv2',              Scenario.Answered,           '87911'),
 ]
 
 # ################################################################################################################################
@@ -384,11 +383,11 @@ def _build() -> 'dictlist':
 
         elif scenario == Scenario.Receipt_Refused:
             result = _refused(conversation, Receipt_Refused_Action, 'InvalidContent',
-                'The fault reference does not match an open trouble report')
+                'The complaint reference does not match an open complaint')
 
         elif scenario == Scenario.Acceptance_Refused:
             result = _refused(conversation, Acceptance_Refused, 'OrderNotCancellable',
-                'The order is already in the completion stage')
+                'The order has already been fulfilled')
 
         elif scenario == Scenario.Notify:
             result = _notify(conversation)

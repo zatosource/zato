@@ -239,7 +239,7 @@ def cpa_wizard() -> 'anydict':
         _text('cpa_id', 'CPAId', is_mono=True),
         valid_from,
         valid_to,
-        _pick_many('services', 'Services', _service_options(), ['bcRequestOrderv5', 'bcNotifyOfOrderStatusv5'], 'None',
+        _pick_many('services', 'Services', _service_options(), ['SubmitOrderv2', 'NotifyOfOrderStatusv2'], 'None',
             is_required=True),
     ])
 
@@ -306,7 +306,7 @@ def registration_wizard() -> 'anydict':
 
     request = _step('Request', [
         _pick('partner', 'Partner', _partner_options()),
-        _pick_many('services', 'Services', _service_options(), ['bcRequestOrderv5'], 'None', is_required=True),
+        _pick_many('services', 'Services', _service_options(), ['SubmitOrderv2'], 'None', is_required=True),
         _text('note', 'Note', is_required=False),
     ])
 

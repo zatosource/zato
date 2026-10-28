@@ -129,7 +129,7 @@ def _security(agreement:'Agreement') -> 'anylist':
         ('Client authentication', chip('Required')),
         ('Partner signing certificate', mono(f'{name}-signing-2026')),
         ('Partner TLS certificate', mono(f'{name}-tls-2026')),
-        ('Local signing certificate', mono('lorem-signing-2026')),
+        ('Local signing certificate', mono('pinecrest-signing-2026')),
     ]
 
     out = [fields('', rows, is_editable=True)]

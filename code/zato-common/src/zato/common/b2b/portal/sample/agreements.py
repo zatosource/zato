@@ -66,25 +66,24 @@ class Registration(NamedTuple):
 # ################################################################################################################################
 # ################################################################################################################################
 
-_order_services = ['bcRequestOrderv5', 'bcRequestOrderAmendmentv5', 'bcRequestOrderCancellationv5', 'bcQueryOrderDetailsv5',
-    'bcNotifyOfOrderStatusv5']
+_order_services = ['SubmitOrderv2', 'ChangeOrderv2', 'CancelOrderv2', 'QueryOrderDetailsv2', 'NotifyOfOrderStatusv2']
 
-_repair_services = ['bcRequestTroubleReportv4', 'bcRequestAppointmentv5', 'bcNotifyOfTroubleReportStatusv4']
+_complaint_services = ['FileComplaintv2', 'EscalateComplaintv2', 'NotifyOfComplaintStatusv2']
 
 Agreements = [
-    Agreement('dolor',  'wBC', 3, 'Active',    -210,  155, _order_services,
+    Agreement('harborlight', 'Orders', 3, 'Active',    -210,  155, _order_services,
         3, 5, 7, 'mshSignalsOnly', 'TLS 1.3', True),
-    Agreement('dolor',  'T2R', 2, 'Active',    -120,  245, _repair_services,
+    Agreement('harborlight', 'Complaints', 2, 'Active', -120,  245, _complaint_services,
         3, 5, 7, 'mshSignalsOnly', 'TLS 1.3', True),
-    Agreement('amet',  'wBC', 4, 'Active',    -64,   301, ['bcRequestOrderv5', 'bcRequestOrderCancellationv5',
-        'bcNotifyOfOrderStatusv5'], 3, 5, 7, 'mshSignalsOnly', 'TLS 1.2', True),
-    Agreement('adipiscing',     'wBC', 1, 'Expiring',  -347,  18,  ['bcRequestOrderv5', 'bcRequestAppointmentv5',
-        'bcNotifyOfOrderStatusv5'], 3, 5, 3, 'none', 'TLS 1.2', False),
-    Agreement('tempor',  'wBC', 2, 'Suspended', -190,  175, ['bcRequestOrderv5', 'bcNotifyOfOrderStatusv5'],
+    Agreement('redwood', 'Orders', 4, 'Active',    -64,   301, ['SubmitOrderv2', 'CancelOrderv2',
+        'NotifyOfOrderStatusv2'], 3, 5, 7, 'mshSignalsOnly', 'TLS 1.2', True),
+    Agreement('lakeshore', 'Orders', 1, 'Expiring',  -347,  18,  ['SubmitOrderv2', 'ScheduleInstallationv2',
+        'NotifyOfOrderStatusv2'], 3, 5, 3, 'none', 'TLS 1.2', False),
+    Agreement('prairie', 'Orders', 2, 'Suspended', -190,  175, ['SubmitOrderv2', 'NotifyOfOrderStatusv2'],
         3, 5, 7, 'mshSignalsOnly', 'TLS 1.2', True),
-    Agreement('labore',    'wBC', 1, 'Proposed',  14,    379, ['bcRequestOrderv5', 'bcQueryOrderDetailsv5',
-        'bcNotifyOfOrderStatusv5'], 3, 5, 7, 'mshSignalsOnly', 'TLS 1.3', True),
-    Agreement('aliqua', 'T2R', 1, 'Agreed',    5,     370, _repair_services,
+    Agreement('bluemesa', 'Orders', 1, 'Proposed',  14,    379, ['SubmitOrderv2', 'QueryOrderDetailsv2',
+        'NotifyOfOrderStatusv2'], 3, 5, 7, 'mshSignalsOnly', 'TLS 1.3', True),
+    Agreement('coppercreek', 'Complaints', 1, 'Agreed',    5,     370, _complaint_services,
         4, 10, 14, 'mshSignalsOnly', 'TLS 1.3', True),
 ]
 
@@ -96,47 +95,47 @@ for _agreement in Agreements:
 # ################################################################################################################################
 
 Registrations = [
-    Registration('2026-0117', 'labore', 'wBC', 'In review', ['bcRequestOrderv5', 'bcQueryOrderDetailsv5',
-        'bcNotifyOfOrderStatusv5'], 1, [
-        RegistrationEvent(9, 'Draft',     'Irure Reprehenderit',      'Registration started'),
-        RegistrationEvent(6, 'Submitted', 'Irure Reprehenderit',      'Submitted for review'),
-        RegistrationEvent(2, 'In review', 'Ullamco Laboris', 'Signing certificate under verification'),
+    Registration('2026-0117', 'bluemesa', 'Orders', 'In review', ['SubmitOrderv2', 'QueryOrderDetailsv2',
+        'NotifyOfOrderStatusv2'], 1, [
+        RegistrationEvent(9, 'Draft',     'Ashley Whitfield', 'Registration started'),
+        RegistrationEvent(6, 'Submitted', 'Ashley Whitfield', 'Submitted for review'),
+        RegistrationEvent(2, 'In review', 'Rachel Simmons',   'Signing certificate under verification'),
     ]),
-    Registration('2026-0112', 'aliqua', 'T2R', 'Approved', _repair_services, 1, [
-        RegistrationEvent(31, 'Draft',     'Velit Esse',   'Registration started'),
-        RegistrationEvent(24, 'Submitted', 'Velit Esse',   'Submitted for review'),
-        RegistrationEvent(17, 'In review', 'Quis Nostrud',    'Endpoint reachable over TLS 1.3'),
-        RegistrationEvent(11, 'Approved',  'Quis Nostrud',    'CPA issued for signature'),
+    Registration('2026-0112', 'coppercreek', 'Complaints', 'Approved', _complaint_services, 1, [
+        RegistrationEvent(31, 'Draft',     'Daniel Foster',  'Registration started'),
+        RegistrationEvent(24, 'Submitted', 'Daniel Foster',  'Submitted for review'),
+        RegistrationEvent(17, 'In review', 'Rachel Simmons', 'Endpoint reachable over TLS 1.3'),
+        RegistrationEvent(11, 'Approved',  'Rachel Simmons', 'CPA issued for signature'),
     ]),
-    Registration('2026-0109', 'amet', 'wBC', 'Active', ['bcRequestOrderv5', 'bcRequestOrderCancellationv5',
-        'bcNotifyOfOrderStatusv5'], 4, [
-        RegistrationEvent(80, 'Submitted', 'Ullamco Laboris', 'Renewal of CPA version 3'),
-        RegistrationEvent(72, 'In review', 'Nisi Aliquip',   'Order amendment removed from the scope'),
-        RegistrationEvent(66, 'Approved',  'Nisi Aliquip',   'CPA issued for signature'),
-        RegistrationEvent(64, 'Active',    'Nisi Aliquip',   'CPA agreed by both parties'),
+    Registration('2026-0109', 'redwood', 'Orders', 'Active', ['SubmitOrderv2', 'CancelOrderv2',
+        'NotifyOfOrderStatusv2'], 4, [
+        RegistrationEvent(80, 'Submitted', 'Marcus Delgado',  'Renewal of CPA version 3'),
+        RegistrationEvent(72, 'In review', 'Thomas Whitaker', 'Order change removed from the scope'),
+        RegistrationEvent(66, 'Approved',  'Thomas Whitaker', 'CPA issued for signature'),
+        RegistrationEvent(64, 'Active',    'Thomas Whitaker', 'CPA agreed by both parties'),
     ]),
-    Registration('2026-0104', 'dolor', 'T2R', 'Active', _repair_services, 2, [
-        RegistrationEvent(140, 'Submitted', 'Quis Nostrud',   'Renewal of CPA version 1'),
-        RegistrationEvent(126, 'Approved',  'Nisi Aliquip',  'CPA issued for signature'),
-        RegistrationEvent(120, 'Active',    'Nisi Aliquip',  'CPA agreed by both parties'),
+    Registration('2026-0104', 'harborlight', 'Complaints', 'Active', _complaint_services, 2, [
+        RegistrationEvent(140, 'Submitted', 'Jennifer Caldwell', 'Renewal of CPA version 1'),
+        RegistrationEvent(126, 'Approved',  'Thomas Whitaker',   'CPA issued for signature'),
+        RegistrationEvent(120, 'Active',    'Thomas Whitaker',   'CPA agreed by both parties'),
     ]),
-    Registration('2026-0121', 'adipiscing', 'wBC', 'Submitted', ['bcRequestOrderv5', 'bcRequestAppointmentv5',
-        'bcNotifyOfOrderStatusv5', 'bcRequestOrderCancellationv5'], 2, [
-        RegistrationEvent(3, 'Draft',     'Nisi Aliquip',   'Renewal of CPA version 1'),
-        RegistrationEvent(1, 'Submitted', 'Nisi Aliquip',   'Order cancellation added to the scope'),
+    Registration('2026-0121', 'lakeshore', 'Orders', 'Submitted', ['SubmitOrderv2', 'ScheduleInstallationv2',
+        'NotifyOfOrderStatusv2', 'CancelOrderv2'], 2, [
+        RegistrationEvent(3, 'Draft',     'Patricia Hollis', 'Renewal of CPA version 1'),
+        RegistrationEvent(1, 'Submitted', 'Patricia Hollis', 'Order cancellation added to the scope'),
     ]),
-    Registration('2026-0098', 'tempor', 'wBC', 'Suspended', ['bcRequestOrderv5', 'bcNotifyOfOrderStatusv5'],
+    Registration('2026-0098', 'prairie', 'Orders', 'Suspended', ['SubmitOrderv2', 'NotifyOfOrderStatusv2'],
         2, [
-        RegistrationEvent(196, 'Submitted', 'Duis Aute', 'Registration started'),
-        RegistrationEvent(190, 'Active',    'Quis Nostrud',   'CPA agreed by both parties'),
-        RegistrationEvent(12,  'Suspended', 'Quis Nostrud',   'Signature verification failures over 24 hours'),
+        RegistrationEvent(196, 'Submitted', 'Kevin Brennan',  'Registration started'),
+        RegistrationEvent(190, 'Active',    'Rachel Simmons', 'CPA agreed by both parties'),
+        RegistrationEvent(12,  'Suspended', 'Rachel Simmons', 'Signature verification failures over 24 hours'),
     ]),
-    Registration('2026-0122', 'labore', 'T2R', 'Draft', _repair_services, 1, [
-        RegistrationEvent(1, 'Draft', 'Irure Reprehenderit', 'Registration started'),
+    Registration('2026-0122', 'bluemesa', 'Complaints', 'Draft', _complaint_services, 1, [
+        RegistrationEvent(1, 'Draft', 'Ashley Whitfield', 'Registration started'),
     ]),
-    Registration('2026-0087', 'adipiscing', 'T2R', 'Rejected', ['bcRequestTroubleReportv4'], 1, [
-        RegistrationEvent(48, 'Submitted', 'Nisi Aliquip',  'Registration started'),
-        RegistrationEvent(41, 'Rejected',  'Ullamco Laboris', 'Trouble report status notifications are mandatory'),
+    Registration('2026-0087', 'lakeshore', 'Complaints', 'Rejected', ['FileComplaintv2'], 1, [
+        RegistrationEvent(48, 'Submitted', 'Patricia Hollis', 'Registration started'),
+        RegistrationEvent(41, 'Rejected',  'Rachel Simmons',  'Complaint status notifications are mandatory'),
     ]),
 ]
 

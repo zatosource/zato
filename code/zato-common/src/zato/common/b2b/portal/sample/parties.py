@@ -41,23 +41,24 @@ class Service(NamedTuple):
     receipt_seconds: int
     perform_seconds: int
     is_notification: bool
+    product: str
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 Partners = [
-    Partner('dolor',  'Dolor Sit',     '987654321', 'Active',     'Tier 1', 'gateway.dolor-sit.example.com',
-        'Quis Nostrud',    'quis.nostrud@dolor-sit.example.com',    214, 301),
-    Partner('amet',  'Amet Consectetur',   '412907766', 'Active',     'Tier 1', 'b2b.amet-consectetur.example.com',
-        'Ullamco Laboris', 'ullamco.laboris@amet-consectetur.example.com', 9, 188),
-    Partner('adipiscing',     'Adipiscing Elit', '603318254', 'Active',     'Tier 2', 'ebxml.adipiscing-elit.example.com',
-        'Nisi Aliquip',   'nisi.aliquip@adipiscing-elit.example.com',        402, 77),
-    Partner('tempor',  'Tempor Incididunt',    '118820931', 'Suspended',  'Tier 2', 'msh.tempor-incididunt.example.com',
-        'Duis Aute',  'duis.aute@tempor-incididunt.example.com', 133, 133),
-    Partner('labore',    'Labore Magna',       '774205583', 'Onboarding', 'Tier 3', 'test-gw.labore-magna.example.com',
-        'Irure Reprehenderit',      'irure.reprehenderit@labore-magna.example.com',        362, 362),
-    Partner('aliqua', 'Aliqua Veniam',      '305561870', 'Active',     'Tier 3', 'exchange.aliqua-veniam.example.com',
-        'Velit Esse',   'velit.esse@aliqua-veniam.example.com',    27, 27),
+    Partner('harborlight', 'Harborlight Wireless', '987654321', 'Active', 'Tier 1', 'gateway.harborlight-wireless.example.com',
+        'Jennifer Caldwell', 'jennifer.caldwell@harborlight-wireless.example.com', 214, 301),
+    Partner('redwood', 'Redwood Fiber Networks', '412907766', 'Active', 'Tier 1', 'b2b.redwood-fiber.example.com',
+        'Marcus Delgado', 'marcus.delgado@redwood-fiber.example.com', 9, 188),
+    Partner('lakeshore', 'Lakeshore Communications', '603318254', 'Active', 'Tier 2', 'ebxml.lakeshore-communications.example.com',
+        'Patricia Hollis', 'patricia.hollis@lakeshore-communications.example.com', 402, 77),
+    Partner('prairie', 'Prairie Sky Broadband', '118820931', 'Suspended', 'Tier 2', 'msh.prairie-sky.example.com',
+        'Kevin Brennan', 'kevin.brennan@prairie-sky.example.com', 133, 133),
+    Partner('bluemesa', 'Blue Mesa Mobile', '774205583', 'Onboarding', 'Tier 3', 'test-gw.bluemesa-mobile.example.com',
+        'Ashley Whitfield', 'ashley.whitfield@bluemesa-mobile.example.com', 362, 362),
+    Partner('coppercreek', 'Copper Creek Telecom', '305561870', 'Active', 'Tier 3', 'exchange.coppercreek-telecom.example.com',
+        'Daniel Foster', 'daniel.foster@coppercreek-telecom.example.com', 27, 27),
 ]
 
 Partner_By_Key = {}
@@ -67,23 +68,28 @@ for _partner in Partners:
 
 # ################################################################################################################################
 
+Orders_Product     = 'Orders'
+Complaints_Product = 'Complaints'
+
 Services = [
-    Service('bcRequestOrderv5',             'rqRequestOrder',             'rsRequestOrder',             'Order',
-        0, 120, False),
-    Service('bcRequestOrderAmendmentv5',    'rqRequestOrderAmendment',    'rsRequestOrderAmendment',    'Order amendment',
-        0, 120, False),
-    Service('bcRequestOrderCancellationv5', 'rqRequestOrderCancellation', 'rsRequestOrderCancellation', 'Order cancellation',
-        0, 120, False),
-    Service('bcRequestAppointmentv5',       'rqRequestAppointment',       'rsRequestAppointment',       'Appointment',
-        120, 300, False),
-    Service('bcRequestTroubleReportv4',     'rqRequestTroubleReport',     'rsRequestTroubleReport',     'Trouble report',
-        120, 600, False),
-    Service('bcQueryOrderDetailsv5',        'rqQueryOrderDetails',        'rsQueryOrderDetails',        'Order details',
-        0, 60, False),
-    Service('bcNotifyOfOrderStatusv5',      'NotifyOfOrderStatus',        '',                           'Order status',
-        300, 0, True),
-    Service('bcNotifyOfTroubleReportStatusv4', 'NotifyOfTroubleReportStatus', '',                     'Trouble report status',
-        300, 0, True),
+    Service('SubmitOrderv2',                'rqSubmitOrder',                'rsSubmitOrder',                'Order',
+        0, 120, False, Orders_Product),
+    Service('ChangeOrderv2',                'rqChangeOrder',                'rsChangeOrder',                'Order change',
+        0, 120, False, Orders_Product),
+    Service('CancelOrderv2',                'rqCancelOrder',                'rsCancelOrder',                'Order cancellation',
+        0, 120, False, Orders_Product),
+    Service('ScheduleInstallationv2',       'rqScheduleInstallation',       'rsScheduleInstallation',       'Installation appointment',
+        120, 300, False, Orders_Product),
+    Service('QueryOrderDetailsv2',          'rqQueryOrderDetails',          'rsQueryOrderDetails',          'Order details',
+        0, 60, False, Orders_Product),
+    Service('NotifyOfOrderStatusv2',        'NotifyOfOrderStatus',          '',                             'Order status',
+        300, 0, True, Orders_Product),
+    Service('FileComplaintv2',              'rqFileComplaint',              'rsFileComplaint',              'Complaint',
+        120, 600, False, Complaints_Product),
+    Service('EscalateComplaintv2',          'rqEscalateComplaint',          'rsEscalateComplaint',          'Complaint escalation',
+        120, 300, False, Complaints_Product),
+    Service('NotifyOfComplaintStatusv2',    'NotifyOfComplaintStatus',      '',                             'Complaint status',
+        300, 0, True, Complaints_Product),
 ]
 
 Service_By_Name = {}
@@ -102,7 +108,7 @@ def endpoint(partner:'Partner') -> 'str':
 
 def cpa_id(partner:'Partner', product:'str', version:'int') -> 'str':
     name = partner.name.split(' ')[0]
-    out = f'Lorem_Ipsum_{name}_B2BGateway_{product}_R1.5.0_cpa{version}'
+    out = f'Pinecrest_Telecom_{name}_B2BGateway_{product}_R1.5.0_cpa{version}'
     return out
 
 # ################################################################################################################################
