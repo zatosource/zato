@@ -1,0 +1,5 @@
+{% for block in blocks %}
+{% if block.kind == 'fields' %}{% include "portal/blocks/fields.html" %}{% endif %}
+{% if block.kind == 'table' %}{% include "portal/blocks/table.html" %}{% endif %}
+{% if block.kind == 'code' %}{% include "portal/blocks/code.html" %}{% endif %}
+{% endfor %}

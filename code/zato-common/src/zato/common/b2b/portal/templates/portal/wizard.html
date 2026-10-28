@@ -1,0 +1,22 @@
+<div class="content">
+    <div class="wizard-card" id="wizard">
+
+        <div class="wizard-title">{{ section.wizard.title }}</div>
+
+        <div class="wizard-steps" id="wizard-steps" role="tablist"></div>
+
+        <div id="wizard-body"></div>
+
+        <div class="wizard-footer">
+            <div class="wizard-footer-center">
+                <button type="button" class="button-secondary" id="wizard-back">Back</button>
+                <button type="button" class="button-action" id="wizard-next">Next</button>
+            </div>
+            <div class="wizard-footer-right">
+                <a class="link" href="{{ section.wizard.list_path }}">Cancel</a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{{ section.wizard|json_script:"wizard-data" }}

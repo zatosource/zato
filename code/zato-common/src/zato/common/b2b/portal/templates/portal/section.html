@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>{{ section.title }}</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="{{ static_url }}vendor/tippy.css">
+<link rel="stylesheet" href="{{ static_url }}css/theme.css">
+<link rel="stylesheet" href="{{ static_url }}css/shell.css">
+<link rel="stylesheet" href="{{ static_url }}css/tables.css">
+<link rel="stylesheet" href="{{ static_url }}css/detail.css">
+<link rel="stylesheet" href="{{ static_url }}css/popup.css">
+<link rel="stylesheet" href="{{ static_url }}css/wizard.css">
+<link rel="stylesheet" href="{{ static_url }}css/actions.css">
+</head>
+<body class="portal">
+
+<nav class="navigation">
+    <div class="navigation-top">{{ organization }}</div>
+    <div class="navigation-list" id="navigation-list">
+        {% for entry in navigation %}
+        <a class="navigation-item{% if entry.is_active %} navigation-item-active{% endif %}" href="{{ entry.href }}" draggable="true" data-slug="{{ entry.slug }}">{{ entry.label }}</a>
+        {% endfor %}
+    </div>
+</nav>
+
+<main class="main-column">
+    {% if is_new %}
+    {% include "portal/wizard.html" %}
+    {% else %}
+    {% include "portal/listing.html" %}
+    {% endif %}
+</main>
+
+<script src="{{ static_url }}vendor/popper.min.js"></script>
+<script src="{{ static_url }}vendor/tippy-bundle.umd.min.js"></script>
+<script src="{{ static_url }}js/core.js"></script>
+<script src="{{ static_url }}js/tooltips.js"></script>
+<script src="{{ static_url }}js/navigation.js"></script>
+{% if is_new %}
+<script src="{{ static_url }}js/popover.js"></script>
+<script src="{{ static_url }}js/fields.js"></script>
+<script src="{{ static_url }}js/calendar.js"></script>
+<script src="{{ static_url }}js/pick-panel.js"></script>
+<script src="{{ static_url }}js/wizard-lines.js"></script>
+<script src="{{ static_url }}js/wizard-checks.js"></script>
+<script src="{{ static_url }}js/wizard.js"></script>
+{% else %}
+<script src="{{ static_url }}js/popover.js"></script>
+<script src="{{ static_url }}js/calendar.js"></script>
+<script src="{{ static_url }}js/fields.js"></script>
+<script src="{{ static_url }}js/listing.js"></script>
+<script src="{{ static_url }}js/detail.js"></script>
+<script src="{{ static_url }}js/edit.js"></script>
+<script src="{{ static_url }}js/selection.js"></script>
+<script src="{{ static_url }}js/actions.js"></script>
+<script src="{{ static_url }}js/bulk.js"></script>
+{% if section.search %}<script src="{{ static_url }}js/search.js"></script>{% endif %}
+{% endif %}
+</body>
+</html>

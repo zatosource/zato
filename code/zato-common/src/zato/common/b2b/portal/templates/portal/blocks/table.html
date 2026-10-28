@@ -1,0 +1,15 @@
+<div class="block">
+    {% if block.title %}<div class="block-title">{{ block.title }}</div>{% endif %}
+    <div class="block-table">
+        <table class="table">
+            <thead>
+                <tr>{% for column in block.columns %}<th{% if column.is_id %} class="column-id"{% endif %}>{{ column.label }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for row in block.rows %}
+                <tr class="{% if forloop.counter|divisibleby:2 %}table-stripe{% endif %}{% if block.is_editable %} table-row-editable{% endif %}">{% for cell in row %}<td>{% include "portal/blocks/cell.html" %}</td>{% endfor %}</tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

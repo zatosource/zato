@@ -1,0 +1,371 @@
+/* ------------------------------------------------------------ */
+/* Popup - the tippy box                                        */
+/* ------------------------------------------------------------ */
+
+.tippy-box[data-theme~="popup"] {
+    color: var(--text);
+    background-color: transparent;
+}
+
+.tippy-box[data-theme~="popup"] > .tippy-content {
+    padding: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Popup - the chrome                                           */
+/* ------------------------------------------------------------ */
+
+.popup {
+    display: flex;
+    flex-direction: column;
+    min-width: 280px;
+    max-width: 480px;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 12px;
+    background: var(--panel-raised);
+    box-shadow: 0 16px 40px var(--shadow-strong), inset 0 1px 0 var(--sheen);
+}
+
+/* The header is a bar of its own, which is what the popup is dragged by */
+.popup-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-strong);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: var(--button-face);
+    cursor: move;
+    user-select: none;
+}
+
+.popup-dragging,
+.popup-dragging * {
+    cursor: grabbing;
+}
+
+.popup-body {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px 10px;
+}
+
+.popup-buttons {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin: 10px -14px -10px;
+    padding: 10px 14px;
+    background: var(--panel);
+}
+
+/* ------------------------------------------------------------ */
+/* Popup - micro-form fields                                    */
+/* ------------------------------------------------------------ */
+
+.micro-form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.micro-form-row .micro-form-field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.micro-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 8px;
+}
+
+.micro-form-label {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+}
+
+.micro-form-field input[type="text"],
+.micro-form-field input[type="date"],
+.micro-form-field input[type="time"],
+.micro-form-field input[type="url"],
+.micro-form-field input[type="email"],
+.micro-form-field select {
+    width: 100%;
+}
+
+.micro-form-number {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.micro-form-number input[type="number"] {
+    width: 5.5em;
+    padding-right: 2px;
+}
+
+.micro-form-unit {
+    color: var(--text4);
+}
+
+.micro-form-row .micro-form-field:has(.micro-form-checkbox) {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    padding-bottom: 5px;
+}
+
+.micro-form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.micro-form-checkbox:has(input:not(:checked)) {
+    color: var(--text4);
+}
+
+.micro-form-checkbox-text {
+    margin-right: auto;
+}
+
+.micro-form-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.micro-form-chips .chip {
+    color: var(--text4);
+    background: var(--badge-unchosen-fill);
+    box-shadow: var(--badge-unchosen-shadow);
+}
+
+.micro-form-chips .chip-on,
+.micro-form-chips .chip-on:hover {
+    color: var(--text);
+    background: var(--badge-chosen-fill);
+    box-shadow: var(--badge-chosen-shadow);
+}
+
+/* ------------------------------------------------------------ */
+/* Popup - calendar                                             */
+/* ------------------------------------------------------------ */
+
+.calendar {
+    min-width: 0;
+    padding: 10px;
+}
+
+.calendar-header {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.calendar-header select:first-child {
+    flex: 1 1 auto;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, var(--calendar-cell));
+    gap: 2px;
+}
+
+.calendar-weekday {
+    height: 24px;
+    font-size: 11px;
+    line-height: 24px;
+    text-align: center;
+    color: var(--text5);
+}
+
+.calendar-day {
+    height: var(--calendar-cell);
+    padding: 0;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--text2);
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.calendar-day:hover {
+    background: var(--row-hover);
+    transition-delay: var(--hover-delay);
+}
+
+.calendar-day-today {
+    color: var(--accent);
+}
+
+.calendar-day-on,
+.calendar-day-on:hover {
+    color: var(--check-mark-color);
+    background: var(--accent);
+}
+
+.portal input.calendar-field {
+    cursor: pointer;
+}
+
+/* ------------------------------------------------------------ */
+/* Popup - pick panels                                          */
+/* ------------------------------------------------------------ */
+
+.pick-filter {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.pick-list {
+    max-height: 13em;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--input-background);
+}
+
+.pick-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.pick-row:hover {
+    background: var(--cell-hover);
+    transition-delay: var(--hover-delay);
+}
+
+.pick-mark {
+    position: relative;
+    flex: 0 0 auto;
+    width: 11px;
+    height: 11px;
+    border: 1px solid var(--text5);
+    border-radius: var(--radius);
+}
+
+.pick-mark-on {
+    border-color: var(--blue);
+}
+
+.pick-mark-on::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: var(--blue);
+}
+
+.pick-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text2);
+}
+
+.pick-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text5);
+}
+
+.pick-empty {
+    padding: 6px 8px;
+    color: var(--text5);
+}
+
+/* ------------------------------------------------------------ */
+/* Popup - pick panels                                          */
+/* ------------------------------------------------------------ */
+
+.pick-filter {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.pick-list {
+    max-height: 13em;
+    overflow-y: scroll;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--input-background);
+}
+
+.pick-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.pick-row:hover {
+    background: var(--row-hover);
+    transition-delay: var(--hover-delay);
+}
+
+.pick-mark {
+    position: relative;
+    flex: 0 0 auto;
+    width: 11px;
+    height: 11px;
+    border: 1px solid var(--text5);
+    border-radius: var(--radius);
+}
+
+.pick-mark-on {
+    border-color: var(--accent);
+}
+
+.pick-mark-on::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: var(--accent);
+}
+
+.pick-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text2);
+}
+
+.pick-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text5);
+}
+
+.pick-empty {
+    padding: 6px 8px;
+    color: var(--text5);
+}

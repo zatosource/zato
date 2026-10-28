@@ -1,0 +1,40 @@
+<div class="detail" id="detail" data-id="{{ item.id }}">
+
+    <div class="detail-header">
+        <h2 class="detail-title portal-mono">{{ item.title }}</h2>
+        <div class="tabs" role="tablist"{% if item.tabs|length == 1 %} hidden{% endif %}>
+            {% for tab in item.tabs %}
+            <button type="button" class="tab{% if tab.key == active_tab %} tab-active{% endif %}" role="tab" data-tab="{{ tab.key }}">{{ tab.label }}</button>
+            {% endfor %}
+        </div>
+        {% if item.details %}<a class="link side-link details-open" href="{{ section.path }}?id={{ item.id|urlencode:'' }}&amp;tab={{ active_tab }}&amp;details=1">{{ item.details_label }}</a>{% endif %}
+    </div>
+
+    <div class="detail-body">
+        {% for tab in item.tabs %}
+        <div class="tab-panel" role="tabpanel" data-tab-panel="{{ tab.key }}"{% if tab.key != active_tab %} hidden{% endif %}>
+            {% include "portal/blocks/blocks.html" with blocks=tab.blocks %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if item.details %}
+    <template class="details-source">
+        <div class="details">
+            <div class="tabs details-tabs" role="tablist">
+                {% for each in item.details %}
+                <button type="button" class="tab{% if forloop.first %} tab-active{% endif %}" role="tab" data-tab="{{ each.key }}">{{ each.label }}</button>
+                {% endfor %}
+            </div>
+            <div class="details-body">
+                {% for each in item.details %}
+                <div class="tab-panel" role="tabpanel" data-tab-panel="{{ each.key }}"{% if not forloop.first %} hidden{% endif %}>
+                    {% include "portal/blocks/blocks.html" with blocks=each.blocks %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </template>
+    {% endif %}
+
+</div>

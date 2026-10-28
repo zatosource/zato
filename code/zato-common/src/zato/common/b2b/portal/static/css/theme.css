@@ -1,0 +1,252 @@
+/* ------------------------------------------------------------ */
+/* Portal - fonts                                               */
+/* ------------------------------------------------------------ */
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(../fonts/ibm-plex-sans-400.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url(../fonts/ibm-plex-sans-500.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url(../fonts/ibm-plex-sans-600.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url(../fonts/ibm-plex-sans-700.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(../fonts/ibm-plex-mono-400.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url(../fonts/ibm-plex-mono-500.ttf) format("truetype");
+}
+
+/* ------------------------------------------------------------ */
+/* Portal - palette                                             */
+/* ------------------------------------------------------------ */
+
+.portal {
+    --font: "IBM Plex Sans", sans-serif;
+    --mono: "IBM Plex Mono", monospace;
+
+    --background: #0e0e0e;
+    --chrome: #080808;
+    --panel: #161616;
+    --panel-raised: #1d1d1d;
+    --panel-header: #252525;
+    --input-background: #0a0a0a;
+    --border: #2e2e2e;
+    --border-strong: #454545;
+    --rule: rgba(255, 255, 255, 0.07);
+
+    --text: #ededed;
+    --text2: #d0d0d0;
+    --text3: #ababab;
+    --text4: #8e8e8e;
+    --text5: #6a6a6a;
+
+    --blue: #6fb6e8;
+    --green: #74cf92;
+    --red: #ff8a80;
+    --amber: #e8c46f;
+    --indigo: #b899f0;
+    --teal: #6fd3c9;
+    --grey: #ababab;
+
+    /* The triangles of the directions of messages are deeper than any chip, so that no state is taken for them */
+    --triangle-inbound: #3f9a62;
+    --triangle-outbound: #444444;
+
+    --accent: #f6c66a;
+    --accent-tint: rgba(246, 166, 5, 0.10);
+
+    --stripe: rgba(255, 255, 255, 0.022);
+    --row-hover: rgba(255, 255, 255, 0.055);
+    --scrollbar-thumb: #333333;
+    --scrollbar-thumb-hover: #4a4a4a;
+    --scrollbar-track: #141414;
+    --shadow-strong: rgba(0, 0, 0, 0.75);
+    --shadow-soft: rgba(0, 0, 0, 0.55);
+    --sheen: rgba(255, 255, 255, 0.07);
+    --grip: #7a7a7a;
+
+    /* A badge standing open in a row of them is raised off it, the ones not chosen are sunk into it */
+    --badge-fill: rgba(255, 255, 255, 0.10);
+    --badge-fill-hover: rgba(255, 255, 255, 0.18);
+    --badge-chosen-fill: radial-gradient(120% 130% at 50% 0%, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.09));
+    --badge-chosen-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.30);
+    --badge-unchosen-fill: rgba(255, 255, 255, 0.05);
+    --badge-unchosen-fill-hover: rgba(255, 255, 255, 0.11);
+    --badge-unchosen-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7);
+
+    /* The faces of the buttons - the one that acts, every other one, and the one that deletes */
+    --button-face: linear-gradient(#2e2e2e, #222222);
+    --button-face-hover: linear-gradient(#383838, #2a2a2a);
+    --button-edge: #4a4a4a;
+    --button-edge-hover: #616161;
+    --button-ink: #e4e4e4;
+    --action-face: linear-gradient(#5c4815, #45360e);
+    --action-face-hover: linear-gradient(#6c5519, #523f11);
+    --action-edge: #a9842c;
+    --action-ink: #ffe3a3;
+    --danger-face: linear-gradient(#4a1d1d, #391515);
+    --danger-face-hover: linear-gradient(#5a2323, #451a1a);
+    --danger-edge: #8c3636;
+    --danger-ink: #ffb4ac;
+
+    --focus-edge: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
+
+    --link-dash: rgba(255, 255, 255, 0.35);
+    --link-hover: var(--accent);
+
+    --radius: 2px;
+    --field-indent: 9px;
+    --hover-delay: 0.12s;
+
+    /* One width for every element of a kind, so that no two pills, chips, buttons, tabs or options differ */
+    --pill-width: 112px;
+    --narrow-column-width: 116px;
+    --chip-width: 104px;
+    --button-width: 100px;
+    --criterion-width: 220px;
+    --tab-width: 116px;
+    --decision-width: 390px;
+    --calendar-cell: 34px;
+    --filter-width: 720px;
+    --split-height: 48%;
+    --split-minimum: 140px;
+    --field-label-minimum: 96px;
+    --details-width: 820px;
+    --id-column-width: 480px;
+    --inactive-opacity: 0.5;
+    --details-height: 440px;
+
+    --toggle-width: 26px;
+    --toggle-height: 14px;
+    --toggle-knob-size: 10px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 12px;
+    --toggle-off-background: #3a3a3a;
+    --toggle-on-background: #3a3a3a;
+    --toggle-knob-color: #8e8e8e;
+    --toggle-knob-on-color: var(--accent);
+
+    --check-size: 14px;
+    --check-mark-color: #1a1a1a;
+}
+
+/* ------------------------------------------------------------ */
+/* Portal - document                                            */
+/* ------------------------------------------------------------ */
+
+.portal,
+.portal * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.portal [hidden] {
+    display: none !important;
+}
+
+body.portal {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--background);
+}
+
+.portal ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.portal ::-webkit-scrollbar-track,
+.portal ::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+}
+
+.portal ::-webkit-scrollbar-thumb {
+    border-radius: var(--radius);
+    background: var(--scrollbar-thumb);
+}
+
+.portal ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
+.portal-mono {
+    font-family: var(--mono);
+    font-size: 12px;
+}
+
+/* A value that qualifies the one before it in the same field */
+.portal-aside {
+    color: var(--text4);
+}
+
+/* ------------------------------------------------------------ */
+/* Portal - tones                                               */
+/* ------------------------------------------------------------ */
+
+.portal-tone-green {
+    --tone: var(--green);
+}
+
+.portal-tone-red {
+    --tone: var(--red);
+}
+
+.portal-tone-amber {
+    --tone: var(--amber);
+}
+
+.portal-tone-blue {
+    --tone: var(--blue);
+}
+
+.portal-tone-indigo {
+    --tone: var(--indigo);
+}
+
+.portal-tone-teal {
+    --tone: var(--teal);
+}
+
+.portal-tone-grey {
+    --tone: var(--grey);
+}

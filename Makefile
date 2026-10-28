@@ -6,7 +6,7 @@
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-console mcp-demo \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -203,9 +203,9 @@ api-portal-demo: ## Healthcare demo for the API portal - services, security defi
 	echo "API portal: http://localhost:$(Zato_Port_API_Portal)"
 	$(MAKE) api-portal
 
-b2b-console: ## A static mockup of the B2B console, with sample data and no server behind it.
-	echo "B2B console: http://localhost:8186/b2b/console/agreements"
-	$(ZATO_PY) -m zato.common.b2b.console.run
+b2b-portal: ## A static mockup of the B2B portal, with sample data and no server behind it.
+	echo "B2B portal: http://localhost:8186/"
+	$(ZATO_PY) -m zato.common.b2b.portal.run
 
 api-portal-tutorial: export Zato_API_Portal_Header_Title = Main tutorial
 api-portal-tutorial: ## The main tutorial for the API portal - its service, connections, API key, REST channel and scheduler job, then the portal itself.

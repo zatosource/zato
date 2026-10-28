@@ -1,0 +1,325 @@
+/* ------------------------------------------------------------ */
+/* Detail - the selected item                                   */
+/* ------------------------------------------------------------ */
+
+.detail {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.detail-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-raised);
+}
+
+.detail-title {
+    margin-right: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    color: var(--text);
+}
+
+.detail-body {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: scroll;
+    padding: 16px;
+}
+
+.detail-removed .detail-body {
+    opacity: 0.45;
+}
+
+/* ------------------------------------------------------------ */
+/* Detail - tabs                                                */
+/* ------------------------------------------------------------ */
+
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.detail-header .tabs {
+    margin-left: 16px;
+}
+
+/* A row of badges - the one standing open is raised off the row, the others are sunk into it */
+.tab {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    min-width: var(--tab-width);
+    height: 26px;
+    padding: 0 12px;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text4);
+    background: var(--badge-unchosen-fill);
+    box-shadow: var(--badge-unchosen-shadow);
+    cursor: pointer;
+    transition: color 0.1s ease, background-color 0.1s ease;
+}
+
+.tab:hover {
+    color: var(--text2);
+    background: var(--badge-unchosen-fill-hover);
+    transition-delay: var(--hover-delay);
+}
+
+.tab-active,
+.tab-active:hover {
+    color: var(--text);
+    background: var(--badge-chosen-fill);
+    box-shadow: var(--badge-chosen-shadow);
+}
+
+/* ------------------------------------------------------------ */
+/* Detail - blocks                                              */
+/* ------------------------------------------------------------ */
+
+/* Each block is a box of its own, so that where one ends and the next begins is never in doubt */
+.block {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel-raised);
+}
+
+.block + .block {
+    margin-top: 14px;
+}
+
+.block-title {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text3);
+    background: var(--panel-header);
+}
+
+/* The columns of a table share its width equally, so that tables of as many columns line up with each other */
+.block-table .table {
+    table-layout: fixed;
+}
+
+.block-table .table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* A column of identifiers is as wide as the longest of them, the other columns sharing what is left */
+.block-table .table .column-id {
+    width: var(--id-column-width);
+}
+
+.fields {
+    display: grid;
+    grid-template-columns: minmax(var(--field-label-minimum), max-content) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px 22px;
+    padding: 12px 14px;
+    font-size: 13px;
+}
+
+.fields dt {
+    color: var(--text4);
+}
+
+/* A field may hold several values, which follow one another and wrap as a whole */
+.fields dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    color: var(--text);
+}
+
+.fields dd .inline-actions {
+    margin-left: 4px;
+}
+
+/* ------------------------------------------------------------ */
+/* Detail - documents                                           */
+/* ------------------------------------------------------------ */
+
+/* The button that copies a document stays in the corner of the document, however far it is scrolled */
+.code-host {
+    position: relative;
+}
+
+.copy-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    height: 22px;
+    padding: 0 9px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 11px;
+    color: var(--text2);
+    background: var(--button-face);
+    cursor: pointer;
+}
+
+.copy-button:hover {
+    color: var(--text);
+    background: var(--button-face-hover);
+    transition-delay: var(--hover-delay);
+}
+
+/* The chip that follows the text of the value under the pointer and copies it. Its holder takes no room,
+   so the value never moves, and its label is drawn by CSS, so the text it copies stays the value alone. */
+/* The confirmation of a copy is as small as the one of the documentation */
+.tippy-box[data-theme~="copied"] {
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 20px;
+}
+
+.tippy-box[data-theme~="copied"] > .tippy-content {
+    padding: 2px 8px;
+}
+
+.copy-chip-holder {
+    display: inline-block;
+    width: 0;
+    white-space: nowrap;
+}
+
+.copy-chip {
+    margin: 0 0 0 8px;
+    padding: 0 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--text2);
+    background: var(--button-face);
+    cursor: pointer;
+}
+
+.copy-chip::before {
+    content: attr(data-label);
+}
+
+.copy-chip:hover {
+    color: var(--text);
+    background: var(--button-face-hover);
+}
+
+.code {
+    padding: 12px 14px;
+    overflow-x: scroll;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.55;
+    white-space: pre;
+    color: var(--text2);
+    background: var(--input-background);
+}
+
+.code-tag {
+    color: var(--blue);
+}
+
+.code-attribute {
+    color: var(--indigo);
+}
+
+.code-value {
+    color: var(--teal);
+}
+
+.code-punctuation {
+    color: var(--text5);
+}
+
+/* ------------------------------------------------------------ */
+/* Detail - the popover of what is kept apart from the tabs     */
+/* ------------------------------------------------------------ */
+
+/* The tippy keeps one size whatever tab it shows, its body scrolling inside it */
+.details {
+    position: relative;
+    width: var(--details-width);
+    padding: 12px 14px 14px;
+}
+
+/* The closing mark is a plain cross in the corner, with no response to the pointer */
+.details-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.details-close::before,
+.details-close::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 1px;
+    width: 12px;
+    height: 1.5px;
+    background: var(--text3);
+}
+
+.details-close::before {
+    transform: rotate(45deg);
+}
+
+.details-close::after {
+    transform: rotate(-45deg);
+}
+
+/* What the popover shows wraps to its width rather than being cut at its edge */
+.details .code {
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.details .table td {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.details-tabs {
+    margin-right: 24px;
+    margin-bottom: 12px;
+}
+
+.details-body {
+    height: var(--details-height);
+    padding-right: 6px;
+    overflow-y: scroll;
+}

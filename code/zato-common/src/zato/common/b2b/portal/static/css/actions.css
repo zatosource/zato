@@ -1,0 +1,99 @@
+/* ------------------------------------------------------------ */
+/* Actions - the command palette                                */
+/* ------------------------------------------------------------ */
+
+.palette-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 14vh;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.palette {
+    display: flex;
+    flex-direction: column;
+    width: 560px;
+    max-width: 90vw;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--panel-raised);
+    box-shadow: 0 24px 60px var(--shadow-strong), inset 0 1px 0 var(--sheen);
+}
+
+.portal .palette-input {
+    height: 44px;
+    padding: 0 16px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    font-size: 14px;
+    background: var(--panel-raised);
+    box-shadow: none;
+}
+
+.palette-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 50vh;
+    padding: 6px 0;
+    overflow-y: scroll;
+}
+
+.palette-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 16px;
+    border: none;
+    font-family: var(--font);
+    font-size: 13px;
+    text-align: left;
+    color: var(--text2);
+    background: transparent;
+    cursor: pointer;
+}
+
+.palette-item:hover,
+.palette-item-active {
+    color: var(--text);
+    background: var(--row-hover);
+}
+
+.palette-note {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text5);
+}
+
+/* ------------------------------------------------------------ */
+/* Actions - links beside the state                             */
+/* ------------------------------------------------------------ */
+
+.inline-actions {
+    display: inline-flex;
+    gap: 16px;
+    margin-left: 16px;
+    font-family: var(--font);
+    font-size: 12px;
+}
+
+.link-danger {
+    color: var(--danger-ink);
+}
+
+/* ------------------------------------------------------------ */
+/* Actions - switches in the rows                               */
+/* ------------------------------------------------------------ */
+
+.listing .row-toggle {
+    padding: 0 10px;
+}
+
+.row-toggle .switch {
+    vertical-align: middle;
+}

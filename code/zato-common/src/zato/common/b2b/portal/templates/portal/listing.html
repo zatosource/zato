@@ -1,0 +1,54 @@
+<div class="content split" id="split"{% if section.wizard %} data-new-label="{{ section.wizard.title }}" data-new-href="{{ section.path }}?new"{% endif %}>
+
+    <div class="card split-top">
+
+        <div class="card-header">
+            <h1 class="card-title">{{ section.title }}</h1>
+            {% if section.wizard %}<a class="button-secondary card-new" href="{{ section.path }}?new">{{ section.wizard.title }}</a>{% endif %}
+        </div>
+
+        <div class="card-search">
+            <input type="search" class="card-filter" id="listing-filter" placeholder="Search" autocomplete="off" spellcheck="false">
+            {% if section.search %}<button type="button" class="button-secondary" id="search-open">Filter</button>{% endif %}
+        </div>
+
+        {% if section.search %}<div class="criteria" id="criteria" hidden></div>{% endif %}
+
+        <div class="listing-scroll">
+            <table class="table listing" id="listing">
+                <thead>
+                    <tr>
+                        {% if section.is_bulk %}<th class="listing-select"><input type="checkbox" class="check" id="check-all"></th>{% endif %}
+                        {% for column in section.columns %}<th{% if column.is_narrow %} class="narrow"{% endif %}>{{ column.label }}</th>{% endfor %}
+                        {% if section.toggle %}<th class="narrow">{{ section.toggle.label }}</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in section.items %}
+                    <tr class="{% if item and row.id == item.id %}listing-row-selected{% endif %}" data-id="{{ row.id }}" data-search="{{ row.search }}"{% for key, value in row.attributes.items %} data-attribute-{{ key }}="{{ value }}"{% endfor %}>
+                        <td class="listing-select"{% if not section.is_bulk %} hidden{% endif %}>
+                            <input type="checkbox" class="check row-check">
+                            <span class="row-sources" hidden></span>
+                        </td>
+                        {% for cell in row.cells %}
+                        <td{% if cell.is_narrow %} class="narrow"{% endif %}><a class="listing-link" href="{{ section.path }}?id={{ row.id|urlencode:'' }}">{% include "portal/blocks/cell.html" with is_plain=True %}</a></td>
+                        {% endfor %}
+                        {% if section.toggle %}<td class="narrow row-toggle"><input type="checkbox" class="switch row-switch" data-on-state="{{ section.toggle.on_state }}" data-on-tone="{{ section.toggle.on_tone }}" data-off-state="{{ section.toggle.off_state }}" data-off-tone="{{ section.toggle.off_tone }}"{% if row.attributes.state == section.toggle.on_state %} checked{% endif %}></td>{% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="listing-empty" id="listing-empty" hidden>No matching items</div>
+        </div>
+
+    </div>
+
+    <div class="split-handle" id="split-handle"{% if not item %} hidden{% endif %}></div>
+
+    <div class="card split-bottom" id="split-bottom"{% if not item %} hidden{% endif %}>{% if item %}{% include "portal/detail.html" %}{% endif %}</div>
+
+</div>
+
+{% if section.search %}{{ section.search|json_script:"search-data" }}{% endif %}
+{{ navigation|json_script:"navigation-data" }}
+{{ section.transitions|json_script:"transitions-data" }}

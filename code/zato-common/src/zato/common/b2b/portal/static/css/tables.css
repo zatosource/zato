@@ -1,0 +1,132 @@
+/* ------------------------------------------------------------ */
+/* Tables - every table of the portal                           */
+/* ------------------------------------------------------------ */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table th {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--text3);
+    background: var(--panel-header);
+}
+
+.table td {
+    padding: 6px 10px;
+    white-space: nowrap;
+    color: var(--text2);
+}
+
+.table .table-stripe {
+    background: var(--stripe);
+}
+
+.table .narrow {
+    width: var(--narrow-column-width);
+    text-align: center;
+}
+
+.table-row-editable {
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.table-row-editable:hover {
+    background: var(--row-hover);
+    transition-delay: var(--hover-delay);
+}
+
+/* ------------------------------------------------------------ */
+/* Tables - the listing of a section                            */
+/* ------------------------------------------------------------ */
+
+.listing-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: scroll;
+}
+
+/* The header stays above the rows scrolled under it, including rows drawn faintly, which are stacked of their own */
+.listing th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.listing td {
+    padding: 0;
+}
+
+/* A disabled item is drawn faintly, its switch excepted */
+.listing tr[data-attribute-state="Disabled"] td:not(.row-toggle) {
+    opacity: var(--inactive-opacity);
+}
+
+.listing .listing-select {
+    width: 36px;
+    padding: 0 0 0 14px;
+}
+
+.listing .listing-select .check {
+    display: block;
+}
+
+.listing-link {
+    display: block;
+    padding: 7px 10px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.listing tbody tr {
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.listing tbody tr:hover {
+    background: var(--row-hover);
+    transition-delay: var(--hover-delay);
+}
+
+.listing tbody .listing-row-selected,
+.listing tbody .listing-row-selected:hover {
+    background: var(--accent-tint);
+}
+
+.listing-empty {
+    padding: 18px 16px;
+    font-size: 12.5px;
+    color: var(--text5);
+}
+
+/* ------------------------------------------------------------ */
+/* Tables - the criteria of a search                            */
+/* ------------------------------------------------------------ */
+
+.criteria {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.criteria .chip {
+    justify-content: space-between;
+    width: var(--criterion-width);
+}
+
+.chip-value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

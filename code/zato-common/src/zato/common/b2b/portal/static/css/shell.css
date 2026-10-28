@@ -1,0 +1,527 @@
+/* ------------------------------------------------------------ */
+/* Shell - navigation pane                                      */
+/* ------------------------------------------------------------ */
+
+.navigation {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 210px;
+    border-right: 1px solid var(--border);
+    background: var(--chrome);
+}
+
+.navigation-top {
+    display: flex;
+    align-items: center;
+    height: 55px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text4);
+}
+
+.navigation-list {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+}
+
+.navigation-item {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 7px 20px;
+    font-family: var(--font);
+    font-size: 13px;
+    text-align: left;
+    text-decoration: none;
+    color: var(--text3);
+    transition: color 0.1s ease;
+}
+
+/* The grip an entry is dragged by shows under the pointer */
+.navigation-item::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 7px;
+    width: 7px;
+    height: 12px;
+    background-image: radial-gradient(circle, var(--grip) 1px, transparent 1.5px);
+    background-size: 4px 4px;
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity 0.1s ease;
+}
+
+.navigation-item:hover {
+    color: var(--text);
+    cursor: grab;
+    transition-delay: var(--hover-delay);
+}
+
+.navigation-item:hover::before {
+    opacity: 1;
+    transition-delay: var(--hover-delay);
+}
+
+.navigation-item-active,
+.navigation-item-active:hover {
+    font-weight: 600;
+    color: var(--text);
+    background: var(--panel-raised);
+}
+
+.navigation-item-dragging {
+    opacity: 0.5;
+}
+
+/* ------------------------------------------------------------ */
+/* Shell - main column and cards                                */
+/* ------------------------------------------------------------ */
+
+.main-column {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.content {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: scroll;
+    padding: 20px 24px;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+    box-shadow: 0 10px 30px var(--shadow-soft), inset 0 1px 0 var(--sheen);
+}
+
+.card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-raised);
+}
+
+.card-title {
+    margin-right: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    color: var(--text);
+}
+
+.card-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.portal input[type="search"].card-filter {
+    flex: 0 1 var(--filter-width);
+    min-width: 0;
+    height: 28px;
+}
+
+/* What the rows checked in the listing can do together, in a tippy to the left of the box in the header */
+.bulk {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.bulk-count {
+    color: var(--text3);
+}
+
+.bulk-actions {
+    display: inline-flex;
+    gap: 16px;
+}
+
+.card-search .button-secondary {
+    height: 28px;
+}
+
+/* Adding a new item stands right after the title of its listing */
+.card-header .card-new {
+    height: 24px;
+    font-size: 11px;
+}
+
+/* ------------------------------------------------------------ */
+/* Shell - the listing above and the selected item below        */
+/* ------------------------------------------------------------ */
+
+.split {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.split-top {
+    position: relative;
+    flex: 1 1 0;
+    min-height: var(--split-minimum);
+}
+
+.split-bottom {
+    flex: 0 0 var(--split-height);
+    min-height: var(--split-minimum);
+    overflow: hidden;
+}
+
+/* The line between the panes is dragged by the grip in its middle */
+.split-handle {
+    position: relative;
+    flex: 0 0 14px;
+    cursor: row-resize;
+}
+
+.split-handle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 43px;
+    height: 7px;
+    background-image: radial-gradient(circle, var(--grip) 1px, transparent 1.5px);
+    background-size: 4px 4px;
+    transform: translate(-50%, -50%);
+}
+
+.split-dragging,
+.split-dragging * {
+    cursor: row-resize;
+    user-select: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Shell - inputs                                               */
+/* ------------------------------------------------------------ */
+
+.portal input[type="text"],
+.portal input[type="search"],
+.portal input[type="number"],
+.portal input[type="date"],
+.portal input[type="time"],
+.portal input[type="url"],
+.portal input[type="email"],
+.portal select {
+    height: 24px;
+    padding: 0 var(--field-indent);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 12px;
+    color: var(--text);
+    background: var(--input-background);
+    box-shadow: inset 0 1px 2px var(--shadow-strong);
+    color-scheme: dark;
+    outline: none;
+}
+
+.portal input:focus,
+.portal select:focus {
+    border-color: var(--focus-edge);
+}
+
+.portal input::placeholder {
+    color: var(--text5);
+}
+
+.portal .input-mono {
+    font-family: var(--mono);
+}
+
+/* A switch is the small slider of the dialog forms of the web admin */
+.portal input[type="checkbox"].switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: var(--toggle-width);
+    height: var(--toggle-height);
+    margin: 0;
+    border: none;
+    border-radius: var(--toggle-height);
+    vertical-align: middle;
+    background-color: var(--toggle-off-background);
+    appearance: none;
+    cursor: pointer;
+    transition: background-color 0.24s;
+}
+
+.portal input[type="checkbox"].switch::before {
+    content: "";
+    position: absolute;
+    bottom: var(--toggle-knob-offset);
+    left: var(--toggle-knob-offset);
+    width: var(--toggle-knob-size);
+    height: var(--toggle-knob-size);
+    border-radius: 50%;
+    background-color: var(--toggle-knob-color);
+    transition: transform 0.24s;
+}
+
+.portal input[type="checkbox"].switch:checked {
+    background-color: var(--toggle-on-background);
+}
+
+.portal input[type="checkbox"].switch:checked::before {
+    background-color: var(--toggle-knob-on-color);
+    transform: translateX(var(--toggle-travel));
+}
+
+/* A check box picks rows of a listing */
+.portal input[type="checkbox"].check {
+    position: relative;
+    width: var(--check-size);
+    height: var(--check-size);
+    margin: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    vertical-align: middle;
+    background: var(--input-background);
+    appearance: none;
+    cursor: pointer;
+}
+
+.portal input[type="checkbox"].check:checked,
+.portal input[type="checkbox"].check:indeterminate {
+    border-color: var(--accent);
+    background: var(--accent);
+}
+
+.portal input[type="checkbox"].check:checked::before {
+    content: "";
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--check-mark-color);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.portal input[type="checkbox"].check:indeterminate::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 2px;
+    width: 8px;
+    height: 2px;
+    background: var(--check-mark-color);
+}
+
+/* ------------------------------------------------------------ */
+/* Shell - buttons                                              */
+/* ------------------------------------------------------------ */
+
+.button-action,
+.button-secondary,
+.button-danger {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-width: var(--button-width);
+    height: 26px;
+    padding: 0 12px;
+    border: 1px solid var(--button-edge);
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-decoration: none;
+    white-space: nowrap;
+    color: var(--button-ink);
+    background: var(--button-face);
+    box-shadow: 0 1px 2px var(--shadow-strong);
+    cursor: pointer;
+    transition: border-color 0.1s ease;
+}
+
+.button-secondary:hover {
+    border-color: var(--button-edge-hover);
+    background: var(--button-face-hover);
+    transition-delay: var(--hover-delay);
+}
+
+.button-action {
+    border-color: var(--action-edge);
+    color: var(--action-ink);
+    background: var(--action-face);
+}
+
+.button-action:hover {
+    background: var(--action-face-hover);
+    transition-delay: var(--hover-delay);
+}
+
+.button-danger {
+    border-color: var(--danger-edge);
+    color: var(--danger-ink);
+    background: var(--danger-face);
+}
+
+.button-danger:hover {
+    background: var(--danger-face-hover);
+    transition-delay: var(--hover-delay);
+}
+
+.button-action:active,
+.button-secondary:active,
+.button-danger:active {
+    box-shadow: inset 0 1px 3px var(--shadow-strong);
+}
+
+.button-action:disabled,
+.button-secondary:disabled,
+.button-danger:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------ */
+/* Shell - links                                                */
+/* ------------------------------------------------------------ */
+
+.link,
+.editable:not(.pill) {
+    padding-bottom: 2px;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+    text-decoration: none;
+    color: var(--text);
+    background-color: transparent;
+    background-image: repeating-linear-gradient(90deg, var(--link-dash) 0, var(--link-dash) 3px, transparent 3px, transparent 6px);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 100% 1px;
+    cursor: pointer;
+    transition: color 0.1s ease;
+}
+
+/* A link beside a heading that leads to more of what the heading shows */
+.side-link {
+    font-size: 11px;
+    color: var(--text3);
+}
+
+.link:hover,
+.editable:not(.pill):hover {
+    color: var(--link-hover);
+    transition-delay: var(--hover-delay);
+}
+
+/* ------------------------------------------------------------ */
+/* Shell - pills                                                */
+/* ------------------------------------------------------------ */
+
+/* A tag in the ink of its tone over a wash of the same hue */
+.pill {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: var(--pill-width);
+    padding: 1px 5px;
+    border-radius: var(--radius);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--tone);
+    background: color-mix(in srgb, var(--tone) 18%, transparent);
+    user-select: none;
+    transition: box-shadow 0.1s ease;
+}
+
+/* A triangle leads the state of a message - pointing right if it came in, left if it went out */
+.direction {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-right: 7px;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    vertical-align: middle;
+}
+
+.direction-inbound {
+    border-left: 8px solid var(--triangle-inbound);
+}
+
+.direction-outbound {
+    border-right: 8px solid var(--triangle-outbound);
+}
+
+.pill.editable {
+    cursor: pointer;
+}
+
+.pill.editable:hover {
+    box-shadow: inset 0 0 0 1px var(--tone);
+    transition-delay: var(--hover-delay);
+}
+
+/* ------------------------------------------------------------ */
+/* Shell - chips                                                */
+/* ------------------------------------------------------------ */
+
+.chip {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    min-width: var(--chip-width);
+    max-width: 100%;
+    height: 22px;
+    padding: 0 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text2);
+    background: var(--button-face);
+    transition: border-color 0.1s ease;
+}
+
+button.chip {
+    cursor: pointer;
+}
+
+button.chip:hover {
+    border-color: var(--button-edge-hover);
+    color: var(--text);
+    transition-delay: var(--hover-delay);
+}
+
+.chip-label {
+    color: var(--text4);
+}
+
