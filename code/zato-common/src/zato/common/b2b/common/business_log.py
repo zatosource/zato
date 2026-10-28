@@ -9,27 +9,32 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from datetime import datetime
-
-# SQLAlchemy
-from sqlalchemy import and_, exists, select
+from heapq import heappop, heappush
+from itertools import count
+from threading import Lock
 
 # Zato
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, event_attr_table, event_table, \
-    is_audit_log_enabled, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, is_audit_log_enabled, ModuleCtx as AuditLogCtx
 from zato.common.audit_log.common import B2BAttr
+from zato.common.b2b.common.commit_group import get_writer
+from zato.common.b2b.common.commit_sql import EventWrite
 from zato.common.b2b.common.exceptions import B2BException
+from zato.common.b2b.common.recovery import read_attrs, read_events, read_open
+from zato.common.b2b.common.schema import OpenKind
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Connection, Engine
+    from sqlalchemy.engine import Connection
+    from zato.common.b2b.common.commit_group import CommitTicket, GroupCommitWriter
     from zato.common.typing_ import anylist, dtnone, stranydict, strlist, strnone
     anylist = anylist
+    CommitTicket = CommitTicket
     Connection = Connection
     dtnone = dtnone
-    Engine = Engine
+    GroupCommitWriter = GroupCommitWriter
     stranydict = stranydict
     strlist = strlist
     strnone = strnone
@@ -42,6 +47,9 @@ business_outcome_list = list['BusinessOutcome']
 
 # How many transactions with a deadline one check of the deadlines looks at.
 Expiry_Batch_Size = 1000
+
+# The key of the data document of a sent event under which the business transaction is recorded.
+Data_Business = 'business'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,8 +87,16 @@ _final_states = (
     BusinessState.Timed_Out,
 )
 
-# The event types that make up the record of one business message.
-_business_event_types = (AuditEvent.Business_Message_Sent, AuditEvent.Business_Reply_Received, AuditEvent.Business_Timed_Out)
+# The event types that make up the record of one business message, a message sent through a send log included.
+_business_event_types = (
+    AuditEvent.Business_Message_Sent,
+    AuditEvent.Message_Sent,
+    AuditEvent.Business_Reply_Received,
+    AuditEvent.Business_Timed_Out,
+)
+
+# The event types that record a business message as sent.
+_sent_event_types = (AuditEvent.Business_Message_Sent, AuditEvent.Message_Sent)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -225,77 +241,142 @@ def _format_time(value:'dtnone') -> 'strnone':
     return out
 
 # ################################################################################################################################
+
+def business_data(message:'BusinessMessage') -> 'stranydict':
+    """ Returns the document a business message is recorded with when it is sent.
+    """
+    out:'stranydict' = {
+        _Data.Conversation_ID: message.conversation_id,
+        _Data.Service: message.service,
+        _Data.Action: message.action,
+        _Data.Sent_At: message.sent_at.isoformat(),
+        _Data.Receipt_Deadline: _format_time(message.receipt_deadline),
+        _Data.Response_Deadline: _format_time(message.response_deadline),
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def business_attrs(message:'BusinessMessage') -> 'stranydict':
+    """ Returns the searchable attributes of every event of a business message.
+    """
+    out:'stranydict' = {
+        B2BAttr.From_Party: message.from_party,
+        B2BAttr.To_Party: message.to_party,
+        B2BAttr.Service: message.service,
+        B2BAttr.Action: message.action,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def business_sent_attrs(message:'BusinessMessage') -> 'stranydict':
+    """ Returns the searchable attributes of the event that records a business message as sent.
+    """
+    out = business_attrs(message)
+
+    if earliest_deadline := message.earliest_deadline:
+        out[B2BAttr.Deadline_At] = earliest_deadline.isoformat()
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class BusinessLog:
     """ The record of the business transaction of every business message a server sends under a B2B protocol,
     kept in the audit log - the message with its deadlines, each signal and response that refers to it,
-    and the passing of a deadline. Nothing is held in memory, so a transaction continues from the record after a restart.
+    and the passing of a deadline. The transactions that await a signal or a response are held in memory
+    with their deadlines, and recover() reads them again from the audit log when a server starts.
     """
 
-    def __init__(self, source:'str', server_name:'str') -> 'None':
+    def __init__(self, source:'str', server_name:'str', writer:'GroupCommitWriter | None'=None) -> 'None':
 
         # A turned-off audit log drops every event, and a transaction cannot be followed without its record.
         if not is_audit_log_enabled():
             raise B2BException(f'The audit log is turned off through `{AuditLogCtx.Env_Enabled}` and no business ' +
                 'transaction can be recorded')
 
+        if writer is None:
+            writer = get_writer()
+
         self.source = source
         self.server_name = server_name
+        self.writer:'GroupCommitWriter' = writer
 
-        # Each event is committed at the moment it is recorded.
+        # Builds the events that the writer commits.
         self.audit_log = AuditLog(server_name, flush_max_size=1)
 
+        # Each transaction that has not ended, by its message identifier ..
+        self._lock = Lock()
+        self._awaiting:'dict[str, BusinessMessage]' = {}
+
+        # .. and the deadlines of the transactions, earliest first, with an order number that breaks ties.
+        self._deadlines:'anylist' = []
+        self._deadline_order = count()
+
+        self.writer.add_event_source(source)
+
 # ################################################################################################################################
 
-    @property
-    def engine(self) -> 'Engine':
-        out = self.audit_log.engine
-        return out
+    def track(self, message:'BusinessMessage') -> 'None':
+        """ Holds in memory a transaction that awaits a signal or a response.
+        """
+        with self._lock:
+            self._awaiting[message.message_id] = message
+
+            for deadline in (message.receipt_deadline, message.response_deadline):
+                if deadline:
+                    order = next(self._deadline_order)
+                    heappush(self._deadlines, (deadline, order, message.message_id))
 
 # ################################################################################################################################
 
-    def _attrs(self, message:'BusinessMessage') -> 'stranydict':
-        out:'stranydict' = {
-            B2BAttr.From_Party: message.from_party,
-            B2BAttr.To_Party: message.to_party,
-            B2BAttr.Service: message.service,
-            B2BAttr.Action: message.action,
-        }
+    def _forget(self, message_id:'str') -> 'None':
+        """ Removes from memory a transaction that ended. Its deadlines are skipped when they come up.
+        """
+        with self._lock:
+            _ = self._awaiting.pop(message_id, None)
 
+# ################################################################################################################################
+
+    def _write(self, write:'EventWrite') -> 'CommitTicket':
+        out = self.writer.submit(write, write.row_count)
         return out
 
 # ################################################################################################################################
 
     def record_sent(self, message:'BusinessMessage') -> 'None':
-        """ Records a business message sent with the deadlines of its business transaction.
+        """ Records a business message sent with the deadlines of its business transaction,
+        and returns once the record is committed.
         """
-        receipt_deadline = _format_time(message.receipt_deadline)
-        response_deadline = _format_time(message.response_deadline)
-        sent_at = message.sent_at.isoformat()
+        data = dumps({Data_Business: business_data(message)})
+        attrs = business_sent_attrs(message)
 
-        data = dumps({
-            _Data.Conversation_ID: message.conversation_id,
-            _Data.Service: message.service,
-            _Data.Action: message.action,
-            _Data.Sent_At: sent_at,
-            _Data.Receipt_Deadline: receipt_deadline,
-            _Data.Response_Deadline: response_deadline,
-        })
+        write = EventWrite()
+        write.pending = self.audit_log.new_pending_event(self.source, AuditEvent.Business_Message_Sent, message.cpa_id,
+            cid=message.message_id, msg_id=message.message_id, status=BusinessState.Sent, outcome=AuditOutcome.OK,
+            data=data, attrs=attrs)
 
-        attrs = self._attrs(message)
+        # A message recorded as sent again starts its transaction anew.
+        with self._lock:
+            if message.message_id in self._awaiting:
+                write.closes.append(OpenKind.Transaction)
 
-        # Only a message with a deadline is looked at again when deadlines are checked.
-        if earliest_deadline := message.earliest_deadline:
-            attrs[B2BAttr.Deadline_At] = earliest_deadline.isoformat()
+        write.opens.append(OpenKind.Transaction)
 
-        _ = self.audit_log.insert(self.source, AuditEvent.Business_Message_Sent, message.cpa_id, cid=message.message_id,
-            msg_id=message.message_id, status=BusinessState.Sent, outcome=AuditOutcome.OK, data=data, attrs=attrs)
+        ticket = self._write(write)
+        _ = ticket.wait()
+
+        self.track(message)
 
 # ################################################################################################################################
 
     def record_reply(self, message:'BusinessMessage', state:'str', reply_message_id:'str', errors:'strlist') -> 'None':
-        """ Records a signal or a response that changed the state of the transaction of a message.
+        """ Records a signal or a response that changed the state of the transaction of a message,
+        and returns once the record is committed.
         """
         data = dumps({
             _Data.Reply_Message_ID: reply_message_id,
@@ -307,104 +388,226 @@ class BusinessLog:
         else:
             audit_outcome = AuditOutcome.OK
 
-        attrs = self._attrs(message)
+        attrs = business_attrs(message)
 
-        _ = self.audit_log.insert(self.source, AuditEvent.Business_Reply_Received, message.cpa_id, cid=message.message_id,
-            msg_id=message.message_id, correl_id=reply_message_id, status=state, outcome=audit_outcome, data=data,
-            attrs=attrs)
+        write = EventWrite()
+        write.pending = self.audit_log.new_pending_event(self.source, AuditEvent.Business_Reply_Received,
+            message.cpa_id, cid=message.message_id, msg_id=message.message_id, correl_id=reply_message_id, status=state,
+            outcome=audit_outcome, data=data, attrs=attrs)
+
+        is_final = state in _final_states
+
+        if is_final:
+            write.closes.append(OpenKind.Transaction)
+
+        ticket = self._write(write)
+        _ = ticket.wait()
+
+        message.state = state
+        message.reply_message_id = reply_message_id
+        message.errors = errors
+
+        if is_final:
+            self._forget(message.message_id)
+
+# ################################################################################################################################
+
+    def _timed_out_write(self, message:'BusinessMessage') -> 'CommitTicket':
+        """ Adds the record of a deadline that passed to the next transaction, without waiting for the commit.
+        """
+        attrs = business_attrs(message)
+
+        write = EventWrite()
+        write.pending = self.audit_log.new_pending_event(self.source, AuditEvent.Business_Timed_Out, message.cpa_id,
+            cid=message.message_id, msg_id=message.message_id, status=BusinessState.Timed_Out,
+            outcome=AuditOutcome.Expired, attrs=attrs)
+        write.closes.append(OpenKind.Transaction)
+
+        out = self._write(write)
+        return out
+
+# ################################################################################################################################
+
+    def _end_timed_out(self, message:'BusinessMessage') -> 'None':
+        message.state = BusinessState.Timed_Out
+        message.reply_message_id = ''
+        message.errors = []
+
+        self._forget(message.message_id)
 
 # ################################################################################################################################
 
     def record_timed_out(self, message:'BusinessMessage') -> 'None':
-        """ Records that a deadline of the transaction of a message passed without what it waited for.
+        """ Records that a deadline of the transaction of a message passed without what it waited for,
+        and returns once the record is committed.
         """
-        attrs = self._attrs(message)
+        ticket = self._timed_out_write(message)
+        _ = ticket.wait()
 
-        _ = self.audit_log.insert(self.source, AuditEvent.Business_Timed_Out, message.cpa_id, cid=message.message_id,
-            msg_id=message.message_id, status=BusinessState.Timed_Out, outcome=AuditOutcome.Expired, attrs=attrs)
+        self._end_timed_out(message)
 
 # ################################################################################################################################
 
-    def _message_events(self, connection:'Connection', message_id:'str') -> 'anylist':
-        """ Returns the events of one message this server sent, in the order they were recorded,
-        from its latest recording as sent onwards.
+    def record_timed_out_all(self, messages:'business_message_list') -> 'None':
+        """ Records the passing of the deadlines of many transactions in as few commits as the writer makes.
         """
-        conditions = and_(
-            event_table.c.msg_id == message_id,
-            event_table.c.source == self.source,
-            event_table.c.server_name == self.server_name,
-            event_table.c.event_type.in_(_business_event_types),
-        )
-        statement = select(event_table).where(conditions).order_by(event_table.c.id)
+        tickets:'anylist' = []
 
-        result = connection.execute(statement)
-        events = result.fetchall()
+        for message in messages:
+            ticket = self._timed_out_write(message)
+            tickets.append(ticket)
 
-        # Our response to produce
-        out:'anylist' = []
+        for message, ticket in zip(messages, tickets):
+            _ = ticket.wait()
+            self._end_timed_out(message)
 
-        for event in events:
+# ################################################################################################################################
 
-            # A message recorded as sent again starts its record anew ..
-            if event.event_type == AuditEvent.Business_Message_Sent:
-                out = []
+    def due(self, now:'datetime', limit:'int') -> 'business_message_list':
+        """ Returns, up to the limit and in the order of their deadlines, the transactions held in memory
+        whose deadline passed without the signal or the response it waits for.
+        """
+        out:'business_message_list' = []
+        due_ids:'set[str]' = set()
 
-            # .. and everything recorded after it belongs to it.
-            out.append(event)
+        with self._lock:
+
+            while self._deadlines and len(out) < limit:
+
+                deadline, _, message_id = self._deadlines[0]
+
+                # The deadlines are ordered, so the first one in the future ends the check.
+                if deadline >= now:
+                    break
+
+                _ = heappop(self._deadlines)
+
+                # A transaction that ended, or one already due through its other deadline, is skipped,
+                # and so is a deadline that passed without consequence, as that of a receipt that arrived.
+                if message_id in due_ids:
+                    continue
+
+                if not (message := self._awaiting.get(message_id)):
+                    continue
+
+                if message.is_past_deadline(now):
+                    out.append(message)
+                    due_ids.add(message_id)
 
         return out
 
 # ################################################################################################################################
 
-    def _new_message(self, events:'anylist') -> 'BusinessMessage':
-        """ Builds a message out of its events, the first of which records it as sent.
+    def awaiting(self, limit:'int') -> 'business_message_list':
+        """ Returns, up to the limit, the transactions held in memory that have a deadline, the earliest one first.
         """
-        first = events[0]
+        with self._lock:
+            messages = list(self._awaiting.values())
+
+        with_deadline:'anylist' = []
+
+        for message in messages:
+            if earliest_deadline := message.earliest_deadline:
+                with_deadline.append((earliest_deadline, message.message_id, message))
+
+        with_deadline.sort()
+
+        out:'business_message_list' = []
+
+        for _, _, message in with_deadline[:limit]:
+            out.append(message)
+
+        return out
+
+# ################################################################################################################################
+
+    def _message_from_events(self, events:'anylist', attrs:'stranydict') -> 'BusinessMessage | None':
+        """ Builds a message out of its events, from its latest recording as sent onwards,
+        or returns None when none of them records it as a business message sent.
+        """
+        start = -1
+
+        for idx, event in enumerate(events):
+            if event.event_type in _sent_event_types:
+                data = loads(event.data)
+                if Data_Business in data:
+                    start = idx
+
+        if start == -1:
+            return None
+
+        first = events[start]
         first_data = loads(first.data)
+        business = first_data[Data_Business]
 
         out = BusinessMessage()
         out.message_id = first.msg_id
         out.cpa_id = first.object_name
-        out.conversation_id = first_data[_Data.Conversation_ID]
-        out.service = first_data[_Data.Service]
-        out.action = first_data[_Data.Action]
-        out.sent_at = datetime.fromisoformat(first_data[_Data.Sent_At])
-        out.receipt_deadline = _parse_time(first_data[_Data.Receipt_Deadline])
-        out.response_deadline = _parse_time(first_data[_Data.Response_Deadline])
+        out.conversation_id = business[_Data.Conversation_ID]
+        out.service = business[_Data.Service]
+        out.action = business[_Data.Action]
+        out.sent_at = datetime.fromisoformat(business[_Data.Sent_At])
+        out.receipt_deadline = _parse_time(business[_Data.Receipt_Deadline])
+        out.response_deadline = _parse_time(business[_Data.Response_Deadline])
+        out.from_party = attrs[B2BAttr.From_Party]
+        out.to_party = attrs[B2BAttr.To_Party]
 
-        # Each later event is a change of state, and the latest one says where the transaction stands.
-        for event in events[1:]:
-            out.state = event.status
+        # Each later event of the transaction is a change of state, and the latest one says where the transaction stands.
+        for event in events[start + 1:]:
 
             if event.event_type == AuditEvent.Business_Reply_Received:
                 reply_data = loads(event.data)
+                out.state = event.status
                 out.reply_message_id = reply_data[_Data.Reply_Message_ID]
                 out.errors = reply_data[_Data.Errors]
+
+            elif event.event_type == AuditEvent.Business_Timed_Out:
+                out.state = event.status
+                out.reply_message_id = ''
+                out.errors = []
 
         return out
 
 # ################################################################################################################################
 
-    def _fill_parties(self, connection:'Connection', event_id:'int', message:'BusinessMessage') -> 'None':
-        """ Fills in the parties of a message from the attributes it was recorded with.
+    def _read_stored(self, connection:'Connection', message_ids:'strlist') -> 'business_message_list':
+        """ Reads the given messages from the audit log, each from the event that last recorded it as sent.
         """
-        statement = select(event_attr_table.c.name, event_attr_table.c.value).where(event_attr_table.c.event_id == event_id)
+        events_by_message = read_events(connection, self.source, self.server_name, message_ids, _business_event_types)
 
-        for row in connection.execute(statement):
-            if row.name == B2BAttr.From_Party:
-                message.from_party = row.value
-            elif row.name == B2BAttr.To_Party:
-                message.to_party = row.value
+        sent_events:'dict[str, int]' = {}
+
+        for message_id, events in events_by_message.items():
+            for event in events:
+                if event.event_type in _sent_event_types:
+                    sent_events[message_id] = event.id
+
+        attrs_by_event = read_attrs(connection, list(sent_events.values()))
+
+        out:'business_message_list' = []
+
+        for message_id, events in events_by_message.items():
+
+            if not (event_id := sent_events.get(message_id)):
+                continue
+
+            attrs = attrs_by_event[event_id]
+
+            if message := self._message_from_events(events, attrs):
+                out.append(message)
+
+        return out
 
 # ################################################################################################################################
 
-    def _from_events(self, connection:'Connection', events:'anylist') -> 'BusinessMessage':
-        """ Builds a message out of its events together with the parties it was recorded with.
-        """
-        first = events[0]
+    def _read_one(self, message_id:'str') -> 'BusinessMessage | None':
+        with self.writer.engine.connect() as connection:
+            messages = self._read_stored(connection, [message_id])
 
-        out = self._new_message(events)
-        self._fill_parties(connection, first.id, out)
+        if messages:
+            out = messages[0]
+        else:
+            out = None
 
         return out
 
@@ -412,68 +615,39 @@ class BusinessLog:
 
     def read(self, message_id:'str') -> 'BusinessMessage | None':
         """ Returns one business message as its transaction stands, or None if this server did not record it as sent.
+        A transaction that has not ended is read from memory, and one that ended from the audit log.
         """
-        with self.engine.connect() as connection:
-            events = self._message_events(connection, message_id)
+        with self._lock:
+            out = self._awaiting.get(message_id)
 
-            # A message that was not recorded as sent is not one this server sent ..
-            if not events:
-                out = None
-
-            # .. and one that was is read from its events.
-            else:
-                out = self._from_events(connection, events)
+        if out is None:
+            out = self.writer.call(self._read_one, message_id)
 
         return out
 
 # ################################################################################################################################
 
-    def awaiting(self, limit:'int') -> 'business_message_list':
-        """ Returns the business messages this server sent whose transaction has a deadline and has not ended,
-        the earliest one first.
+    def _recover(self) -> 'business_message_list':
+        with self.writer.engine.connect() as connection:
+            open_records = read_open(connection, OpenKind.Transaction, self.source, self.server_name)
+            message_ids = list(open_records)
+            out = self._read_stored(connection, message_ids)
+
+        return out
+
+# ################################################################################################################################
+
+    def recover(self) -> 'int':
+        """ Reads the transactions that have not ended from the audit log into memory, so that signal matching
+        and expiry continue from them, and returns how many there are.
         """
-        later = event_table.alias()
+        messages = self.writer.call(self._recover)
 
-        # A transaction ends with a final state, and a message recorded as sent again starts a new one.
-        is_closing = and_(
-            later.c.msg_id == event_table.c.msg_id,
-            later.c.source == self.source,
-            later.c.server_name == self.server_name,
-            later.c.id > event_table.c.id,
-            later.c.event_type.in_(_business_event_types),
-            later.c.status.in_(_final_states + (BusinessState.Sent,)),
-        )
-        closing_select = select(later.c.id).where(is_closing)
-        is_closed = exists(closing_select)
+        for message in messages:
+            if message.state not in _final_states:
+                self.track(message)
 
-        has_deadline_conditions = and_(
-            event_attr_table.c.event_id == event_table.c.id,
-            event_attr_table.c.name == B2BAttr.Deadline_At,
-        )
-        deadline_select = select(event_attr_table.c.id).where(has_deadline_conditions)
-        has_deadline = exists(deadline_select)
-
-        conditions = and_(
-            event_table.c.source == self.source,
-            event_table.c.server_name == self.server_name,
-            event_table.c.event_type == AuditEvent.Business_Message_Sent,
-            has_deadline,
-            ~is_closed,
-        )
-
-        statement = select(event_table.c.msg_id).where(conditions).order_by(event_table.c.id).limit(limit)
-
-        out:'business_message_list' = []
-
-        with self.engine.connect() as connection:
-            result = connection.execute(statement)
-            rows = result.fetchall()
-
-            for row in rows:
-                events = self._message_events(connection, row.msg_id)
-                message = self._from_events(connection, events)
-                out.append(message)
-
+        out = len(messages)
         return out
 
 # ################################################################################################################################
@@ -497,10 +671,6 @@ def time_out(business_log:'BusinessLog', message:'BusinessMessage') -> 'Business
     """
     business_log.record_timed_out(message)
 
-    message.state = BusinessState.Timed_Out
-    message.reply_message_id = ''
-    message.errors = []
-
     out = new_business_outcome(message)
     return out
 
@@ -508,14 +678,16 @@ def time_out(business_log:'BusinessLog', message:'BusinessMessage') -> 'Business
 
 def expired(business_log:'BusinessLog', now:'datetime', limit:'int'=Expiry_Batch_Size) -> 'business_outcome_list':
     """ Ends the transaction of every message whose deadline passed without the signal or the response it waits for,
-    and returns the outcome of each.
+    and returns the outcome of each, in the order of the deadlines. The deadlines are read from memory.
     """
+    messages = business_log.due(now, limit)
+    business_log.record_timed_out_all(messages)
+
     out:'business_outcome_list' = []
 
-    for message in business_log.awaiting(limit):
-        if message.is_past_deadline(now):
-            outcome = time_out(business_log, message)
-            out.append(outcome)
+    for message in messages:
+        outcome = new_business_outcome(message)
+        out.append(outcome)
 
     return out
 

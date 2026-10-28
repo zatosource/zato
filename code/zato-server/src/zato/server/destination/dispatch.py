@@ -21,7 +21,8 @@ from urllib.parse import parse_qsl
 
 # Zato
 from zato.common.api import SMTPMessage
-from zato.common.audit_log.common import Ack_Rejected_Marker, AuditClassification, AuditSource, derive_http_classification
+from zato.common.audit_log.classification import Ack_Rejected_Marker, derive_http_classification
+from zato.common.audit_log.common import AuditClassification, AuditSource
 from zato.common.audit_log.request_context import Key_Address, Key_Headers, Key_Method, Key_Params
 from zato.common.destination.constants import Default_Method, Default_Params, Default_Path, Default_Remote_Path, \
     Default_Subject, Default_To, DestinationOption, DestinationType, Hop_Destination_Name, Known_Methods

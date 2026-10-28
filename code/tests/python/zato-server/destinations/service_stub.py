@@ -15,7 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, OK
 
 # Zato
-from zato.common.audit_log.common import Ack_Rejected_Marker
+from zato.common.audit_log.classification import Ack_Rejected_Marker
 from zato.common.pubsub.outgoing import SendResult
 from zato.server.destination.facade import DestinationFacade
 

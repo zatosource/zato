@@ -12,7 +12,8 @@ from http.client import BAD_GATEWAY, BAD_REQUEST, CONFLICT, FORBIDDEN, GATEWAY_T
     UNPROCESSABLE_ENTITY
 
 # Zato
-from zato.common.audit_log.common import derive_http_classification, AuditClassification
+from zato.common.audit_log.classification import derive_http_classification
+from zato.common.audit_log.common import AuditClassification
 
 # ################################################################################################################################
 # ################################################################################################################################

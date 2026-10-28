@@ -19,7 +19,8 @@ from dataclasses import dataclass
 from time import monotonic
 
 # Zato
-from zato.common.audit_log.common import AuditClassification, AuditOutcome, derive_classification
+from zato.common.audit_log.classification import derive_classification
+from zato.common.audit_log.common import AuditClassification, AuditOutcome
 from zato.common.destination.audit import record_hop
 from zato.common.destination.constants import Default_Retry_Count, Default_Retry_Sleep_Seconds, DeliveryMode, \
     Respond_From_Service

@@ -22,7 +22,7 @@ from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
-from zato.common.util.api import get_sql_engine_display_name
+from zato.common.util.api import get_sql_engine_display_name, parse_extra_into_dict
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, ChangePasswordBase
@@ -39,11 +39,13 @@ class _SQLService:
         params['action'] = action
         self.config_dispatcher.publish(params)
 
-    def validate_extra(self, cid, extra):
-        if extra and '=' not in extra:
-            raise ZatoException(cid,
-                'extra should be a list of key=value parameters, possibly one-element long, instead of `{}`'.format(
-                    extra))
+    def validate_extra(self, cid:'str', extra:'str') -> 'None':
+        """ Rejects extra options that the connection pool does not accept, before they are stored in the ODB.
+        """
+        try:
+            _ = parse_extra_into_dict(extra)
+        except ValueError as e:
+            raise ZatoException(cid, f'Invalid extra options, {e}')
 
     def validate_audit_log(self, cid, audit_log):
         if audit_log not in all_sql_audit_levels:

@@ -81,8 +81,8 @@ class TestMessageStore:
         store = new_memory_store()
         identity = _identity('message-1')
 
-        assert store.claim(identity, _message(_now), _now)
-        assert not store.claim(identity, _message(_now), _now)
+        assert store.claim(identity, _message(_now))
+        assert not store.claim(identity, _message(_now))
 
         stored = store.get(identity, _now)
 
@@ -95,15 +95,15 @@ class TestMessageStore:
 
         later = _now + timedelta(seconds=_persist_seconds)
 
-        assert store.claim(identity, _message(_now), _now)
+        assert store.claim(identity, _message(_now))
         assert store.get(identity, later) is None
-        assert store.claim(identity, _message(later), later)
+        assert store.claim(identity, _message(later))
 
     def test_status_of_claimed_message(self) -> 'None':
         store = new_memory_store()
         identity = _identity('message-1')
 
-        _ = store.claim(identity, _message(_now), _now)
+        _ = store.claim(identity, _message(_now))
         store.set_status(identity, 'Processed')
 
         stored = store.get(identity, _now)
@@ -145,7 +145,7 @@ class TestMessageStore:
         second = new_memory_store()
         identity = _identity('message-1')
 
-        _ = first.claim(identity, _message(_now), _now)
+        _ = first.claim(identity, _message(_now))
 
         assert second.get(identity, _now) is None
 
@@ -156,7 +156,7 @@ class TestMessageStore:
         results:'bool_list' = []
 
         def claim() -> 'None':
-            is_claimed = store.claim(identity, _message(_now), _now)
+            is_claimed = store.claim(identity, _message(_now))
             results.append(is_claimed)
 
         greenlets = [spawn(claim) for _ in range(_greenlet_count)]

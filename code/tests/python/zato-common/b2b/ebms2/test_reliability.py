@@ -9,10 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from tempfile import NamedTemporaryFile
 
+# pytest
+import pytest
+
 # SQLAlchemy
 from sqlalchemy import create_engine
 
 # Zato
+from zato.common.b2b.common.commit_group import GroupCommitWriter
 from zato.common.b2b.common.store import MessageStore
 from zato.common.b2b.common.outcome import FinalState, SignalKind
 from zato.common.b2b.ebms2.common import ErrorCode, MessageOrderSemantics, PerMessage, SequenceStatus, SyncReplyMode
@@ -20,6 +24,7 @@ from zato.common.b2b.ebms2.outbound import SendOptions
 from zato.common.b2b.ebms2.reliability import next_sequence_number
 from zato.common.test.b2b_cpa import new_settings
 from zato.common.test.b2b_ebms2 import deliver, new_exchange, new_payload, send, Start_Time
+from zato.common.test.b2b_write_path import CommitRefused, FailingCommit, new_memory_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,18 +224,43 @@ class TestDuplicateElimination:
         with NamedTemporaryFile(suffix='.db') as database:
 
             engine = create_engine(f'sqlite:///{database.name}')
-            exchange.receiver.store = MessageStore(engine)
+            writer = GroupCommitWriter(engine)
+            exchange.receiver.store = MessageStore(writer)
 
             outbound = send(exchange)
 
             first = deliver(exchange, outbound)
             second = deliver(exchange, outbound)
 
+            writer.stop()
             engine.dispose()
 
         assert first.outcome.delivered
         assert second.outcome.duplicate
         assert second.response.body == first.response.body
+
+    def test_failed_commit(self, parties:'TestParties') -> 'None':
+        settings = _settings(parties)
+        exchange = new_exchange(parties, settings)
+
+        writer = GroupCommitWriter(new_memory_engine(), interval_ms=0, is_started=False)
+        exchange.receiver.store = MessageStore(writer)
+
+        outbound = send(exchange)
+
+        # A claim that is not committed produces neither an acknowledgment nor a delivery ..
+        failing = FailingCommit(writer.engine)
+
+        with pytest.raises(CommitRefused):
+            _ = deliver(exchange, outbound)
+
+        failing.stop()
+
+        # .. and the resend of the partner is delivered as the first copy.
+        resent = deliver(exchange, outbound)
+
+        assert resent.outcome.delivered
+        assert not resent.outcome.duplicate
 
 # ################################################################################################################################
 # ################################################################################################################################

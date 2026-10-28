@@ -8,15 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, INTERNAL_SERVER_ERROR, NOT_FOUND, \
-    REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
 
 # requests
 from requests.exceptions import ConnectionError as RequestsConnectionError, SSLError as RequestsSSLError, \
     Timeout as RequestsTimeout
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
+from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, Sequence, String, Table, Text
+from sqlalchemy.dialects.mysql import LONGTEXT
 
 # Zato
 from zato.common.exception import BackendInvocationError
@@ -491,6 +490,18 @@ _big_id_column = BigInteger()
 _sqlite_id_column = Integer()
 _id_column_type = _big_id_column.with_variant(_sqlite_id_column, 'sqlite')
 
+# A TEXT column of MySQL holds 64 KB, less than the attachments a body may carry.
+_body_data_type = Text().with_variant(LONGTEXT(), 'mysql')
+
+def _new_id_column(table_name:'str') -> 'Column':
+    """ Returns the autoincrement primary key of one table. Oracle DB generates its values from a sequence
+    of the table's own, which the other databases do not use, as they generate the values themselves.
+    """
+    sequence = Sequence(f'{table_name}_id_seq', optional=True)
+
+    out = Column('id', _id_column_type, sequence, primary_key=True, autoincrement=True)
+    return out
+
 # The column types the tables below are built out of, named once so no table definition
 # needs an inner call of its own.
 _short_column = String(_short_column_len)
@@ -505,7 +516,7 @@ _index_prefix_len = 64
 # ################################################################################################################################
 
 _event_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column('event'),
     Column('cid', _short_column),
     Column('cid_sequence', Integer),
     Column('source', _short_column),
@@ -527,6 +538,11 @@ _event_columns = [
     Column('status', _short_column),
     Column('duration_ms', Integer),
     Column('data', Text),
+
+    # The transaction a group commit wrote the event in, on the databases whose drivers return
+    # no identifiers from a multi-row insert, so that one select by it returns them in insertion order.
+    Column('commit_id', _short_column),
+
     Index('idx_event_source_object', 'source', 'object_name', 'id'),
 
     # One object's events are read newest first by the time they happened rather than by the
@@ -546,6 +562,8 @@ _event_columns = [
     # every message whose receipt has not arrived - and the msg_id index above covers only the
     # lookup of the closing event, leaving the outer half of that question a full scan.
     Index('idx_event_source_type_time', 'source', 'event_type', 'event_time_iso'),
+
+    Index('idx_event_commit_id', 'commit_id', 'id'),
 ]
 
 event_table = Table('event', metadata, *_event_columns)
@@ -556,7 +574,7 @@ event_table = Table('event', metadata, *_event_columns)
 # Values are stored as capped text, and numbers additionally go to a numeric column
 # so aggregation queries can sum and group without casting.
 _event_attr_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column('event_attr'),
     Column('event_id', BigInteger),
     Column('name', _short_column),
     Column('value', _short_column),
@@ -574,11 +592,11 @@ event_attr_table = Table('event_attr', metadata, *_event_attr_columns)
 # and pruning content is a bulk delete here rather than column surgery on the event table.
 # The event time is denormalized so pruning never needs a join.
 _event_body_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column('event_body'),
     Column('event_id', BigInteger),
     Column('kind', _short_column),
     Column('event_time_iso', _short_column),
-    Column('data', Text),
+    Column('data', _body_data_type),
     Index('idx_event_body_event', 'event_id'),
     Index('idx_event_body_time', 'event_time_iso'),
 ]
@@ -590,7 +608,7 @@ event_body_table = Table('event_body', metadata, *_event_body_columns)
 # Lineage between events - resubmissions, batch membership and aggregation.
 # A link table because one event may have many parents.
 _event_link_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column('event_link'),
     Column('child_event_id', BigInteger),
     Column('parent_event_id', BigInteger),
     Column('link_type', _short_column),
@@ -606,7 +624,7 @@ event_link_table = Table('event_link', metadata, *_event_link_columns)
 # so a double-click or two overlapping bulk operations cannot double-apply one message.
 # A row acquired but never completed marks an interrupted resubmit, detectable as in-doubt.
 _event_dedup_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column('event_dedup'),
     Column('dedup_key', _short_column),
     Column('cid', _short_column),
     Column('action', _short_column),
@@ -627,7 +645,7 @@ event_dedup_table = Table('event_dedup', metadata, *_event_dedup_columns)
 # no lifecycle here - what happens to an alert after it goes out lives in Jira,
 # ServiceNow or whatever else receives it.
 _alert_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column('alert'),
     Column('rule_name', _short_column),
     Column('source', _short_column),
     Column('object_name', _short_column),
@@ -647,88 +665,6 @@ _alert_columns = [
 ]
 
 alert_table = Table('alert', metadata, *_alert_columns)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Markers meaning a failure is transient - resubmitting the message as-is can work
-_transient_markers = (
-    'timeout', 'timed out', 'connection', 'refused', 'unreachable', 'reset', 'unavailable', 'temporar',
-    f'{REQUEST_TIMEOUT}', f'{TOO_MANY_REQUESTS}', f'{BAD_GATEWAY}', f'{SERVICE_UNAVAILABLE}', f'{GATEWAY_TIMEOUT}',
-)
-
-# What the status of a delivery an HL7 receiver answered with an AE or an AR opens with.
-Ack_Rejected_Marker = 'HL7 ack rejected'
-
-# Markers meaning a failure is permanent - the message needs to change before another attempt
-_permanent_markers = (
-    'validation', 'invalid', 'malformed', 'parse', 'schema', 'unauthorized', 'forbidden', 'not found', 'duplicate',
-    Ack_Rejected_Marker.lower(),
-    f'{BAD_REQUEST}', f'{UNAUTHORIZED}', f'{FORBIDDEN}', f'{NOT_FOUND}', f'{UNPROCESSABLE_ENTITY}',
-)
-
-# ################################################################################################################################
-
-def derive_classification(outcome:'str', status:'str' = '', application_outcome:'str' = '') -> 'str':
-    """ Derives the transient-vs-permanent classification of a failure out of its platform
-    and application outcomes. Successful events and failures matching no known marker stay unclassified.
-    """
-
-    # Only failures are classified ..
-    if outcome != AuditOutcome.Error:
-        return ''
-
-    # .. both outcome layers contribute to the match ..
-    combined = f'{status} {application_outcome}'.lower()
-
-    # .. a transient failure means resubmitting the message as-is can work ..
-    for marker in _transient_markers:
-        if marker in combined:
-            out = AuditClassification.Transient
-            break
-
-    # .. a permanent one means the message needs to change first ..
-    else:
-        for marker in _permanent_markers:
-            if marker in combined:
-                out = AuditClassification.Permanent
-                break
-
-        # .. and anything unmatched stays unclassified.
-        else:
-            out = ''
-
-    return out
-
-# ################################################################################################################################
-
-# The client errors that say the server could not take the request right now rather than that the request is wrong
-_transient_client_errors = (REQUEST_TIMEOUT, TOO_MANY_REQUESTS)
-
-# ################################################################################################################################
-
-def derive_http_classification(status_code:'int') -> 'str':
-    """ Classifies a rejection by the HTTP status it came with - a client error is permanent, except for the ones
-    saying the server could not take the request right now, and a server error is transient.
-    """
-
-    # A server error is something the same request can get past later ..
-    if status_code >= INTERNAL_SERVER_ERROR:
-        out = AuditClassification.Transient
-
-    # .. so is a client error that only says the server was busy or slow ..
-    elif status_code in _transient_client_errors:
-        out = AuditClassification.Transient
-
-    # .. any other client error needs the request to change first ..
-    elif status_code >= BAD_REQUEST:
-        out = AuditClassification.Permanent
-
-    # .. and anything below that is not a rejection at all.
-    else:
-        out = ''
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

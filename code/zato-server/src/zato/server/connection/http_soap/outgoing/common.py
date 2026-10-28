@@ -19,7 +19,8 @@ from requests_toolbelt import MultipartEncoder
 
 # Zato
 from zato.common.api import HTTP_SOAP, SEC_DEF_TYPE
-from zato.common.audit_log.common import AuditClassification, derive_http_classification, TransportStatus
+from zato.common.audit_log.classification import derive_http_classification
+from zato.common.audit_log.common import AuditClassification, TransportStatus
 
 # ################################################################################################################################
 # ################################################################################################################################

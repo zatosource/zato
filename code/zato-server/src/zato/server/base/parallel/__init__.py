@@ -2105,12 +2105,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         result = facade.run_enmasse_sync_export()
 
+        # A completed export returns the file the command wrote ..
         if result.is_ok:
             with open('/tmp/enmasse-export.yaml') as f:
                 data = f.read()
             return data
+
+        # .. while a failed one is reported as an error, never as the content of the file.
         else:
-            return result.stderr
+            message = f'Enmasse export failed, exit code: `{result.exit_code}`, timeout: `{result.timeout_msg}`, ' + \
+                f'stdout: `{result.stdout}`, stderr: `{result.stderr}`'
+            raise Exception(message)
 
 # ################################################################################################################################
 

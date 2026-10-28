@@ -449,7 +449,7 @@ def _receive_business(ctx:'_Context', elements:'MessageElements', out:'InboundRe
     stored.response = stored_response
 
     # Only the copy that records the message first is delivered, unless duplicates are not eliminated ..
-    is_claimed = ctx.store.claim(identity, stored, ctx.now)
+    is_claimed = ctx.store.claim(identity, stored)
 
     if not is_claimed:
         if is_duplicate_elimination(binding, header):

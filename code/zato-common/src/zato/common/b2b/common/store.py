@@ -7,148 +7,49 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import dataclass
 from datetime import datetime
-from logging import getLogger
-from threading import Lock
-from typing import NamedTuple
 
 # SQLAlchemy
-from sqlalchemy import and_, BigInteger, Boolean, Column, create_engine, Index, Integer, LargeBinary, MetaData, select, String, \
-    Table, UniqueConstraint
+from sqlalchemy import and_, create_engine, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import StaticPool
 
 # Zato
-from zato.common.b2b.common.exceptions import B2BException
+from zato.common.b2b.common.commit_group import get_writer, GroupCommitWriter
+from zato.common.b2b.common.commit_sql import ClaimWrite, StatusWrite
+from zato.common.b2b.common.records import HeldMessage, MessageIdentity, StoredMessage, StoredResponse, to_iso
+from zato.common.b2b.common.schema import held_message_table, message_table, sequence_table
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Engine
+    from sqlalchemy.engine import Connection
     from zato.common.typing_ import any_
     any_ = any_
-    Engine = Engine
+    Connection = Connection
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MessageIdentity(NamedTuple):
-    """ What makes one received message the same message when it arrives again.
-    """
-    protocol:   str
-    from_party: str
-    to_party:   str
-    message_id: str
+__all__ = [
+    'HeldMessage', 'MessageIdentity', 'MessageStore', 'new_audit_store', 'new_memory_store', 'StoredMessage',
+    'StoredResponse',
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-@dataclass(init=False)
-class StoredResponse:
-    """ The response signal that answered a received message, kept so that a duplicate gets the same one.
-    """
-    status_code:    int
-    content_type:   str
-    body:           bytes
-    is_synchronous: bool
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class StoredMessage:
-    """ One received message as the store remembers it.
-    """
-    status:      str
-    received_at: 'datetime'
-    expires_at:  'datetime'
-    response:    StoredResponse
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class HeldMessage:
-    """ A received message whose delivery waits for the messages that precede it in its sequence.
-    """
-    content_type: str
-    body:         bytes
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Maximum length of the identifier columns.
-_short_column_len = 255
-
-# Retention runs after every that many claims.
-_retention_check_interval = 1000
 
 # The URL of an in-memory SQLite database.
 _memory_url = 'sqlite://'
 
-# ################################################################################################################################
-# ################################################################################################################################
+# The writer of an in-memory store commits each write as soon as it arrives.
+_memory_commit_interval_ms = 0
 
-metadata = MetaData()
-
-# Row identifiers are 64-bit, except under SQLite where the autoincrement
-# primary key must be a plain INTEGER to become an alias of the built-in rowid.
-_sqlite_id_column_type = Integer()
-_id_column_type = BigInteger().with_variant(_sqlite_id_column_type, 'sqlite')
-
-_short_column = String(_short_column_len)
+# Each claim and each status update is one row.
+_write_row_count = 1
 
 # ################################################################################################################################
-
-message_table = Table('b2b_message', metadata,
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('protocol', _short_column, nullable=False),
-    Column('from_party', _short_column, nullable=False),
-    Column('to_party', _short_column, nullable=False),
-    Column('message_id', _short_column, nullable=False),
-    Column('status', _short_column, nullable=False),
-    Column('received_iso', _short_column, nullable=False),
-    Column('expires_iso', _short_column, nullable=False),
-    Column('response_status_code', Integer, nullable=False),
-    Column('response_content_type', _short_column, nullable=False),
-    Column('response_body', LargeBinary, nullable=False),
-    Column('response_is_synchronous', Boolean, nullable=False),
-    UniqueConstraint('protocol', 'from_party', 'to_party', 'message_id', name='uq_b2b_message_identity'),
-
-    # Retention deletes on the expiry time, which without this index means reading the whole table on every run.
-    Index('idx_b2b_message_expires', 'expires_iso'),
-)
-
-sequence_table = Table('b2b_sequence', metadata,
-    Column('conversation', _short_column, primary_key=True),
-    Column('next_sequence', BigInteger, nullable=False),
-)
-
-held_message_table = Table('b2b_held_message', metadata,
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('conversation', _short_column, nullable=False),
-    Column('sequence_number', BigInteger, nullable=False),
-    Column('content_type', _short_column, nullable=False),
-    Column('body', LargeBinary, nullable=False),
-    UniqueConstraint('conversation', 'sequence_number', name='uq_b2b_held_message'),
-)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _to_iso(when:'datetime') -> 'str':
-    """ Returns a UTC datetime in the one ISO form the timestamp columns are compared in.
-    """
-    out = when.isoformat(timespec='microseconds')
-    return out
-
 # ################################################################################################################################
 
 def _identity_condition(identity:'MessageIdentity') -> 'any_':
@@ -169,97 +70,36 @@ def _identity_condition(identity:'MessageIdentity') -> 'any_':
 class MessageStore:
     """ The state the B2B protocol layers keep between messages - received message identifiers
     with their responses and statuses, and the sequence state of ordered conversations - in a SQL database.
-    The unique constraint on the message identity makes a claim atomic.
+    Claims and status updates are committed through a group commit writer, and the unique constraint
+    on the message identity makes a claim atomic.
     """
 
-    def __init__(self, engine:'Engine') -> 'None':
-        self.engine = engine
-
-        # The schema creation is idempotent.
-        metadata.create_all(self.engine)
-
-        # Counts claims so that retention runs periodically instead of on every write.
-        self._claim_count_lock = Lock()
-        self._claim_count = 0
+    def __init__(self, writer:'GroupCommitWriter') -> 'None':
+        self.writer = writer
+        self.engine = writer.engine
 
 # ################################################################################################################################
 
-    def _insert(self, identity:'MessageIdentity', message:'StoredMessage') -> 'bool':
-        """ Inserts the row of one message. Returns False when the identity has a row already.
-        """
-        values = {
-            'protocol': identity.protocol,
-            'from_party': identity.from_party,
-            'to_party': identity.to_party,
-            'message_id': identity.message_id,
-            'status': message.status,
-            'received_iso': _to_iso(message.received_at),
-            'expires_iso': _to_iso(message.expires_at),
-            'response_status_code': message.response.status_code,
-            'response_content_type': message.response.content_type,
-            'response_body': message.response.body,
-            'response_is_synchronous': message.response.is_synchronous,
-        }
-
-        insert = message_table.insert()
-        statement = insert.values(**values)
-
-        # A constraint violation means the identity is already recorded.
-        try:
-            with self.engine.begin() as connection:
-                _ = connection.execute(statement)
-            out = True
-        except IntegrityError:
-            out = False
-
-        return out
-
-# ################################################################################################################################
-
-    def claim(self, identity:'MessageIdentity', message:'StoredMessage', now:'datetime') -> 'bool':
+    def claim(self, identity:'MessageIdentity', message:'StoredMessage') -> 'bool':
         """ Records a received message under its identity. Returns True when this call was the first
-        to record it, and False when an unexpired record of the same identity exists already.
+        to record it, and False when a record of the same identity exists already that had not expired
+        when the message was received. The call returns once the claim is committed.
         """
+        write = ClaimWrite()
+        write.identity = identity
+        write.message = message
 
-        # Try to record the message as new ..
-        out = self._insert(identity, message)
-
-        # .. if it exists already, it may be an expired record, which is replaced ..
-        if not out:
-            now_iso = _to_iso(now)
-            identity_condition = _identity_condition(identity)
-            expired_condition = and_(identity_condition, message_table.c.expires_iso <= now_iso)
-
-            delete = message_table.delete()
-            delete_statement = delete.where(expired_condition)
-
-            with self.engine.begin() as connection:
-                result = connection.execute(delete_statement)
-
-            # .. and only a deleted expired record makes room for this one.
-            if result.rowcount:
-                out = self._insert(identity, message)
-
-        # Periodically delete the expired records of all the messages.
-        with self._claim_count_lock:
-            self._claim_count += 1
-            is_retention_due = self._claim_count % _retention_check_interval == 0
-
-        if is_retention_due:
-            self._run_retention(now)
-
+        out = self.writer.write(write, _write_row_count)
         return out
 
 # ################################################################################################################################
 
-    def get(self, identity:'MessageIdentity', now:'datetime') -> 'StoredMessage | None':
-        """ Returns the unexpired record of a received message, or None.
-        """
+    def _get(self, identity:'MessageIdentity', now:'datetime') -> 'StoredMessage | None':
 
         # Our response to produce
         out = None
 
-        now_iso = _to_iso(now)
+        now_iso = to_iso(now)
         identity_condition = _identity_condition(identity)
         unexpired_condition = and_(identity_condition, message_table.c.expires_iso > now_iso)
 
@@ -280,10 +120,19 @@ class MessageStore:
 
         if row is not None:
 
+            # Oracle DB returns an empty value as NULL.
+            content_type = row.response_content_type
+            if content_type is None:
+                content_type = ''
+
+            body = row.response_body
+            if body is None:
+                body = b''
+
             response = StoredResponse()
             response.status_code    = row.response_status_code
-            response.content_type   = row.response_content_type
-            response.body           = row.response_body
+            response.content_type   = content_type
+            response.body           = body
             response.is_synchronous = row.response_is_synchronous
 
             out = StoredMessage()
@@ -296,29 +145,26 @@ class MessageStore:
 
 # ################################################################################################################################
 
-    def set_status(self, identity:'MessageIdentity', status:'str') -> 'None':
-        """ Updates the status of a claimed message.
+    def get(self, identity:'MessageIdentity', now:'datetime') -> 'StoredMessage | None':
+        """ Returns the unexpired record of a received message, or None.
         """
-
-        identity_condition = _identity_condition(identity)
-
-        update = message_table.update()
-        update = update.where(identity_condition)
-        statement = update.values(status=status)
-
-        with self.engine.begin() as connection:
-            result = connection.execute(statement)
-
-        # Only a message that was claimed has a status to update.
-        if not result.rowcount:
-            raise B2BException(f'Message `{identity.message_id}` from `{identity.from_party}` is not in the store')
+        out = self.writer.call(self._get, identity, now)
+        return out
 
 # ################################################################################################################################
 
-    def get_next_sequence(self, conversation:'str') -> 'int | None':
-        """ Returns the sequence number expected next in an ordered conversation, or None
-        when the conversation has no state yet.
+    def set_status(self, identity:'MessageIdentity', status:'str') -> 'None':
+        """ Updates the status of a claimed message, and returns once the update is committed.
         """
+        write = StatusWrite()
+        write.identity = identity
+        write.status = status
+
+        _ = self.writer.write(write, _write_row_count)
+
+# ################################################################################################################################
+
+    def _get_next_sequence(self, conversation:'str') -> 'int | None':
 
         query = select(sequence_table.c.next_sequence)
         statement = query.where(sequence_table.c.conversation == conversation)
@@ -331,9 +177,16 @@ class MessageStore:
 
 # ################################################################################################################################
 
-    def set_next_sequence(self, conversation:'str', sequence_number:'int') -> 'None':
-        """ Sets the sequence number expected next in an ordered conversation.
+    def get_next_sequence(self, conversation:'str') -> 'int | None':
+        """ Returns the sequence number expected next in an ordered conversation, or None
+        when the conversation has no state yet.
         """
+        out = self.writer.call(self._get_next_sequence, conversation)
+        return out
+
+# ################################################################################################################################
+
+    def _set_next_sequence(self, conversation:'str', sequence_number:'int') -> 'None':
 
         update = sequence_table.update()
         update = update.where(sequence_table.c.conversation == conversation)
@@ -351,10 +204,14 @@ class MessageStore:
 
 # ################################################################################################################################
 
-    def hold(self, conversation:'str', sequence_number:'int', message:'HeldMessage') -> 'None':
-        """ Keeps a message that arrived before the messages preceding it in its conversation.
-        A message held already under the same number stays as it is.
+    def set_next_sequence(self, conversation:'str', sequence_number:'int') -> 'None':
+        """ Sets the sequence number expected next in an ordered conversation.
         """
+        self.writer.call(self._set_next_sequence, conversation, sequence_number)
+
+# ################################################################################################################################
+
+    def _hold(self, conversation:'str', sequence_number:'int', message:'HeldMessage') -> 'None':
 
         insert = held_message_table.insert()
         statement = insert.values(
@@ -372,9 +229,15 @@ class MessageStore:
 
 # ################################################################################################################################
 
-    def release(self, conversation:'str', sequence_number:'int') -> 'HeldMessage | None':
-        """ Removes and returns the held message with the given sequence number, or None.
+    def hold(self, conversation:'str', sequence_number:'int', message:'HeldMessage') -> 'None':
+        """ Keeps a message that arrived before the messages preceding it in its conversation.
+        A message held already under the same number stays as it is.
         """
+        self.writer.call(self._hold, conversation, sequence_number, message)
+
+# ################################################################################################################################
+
+    def _release(self, conversation:'str', sequence_number:'int') -> 'HeldMessage | None':
 
         # Our response to produce
         out = None
@@ -405,29 +268,24 @@ class MessageStore:
 
 # ################################################################################################################################
 
-    def _run_retention(self, now:'datetime') -> 'None':
-        """ Deletes the records of messages whose duplicate detection window has passed.
+    def release(self, conversation:'str', sequence_number:'int') -> 'HeldMessage | None':
+        """ Removes and returns the held message with the given sequence number, or None.
         """
-        now_iso = _to_iso(now)
-
-        delete = message_table.delete()
-        statement = delete.where(message_table.c.expires_iso <= now_iso)
-
-        with self.engine.begin() as connection:
-            result = connection.execute(statement)
-
-        deleted_count = result.rowcount
-
-        if deleted_count:
-
-            if deleted_count == 1:
-                suffix = 'record'
-            else:
-                suffix = 'records'
-
-            logger.info('B2B message store retention deleted %d %s that expired before %s', deleted_count, suffix, now_iso)
+        out = self.writer.call(self._release, conversation, sequence_number)
+        return out
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def new_audit_store() -> 'MessageStore':
+    """ Returns a message store in the audit log database, written to through the group commit writer of the process,
+    so that one transaction holds the claims and the audit events.
+    """
+    writer = get_writer()
+
+    out = MessageStore(writer)
+    return out
+
 # ################################################################################################################################
 
 def new_memory_store() -> 'MessageStore':
@@ -436,8 +294,9 @@ def new_memory_store() -> 'MessageStore':
     # Each connection to an in-memory SQLite database opens a database of its own,
     # so all the callers share the one connection of a static pool.
     engine = create_engine(_memory_url, poolclass=StaticPool, connect_args={'check_same_thread': False})
+    writer = GroupCommitWriter(engine, interval_ms=_memory_commit_interval_ms, is_started=False)
 
-    out = MessageStore(engine)
+    out = MessageStore(writer)
     return out
 
 # ################################################################################################################################
