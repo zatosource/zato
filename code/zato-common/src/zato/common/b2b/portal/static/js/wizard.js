@@ -58,7 +58,12 @@ wizard.renderLines = function(body, step) {
     var grid = portal.create('div', 'decision-lines', '');
 
     for (var lineIndex = 0; lineIndex < step.lines.length; lineIndex++) {
-        portal.wizardLines.build(grid, step.lines[lineIndex], wizard.state);
+
+        var line = step.lines[lineIndex];
+
+        if (portal.wizardLines.isShown(line, wizard.state)) {
+            portal.wizardLines.build(grid, line, wizard.state);
+        }
     }
 
     body.appendChild(grid);
@@ -115,6 +120,11 @@ wizard.renderReview = function(body) {
         for (var lineIndex = 0; lineIndex < step.lines.length; lineIndex++) {
 
             var line = step.lines[lineIndex];
+
+            if (!portal.wizardLines.isShown(line, wizard.state)) {
+                continue;
+            }
+
             var row = portal.create('div', 'wizard-review-row', '');
             row.appendChild(portal.create('span', 'wizard-review-key', line.label));
 
@@ -171,12 +181,26 @@ wizard.check = function() {
 
 wizard.onChange = function() {
 
-    // .. errors appear only once completing the wizard has been attempted ..
+    var visibility = portal.wizardLines.visibility(wizard.data.steps, wizard.state);
+    var isVisibilityChanged = visibility !== wizard.visibility;
+
+    wizard.visibility = visibility;
+
+    if (wizard.isSubmitted) {
+        wizard.check();
+    }
+
+    // A change that shows or hides lines builds the step again, any other one only refreshes the errors ..
+    if (isVisibilityChanged) {
+        wizard.show(wizard.current);
+        return;
+    }
+
+    // .. errors appear only once completing the wizard has been attempted.
     if (!wizard.isSubmitted) {
         return;
     }
 
-    wizard.check();
     portal.wizardLines.showErrors(document.getElementById('wizard-body'), wizard.errors);
     wizard.renderSteps();
 };
@@ -225,6 +249,7 @@ wizard.init = function() {
 
     wizard.data = portal.readData('wizard-data');
     wizard.state = portal.wizardLines.initialState(wizard.data.steps);
+    wizard.visibility = portal.wizardLines.visibility(wizard.data.steps, wizard.state);
     portal.wizardLines.onChange = wizard.onChange;
 
     document.getElementById('wizard-back').addEventListener('click', function() {

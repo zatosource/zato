@@ -8,9 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.b2b.portal.sample.agreements import Agreements, Registrations
-from zato.common.b2b.portal.sample.common import action, cell, chip, choice, column, counted, days_from_now, fields, href, id_column, item, \
-    mono, Path_CPAs, Path_Messages, Path_Partners, Path_Registrations, section, tab, table, timestamp, typed
-from zato.common.b2b.portal.sample.parties import DUNS_Type, endpoint, Partner_Role, Partners
+from zato.common.b2b.portal.sample.common import action, cell, chip, choice, column, counted, days_from_now, fields, href, \
+    id_column, item, mono, Path_Agreements, Path_Messages, Path_Partners, Path_Registrations, section, tab, table, timestamp, \
+    typed
+from zato.common.b2b.portal.sample.parties import endpoint, Partners
+from zato.common.b2b.portal.sample.protocol.common import Protocols
+from zato.common.b2b.portal.sample.protocol.views import Views_By_Protocol
 from zato.common.b2b.portal.sample.section_messages import state_chip
 from zato.common.b2b.portal.sample.traffic import Messages
 
@@ -34,10 +37,24 @@ _recent_message_count = 8
 
 _categories = sorted({partner.category for partner in Partners})
 
+# The part of the name of a certificate that says what it is used for, by its usage
+_certificate_suffixes = {
+    'Signing':                'signing',
+    'Signing and encryption': 'signing',
+    'Encryption':             'encryption',
+    'TLS client':             'tls',
+}
+
+_tls_usage = 'TLS client'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _certificate(name:'str', usage:'str', days_left:'int') -> 'anylist':
+def _certificate(partner:'Partner', usage:'str') -> 'anylist':
+
+    suffix = _certificate_suffixes[usage]
+    name = f'{partner.key}-{suffix}-2026'
+    days_left = partner.tls_days_left if usage == _tls_usage else partner.signing_days_left
 
     if days_left < _expiry_warning_days:
         state = chip('Expires soon', tip=counted(days_left, 'day left', 'days left'))
@@ -55,7 +72,7 @@ def _overview(partner:'Partner') -> 'anylist':
         ('Name', partner.name),
         ('State', chip(partner.state, role='state')),
         ('PartyId', mono(partner.duns)),
-        ('Role', mono(Partner_Role)),
+        ('Protocol', choice(partner.protocol, Protocols)),
         ('Category', choice(partner.category, _categories)),
         ('Endpoint', typed(endpoint(partner), 'url', is_mono=True)),
         ('Contact', partner.contact),
@@ -67,24 +84,13 @@ def _overview(partner:'Partner') -> 'anylist':
 
 # ################################################################################################################################
 
-def _identifiers(partner:'Partner') -> 'anylist':
-
-    rows = [
-        [mono(partner.duns), mono(DUNS_Type), mono(Partner_Role)],
-        [mono(partner.host), mono('urn:pinecrest-telecom:partyid-type:host'), mono(Partner_Role)],
-    ]
-
-    out = [table('', ['PartyId', 'Type', 'Role'], rows, is_editable=True)]
-    return out
-
-# ################################################################################################################################
-
 def _certificates(partner:'Partner') -> 'anylist':
 
-    rows = [
-        _certificate(f'{partner.key}-signing-2026', 'Signing', partner.signing_days_left),
-        _certificate(f'{partner.key}-tls-2026', 'TLS client', partner.tls_days_left),
-    ]
+    views = Views_By_Protocol[partner.protocol]
+    rows:'anylist' = []
+
+    for usage in views.certificate_usages:
+        rows.append(_certificate(partner, usage))
 
     out = [
         table('', ['Name', 'Usage', 'Valid to', 'State'], rows, is_editable=True),
@@ -101,7 +107,7 @@ def _agreements(partner:'Partner') -> 'anylist':
     for agreement in Agreements:
         if agreement.partner_key == partner.key:
             agreement_rows.append([
-                mono(agreement.cpa_id, href=href(Path_CPAs, agreement.cpa_id)),
+                mono(agreement.agreement_id, href=href(Path_Agreements, agreement.agreement_id)),
                 days_from_now(agreement.end_days),
                 chip(agreement.state),
             ])
@@ -119,7 +125,7 @@ def _agreements(partner:'Partner') -> 'anylist':
     out:'anylist' = []
 
     if agreement_rows:
-        out.append(table('CPAs', [id_column('CPAId'), 'Valid to', 'State'], agreement_rows))
+        out.append(table('Agreements', [id_column('Agreement'), 'Valid to', 'State'], agreement_rows))
 
     if registration_rows:
         out.append(table('Registrations', ['Registration', 'Product', 'State'], registration_rows))
@@ -170,6 +176,7 @@ def _actions(state:'str') -> 'anylist':
 
 def _item(partner:'Partner') -> 'anydict':
 
+    views = Views_By_Protocol[partner.protocol]
     agreement_count = 0
 
     for agreement in Agreements:
@@ -182,6 +189,7 @@ def _item(partner:'Partner') -> 'anydict':
         cells=[
             cell(partner.name),
             mono(partner.duns),
+            cell(partner.protocol),
             cell(partner.category),
             mono(endpoint(partner)),
             cell(str(agreement_count)),
@@ -189,11 +197,12 @@ def _item(partner:'Partner') -> 'anydict':
         ],
         attributes={
             'state': partner.state,
+            'protocol': partner.protocol,
         },
-        search=[partner.name, partner.duns, partner.host, partner.contact, partner.category],
+        search=[partner.name, partner.duns, partner.host, partner.contact, partner.category, partner.protocol],
         tabs=[
             tab('overview', 'Overview', _overview(partner)),
-            tab('identifiers', 'Identifiers', _identifiers(partner)),
+            tab('identifiers', 'Identifiers', views.partner_identifiers(partner)),
             tab('certificates', 'Certificates', _certificates(partner)),
             tab('agreements', 'Agreements', _agreements(partner)),
             tab('messages', 'Messages', _messages(partner)),
@@ -218,9 +227,10 @@ def build() -> 'anydict':
         columns=[
             column('Name'),
             column('PartyId', is_narrow=True),
+            column('Protocol', is_narrow=True),
             column('Category', is_narrow=True),
             column('Endpoint'),
-            column('CPAs', is_narrow=True),
+            column('Agreements', is_narrow=True),
             column('State', is_narrow=True),
         ],
         items=items,

@@ -9,10 +9,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from typing import NamedTuple
 
+# Zato
+from zato.common.b2b.portal.sample.protocol.common import channel_path, Protocol
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 DUNS_Type = 'urn:oasis:names:tc:ebXML-cppa:partyid-type:duns'
+
+# The ebCore type of a DUNS number, ISO 6523 ICD 0060, which AS4 party identifiers are qualified with
+ISO6523_DUNS_Type = 'urn:oasis:names:tc:ebcore:partyid-type:iso6523:0060'
 
 Partner_Role = 'CommunicationsProvider'
 
@@ -25,6 +31,7 @@ class Partner(NamedTuple):
     duns: str
     state: str
     category: str
+    protocol: str
     host: str
     contact: str
     email: str
@@ -47,18 +54,20 @@ class Service(NamedTuple):
 # ################################################################################################################################
 
 Partners = [
-    Partner('harborlight', 'Harborlight Wireless', '987654321', 'Active', 'Tier 1', 'gateway.harborlight-wireless.example.com',
-        'Jennifer Caldwell', 'jennifer.caldwell@harborlight-wireless.example.com', 214, 301),
-    Partner('redwood', 'Redwood Fiber Networks', '412907766', 'Active', 'Tier 1', 'b2b.redwood-fiber.example.com',
-        'Marcus Delgado', 'marcus.delgado@redwood-fiber.example.com', 9, 188),
-    Partner('lakeshore', 'Lakeshore Communications', '603318254', 'Active', 'Tier 2', 'ebxml.lakeshore-communications.example.com',
-        'Patricia Hollis', 'patricia.hollis@lakeshore-communications.example.com', 402, 77),
-    Partner('prairie', 'Prairie Sky Broadband', '118820931', 'Suspended', 'Tier 2', 'msh.prairie-sky.example.com',
-        'Kevin Brennan', 'kevin.brennan@prairie-sky.example.com', 133, 133),
-    Partner('bluemesa', 'Blue Mesa Mobile', '774205583', 'Onboarding', 'Tier 3', 'test-gw.bluemesa-mobile.example.com',
-        'Ashley Whitfield', 'ashley.whitfield@bluemesa-mobile.example.com', 362, 362),
-    Partner('coppercreek', 'Copper Creek Telecom', '305561870', 'Active', 'Tier 3', 'exchange.coppercreek-telecom.example.com',
-        'Daniel Foster', 'daniel.foster@coppercreek-telecom.example.com', 27, 27),
+    Partner('harborlight', 'Harborlight Wireless', '987654321', 'Active', 'Tier 1', Protocol.ebXML,
+        'gateway.harborlight-wireless.example.com', 'Jennifer Caldwell', 'jennifer.caldwell@harborlight-wireless.example.com',
+        214, 301),
+    Partner('redwood', 'Redwood Fiber Networks', '412907766', 'Active', 'Tier 1', Protocol.AS4,
+        'b2b.redwood-fiber.example.com', 'Marcus Delgado', 'marcus.delgado@redwood-fiber.example.com', 9, 188),
+    Partner('lakeshore', 'Lakeshore Communications', '603318254', 'Active', 'Tier 2', Protocol.AS2,
+        'as2.lakeshore-communications.example.com', 'Patricia Hollis', 'patricia.hollis@lakeshore-communications.example.com',
+        402, 77),
+    Partner('prairie', 'Prairie Sky Broadband', '118820931', 'Suspended', 'Tier 2', Protocol.AS2,
+        'as2.prairie-sky.example.com', 'Kevin Brennan', 'kevin.brennan@prairie-sky.example.com', 133, 133),
+    Partner('bluemesa', 'Blue Mesa Mobile', '774205583', 'Onboarding', 'Tier 3', Protocol.AS4,
+        'test-gw.bluemesa-mobile.example.com', 'Ashley Whitfield', 'ashley.whitfield@bluemesa-mobile.example.com', 362, 362),
+    Partner('coppercreek', 'Copper Creek Telecom', '305561870', 'Active', 'Tier 3', Protocol.ebXML,
+        'exchange.coppercreek-telecom.example.com', 'Daniel Foster', 'daniel.foster@coppercreek-telecom.example.com', 27, 27),
 ]
 
 Partner_By_Key = {}
@@ -101,14 +110,63 @@ for _service in Services:
 # ################################################################################################################################
 
 def endpoint(partner:'Partner') -> 'str':
-    out = f'https://{partner.host}/exchange/{partner.duns}'
+    path = channel_path(partner.protocol, partner.duns)
+
+    out = f'https://{partner.host}{path}'
     return out
 
 # ################################################################################################################################
 
-def cpa_id(partner:'Partner', product:'str', version:'int') -> 'str':
+def as2_id(partner:'Partner') -> 'str':
+    """ The AS2 identifier of a partner, which its messages have in AS2-From and ours in AS2-To.
+    """
     name = partner.name.split(' ')[0]
+    name = name.upper()
+
+    out = f'{name}-B2B'
+    return out
+
+# ################################################################################################################################
+
+def _cpa_id(partner:'Partner', product:'str', version:'int') -> 'str':
+    name = partner.name.split(' ')[0]
+
     out = f'Pinecrest_Telecom_{name}_B2BGateway_{product}_R1.5.0_cpa{version}'
+    return out
+
+# ################################################################################################################################
+
+def _partnership_id(partner:'Partner', product:'str', version:'int') -> 'str':
+    name = partner.name.split(' ')[0]
+
+    out = f'Pinecrest_Telecom_{name}_AS2_{product}_v{version}'
+    return out
+
+# ################################################################################################################################
+
+def _agreement_ref(partner:'Partner', product:'str', version:'int') -> 'str':
+    product = product.lower()
+
+    out = f'urn:pinecrest-telecom:b2b:agreement:{partner.key}:{product}:v{version}'
+    return out
+
+# ################################################################################################################################
+
+_agreement_ids = {
+    Protocol.ebXML: _cpa_id,
+    Protocol.AS2:   _partnership_id,
+    Protocol.AS4:   _agreement_ref,
+}
+
+# ################################################################################################################################
+
+def agreement_id(partner:'Partner', product:'str', version:'int') -> 'str':
+    """ The identifier of an agreement in the form the protocol of the partner uses - a CPAId, the name of an AS2 partnership
+    or an AS4 AgreementRef.
+    """
+    make_id = _agreement_ids[partner.protocol]
+
+    out = make_id(partner, product, version)
     return out
 
 # ################################################################################################################################

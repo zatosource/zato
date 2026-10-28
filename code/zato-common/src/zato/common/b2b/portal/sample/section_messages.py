@@ -7,14 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.b2b.portal.config import Local_Organization, Local_Party_ID, Local_Role
-from zato.common.b2b.portal.sample.agreements import Agreement_By_ID
-from zato.common.b2b.portal.sample.common import action, aside, cell, chip, code, column, counted, delta, directed, envelope_timestamp, \
-    fields, href, id_column, item, link, mono, Now, Path_CPAs, Path_Messages, Path_Partners, section, size_text, tab, table, \
-    timestamp, yes_no
-from zato.common.b2b.portal.sample.parties import DUNS_Type, endpoint, Partner_By_Key, Partner_Role, Services
-from zato.common.b2b.portal.sample.payloads import envelope, payload, raw_message
-from zato.common.b2b.portal.sample.traffic import Conversation_By_ID, Kind, Messages
+from zato.common.b2b.portal.sample.common import action, aside, cell, chip, code, column, delta, directed, fields, href, \
+    id_column, item, link, mono, Now, Path_Agreements, Path_Messages, Path_Partners, section, tab, table, timestamp
+from zato.common.b2b.portal.sample.parties import Partner_By_Key, Services
+from zato.common.b2b.portal.sample.payloads import payload
+from zato.common.b2b.portal.sample.protocol.common import Protocols, Vocabularies
+from zato.common.b2b.portal.sample.protocol.views import Views_By_Protocol
+from zato.common.b2b.portal.sample.traffic import Conversation_By_ID, Messages
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,7 +93,9 @@ def _state_chip(message:'anydict') -> 'anydict':
 def _summary(message:'anydict', conversation:'anydict') -> 'anylist':
 
     partner = Partner_By_Key[message['partner_key']]
+    vocabulary = Vocabularies[message['protocol']]
     by_id = _by_key(conversation)
+    agreement_id = message['agreement_id']
 
     action_cells = [mono(message['action'])]
 
@@ -112,7 +113,8 @@ def _summary(message:'anydict', conversation:'anydict') -> 'anylist':
         ('Action', action_cells),
         ('Service', mono(message['service'])),
         ('Reference', mono(message['reference'])),
-        ('CPAId', mono(message['cpa_id'], href=href(Path_CPAs, message['cpa_id']))),
+        ('Protocol', message['protocol']),
+        (vocabulary.agreement_label, mono(agreement_id, href=href(Path_Agreements, agreement_id))),
         ('ConversationId', mono(message['conversation_id'])),
     ]
 
@@ -149,56 +151,6 @@ def _transaction(message:'anydict', conversation:'anydict') -> 'anylist':
     out = [table('', [id_column('MessageId'), 'Time', 'Delta', 'State', 'Action', 'Kind'], rows)]
     return out
 
-# ################################################################################################################################
-
-def _envelope(message:'anydict') -> 'anylist':
-
-    partner = Partner_By_Key[message['partner_key']]
-    agreement = Agreement_By_ID[message['cpa_id']]
-
-    if message['direction'] == 'Inbound':
-        from_id, from_role, to_id, to_role = partner.duns, Partner_Role, Local_Party_ID, Local_Role
-    else:
-        from_id, from_role, to_id, to_role = Local_Party_ID, Local_Role, partner.duns, Partner_Role
-
-    is_messaging = message['kind'] in (Kind.Ack, Kind.Error)
-
-    header = fields('Message header', [
-        ('From PartyId', mono(from_id)),
-        ('From role', mono(from_role)),
-        ('To PartyId', mono(to_id)),
-        ('To role', mono(to_role)),
-        ('PartyId type', mono(DUNS_Type)),
-        ('Service type', mono('string')),
-        ('Timestamp', mono(envelope_timestamp(message['moment']))),
-    ])
-
-    reliability = fields('Reliable messaging', [
-        ('AckRequested', yes_no(not is_messaging)),
-        ('Signed acknowledgment', yes_no(agreement.is_signed_ack)),
-        ('DuplicateElimination', yes_no(not is_messaging)),
-        ('SyncReplyMode', mono(agreement.sync_reply)),
-    ])
-
-    out = [header, reliability]
-    return out
-
-# ##############################################################################################################################
-
-def _parts(message:'anydict', body:'str') -> 'anylist':
-
-    header = envelope(message)
-    header_size = len(header.encode('utf8'))
-
-    parts = [['ebXML_Message_Header', 'text/xml', size_text(header_size)]]
-
-    if body:
-        body_size = len(body.encode('utf8'))
-        parts.append(['payload-1', 'application/xml', size_text(body_size)])
-
-    out = [table('', ['Content-ID', 'Content-Type', 'Size'], parts)]
-    return out
-
 # ##############################################################################################################################
 
 def _attempts(message:'anydict') -> 'anylist':
@@ -220,35 +172,6 @@ def _attempts(message:'anydict') -> 'anylist':
     return out
 
 # ##############################################################################################################################
-
-def _transport(message:'anydict') -> 'anylist':
-
-    partner = Partner_By_Key[message['partner_key']]
-    agreement = Agreement_By_ID[message['cpa_id']]
-
-    if message['direction'] == 'Outbound':
-        out = [fields('', [
-            ('Endpoint', mono(endpoint(partner))),
-            ('TLS', agreement.tls_version),
-            ('SOAPAction', mono('"ebXML"')),
-            ('Retries', f'{counted(agreement.retries, "retry", "retries")} every {counted(agreement.retry_minutes, "minute", "minutes")}'),
-        ])]
-
-    else:
-        is_verified = message['error_code'] != 'SecurityFailure'
-        signature = 'Verified' if is_verified else 'Not verified'
-
-        out = [fields('', [
-            ('Channel', mono('/exchange/' + Local_Party_ID)),
-            ('TLS', agreement.tls_version),
-            ('Client certificate', mono(f'CN={partner.host}, O={partner.name}')),
-            ('Signature', chip(signature)),
-            ('Received by', Local_Organization),
-        ])]
-
-    return out
-
-# ##############################################################################################################################
 # ##############################################################################################################################
 
 def _actions(state:'str') -> 'anylist':
@@ -266,6 +189,7 @@ def _item(message:'anydict') -> 'anydict':
 
     conversation = Conversation_By_ID[message['conversation_id']]
     partner = Partner_By_Key[message['partner_key']]
+    views = Views_By_Protocol[message['protocol']]
     body = payload(message)
 
     age = Now - message['moment']
@@ -284,15 +208,7 @@ def _item(message:'anydict') -> 'anydict':
     if is_outbound:
         tabs.append(tab('delivery', 'Delivery', _attempts(message)))
 
-    transport_label = 'Transport' if is_outbound else 'Reception'
-
-    details = [
-        tab('envelope', 'Envelope', _envelope(message)),
-        tab('soap', 'SOAP envelope', [code('', envelope(message))]),
-        tab('parts', 'MIME parts', _parts(message, body)),
-        tab('transport', transport_label, _transport(message)),
-        tab('raw', 'Raw message', [code('', raw_message(message))]),
-    ]
+    details = views.message_details(message, body)
 
     out = item(
         message['key'],
@@ -301,6 +217,7 @@ def _item(message:'anydict') -> 'anydict':
             cell(timestamp(message['moment'])),
             _state_chip(message),
             cell(partner.name),
+            cell(message['protocol']),
             mono(message['service']),
             mono(message['action']),
         ],
@@ -308,9 +225,10 @@ def _item(message:'anydict') -> 'anydict':
             'state': message['state'],
             'direction': message['direction'],
             'partner': partner.key,
+            'protocol': message['protocol'],
             'service': message['service'],
             'action': message['action'],
-            'cpa': message['cpa_id'],
+            'agreement': message['agreement_id'],
             'transaction': conversation['state'],
             'message-id': message['id'],
             'conversation-id': message['conversation_id'],
@@ -371,14 +289,15 @@ def _search() -> 'anydict':
         'rows': [
             [_select('partner', 'Partner', partners)],
             [
+                _select('protocol', 'Protocol', _options(Protocols)),
                 _select('direction', 'Direction', _options(_directions)),
-                _select('state', 'State', _options(_states)),
             ],
+            [_select('state', 'State', _options(_states))],
             [_select('service', 'Service', _options(service_names))],
             [_text('action', 'Action')],
             [_text('message-id', 'MessageId')],
             [_text('conversation-id', 'ConversationId')],
-            [_text('cpa', 'CPAId')],
+            [_text('agreement', 'Agreement')],
             [
                 _select('transaction', 'Transaction', _options(['Sent', 'Acknowledged', 'Answered', 'Failed'])),
                 _select('age', 'Period', periods, 'at-most'),
@@ -407,6 +326,7 @@ def build() -> 'anydict':
             column('Time'),
             column('State', is_narrow=True),
             column('Partner'),
+            column('Protocol', is_narrow=True),
             column('Service'),
             column('Action'),
         ],

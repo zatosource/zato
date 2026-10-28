@@ -12,9 +12,10 @@ from typing import NamedTuple
 # Zato
 from zato.common.b2b.portal.sample.agreements import Agreements
 from zato.common.b2b.portal.sample.common import action, aside, cell, chip, choice, choices, column, fields, href, item, link, \
-    minutes_ago, mono, Path_Alerts, Path_CPAs, Path_Messages, Path_Partners, Path_Registrations, section, tab, table, \
+    minutes_ago, mono, Path_Agreements, Path_Alerts, Path_Messages, Path_Partners, Path_Registrations, section, tab, table, \
     timestamp
 from zato.common.b2b.portal.sample.parties import Partner_By_Key
+from zato.common.b2b.portal.sample.protocol.common import Vocabularies
 from zato.common.b2b.portal.sample.section_messages import state_chip
 from zato.common.b2b.portal.sample.traffic import Messages
 
@@ -42,7 +43,7 @@ class Alert(NamedTuple):
     partner_key: str
     text: str
     message_match: str
-    cpa: str
+    agreement_product: str
     registration: str
 
 # ################################################################################################################################
@@ -62,7 +63,7 @@ class Rule(NamedTuple):
 
 Rules = [
     Rule('delivery-failed', 'Undelivered messages', 'Delivery failed', 'Error', 'Enabled',
-        'All retries of the CPA exhausted', ['Portal', 'Email', 'Webhook'],
+        'All retries of the agreement exhausted', ['Portal', 'Email', 'Webhook'],
         ['b2b-operations@pinecrest-telecom.example.com', 'https://hooks.pinecrest-telecom.example.com/b2b']),
     Rule('delivery-retrying', 'Retried deliveries', 'Delivery retrying', 'Warning', 'Enabled',
         'Second attempt failed', ['Portal'], []),
@@ -74,7 +75,7 @@ Rules = [
         'ReceiptAcknowledgementException or AcceptanceAcknowledgementException', ['Portal'], []),
     Rule('certificate-expiry', 'Certificate expiry', 'Certificate expiring', 'Warning', 'Enabled',
         '30 days before the end of validity', ['Portal', 'Email'], ['pki@pinecrest-telecom.example.com']),
-    Rule('cpa-expiry', 'CPA expiry', 'CPA expiring', 'Warning', 'Enabled',
+    Rule('agreement-expiry', 'Agreement expiry', 'Agreement expiring', 'Warning', 'Enabled',
         '30 days before the end of validity', ['Portal', 'Email'], ['b2b-onboarding@pinecrest-telecom.example.com']),
     Rule('duplicate', 'Duplicate messages', 'Duplicate eliminated', 'Information', 'Enabled',
         'Any message', ['Portal'], []),
@@ -99,11 +100,11 @@ _partner_scopes = ['All'] + [partner.name for partner in Partner_By_Key.values()
 
 Alerts = [
     Alert('10442', 'Error',       'Open',         253, 'Delivery failed', 'delivery-failed', 'redwood',
-        'NotifyOfOrderStatusv2 not acknowledged after 3 retries', 'DeliveryFailure', '', ''),
+        'No receipt for NotifyOfOrderStatusv2 after 3 retries', 'EBMS:0202', '', ''),
     Alert('10447', 'Warning',     'Open',         17,  'Delivery retrying', 'delivery-retrying', 'lakeshore',
         'NotifyOfOrderStatusv2 failed twice, next retry scheduled', 'Retrying', '', ''),
     Alert('10445', 'Error',       'Open',         75,  'Signature verification failed', 'signature', 'prairie',
-        'rqSubmitOrder refused, the signature does not verify', 'SecurityFailure', '', ''),
+        'rqSubmitOrder refused, the signature does not verify', 'authentication-failed', '', ''),
     Alert('10439', 'Warning',     'Open',         895, 'Receipt overdue', 'receipt-overdue', 'harborlight',
         'No ReceiptAcknowledgement for NotifyOfComplaintStatus within 5 minutes', 'TimeToAcknowledgeReceipt', '', ''),
     Alert('10444', 'Warning',     'Acknowledged', 38,  'Business signal exception', 'signal-exception', 'redwood',
@@ -114,8 +115,8 @@ Alerts = [
         'Signing certificate redwood-signing-2026 expires in 9 days', '', '', ''),
     Alert('10431', 'Warning',     'Acknowledged', 2650, 'Certificate expiring', 'certificate-expiry', 'coppercreek',
         'Signing certificate coppercreek-signing-2026 expires in 27 days', '', '', ''),
-    Alert('10433', 'Warning',     'Open',         1890, 'CPA expiring', 'cpa-expiry', 'lakeshore',
-        'CPA version 1 of Lakeshore Communications expires in 18 days', '', 'Orders', ''),
+    Alert('10433', 'Warning',     'Open',         1890, 'Agreement expiring', 'agreement-expiry', 'lakeshore',
+        'Partnership version 1 of Lakeshore Communications expires in 18 days', '', 'Orders', ''),
     Alert('10443', 'Information', 'Acknowledged', 95,  'Duplicate eliminated', 'duplicate', 'harborlight',
         'rqChangeOrder received twice with the same MessageId', 'DuplicateElimination', '', ''),
     Alert('10446', 'Information', 'Open',         1440, 'Registration submitted', 'registration', 'lakeshore',
@@ -143,15 +144,15 @@ def _message(partner_key:'str', match:'str') -> 'anydict':
 
 # ################################################################################################################################
 
-def _cpa_id(partner_key:'str', product:'str') -> 'str':
+def _agreement_id(partner_key:'str', product:'str') -> 'str':
 
     for agreement in Agreements:
         if agreement.partner_key == partner_key:
             if agreement.product == product:
-                out = agreement.cpa_id
+                out = agreement.agreement_id
                 break
     else:
-        raise Exception(f'No CPA of `{partner_key}` for `{product}`')
+        raise Exception(f'No agreement of `{partner_key}` for `{product}`')
 
     return out
 
@@ -169,9 +170,10 @@ def _subject(alert:'Alert') -> 'anylist':
         subject = ('MessageId', mono(message['id'], href=href(Path_Messages, message['key'])))
         partner_row = ('Partner', [state_chip(message), partner_link])
 
-    elif alert.cpa:
-        cpa_id = _cpa_id(alert.partner_key, alert.cpa)
-        subject = ('CPAId', mono(cpa_id, href=href(Path_CPAs, cpa_id)))
+    elif alert.agreement_product:
+        vocabulary = Vocabularies[partner.protocol]
+        agreement_id = _agreement_id(alert.partner_key, alert.agreement_product)
+        subject = (vocabulary.agreement_label, mono(agreement_id, href=href(Path_Agreements, agreement_id)))
         partner_row = ('Partner', partner_link)
 
     else:

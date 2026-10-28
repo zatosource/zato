@@ -10,8 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.b2b.portal.config import Local_Organization
 from zato.common.b2b.portal.sample.agreements import Agreement_By_ID, Registrations
 from zato.common.b2b.portal.sample.common import action, cell, chip, choice, column, days_from_now, delta, direction_cell, \
-    fields, fixed, href, item, link, mono, Path_CPAs, Path_Partners, minutes_ago, Path_Registrations, section, tab, table, typed
-from zato.common.b2b.portal.sample.parties import cpa_id, endpoint, Partner_By_Key, Partner_Role, Service_By_Name
+    fields, fixed, href, item, link, minutes_ago, mono, Path_Agreements, Path_Partners, Path_Registrations, section, tab, table, \
+    typed
+from zato.common.b2b.portal.sample.parties import agreement_id, endpoint, Partner_By_Key, Service_By_Name
+from zato.common.b2b.portal.sample.protocol.common import Vocabularies
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,10 +36,11 @@ _products = sorted({registration.product for registration in Registrations})
 def _overview(registration:'Registration') -> 'anylist':
 
     partner = Partner_By_Key[registration.partner_key]
-    agreement_id = cpa_id(partner, registration.product, registration.agreement_version)
+    vocabulary = Vocabularies[partner.protocol]
+    issued_id = agreement_id(partner, registration.product, registration.agreement_version)
 
-    if agreement_id in Agreement_By_ID:
-        agreement = mono(agreement_id, href=href(Path_CPAs, agreement_id))
+    if issued_id in Agreement_By_ID:
+        agreement = mono(issued_id, href=href(Path_Agreements, issued_id))
     else:
         agreement = cell('Not issued')
 
@@ -49,10 +52,10 @@ def _overview(registration:'Registration') -> 'anylist':
         ('State', chip(registration.state, role='state')),
         ('Partner', link(partner.name, href(Path_Partners, partner.key))),
         ('PartyId', mono(partner.duns)),
-        ('Role', mono(Partner_Role)),
+        ('Protocol', fixed(partner.protocol)),
         ('Product', choice(registration.product, _products)),
         ('Endpoint', typed(endpoint(partner), 'url', is_mono=True)),
-        ('CPAId', agreement),
+        (vocabulary.agreement_label, agreement),
         ('Requested', fixed(days_from_now(-first.days_ago))),
         ('Last change', fixed(days_from_now(-last.days_ago))),
         ('Requested by', fixed(first.user)),

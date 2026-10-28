@@ -174,7 +174,14 @@ checks.errors = function(steps, state) {
         var stepLines = steps[stepIndex].lines;
 
         for (var lineIndex = 0; lineIndex < stepLines.length; lineIndex++) {
+
             var line = stepLines[lineIndex];
+
+            // .. a line that is not shown has no answer to check ..
+            if (!portal.wizardLines.isShown(line, state)) {
+                continue;
+            }
+
             var error = checks.lineError(line, state);
             if (error) {
                 out[line.name] = error;

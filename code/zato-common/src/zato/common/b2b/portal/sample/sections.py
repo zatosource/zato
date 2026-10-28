@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.b2b.portal.sample import section_alerts, section_cpas, section_messages, section_partners, \
+from zato.common.b2b.portal.sample import section_agreements, section_alerts, section_messages, section_partners, \
     section_registrations, wizards
 from zato.common.b2b.portal.sample.common import State_Tones
 
@@ -26,13 +26,13 @@ def _build() -> 'strdictdict':
     rules = section_alerts.build_rules()
     partners = section_partners.build()
     registrations = section_registrations.build()
-    cpas = section_cpas.build()
+    agreements = section_agreements.build()
     messages = section_messages.build()
 
     rules['wizard'] = wizards.rule_wizard()
     partners['wizard'] = wizards.partner_wizard()
     registrations['wizard'] = wizards.registration_wizard()
-    cpas['wizard'] = wizards.cpa_wizard()
+    agreements['wizard'] = wizards.agreement_wizard()
 
     # A rule is enabled and disabled by a switch in its own row
     rules['toggle'] = {
@@ -45,7 +45,7 @@ def _build() -> 'strdictdict':
 
     out:'strdictdict' = {}
 
-    for section in (alerts, rules, partners, registrations, cpas, messages):
+    for section in (alerts, rules, partners, registrations, agreements, messages):
         out[section['slug']] = section
 
     return out
@@ -69,7 +69,7 @@ Navigation:'anylist' = [
     _entry('Message log', 'messages'),
     _entry('Alerts', 'alerts'),
     _entry('Trading partners', 'partners'),
-    _entry('CPAs', 'cpas'),
+    _entry('Agreements', 'agreements'),
     _entry('Registrations', 'registrations'),
     _entry('Alert rules', 'alert-rules'),
 ]

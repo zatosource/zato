@@ -14,6 +14,7 @@ from zato.common.b2b.portal.config import Local_Host
 from zato.common.b2b.portal.sample.agreements import Agreements
 from zato.common.b2b.portal.sample.common import minutes_ago, Tone
 from zato.common.b2b.portal.sample.parties import Partner_By_Key, Service_By_Name
+from zato.common.b2b.portal.sample.protocol.common import Business_Service, Vocabularies
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,6 +22,7 @@ from zato.common.b2b.portal.sample.parties import Partner_By_Key, Service_By_Nam
 if 0:
     from datetime import datetime
     from zato.common.b2b.portal.sample.parties import Partner, Service
+    from zato.common.b2b.portal.sample.protocol.common import Vocabulary
     from zato.common.typing_ import anydict, anylist, anytuple, dictlist
     anylist = anylist
     anytuple = anytuple
@@ -28,14 +30,12 @@ if 0:
     dictlist = dictlist
     Partner = Partner
     Service = Service
+    Vocabulary = Vocabulary
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The service and the actions of the messages the messaging layer itself exchanges
-Messaging_Service      = 'urn:oasis:names:tc:ebxml-msg:service'
-Acknowledgment_Action  = 'Acknowledgment'
-Error_Action           = 'MessageError'
+# The actions of the business signals
 Receipt_Action         = 'ReceiptAcknowledgement'
 Receipt_Refused_Action = 'ReceiptAcknowledgementException'
 Acceptance_Refused     = 'AcceptanceAcknowledgementException'
@@ -65,7 +65,7 @@ _ack_delay      = 1
 _receipt_delay  = 14
 _response_delay = 52
 
-# The retry interval of every CPA in the sample data, in minutes
+# The retry interval of every agreement in the sample data, in minutes
 _retry_minutes = 5
 
 # ################################################################################################################################
@@ -93,12 +93,12 @@ _seeds = [
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _cpa_id(partner_key:'str', product:'str') -> 'str':
+def _agreement_id(partner_key:'str', product:'str') -> 'str':
 
     for agreement in Agreements:
         if agreement.partner_key == partner_key:
             if agreement.product == product:
-                out = agreement.cpa_id
+                out = agreement.agreement_id
                 break
     else:
         raise Exception(f'No agreement for `{partner_key}` and `{product}`')
@@ -127,7 +127,8 @@ class _Conversation:
         self.index = index
         self.partner:'Partner' = Partner_By_Key[partner_key]
         self.service:'Service' = Service_By_Name[service_name]
-        self.cpa_id = _cpa_id(partner_key, product)
+        self.vocabulary:'Vocabulary' = Vocabularies[self.partner.protocol]
+        self.agreement_id = _agreement_id(partner_key, product)
         self.scenario = scenario
         self.reference = reference
         self.moment = minutes_ago(started_minutes)
@@ -158,14 +159,27 @@ class _Conversation:
         number = self.index * 10 + len(self.messages)
         attempts:'anylist' = []
 
+        # A business message names its own service ..
+        if is_business:
+            service = self.service.name
+
+        # .. so does an AS2 MDN or an AS4 signal, which have no service of their own ..
+        elif self.vocabulary.messaging_service == Business_Service:
+            service = self.service.name
+
+        # .. while a message of the ebXML messaging layer names the service of that layer.
+        else:
+            service = self.vocabulary.messaging_service
+
         out = {
             'id': _message_id(prefix, self.moment, number, host),
             'conversation_id': self.conversation_id,
             'moment': self.moment,
             'direction': 'Inbound' if is_inbound else 'Outbound',
             'partner_key': self.partner.key,
-            'cpa_id': self.cpa_id,
-            'service': self.service.name if is_business else Messaging_Service,
+            'protocol': self.partner.protocol,
+            'agreement_id': self.agreement_id,
+            'service': service,
             'action': action,
             'ref_to': ref_to,
             'state': state,
@@ -187,14 +201,28 @@ class _Conversation:
 # ################################################################################################################################
 
     def ack(self, message:'anydict', state:'str'='') -> 'anydict':
-        """ The acknowledgment of a message, sent by the side that received it.
+        """ The acknowledgment of a message, sent by the side that received it - an ebXML Acknowledgment, an AS2 MDN
+        or an AS4 Receipt.
         """
         is_inbound = message['direction'] == 'Outbound'
         if not state:
             state = 'Received' if is_inbound else 'Delivered'
 
-        out = self.add(delay=_ack_delay, is_inbound=is_inbound, action=Acknowledgment_Action, kind=Kind.Ack, state=state,
-            ref_to=message['id'], is_business=False)
+        out = self.add(delay=_ack_delay, is_inbound=is_inbound, action=self.vocabulary.ack_action, kind=Kind.Ack,
+            state=state, ref_to=message['id'], is_business=False)
+        return out
+
+# ################################################################################################################################
+
+    def has_receipt_signal(self) -> 'bool':
+        """ Whether the service asks for a receipt acknowledgement signal, which an AS2 MDN stands in for.
+        """
+        out = False
+
+        if self.service.receipt_seconds:
+            if self.vocabulary.has_business_signals:
+                out = True
+
         return out
 
 # ################################################################################################################################
@@ -231,7 +259,7 @@ def _answered(conversation:'_Conversation') -> 'anydict':
         state='Received')
     _ = conversation.ack(request)
 
-    if conversation.service.receipt_seconds:
+    if conversation.has_receipt_signal():
         receipt = conversation.add(delay=_receipt_delay, is_inbound=False, action=Receipt_Action, kind=Kind.Signal,
             state='Delivered', ref_to=request['id'])
         _ = conversation.ack(receipt)
@@ -281,7 +309,7 @@ def _notify(conversation:'_Conversation') -> 'anydict':
         state='Delivered')
     _ = conversation.ack(notification)
 
-    if conversation.service.receipt_seconds:
+    if conversation.has_receipt_signal():
         receipt = conversation.add(delay=_receipt_delay, is_inbound=True, action=Receipt_Action, kind=Kind.Signal,
             state='Received', ref_to=notification['id'])
         _ = conversation.ack(receipt)
@@ -303,8 +331,8 @@ def _notify_undelivered(conversation:'_Conversation', is_final:'bool') -> 'anydi
     _retries(notification, count)
 
     if is_final:
-        notification['error_code'] = 'DeliveryFailure'
-        notification['error'] = 'No acknowledgment after 3 retries at 5-minute intervals'
+        notification['error_code'] = conversation.vocabulary.delivery_failure_code
+        notification['error'] = f'No {conversation.vocabulary.ack_noun} after 3 retries at 5-minute intervals'
         out = {'state': 'Failed'}
     else:
         next_attempt = notification['moment'] + timedelta(minutes=count * _retry_minutes)
@@ -320,8 +348,8 @@ def _receipt_overdue(conversation:'_Conversation') -> 'anydict':
 
     notification = conversation.add(delay=0, is_inbound=False, action=conversation.service.request, kind=Kind.Notification,
         state='Delivered')
-    notification['error_code'] = 'TimeToAcknowledgeReceipt'
-    notification['error'] = 'No receipt acknowledgement within 5 minutes'
+    notification['error_code'] = conversation.vocabulary.receipt_overdue_code
+    notification['error'] = f'No {conversation.vocabulary.receipt_noun} within 5 minutes'
     _ = conversation.ack(notification)
 
     out = {'state': 'Failed'}
@@ -339,7 +367,7 @@ def _duplicate(conversation:'_Conversation') -> 'anydict':
     copy['moment'] = request['moment'] + timedelta(seconds=31)
     copy['state'] = 'Duplicate'
     copy['attempts'] = []
-    copy['error_code'] = 'DuplicateElimination'
+    copy['error_code'] = conversation.vocabulary.duplicate_code
     copy['error'] = 'Identical to a message received at ' + request['moment'].strftime('%H:%M:%S')
 
     conversation.messages.insert(2, copy)
@@ -351,11 +379,11 @@ def _signature_failed(conversation:'_Conversation') -> 'anydict':
 
     request = conversation.add(delay=0, is_inbound=True, action=conversation.service.request, kind=Kind.Document,
         state='Refused')
-    request['error_code'] = 'SecurityFailure'
+    request['error_code'] = conversation.vocabulary.security_failure_code
     request['error'] = 'The signature does not verify against the partner signing certificate'
 
-    error = conversation.add(delay=_ack_delay, is_inbound=False, action=Error_Action, kind=Kind.Error, state='Delivered',
-        ref_to=request['id'], is_business=False)
+    error = conversation.add(delay=_ack_delay, is_inbound=False, action=conversation.vocabulary.error_action, kind=Kind.Error,
+        state='Delivered', ref_to=request['id'], is_business=False)
     error['error_code'] = request['error_code']
     error['error'] = request['error']
 
@@ -414,7 +442,7 @@ def _build() -> 'dictlist':
         out.append({
             'id': conversation.conversation_id,
             'partner_key': conversation.partner.key,
-            'cpa_id': conversation.cpa_id,
+            'agreement_id': conversation.agreement_id,
             'service': conversation.service.name,
             'reference': conversation.reference,
             'state': result['state'],

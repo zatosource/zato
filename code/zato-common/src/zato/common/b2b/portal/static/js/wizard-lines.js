@@ -61,6 +61,38 @@ lines.formSpecs = function(line) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A line bound to the value of another line is shown only while that line holds it, any other line always is.
+lines.isShown = function(line, state) {
+
+    if (line.shown_when.length === 0) {
+        return true;
+    }
+
+    var out = state[line.shown_when[0]] === line.shown_when[1];
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Which lines of all the steps are shown, as one text that changes whenever any of them appears or disappears.
+lines.visibility = function(steps, state) {
+
+    var out = '';
+
+    for (var stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+
+        var stepLines = steps[stepIndex].lines;
+
+        for (var lineIndex = 0; lineIndex < stepLines.length; lineIndex++) {
+            out += lines.isShown(stepLines[lineIndex], state) ? '1' : '0';
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 lines.optionNote = function(options, value) {
 
     var out = '';
