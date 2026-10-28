@@ -23,7 +23,8 @@ from sqlalchemy import create_engine
 
 # Zato
 from gevent_monitor import get_monitor, Lag_Interval
-from zato.common.b2b.common.commit_group import GroupCommitWriter, needs_thread_pool
+from zato.common.b2b.common.commit_group import GroupCommitWriter
+from zato.common.db_env.engine import needs_thread_pool
 from zato.common.b2b.common.store import MessageStore
 from zato.common.test.b2b_write_path import new_identity, new_memory_engine, new_stored_message
 

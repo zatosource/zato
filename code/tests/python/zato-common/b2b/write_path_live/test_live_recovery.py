@@ -51,9 +51,6 @@ if 0:
 # How long the writer of a test waits between two commits, in milliseconds.
 _interval_ms = 10
 
-# A row limit that no transaction of a test reaches.
-_max_rows = 1_000_000
-
 # How many expiries one check ends at most.
 _expiry_limit = 100
 
@@ -228,24 +225,33 @@ class TestRecoveryQueryPlans:
     """
 
     def test_plans(self, database:'LiveDB') -> 'None':
-        writer = GroupCommitWriter(database.engine, interval_ms=0, max_rows=_max_rows, is_started=False)
+        writer = GroupCommitWriter(database.engine, interval_ms=0, is_started=False)
 
         audit_log = AuditLog(Server, flush_max_size=1)
         other_audit_log = AuditLog(_other_server, flush_max_size=1)
 
         open_ids:'strlist' = []
 
+        # The rows enqueued since the last commit, committed at the row limit of the writer as the server does.
+        pending_rows = 0
+
         for idx in range(_planned_messages):
             message_id = f'message-{idx}'
 
             sent = new_event(audit_log, message_id)
             _ = writer.enqueue(sent, 3)
+            pending_rows += 3
 
             if idx < _planned_open:
                 sent.opens.append(OpenKind.Exchange)
                 open_ids.append(message_id)
             else:
                 _ = writer.enqueue(new_event(audit_log, message_id, AuditEvent.Message_Completed), 3)
+                pending_rows += 3
+
+            if pending_rows >= writer.max_rows:
+                assert writer.commit_due()
+                pending_rows = 0
 
         for idx in range(_other_server_open):
             other = new_event(other_audit_log, f'other-{idx}')

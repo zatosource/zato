@@ -13,6 +13,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 
+# gevent
+from gevent import get_hub
+from gevent.monkey import is_module_patched
+
 # SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy import event as sa_event
@@ -31,9 +35,11 @@ if 0:
     from sqlalchemy import MetaData
     from sqlalchemy.engine import Engine
     from zato.common.db_env.common import EnvDBConfig
-    from zato.common.typing_ import anydict, stranydict, strtuple
+    from zato.common.typing_ import any_, anydict, callable_, stranydict, strtuple
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
+    callable_ = callable_
     Engine = Engine
     EnvDBConfig = EnvDBConfig
     MetaData = MetaData
@@ -208,6 +214,34 @@ def dispose_env_engine(config:'EnvDBConfig') -> 'None':
     # An engine that was never built has nothing to close
     if engine := _engine_cache.pop(cache_key, None):
         engine.dispose()
+
+# ################################################################################################################################
+
+def needs_thread_pool(engine:'Engine') -> 'bool':
+    """ Says whether the database calls of an engine run in the thread pool of the gevent hub. Under gevent,
+    the SQLite driver performs its calls in C without yielding to the event loop, while the drivers of the network
+    databases perform their I/O through the sockets that gevent patched, each bound to the hub of its own thread.
+    """
+    if is_module_patched('threading'):
+        out = engine.dialect.name == Type_SQLite
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
+def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
+    """ Runs one blocking database call, in the thread pool of the gevent hub if the engine needs it.
+    """
+    if needs_thread_pool(engine):
+        hub = get_hub()
+        threadpool = hub.threadpool
+        out = threadpool.apply(func, args)
+    else:
+        out = func(*args)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

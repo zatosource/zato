@@ -32,6 +32,7 @@ from zato.common.audit_log.sqlite_writes import apply_write_wait, dispose_stale_
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, get_env_engine, \
     Type_MySQL, Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.engine import call_database
 from zato.common.util.api import as_bool, utcnow
 
 # ################################################################################################################################
@@ -498,7 +499,7 @@ class AuditLog:
         dispose_stale_sqlite_engine()
 
         try:
-            out = self._insert_batch(batch)
+            out = call_database(self.engine, self._insert_batch, batch)
         except OperationalError:
 
             # A refused write shortens the wait of every write from here on, the retry below included ..
@@ -507,7 +508,7 @@ class AuditLog:
             # .. and a pooled connection that opened the file while it was read-only stays
             # read-only after the permissions come back - a fresh engine self-heals that.
             dispose_env_engine(env_config)
-            out = self._insert_batch(batch)
+            out = call_database(self.engine, self._insert_batch, batch)
 
         # A write that went through brings the full busy timeout back
         mark_write_accepted()
@@ -538,7 +539,7 @@ class AuditLog:
             _trace('retention run begins')
             retention_start = monotonic()
 
-            self._run_retention(now)
+            call_database(self.engine, self._run_retention, now)
 
             _trace('retention run done %.1fms', (monotonic() - retention_start) * 1000)
 

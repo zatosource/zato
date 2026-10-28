@@ -13,10 +13,6 @@ from logging import getLogger
 from threading import Lock, Thread
 from time import monotonic, sleep
 
-# gevent
-from gevent import get_hub
-from gevent.monkey import is_module_patched
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -183,27 +179,12 @@ class EventBuffer:
             _trace('inline flush of %d events begins', batch_size)
             flush_start = monotonic()
 
-            self._write_batch_off_loop(batch)
+            _ = self.write_batch(batch)
 
             flush_elapsed = monotonic() - flush_start
             flush_elapsed_ms = flush_elapsed * 1000
 
             _trace('inline flush of %d events done %.1fms', batch_size, flush_elapsed_ms)
-
-# ################################################################################################################################
-
-    def _write_batch_off_loop(self, batch:'pending_event_list') -> 'None':
-        """ Runs the blocking database write on a real OS thread when gevent has the process
-        monkey-patched - the database driver's C calls never yield to the event loop, so a slow
-        write executed inline would freeze every socket in the process for its whole duration.
-        """
-        if is_module_patched('threading'):
-            hub = get_hub()
-            threadpool = hub.threadpool
-
-            _ = threadpool.apply(self.write_batch, (batch,))
-        else:
-            self.write_batch(batch)
 
 # ################################################################################################################################
 
@@ -222,13 +203,7 @@ class EventBuffer:
     def _start_flusher(self) -> 'None':
         """ Starts the background thread enforcing the maximum wait time.
         """
-        thread_options = {
-            'target': self._run_flusher,
-            'name': 'audit-log-flusher',
-            'daemon': True,
-        }
-
-        thread = Thread(**thread_options)
+        thread = Thread(target=self._run_flusher, name='audit-log-flusher', daemon=True)
         thread.start()
 
 # ################################################################################################################################
@@ -271,7 +246,7 @@ class EventBuffer:
                 flush_start = monotonic()
 
                 try:
-                    self._write_batch_off_loop(batch)
+                    _ = self.write_batch(batch)
                 except Exception:
                     logger.warning('Audit log flush failed', exc_info=True)
 
