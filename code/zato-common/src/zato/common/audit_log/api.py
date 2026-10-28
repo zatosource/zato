@@ -31,7 +31,7 @@ from zato.common.audit_log.sqlite_writes import apply_write_wait, dispose_stale_
     mark_write_accepted, mark_write_refused
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, get_env_engine, \
-    Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
+    Type_MySQL, Type_PostgreSQL, Type_SQLite
 from zato.common.util.api import as_bool, utcnow
 
 # ################################################################################################################################
@@ -106,7 +106,6 @@ class ModuleCtx:
     Type_SQLite     = Type_SQLite
     Type_MySQL      = Type_MySQL
     Type_PostgreSQL = Type_PostgreSQL
-    Type_Oracle     = Type_Oracle
 
     # The audit log records events unless it is turned off explicitly
     Default_Enabled = Default_Enabled
@@ -214,7 +213,7 @@ def build_attr_rows(event_id:'int', attrs:'stranydict') -> 'anylist':
 
 class AuditLog:
     """ A source-agnostic audit log writing structured events into one shared database.
-    The database is SQLite by default and can be MySQL, PostgreSQL or Oracle DB,
+    The database is SQLite by default and can be MySQL or PostgreSQL,
     as configured through the Zato_Audit_Log_DB_* environment variables.
     Events are written synchronously by default - high-volume producers turn on batching
     through the flush parameters or the Zato_Audit_Log_Flush_* environment variables.

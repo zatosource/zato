@@ -120,19 +120,10 @@ class MessageStore:
 
         if row is not None:
 
-            # Oracle DB returns an empty value as NULL.
-            content_type = row.response_content_type
-            if content_type is None:
-                content_type = ''
-
-            body = row.response_body
-            if body is None:
-                body = b''
-
             response = StoredResponse()
             response.status_code    = row.response_status_code
-            response.content_type   = content_type
-            response.body           = body
+            response.content_type   = row.response_content_type
+            response.body           = row.response_body
             response.is_synchronous = row.response_is_synchronous
 
             out = StoredMessage()

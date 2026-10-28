@@ -6,7 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# gevent - the writer runs under gevent as in the server, so the patching runs before anything else is imported.
+from gevent import monkey
+_ = monkey.patch_all()
+
 # stdlib
+import atexit
 import os
 import sys
 
@@ -17,11 +22,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 import pytest
 
 # Zato
-from live_db import clear_tables, Env_Prefix, LiveDB, Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
-from live_sql.containers import start_mysql, start_oracle, start_postgresql, stop_container
+from gevent_monitor import pytest_pyfunc_call as pytest_pyfunc_call
+from live_db import clear_tables, Env_Prefix, LiveDB, Type_MySQL, Type_PostgreSQL, Type_SQLite
+from live_sql.containers import start_mysql, start_postgresql, stop_container
 from live_sql.env import build_env, database_env
+from perf import silence_logging_teardown
 from zato.common.audit_log.api import get_audit_engine
 from zato.common.b2b.common.commit_group import GroupCommitWriter
+
+_ = atexit.register(silence_logging_teardown)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,12 +56,10 @@ class ModuleCtx:
     # Host ports the containers listen on
     MySQL_Port      = 23376
     PostgreSQL_Port = 25476
-    Oracle_Port     = 21576
 
     # Names of the containers so stale ones can be removed
     MySQL_Container      = 'zato-b2b-write-path-mysql'
     PostgreSQL_Container = 'zato-b2b-write-path-postgresql'
-    Oracle_Container     = 'zato-b2b-write-path-oracle'
 
     # Database credentials shared by all the containers
     Username = 'zato_b2b'
@@ -63,7 +70,7 @@ class ModuleCtx:
 Interval_Ms = 10
 
 # The databases each live test runs against.
-_databases = (Type_SQLite, Type_MySQL, Type_PostgreSQL, Type_Oracle)
+_databases = (Type_SQLite, Type_MySQL, Type_PostgreSQL)
 
 # The file name of the SQLite database of a test.
 _sqlite_file_name = 'audit.db'
@@ -96,20 +103,6 @@ def postgresql_server() -> 'servergen':
         password=ModuleCtx.Password,
         db_name=ModuleCtx.DB_Name,
         needs_ssl=False,
-    )
-    yield server
-
-    stop_container(server.container_name)
-
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def oracle_server() -> 'servergen':
-    server = start_oracle(
-        container_name=ModuleCtx.Oracle_Container,
-        port=ModuleCtx.Oracle_Port,
-        username=ModuleCtx.Username,
-        password=ModuleCtx.Password,
     )
     yield server
 
@@ -155,7 +148,7 @@ def database(request:'FixtureRequest', tmp_path:'Path') -> 'databasegen':
 
 @pytest.fixture
 def writer(database:'LiveDB') -> 'writergen':
-    """ A writer whose thread commits the writes of a test.
+    """ A writer whose commit loop, a greenlet under gevent, commits the writes of a test.
     """
     out = GroupCommitWriter(database.engine, interval_ms=Interval_Ms)
     yield out

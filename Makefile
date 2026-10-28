@@ -935,7 +935,7 @@ test-documents: ## Documents in attachments, files and IHE XDM packages - the un
 
 test-b2b: ## B2B protocols - ebMS 2.0 agreements, packaging, signatures, signals, receiving, sending and reliability, then the interoperability suite when it is present.
 	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/b2b/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_b2b -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \

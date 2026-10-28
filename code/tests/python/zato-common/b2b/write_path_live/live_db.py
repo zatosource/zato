@@ -46,7 +46,6 @@ Env_Prefix = 'Zato_Audit_Log_DB_'
 Type_SQLite     = 'sqlite'
 Type_MySQL      = 'mysql'
 Type_PostgreSQL = 'postgresql'
-Type_Oracle     = 'oracle'
 
 # The program that runs the other side of the tests in a process of its own.
 Child_Program = os.path.join(os.path.dirname(__file__), 'child.py')
@@ -58,12 +57,6 @@ Line_Claimed    = 'claimed'
 
 # The tables whose statistics the query planners read.
 _planned_tables = ('event', 'event_attr', 'event_body', 'b2b_open')
-
-# The statement under which Oracle DB stores an explained plan.
-_oracle_statement_id = 'zato_b2b'
-
-# The plan operations of Oracle DB that read a table or an index in full.
-_oracle_full_options = ('FULL', 'FULL SCAN', 'FAST FULL SCAN')
 
 # The access types of MySQL that read a table or an index in full.
 _mysql_full_types = ('ALL', 'index')
@@ -185,14 +178,9 @@ def gather_statistics(database:'LiveDB') -> 'None':
             for table_name in _planned_tables:
                 _ = connection.exec_driver_sql(f'ANALYZE {table_name}')
 
-        elif database.name == Type_MySQL:
+        else:
             table_names = ', '.join(_planned_tables)
             _ = connection.exec_driver_sql(f'ANALYZE TABLE {table_names}').all()
-
-        else:
-            for table_name in _planned_tables:
-                upper_name = table_name.upper()
-                _ = connection.exec_driver_sql(f"BEGIN DBMS_STATS.GATHER_TABLE_STATS(USER, '{upper_name}'); END;")
 
         connection.commit()
 
@@ -237,24 +225,6 @@ def _mysql_full_scans(connection:'Connection', sql:'str') -> 'strlist':
 
 # ################################################################################################################################
 
-def _oracle_full_scans(connection:'Connection', sql:'str') -> 'strlist':
-    statement_id = _oracle_statement_id
-
-    _ = connection.exec_driver_sql(f"DELETE FROM plan_table WHERE statement_id = '{statement_id}'")
-    _ = connection.exec_driver_sql(f"EXPLAIN PLAN SET STATEMENT_ID = '{statement_id}' FOR {sql}")
-
-    query = f"SELECT operation, options, object_name FROM plan_table WHERE statement_id = '{statement_id}'"
-
-    out:'strlist' = []
-
-    for operation, options, object_name in connection.exec_driver_sql(query):
-        if options in _oracle_full_options:
-            out.append(f'{operation} {options} {object_name}')
-
-    return out
-
-# ################################################################################################################################
-
 def full_scans(database:'LiveDB', statement:'Select') -> 'strlist':
     """ Returns each step of the plan of a statement that reads a table or an index in full.
     """
@@ -270,11 +240,8 @@ def full_scans(database:'LiveDB', statement:'Select') -> 'strlist':
         elif database.name == Type_PostgreSQL:
             out = _postgresql_full_scans(connection, sql)
 
-        elif database.name == Type_MySQL:
-            out = _mysql_full_scans(connection, sql)
-
         else:
-            out = _oracle_full_scans(connection, sql)
+            out = _mysql_full_scans(connection, sql)
 
         connection.rollback()
 

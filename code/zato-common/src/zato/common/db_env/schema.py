@@ -17,7 +17,7 @@ from sqlalchemy import inspect
 from sqlalchemy import text as sa_text
 
 # Zato
-from zato.common.db_env.common import Type_MySQL, Type_Oracle, Type_PostgreSQL
+from zato.common.db_env.common import Type_MySQL, Type_PostgreSQL
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,12 +52,6 @@ def ensure_columns(engine:'Engine', table:'Table') -> 'None':
     for column_info in existing:
         existing_names.add(column_info['name'])
 
-    # Oracle DB is the one dialect that does not accept the COLUMN keyword here
-    if engine.dialect.name == Type_Oracle:
-        add_clause = 'ADD'
-    else:
-        add_clause = 'ADD COLUMN'
-
     for column in table.columns:
 
         if column.name in existing_names:
@@ -65,7 +59,7 @@ def ensure_columns(engine:'Engine', table:'Table') -> 'None':
 
         # Let the dialect render the correct type name for this column
         type_sql = column.type.compile(engine.dialect)
-        ddl = f'ALTER TABLE {table.name} {add_clause} {column.name} {type_sql}'
+        ddl = f'ALTER TABLE {table.name} ADD COLUMN {column.name} {type_sql}'
 
         with engine.begin() as connection:
             _ = connection.execute(sa_text(ddl))
@@ -105,8 +99,7 @@ def ensure_column_types(engine:'Engine', table:'Table') -> 'None':
     by older releases need the wider type before their autoincrement overflows.
     """
 
-    # Only these two dialects render Integer as a 32-bit INT - SQLite integers
-    # are always 64-bit and Oracle's INTEGER is already a 38-digit NUMBER.
+    # Only these two dialects render Integer as a 32-bit INT - SQLite integers are always 64-bit.
     if engine.dialect.name not in (Type_MySQL, Type_PostgreSQL):
         return
 

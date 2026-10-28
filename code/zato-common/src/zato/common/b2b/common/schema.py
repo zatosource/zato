@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, Index, Integer, LargeBinary, MetaData, Sequence, String, Table, \
+from sqlalchemy import BigInteger, Boolean, Column, Index, Integer, LargeBinary, MetaData, String, Table, \
     UniqueConstraint
 
 # ################################################################################################################################
@@ -53,21 +53,16 @@ _short_column = String(_short_column_len)
 
 # ################################################################################################################################
 
-def _new_id_column(table_name:'str') -> 'Column':
-    """ Returns the autoincrement primary key of one table. Oracle DB generates its values from a sequence
-    of the table's own, which the other databases do not use, as they generate the values themselves.
+def _new_id_column() -> 'Column':
+    """ Returns the autoincrement primary key of one table.
     """
-    sequence = Sequence(f'{table_name}_id_seq', optional=True)
-
-    out = Column('id', _id_column_type, sequence, primary_key=True, autoincrement=True)
+    out = Column('id', _id_column_type, primary_key=True, autoincrement=True)
     return out
 
 # ################################################################################################################################
 
-# Oracle DB stores an empty string and an empty binary value as NULL, which is why the columns
-# that may hold one are nullable.
 message_table = Table('b2b_message', metadata,
-    _new_id_column('b2b_message'),
+    _new_id_column(),
     Column('protocol', _identity_column, nullable=False),
     Column('from_party', _identity_column, nullable=False),
     Column('to_party', _identity_column, nullable=False),
@@ -76,8 +71,8 @@ message_table = Table('b2b_message', metadata,
     Column('received_iso', _short_column, nullable=False),
     Column('expires_iso', _short_column, nullable=False),
     Column('response_status_code', Integer, nullable=False),
-    Column('response_content_type', _short_column, nullable=True),
-    Column('response_body', LargeBinary, nullable=True),
+    Column('response_content_type', _short_column, nullable=False),
+    Column('response_body', LargeBinary, nullable=False),
     Column('response_is_synchronous', Boolean, nullable=False),
 
     # The transaction that claimed the row, on the databases whose claim statement returns no rows.
@@ -97,7 +92,7 @@ sequence_table = Table('b2b_sequence', metadata,
 )
 
 held_message_table = Table('b2b_held_message', metadata,
-    _new_id_column('b2b_held_message'),
+    _new_id_column(),
     Column('conversation', _short_column, nullable=False),
     Column('sequence_number', BigInteger, nullable=False),
     Column('content_type', _short_column, nullable=False),
@@ -108,7 +103,7 @@ held_message_table = Table('b2b_held_message', metadata,
 # One row for each exchange and each business transaction that has not ended, pointing at the audit event
 # that started it. A server reads its own rows on start and nothing else, whatever the size of the audit log.
 open_table = Table('b2b_open', metadata,
-    _new_id_column('b2b_open'),
+    _new_id_column(),
     Column('kind', _short_column, nullable=False),
     Column('source', _short_column, nullable=False),
     Column('server_name', _short_column, nullable=False),

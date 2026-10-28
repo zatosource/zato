@@ -9,7 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from threading import Event
+from time import monotonic
+
+# gevent
+from gevent import sleep
+from gevent.monkey import get_original
 
 # SQLAlchemy
 from sqlalchemy import create_engine, event as sa_event
@@ -74,6 +78,12 @@ _memory_url = 'sqlite://'
 
 # The verbs that open the SQL statements the recorder classifies.
 _statement_verbs = ('INSERT', 'UPDATE', 'DELETE', 'SELECT', 'MERGE')
+
+# The events of the operating system, which a commit in the thread pool of the gevent hub waits on as well.
+_Native_Event = get_original('threading', 'Event')
+
+# How often a test checks whether a commit is waiting at the gate, in seconds.
+_gate_poll_seconds = 0.005
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -205,14 +215,28 @@ class CommitGate:
 
     def __init__(self, engine:'Engine') -> 'None':
         self.engine = engine
-        self.is_waiting = Event()
-        self._opened = Event()
+        self._is_waiting = _Native_Event()
+        self._opened = _Native_Event()
 
         sa_event.listen(engine, 'commit', self._on_commit)
 
     def _on_commit(self, conn:'any_') -> 'None':
-        self.is_waiting.set()
+        self._is_waiting.set()
         _ = self._opened.wait()
+
+    def wait_for_commit(self, timeout:'float') -> 'bool':
+        """ Waits until a commit is held back at the gate, yielding to the event loop under gevent,
+        and says whether one was within the timeout.
+        """
+        deadline = monotonic() + timeout
+
+        while not self._is_waiting.is_set():
+            if monotonic() >= deadline:
+                break
+            sleep(_gate_poll_seconds)
+
+        out = self._is_waiting.is_set()
+        return out
 
     def open(self) -> 'None':
         self._opened.set()

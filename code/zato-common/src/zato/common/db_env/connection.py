@@ -16,7 +16,7 @@ import ssl
 from sqlalchemy import text
 
 # Zato
-from zato.common.db_env.common import Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.common import Type_MySQL, Type_PostgreSQL, Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,14 +37,12 @@ if 0:
 _dialects = {
     Type_MySQL:      'mysql+pymysql',
     Type_PostgreSQL: 'postgresql+pg8000',
-    Type_Oracle:     'oracle',
 }
 
 # Default ports for each database type
 _default_ports = {
     Type_MySQL:      3306,
     Type_PostgreSQL: 5432,
-    Type_Oracle:     1521,
 }
 
 # How long an SQLite write waits for another writer to finish before giving up,
@@ -130,13 +128,8 @@ def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stran
     if db_type == Type_MySQL:
         out['ssl'] = ssl_context
 
-    # .. pg8000 under its own keyword ..
-    elif db_type == Type_PostgreSQL:
-        out['ssl_context'] = ssl_context
-
-    # .. and Oracle DB additionally needs the TCPS protocol.
+    # .. and pg8000 under its own keyword.
     else:
-        out['protocol'] = 'tcps'
         out['ssl_context'] = ssl_context
 
     return out
@@ -165,13 +158,7 @@ def build_engine_url_from_values(values:'stranydict', db_type:'str') -> 'str':
     else:
         port = _default_ports[db_type]
 
-    # The Oracle dialect reads the URL's path as a SID, so the database name,
-    # which is a service name, moves into a query parameter instead.
-    if db_type == Type_Oracle:
-        out = f'{dialect}://{username}:{password}@{host}:{port}/?service_name={db_name}'
-    else:
-        out = f'{dialect}://{username}:{password}@{host}:{port}/{db_name}'
-
+    out = f'{dialect}://{username}:{password}@{host}:{port}/{db_name}'
     return out
 
 # ################################################################################################################################

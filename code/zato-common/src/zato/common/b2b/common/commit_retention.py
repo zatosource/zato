@@ -33,7 +33,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many identifiers one IN list of a delete holds, below the limit of 1,000 that Oracle DB has.
+# How many identifiers one IN list of a delete holds.
 _in_list_size = 500
 
 # The event types of the B2B exchanges and business transactions.

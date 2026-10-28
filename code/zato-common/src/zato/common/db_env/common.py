@@ -33,7 +33,6 @@ if 0:
 Type_SQLite     = 'sqlite'
 Type_MySQL      = 'mysql'
 Type_PostgreSQL = 'postgresql'
-Type_Oracle     = 'oracle'
 
 # What is used when the type variable is not set
 Default_Type = Type_SQLite

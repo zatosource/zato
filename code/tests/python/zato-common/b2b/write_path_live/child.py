@@ -6,6 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# gevent - the writer runs under gevent as in the server, so the patching runs before anything else is imported.
+from gevent import monkey
+_ = monkey.patch_all()
+
 # stdlib
 import json
 import os

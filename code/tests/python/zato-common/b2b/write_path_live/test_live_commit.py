@@ -22,7 +22,7 @@ from sqlalchemy import inspect, select
 
 # Zato
 from live_db import count_rows, Line_Claimed, Line_Committing, Line_Ready, new_audit_log, new_event, start_child, \
-    Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite, wait_for_line
+    Type_MySQL, Type_PostgreSQL, Type_SQLite, wait_for_line
 from zato.common.audit_log.api import AuditEvent, event_attr_table, event_body_table, event_table
 from zato.common.audit_log.attachment import build_attachment
 from zato.common.b2b.common.clock import ManualClock
@@ -83,20 +83,11 @@ _full_attachment_size = 200 * 1024
 # The B2B tables the audit log database holds.
 _b2b_tables = ('b2b_message', 'b2b_sequence', 'b2b_held_message', 'b2b_open')
 
-# The verb of the claim statement on each database.
-_claim_verbs = {
-    Type_SQLite: 'INSERT',
-    Type_MySQL: 'INSERT',
-    Type_PostgreSQL: 'INSERT',
-    Type_Oracle: 'MERGE',
-}
-
 # The tables each database selects from to learn the identifiers of the rows a transaction wrote.
 _identifier_selects = {
     Type_SQLite: ['event'],
     Type_MySQL: ['b2b_message', 'event'],
     Type_PostgreSQL: [],
-    Type_Oracle: ['b2b_message'],
 }
 
 # ################################################################################################################################
@@ -168,7 +159,7 @@ class TestCommitBeforeConfirmation:
         thread = Thread(target=receive)
         thread.start()
 
-        assert gate.is_waiting.wait(_wait_seconds)
+        assert gate.wait_for_commit(_wait_seconds)
         thread.join(_still_waiting_seconds)
 
         assert thread.is_alive()
@@ -196,7 +187,7 @@ class TestCommitBeforeConfirmation:
         thread = Thread(target=post)
         thread.start()
 
-        assert gate.is_waiting.wait(_wait_seconds)
+        assert gate.wait_for_commit(_wait_seconds)
         thread.join(_still_waiting_seconds)
 
         assert thread.is_alive()
@@ -279,10 +270,8 @@ class TestStatementCounts:
         clock.advance(1)
         assert writer.commit_due()
 
-        claim_verb = _claim_verbs[database.name]
-
         assert recorder.writes() == [
-            f'{claim_verb} b2b_message',
+            'INSERT b2b_message',
             'UPDATE b2b_message',
             'INSERT event',
             'INSERT event_attr',

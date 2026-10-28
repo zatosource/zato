@@ -215,7 +215,7 @@ class TestCallersReleased:
         thread.start()
 
         # The commit started and is held back, and the caller is still waiting for it.
-        assert gate.is_waiting.wait(_join_seconds)
+        assert gate.wait_for_commit(_join_seconds)
         thread.join(0.2)
         assert thread.is_alive()
         assert results == []

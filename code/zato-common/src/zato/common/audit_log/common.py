@@ -14,7 +14,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, SSLE
     Timeout as RequestsTimeout
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, Sequence, String, Table, Text
+from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
 from sqlalchemy.dialects.mysql import LONGTEXT
 
 # Zato
@@ -481,7 +481,7 @@ class AuditLink:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The one table holding all audit events, portable across SQLite, MySQL, PostgreSQL and Oracle DB.
+# The one table holding all audit events, portable across SQLite, MySQL and PostgreSQL.
 # Short columns are VARCHAR because MySQL cannot index TEXT columns without a prefix length.
 metadata = MetaData()
 
@@ -494,13 +494,10 @@ _id_column_type = _big_id_column.with_variant(_sqlite_id_column, 'sqlite')
 # A TEXT column of MySQL holds 64 KB, less than the attachments a body may carry.
 _body_data_type = Text().with_variant(LONGTEXT(), 'mysql')
 
-def _new_id_column(table_name:'str') -> 'Column':
-    """ Returns the autoincrement primary key of one table. Oracle DB generates its values from a sequence
-    of the table's own, which the other databases do not use, as they generate the values themselves.
+def _new_id_column() -> 'Column':
+    """ Returns the autoincrement primary key of one table.
     """
-    sequence = Sequence(f'{table_name}_id_seq', optional=True)
-
-    out = Column('id', _id_column_type, sequence, primary_key=True, autoincrement=True)
+    out = Column('id', _id_column_type, primary_key=True, autoincrement=True)
     return out
 
 # The column types the tables below are built out of, named once so no table definition
@@ -517,7 +514,7 @@ _index_prefix_len = 64
 # ################################################################################################################################
 
 _event_columns = [
-    _new_id_column('event'),
+    _new_id_column(),
     Column('cid', _short_column),
     Column('cid_sequence', Integer),
     Column('source', _short_column),
@@ -575,7 +572,7 @@ event_table = Table('event', metadata, *_event_columns)
 # Values are stored as capped text, and numbers additionally go to a numeric column
 # so aggregation queries can sum and group without casting.
 _event_attr_columns = [
-    _new_id_column('event_attr'),
+    _new_id_column(),
     Column('event_id', BigInteger),
     Column('name', _short_column),
     Column('value', _short_column),
@@ -593,7 +590,7 @@ event_attr_table = Table('event_attr', metadata, *_event_attr_columns)
 # and pruning content is a bulk delete here rather than column surgery on the event table.
 # The event time is denormalized so pruning never needs a join.
 _event_body_columns = [
-    _new_id_column('event_body'),
+    _new_id_column(),
     Column('event_id', BigInteger),
     Column('kind', _short_column),
     Column('event_time_iso', _short_column),
@@ -609,7 +606,7 @@ event_body_table = Table('event_body', metadata, *_event_body_columns)
 # Lineage between events - resubmissions, batch membership and aggregation.
 # A link table because one event may have many parents.
 _event_link_columns = [
-    _new_id_column('event_link'),
+    _new_id_column(),
     Column('child_event_id', BigInteger),
     Column('parent_event_id', BigInteger),
     Column('link_type', _short_column),
@@ -625,7 +622,7 @@ event_link_table = Table('event_link', metadata, *_event_link_columns)
 # so a double-click or two overlapping bulk operations cannot double-apply one message.
 # A row acquired but never completed marks an interrupted resubmit, detectable as in-doubt.
 _event_dedup_columns = [
-    _new_id_column('event_dedup'),
+    _new_id_column(),
     Column('dedup_key', _short_column),
     Column('cid', _short_column),
     Column('action', _short_column),
@@ -646,7 +643,7 @@ event_dedup_table = Table('event_dedup', metadata, *_event_dedup_columns)
 # no lifecycle here - what happens to an alert after it goes out lives in Jira,
 # ServiceNow or whatever else receives it.
 _alert_columns = [
-    _new_id_column('alert'),
+    _new_id_column(),
     Column('rule_name', _short_column),
     Column('source', _short_column),
     Column('object_name', _short_column),

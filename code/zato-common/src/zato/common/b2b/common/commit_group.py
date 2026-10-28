@@ -61,6 +61,9 @@ Default_Commit_Max_Rows    = 1000
 # How often retention runs between two commits.
 Retention_Interval_Seconds = 60
 
+# The dialect of the only database whose driver performs its calls in C without yielding to the event loop.
+_sqlite_dialect = 'sqlite'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -88,17 +91,27 @@ def get_commit_max_rows() -> 'int':
 
 # ################################################################################################################################
 
-def _call_off_loop(func:'callable_', *args:'any_') -> 'any_':
-    """ Runs a blocking database call in the thread pool of the gevent hub when gevent has patched threading,
-    since the C calls of the database drivers never yield to the event loop.
+def needs_thread_pool(engine:'Engine') -> 'bool':
+    """ Says whether the database calls of an engine run in the thread pool of the gevent hub. Under gevent,
+    the SQLite driver performs its calls in C without yielding to the event loop, while the drivers of the network
+    databases perform their I/O through the sockets that gevent patched, each bound to the hub of its own thread.
     """
     if is_module_patched('threading'):
-        hub = get_hub()
-        threadpool = hub.threadpool
-        out = threadpool.apply(func, args)
+        out = engine.dialect.name == _sqlite_dialect
     else:
-        out = func(*args)
+        out = False
 
+    return out
+
+# ################################################################################################################################
+
+def _call_in_thread_pool(func:'callable_', *args:'any_') -> 'any_':
+    """ Runs a blocking database call in the thread pool of the gevent hub.
+    """
+    hub = get_hub()
+    threadpool = hub.threadpool
+
+    out = threadpool.apply(func, args)
     return out
 
 # ################################################################################################################################
@@ -235,6 +248,7 @@ class GroupCommitWriter:
 
         # Serializes the database calls of this writer - its commits, its retention and the reads made through it.
         self._db_lock = Lock()
+        self._needs_thread_pool = needs_thread_pool(engine)
 
         # The sources whose B2B audit events retention deletes.
         self._event_sources:'set[str]' = set()
@@ -399,7 +413,7 @@ class GroupCommitWriter:
 
         with self._db_lock:
             try:
-                _call_off_loop(self._execute, tickets, commit_id)
+                _ = self._call_database(self._execute, tickets, commit_id)
             except Exception as e:
                 logger.warning('B2B commit of %d writes failed: %s', len(tickets), e)
                 for ticket in tickets:
@@ -415,10 +429,22 @@ class GroupCommitWriter:
 
     def call(self, func:'callable_', *args:'any_') -> 'any_':
         """ Runs a database call outside the group commit, such as a read, serialized with the commits of this writer
-        and off the event loop under gevent.
+        and in the thread pool of the gevent hub if the engine needs it.
         """
         with self._db_lock:
-            out = _call_off_loop(func, *args)
+            out = self._call_database(func, *args)
+
+        return out
+
+# ################################################################################################################################
+
+    def _call_database(self, func:'callable_', *args:'any_') -> 'any_':
+        """ Runs one database call of this writer, in the thread pool of the gevent hub if the engine needs it.
+        """
+        if self._needs_thread_pool:
+            out = _call_in_thread_pool(func, *args)
+        else:
+            out = func(*args)
 
         return out
 
@@ -448,7 +474,7 @@ class GroupCommitWriter:
             sources = sorted(self._event_sources)
 
         with self._db_lock:
-            out = _call_off_loop(self._run_retention_transaction, now, sources)
+            out = self._call_database(self._run_retention_transaction, now, sources)
 
         self._last_retention_at = self.clock()
 

@@ -8,14 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
-from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, Boolean, case, delete, insert, LargeBinary, select, text, update
+from sqlalchemy import and_, bindparam, case, delete, insert, select, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.compiler import InsertmanyvaluesSentinelOpts
 
 # Zato
@@ -45,22 +43,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 # The databases whose claim statement is an upsert that returns the rows it claimed.
 _returning_claim_dialects = ('postgresql', 'sqlite')
 
-_dialect_mysql  = 'mysql'
-_dialect_oracle = 'oracle'
-
-# How many times a claim statement on Oracle DB is repeated when a concurrent transaction committed the same
-# message between the match of its MERGE and its insert.
-_oracle_merge_attempts = 3
-
-# How many values one IN list holds, below the limit of 1,000 that Oracle DB has.
+# How many values one IN list holds.
 _in_list_size = 500
 
 # The columns that make up the identity of a received message.
@@ -78,51 +64,6 @@ _replaced_columns = (
     'commit_id',
     'expires_iso',
 )
-
-# The claim statement of Oracle DB. A MERGE with one source row is executed with an array of parameter sets.
-_oracle_merge = """
-MERGE INTO b2b_message t
-USING (
-    SELECT
-        :protocol AS protocol,
-        :from_party AS from_party,
-        :to_party AS to_party,
-        :message_id AS message_id,
-        :status AS status,
-        :received_iso AS received_iso,
-        :expires_iso AS expires_iso,
-        :response_status_code AS response_status_code,
-        :response_content_type AS response_content_type,
-        :response_body AS response_body,
-        :response_is_synchronous AS response_is_synchronous,
-        :commit_id AS commit_id
-    FROM dual
-) s
-ON (
-    t.protocol = s.protocol AND
-    t.from_party = s.from_party AND
-    t.to_party = s.to_party AND
-    t.message_id = s.message_id
-)
-WHEN MATCHED THEN UPDATE SET
-    t.status = s.status,
-    t.received_iso = s.received_iso,
-    t.expires_iso = s.expires_iso,
-    t.response_status_code = s.response_status_code,
-    t.response_content_type = s.response_content_type,
-    t.response_body = s.response_body,
-    t.response_is_synchronous = s.response_is_synchronous,
-    t.commit_id = s.commit_id
-    WHERE t.expires_iso <= s.received_iso
-WHEN NOT MATCHED THEN INSERT (
-    id, protocol, from_party, to_party, message_id, status, received_iso, expires_iso,
-    response_status_code, response_content_type, response_body, response_is_synchronous, commit_id
-) VALUES (
-    b2b_message_id_seq.NEXTVAL, s.protocol, s.from_party, s.to_party, s.message_id, s.status, s.received_iso,
-    s.expires_iso, s.response_status_code, s.response_content_type, s.response_body, s.response_is_synchronous,
-    s.commit_id
-)
-"""
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -298,33 +239,6 @@ def _upsert_mysql(connection:'Connection', rows:'anylist', commit_id:'str') -> '
 
 # ################################################################################################################################
 
-def _merge_oracle(connection:'Connection', rows:'anylist', commit_id:'str') -> 'set[MessageIdentity]':
-    """ Claims messages on Oracle DB - a MERGE that replaces only an expired record,
-    followed by one select of the rows that carry the identifier of this transaction.
-    """
-    statement = text(_oracle_merge)
-    statement = statement.bindparams(
-        bindparam('response_body', type_=LargeBinary),
-        bindparam('response_is_synchronous', type_=Boolean),
-    )
-
-    # A MERGE inserts a message that another transaction inserted after the MERGE matched it,
-    # which the unique constraint refuses. The statement is repeated, and it matches the message this time.
-    for attempt in range(1, _oracle_merge_attempts + 1):
-        try:
-            _ = connection.execute(statement, rows)
-        except IntegrityError:
-            if attempt == _oracle_merge_attempts:
-                raise
-            logger.info('B2B claim statement repeated after a concurrent claim, attempt %d', attempt)
-        else:
-            break
-
-    out = _claimed_by_commit(connection, commit_id)
-    return out
-
-# ################################################################################################################################
-
 def write_claims(connection:'Connection', writes:'anylist', commit_id:'str') -> 'anylist':
     """ Claims the messages of a transaction in one statement and returns the result of each write in their order.
     A copy of a message that another write of the same transaction claims is resolved here, without the database.
@@ -351,10 +265,8 @@ def write_claims(connection:'Connection', writes:'anylist', commit_id:'str') -> 
 
     if dialect_name in _returning_claim_dialects:
         claimed = _upsert_returning(connection, rows)
-    elif dialect_name == _dialect_mysql:
-        claimed = _upsert_mysql(connection, rows, commit_id)
     else:
-        claimed = _merge_oracle(connection, rows, commit_id)
+        claimed = _upsert_mysql(connection, rows, commit_id)
 
     # .. and only the first copy of a claimed message is the one that claimed it.
     out:'anylist' = []
