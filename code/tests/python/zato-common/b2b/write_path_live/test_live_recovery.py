@@ -15,7 +15,8 @@ from live_db import count_rows, full_scans, gather_statistics, new_event
 from zato.common.audit_log.api import AuditEvent, AuditLog, event_table
 from zato.common.audit_log.common import get_retention_days
 from zato.common.b2b.common import commit_group
-from zato.common.b2b.common.business_log import BusinessLog, BusinessState, expired
+from zato.common.b2b.common.business_log import BusinessLog, expired
+from zato.common.b2b.common.business_state import BusinessState
 from zato.common.b2b.common.clock import ManualClock
 from zato.common.b2b.common.commit_group import GroupCommitWriter
 from zato.common.b2b.common.outcome import SignalKind
@@ -34,7 +35,7 @@ if 0:
     from datetime import datetime
     from live_db import LiveDB
     from pytest import MonkeyPatch
-    from zato.common.b2b.common.business_log import BusinessOutcome
+    from zato.common.b2b.common.business_state import BusinessOutcome
     from zato.common.b2b.common.commit_retention import RetentionResult
     from zato.common.typing_ import strlist
     BusinessOutcome = BusinessOutcome

@@ -18,7 +18,8 @@ import pytest
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.audit_log.common import AuditSource
-from zato.common.b2b.common.business_log import BusinessLog, BusinessState, expired
+from zato.common.b2b.common.business_log import BusinessLog, expired
+from zato.common.b2b.common.business_state import BusinessState
 from zato.common.b2b.common.exceptions import B2BException
 from zato.common.b2b.common.outcome import FinalState
 from zato.common.b2b.ebms2.business_signals import accept_business_message, build_signal, business_deadlines, \
@@ -36,7 +37,7 @@ from zato.common.util.xml_.core import qname
 if 0:
     from pathlib import Path
     from pytest import MonkeyPatch
-    from zato.common.b2b.common.business_log import BusinessOutcome
+    from zato.common.b2b.common.business_state import BusinessOutcome
     from zato.common.b2b.ebms2.header import MessageHeader
     from zato.common.b2b.ebms2.inbound import InboundResult
     from zato.common.b2b.ebms2.outbound import OutboundMessage

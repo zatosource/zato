@@ -17,7 +17,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, event_table, ModuleCtx as AuditLogCtx
-from zato.common.b2b.common.business_log import BusinessLog, BusinessState, expired
+from zato.common.b2b.common.business_log import BusinessLog, expired
+from zato.common.b2b.common.business_state import BusinessState
 from zato.common.b2b.common.clock import ManualClock
 from zato.common.b2b.common.commit_group import GroupCommitWriter
 from zato.common.b2b.common.outcome import FinalState, SignalKind

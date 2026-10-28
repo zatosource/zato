@@ -44,6 +44,7 @@ B2B_Event_Types = (
     AuditEvent.Business_Message_Sent,
     AuditEvent.Business_Reply_Received,
     AuditEvent.Business_Timed_Out,
+    AuditEvent.Business_Delivery_Failed,
 )
 
 # ################################################################################################################################

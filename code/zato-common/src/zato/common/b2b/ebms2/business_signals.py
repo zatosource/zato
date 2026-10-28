@@ -14,7 +14,8 @@ from datetime import timedelta
 from lxml.etree import Element, SubElement, tostring
 
 # Zato
-from zato.common.b2b.common.business_log import BusinessMessage, BusinessState, can_change, new_business_outcome, time_out
+from zato.common.b2b.common.business_log import time_out
+from zato.common.b2b.common.business_state import BusinessMessage, BusinessState, can_change, new_business_outcome
 from zato.common.b2b.common.exceptions import B2BException
 from zato.common.b2b.ebms2.common import Direction, NS
 from zato.common.b2b.ebms2.cpa.xml_ import parse_duration_text
@@ -27,7 +28,8 @@ from zato.common.util.xml_.core import parse_xml, qname, to_timestamp, XMLExcept
 
 if 0:
     from datetime import datetime
-    from zato.common.b2b.common.business_log import BusinessLog, BusinessOutcome
+    from zato.common.b2b.common.business_log import BusinessLog
+    from zato.common.b2b.common.business_state import BusinessOutcome
     from zato.common.b2b.common.clock import Clock
     from zato.common.b2b.common.keys import LocalKeys
     from zato.common.b2b.ebms2.agreement import Agreement, Binding

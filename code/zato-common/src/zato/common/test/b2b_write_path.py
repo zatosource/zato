@@ -18,7 +18,7 @@ from sqlalchemy.pool import StaticPool
 # Zato
 from zato.common.audit_log.api import metadata as audit_metadata
 from zato.common.audit_log.common import AuditSource, B2BAttr
-from zato.common.b2b.common.business_log import BusinessMessage
+from zato.common.b2b.common.business_state import BusinessMessage
 from zato.common.b2b.common.outcome import FinalState, Outcome, SignalKind
 from zato.common.b2b.common.records import MessageIdentity, StoredMessage, StoredResponse
 from zato.common.b2b.common.retry import RetryPolicy, RetryState

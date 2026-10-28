@@ -13,7 +13,8 @@ from dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import stranydict, strlist
+    stranydict = stranydict
     strlist = strlist
 
 # ################################################################################################################################
@@ -40,6 +41,13 @@ class FinalState:
     Duplicate = 'duplicate'
     Failed    = 'failed'
     Answered  = 'answered'
+
+class FailureCause:
+    """ Why a delivery of a message failed - no answer within the timeout, an HTTP error status, or a protocol error.
+    """
+    No_Answer      = 'no-answer'
+    HTTP_Error     = 'http-error'
+    Protocol_Error = 'protocol-error'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,8 +82,54 @@ class Outcome:
     # Where the exchange ended.
     final_state: str = FinalState.Rejected
 
+    # Why the latest delivery failed, and its HTTP status code or protocol error code, empty after a successful one.
+    failure_cause:  str = ''
+    failure_detail: str = ''
+
     def __init__(self) -> 'None':
         self.payload_digests = []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def outcome_to_dict(outcome:'Outcome') -> 'stranydict':
+    """ Returns the document an outcome is recorded with in the audit log.
+    """
+    out:'stranydict' = {
+        'delivered': outcome.delivered,
+        'payload_digests': outcome.payload_digests,
+        'signal_kind': outcome.signal_kind,
+        'error_code': outcome.error_code,
+        'error_severity': outcome.error_severity,
+        'signature_verified': outcome.signature_verified,
+        'duplicate': outcome.duplicate,
+        'retry_count': outcome.retry_count,
+        'final_state': outcome.final_state,
+        'failure_cause': outcome.failure_cause,
+        'failure_detail': outcome.failure_detail,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def outcome_from_dict(data:'stranydict') -> 'Outcome':
+    """ Returns an outcome from the document it is recorded with in the audit log.
+    """
+    out = Outcome()
+    out.delivered = data['delivered']
+    out.payload_digests = data['payload_digests']
+    out.signal_kind = data['signal_kind']
+    out.error_code = data['error_code']
+    out.error_severity = data['error_severity']
+    out.signature_verified = data['signature_verified']
+    out.duplicate = data['duplicate']
+    out.retry_count = data['retry_count']
+    out.final_state = data['final_state']
+    out.failure_cause = data['failure_cause']
+    out.failure_detail = data['failure_detail']
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

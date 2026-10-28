@@ -380,10 +380,11 @@ class AuditEvent:
     Message_Completed = 'message-completed'
 
     # A B2B business message sent with the deadlines of its business transaction, a business signal or a response
-    # that refers to it, and the end of its transaction when a deadline passes first.
-    Business_Message_Sent   = 'business-message-sent'
-    Business_Reply_Received = 'business-reply-received'
-    Business_Timed_Out      = 'business-timed-out'
+    # that refers to it, the end of its transaction when a deadline passes first, and when its delivery fails.
+    Business_Message_Sent    = 'business-message-sent'
+    Business_Reply_Received  = 'business-reply-received'
+    Business_Timed_Out       = 'business-timed-out'
+    Business_Delivery_Failed = 'business-delivery-failed'
 
 # ################################################################################################################################
 

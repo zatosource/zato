@@ -15,7 +15,7 @@
 	test-edifact test-soap test-openapi test-api-portal-live \
 	test-llm \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
-	test-hl7 test-ccda test-documents test-b2b hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
+	test-hl7 test-ccda test-documents test-b2b test-b2b-perf hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-rule-engine test-rule-engine-perf \
@@ -78,7 +78,7 @@ include $(CURDIR)/code/tests/check.mk
 
 # ----------------------------------------------------------------------------
 # Zato_Health_Root - needed by health, test, and lint targets only.
-# Zato_B2B_Root - needed by test-b2b for the interoperability suite only.
+# Zato_B2B_Root - needed by test-b2b for the interoperability suite and by test-b2b-perf for its performance suite only.
 # Existing build/install/clean/restart targets work without it.
 # ----------------------------------------------------------------------------
 
@@ -943,6 +943,17 @@ test-b2b: ## B2B protocols - ebMS 2.0 agreements, packaging, signatures, signals
 	@if [ -z "$(Zato_B2B)" ]; then echo "Zato_B2B_Root is not set, the B2B interoperability suite is skipped" $(Zato_Log); exit 0; fi; \
 	$(MAKE) --no-print-directory -C $(Zato_B2B) test-all Zato_Root=$(CURDIR) Zato_Python=$(ZATO_PY) $(Zato_Log)
 
+test-b2b-perf: ## B2B performance - the harness against the public test agreements on each database, then the performance suite of the interoperability repository when it is present.
+	$(Zato_Log_Reset)
+	@if [ ! -d $(CURDIR)/code/tests/python/zato-common/b2b/perf ]; then echo "The B2B performance tests are not present, skipped" $(Zato_Log); exit 0; fi; \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/b2b/perf/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_b2b_perf -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+	@if [ -z "$(Zato_B2B)" ]; then echo "Zato_B2B_Root is not set, the B2B performance suite is skipped" $(Zato_Log); exit 0; fi; \
+	$(MAKE) --no-print-directory -C $(Zato_B2B) test-perf Zato_Root=$(CURDIR) Zato_Python=$(ZATO_PY) $(Zato_Log)
+
 test-mcp-oauth: ## OAuth for MCP gateways - simulated clients signing in through Keycloak.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1553,7 +1564,7 @@ Zato_Test_Live := \
 Zato_Test_Heavy := test-rest test-server
 
 # Standalone performance suites, left out of test-all
-Zato_Test_Perf := test-pubsub-perf test-rule-engine-perf
+Zato_Test_Perf := test-pubsub-perf test-rule-engine-perf test-b2b-perf
 
 Zato_Test_Fuzz := test-rest-fuzz test-server-fuzz
 

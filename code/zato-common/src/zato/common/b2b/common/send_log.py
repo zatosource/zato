@@ -15,11 +15,11 @@ from threading import Lock
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, is_audit_log_enabled, ModuleCtx as AuditLogCtx
 from zato.common.audit_log.attachment import build_attachment, Env_Max_Attachment_Size, get_max_attachment_size
 from zato.common.audit_log.common import B2BAttr
-from zato.common.b2b.common.business_log import business_data, business_sent_attrs, Data_Business
+from zato.common.b2b.common.business_state import business_data, business_sent_attrs, Data_Business
 from zato.common.b2b.common.commit_group import get_writer
 from zato.common.b2b.common.commit_sql import EventWrite
 from zato.common.b2b.common.exceptions import B2BException
-from zato.common.b2b.common.outcome import Outcome
+from zato.common.b2b.common.outcome import FinalState, outcome_from_dict, outcome_to_dict
 from zato.common.b2b.common.recovery import read_attrs, read_bodies, read_events, read_open
 from zato.common.b2b.common.retry import RetryPolicy, RetryState
 from zato.common.b2b.common.schema import OpenKind
@@ -30,9 +30,11 @@ from zato.common.json_internal import dumps, loads
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.b2b.common.business_log import BusinessLog, BusinessMessage
+    from zato.common.b2b.common.business_log import BusinessLog
+    from zato.common.b2b.common.business_state import BusinessMessage
     from zato.common.b2b.common.clock import Clock
     from zato.common.b2b.common.commit_group import GroupCommitWriter
+    from zato.common.b2b.common.outcome import Outcome
     from zato.common.typing_ import anydict, anylist, stranydict, strlist, strstrdict
     anydict = anydict
     anylist = anylist
@@ -42,6 +44,7 @@ if 0:
     Connection = Connection
     Engine = Engine
     GroupCommitWriter = GroupCommitWriter
+    Outcome = Outcome
     stranydict = stranydict
     strlist = strlist
     strstrdict = strstrdict
@@ -133,41 +136,6 @@ class _Exchange:
         self.attempts = []
         self.signals = []
         self.signal_bodies = []
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _outcome_to_dict(outcome:'Outcome') -> 'stranydict':
-    out = {
-        'delivered': outcome.delivered,
-        'payload_digests': outcome.payload_digests,
-        'signal_kind': outcome.signal_kind,
-        'error_code': outcome.error_code,
-        'error_severity': outcome.error_severity,
-        'signature_verified': outcome.signature_verified,
-        'duplicate': outcome.duplicate,
-        'retry_count': outcome.retry_count,
-        'final_state': outcome.final_state,
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def _outcome_from_dict(data:'stranydict') -> 'Outcome':
-
-    out = Outcome()
-    out.delivered = data['delivered']
-    out.payload_digests = data['payload_digests']
-    out.signal_kind = data['signal_kind']
-    out.error_code = data['error_code']
-    out.error_severity = data['error_severity']
-    out.signature_verified = data['signature_verified']
-    out.duplicate = data['duplicate']
-    out.retry_count = data['retry_count']
-    out.final_state = data['final_state']
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -276,7 +244,7 @@ class SendLog:
         if expires_at := retry_state.expires_at:
             expires_at = expires_at.isoformat()
 
-        initial_outcome = _outcome_to_dict(sent.outcome)
+        initial_outcome = outcome_to_dict(sent.outcome)
 
         data:'stranydict' = {
             _Data.Retries: sent.policy.retries,
@@ -388,6 +356,17 @@ class SendLog:
 
 # ################################################################################################################################
 
+    def record_attempt_failure(self, sent:'SentMessage', failure_cause:'str', failure_detail:'str') -> 'None':
+        """ Records in memory why the latest delivery of a message failed. The cause is recorded in the audit log
+        with the end of the exchange.
+        """
+        with self._lock:
+            if exchange := self._open.get(sent.message_id):
+                exchange.sent.outcome.failure_cause = failure_cause
+                exchange.sent.outcome.failure_detail = failure_detail
+
+# ################################################################################################################################
+
     def record_signal(
         self,
         sent:'SentMessage',
@@ -437,7 +416,8 @@ class SendLog:
 
     def record_completion(self, sent:'SentMessage', outcome:'Outcome') -> 'None':
         """ Records the end of the exchange of a message with its deliveries and the signals that answered it,
-        the signal that ended it included, after which it is no longer outstanding. The call returns once
+        the signal that ended it included, after which it is no longer outstanding. An exchange that failed
+        ends the business transaction of its message with the cause of the last delivery. The call returns once
         the record is committed.
         """
         with self._lock:
@@ -458,7 +438,7 @@ class SendLog:
         attrs[B2BAttr.Error_Code] = outcome.error_code
 
         data = dumps({
-            _Data.Outcome: _outcome_to_dict(outcome),
+            _Data.Outcome: outcome_to_dict(outcome),
             _Data.Attempts: attempts,
             _Data.Signals: signals,
         })
@@ -489,6 +469,10 @@ class SendLog:
 
         sent.retry_state.is_answered = True
         sent.outcome = outcome
+
+        if outcome.final_state == FinalState.Failed:
+            if self.business_log:
+                self.business_log.record_delivery_failed(sent.message_id, outcome.failure_cause, outcome.failure_detail)
 
 # ################################################################################################################################
 
@@ -526,7 +510,7 @@ class SendLog:
         # A completed message has the outcome its exchange ended with and the deliveries it was made in ..
         if completion:
             completion_data = loads(completion.data)
-            outcome = _outcome_from_dict(completion_data[_Data.Outcome])
+            outcome = outcome_from_dict(completion_data[_Data.Outcome])
 
             if attempts := completion_data[_Data.Attempts]:
                 retry_state.attempt_count = len(attempts)
@@ -536,7 +520,7 @@ class SendLog:
 
         # .. while a pending one has the outcome it was sent with.
         else:
-            outcome = _outcome_from_dict(first_data[_Data.Outcome])
+            outcome = outcome_from_dict(first_data[_Data.Outcome])
 
         out = SentMessage()
         out.message_id = first.msg_id
