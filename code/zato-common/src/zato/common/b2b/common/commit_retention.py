@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 # SQLAlchemy
-from sqlalchemy import and_, delete, exists, or_, select
+from sqlalchemy import and_, delete, exists, func, or_, select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, event_body_table, event_table, get_retention_days
@@ -287,6 +287,27 @@ def select_retained(connection:'Connection', now:'datetime', sources:'strlist', 
         out.events.extend(select_old_events(connection, source, now, limit, held_ids))
 
     return out
+
+# ################################################################################################################################
+
+def read_candidate_rows(connection:'Connection', candidates:'RetentionCandidates') -> 'None':
+    """ Reads the attributes and the bodies of the events retention found due for deletion, the bodies in full,
+    so that their deletion finds the pages it changes in the memory of the database.
+    """
+    ids = candidates.events
+
+    for start in range(0, len(ids), _in_list_size):
+        chunk = ids[start:start + _in_list_size]
+
+        # Each attribute row is read from its table rather than from an index ..
+        attrs = select(func.count(b2b_event_table.c.final_state)).where(b2b_event_table.c.event_id.in_(chunk))
+        _ = connection.execute(attrs).scalar()
+
+        # .. and each body is read with all of its stored parts.
+        data = func.count(func.md5(event_body_table.c.data))
+        content = func.count(func.md5(event_body_table.c.content))
+        bodies = select(data, content).where(event_body_table.c.event_id.in_(chunk))
+        _ = connection.execute(bodies).one()
 
 # ################################################################################################################################
 

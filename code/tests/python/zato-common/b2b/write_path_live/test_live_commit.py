@@ -91,6 +91,13 @@ _identifier_selects = {
     Type_PostgreSQL: [],
 }
 
+# The statement that inserts the rows whose identifiers are not read back, for each database.
+_bulk_insert_verbs = {
+    Type_SQLite: 'INSERT',
+    Type_MySQL: 'INSERT',
+    Type_PostgreSQL: 'COPY',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -271,14 +278,16 @@ class TestStatementCounts:
         clock.advance(1)
         assert writer.commit_due()
 
+        bulk_verb = _bulk_insert_verbs[database.name]
+
         assert recorder.writes() == [
             'INSERT b2b_message',
             'UPDATE b2b_message',
             'INSERT event',
-            'INSERT b2b_event',
-            'INSERT event_body',
+            f'{bulk_verb} b2b_event',
+            f'{bulk_verb} event_body',
             'DELETE b2b_open',
-            'INSERT b2b_open',
+            f'{bulk_verb} b2b_open',
         ]
 
         selected:'strlist' = []

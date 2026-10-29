@@ -18,7 +18,8 @@ from uuid import uuid4
 # Zato
 from zato.common.audit_log.api import get_audit_engine, metadata as audit_metadata
 from zato.common.audit_log.export.api import get_audit_export
-from zato.common.b2b.common.commit_retention import delete_candidates, delete_retained, RetentionResult, select_retained
+from zato.common.b2b.common.commit_retention import delete_candidates, delete_retained, read_candidate_rows, \
+    RetentionResult, select_retained
 from zato.common.b2b.common.commit_sql import write_transaction
 from zato.common.b2b.common.commit_ticket import CommitTicket, GroupProgress, TransactionResult
 from zato.common.b2b.common.commit_timing import timing_log
@@ -535,9 +536,10 @@ class GroupCommitWriter:
 
         with self.engine.connect() as connection:
 
-            # The rows due for deletion are selected in a transaction of their own, without the lock ..
+            # The rows due for deletion are selected and read in a transaction of their own, without the lock ..
             with connection.begin():
                 candidates = select_retained(connection, now, sources, self.retention_batch_rows)
+                read_candidate_rows(connection, candidates)
 
             selected_at = time()
 

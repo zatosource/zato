@@ -17,17 +17,19 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.sql.compiler import InsertmanyvaluesSentinelOpts
 
 # Zato
-from zato.common.audit_log.api import build_attr_rows, event_attr_table, event_body_table, event_link_table, event_table
+from zato.common.audit_log.api import event_body_table, event_link_table, event_table
 from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.b2b.common.exceptions import B2BException
 from zato.common.b2b.common.records import MessageIdentity
 from zato.common.b2b.common.schema import b2b_event_attr_names, b2b_event_table, message_table, open_table
+from zato.common.db_env.pg8000_copy import copy_rows
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Connection, Dialect
+    from sqlalchemy.sql.schema import Table
     from zato.common.audit_log.buffer import PendingEvent
     from zato.common.b2b.common.commit_ticket import CommitTicket
     from zato.common.b2b.common.records import StoredMessage
@@ -41,6 +43,7 @@ if 0:
     StoredMessage = StoredMessage
     stranydict = stranydict
     strlist = strlist
+    Table = Table
 
 identity_status_dict = dict[MessageIdentity, str]
 status_keys_dict     = dict[str, list[tuple[str, str, str, str]]]
@@ -54,6 +57,9 @@ _returning_claim_dialects = ('postgresql', 'sqlite')
 
 # How many values one IN list holds.
 _in_list_size = 500
+
+# The driver whose connections insert rows with COPY.
+_copy_driver = 'pg8000'
 
 # The columns that make up the identity of a received message.
 _identity_columns = ('protocol', 'from_party', 'to_party', 'message_id')
@@ -410,6 +416,17 @@ def _returns_ordered_ids(dialect:'Dialect') -> 'bool':
 
 # ################################################################################################################################
 
+def _insert_rows(connection:'Connection', table:'Table', rows:'anylist') -> 'None':
+    """ Inserts rows whose identifiers are not needed, with one COPY statement through pg8000
+    and with one multi-row insert through any other driver.
+    """
+    if connection.dialect.driver == _copy_driver:
+        copy_rows(connection, table, rows)
+    else:
+        _ = connection.execute(insert(table), rows)
+
+# ################################################################################################################################
+
 def _insert_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 'list[int]':
     """ Inserts the audit events of a transaction in one statement and returns their identifiers in the order
     of the writes, through RETURNING where the driver returns them from a multi-row insert, and otherwise
@@ -509,13 +526,13 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
             })
 
     if attr_rows:
-        _ = connection.execute(insert(b2b_event_table), attr_rows)
+        _insert_rows(connection, b2b_event_table, attr_rows)
 
     if body_rows:
-        _ = connection.execute(insert(event_body_table), body_rows)
+        _insert_rows(connection, event_body_table, body_rows)
 
     if link_rows:
-        _ = connection.execute(insert(event_link_table), link_rows)
+        _insert_rows(connection, event_link_table, link_rows)
 
     # A record is closed before one is opened, so that a message sent anew under the same identifier has one record.
     open_key = tuple_(open_table.c.kind, open_table.c.source, open_table.c.server_name, open_table.c.message_id)
@@ -526,7 +543,7 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
         _ = connection.execute(delete(open_table).where(is_closed))
 
     if open_rows:
-        _ = connection.execute(insert(open_table), open_rows)
+        _insert_rows(connection, open_table, open_rows)
 
     return event_ids
 

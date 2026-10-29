@@ -77,7 +77,7 @@ _body_repeat = 100
 _memory_url = 'sqlite://'
 
 # The verbs that open the SQL statements the recorder classifies.
-_statement_verbs = ('INSERT', 'UPDATE', 'DELETE', 'SELECT', 'MERGE')
+_statement_verbs = ('INSERT', 'UPDATE', 'DELETE', 'SELECT', 'MERGE', 'COPY')
 
 # The events of the operating system, which a commit in the thread pool of the gevent hub waits on as well.
 _Native_Event = get_original('threading', 'Event')
@@ -101,8 +101,8 @@ class RecordedStatement:
 # ################################################################################################################################
 
 def _table_of(verb:'str', sql:'str') -> 'str':
-    """ Returns the table a statement is about - the one it inserts into, updates, deletes from, merges into
-    or, for a select, the first one it reads from.
+    """ Returns the table a statement is about - the one it inserts into, updates, deletes from, merges into,
+    copies into or, for a select, the first one it reads from.
     """
     upper = sql.upper()
 
@@ -112,6 +112,8 @@ def _table_of(verb:'str', sql:'str') -> 'str':
         marker = 'UPDATE '
     elif verb == 'MERGE':
         marker = 'INTO '
+    elif verb == 'COPY':
+        marker = 'COPY '
     else:
         marker = 'FROM '
 

@@ -66,6 +66,9 @@ class ModuleCtx:
     # The largest statement MySQL accepts, as the audit log documentation requires
     MySQL_Max_Allowed_Packet = '--max-allowed-packet=128M'
 
+    # The data directory of the PostgreSQL image, mounted in memory for the containers that keep no data on disk
+    PostgreSQL_Memory_Data_Dir = '/var/lib/postgresql/data'
+
 
     # The queries the readiness checks run
     Ping_Query        = 'select 1'
@@ -295,9 +298,12 @@ def start_postgresql(
     certificates:'certificatepathsnone' = None,
     server_settings:'strlist | None' = None,
     data_dir:'str | None' = None,
+    is_in_memory:'bool' = False,
+    cpus:'str | None' = None,
     ) -> 'DatabaseServer':
-    """ Starts a PostgreSQL container, optionally one that requires TLS for all TCP connections.
-    Certificates are always given when needs_ssl is True and they are dereferenced only then.
+    """ Starts a PostgreSQL container, optionally one that requires TLS for all TCP connections, one whose data directory
+    is in memory and one limited to the number of CPUs given. Certificates are always given when needs_ssl is True
+    and they are dereferenced only then.
     """
     ssl_certificates:'CertificatePaths' = cast_('CertificatePaths', certificates)
 
@@ -327,6 +333,12 @@ def start_postgresql(
 
     if data_dir:
         command.extend(['--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{data_dir}:/var/lib/postgresql/data'])
+
+    if is_in_memory:
+        command.extend(['--tmpfs', ModuleCtx.PostgreSQL_Memory_Data_Dir])
+
+    if cpus:
+        command.extend(['--cpus', cpus])
 
     command.append(ModuleCtx.PostgreSQL_Image)
 
