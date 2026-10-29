@@ -8,10 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from dataclasses import dataclass
 from logging import getLogger
 from queue import Queue
-from threading import Condition, Event, Lock, Thread
+from threading import Condition, Lock, Thread
 from time import monotonic
 from uuid import uuid4
 
@@ -20,6 +19,7 @@ from zato.common.audit_log.api import get_audit_engine, metadata as audit_metada
 from zato.common.audit_log.export.api import get_audit_export
 from zato.common.b2b.common.commit_retention import delete_retained, RetentionResult
 from zato.common.b2b.common.commit_sql import write_transaction
+from zato.common.b2b.common.commit_ticket import CommitTicket, GroupProgress, TransactionResult
 from zato.common.b2b.common.schema import create_tables
 from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.engine import call_database
@@ -49,7 +49,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-ticket_list = list['CommitTicket']
+ticket_list = list[CommitTicket]
 queue_list  = list[Queue]
 thread_list = list[Thread]
 
@@ -61,9 +61,11 @@ Env_Commit_Max_Rows    = 'Zato_B2B_Commit_Max_Rows'
 Default_Commit_Interval_Ms = 100
 Default_Commit_Max_Rows    = 1000
 
-# How often retention runs between two commits, and how many rows of each kind one batch of it deletes.
-Retention_Interval_Seconds = 60
-Retention_Batch_Rows       = 250
+# How often retention runs between two commits, how many rows of each kind one batch of it deletes,
+# and how often the batches run while each one reaches that limit.
+Retention_Interval_Seconds       = 60
+Retention_Batch_Rows             = 500
+Retention_Batch_Interval_Seconds = 0.5
 
 # How many groups a pipelined writer holds at a time - one being committed and one executing its statements.
 _lane_count = 2
@@ -92,68 +94,6 @@ def get_commit_max_rows() -> 'int':
         out = Default_Commit_Max_Rows
 
     return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class TransactionResult:
-    """ What a function run in a transaction of its own returns - its value for the caller,
-    and the event writes it inserted.
-    """
-    value:        'any_'
-    event_writes: 'anylist'
-
-    def __init__(self) -> 'None':
-        self.value = None
-        self.event_writes = []
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CommitTicket:
-    """ One write waiting for the commit of the transaction that holds it.
-    """
-
-    def __init__(self, write:'any_', row_count:'int') -> 'None':
-        self.write = write
-        self.row_count = row_count
-
-        # What the write produced, or the exception that refused it.
-        self.result:'any_' = None
-        self.error:'Exception | None' = None
-
-        self._done = Event()
-
-    @property
-    def is_done(self) -> 'bool':
-        out = self._done.is_set()
-        return out
-
-    def release(self) -> 'None':
-        self._done.set()
-
-    def wait(self) -> 'any_':
-        """ Waits until the transaction that holds the write is committed and returns the result of the write.
-        """
-        _ = self._done.wait()
-
-        if self.error:
-            raise self.error
-
-        out = self.result
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GroupProgress:
-    """ One group of writes of a pipelined writer, and whether its statements are executed.
-    """
-
-    def __init__(self, tickets:'ticket_list') -> 'None':
-        self.tickets = tickets
-        self.statements_done = Event()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -217,11 +157,17 @@ class GroupCommitWriter:
         # Whether the last batch of retention reached the row limit, so that the next batch is due without the interval.
         self._has_retention_backlog = False
 
+        # Whether a batch of retention of a pipelined writer is in its lane, so that the next one waits for its commit.
+        self._is_retention_running = False
+
         self.is_started = is_started
 
         # The queues and the threads of the lanes of a pipelined writer, each committing its groups one after another.
         self._lanes:'queue_list' = []
         self._lane_threads:'thread_list' = []
+
+        # The lane of retention of a pipelined writer, whose commits do not delay the groups.
+        self._retention_lane = Queue()
 
         if is_started:
 
@@ -232,6 +178,10 @@ class GroupCommitWriter:
                     lane_thread.start()
                     self._lanes.append(lane)
                     self._lane_threads.append(lane_thread)
+
+                lane_thread = Thread(target=self._run_retention_lane, name='b2b-retention-lane', daemon=True)
+                lane_thread.start()
+                self._lane_threads.append(lane_thread)
 
             thread = Thread(target=self._run, name='b2b-commit-group', daemon=True)
             thread.start()
@@ -505,16 +455,33 @@ class GroupCommitWriter:
 
 # ################################################################################################################################
 
+    def _execute_retention_pipelined(self, now:'datetime', sources:'strlist') -> 'RetentionResult':
+        """ Executes one batch of retention while holding the database lock of this writer, and commits it without
+        the lock, so that the groups execute their statements during the commit.
+        """
+        with self.engine.connect() as connection:
+
+            with self._db_lock:
+                transaction = connection.begin()
+                out = delete_retained(connection, now, sources, self.retention_batch_rows)
+
+            transaction.commit()
+
+        return out
+
+# ################################################################################################################################
+
     def run_retention(self, now:'datetime') -> 'RetentionResult':
         """ Runs one batch of retention, in a transaction of its own.
         """
         with self._condition:
             sources = sorted(self._event_sources)
 
-        with self._db_lock:
-            out = self._call_database(self._execute_retention, now, sources)
-
-        self._last_retention_at = self.clock()
+        if self.is_pipelined:
+            out = self._execute_retention_pipelined(now, sources)
+        else:
+            with self._db_lock:
+                out = self._call_database(self._execute_retention, now, sources)
 
         if out.messages or out.held or out.events:
             logger.info('B2B retention deleted %d message records, %d held messages and %d events', out.messages, out.held,
@@ -524,31 +491,88 @@ class GroupCommitWriter:
 
 # ################################################################################################################################
 
+    def _retain(self, now:'datetime') -> 'None':
+        """ Runs one batch of retention and records whether the next one is due without the usual interval.
+        """
+        try:
+            result = self.run_retention(now)
+        except Exception:
+            has_backlog = False
+            logger.exception('B2B retention failed')
+        else:
+            has_backlog = result.is_at_limit(self.retention_batch_rows)
+
+        with self._condition:
+            self._has_retention_backlog = has_backlog
+            self._last_retention_at = self.clock()
+            self._is_retention_running = False
+            self._condition.notify()
+
+# ################################################################################################################################
+
+    def _run_retention_lane(self) -> 'None':
+        """ Runs the batches of retention of a pipelined writer, until it receives None.
+        """
+        while now := self._retention_lane.get():
+            self._retain(now)
+
+# ################################################################################################################################
+
     def _run_retention_if_due(self) -> 'None':
         """ Runs one batch of retention between two commits once its interval elapsed, and the next batch after
-        the next commit for as long as each batch reaches the row limit.
+        the next commit for as long as each batch reaches the row limit. A pipelined writer hands the batch to its lane.
         """
-        if self._has_retention_backlog:
-            is_due = True
-        else:
-            since_last = self.clock() - self._last_retention_at
-            is_due = since_last >= Retention_Interval_Seconds
+        with self._condition:
 
-        if is_due:
-            now = utcnow()
-            try:
-                result = self.run_retention(now)
-            except Exception:
-                self._has_retention_backlog = False
-                logger.exception('B2B retention failed')
+            # A batch still in its lane is committed before the next one starts ..
+            if self._is_retention_running:
+                return
+
+            since_last = self.clock() - self._last_retention_at
+
+            # .. a backlog is deleted batch by batch at an interval of its own ..
+            if self._has_retention_backlog:
+                interval = Retention_Batch_Interval_Seconds
+
+            # .. and otherwise retention runs at the usual one.
             else:
-                self._has_retention_backlog = result.is_at_limit(self.retention_batch_rows)
+                interval = Retention_Interval_Seconds
+
+            if since_last < interval:
+                return
+
+            self._is_retention_running = self.is_pipelined
+
+        now = utcnow()
+
+        if self.is_pipelined:
+            self._retention_lane.put(now)
+        else:
+            self._retain(now)
+
+# ################################################################################################################################
+
+    def _time_to_batch(self) -> 'floatnone':
+        """ Returns how many seconds remain until the next batch of retention after one that reached the row limit,
+        or None when there is no such batch or one is still in its lane.
+        """
+        if self._is_retention_running:
+            out = None
+
+        elif self._has_retention_backlog:
+            waited = self.clock() - self._last_retention_at
+            remaining = Retention_Batch_Interval_Seconds - waited
+            out = max(remaining, 0.0)
+        else:
+            out = None
+
+        return out
 
 # ################################################################################################################################
 
     def _has_work(self) -> 'bool':
         """ Says whether the commit thread is to stop waiting - the writer is stopped, the pending writes are due,
-        or there are none and a batch of retention is due after the previous one. The condition is held by the caller.
+        or there are none and the next batch of retention is due. The condition is held by the caller.
         """
         if self._is_stopped:
             out = True
@@ -557,9 +581,24 @@ class GroupCommitWriter:
         elif self._pending:
             out = self._is_due()
 
-        # .. while without them, the batches follow one another.
+        # .. while without them, the batches follow one another at their interval.
+        elif (remaining := self._time_to_batch()) is None:
+            out = False
         else:
-            out = self._has_retention_backlog
+            out = remaining <= 0
+
+        return out
+
+# ################################################################################################################################
+
+    def _time_to_wake(self) -> 'floatnone':
+        """ Returns how many seconds the commit thread waits for at most - until the pending writes are due,
+        or without them, until the next batch of retention. The condition is held by the caller.
+        """
+        if self._pending:
+            out = self._time_to_due()
+        else:
+            out = self._time_to_batch()
 
         return out
 
@@ -577,7 +616,7 @@ class GroupCommitWriter:
             with self._condition:
 
                 while not self._has_work():
-                    timeout = self._time_to_due()
+                    timeout = self._time_to_wake()
                     _ = self._condition.wait(timeout)
 
                 # A stopped writer commits what it still holds and ends.
@@ -600,6 +639,8 @@ class GroupCommitWriter:
                 # A stopped writer ends once its lanes committed every group they hold.
                 for lane in self._lanes:
                     lane.put(None)
+
+                self._retention_lane.put(None)
 
                 for lane_thread in self._lane_threads:
                     lane_thread.join()

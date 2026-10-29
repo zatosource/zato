@@ -17,7 +17,7 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, event_
     ModuleCtx as AuditLogCtx
 from zato.common.audit_log.attachment import build_attachment
 from zato.common.audit_log.common import B2BAttr
-from zato.common.b2b.common.commit_group import TransactionResult
+from zato.common.b2b.common.commit_ticket import TransactionResult
 from zato.common.b2b.common.commit_sql import EventWrite, write_events
 from zato.common.b2b.common.exceptions import B2BException
 from zato.common.b2b.common.limits import Limits

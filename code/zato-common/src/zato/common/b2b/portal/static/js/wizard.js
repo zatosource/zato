@@ -56,17 +56,16 @@ wizard.renderSteps = function() {
 wizard.renderLines = function(body, step) {
 
     var grid = portal.create('div', 'decision-lines', '');
+    var slots = portal.wizardLines.slots(step.lines);
 
-    for (var lineIndex = 0; lineIndex < step.lines.length; lineIndex++) {
+    grid.style.setProperty('--decision-rows', String(wizard.rowCount));
 
-        var line = step.lines[lineIndex];
-
-        if (portal.wizardLines.isShown(line, wizard.state)) {
-            portal.wizardLines.build(grid, line, wizard.state);
-        }
+    for (var slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+        portal.wizardLines.buildSlot(grid, slots[slotIndex], wizard.state);
     }
 
     body.appendChild(grid);
+    portal.wizardLines.applyVisibility(body, wizard.state);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -181,27 +180,17 @@ wizard.check = function() {
 
 wizard.onChange = function() {
 
-    var visibility = portal.wizardLines.visibility(wizard.data.steps, wizard.state);
-    var isVisibilityChanged = visibility !== wizard.visibility;
+    var body = document.getElementById('wizard-body');
 
-    wizard.visibility = visibility;
+    portal.wizardLines.applyVisibility(body, wizard.state);
 
-    if (wizard.isSubmitted) {
-        wizard.check();
-    }
-
-    // A change that shows or hides lines builds the step again, any other one only refreshes the errors ..
-    if (isVisibilityChanged) {
-        wizard.show(wizard.current);
-        return;
-    }
-
-    // .. errors appear only once completing the wizard has been attempted.
+    // .. errors appear only once completing the wizard has been attempted ..
     if (!wizard.isSubmitted) {
         return;
     }
 
-    portal.wizardLines.showErrors(document.getElementById('wizard-body'), wizard.errors);
+    wizard.check();
+    portal.wizardLines.showErrors(body, wizard.errors);
     wizard.renderSteps();
 };
 
@@ -245,11 +234,25 @@ wizard.onNext = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+wizard.mostRows = function() {
+
+    var out = 0;
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+        var rowCount = portal.wizardLines.slots(wizard.data.steps[stepIndex].lines).length;
+        out = Math.max(out, rowCount);
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 wizard.init = function() {
 
     wizard.data = portal.readData('wizard-data');
     wizard.state = portal.wizardLines.initialState(wizard.data.steps);
-    wizard.visibility = portal.wizardLines.visibility(wizard.data.steps, wizard.state);
+    wizard.rowCount = wizard.mostRows();
     portal.wizardLines.onChange = wizard.onChange;
 
     document.getElementById('wizard-back').addEventListener('click', function() {

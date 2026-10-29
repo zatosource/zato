@@ -20,7 +20,7 @@ from sqlalchemy import insert, select, update
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome
-from zato.common.b2b.common.commit_group import TransactionResult
+from zato.common.b2b.common.commit_ticket import TransactionResult
 from zato.common.b2b.common.commit_sql import EventWrite, write_events
 from zato.common.b2b.common.schema import address_state_table
 from zato.common.json_internal import dumps

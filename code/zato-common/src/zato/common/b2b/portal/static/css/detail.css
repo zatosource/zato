@@ -21,9 +21,7 @@
 .detail-title {
     margin-right: 6px;
     font-size: 14px;
-    font-weight: 600;
     overflow-wrap: anywhere;
-    color: var(--text);
 }
 
 .detail-body {
@@ -65,7 +63,8 @@
     border-radius: var(--radius);
     font-family: var(--font);
     font-size: 11.5px;
-    font-weight: 600;
+    font-weight: 500;
+    letter-spacing: 0.02em;
     white-space: nowrap;
     color: var(--text4);
     background: var(--badge-unchosen-fill);
@@ -106,10 +105,6 @@
 .block-title {
     padding: 7px 12px;
     border-bottom: 1px solid var(--border);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     color: var(--text3);
     background: var(--panel-header);
 }

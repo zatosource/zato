@@ -42,7 +42,7 @@ from zato.common.test.b2b_write_path import CommitGate, CommitRefused, FailingCo
 
 if 0:
     from live_db import LiveDB
-    from zato.common.b2b.common.commit_group import CommitTicket
+    from zato.common.b2b.common.commit_ticket import CommitTicket
     from zato.common.b2b.ebms2.inbound import InboundResult
     from zato.common.test.b2b_cpa import AgreementSettings
     from zato.common.test.b2b_pki import TestParties

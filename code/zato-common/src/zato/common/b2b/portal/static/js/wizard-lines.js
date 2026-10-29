@@ -74,17 +74,63 @@ lines.isShown = function(line, state) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Which lines of all the steps are shown, as one text that changes whenever any of them appears or disappears.
-lines.visibility = function(steps, state) {
+lines.isBoundTo = function(line, name) {
 
-    var out = '';
+    if (line.shown_when.length === 0) {
+        return false;
+    }
 
-    for (var stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+    var out = line.shown_when[0] === name;
+    return out;
+};
 
-        var stepLines = steps[stepIndex].lines;
+// ////////////////////////////////////////////////////////////////////////
 
-        for (var lineIndex = 0; lineIndex < stepLines.length; lineIndex++) {
-            out += lines.isShown(stepLines[lineIndex], state) ? '1' : '0';
+// The rows of a step, each a list of the lines that share it. Lines bound to the same other line follow
+// one another, and the n-th line of each of its values shares the n-th row of the run, so a change
+// of that value replaces lines in their rows and never moves a row.
+lines.slots = function(stepLines) {
+
+    var out = [];
+    var lineIndex = 0;
+
+    while (lineIndex < stepLines.length) {
+
+        var first = stepLines[lineIndex];
+
+        if (first.shown_when.length === 0) {
+            out.push([first]);
+            lineIndex += 1;
+            continue;
+        }
+
+        var name = first.shown_when[0];
+        var runStart = out.length;
+        var positions = {};
+
+        while (lineIndex < stepLines.length) {
+
+            var line = stepLines[lineIndex];
+
+            if (!lines.isBoundTo(line, name)) {
+                break;
+            }
+
+            var value = line.shown_when[1];
+
+            if (!(value in positions)) {
+                positions[value] = 0;
+            }
+
+            var slotIndex = runStart + positions[value];
+            positions[value] += 1;
+
+            if (slotIndex === out.length) {
+                out.push([]);
+            }
+
+            out[slotIndex].push(line);
+            lineIndex += 1;
         }
     }
 
@@ -381,22 +427,60 @@ lines.builders = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Builds the label and the control of one line into the grid of the step, with the place for its error below the control.
-lines.build = function(grid, line, state) {
+lines.bindLayer = function(element, line) {
 
-    var label = portal.create('label', 'decision-line-label', line.label);
-    label.setAttribute('for', 'line-' + line.name);
+    if (line.shown_when.length) {
+        element.setAttribute('data-shown-name', line.shown_when[0]);
+        element.setAttribute('data-shown-value', line.shown_when[1]);
+    }
+};
 
-    var slot = portal.create('div', 'decision-line-slot', '');
-    slot.setAttribute('data-line', line.name);
-    slot.appendChild(lines.builders[line.kind](line, state));
+// ////////////////////////////////////////////////////////////////////////
 
-    var error = portal.create('div', 'decision-error', '');
-    error.hidden = true;
-    slot.appendChild(error);
+// Builds the labels and the controls of the lines of one row into the grid of the step, each control with
+// the place for its error below it. The lines of a row are stacked in one cell, which is as large as the largest of them.
+lines.buildSlot = function(grid, slot, state) {
 
-    grid.appendChild(label);
-    grid.appendChild(slot);
+    var labelCell = portal.create('div', 'decision-layers', '');
+    var controlCell = portal.create('div', 'decision-layers', '');
+
+    for (var lineIndex = 0; lineIndex < slot.length; lineIndex++) {
+
+        var line = slot[lineIndex];
+
+        var label = portal.create('label', 'decision-line-label', line.label);
+        label.setAttribute('for', 'line-' + line.name);
+        lines.bindLayer(label, line);
+
+        var lineSlot = portal.create('div', 'decision-line-slot', '');
+        lineSlot.setAttribute('data-line', line.name);
+        lineSlot.appendChild(lines.builders[line.kind](line, state));
+        lines.bindLayer(lineSlot, line);
+
+        var error = portal.create('div', 'decision-error', '');
+        error.hidden = true;
+        lineSlot.appendChild(error);
+
+        labelCell.appendChild(label);
+        controlCell.appendChild(lineSlot);
+    }
+
+    grid.appendChild(labelCell);
+    grid.appendChild(controlCell);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Shows each line under the root that the state shows, and keeps every other one in its row unseen.
+lines.applyVisibility = function(root, state) {
+
+    var elements = root.querySelectorAll('[data-shown-name]');
+
+    for (var elementIndex = 0; elementIndex < elements.length; elementIndex++) {
+        var element = elements[elementIndex];
+        var value = state[element.getAttribute('data-shown-name')];
+        element.classList.toggle('decision-layer-hidden', element.getAttribute('data-shown-value') !== value);
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////

@@ -13,7 +13,7 @@ from datetime import timedelta
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
-from zato.common.b2b.common.commit_group import TransactionResult
+from zato.common.b2b.common.commit_ticket import TransactionResult
 from zato.common.b2b.common.commit_sql import write_events
 from zato.common.b2b.common.exceptions import B2BException
 from zato.common.b2b.common.receive_log import read_received

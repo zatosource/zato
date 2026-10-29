@@ -30,7 +30,8 @@ from zato.common.json_internal import dumps, loads
 if 0:
     from sqlalchemy.engine import Connection
     from zato.common.b2b.common.business_state import BusinessOutcome
-    from zato.common.b2b.common.commit_group import CommitTicket, GroupCommitWriter
+    from zato.common.b2b.common.commit_group import GroupCommitWriter
+    from zato.common.b2b.common.commit_ticket import CommitTicket
     from zato.common.b2b.common.recovery import RecoveredPage
     from zato.common.typing_ import anylist, stranydict, strlist
     anylist = anylist

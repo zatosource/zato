@@ -36,11 +36,6 @@
     gap: 14px;
     padding: 8px 12px;
     border-bottom: 1px solid var(--border-strong);
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--text);
     background: var(--button-face);
     cursor: move;
@@ -92,7 +87,6 @@
 .micro-form-label {
     align-self: flex-start;
     font-size: 11px;
-    font-weight: 600;
     color: var(--text3);
 }
 
@@ -101,6 +95,7 @@
 .micro-form-field input[type="time"],
 .micro-form-field input[type="url"],
 .micro-form-field input[type="email"],
+.micro-form-field input[type="tel"],
 .micro-form-field select {
     width: 100%;
 }
@@ -226,77 +221,6 @@
 
 .portal input.calendar-field {
     cursor: pointer;
-}
-
-/* ------------------------------------------------------------ */
-/* Popup - pick panels                                          */
-/* ------------------------------------------------------------ */
-
-.pick-filter {
-    width: 100%;
-    margin-bottom: 8px;
-}
-
-.pick-list {
-    max-height: 13em;
-    overflow-y: auto;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--input-background);
-}
-
-.pick-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
-    cursor: pointer;
-    transition: background-color 0.1s ease;
-}
-
-.pick-row:hover {
-    background: var(--cell-hover);
-    transition-delay: var(--hover-delay);
-}
-
-.pick-mark {
-    position: relative;
-    flex: 0 0 auto;
-    width: 11px;
-    height: 11px;
-    border: 1px solid var(--text5);
-    border-radius: var(--radius);
-}
-
-.pick-mark-on {
-    border-color: var(--blue);
-}
-
-.pick-mark-on::before {
-    content: "";
-    position: absolute;
-    inset: 2px;
-    background: var(--blue);
-}
-
-.pick-name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--text2);
-}
-
-.pick-note {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text5);
-}
-
-.pick-empty {
-    padding: 6px 8px;
-    color: var(--text5);
 }
 
 /* ------------------------------------------------------------ */

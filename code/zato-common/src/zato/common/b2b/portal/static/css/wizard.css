@@ -14,12 +14,6 @@
     box-shadow: 0 10px 30px var(--shadow-soft), inset 0 1px 0 var(--sheen);
 }
 
-.wizard-title {
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--text);
-}
-
 /* ------------------------------------------------------------ */
 /* Wizard - step strip                                          */
 /* ------------------------------------------------------------ */
@@ -48,22 +42,36 @@
 /* Wizard - decision lines                                      */
 /* ------------------------------------------------------------ */
 
-/* Every label stands level with the first line of its control, however tall the control is */
+/* Every label stands level with the first line of its control, however tall the control is,
+   and every step is as tall as the one of the most rows, so that the card keeps its size from step to step */
 .decision-lines {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
     align-items: start;
-    gap: 12px 28px;
-    min-height: 220px;
+    gap: var(--decision-row-gap) 28px;
+    min-height: calc(var(--decision-rows) * (var(--decision-row-height) + var(--decision-row-gap)) - var(--decision-row-gap));
     align-content: start;
+}
+
+/* The lines that share a row are stacked in one cell, only the one the wizard shows is seen */
+.decision-layers {
+    display: grid;
+    min-width: 0;
+}
+
+.decision-layers > * {
+    grid-area: 1 / 1;
+}
+
+.decision-layer-hidden {
+    visibility: hidden;
 }
 
 .decision-line-label {
     font-size: 13px;
-    font-weight: 600;
     line-height: 24px;
     white-space: nowrap;
-    color: var(--text);
+    color: var(--text3);
 }
 
 .decision-line-slot {
@@ -171,11 +179,7 @@
     margin-bottom: 4px;
     padding: 0 8px 5px;
     border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--text);
+    color: var(--text3);
 }
 
 .wizard-review-row {

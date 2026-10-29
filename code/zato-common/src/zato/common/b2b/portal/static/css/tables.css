@@ -12,7 +12,8 @@
     padding: 7px 10px;
     border-bottom: 1px solid var(--border);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 400;
+    letter-spacing: 0.01em;
     text-align: left;
     white-space: nowrap;
     color: var(--text3);

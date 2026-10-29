@@ -34,6 +34,8 @@ _as2_encryption_algorithms = ['AES-128-CBC', 'AES-256-CBC', 'AES-128-GCM', 'AES-
 _as2_mdn_modes             = [AS2MDNMode.Sync, AS2MDNMode.Async, AS2MDNMode.Not_Requested]
 _as2_content_types         = ['application/xml', 'application/edi-x12', 'application/edifact']
 _as2_transfer_encodings    = ['binary', 'base64']
+_as2_http_transfers        = ['Content-Length', 'Chunked']
+_as2_versions              = ['1.2', '1.1', '1.0']
 
 _as4_profiles    = [AS4Profile.EDelivery2, AS4Profile.EDelivery1, AS4Profile.Peppol, AS4Profile.ICS2]
 _as4_token_types = [AS4TokenType.X509v3, AS4TokenType.PKIPath, AS4TokenType.SAML20]
@@ -301,6 +303,7 @@ def _as2_messaging() -> 'anylist':
             [_select('content_type', 'Content type', _as2_content_types)],
             [_select('transfer_encoding', 'Content-Transfer-Encoding', _as2_transfer_encodings)],
         ]),
+        _select('http_transfer', 'HTTP transfer', _as2_http_transfers),
     ]
 
     out = _shown_when(lines, 'protocol', Protocol.AS2)
@@ -405,6 +408,14 @@ def partner_wizard() -> 'anydict':
     connectivity_lines.extend(_shown_when([
         _text('soap_action', 'SOAPAction', '"ebXML"', is_mono=True),
     ], 'protocol', Protocol.ebXML))
+
+    connectivity_lines.extend(_shown_when([
+        _select('as2_version', 'AS2 version', _as2_versions),
+    ], 'protocol', Protocol.AS2))
+
+    connectivity_lines.extend(_shown_when([
+        _switch('payload_compression', 'Payload compression', True),
+    ], 'protocol', Protocol.AS4))
 
     connectivity_lines.append(_form('certificates', 'Certificates', '{signing_certificate}', [
         [_text('signing_certificate', 'Signing certificate', is_mono=True)],

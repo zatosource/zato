@@ -29,7 +29,7 @@ from zato.common.b2b.common.schema import message_table, open_table
 if 0:
     from sqlalchemy.engine import Connection, Dialect
     from zato.common.audit_log.buffer import PendingEvent
-    from zato.common.b2b.common.commit_group import CommitTicket
+    from zato.common.b2b.common.commit_ticket import CommitTicket
     from zato.common.b2b.common.records import StoredMessage
     from zato.common.typing_ import any_, anylist, stranydict, strlist
     any_ = any_
