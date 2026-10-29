@@ -26,6 +26,7 @@ from sqlalchemy.pool import QueuePool
 from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
     set_postgresql_no_delay, set_sqlite_pragmas
+from zato.common.db_env.pg8000_binary import install as install_pg8000_binary
 from zato.common.defaults import default_env_base_dir
 
 # ################################################################################################################################
@@ -58,6 +59,9 @@ _network_max_overflow = 50
 
 # Engines are cached per configuration so all callers in a process share one pool
 _engine_cache:'anydict' = {}
+
+# The connections of PostgreSQL send and receive bytea values in the binary format.
+install_pg8000_binary()
 
 # SQLite file engines are cached per path and pool mode
 _sqlite_file_engine_cache:'anydict' = {}
