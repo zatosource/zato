@@ -557,6 +557,9 @@ _event_columns = [
     Column('duration_ms', Integer),
     Column('data', Text),
 
+    # What the product reads back from an event and the free-text search does not cover, e.g. the digests of payloads.
+    Column('internal_data', Text),
+
     # The transaction a group commit wrote the event in, on the databases whose drivers return
     # no identifiers from a multi-row insert, so that one select by it returns them in insertion order.
     Column('commit_id', _short_column),

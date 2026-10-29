@@ -49,7 +49,11 @@ SQLite_Min_Term_Length = 3
 MySQL_Min_Term_Length = 2
 
 # The trigram index of PostgreSQL over the searched event columns
-_postgresql_event_index = 'idx_event_search'
+PostgreSQL_Event_Index = 'idx_event_search'
+
+# How many kilobytes the pending list of a trigram index of PostgreSQL holds before an insert merges it into the index
+# within its own statement. The search index merger merges the pending lists every ten seconds, well before they reach it.
+PostgreSQL_Pending_List_Limit_KB = 65536
 
 # What separates two columns in the text the trigram index of PostgreSQL covers
 _postgresql_column_separator = "' '"
@@ -128,7 +132,8 @@ def _postgresql_event_statements(table_name:'str') -> 'strlist':
     because each GIN index adds its entries and its pending list to the log of every insert.
     """
     search_text = _postgresql_search_text('')
-    create_index = f'CREATE INDEX {_postgresql_event_index} ON {table_name} USING gin ({search_text} gin_trgm_ops)'
+    storage = f'WITH (gin_pending_list_limit = {PostgreSQL_Pending_List_Limit_KB})'
+    create_index = f'CREATE INDEX {PostgreSQL_Event_Index} ON {table_name} USING gin ({search_text} gin_trgm_ops) {storage}'
 
     out = [create_index]
     return out

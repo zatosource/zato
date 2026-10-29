@@ -347,6 +347,7 @@ def new_sent_message(message_id:'str', sent_at:'datetime'=Start_Time, wire_body:
     out.retry_state = retry_state
     out.outcome = outcome
     out.details = {'conversation_id': 'b2b-conversation-' + message_id}
+    out.internal_details = {}
     out.wire_headers = {'Content-Type': Content_Type}
     out.wire_body = wire_body
 

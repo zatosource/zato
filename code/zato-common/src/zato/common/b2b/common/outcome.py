@@ -96,11 +96,11 @@ class Outcome:
 # ################################################################################################################################
 
 def outcome_to_dict(outcome:'Outcome') -> 'stranydict':
-    """ Returns the document an outcome is recorded with in the audit log.
+    """ Returns the document an outcome is recorded with in the audit log. The digests of the payloads are recorded
+    in the internal data of the event instead, which the free-text search does not cover.
     """
     out:'stranydict' = {
         'delivered': outcome.delivered,
-        'payload_digests': outcome.payload_digests,
         'signal_kind': outcome.signal_kind,
         'error_code': outcome.error_code,
         'error_severity': outcome.error_severity,
@@ -116,12 +116,12 @@ def outcome_to_dict(outcome:'Outcome') -> 'stranydict':
 
 # ################################################################################################################################
 
-def outcome_from_dict(data:'stranydict') -> 'Outcome':
-    """ Returns an outcome from the document it is recorded with in the audit log.
+def outcome_from_dict(data:'stranydict', payload_digests:'strlist') -> 'Outcome':
+    """ Returns an outcome from the document it is recorded with in the audit log and from the digests of its payloads.
     """
     out = Outcome()
     out.delivered = data['delivered']
-    out.payload_digests = data['payload_digests']
+    out.payload_digests = payload_digests
     out.signal_kind = data['signal_kind']
     out.error_code = data['error_code']
     out.error_severity = data['error_severity']

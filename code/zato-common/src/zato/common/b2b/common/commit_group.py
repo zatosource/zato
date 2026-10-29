@@ -18,13 +18,15 @@ from uuid import uuid4
 # Zato
 from zato.common.audit_log.api import get_audit_engine, metadata as audit_metadata
 from zato.common.audit_log.export.api import get_audit_export
+from zato.common.audit_log.search_index import PostgreSQL_Event_Index
+from zato.common.audit_log.search_index_merge import SearchIndexMerger
 from zato.common.b2b.common.commit_retention import delete_candidates, delete_retained, read_candidate_rows, \
     RetentionResult, select_retained
 from zato.common.b2b.common.commit_sql import write_transaction
 from zato.common.b2b.common.commit_ticket import CommitTicket, GroupProgress, TransactionResult
 from zato.common.b2b.common.commit_timing import timing_log
-from zato.common.b2b.common.schema import create_tables
-from zato.common.db_env.common import Type_SQLite
+from zato.common.b2b.common.schema import B2B_Event_Search_Index, create_tables
+from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.engine import call_database
 from zato.common.util.api import utcnow
 
@@ -205,6 +207,12 @@ class GroupCommitWriter:
 
             thread = Thread(target=self._run, name='b2b-commit-group', daemon=True)
             thread.start()
+
+        # The trigram indexes of PostgreSQL that the groups insert into are merged outside of the groups.
+        self._search_index_merger = SearchIndexMerger(engine, (PostgreSQL_Event_Index, B2B_Event_Search_Index))
+
+        if is_started and engine.dialect.name == Type_PostgreSQL:
+            self._search_index_merger.start()
 
 # ################################################################################################################################
 
@@ -774,6 +782,8 @@ class GroupCommitWriter:
         with self._condition:
             self._is_stopped = True
             self._condition.notify()
+
+        self._search_index_merger.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

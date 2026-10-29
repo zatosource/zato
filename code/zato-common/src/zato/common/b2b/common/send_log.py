@@ -23,7 +23,7 @@ from zato.common.b2b.common.limits import Limits
 from zato.common.b2b.common.outcome import FinalState, outcome_to_dict
 from zato.common.b2b.common.recovery import page_of, read_bodies, read_open_page, Recovery_Page_Size
 from zato.common.b2b.common.schema import OpenKind
-from zato.common.b2b.common.send_record import read_stored, SentData, SentMessage, sent_message_list
+from zato.common.b2b.common.send_record import read_stored, SentData, SentInternalData, SentMessage, sent_message_list
 from zato.common.json_internal import dumps
 
 # ################################################################################################################################
@@ -209,6 +209,11 @@ class SendLog:
             SentData.Outcome: initial_outcome,
         }
 
+        internal_data:'stranydict' = {
+            SentInternalData.Details: sent.internal_details,
+            SentInternalData.Payload_Digests: sent.outcome.payload_digests,
+        }
+
         now = self.clock.now()
         attempt_at = now.isoformat()
 
@@ -233,7 +238,8 @@ class SendLog:
 
         write.pending = self.audit_log.new_pending_event(self.source, AuditEvent.Message_Sent, sent.cpa_id,
             cid=sent.message_id, msg_id=sent.message_id, endpoint=sent.endpoint, size=wire_size, outcome=AuditOutcome.OK,
-            data=dumps(data), attrs=attrs, attachments=[attachment], parents=parents, parent_link_type=AuditLink.Resubmit_Of)
+            data=dumps(data), internal_data=dumps(internal_data), attrs=attrs, attachments=[attachment], parents=parents,
+            parent_link_type=AuditLink.Resubmit_Of)
 
         event_id = self._write(write)
 
@@ -458,6 +464,10 @@ class SendLog:
             SentData.Signals: signals,
         })
 
+        internal_data = dumps({
+            SentInternalData.Payload_Digests: outcome.payload_digests,
+        })
+
         if outcome.error_code:
             audit_outcome = AuditOutcome.Error
         else:
@@ -473,7 +483,7 @@ class SendLog:
         write = EventWrite()
         write.pending = self.audit_log.new_pending_event(self.source, AuditEvent.Message_Completed, sent.cpa_id,
             cid=sent.message_id, msg_id=sent.message_id, status=outcome.final_state, outcome=audit_outcome, data=data,
-            attrs=attrs, attachments=attachments)
+            internal_data=internal_data, attrs=attrs, attachments=attachments)
 
         if exchange:
             write.closes.append(OpenKind.Exchange)

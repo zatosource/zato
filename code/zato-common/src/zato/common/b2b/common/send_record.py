@@ -59,6 +59,15 @@ class SentData:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SentInternalData:
+    """ The keys of the internal data documents the events of a sent message have, which the free-text search does not cover.
+    """
+    Details         = 'details'
+    Payload_Digests = 'payload_digests'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The event types that make up the record of one sent message.
 Message_Event_Types = (AuditEvent.Message_Sent, AuditEvent.Message_Resent, AuditEvent.Message_Completed)
 
@@ -86,8 +95,11 @@ class SentMessage:
     retry_state: 'RetryState'
     outcome:     'Outcome'
 
-    # The protocol's own data that rebuilding the message requires.
+    # The protocol's own data that rebuilding the message requires ..
     details: 'stranydict'
+
+    # .. and the part of it that the free-text search does not cover.
+    internal_details: 'stranydict'
 
     # The wire form of the message. The bytes are held only until the first delivery takes them,
     # and are read again by the identifier of the event they are stored with.
@@ -104,6 +116,7 @@ def new_sent_message(events:'anylist', attrs:'stranydict') -> 'SentMessage':
     """
     first = events[0]
     first_data = loads(first.data)
+    first_internal_data = loads(first.internal_data)
 
     completion = None
     resend = None
@@ -136,7 +149,9 @@ def new_sent_message(events:'anylist', attrs:'stranydict') -> 'SentMessage':
     # A completed message has the outcome its exchange ended with and the deliveries it was made in ..
     if completion:
         completion_data = loads(completion.data)
-        outcome = outcome_from_dict(completion_data[SentData.Outcome])
+        completion_internal_data = loads(completion.internal_data)
+        payload_digests = completion_internal_data[SentInternalData.Payload_Digests]
+        outcome = outcome_from_dict(completion_data[SentData.Outcome], payload_digests)
 
         if attempts := completion_data[SentData.Attempts]:
             retry_state.attempt_count = len(attempts)
@@ -146,7 +161,8 @@ def new_sent_message(events:'anylist', attrs:'stranydict') -> 'SentMessage':
 
     # .. while a pending one has the outcome it was sent with, and its deliveries count from its latest resend, if any.
     else:
-        outcome = outcome_from_dict(first_data[SentData.Outcome])
+        payload_digests = first_internal_data[SentInternalData.Payload_Digests]
+        outcome = outcome_from_dict(first_data[SentData.Outcome], payload_digests)
 
         if resend:
             resend_data = loads(resend.data)
@@ -163,6 +179,7 @@ def new_sent_message(events:'anylist', attrs:'stranydict') -> 'SentMessage':
     out.retry_state = retry_state
     out.outcome = outcome
     out.details = first_data[SentData.Details]
+    out.internal_details = first_internal_data[SentInternalData.Details]
     out.wire_headers = first_data[SentData.Headers]
     out.wire_body = b''
     out.wire_event_id = first.id

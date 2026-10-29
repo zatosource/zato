@@ -349,6 +349,7 @@ class AuditLog:
         status:'str' = '',
         duration_ms:'int' = 0,
         data:'str' = '',
+        internal_data:'str' = '',
         attrs:'strdictnone' = None,
         bodies:'strdictnone' = None,
         attachments:'anylistnone' = None,
@@ -418,6 +419,7 @@ class AuditLog:
             'status': status,
             'duration_ms': duration_ms,
             'data': data,
+            'internal_data': internal_data,
         }
 
         return pending

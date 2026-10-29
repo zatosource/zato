@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import BigInteger, Boolean, Column, Index, Integer, MetaData, String, Table, UniqueConstraint
 
 # Zato
+from zato.common.audit_log.search_index import PostgreSQL_Pending_List_Limit_KB
 from zato.common.db_env.common import Binary_Type, UTC_DateTime
 
 # ################################################################################################################################
@@ -159,11 +160,15 @@ b2b_event_table = Table('b2b_event', metadata,
     Index('idx_b2b_event_final_state', 'final_state'),
 )
 
+# The trigram index of PostgreSQL over the searched attributes of the B2B events.
+B2B_Event_Search_Index = 'idx_b2b_event_search'
+
 from sqlalchemy import DDL, event as _sa_event
 _search_expr = " || ' ' || ".join(f"coalesce({name}, '')" for name in ('from_party', 'to_party', 'service', 'action',
     'final_state', 'signal_kind', 'error_code'))
+_search_storage = f'WITH (gin_pending_list_limit = {PostgreSQL_Pending_List_Limit_KB})'
 _sa_event.listen(b2b_event_table, 'after_create', DDL(
-    f'CREATE INDEX idx_b2b_event_search ON b2b_event USING gin (({_search_expr}) gin_trgm_ops)').execute_if(
+    f'CREATE INDEX {B2B_Event_Search_Index} ON b2b_event USING gin (({_search_expr}) gin_trgm_ops) {_search_storage}').execute_if(
     dialect='postgresql'))
 
 # ################################################################################################################################

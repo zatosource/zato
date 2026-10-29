@@ -118,6 +118,9 @@ def new_sent_message(outbound:'OutboundMessage', wire:'Package') -> 'SentMessage
         _Detail.Is_Ack_Requested: outbound.is_ack_requested,
         _Detail.Is_Ack_Signature_Requested: outbound.is_ack_signature_requested,
         _Detail.Is_Sync_Reply: outbound.is_sync_reply,
+    }
+
+    internal_details:'stranydict' = {
         _Detail.Sent_Digests: outbound.sent_digests,
     }
 
@@ -132,6 +135,7 @@ def new_sent_message(outbound:'OutboundMessage', wire:'Package') -> 'SentMessage
     out.retry_state = outbound.retry_state
     out.outcome = outbound.outcome
     out.details = details
+    out.internal_details = internal_details
     out.wire_headers = wire.headers
     out.wire_body = wire.body
 
@@ -185,7 +189,7 @@ def restore_outbound(agreement:'Agreement', local_keys:'LocalKeys', sent:'SentMe
     out.package = package
     out.endpoint = sent.endpoint
     out.signature = None
-    out.sent_digests = details[_Detail.Sent_Digests]
+    out.sent_digests = sent.internal_details[_Detail.Sent_Digests]
     out.is_ack_requested = details[_Detail.Is_Ack_Requested]
     out.is_ack_signature_requested = details[_Detail.Is_Ack_Signature_Requested]
     out.is_sync_reply = details[_Detail.Is_Sync_Reply]
