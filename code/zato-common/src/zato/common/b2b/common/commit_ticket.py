@@ -9,6 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from threading import Event
+from time import time
+
+# Zato
+from zato.common.b2b.common.commit_timing import timing_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,6 +57,10 @@ class CommitTicket:
         self.result:'any_' = None
         self.error:'Exception | None' = None
 
+        # Prototype - when the write was enqueued and when its transaction released it.
+        self.enqueued_at = time()
+        self.released_at = 0.0
+
         self._done = Event()
 
     @property
@@ -61,12 +69,22 @@ class CommitTicket:
         return out
 
     def release(self) -> 'None':
+        self.released_at = time()
         self._done.set()
 
     def wait(self) -> 'any_':
         """ Waits until the transaction that holds the write is committed and returns the result of the write.
         """
         _ = self._done.wait()
+
+        if timing_log:
+            resumed_at = time()
+            timing_log.write({
+                'type': 'ticket',
+                'rows': self.row_count,
+                'wait_ms': round((resumed_at - self.enqueued_at) * 1000, 2),
+                'lag_ms': round((resumed_at - self.released_at) * 1000, 2),
+            })
 
         if self.error:
             raise self.error
@@ -84,6 +102,16 @@ class GroupProgress:
     def __init__(self, tickets:'ticket_list') -> 'None':
         self.tickets = tickets
         self.statements_done = Event()
+
+        # Set once the transaction of the group is committed or rolled back.
+        self.is_committed = Event()
+
+        # Prototype - when the group was taken from the pending writes, and when each step of its commit ended.
+        self.taken_at = time()
+        self.lane_started_at = 0.0
+        self.lock_acquired_at = 0.0
+        self.statements_done_at = 0.0
+        self.committed_at = 0.0
 
 # ################################################################################################################################
 # ################################################################################################################################

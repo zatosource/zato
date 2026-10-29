@@ -11,15 +11,17 @@ import os
 from logging import getLogger
 from queue import Queue
 from threading import Condition, Lock, Thread
-from time import monotonic
+from time import monotonic, time
+from typing import NamedTuple
 from uuid import uuid4
 
 # Zato
 from zato.common.audit_log.api import get_audit_engine, metadata as audit_metadata
 from zato.common.audit_log.export.api import get_audit_export
-from zato.common.b2b.common.commit_retention import delete_retained, RetentionResult
+from zato.common.b2b.common.commit_retention import delete_candidates, delete_retained, RetentionResult, select_retained
 from zato.common.b2b.common.commit_sql import write_transaction
 from zato.common.b2b.common.commit_ticket import CommitTicket, GroupProgress, TransactionResult
+from zato.common.b2b.common.commit_timing import timing_log
 from zato.common.b2b.common.schema import create_tables
 from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.engine import call_database
@@ -31,6 +33,7 @@ from zato.common.util.api import utcnow
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
+    from zato.common.b2b.common.commit_timing import TimingLog
     from zato.common.typing_ import any_, anylist, anytuple, callable_, floatnone, strlist
     any_ = any_
     anylist = anylist
@@ -40,6 +43,7 @@ if 0:
     Engine = Engine
     floatnone = floatnone
     strlist = strlist
+    TimingLog = TimingLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,6 +56,7 @@ logger = getLogger(__name__)
 ticket_list = list[CommitTicket]
 queue_list  = list[Queue]
 thread_list = list[Thread]
+lane_groups = dict[int, GroupProgress]
 
 # The environment variables that configure the group commit.
 Env_Commit_Interval_Ms = 'Zato_B2B_Commit_Interval_Ms'
@@ -69,6 +74,16 @@ Retention_Batch_Interval_Seconds = 0.5
 
 # How many groups a pipelined writer holds at a time - one being committed and one executing its statements.
 _lane_count = 2
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RetentionJob(NamedTuple):
+    """ One batch of retention of a pipelined writer - the time it deletes as of, and the last group of each lane,
+    whose commits precede its select.
+    """
+    now:    'datetime'
+    groups: 'list[GroupProgress]'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -159,6 +174,10 @@ class GroupCommitWriter:
 
         # Whether a batch of retention of a pipelined writer is in its lane, so that the next one waits for its commit.
         self._is_retention_running = False
+
+        # When the batch in the lane started, and whether the next one fell due before it was committed.
+        self._retention_started_at = self._last_retention_at
+        self._is_retention_requested = False
 
         self.is_started = is_started
 
@@ -356,16 +375,21 @@ class GroupCommitWriter:
         """ Writes one transaction while holding the database lock of this writer, and commits it without the lock,
         so that the next group executes its statements during the commit. Returns the event writes it inserted.
         """
+        progress.lane_started_at = time()
+
         with self.engine.connect() as connection:
 
             # A transaction whose statements fail is rolled back when its connection is closed ..
             with self._db_lock:
+                progress.lock_acquired_at = time()
                 transaction = connection.begin()
                 out = write_transaction(connection, progress.tickets, commit_id)
 
             # .. and once they are executed, the next group may execute its own.
+            progress.statements_done_at = time()
             progress.statements_done.set()
             transaction.commit()
+            progress.committed_at = time()
 
         return out
 
@@ -387,12 +411,38 @@ class GroupCommitWriter:
         else:
             self._export(event_writes)
 
-        # A group whose statements failed does not hold up the next one ..
+        # A group whose statements failed does not hold up the next one, nor the next batch of retention ..
         progress.statements_done.set()
+        progress.is_committed.set()
 
         # .. and its callers are released.
         for ticket in tickets:
             ticket.release()
+
+        if timing_log:
+            self._write_group_timing(timing_log, progress)
+
+# ################################################################################################################################
+
+    def _write_group_timing(self, log:'TimingLog', progress:'GroupProgress') -> 'None':
+        """ Prototype - writes how long each step of the commit of one group took.
+        """
+        tickets = progress.tickets
+        first_enqueued_at = min(ticket.enqueued_at for ticket in tickets)
+        rows = sum(ticket.row_count for ticket in tickets)
+        released_at = time()
+
+        log.write({
+            'type': 'group',
+            'tickets': len(tickets),
+            'rows': rows,
+            'pending_ms': round((progress.taken_at - first_enqueued_at) * 1000, 2),
+            'lane_ms': round((progress.lane_started_at - progress.taken_at) * 1000, 2),
+            'lock_ms': round((progress.lock_acquired_at - progress.lane_started_at) * 1000, 2),
+            'exec_ms': round((progress.statements_done_at - progress.lock_acquired_at) * 1000, 2),
+            'commit_ms': round((progress.committed_at - progress.statements_done_at) * 1000, 2),
+            'release_ms': round((released_at - progress.committed_at) * 1000, 2),
+        })
 
 # ################################################################################################################################
 
@@ -408,8 +458,19 @@ class GroupCommitWriter:
         """ Runs a database call outside the group commit, such as a read, serialized with the commits of this writer
         and in the thread pool of the gevent hub if the engine needs it.
         """
+        started_at = time()
+
         with self._db_lock:
+            lock_acquired_at = time()
             out = self._call_database(func, *args)
+
+        if timing_log:
+            timing_log.write({
+                'type': 'call',
+                'func': func.__name__,
+                'lock_ms': round((lock_acquired_at - started_at) * 1000, 2),
+                'exec_ms': round((time() - lock_acquired_at) * 1000, 2),
+            })
 
         return out
 
@@ -429,10 +490,20 @@ class GroupCommitWriter:
         a TransactionResult whose committed events are exported like those of a group commit.
         """
         commit_id = uuid4().hex
+        started_at = time()
 
         with self._db_lock:
+            lock_acquired_at = time()
             result = self._call_database(self._execute_function, func, commit_id, args)
             self._export(result.event_writes)
+
+        if timing_log:
+            timing_log.write({
+                'type': 'transaction',
+                'func': func.__name__,
+                'lock_ms': round((lock_acquired_at - started_at) * 1000, 2),
+                'exec_ms': round((time() - lock_acquired_at) * 1000, 2),
+            })
 
         out = result.value
         return out
@@ -456,16 +527,41 @@ class GroupCommitWriter:
 # ################################################################################################################################
 
     def _execute_retention_pipelined(self, now:'datetime', sources:'strlist') -> 'RetentionResult':
-        """ Executes one batch of retention while holding the database lock of this writer, and commits it without
-        the lock, so that the groups execute their statements during the commit.
+        """ Finds the rows of one batch of retention without the database lock of this writer, deletes them while
+        holding the lock, and commits without it, so that the groups execute their statements during the select
+        and during the commit.
         """
+        started_at = time()
+
         with self.engine.connect() as connection:
 
-            with self._db_lock:
-                transaction = connection.begin()
-                out = delete_retained(connection, now, sources, self.retention_batch_rows)
+            # The rows due for deletion are selected in a transaction of their own, without the lock ..
+            with connection.begin():
+                candidates = select_retained(connection, now, sources, self.retention_batch_rows)
 
+            selected_at = time()
+
+            # .. those still due are deleted while holding it ..
+            with self._db_lock:
+                lock_acquired_at = time()
+                transaction = connection.begin()
+                out = delete_candidates(connection, now, candidates)
+
+            # .. and the deletion is committed without it.
+            statements_done_at = time()
             transaction.commit()
+
+        if timing_log:
+            timing_log.write({
+                'type': 'retention',
+                'messages': out.messages,
+                'held': out.held,
+                'events': out.events,
+                'select_ms': round((selected_at - started_at) * 1000, 2),
+                'lock_ms': round((lock_acquired_at - selected_at) * 1000, 2),
+                'exec_ms': round((statements_done_at - lock_acquired_at) * 1000, 2),
+                'commit_ms': round((time() - statements_done_at) * 1000, 2),
+            })
 
         return out
 
@@ -502,8 +598,10 @@ class GroupCommitWriter:
         else:
             has_backlog = result.is_at_limit(self.retention_batch_rows)
 
+        # A batch that fell due while this one ran follows it as a batch of a backlog.
         with self._condition:
-            self._has_retention_backlog = has_backlog
+            self._has_retention_backlog = has_backlog or self._is_retention_requested
+            self._is_retention_requested = False
             self._last_retention_at = self.clock()
             self._is_retention_running = False
             self._condition.notify()
@@ -513,40 +611,55 @@ class GroupCommitWriter:
     def _run_retention_lane(self) -> 'None':
         """ Runs the batches of retention of a pipelined writer, until it receives None.
         """
-        while now := self._retention_lane.get():
-            self._retain(now)
+        while job := self._retention_lane.get():
+
+            # The groups handed to the lanes before the batch are committed before it selects what is due ..
+            for progress in job.groups:
+                _ = progress.is_committed.wait()
+
+            # .. so that it sees their rows.
+            self._retain(job.now)
 
 # ################################################################################################################################
 
-    def _run_retention_if_due(self) -> 'None':
+    def _run_retention_if_due(self, groups:'lane_groups') -> 'None':
         """ Runs one batch of retention between two commits once its interval elapsed, and the next batch after
-        the next commit for as long as each batch reaches the row limit. A pipelined writer hands the batch to its lane.
+        the next commit for as long as each batch reaches the row limit. A pipelined writer hands the batch to its lane,
+        with the last group of each lane.
         """
         with self._condition:
 
-            # A batch still in its lane is committed before the next one starts ..
-            if self._is_retention_running:
-                return
+            now_clock = self.clock()
 
-            since_last = self.clock() - self._last_retention_at
-
-            # .. a backlog is deleted batch by batch at an interval of its own ..
+            # A backlog is deleted batch by batch at an interval of its own ..
             if self._has_retention_backlog:
                 interval = Retention_Batch_Interval_Seconds
 
-            # .. and otherwise retention runs at the usual one.
+            # .. and otherwise retention runs at the usual one ..
             else:
                 interval = Retention_Interval_Seconds
+
+            # .. a batch still in its lane is committed before the next one starts, and a batch that falls due
+            # in the meantime follows it ..
+            if self._is_retention_running:
+                if now_clock - self._retention_started_at >= interval:
+                    self._is_retention_requested = True
+                return
+
+            since_last = now_clock - self._last_retention_at
 
             if since_last < interval:
                 return
 
+            # .. and otherwise the batch starts now.
             self._is_retention_running = self.is_pipelined
+            self._retention_started_at = now_clock
 
         now = utcnow()
 
         if self.is_pipelined:
-            self._retention_lane.put(now)
+            job = RetentionJob(now, list(groups.values()))
+            self._retention_lane.put(job)
         else:
             self._retain(now)
 
@@ -608,8 +721,9 @@ class GroupCommitWriter:
         """ Commits the pending writes whenever they are due, until the writer is stopped. A pipelined writer hands
         its groups to its lanes in turn, each group once the statements of the previous one are executed.
         """
-        # The lane the next group goes to.
+        # The lane the next group goes to, and the last group each lane received.
         lane_idx = 0
+        groups:'lane_groups' = {}
 
         while True:
 
@@ -627,6 +741,7 @@ class GroupCommitWriter:
                 if self.is_pipelined:
                     progress = GroupProgress(tickets)
                     self._lanes[lane_idx].put(progress)
+                    groups[lane_idx] = progress
                     lane_idx = (lane_idx + 1) % _lane_count
 
                     # The next group is taken once the statements of this one are executed.
@@ -647,7 +762,7 @@ class GroupCommitWriter:
 
                 break
 
-            self._run_retention_if_due()
+            self._run_retention_if_due(groups)
 
 # ################################################################################################################################
 

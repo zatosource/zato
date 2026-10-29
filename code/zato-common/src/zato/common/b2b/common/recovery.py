@@ -14,7 +14,7 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.audit_log.api import AuditBody, event_attr_table, event_body_table, event_table
-from zato.common.b2b.common.schema import open_table
+from zato.common.b2b.common.schema import b2b_event_attr_names, b2b_event_table, open_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,9 +104,7 @@ def events_statement(source:'str', server_name:'str', message_ids:'strlist', eve
 def attrs_statement(event_ids:'intlist') -> 'Select':
     """ Returns the query of the attributes of the given events.
     """
-    query = select(event_attr_table.c.event_id, event_attr_table.c.name, event_attr_table.c.value)
-
-    out = query.where(event_attr_table.c.event_id.in_(event_ids))
+    out = select(b2b_event_table).where(b2b_event_table.c.event_id.in_(event_ids))
     return out
 
 # ################################################################################################################################
@@ -208,7 +206,10 @@ def read_attrs(connection:'Connection', event_ids:'intlist') -> 'intanydict':
 
         for row in connection.execute(statement):
             event_attrs = out[row.event_id]
-            event_attrs[row.name] = row.value
+            for name in b2b_event_attr_names:
+                value = getattr(row, name)
+                if value is not None:
+                    event_attrs[name] = value
 
     return out
 

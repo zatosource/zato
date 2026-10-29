@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import OAuth, Quota_Tiers
+from zato.common.api import MTLS, OAuth, Quota_Tiers, SEC_DEF_TYPE
 from zato.common.json_internal import loads
 from zato.common.odb.model import to_json
 from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, spnego_list, \
@@ -79,6 +79,19 @@ class SecurityExporter:
 
 # ################################################################################################################################
 
+    def _set_mtls_use_for(self, security_entry:'anydict') -> 'None':
+        """ Assigns the default use to an mTLS definition stored without one
+        and removes the fields that do not apply to the definition's use.
+        """
+        if not (use_for := security_entry.get(MTLS.Use_For_Field)):
+            use_for = MTLS.Use_For.Default
+            security_entry[MTLS.Use_For_Field] = use_for
+
+        for field in MTLS.Not_Applicable_Fields[use_for]:
+            _ = security_entry.pop(field, None)
+
+# ################################################################################################################################
+
     def _process_standard_security(self, items, sec_type, excluded_names, excluded_prefixes):
         result = []
 
@@ -107,6 +120,10 @@ class SecurityExporter:
 
             # Quota tiers are stored by id but exported by name
             self._resolve_quota_tier(security_entry)
+
+            # An mTLS definition always says what it is used with and lists only the fields its use reads
+            if sec_type == SEC_DEF_TYPE.MTLS:
+                self._set_mtls_use_for(security_entry)
 
             result.append(security_entry)
 

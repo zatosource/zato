@@ -17,9 +17,10 @@ from sqlalchemy import delete, func, select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, metadata as audit_metadata
+from zato.common.audit_log.common import B2BAttr
 from zato.common.b2b.common.commit_sql import EventWrite
-from zato.common.b2b.common.schema import address_state_table, create_tables, held_message_table, message_table, \
-    open_table, sequence_table
+from zato.common.b2b.common.schema import address_state_table, b2b_event_table, create_tables, held_message_table, \
+    message_table, open_table, sequence_table
 from zato.common.test.b2b_write_path import Server, Source
 
 # ################################################################################################################################
@@ -86,7 +87,7 @@ def clear_tables(engine:'Engine') -> 'None':
 
     with engine.begin() as connection:
 
-        for table in (open_table, message_table, sequence_table, held_message_table, address_state_table):
+        for table in (b2b_event_table, open_table, message_table, sequence_table, held_message_table, address_state_table):
             _ = connection.execute(delete(table))
 
         for table in reversed(audit_metadata.sorted_tables):
@@ -112,7 +113,7 @@ def new_event(audit_log:'AuditLog', message_id:'str', event_type:'str'=AuditEven
     """
     out = EventWrite()
     out.pending = audit_log.new_pending_event(Source, event_type, 'b2b-agreement', msg_id=message_id, data='{}',
-        attrs={'b2b_marker': message_id}, bodies={'request': message_id})
+        attrs={B2BAttr.Service: message_id}, bodies={'request': message_id})
 
     return out
 

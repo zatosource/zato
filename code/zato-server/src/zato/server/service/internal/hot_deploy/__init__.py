@@ -31,7 +31,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, anylistnone, commoniter, intlist, strbytes, strlist, strset
+    from zato.common.typing_ import any_, anylist, anylistnone, commoniter, intlist, stranydict, strbytes, strlist, strset
     from zato.server.service.store import InRAMService
     strbytes = strbytes
     InRAMService = InRAMService
@@ -46,6 +46,15 @@ _msg_server_reached = 'OK, server reached'
 
 # What an IDE plugin receives once its file is in the pickup directory.
 _msg_deployed = 'OK, deployed to server'
+
+# Files with certificates, keys and CA certificates that outgoing connections read.
+_tls_material_suffix = '.pem'
+
+# The configuration keys of an outgoing connection that name such files.
+_tls_material_keys = ('tls_client_cert', 'tls_client_key', 'ca_certs_path')
+
+# The transports of the outgoing connections that read such files.
+_tls_material_transports = ('plain_http', 'soap')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -402,6 +411,56 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def _uses_tls_material(self, config:'stranydict', path:'str') -> 'bool':
+        """ Returns True if an outgoing connection's configuration names the given file
+        as its client certificate, its key or its CA certificates.
+        """
+        for key in _tls_material_keys:
+
+            # Not every connection names every file, and only those with an mTLS definition have CA certificates.
+            if value := config.get(key):
+                value = os.path.normpath(value)
+                if value == path:
+                    out = True
+                    break
+        else:
+            out = False
+
+        return out
+
+# ################################################################################################################################
+
+    def _reload_tls_material(self, path:'str') -> 'None':
+        """ Makes every outgoing REST and SOAP connection that reads the given file discard its pooled
+        TLS connections, so that its next request reads the file anew.
+        """
+        config_manager = self.server.config_manager
+        config_store = config_manager.config_store
+
+        # The names of the connections that read the file
+        reloaded:'strlist' = []
+
+        with config_manager.update_lock:
+
+            # Go through each outgoing connection ..
+            for transport in _tls_material_transports:
+                config_dict = getattr(config_store, 'out_' + transport)
+
+                for conn_name in config_dict.copy_keys():
+                    wrapper = config_dict[conn_name]['conn']
+
+                    # .. and refresh each that reads the file.
+                    if self._uses_tls_material(wrapper.config, path):
+                        wrapper.reload_tls_material()
+                        reloaded.append(conn_name)
+                        self.logger.info('Reloaded TLS material of outgoing connection `%s` (%s) -> `%s`',
+                            conn_name, transport, path)
+
+        if not reloaded:
+            self.logger.info('No outgoing connection reads TLS material from `%s`', path)
+
+# ################################################################################################################################
+
     def _is_enmasse_file(self, payload_name:'str') -> 'bool':
         return 'enmasse' in payload_name and (payload_name.endswith('.yml') or payload_name.endswith('.yaml'))
 
@@ -443,6 +502,11 @@ class Create(AdminService):
 
         internal_path = os.path.join('server', 'service', 'internal')
         payload_name = os.path.normpath(payload_name)
+
+        # TLS material is never deployed - the outgoing connections that read it are refreshed instead.
+        if payload_name.endswith(_tls_material_suffix):
+            self._reload_tls_material(payload_name)
+            return
 
         is_external = internal_path not in payload_name
         is_relative = not os.path.isabs(payload_name)

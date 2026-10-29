@@ -16,7 +16,7 @@ from threading import Lock
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, is_audit_log_enabled, ModuleCtx as AuditLogCtx
 from zato.common.audit_log.common import B2BAttr
 from zato.common.b2b.common.business_state import business_attrs, business_data, BusinessData, BusinessMessage, \
-    business_sent_attrs, BusinessState, can_change, Data_Business, Final_States, new_business_outcome, parse_time
+    business_sent_attrs, BusinessState, can_change, Data_Business, ends_transaction, new_business_outcome, parse_time
 from zato.common.b2b.common.commit_group import get_writer
 from zato.common.b2b.common.commit_sql import EventWrite
 from zato.common.b2b.common.exceptions import B2BException
@@ -177,7 +177,7 @@ class BusinessLog:
             message.cpa_id, cid=message.message_id, msg_id=message.message_id, correl_id=reply_message_id, status=state,
             outcome=audit_outcome, data=data, attrs=attrs)
 
-        is_final = state in Final_States
+        is_final = ends_transaction(state, message.response_deadline)
 
         if is_final:
             write.closes.append(OpenKind.Transaction)
@@ -483,7 +483,7 @@ class BusinessLog:
         out = self.writer.call(self._recover_page, after_id, limit)
 
         for message in out.items:
-            if message.state not in Final_States:
+            if not ends_transaction(message.state, message.response_deadline):
                 self.track(message)
 
         return out

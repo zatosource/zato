@@ -21,6 +21,7 @@ from zato.common.audit_log.common import AuditSource
 from zato.common.b2b.common.business_log import BusinessLog
 from zato.common.b2b.common.clock import SystemClock
 from zato.common.b2b.common.commit_group import get_writer
+from zato.common.b2b.common.commit_timing import timing_log
 from zato.common.b2b.common.retry import RetryAction
 from zato.common.b2b.common.scheduler import DeliveryScheduler, EntryKind
 from zato.common.b2b.common.send_log import SendLog
@@ -157,6 +158,10 @@ class PerfExchange:
         # How many greenlets send, resend or process messages at the moment.
         self.busy = 0
         self.resends = 0
+
+        if timing_log:
+            timing_log.write({'type': 'role', 'role': config.role})
+            timing_log.start_loop_probe()
 
 # ################################################################################################################################
 
@@ -311,10 +316,21 @@ class PerfExchange:
 
             self.write(record)
 
+            process_started_at = time()
             processor = self.processors[kind]
             processor(header, delivery)
 
+            confirm_started_at = time()
             self.receive_log.confirm(delivery.identity, delivery.cpa_id)
+
+            if timing_log:
+                timing_log.write({
+                    'type': 'deliver',
+                    'id': delivery.message_id,
+                    'kind': kind,
+                    'process_ms': round((confirm_started_at - process_started_at) * 1000, 2),
+                    'confirm_ms': round((time() - confirm_started_at) * 1000, 2),
+                })
 
 # ################################################################################################################################
 
@@ -432,26 +448,44 @@ class PerfExchange:
     def _post(self, message_id:'str') -> 'None':
         """ Posts the stored wire form of a message and records what the response answered it with.
         """
+        read_started_at = time()
         sent = self.send_log.get(message_id)
         body = self.send_log.wire_body(message_id)
 
+        post_started_at = time()
         response = http_post(sent.endpoint, sent.wire_headers, body)
+        post_ended_at = time()
 
         # The partner posts some of its messages a second time.
         if self._is_fault(self.config.duplicate_percent):
             self._write_fault(message_id, FaultType.Duplicated)
             _ = http_post(sent.endpoint, sent.wire_headers, body)
 
+        restore_started_at = time()
         sent = self.send_log.get(message_id)
         agreement = self.agreements_by_cpa_id[sent.cpa_id]
         outbound = restore_outbound(agreement, self.local_keys, sent)
 
         if response is None:
             accept_no_answer(outbound)
+            accepted_at = time()
             self._record_answer(sent, outbound, {}, b'')
         else:
             _ = accept_response(outbound, response.status_code, response.headers, response.body, self.clock)
+            accepted_at = time()
             self._record_answer(sent, outbound, response.headers, response.body)
+
+        if timing_log:
+            timing_log.write({
+                'type': 'post',
+                'id': message_id,
+                'read_ms': round((post_started_at - read_started_at) * 1000, 2),
+                'http_ms': round((post_ended_at - post_started_at) * 1000, 2),
+                'answer_ms': round((time() - post_ended_at) * 1000, 2),
+                'duplicate_ms': round((restore_started_at - post_ended_at) * 1000, 2),
+                'accept_ms': round((accepted_at - restore_started_at) * 1000, 2),
+                'record_ms': round((time() - accepted_at) * 1000, 2),
+            })
 
 # ################################################################################################################################
 

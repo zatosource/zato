@@ -291,7 +291,7 @@ class TestOneStatementPerTable:
             'INSERT b2b_message',
             'UPDATE b2b_message',
             'INSERT event',
-            'INSERT event_attr',
+            'INSERT b2b_event',
             'INSERT event_body',
             'DELETE b2b_open',
             'INSERT b2b_open',

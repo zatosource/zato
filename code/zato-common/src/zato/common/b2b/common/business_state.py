@@ -201,6 +201,23 @@ def can_change(current:'str', new:'str') -> 'bool':
 
 # ################################################################################################################################
 
+def ends_transaction(state:'str', response_deadline:'dtnone') -> 'bool':
+    """ Says whether a transaction in the given state has ended - the state is final, or the message is receipted
+    and its transaction awaits no response.
+    """
+    if state in Final_States:
+        out = True
+
+    elif state == BusinessState.Receipted:
+        out = response_deadline is None
+
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
 def parse_time(value:'strnone') -> 'dtnone':
     if value:
         out = datetime.fromisoformat(value)

@@ -293,6 +293,8 @@ def start_postgresql(
     db_name:'str',
     needs_ssl:'bool',
     certificates:'certificatepathsnone' = None,
+    server_settings:'strlist | None' = None,
+    data_dir:'str | None' = None,
     ) -> 'DatabaseServer':
     """ Starts a PostgreSQL container, optionally one that requires TLS for all TCP connections.
     Certificates are always given when needs_ssl is True and they are dereferenced only then.
@@ -323,7 +325,15 @@ def start_postgresql(
         command.extend(['-v', f'{ssl_certificates.directory}:/certs-in:ro'])
         command.extend(['-v', f'{setup_script}:/docker-entrypoint-initdb.d/postgresql-ssl-setup.sh:ro'])
 
+    if data_dir:
+        command.extend(['--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{data_dir}:/var/lib/postgresql/data'])
+
     command.append(ModuleCtx.PostgreSQL_Image)
+
+    if server_settings:
+        command.append('postgres')
+        for setting in server_settings:
+            command.extend(['-c', setting])
 
     _ = subprocess.run(command, check=True, capture_output=True)
 

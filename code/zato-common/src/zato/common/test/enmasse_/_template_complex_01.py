@@ -112,12 +112,14 @@ security:
 
   - name: enmasse.mtls.1
     type: mtls
+    use_for: outgoing
     cert_path: /opt/hot-deploy/ssl/enmasse-client-cert.pem
     key_path: /opt/hot-deploy/ssl/enmasse-client-key.pem
     ca_certs_path: /opt/hot-deploy/ssl/enmasse-remote-ca.pem
 
   - name: enmasse.mtls.2
     type: mtls
+    use_for: channels
     client_cert_fingerprint: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
     client_cert_subject_dn: CN=enmasse.client,O=Enmasse,C=US
 

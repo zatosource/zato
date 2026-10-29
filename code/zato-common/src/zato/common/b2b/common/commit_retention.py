@@ -11,11 +11,11 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 # SQLAlchemy
-from sqlalchemy import and_, delete, exists, select
+from sqlalchemy import and_, delete, exists, or_, select
 
 # Zato
-from zato.common.audit_log.api import AuditEvent, event_attr_table, event_body_table, event_table, get_retention_days
-from zato.common.b2b.common.schema import held_message_table, message_table, open_table
+from zato.common.audit_log.api import AuditEvent, event_body_table, event_table, get_retention_days
+from zato.common.b2b.common.schema import b2b_event_table, held_message_table, message_table, open_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +33,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many identifiers one IN list of a delete holds.
+# How many identifiers one IN list of a select or a delete holds.
 _in_list_size = 500
 
 # The event types of the B2B exchanges, business transactions, received messages and ordered conversations.
@@ -80,33 +80,43 @@ class RetentionResult:
         return out
 
 # ################################################################################################################################
+
+@dataclass(init=False)
+class RetentionCandidates:
+    """ The identifiers of the rows one run of retention found due for deletion - the records of received messages,
+    the held messages of each source and the B2B audit events.
+    """
+    messages: 'intlist'
+    held:     'dict[str, intlist]'
+    events:   'intlist'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
-def _delete_by_ids(connection:'Connection', column:'any_', ids:'intlist') -> 'None':
-    """ Deletes the rows whose given column holds one of the identifiers, in IN lists of a bounded size.
+def _select_ids(connection:'Connection', statement:'any_') -> 'intlist':
+    """ Returns the identifiers a select of one column returns.
     """
+    out:'intlist' = []
+
+    for row_id in connection.execute(statement).scalars():
+        out.append(row_id)
+
+    return out
+
+# ################################################################################################################################
+
+def _delete_by_ids(connection:'Connection', column:'any_', ids:'intlist', *conditions:'any_') -> 'int':
+    """ Deletes the rows whose given column holds one of the identifiers and which meet the conditions,
+    in IN lists of a bounded size, and returns how many it deleted.
+    """
+    out = 0
+
     for start in range(0, len(ids), _in_list_size):
         chunk = ids[start:start + _in_list_size]
-        statement = delete(column.table).where(column.in_(chunk))
-        _ = connection.execute(statement)
+        statement = delete(column.table).where(column.in_(chunk), *conditions)
+        result = connection.execute(statement)
+        out += result.rowcount
 
-# ################################################################################################################################
-
-def delete_expired_messages(connection:'Connection', now:'datetime', limit:'int') -> 'int':
-    """ Deletes up to the limit of the records of received messages whose duplicate detection window has passed,
-    and returns how many it deleted.
-    """
-    query = select(message_table.c.id).where(message_table.c.expires_at <= now)
-    statement = query.limit(limit)
-
-    ids:'intlist' = []
-
-    for message_id in connection.execute(statement).scalars():
-        ids.append(message_id)
-
-    _delete_by_ids(connection, message_table.c.id, ids)
-
-    out = len(ids)
     return out
 
 # ################################################################################################################################
@@ -119,10 +129,33 @@ def _retention_cutoff(source:'str', now:'datetime') -> 'datetime':
     return out
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-def delete_old_held(connection:'Connection', source:'str', now:'datetime', limit:'int') -> 'int':
-    """ Deletes up to the limit of the held messages of one source that were held for longer than the retention
-    of the source, and returns how many it deleted.
+def select_expired_messages(connection:'Connection', now:'datetime', limit:'int') -> 'intlist':
+    """ Returns up to the limit of the identifiers of the records of received messages whose duplicate detection
+    window has passed.
+    """
+    query = select(message_table.c.id).where(message_table.c.expires_at <= now)
+    statement = query.limit(limit)
+
+    out = _select_ids(connection, statement)
+    return out
+
+# ################################################################################################################################
+
+def delete_expired_messages(connection:'Connection', now:'datetime', ids:'intlist') -> 'int':
+    """ Deletes the records of received messages with the given identifiers whose duplicate detection window
+    is still passed, since a claim of the same message replaces an expired record, and returns how many it deleted.
+    """
+    out = _delete_by_ids(connection, message_table.c.id, ids, message_table.c.expires_at <= now)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def select_old_held(connection:'Connection', source:'str', now:'datetime', limit:'int') -> 'intlist':
+    """ Returns up to the limit of the identifiers of the held messages of one source that were held for longer
+    than the retention of the source.
     """
     cutoff = _retention_cutoff(source, now)
 
@@ -138,14 +171,90 @@ def delete_old_held(connection:'Connection', source:'str', now:'datetime', limit
     )
     statement = select(held_message_table.c.id).where(conditions).limit(limit)
 
-    ids:'intlist' = []
+    out = _select_ids(connection, statement)
+    return out
 
-    for row_id in connection.execute(statement).scalars():
-        ids.append(row_id)
+# ################################################################################################################################
 
-    _delete_by_ids(connection, held_message_table.c.id, ids)
+def delete_old_held(connection:'Connection', source:'str', now:'datetime', ids:'intlist') -> 'int':
+    """ Deletes the held messages of one source with the given identifiers that are still held for longer
+    than the retention of the source, and returns how many it deleted.
+    """
+    cutoff = _retention_cutoff(source, now)
 
-    out = len(ids)
+    out = _delete_by_ids(connection, held_message_table.c.id, ids, held_message_table.c.held_at < cutoff)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _is_event_kept(held_ids:'intlist') -> 'any_':
+    """ Returns the condition under which an event is kept whatever its age - the exchange, business transaction
+    or delivery of its message is open, or the message is held other than by one of the given held messages.
+    """
+    is_open_conditions = and_(
+        open_table.c.message_id == event_table.c.msg_id,
+        open_table.c.source == event_table.c.source,
+    )
+    is_open = exists(select(open_table.c.id).where(is_open_conditions))
+
+    is_held_conditions = and_(
+        held_message_table.c.message_id == event_table.c.msg_id,
+        held_message_table.c.id.not_in(held_ids),
+    )
+    is_held = exists(select(held_message_table.c.id).where(is_held_conditions))
+
+    out = or_(is_open, is_held)
+    return out
+
+# ################################################################################################################################
+
+def select_old_events(
+    connection:'Connection',
+    source:'str',
+    now:'datetime',
+    limit:'int',
+    held_ids:'intlist',
+    ) -> 'intlist':
+    """ Returns up to the limit of the identifiers of the B2B audit events of one source that are older than
+    the retention of the source and are not kept. The given held messages are deleted before the events,
+    so the events of their receipt are not kept on their account.
+    """
+    cutoff = _retention_cutoff(source, now)
+
+    conditions = and_(
+        event_table.c.source == source,
+        event_table.c.event_type.in_(B2B_Event_Types),
+        event_table.c.event_time < cutoff,
+        ~_is_event_kept(held_ids),
+    )
+    statement = select(event_table.c.id).where(conditions).limit(limit)
+
+    out = _select_ids(connection, statement)
+    return out
+
+# ################################################################################################################################
+
+def delete_events(connection:'Connection', ids:'intlist') -> 'int':
+    """ Deletes the B2B audit events with the given identifiers that are still not kept, together with their
+    attributes and bodies, and returns how many events it deleted.
+    """
+    is_not_kept = ~_is_event_kept([])
+
+    deleted:'intlist' = []
+
+    # The events a message opened or held since they were selected are kept ..
+    for start in range(0, len(ids), _in_list_size):
+        chunk = ids[start:start + _in_list_size]
+        statement = select(event_table.c.id).where(event_table.c.id.in_(chunk), is_not_kept)
+        deleted.extend(_select_ids(connection, statement))
+
+    # .. and the rows that reference an event go before the event itself.
+    _ = _delete_by_ids(connection, b2b_event_table.c.event_id, deleted)
+    _ = _delete_by_ids(connection, event_body_table.c.event_id, deleted)
+    _ = _delete_by_ids(connection, event_table.c.id, deleted)
+
+    out = len(deleted)
     return out
 
 # ################################################################################################################################
@@ -155,36 +264,46 @@ def delete_old_events(connection:'Connection', source:'str', now:'datetime', lim
     together with their attributes and bodies, and returns how many events it deleted. The events of a message
     whose exchange, business transaction or delivery is open, or which is held, are kept, whatever their age.
     """
-    cutoff = _retention_cutoff(source, now)
+    ids = select_old_events(connection, source, now, limit, [])
 
-    is_open_conditions = and_(
-        open_table.c.message_id == event_table.c.msg_id,
-        open_table.c.source == event_table.c.source,
-    )
-    is_open = exists(select(open_table.c.id).where(is_open_conditions))
+    out = delete_events(connection, ids)
+    return out
 
-    is_held = exists(select(held_message_table.c.id).where(held_message_table.c.message_id == event_table.c.msg_id))
+# ################################################################################################################################
+# ################################################################################################################################
 
-    conditions = and_(
-        event_table.c.source == source,
-        event_table.c.event_type.in_(B2B_Event_Types),
-        event_table.c.event_time < cutoff,
-        ~is_open,
-        ~is_held,
-    )
-    statement = select(event_table.c.id).where(conditions).limit(limit)
+def select_retained(connection:'Connection', now:'datetime', sources:'strlist', limit:'int') -> 'RetentionCandidates':
+    """ Returns the identifiers of what retention deletes, each kind of row up to the row limit.
+    """
+    out = RetentionCandidates()
+    out.messages = select_expired_messages(connection, now, limit)
+    out.held = {}
+    out.events = []
 
-    ids:'intlist' = []
+    # A held message goes before the events of its receipt, which are kept while it is held.
+    for source in sources:
+        held_ids = select_old_held(connection, source, now, limit)
+        out.held[source] = held_ids
+        out.events.extend(select_old_events(connection, source, now, limit, held_ids))
 
-    for event_id in connection.execute(statement).scalars():
-        ids.append(event_id)
+    return out
 
-    # The rows that reference an event go before the event itself.
-    _delete_by_ids(connection, event_attr_table.c.event_id, ids)
-    _delete_by_ids(connection, event_body_table.c.event_id, ids)
-    _delete_by_ids(connection, event_table.c.id, ids)
+# ################################################################################################################################
 
-    out = len(ids)
+def delete_candidates(connection:'Connection', now:'datetime', candidates:'RetentionCandidates') -> 'RetentionResult':
+    """ Deletes the rows retention found due for deletion that are still due, and returns how many rows it deleted.
+    """
+    out = RetentionResult()
+    out.messages = delete_expired_messages(connection, now, candidates.messages)
+    out.held = 0
+
+    # The held messages go before the events of their receipt ..
+    for source, held_ids in candidates.held.items():
+        out.held += delete_old_held(connection, source, now, held_ids)
+
+    # .. which are then no longer kept on their account.
+    out.events = delete_events(connection, candidates.events)
+
     return out
 
 # ################################################################################################################################
@@ -192,17 +311,9 @@ def delete_old_events(connection:'Connection', source:'str', now:'datetime', lim
 def delete_retained(connection:'Connection', now:'datetime', sources:'strlist', limit:'int') -> 'RetentionResult':
     """ Deletes what retention deletes, each kind of row up to the row limit, and returns how many rows it deleted.
     """
-    out = RetentionResult()
-    out.held = 0
-    out.events = 0
+    candidates = select_retained(connection, now, sources, limit)
 
-    out.messages = delete_expired_messages(connection, now, limit)
-
-    # A held message goes before the events of its receipt, which are kept while it is held.
-    for source in sources:
-        out.held += delete_old_held(connection, source, now, limit)
-        out.events += delete_old_events(connection, source, now, limit)
-
+    out = delete_candidates(connection, now, candidates)
     return out
 
 # ################################################################################################################################

@@ -274,6 +274,13 @@ listener:
 # The name the Docker image's entrypoint invokes
 file-pickup-listener: listener
 
+# Where the certificates, keys and CA certificates that outgoing connections read are kept
+Zato_TLS_Material_Dir ?= /opt/hot-deploy/ssl
+
+# Reports changed TLS material to the server, which refreshes the outgoing connections that read it
+tls-material-listener:
+	py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py $(Zato_TLS_Material_Dir) --tls-material --observer $(Zato_File_Listener_Observer)
+
 haproxy:
 	@mkdir -p $(HAPROXY_DEV_DIR)
 	@touch $(HOME)/env/qs-1/blocked-paths.txt

@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from unittest import main, TestCase
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 # Zato
 from zato.common.api import EnvVariable, HTTP_SOAP, SEC_DEF_TYPE, URL_TYPE
@@ -255,6 +255,48 @@ class MTLSTestCase(TestCase):
 
         mock_clear_pool.assert_called_once_with()
         self.assertEqual(wrapper.config['tls_client_cert'], '/tmp/second.crt.pem')
+
+# ################################################################################################################################
+
+    def test_reload_discards_pooled_connections(self) -> 'None':
+        wrapper = self._get_mtls_wrapper()
+
+        with patch.object(wrapper.https_adapter, 'clear_pool') as mock_clear_pool:
+            wrapper.reload_tls_material()
+
+        mock_clear_pool.assert_called_once_with()
+
+        # The files the connection reads are the same ones as before
+        self.assertEqual(wrapper.config['tls_client_cert'], '/tmp/first.crt.pem')
+        self.assertEqual(wrapper.config['tls_client_key'], '/tmp/first.key.pem')
+
+# ################################################################################################################################
+
+    def test_reload_closes_and_drops_the_soap_client(self) -> 'None':
+        wrapper = self._get_mtls_wrapper()
+
+        soap_client = Mock()
+        wrapper._soap_client = cast_('any_', soap_client)
+
+        with patch.object(wrapper.https_adapter, 'clear_pool'):
+            wrapper.reload_tls_material()
+
+        soap_client.close.assert_called_once_with()
+        self.assertIsNone(wrapper._soap_client)
+
+# ################################################################################################################################
+
+    def test_reload_without_a_soap_client(self) -> 'None':
+        wrapper = self._get_mtls_wrapper()
+
+        # The SOAP client is built on first use only, so a connection that was never invoked has none
+        self.assertIsNone(wrapper._soap_client)
+
+        with patch.object(wrapper.https_adapter, 'clear_pool') as mock_clear_pool:
+            wrapper.reload_tls_material()
+
+        mock_clear_pool.assert_called_once_with()
+        self.assertIsNone(wrapper._soap_client)
 
 # ################################################################################################################################
 # ################################################################################################################################

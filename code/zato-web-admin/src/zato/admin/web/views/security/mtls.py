@@ -25,7 +25,7 @@ class Index(_Index):
     paginate = True
 
     output_required = 'id', 'name'
-    output_optional = 'is_active', 'cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint', \
+    output_optional = 'is_active', 'use_for', 'cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint', \
         'client_cert_subject_dn'
     output_repeated = True
 
@@ -43,7 +43,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name',
-    input_optional = 'cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint', 'client_cert_subject_dn'
+    input_optional = 'use_for', 'cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint', \
+        'client_cert_subject_dn'
     output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):

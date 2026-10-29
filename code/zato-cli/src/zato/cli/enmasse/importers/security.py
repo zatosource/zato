@@ -11,6 +11,7 @@ import logging
 from uuid import uuid4
 
 # Zato
+from zato.cli.enmasse.importers.security_mtls import prepare_mtls_definition, set_stored_use_for
 from zato.cli.enmasse.util import preprocess_item
 from zato.cli.enmasse.util.secrets import Auto_Password_Prefix, decrypt_secret, encrypt_kept_opaque_secrets, \
     encrypt_opaque_secrets, encrypt_secret, ensure_encrypted, is_encrypted, is_usable_secret, load_opaque, secret_needs_update
@@ -147,6 +148,8 @@ class SecurityImporter:
                 for key, value in opaque.items():
                     if key not in item:
                         item[key] = value
+
+            set_stored_use_for(item)
 
             logger.info('Processing security definition: %s (type=%s, id=%s)', name, sec_type, item.get('id'))
             out[name] = item
@@ -634,6 +637,8 @@ class SecurityImporter:
         for item in security_list:
             if item['type'] not in valid_types:
                 raise ValueError(f'Invalid security definition type: {item["type"]}. Must be one of {valid_types} -> {item}')
+
+            prepare_mtls_definition(item)
 
         # Resolve quota tier references - YAML carries tier names but opaque data stores tier ids.
         for item in security_list:

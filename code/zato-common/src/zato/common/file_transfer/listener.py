@@ -41,6 +41,12 @@ if 0:
 # Logger for this module
 logger = logging.getLogger(__name__)
 
+# The event handler classes a directory can be watched with
+event_handler_class = type['ZatoFileSystemEventHandler']
+
+# The only files that the TLS material mode watches
+TLS_Material_Patterns = ['*.pem']
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -423,6 +429,21 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
 # ################################################################################################################################
 
+    def get_request_body(self, event_path:'str') -> 'str':
+        """ Returns the request that deploys the file - its contents together with its path.
+        """
+        with open(event_path, 'rb') as f:
+            file_data = f.read()
+
+        out = dumps({
+            'payload': b64encode(file_data).decode('ascii'),
+            'payload_name': event_path,
+        })
+
+        return out
+
+# ################################################################################################################################
+
     def publish_file_ready_event(self, event_path:'str') -> 'None':
         """ Deploy the file to the server via its REST API.
         """
@@ -433,13 +454,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         self.last_deployed[event_path] = now
 
         try:
-            with open(event_path, 'rb') as f:
-                file_data = f.read()
-
-            request_body = dumps({
-                'payload': b64encode(file_data).decode('ascii'),
-                'payload_name': event_path,
-            })
+            request_body = self.get_request_body(event_path)
 
             service_name = 'zato.hot-deploy.create'
             url = self.invoke_url.format(service_name)
@@ -522,6 +537,28 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TLSMaterialEventHandler(ZatoFileSystemEventHandler):
+    """ Reports changed certificates, keys and CA certificates to the server, which refreshes
+    the outgoing connections that read them. Only the path of a file is sent, never its contents.
+    """
+
+    def get_request_body(self, event_path:'str') -> 'str':
+        out = dumps({'payload_name': event_path})
+        return out
+
+# ################################################################################################################################
+
+    def on_moved(self, event:'FileSystemEvent') -> 'None':
+        """ Handle a file renamed into place, which is how a certificate is usually replaced in full.
+        """
+        event_path:'str' = event.dest_path.rstrip(os.path.sep) # type: ignore
+
+        if self._is_event_relevant(event_path, 'created'):
+            self.publish_file_ready_event(event_path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def watch_directory(
     directory_path:'str',
     matching_items:'strlist',
@@ -530,6 +567,7 @@ def watch_directory(
     event_types:'strlistnone',
     file_patterns:'strlistnone',
     observer_type:'str'='inotify',
+    handler_class:'event_handler_class'=ZatoFileSystemEventHandler,
 ) -> 'BaseObserver':
     """ Sets up a watchdog observer to monitor changes in the deepest common directory.
     """
@@ -554,7 +592,7 @@ def watch_directory(
         watch_dir = os.path.dirname(watch_dir)
 
     # .. create the event handler ..
-    event_handler = ZatoFileSystemEventHandler(matching_items, session, invoke_url, event_types, file_patterns, observer_type)
+    event_handler = handler_class(matching_items, session, invoke_url, event_types, file_patterns, observer_type)
 
     # .. and schedule the observer.
     _ = observer.schedule(event_handler, watch_dir, recursive=True)
@@ -628,6 +666,13 @@ if __name__ == '__main__':
         help=f'File patterns to monitor (default: {default_patterns})'
     )
 
+    _ = parser.add_argument(
+        '--tls-material',
+        dest='is_tls_material',
+        action='store_true',
+        help=f'Report changed TLS material ({TLS_Material_Patterns}) to the outgoing connections that read it'
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -640,7 +685,8 @@ if __name__ == '__main__':
         matching_items = []
         is_incoming_services = base_dir.rstrip(os.path.sep).endswith(os.path.join('incoming', 'services'))
 
-        if is_incoming_services:
+        # TLS material is watched in the whole directory, without looking for any source layout in it
+        if args.is_tls_material or is_incoming_services:
             matching_items = [base_dir]
             logger.info('Watching for changes in %s', base_dir)
         else:
@@ -660,6 +706,12 @@ if __name__ == '__main__':
             # Use the parsed arguments
             file_patterns = args.patterns
             observer_type = args.observer_type
+            handler_class = ZatoFileSystemEventHandler
+
+            # TLS material is only ever reported by its path, never deployed
+            if args.is_tls_material:
+                file_patterns = TLS_Material_Patterns
+                handler_class = TLSMaterialEventHandler
 
             logger.info('Using file patterns: %s', file_patterns)
             logger.info('Using observer type: %s', observer_type)
@@ -677,6 +729,7 @@ if __name__ == '__main__':
                     event_types=None,
                     file_patterns=file_patterns,
                     observer_type=observer_type,
+                    handler_class=handler_class,
                 )
                 observer.start()
                 logger.info('Watching for changes, press Ctrl+C to stop...')

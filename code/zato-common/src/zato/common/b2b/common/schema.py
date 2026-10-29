@@ -147,6 +147,25 @@ open_table = Table('b2b_open', metadata,
     Index('idx_b2b_open_message', 'message_id'),
 )
 
+# Prototype - the attributes of one B2B event as one row of columns, in place of one event_attr row per attribute.
+b2b_event_attr_names = ('from_party', 'to_party', 'service', 'action', 'attempt', 'attempt_at', 'final_state',
+    'signal_kind', 'error_code', 'deadline_at')
+
+b2b_event_table = Table('b2b_event', metadata,
+    Column('event_id', BigInteger, primary_key=True, autoincrement=False),
+    *[Column(name, _short_column, nullable=True) for name in b2b_event_attr_names],
+    Index('idx_b2b_event_parties', 'from_party', 'to_party'),
+    Index('idx_b2b_event_operation', 'service', 'action'),
+    Index('idx_b2b_event_final_state', 'final_state'),
+)
+
+from sqlalchemy import DDL, event as _sa_event
+_search_expr = " || ' ' || ".join(f"coalesce({name}, '')" for name in ('from_party', 'to_party', 'service', 'action',
+    'final_state', 'signal_kind', 'error_code'))
+_sa_event.listen(b2b_event_table, 'after_create', DDL(
+    f'CREATE INDEX idx_b2b_event_search ON b2b_event USING gin (({_search_expr}) gin_trgm_ops)').execute_if(
+    dialect='postgresql'))
+
 # ################################################################################################################################
 # ################################################################################################################################
 

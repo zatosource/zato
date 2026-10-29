@@ -224,6 +224,21 @@ class AuthMixin:
 
 # ################################################################################################################################
 
+    def reload_tls_material(self) -> 'None':
+        """ Discards the pooled TLS connections and the SOAP client, so that the next request
+        reads the client certificate, its key and the CA certificates from their files anew.
+        """
+
+        # Pooled connections keep presenting the material they were opened with ..
+        self.https_adapter.clear_pool()
+
+        # .. and the SOAP client keeps a session of its own, with a pool of its own.
+        if self._soap_client:
+            self._soap_client.close()
+            self._soap_client = None
+
+# ################################################################################################################################
+
     def _get_bearer_token_auth(self, sec_def_name:'str', scopes:'str', data_format:'str') -> 'BearerTokenInfoResult':
 
         # This will get the token from cache or from the remote auth. server ..

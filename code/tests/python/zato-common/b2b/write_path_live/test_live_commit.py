@@ -23,12 +23,13 @@ from sqlalchemy import inspect, select
 # Zato
 from live_db import count_rows, Line_Claimed, Line_Committing, Line_Ready, new_audit_log, new_event, start_child, \
     Type_MySQL, Type_PostgreSQL, Type_SQLite, wait_for_line
-from zato.common.audit_log.api import AuditEvent, event_attr_table, event_body_table, event_table
+from zato.common.audit_log.api import AuditEvent, event_body_table, event_table
 from zato.common.audit_log.attachment import build_attachment
+from zato.common.audit_log.common import B2BAttr
 from zato.common.b2b.common.clock import ManualClock
 from zato.common.b2b.common.commit_group import GroupCommitWriter
 from zato.common.b2b.common.commit_sql import ClaimWrite, EventWrite, StatusWrite
-from zato.common.b2b.common.schema import message_table, open_table, OpenKind
+from zato.common.b2b.common.schema import b2b_event_table, message_table, open_table, OpenKind
 from zato.common.b2b.common.send_log import SendLog
 from zato.common.b2b.common.store import MessageStore
 from zato.common.b2b.ebms2.common import SyncReplyMode
@@ -274,7 +275,7 @@ class TestStatementCounts:
             'INSERT b2b_message',
             'UPDATE b2b_message',
             'INSERT event',
-            'INSERT event_attr',
+            'INSERT b2b_event',
             'INSERT event_body',
             'DELETE b2b_open',
             'INSERT b2b_open',
@@ -325,7 +326,7 @@ class TestOneTransaction:
 
         assert count_rows(engine, message_table) == 0
         assert count_rows(engine, event_table) == 0
-        assert count_rows(engine, event_attr_table) == 0
+        assert count_rows(engine, b2b_event_table) == 0
         assert count_rows(engine, event_body_table) == 0
         assert count_rows(engine, open_table) == 0
 
@@ -362,7 +363,7 @@ class TestEventIdentifiers:
             for event_id, message_id in connection.execute(select(event_table.c.id, event_table.c.msg_id)):
                 message_ids[event_id] = message_id
 
-            attrs = connection.execute(select(event_attr_table.c.event_id, event_attr_table.c.value)).all()
+            attrs = connection.execute(select(b2b_event_table.c.event_id, b2b_event_table.c.service)).all()
             bodies = connection.execute(select(event_body_table.c.event_id, event_body_table.c.data)).all()
 
         child_events = _child_batches * _child_batch_size
@@ -435,7 +436,7 @@ class TestFullTransaction:
         for idx in range(_full_events):
             write = EventWrite()
             write.pending = audit_log.new_pending_event(Source, AuditEvent.Message_Sent, 'b2b-agreement',
-                msg_id=f'message-{idx}', data='{}', attrs={'b2b_first': idx, 'b2b_second': f'value-{idx}'},
+                msg_id=f'message-{idx}', data='{}', attrs={B2BAttr.Attempt: idx, B2BAttr.Action: f'value-{idx}'},
                 attachments=[attachment])
 
             row_count += write.row_count
@@ -447,7 +448,7 @@ class TestFullTransaction:
         engine = database.engine
 
         assert count_rows(engine, event_table) == _full_events
-        assert count_rows(engine, event_attr_table) == _full_events * 2
+        assert count_rows(engine, b2b_event_table) == _full_events
         assert count_rows(engine, event_body_table) == _full_events
 
 # ################################################################################################################################

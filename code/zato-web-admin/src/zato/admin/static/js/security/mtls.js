@@ -25,13 +25,59 @@ $(document).ready(function() {
         $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
         $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
     });
+
+    // The use of a definition decides which of its fields can be filled in.
+    $(document).on('change', '#id_use_for', function() {
+        $.fn.zato.security.mtls.updateFieldState('create');
+    });
+    $(document).on('change', '#id_edit-use_for', function() {
+        $.fn.zato.security.mtls.updateFieldState('edit');
+    });
 })
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.mtls.config = {
+    defaultUseFor: 'both',
+    fieldNames: ['cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint', 'client_cert_subject_dn'],
+    disabledFieldsByUseFor: {
+        'channels': ['cert_path', 'key_path', 'ca_certs_path'],
+        'outgoing': ['client_cert_fingerprint', 'client_cert_subject_dn'],
+        'both': []
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.mtls.getIdPrefix = function(action) {
+    var out = action == 'edit' ? '#id_edit-' : '#id_';
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.mtls.updateFieldState = function(action) {
+    var config = $.fn.zato.security.mtls.config;
+    var idPrefix = $.fn.zato.security.mtls.getIdPrefix(action);
+
+    // Find out what the definition is used with ..
+    var useFor = $(idPrefix + 'use_for').val();
+    var disabledFields = config.disabledFieldsByUseFor[useFor];
+
+    // .. and enable only the fields that apply to it.
+    $.each(config.fieldNames, function(index, fieldName) {
+        var isDisabled = disabledFields.indexOf(fieldName) !== -1;
+        $(idPrefix + fieldName).prop('disabled', isDisabled);
+    });
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.mtls.field_descriptions = {
     'id_name': 'A unique name for this definition. ' +
         'Used to identify it in channels, outgoing connections, logs and the dashboard.',
+    'id_use_for': 'Whether this definition is used with channels, with outgoing connections or with both. ' +
+        'Fields that do not apply to the selected use are disabled.',
     'id_cert_path': 'Path to a PEM file on the server with the client certificate that outgoing connections ' +
         'present during the TLS handshake.',
     'id_key_path': 'Path to a PEM file on the server with the private key matching the certificate. ' +
@@ -48,6 +94,8 @@ $.fn.zato.security.mtls.field_descriptions = {
 
 $.fn.zato.security.mtls.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create an mTLS definition', null);
+    $('#id_use_for').val($.fn.zato.security.mtls.config.defaultUseFor);
+    $.fn.zato.security.mtls.updateFieldState('create');
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
@@ -57,6 +105,7 @@ $.fn.zato.security.mtls.create = function() {
 
 $.fn.zato.security.mtls.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Edit mTLS definition', id);
+    $.fn.zato.security.mtls.updateFieldState('edit');
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
@@ -82,6 +131,7 @@ $.fn.zato.security.mtls.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.key_path ? item.key_path : '');
     row += String.format("<td class='ignore'>{0}</td>", item.ca_certs_path ? item.ca_certs_path : '');
+    row += String.format("<td class='ignore'>{0}</td>", item.use_for);
 
     if(include_tr) {
         row += '</tr>';

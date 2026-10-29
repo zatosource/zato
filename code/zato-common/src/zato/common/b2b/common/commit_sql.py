@@ -21,7 +21,7 @@ from zato.common.audit_log.api import build_attr_rows, event_attr_table, event_b
 from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.b2b.common.exceptions import B2BException
 from zato.common.b2b.common.records import MessageIdentity
-from zato.common.b2b.common.schema import message_table, open_table
+from zato.common.b2b.common.schema import b2b_event_attr_names, b2b_event_table, message_table, open_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -468,8 +468,12 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
         event_time = values['event_time']
 
         if pending.attrs:
-            rows = build_attr_rows(event_id, pending.attrs)
-            attr_rows.extend(rows)
+            b2b_row:'stranydict' = {'event_id': event_id}
+            for name in b2b_event_attr_names:
+                b2b_row[name] = None
+            for name, value in pending.attrs.items():
+                b2b_row[name] = str(value)
+            attr_rows.append(b2b_row)
 
         # All the body rows go in one statement, so a body that is not an attachment has an empty content column.
         for kind, body_data in pending.bodies.items():
@@ -505,7 +509,7 @@ def write_events(connection:'Connection', writes:'anylist', commit_id:'str') -> 
             })
 
     if attr_rows:
-        _ = connection.execute(insert(event_attr_table), attr_rows)
+        _ = connection.execute(insert(b2b_event_table), attr_rows)
 
     if body_rows:
         _ = connection.execute(insert(event_body_table), body_rows)
