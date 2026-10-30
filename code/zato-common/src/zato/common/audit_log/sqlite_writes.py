@@ -48,6 +48,7 @@ env_config = EnvDBConfig(
     sqlite_file_name=Audit_DB_File_Name,
     metadata=metadata,
     needs_pool=True,
+    needs_background_checkpoint=True,
 )
 
 # ################################################################################################################################

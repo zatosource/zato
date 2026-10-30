@@ -9,18 +9,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The native text indexes behind the free-text search of the audit log. SQLite keeps FTS5 tables
 # with the trigram tokenizer, maintained by triggers in the transaction that writes the event.
 # PostgreSQL keeps pg_trgm GIN indexes, one over the searched event columns joined into a single text
-# and one over attribute values, which serve LIKE patterns directly. MySQL keeps FULLTEXT
-# indexes with the ngram parser, read through MATCH ... AGAINST. A search narrows the rows through
+# and one over attribute values, which serve LIKE patterns directly. A search narrows the rows through
 # the index and confirms each one with LIKE, so every database returns what LIKE alone would return.
 
 from __future__ import annotations
 
 # SQLAlchemy
 from sqlalchemy import and_, column, DDL, event, literal_column, select, table
-from sqlalchemy.dialects.mysql import match as mysql_match
 
 # Zato
-from zato.common.db_env.common import Type_MySQL, Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,9 +43,6 @@ Event_Attr_Search_Table = 'event_attr_search'
 # The shortest term the trigram tokenizer of SQLite indexes
 SQLite_Min_Term_Length = 3
 
-# The shortest term the ngram parser of MySQL indexes, which is its default ngram_token_size
-MySQL_Min_Term_Length = 2
-
 # The trigram index of PostgreSQL over the searched event columns
 PostgreSQL_Event_Index = 'idx_event_search'
 
@@ -58,10 +53,6 @@ PostgreSQL_Pending_List_Limit_KB = 65536
 # What separates two columns in the text the trigram index of PostgreSQL covers
 _postgresql_column_separator = "' '"
 
-# The FULLTEXT indexes of MySQL
-_mysql_event_index = 'idx_event_search'
-_mysql_attr_index  = 'idx_event_attr_search'
-
 # The event columns the free-text search covers
 search_columns = ('data', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id',
     'status', 'classification', 'sub_key')
@@ -69,7 +60,7 @@ search_columns = ('data', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_
 # The attribute column the attribute search covers
 _attr_search_columns = ('value',)
 
-# The double quote that delimits a phrase in FTS5 and in the boolean mode of MySQL
+# The double quote that delimits a phrase in FTS5
 _quote = '"'
 
 # ################################################################################################################################
@@ -140,28 +131,39 @@ def _postgresql_event_statements(table_name:'str') -> 'strlist':
 
 # ################################################################################################################################
 
-def _postgresql_attr_statements(table_name:'str') -> 'strlist':
-    """ One trigram GIN index over the attribute values.
+def _postgresql_attr_index_name(table_name:'str', column_name:'str') -> 'str':
+    """ The name of the trigram GIN index over one attribute column.
     """
+    out = f'idx_{table_name}_search_{column_name}'
+    return out
+
+# ################################################################################################################################
+
+def _postgresql_attr_statements(table_name:'str') -> 'strlist':
+    """ One trigram GIN index over the attribute values, with the pending list limit of the event index.
+    """
+    storage = f'WITH (gin_pending_list_limit = {PostgreSQL_Pending_List_Limit_KB})'
+
     out:'strlist' = []
 
     for name in _attr_search_columns:
-        out.append(f'CREATE INDEX idx_{table_name}_search_{name} ON {table_name} USING gin ({name} gin_trgm_ops)')
+        index_name = _postgresql_attr_index_name(table_name, name)
+        out.append(f'CREATE INDEX {index_name} ON {table_name} USING gin ({name} gin_trgm_ops) {storage}')
 
     return out
 
 # ################################################################################################################################
 
-def _mysql_statements(table_name:'str', index_name:'str', columns:'strtuple') -> 'strlist':
-    """ The FULLTEXT index of one table, created with stopwords off, because the ngram parser leaves out
-    every token that contains a stopword, and the default list holds single letters.
+def get_postgresql_index_names(attr_table_name:'str') -> 'strtuple':
+    """ The names of all the trigram GIN indexes of PostgreSQL, the event index first.
     """
-    column_list = ', '.join(columns)
+    names:'strlist' = [PostgreSQL_Event_Index]
 
-    stopwords_off = 'SET SESSION innodb_ft_enable_stopword = OFF'
-    create_index = f'CREATE FULLTEXT INDEX {index_name} ON {table_name} ({column_list}) WITH PARSER ngram'
+    for name in _attr_search_columns:
+        index_name = _postgresql_attr_index_name(attr_table_name, name)
+        names.append(index_name)
 
-    out = [stopwords_off, create_index]
+    out = tuple(names)
     return out
 
 # ################################################################################################################################
@@ -189,7 +191,7 @@ def register_search_indexes(event_table:'Table', event_attr_table:'Table') -> 'N
     _listen(event_table, 'after_create', event_sqlite, Type_SQLite)
     _listen(event_attr_table, 'after_create', attr_sqlite, Type_SQLite)
 
-    # .. PostgreSQL, which needs its trigram extension before any of the indexes ..
+    # .. and PostgreSQL, which needs its trigram extension before any of the indexes.
     extension = ['CREATE EXTENSION IF NOT EXISTS pg_trgm']
     event_postgresql = _postgresql_event_statements(event_table_name)
     attr_postgresql = _postgresql_attr_statements(attr_table_name)
@@ -198,34 +200,7 @@ def register_search_indexes(event_table:'Table', event_attr_table:'Table') -> 'N
     _listen(event_table, 'after_create', event_postgresql, Type_PostgreSQL)
     _listen(event_attr_table, 'after_create', attr_postgresql, Type_PostgreSQL)
 
-    # .. and MySQL.
-    event_mysql = _mysql_statements(event_table_name, _mysql_event_index, search_columns)
-    attr_mysql = _mysql_statements(attr_table_name, _mysql_attr_index, _attr_search_columns)
-
-    _listen(event_table, 'after_create', event_mysql, Type_MySQL)
-    _listen(event_attr_table, 'after_create', attr_mysql, Type_MySQL)
-
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _is_mysql_term_indexed(query:'str') -> 'bool':
-    """ Whether the ngram index of MySQL can find the term - the parser splits it on whitespace
-    and indexes no word shorter than its token, and a phrase cannot carry a double quote.
-    """
-    if _quote in query:
-        return False
-
-    words = query.split()
-
-    if not words:
-        return False
-
-    for word in words:
-        if len(word) < MySQL_Min_Term_Length:
-            return False
-
-    return True
-
 # ################################################################################################################################
 
 def _fts5_phrase(query:'str') -> 'str':
@@ -258,22 +233,6 @@ def _sqlite_narrowed(search_table:'str', query:'str', condition:'any_', row_id:'
 
 # ################################################################################################################################
 
-def _mysql_narrowed(columns:'any_', query:'str', condition:'any_') -> 'any_':
-    """ The condition, narrowed down to the rows the FULLTEXT index finds, when the index can find the term.
-    """
-    if not _is_mysql_term_indexed(query):
-        return condition
-
-    phrase = _quote + query + _quote
-
-    is_indexed_match = mysql_match(*columns, against=phrase)
-    is_indexed_match = is_indexed_match.in_boolean_mode()
-
-    out = and_(is_indexed_match, condition)
-    return out
-
-# ################################################################################################################################
-
 def _postgresql_narrowed(event_table:'Table', pattern:'str', condition:'any_') -> 'any_':
     """ The condition, narrowed down to the rows whose joined searched columns the trigram index finds the pattern in.
     The joined text can match across two columns, which is why the condition confirms each row.
@@ -295,12 +254,6 @@ def narrow_event_search(dialect_name:'str', event_table:'Table', query:'str', pa
     if dialect_name == Type_SQLite:
         out = _sqlite_narrowed(Event_Search_Table, query, condition, event_table.c.id)
 
-    elif dialect_name == Type_MySQL:
-        columns:'list' = []
-        for name in search_columns:
-            columns.append(event_table.c[name])
-        out = _mysql_narrowed(columns, query, condition)
-
     else:
         out = _postgresql_narrowed(event_table, pattern, condition)
 
@@ -313,10 +266,6 @@ def narrow_attr_search(dialect_name:'str', event_attr_table:'Table', query:'str'
     """
     if dialect_name == Type_SQLite:
         out = _sqlite_narrowed(Event_Attr_Search_Table, query, condition, event_attr_table.c.id)
-
-    elif dialect_name == Type_MySQL:
-        columns = [event_attr_table.c.value]
-        out = _mysql_narrowed(columns, query, condition)
 
     else:
         out = condition

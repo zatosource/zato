@@ -17,7 +17,7 @@ import ssl
 from sqlalchemy import text
 
 # Zato
-from zato.common.db_env.common import Type_MySQL, Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,13 +36,11 @@ if 0:
 
 # SQLAlchemy dialects for each database type
 _dialects = {
-    Type_MySQL:      'mysql+pymysql',
     Type_PostgreSQL: 'postgresql+pg8000',
 }
 
 # Default ports for each database type
 _default_ports = {
-    Type_MySQL:      3306,
     Type_PostgreSQL: 5432,
 }
 
@@ -128,20 +126,11 @@ def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stran
     # .. it is off unless requested explicitly, which pg8000 needs to be told about,
     # .. because without a context it attempts an unverified TLS connection first ..
     if not values['ssl']:
-        if db_type == Type_PostgreSQL:
-            out['ssl_context'] = False
+        out['ssl_context'] = False
         return out
 
-    # .. each driver receives the same SSL context under its own keyword ..
-    ssl_context = build_ssl_context_from_values(values)
-
-    # .. PyMySQL accepts an SSL context directly ..
-    if db_type == Type_MySQL:
-        out['ssl'] = ssl_context
-
-    # .. and pg8000 under its own keyword.
-    else:
-        out['ssl_context'] = ssl_context
+    # .. and pg8000 receives the SSL context under its own keyword.
+    out['ssl_context'] = build_ssl_context_from_values(values)
 
     return out
 

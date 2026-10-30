@@ -15,7 +15,6 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, SSLE
 
 # SQLAlchemy
 from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
-from sqlalchemy.dialects.mysql import LONGTEXT
 
 # Zato
 from zato.common.audit_log.search_index import register_search_indexes
@@ -444,8 +443,7 @@ class AuditLink:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The one table holding all audit events, portable across SQLite, MySQL and PostgreSQL.
-# Short columns are VARCHAR because MySQL cannot index TEXT columns without a prefix length.
+# The one table holding all audit events, portable across SQLite and PostgreSQL.
 metadata = MetaData()
 
 # Event identifiers are 64-bit, except under SQLite where the autoincrement
@@ -453,9 +451,6 @@ metadata = MetaData()
 _big_id_column = BigInteger()
 _sqlite_id_column = Integer()
 _id_column_type = _big_id_column.with_variant(_sqlite_id_column, 'sqlite')
-
-# A TEXT column of MySQL holds 64 KB, less than the attachments a body may carry.
-_body_data_type = Text().with_variant(LONGTEXT(), 'mysql')
 
 def _new_id_column() -> 'Column':
     """ Returns the autoincrement primary key of one table.
@@ -469,11 +464,6 @@ _short_column = String(_short_column_len)
 _endpoint_column = String(_endpoint_column_len)
 _attr_number_column = Numeric(20, 6, asdecimal=False)
 _time_column = UTC_DateTime()
-
-# How much of a short column an index spans when a whole one would not fit. MySQL caps a key
-# at 3072 bytes, which four full-width utf8mb4 columns overrun, and rule, source, object
-# and kind names all tell themselves apart well inside this many characters.
-_index_prefix_len = 64
 
 # ################################################################################################################################
 
@@ -564,7 +554,7 @@ _event_body_columns = [
     Column('event_id', BigInteger),
     Column('kind', _short_column),
     Column('event_time', _time_column),
-    Column('data', _body_data_type),
+    Column('data', Text),
     Column('content', Binary_Type),
     Index('idx_event_body_event', 'event_id'),
     Index('idx_event_body_time', 'event_time'),
@@ -625,12 +615,7 @@ _alert_columns = [
     Column('count', Integer),
     Column('first_raised_at', _time_column),
     Column('last_raised_at', _time_column),
-    Index('idx_alert_rule_object', 'rule_name', 'source', 'object_name', 'kind', mysql_length={
-        'rule_name': _index_prefix_len,
-        'source': _index_prefix_len,
-        'object_name': _index_prefix_len,
-        'kind': _index_prefix_len,
-    }),
+    Index('idx_alert_rule_object', 'rule_name', 'source', 'object_name', 'kind'),
 ]
 
 alert_table = Table('alert', metadata, *_alert_columns)

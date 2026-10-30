@@ -20,7 +20,7 @@ from sqlalchemy import func, select
 from common import delete_all_events
 from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditSource
 from zato.common.audit_log.search import build_search_conditions
-from zato.common.db_env.common import hour_period, Type_MySQL, Type_SQLite
+from zato.common.db_env.common import hour_period, Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,7 +61,6 @@ _attr_value = 'MRN-778899'
 # What each database adds to a statement when its own index narrows a search down
 _index_markers = {
     Type_SQLite: 'event_search MATCH',
-    Type_MySQL: 'AGAINST',
 }
 
 # ################################################################################################################################

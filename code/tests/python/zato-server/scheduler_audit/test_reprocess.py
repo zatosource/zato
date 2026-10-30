@@ -283,7 +283,7 @@ def test_a_reprocess_runs_the_job_as_a_linked_run(tmp_path:'any_') -> 'None':
         service_name, payload, kwargs = server.invoked[0]
 
         assert service_name == Job_Service
-        assert payload == {'region': 'us-east', 'batch_size': '50'}
+        assert payload == {'region': 'us-east', 'batch_size': 50}
         assert kwargs['channel'] == CHANNEL.SCHEDULER
         assert kwargs['cid'] == Reprocess_Cid
 

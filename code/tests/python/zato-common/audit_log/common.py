@@ -14,8 +14,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 
 # Zato
-from live_sql.asserts import assert_mysql_connection_encrypted as assert_mysql_engine_encrypted, \
-    assert_postgresql_connection_encrypted as assert_postgresql_engine_encrypted
+from live_sql.asserts import assert_postgresql_connection_encrypted as assert_postgresql_engine_encrypted
 from live_sql.env import database_env
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -217,14 +216,6 @@ def run_audit_log_scenario() -> 'None':
         data='Subject: Monthly report')
 
     assert _count_events(AuditSource.Email_IMAP, 'audit.test.imap') == 1
-
-# ################################################################################################################################
-
-def assert_mysql_connection_encrypted() -> 'None':
-    """ Confirms the current MySQL session really is encrypted.
-    """
-    engine = get_audit_engine()
-    assert_mysql_engine_encrypted(engine)
 
 # ################################################################################################################################
 

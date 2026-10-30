@@ -28,6 +28,7 @@ from zato.common.db_env.connection import build_connect_args_from_values, build_
     set_postgresql_no_delay, set_sqlite_pragmas
 from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
+from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
 from zato.common.defaults import default_env_base_dir
 
 # ################################################################################################################################
@@ -53,13 +54,16 @@ if 0:
 # commit waits for the database's log flush and the flush is shared across all commits
 # in flight, so throughput scales with how many connections may commit at once
 # and SQLAlchemy's default cap of 5+10 is too low for stores like pub/sub.
-# The total of 80 stays below the default connection limits of both MySQL (151)
-# and PostgreSQL (100), leaving room for other clients of the same database.
+# The total of 80 stays below the default connection limit of PostgreSQL (100),
+# leaving room for other clients of the same database.
 _network_pool_size = 30
 _network_max_overflow = 50
 
 # Engines are cached per configuration so all callers in a process share one pool
 _engine_cache:'anydict' = {}
+
+# The background checkpointers of the cached SQLite engines that have one, by the same keys
+_checkpointer_cache:'anydict' = {}
 
 # The connections of PostgreSQL prepare their statements once and exchange bytea values and native types in the binary format,
 # and they insert rows in bulk with COPY.
@@ -171,10 +175,7 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
         engine_kwargs['poolclass'] = QueuePool
         connect_args['check_same_thread'] = False
 
-    # .. all network databases run read committed so every backend behaves the same -
-    # .. it is already the default of PostgreSQL, and it matters on MySQL,
-    # .. whose repeatable-read default takes gap locks that deadlock concurrent
-    # .. transactions deleting interleaved key ranges, e.g. pub/sub acknowledgements ..
+    # .. PostgreSQL runs read committed ..
     if db_type != Type_SQLite:
         engine_kwargs['isolation_level'] = 'READ COMMITTED'
 
@@ -191,6 +192,10 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     if db_type == Type_SQLite:
         sa_event.listen(out, 'connect', set_sqlite_pragmas)
 
+        # .. a store whose WAL is checkpointed in the background lets its commits append to a longer log ..
+        if config.needs_background_checkpoint:
+            sa_event.listen(out, 'connect', set_background_checkpoint_limit)
+
     elif db_type == Type_PostgreSQL:
         sa_event.listen(out, 'connect', set_postgresql_no_delay)
 
@@ -200,6 +205,12 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
 
     # .. make sure the schema exists - this is idempotent ..
     config.metadata.create_all(out)
+
+    # .. start the checkpoints of the WAL that the commits no longer run ..
+    if db_type == Type_SQLite and config.needs_background_checkpoint:
+        checkpointer = WALCheckpointer(out)
+        checkpointer.start()
+        _checkpointer_cache[cache_key] = checkpointer
 
     # .. and cache the engine for all future callers.
     _engine_cache[cache_key] = out
@@ -214,7 +225,11 @@ def dispose_env_engine(config:'EnvDBConfig') -> 'None':
     """
     cache_key = _get_cache_key(config)
 
-    # An engine that was never built has nothing to close
+    # The checkpoints of the engine end with it ..
+    if checkpointer := _checkpointer_cache.pop(cache_key, None):
+        checkpointer.stop()
+
+    # .. and an engine that was never built has nothing to close.
     if engine := _engine_cache.pop(cache_key, None):
         engine.dispose()
 

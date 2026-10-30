@@ -348,6 +348,9 @@ class _BulkAuditLog(AuditLog):
             self.pending_events.append(pending)
             out = len(self.pending_events)
 
+            # The relative id is what the caller of insert receives
+            pending.event_id = out
+
         return out
 
 # ################################################################################################################################

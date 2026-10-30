@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
+from decimal import Decimal
 from functools import lru_cache
 from struct import Struct
 from typing import NamedTuple
@@ -18,6 +19,7 @@ from sqlalchemy.dialects.postgresql.pg8000 import PGDialect_pg8000
 
 # Zato
 from zato.common.db_env.pg8000_wire import Max_Inline_Size
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,6 +47,21 @@ _int2   = Struct('!h')
 _int4   = Struct('!i')
 _int8   = Struct('!q')
 _float8 = Struct('!d')
+
+# The header of a binary NUMERIC - the count of its digits, the weight of the first one, its sign and its display scale.
+_numeric_header = Struct('!hhHh')
+
+# The signs of a binary NUMERIC.
+_numeric_positive          = 0x0000
+_numeric_negative          = 0x4000
+_numeric_nan               = 0xC000
+_numeric_positive_infinity = 0xD000
+_numeric_negative_infinity = 0xF000
+
+# The digits of a binary NUMERIC are in base 10000, each one covering four decimal digits.
+_numeric_base        = 10_000
+_numeric_base_digits = 4
+_decimal_base        = 10
 
 # The header of a COPY stream in the binary format - its signature, its flags and the length of its extension area.
 _copy_header = b'PGCOPY\n\xff\r\n\x00' + _int4.pack(0) + _int4.pack(0)
@@ -139,6 +156,103 @@ def _encode_float8(value:'float') -> 'bytes':
 
 # ################################################################################################################################
 
+def _encode_special_numeric(number:'Decimal') -> 'bytes':
+    """ Encodes NaN or an infinity as a binary NUMERIC, which has no digits.
+    """
+    if number.is_nan():
+        sign = _numeric_nan
+    elif number > 0:
+        sign = _numeric_positive_infinity
+    else:
+        sign = _numeric_negative_infinity
+
+    out = _numeric_header.pack(0, 0, sign, 0)
+    return out
+
+# ################################################################################################################################
+
+def _encode_numeric(value:'int | float | Decimal') -> 'bytes':
+    """ Encodes a number as a binary NUMERIC - its digits in base 10000, most significant first,
+    the weight of the first digit, the sign and the display scale.
+    """
+
+    # A float is encoded through its shortest decimal representation ..
+    if isinstance(value, float):
+        shortest = repr(value)
+        number = Decimal(shortest)
+    else:
+        number = Decimal(value)
+
+    # .. NaN and the infinities have no digits ..
+    if not number.is_finite():
+        out = _encode_special_numeric(number)
+        return out
+
+    decimal_sign, decimal_digits, exponent = number.as_tuple()
+    exponent = cast_('int', exponent)
+
+    if decimal_sign:
+        sign = _numeric_negative
+    else:
+        sign = _numeric_positive
+
+    # .. the decimal digits become one integer ..
+    coefficient = 0
+
+    for decimal_digit in decimal_digits:
+        coefficient = coefficient * _decimal_base + decimal_digit
+
+    # .. which is scaled so the decimal point falls on a boundary of the base 10000 digits ..
+    if exponent >= 0:
+        coefficient *= _decimal_base ** exponent
+        scale = 0
+    else:
+        scale = -exponent
+
+    padding = -scale % _numeric_base_digits
+    coefficient *= _decimal_base ** padding
+
+    padded_scale = scale + padding
+    fraction_digit_count = padded_scale // _numeric_base_digits
+
+    # .. split into the base 10000 digits, least significant first ..
+    digits:'anylist' = []
+
+    while coefficient:
+        coefficient, digit = divmod(coefficient, _numeric_base)
+        digits.append(digit)
+
+    digit_count = len(digits)
+    weight = digit_count - 1 - fraction_digit_count
+
+    # .. the trailing zero digits are implied by the weight ..
+    first_nonzero = 0
+
+    while first_nonzero < digit_count and digits[first_nonzero] == 0:
+        first_nonzero += 1
+
+    digits = digits[first_nonzero:]
+    digits.reverse()
+
+    # .. a zero has no digits at all ..
+    if not digits:
+        weight = 0
+        sign = _numeric_positive
+
+    # .. and the digits follow the header.
+    digit_count = len(digits)
+
+    out = bytearray(_numeric_header.pack(digit_count, weight, sign, scale))
+
+    for digit in digits:
+        packed = _int2.pack(digit)
+        out.extend(packed)
+
+    out = bytes(out)
+    return out
+
+# ################################################################################################################################
+
 def _encode_since(value:'datetime', epoch:'datetime') -> 'bytes':
     """ Encodes a timestamp as the number of microseconds since the epoch given.
     """
@@ -174,6 +288,7 @@ _encoders = {
     'BYTEA': _encode_bytes,
     'DOUBLE PRECISION': _encode_float8,
     'INTEGER': _encode_int4,
+    'NUMERIC': _encode_numeric,
     'SMALLINT': _encode_int2,
     'TEXT': _encode_text,
     'TIMESTAMP WITH TIME ZONE': _encode_timestamptz,

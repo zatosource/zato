@@ -15,7 +15,6 @@ from datetime import timezone
 
 # SQLAlchemy
 from sqlalchemy import DateTime, LargeBinary, String
-from sqlalchemy.dialects.mysql import DATETIME as MySQLDateTime, LONGBLOB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.types import TypeDecorator
@@ -48,7 +47,6 @@ if 0:
 
 # Recognized database types
 Type_SQLite     = 'sqlite'
-Type_MySQL      = 'mysql'
 Type_PostgreSQL = 'postgresql'
 
 # What is used when the type variable is not set
@@ -60,16 +58,12 @@ Default_SSL = False
 # When SSL is on, the server certificate is verified unless turned off explicitly
 Default_SSL_Verify = True
 
-# Binary content, raw bytes on every database - a BLOB of MySQL holds 64 KB and LONGBLOB holds 4 GB.
-Binary_Type = LargeBinary().with_variant(LONGBLOB(), Type_MySQL)
-
-# The number of fractional digits of a second MySQL keeps in a DATETIME column.
-_mysql_datetime_precision = 6
+# Binary content, raw bytes on every database.
+Binary_Type = LargeBinary()
 
 # The hour a timestamp falls in, in the form YYYY-MM-DDTHH, as Python and each database format it.
 Hour_Period_Format = '%Y-%m-%dT%H'
 _sqlite_hour_format = '%Y-%m-%dT%H'
-_mysql_hour_format = '%Y-%m-%dT%H'
 _postgresql_hour_format = 'YYYY-MM-DD"T"HH24'
 
 # ################################################################################################################################
@@ -77,18 +71,14 @@ _postgresql_hour_format = 'YYYY-MM-DD"T"HH24'
 
 class UTC_DateTime(TypeDecorator):
     """ A point in time in UTC. It accepts timezone-aware datetimes, keeps them in UTC and returns them timezone-aware
-    in UTC on every database. PostgreSQL stores a timestamp with a time zone, MySQL stores a DATETIME with microseconds
-    and SQLite stores the text form SQLAlchemy defines for its DATETIME type.
+    in UTC on every database. PostgreSQL stores a timestamp with a time zone and SQLite stores the text form
+    SQLAlchemy defines for its DATETIME type.
     """
     impl = DateTime
     cache_ok = True
 
     def load_dialect_impl(self, dialect:'Dialect') -> 'TypeEngine':
-
-        if dialect.name == Type_MySQL:
-            datetime_type = MySQLDateTime(fsp=_mysql_datetime_precision)
-        else:
-            datetime_type = DateTime(timezone=True)
+        datetime_type = DateTime(timezone=True)
 
         out = dialect.type_descriptor(datetime_type)
         return out
@@ -104,7 +94,7 @@ class UTC_DateTime(TypeDecorator):
         # .. every value is stored in UTC ..
         out = value.astimezone(timezone.utc)
 
-        # .. and the databases whose type has no time zone receive it without one.
+        # .. and SQLite, whose type has no time zone, receives it without one.
         if dialect.name != Type_PostgreSQL:
             out = out.replace(tzinfo=None)
 
@@ -122,7 +112,7 @@ class UTC_DateTime(TypeDecorator):
         if dialect.name == Type_PostgreSQL:
             out = value.astimezone(timezone.utc)
 
-        # .. while the other databases return it in UTC without a time zone.
+        # .. while SQLite returns it in UTC without a time zone.
         else:
             out = value.replace(tzinfo=timezone.utc)
 
@@ -166,18 +156,6 @@ def compile_hour_period_sqlite(element:'_HourPeriod', compiler:'SQLCompiler', **
 
 # ################################################################################################################################
 
-@compiles(_HourPeriod, Type_MySQL)
-def compile_hour_period_mysql(element:'_HourPeriod', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
-
-    # The driver interpolates parameters with percent signs, so the format's own signs are escaped.
-    column = compiler.process(element.clauses, **kwargs)
-    hour_format = compiler.post_process_text(_mysql_hour_format)
-
-    out = f"DATE_FORMAT({column}, '{hour_format}')"
-    return out
-
-# ################################################################################################################################
-
 @compiles(_HourPeriod, Type_PostgreSQL)
 def compile_hour_period_postgresql(element:'_HourPeriod', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
     column = compiler.process(element.clauses, **kwargs)
@@ -192,7 +170,15 @@ class EnvDBConfig:
     selecting it, its default SQLite file name and the schema it needs.
     """
 
-    def __init__(self, *, env_prefix:'str', sqlite_file_name:'str', metadata:'MetaData', needs_pool:'bool'=False) -> 'None':
+    def __init__(
+        self,
+        *,
+        env_prefix:'str',
+        sqlite_file_name:'str',
+        metadata:'MetaData',
+        needs_pool:'bool' = False,
+        needs_background_checkpoint:'bool' = False,
+        ) -> 'None':
 
         self.env_prefix = env_prefix
         self.sqlite_file_name = sqlite_file_name
@@ -203,6 +189,9 @@ class EnvDBConfig:
         # and each close checkpoints the WAL, costing more than ten milliseconds. Stores with
         # many small transactions, such as pub/sub, need a real pool instead.
         self.needs_pool = needs_pool
+
+        # Whether the WAL of a SQLite database is checkpointed in a thread of its own rather than by the commits
+        self.needs_background_checkpoint = needs_background_checkpoint
 
         # The full names of the environment variables selecting and configuring the database
         self.env_type     = f'{env_prefix}Type'

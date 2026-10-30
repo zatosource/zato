@@ -14,7 +14,7 @@ import pytest
 
 # SQLAlchemy
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Double, event as sa_event, Integer, LargeBinary, MetaData, \
-    select, SmallInteger, String, Table, Text
+    Numeric, select, SmallInteger, String, Table, Text
 
 # Zato
 from zato.common.db_env.common import UTC_DateTime
@@ -56,11 +56,17 @@ _target_table = Table('copy_target', _metadata,
     Column('created_at', DateTime(timezone=True)),
     Column('local_time', DateTime()),
     Column('event_time', UTC_DateTime()),
+    Column('amount', Numeric(20, 6, asdecimal=False)),
 )
 
 # The columns the rows of a test fill, without the identifier.
 _value_columns = ('event_id', 'attempt', 'priority', 'kind', 'data', 'content', 'is_final', 'score', 'created_at',
-    'local_time', 'event_time')
+    'local_time', 'event_time', 'amount')
+
+# Numbers a NUMERIC(20, 6) column holds - integers, fractions, values on and off the boundaries of
+# its base 10000 digits, and values with more decimal places than the column keeps.
+_amounts = [0, 1, -1, 10_000, 100_000_000, 0.0001, 0.000001, 1.5, -0.5, 0.1, 123456789.123456, -98765.4321,
+    99999999999999.99, 0.1234567, 7.0000005, 2_147_483_648]
 
 # A time zone two hours east of UTC.
 _east_zone = timezone(timedelta(hours=2))
@@ -87,6 +93,7 @@ def _new_rows() -> 'dictlist':
             'created_at': datetime(2026, 10, 29, 12, 0, 0, 123456, tzinfo=timezone.utc),
             'local_time': datetime(1999, 12, 31, 23, 59, 59, 999999),
             'event_time': datetime(2026, 10, 29, 14, 0, 0, tzinfo=_east_zone),
+            'amount': 1250,
         },
         {
             'event_id': 2,
@@ -100,6 +107,7 @@ def _new_rows() -> 'dictlist':
             'created_at': None,
             'local_time': None,
             'event_time': None,
+            'amount': None,
         },
         {
             'event_id': 3,
@@ -113,6 +121,7 @@ def _new_rows() -> 'dictlist':
             'created_at': datetime(1970, 1, 1, tzinfo=timezone.utc),
             'local_time': datetime(2024, 2, 29, 12, 34, 56, 789012),
             'event_time': datetime(2000, 1, 1, tzinfo=timezone.utc),
+            'amount': -1234.5678,
         },
     ]
 
@@ -191,6 +200,29 @@ class TestCopyRows:
         for copied_row, inserted_row in zip(copied, inserted):
             for name in _value_columns:
                 assert copied_row[name] == inserted_row[name], name
+
+    def test_numeric_same_as_insert(self, engine:'Engine', target_table:'Table') -> 'None':
+        rows:'dictlist' = []
+
+        for amount in _amounts:
+            rows.append({'amount': amount})
+
+        with engine.begin() as connection:
+            copy_rows(connection, target_table, rows)
+
+        with engine.begin() as connection:
+            _ = connection.execute(target_table.insert(), rows)
+
+        stored = _read_rows(engine)
+        amount_count = len(_amounts)
+
+        copied = stored[:amount_count]
+        inserted = stored[amount_count:]
+
+        assert len(inserted) == amount_count
+
+        for copied_row, inserted_row in zip(copied, inserted):
+            assert copied_row['amount'] == inserted_row['amount'], inserted_row['amount']
 
     def test_rollback(self, engine:'Engine', target_table:'Table') -> 'None':
         rows = _new_rows()

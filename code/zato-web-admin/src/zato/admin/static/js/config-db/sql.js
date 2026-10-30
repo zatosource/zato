@@ -33,7 +33,6 @@
         // The default port each database type listens on
         default_ports: {
             'sqlite': '',
-            'mysql': '3306',
             'postgresql': '5432'
         },
 
