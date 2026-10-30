@@ -10,7 +10,9 @@ is enriched with before it reaches the browser.
 """
 
 # SQLAlchemy
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, String
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.functions import FunctionElement
 
 # Zato
 from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_numeric_columns, _row_time_columns, \
@@ -21,16 +23,19 @@ from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.audit_log.resubmit import Resend_Hop_Service
 from zato.common.audit_log.service import Attribute_Channel
+from zato.common.db_env.common import Type_SQLite
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.sql.compiler import SQLCompiler
     from zato.common.typing_ import any_, anydict, anylist
     any_ = any_
     anydict = anydict
     anylist = anylist
+    SQLCompiler = SQLCompiler
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,7 +46,35 @@ _checksum_attr = 'checksum'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _normalize_row(row:'anydict') -> 'None':
+class _NotIndexed(FunctionElement):
+    """ A text column whose condition the database does not use to choose an index.
+    """
+    type = String()
+    name = 'not_indexed'
+    inherit_cache = True
+
+# ################################################################################################################################
+
+@compiles(_NotIndexed)
+def compile_not_indexed(element:'_NotIndexed', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+    out = compiler.process(element.clauses, **kwargs)
+    return out
+
+# ################################################################################################################################
+
+@compiles(_NotIndexed, Type_SQLite)
+def compile_not_indexed_sqlite(element:'_NotIndexed', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+
+    # SQLite does not use a condition on a column under the unary plus operator to constrain an index.
+    column = compiler.process(element.clauses, **kwargs)
+    out = '+' + column
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def normalize_row(row:'anydict') -> 'None':
     """ Turns the NULLs of one row's text columns into empty strings and its timestamps into
     their ISO 8601 form, so that every cell the frontend reads is a value of the type its column says it is.
     """
@@ -80,7 +113,7 @@ def _group_by_source(rows:'anylist') -> 'anydict':
 
 # ################################################################################################################################
 
-def _hydrate_rows(connection:'any_', rows:'anylist') -> 'None':
+def hydrate_rows(connection:'any_', rows:'anylist') -> 'None':
     """ Brings a set of rows read straight out of the event table up to the shape the frontend reads,
     whatever sources they came from - the same shape a page of a listing arrives in, so one row
     renderer serves both.
@@ -221,10 +254,15 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
 
     is_resubmit_of_row = event_table.c.correl_id.in_(cids)
 
+    # SQLite has no statistics to tell that the correlation ids select far fewer rows than the source
+    # or the outcome do, so only the correlation ids are left to choose its index by.
+    unindexed_source = _NotIndexed(event_table.c.source)
+    unindexed_outcome = _NotIndexed(event_table.c.outcome)
+
     conditions = and_(
-        event_table.c.source == source,
+        unindexed_source == source,
         is_resubmit_of_row,
-        event_table.c.outcome == AuditOutcome.OK,
+        unindexed_outcome == AuditOutcome.OK,
     )
 
     statement = select(event_table.c.correl_id).where(conditions)

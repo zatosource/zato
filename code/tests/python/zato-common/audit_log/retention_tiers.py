@@ -155,7 +155,7 @@ def _count_outstanding(source:'str') -> 'int':
     """
     engine = get_audit_engine()
 
-    conditions = outstanding_conditions(source, AuditEvent.Message_Sent, AuditEvent.Ack_Received, True)
+    conditions = outstanding_conditions(source)
 
     query = select(func.count())
     query = query.select_from(event_table)

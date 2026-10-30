@@ -15,17 +15,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 
 # SQLAlchemy
-from sqlalchemy import and_, exists, select
+from sqlalchemy import select
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.audit_log.api import event_table, AuditEvent
+from zato.common.audit_log.common import event_open_table, event_table, exchange_pairs
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anydict, anylist
+    anydict = anydict
     anylist = anylist
 
 # ################################################################################################################################
@@ -65,51 +66,28 @@ def _new_outcome_filter(open_outcome:'str') -> 'OutstandingFilter':
 # ################################################################################################################################
 
 # The sources whose events can be outstanding at all - what opens and what closes
-# each one's exchanges.
-source_outstanding = {
-    'mllp-outgoing': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
+# each one's exchanges ..
+source_outstanding:'anydict' = {}
 
-    # A scheduler run is one row updated in place - outstanding means it is still running
-    'scheduler': _new_outcome_filter(SCHEDULER.OUTCOME.RUNNING),
-}
+for _pair in exchange_pairs:
+    source_outstanding[_pair.source] = _new_outstanding_filter(_pair.open_event, _pair.close_event, _pair.needs_object_name_match)
+
+# .. and a scheduler run, which is one row updated in place - outstanding means it is still running.
+source_outstanding['scheduler'] = _new_outcome_filter(SCHEDULER.OUTCOME.RUNNING)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def outstanding_conditions(
-    source:'str',
-    open_event:'str',
-    close_event:'str',
-    needs_object_name_match:'bool',
-    ) -> 'anylist':
+def outstanding_conditions(source:'str') -> 'anylist':
     """ Builds the WHERE conditions selecting the open events of one source whose closing event
-    has not arrived. A closing event always matches on the message id, and the object name match
-    additionally requires it to have been recorded under the same object as the event it closes.
+    has not arrived, which the table of open exchanges holds.
     """
+    open_event_ids = select(event_open_table.c.event_id)
+    open_event_ids = open_event_ids.where(event_open_table.c.source == source)
 
-    # A closing event matches on the same source and message id ..
-    closing = event_table.alias('closing')
+    is_open = event_table.c.id.in_(open_event_ids)
 
-    match_conditions = [
-        closing.c.source == source,
-        closing.c.event_type == close_event,
-        closing.c.msg_id == event_table.c.msg_id,
-    ]
-
-    # .. and, for sources whose acknowledgments echo the partner pair, on the pair too.
-    if needs_object_name_match:
-        object_name_matches = closing.c.object_name == event_table.c.object_name
-        match_conditions.append(object_name_matches)
-
-    close_conditions = and_(*match_conditions)
-    close_select = select(closing.c.id)
-    close_select = close_select.where(close_conditions)
-    close_exists = exists(close_select)
-
-    out:'anylist' = [
-        event_table.c.event_type == open_event,
-        ~close_exists,
-    ]
+    out:'anylist' = [is_open]
 
     return out
 

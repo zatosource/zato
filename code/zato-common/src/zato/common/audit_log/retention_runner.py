@@ -12,6 +12,8 @@ from threading import Event, Lock, Thread
 from time import monotonic
 
 # Zato
+from zato.common.audit_log.common import event_count_table
+from zato.common.audit_log.event_count import compact_event_counts
 from zato.common.audit_log.retention import run_retention
 from zato.common.db_env.engine import call_database
 from zato.common.util.api import utcnow
@@ -21,8 +23,10 @@ from zato.common.util.api import utcnow
 
 if 0:
     from sqlalchemy.engine import Engine
+    from zato.common.typing_ import anydict
 
     # Dummy assignments to satisfy type checkers
+    anydict = anydict
     Engine = Engine
 
 # ################################################################################################################################
@@ -58,6 +62,9 @@ class RetentionRunner:
 
         # The thread starts with the first request
         self._is_started = False
+
+        # The highest id of the count table of each engine that its previous compaction left behind
+        self._compacted_up_to:'anydict' = {}
 
 # ################################################################################################################################
 
@@ -107,6 +114,26 @@ class RetentionRunner:
                 retention_elapsed_ms = retention_elapsed * 1000
 
                 logger.debug('Audit log retention completed in %.1f ms', retention_elapsed_ms)
+
+                # The count rows that the writes and the retention above added are compacted next.
+                self._compact(engine)
+
+# ################################################################################################################################
+
+    def _compact(self, engine:'Engine') -> 'None':
+        """ Compacts the count table of one engine's database, starting above the highest id its previous compaction saw.
+        """
+        if engine in self._compacted_up_to:
+            compacted_up_to = self._compacted_up_to[engine]
+        else:
+            compacted_up_to = 0
+
+        try:
+            compacted_up_to = call_database(engine, compact_event_counts, engine, event_count_table, compacted_up_to)
+        except Exception:
+            logger.exception('Audit log event counts could not be compacted')
+        else:
+            self._compacted_up_to[engine] = compacted_up_to
 
 # ################################################################################################################################
 # ################################################################################################################################

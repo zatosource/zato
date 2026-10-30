@@ -17,6 +17,8 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, SSLE
 from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
 
 # Zato
+from zato.common.audit_log.event_count import register_event_count
+from zato.common.audit_log.event_open import new_exchange_pair, register_event_open
 from zato.common.audit_log.search_index import register_search_indexes
 from zato.common.db_env.common import Binary_Type, UTC_DateTime
 from zato.common.exception import BackendInvocationError
@@ -465,6 +467,14 @@ _endpoint_column = String(_endpoint_column_len)
 _attr_number_column = Numeric(20, 6, asdecimal=False)
 _time_column = UTC_DateTime()
 
+# A page of the listing is one window of the events ordered by the time they happened, newest first,
+# with ids breaking ties, and these indexes hold that order for all events, for one source and for one outcome.
+_ordered_indexes = [
+    Index('idx_event_time', 'event_time', 'id'),
+    Index('idx_event_source_time', 'source', 'event_time', 'id'),
+    Index('idx_event_outcome_time', 'outcome', 'event_time', 'id'),
+]
+
 # ################################################################################################################################
 
 _event_columns = [
@@ -521,7 +531,55 @@ _event_columns = [
     Index('idx_event_commit_id', 'commit_id', 'id'),
 ]
 
+_event_columns.extend(_ordered_indexes)
+
 event_table = Table('event', metadata, *_event_columns)
+
+# ################################################################################################################################
+
+# The number of events of each minute and key the listing filters by, signed, so that inserts, updates and deletions
+# each add rows of their own. The key columns have the names and types of the event columns, so the conditions
+# of a search apply to both tables alike.
+_event_count_columns = [
+    _new_id_column(),
+    Column('period_start', _time_column),
+    Column('source', _short_column),
+    Column('object_name', _short_column),
+    Column('event_type', _short_column),
+    Column('outcome', _short_column),
+    Column('status', _short_column),
+    Column('event_count', BigInteger),
+
+    # The index holds every column a read of the counts uses, so a range of minutes is read from the index alone
+    Index('idx_event_count_period', 'period_start', 'source', 'object_name', 'event_type', 'outcome', 'status', 'event_count'),
+]
+
+event_count_table = Table('event_count', metadata, *_event_count_columns)
+
+register_event_count(event_table, event_count_table, _ordered_indexes)
+
+# ################################################################################################################################
+
+# The exchanges that are open - each event that opens one while no event that closes it exists.
+_event_open_columns = [
+    _new_id_column(),
+    Column('event_id', BigInteger),
+    Column('source', _short_column),
+    Column('msg_id', _short_column),
+    Column('object_name', _short_column),
+    Index('idx_event_open_event', 'event_id'),
+    Index('idx_event_open_exchange', 'source', 'msg_id', 'object_name'),
+]
+
+event_open_table = Table('event_open', metadata, *_event_open_columns)
+
+# A sent HL7 message is open until its acknowledgment, recorded under the same partner pair, arrives.
+_mllp_exchange = new_exchange_pair(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, AuditEvent.Ack_Received, True)
+
+# The sources whose exchanges pair an opening event with a closing one
+exchange_pairs = [_mllp_exchange]
+
+register_event_open(event_table, event_open_table, exchange_pairs)
 
 # ################################################################################################################################
 
