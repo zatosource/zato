@@ -612,6 +612,11 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/zato-server/test/zato/commands_/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_commands -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+# The TLS material listener reads inotify events in an OS thread, which a gevent-patched process blocks
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/file_transfer/test_tls_material_listener.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_tls_material_listener -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 # fuzz_disabled
 test-server-fuzz: ## Server property, fuzz and mutation tests.

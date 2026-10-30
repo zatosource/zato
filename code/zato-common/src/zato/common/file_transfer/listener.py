@@ -281,6 +281,12 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
 # ################################################################################################################################
 
+    def _is_enmasse_path(self, event_path:'str') -> 'bool':
+        out = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
+        return out
+
+# ################################################################################################################################
+
     def _is_event_relevant(self, event_path:'str', event_type:'str') -> 'bool':
         """ Check if event should be processed based on path and type.
         """
@@ -290,7 +296,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
         # Ignore all directory events (not just modified ones)
         # But make an exception for enmasse files which we always want to process
-        is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
+        is_enmasse = self._is_enmasse_path(event_path)
 
         # Skip all directory events (unless it's enmasse-related)
         if os.path.isdir(event_path) and not is_enmasse:
@@ -541,6 +547,11 @@ class TLSMaterialEventHandler(ZatoFileSystemEventHandler):
     """ Reports changed certificates, keys and CA certificates to the server, which refreshes
     the outgoing connections that read them. Only the path of a file is sent, never its contents.
     """
+
+    def _is_enmasse_path(self, event_path:'str') -> 'bool':
+        return False
+
+# ################################################################################################################################
 
     def get_request_body(self, event_path:'str') -> 'str':
         out = dumps({'payload_name': event_path})
