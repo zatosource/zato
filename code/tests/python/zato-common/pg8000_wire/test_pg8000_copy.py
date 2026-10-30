@@ -17,8 +17,6 @@ from sqlalchemy import BigInteger, Boolean, Column, DateTime, Double, event as s
     select, SmallInteger, String, Table, Text
 
 # Zato
-from zato.common.audit_log.common import event_body_table, event_link_table
-from zato.common.b2b.common.schema import b2b_event_attr_names, b2b_event_table, open_table
 from zato.common.db_env.common import UTC_DateTime
 from zato.common.db_env.pg8000_copy import copy_rows, encode_rows, get_copy_plan
 from zato.common.db_env.pg8000_wire import Max_Inline_Size
@@ -29,13 +27,12 @@ from zato.common.db_env.pg8000_wire import Max_Inline_Size
 if 0:
     from collections.abc import Iterator
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, anylist, dictlist, stranydict, strlist
+    from zato.common.typing_ import any_, anylist, dictlist, strlist
 
     any_ = any_
     anylist = anylist
     dictlist = dictlist
     Engine = Engine
-    stranydict = stranydict
     strlist = strlist
 
     tablegen = Iterator[Table]
@@ -222,66 +219,6 @@ class TestCopyRows:
         expected = f'COPY copy_target ({column_list}) FROM STDIN WITH (FORMAT binary)'
 
         assert statements == [expected]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestCommitTables:
-    """ The tables the commits of B2B messages fill with COPY store the rows the commits write.
-    """
-
-    def test_tables(self, engine:'Engine') -> 'None':
-        tables = (b2b_event_table, event_body_table, event_link_table, open_table)
-        event_time = datetime(2026, 10, 29, 12, 0, 0, 250000, tzinfo=timezone.utc)
-
-        # The trigram index of the B2B events needs its extension.
-        with engine.begin() as connection:
-            _ = connection.exec_driver_sql('create extension if not exists pg_trgm')
-
-        for table in tables:
-            table.create(engine)
-
-        attr_row:'stranydict' = {'event_id': 1}
-
-        for name in b2b_event_attr_names:
-            attr_row[name] = None
-
-        attr_row['from_party'] = 'Jane Doe'
-        attr_row['service'] = 'order.create'
-
-        rows = {
-            b2b_event_table: [attr_row],
-            event_body_table: [
-                {'event_id': 1, 'kind': 'request', 'event_time': event_time, 'data': '<Order/>', 'content': None},
-                {'event_id': 1, 'kind': 'attachment', 'event_time': event_time, 'data': '{"name": "invoice.pdf"}',
-                    'content': _large_content},
-            ],
-            event_link_table: [{'child_event_id': 2, 'parent_event_id': 1, 'link_type': 'response'}],
-            open_table: [{'kind': 'exchange', 'source': 'b2b', 'server_name': 'server1', 'message_id': 'msg-1', 'event_id': 1}],
-        }
-
-        with engine.begin() as connection:
-            for table in tables:
-                copy_rows(connection, table, rows[table])
-
-        # Each table has the rows it was given, apart from the identifiers its sequence assigned, if it has one.
-        with engine.connect() as connection:
-            for table in tables:
-                stored:'dictlist' = []
-                has_sequence = 'id' in table.c
-
-                for row in connection.execute(select(table)):
-                    values = dict(row._mapping)
-
-                    if has_sequence:
-                        del values['id']
-
-                    stored.append(values)
-
-                assert stored == rows[table], table.name
-
-        for table in reversed(tables):
-            table.drop(engine)
 
 # ################################################################################################################################
 # ################################################################################################################################

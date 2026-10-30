@@ -16,6 +16,7 @@ import threading
 import time
 from base64 import b64decode
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 from http.client import OK, UNAUTHORIZED
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlsplit
@@ -36,6 +37,9 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# The address the server binds to unless told otherwise
+_Default_Host = '127.0.0.1'
 
 # What the server responds with when a path has no explicit configuration
 _Default_Response_Status = OK
@@ -58,6 +62,21 @@ _Certificate_Key_Size = 2048
 
 # The public exponent for the RSA key above
 _Certificate_Public_Exponent = 65537
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_peer_fingerprint(connection:'any_') -> 'str':
+    """ Returns the SHA-256 fingerprint of the certificate that the client presented,
+    or an empty string when the connection is not TLS or no certificate was presented.
+    """
+    out = ''
+
+    if isinstance(connection, ssl.SSLSocket):
+        if certificate_der := connection.getpeercert(binary_form=True):
+            out = sha256(certificate_der).hexdigest()
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,6 +112,10 @@ class _RecordingHandler(BaseHTTPRequestHandler):
             'query': query,
             'headers': dict(self.headers.items()),
             'body': body,
+
+            # Which certificate the client presented and from which port, which tells one TLS connection from another
+            'client_cert_fingerprint': _get_peer_fingerprint(self.connection),
+            'client_port': self.client_address[1],
         }
 
         # Subclasses may enrich the record, e.g. with the authenticated principal
@@ -175,7 +198,7 @@ class HTTPTestServer:
     """
 
     def __init__(self) -> 'None':
-        self.host = '127.0.0.1'
+        self.host = _Default_Host
         self.port = 0
         self.scheme = 'http'
         self._httpd:'any_' = None
@@ -349,14 +372,17 @@ class HTTPSTestServer(HTTPTestServer):
     a mutual-TLS server backed by a full CA, for mTLS security definition tests.
     """
 
-    def __init__(self, require_client_cert:'bool'=False) -> 'None':
+    def __init__(self, require_client_cert:'bool'=False, host:'str'=_Default_Host, tls_material:'any_'=None) -> 'None':
         super().__init__()
 
+        self.host = host
         self.scheme = 'https'
         self.require_client_cert = require_client_cert
 
         # Set only in the mutual-TLS mode - the CA plus the server and client material.
-        self.tls_material:'any_' = None
+        # Material that the caller provides is the caller's to remove, the server removes only what it builds itself.
+        self.tls_material = tls_material
+        self.owns_tls_material = tls_material is None
 
         # Set only in the plain HTTPS mode - the self-signed certificate and its key.
         self._certificate_path = ''
@@ -386,7 +412,9 @@ class HTTPSTestServer(HTTPTestServer):
             from certs import build_tls_material
 
             # Mutual TLS needs a full CA so the client certificate can chain up to it ..
-            self.tls_material = build_tls_material(self.host)
+            if self.owns_tls_material:
+                self.tls_material = build_tls_material(self.host)
+
             ssl_context.load_cert_chain(self.tls_material.server_certificate_path, self.tls_material.server_key_path)
 
             # .. and the client certificate is mandatory and pinned to that CA.
@@ -415,8 +443,9 @@ class HTTPSTestServer(HTTPTestServer):
         """
         super().stop()
 
-        if self.tls_material:
-            shutil.rmtree(self.tls_material.directory, ignore_errors=True)
+        if self.require_client_cert:
+            if self.owns_tls_material:
+                shutil.rmtree(self.tls_material.directory, ignore_errors=True)
         else:
             os.remove(self._certificate_path)
             os.remove(self._key_path)

@@ -27,12 +27,13 @@ from zato.common.soap.envelope import attach_body, build_envelope, build_fault, 
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import enforce_wss
+from zato.common.typing_ import cast_
 from zato.common.util.xml_.core import XMLException
 from zato.common.util.xml_.mime_ import new_content_id, Part
 
 # ################################################################################################################################
 
-from certs import build_tls_material
+from certs import build_tls_material, get_peer_fingerprint
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,6 +46,9 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# The address the server binds to unless told otherwise
+_Default_Host = '127.0.0.1'
 
 # How long to wait for expected requests to arrive.
 _Request_Wait_Timeout = 10
@@ -85,6 +89,10 @@ class _Handler(BaseHTTPRequestHandler):
             'parts': [],
             'addressing': None,
             'body': None,
+
+            # Which certificate the client presented and from which port, which tells one TLS connection from another
+            'client_cert_fingerprint': get_peer_fingerprint(self.connection),
+            'client_port': self.client_address[1],
         }
 
         try:
@@ -339,14 +347,23 @@ class SOAPTestServer:
     """ A live SOAP server for client tests. It records every request and answers per-path,
     over plain HTTP, HTTPS, or HTTPS with mandatory client certificates for mutual-TLS scenarios.
     """
-    def __init__(self, tls:'bool'=False, require_client_cert:'bool'=False) -> 'None':
-        self.host = '127.0.0.1'
+    def __init__(
+        self,
+        tls:'bool'=False,
+        require_client_cert:'bool'=False,
+        host:'str'=_Default_Host,
+        tls_material:'TLSMaterial | None'=None,
+        ) -> 'None':
+        self.host = host
         self.port = 0
         self.tls = tls
         self.require_client_cert = require_client_cert
         self.scheme = 'https' if tls else 'http'
 
-        self.tls_material:'TLSMaterial | None' = None
+        # Material that the caller provides is the caller's to remove, the server removes only what it builds itself.
+        self.tls_material = tls_material
+        self.owns_tls_material = tls_material is None
+
         self._httpd:'any_' = None
         self._thread:'any_' = None
 
@@ -360,15 +377,19 @@ class SOAPTestServer:
         self.port = self._httpd.server_address[1]
 
         if self.tls:
-            self.tls_material = build_tls_material(self.host)
+            if self.owns_tls_material:
+                self.tls_material = build_tls_material(self.host)
+
+            # Either way, there is material to serve with from now on
+            tls_material = cast_('TLSMaterial', self.tls_material)
 
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-            ssl_context.load_cert_chain(self.tls_material.server_certificate_path, self.tls_material.server_key_path)
+            ssl_context.load_cert_chain(tls_material.server_certificate_path, tls_material.server_key_path)
 
             # Mutual TLS makes the client certificate mandatory and pins it to our test CA.
             if self.require_client_cert:
                 ssl_context.verify_mode = ssl.CERT_REQUIRED
-                ssl_context.load_verify_locations(self.tls_material.ca_path)
+                ssl_context.load_verify_locations(tls_material.ca_path)
 
             self._httpd.socket = ssl_context.wrap_socket(self._httpd.socket, server_side=True)
 
@@ -385,7 +406,7 @@ class SOAPTestServer:
         self._httpd.shutdown()
         self._httpd.server_close()
 
-        if self.tls_material:
+        if self.tls_material and self.owns_tls_material:
             shutil.rmtree(self.tls_material.directory, ignore_errors=True)
 
         logger.info('[SOAPTestServer] stopped on %s', self.address)

@@ -23,6 +23,7 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.util.secrets import is_encrypted
+from zato.common.odb.model import MTLSSecurity
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -32,6 +33,14 @@ from zato.common.typing_ import cast_
 if 0:
     from zato.common.typing_ import any_, anylist, stranydict
     any_, anylist, stranydict = any_, anylist, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The material that mTLS definitions name in the use_for tests
+_mtls_cert_path = '/opt/hot-deploy/ssl/outgoing/use-for-client-cert.pem'
+_mtls_key_path = '/opt/hot-deploy/ssl/outgoing/use-for-client-key.pem'
+_mtls_fingerprint = '2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -185,6 +194,7 @@ class TestEnmasseSecurity(TestCase):
         self.assertTrue(outgoing.is_active)
 
         opaque = json.loads(outgoing.opaque1)
+        self.assertEqual(opaque['use_for'], 'outgoing')
         self.assertEqual(opaque['cert_path'], '/opt/hot-deploy/ssl/enmasse-client-cert.pem')
         self.assertEqual(opaque['key_path'], '/opt/hot-deploy/ssl/enmasse-client-key.pem')
         self.assertEqual(opaque['ca_certs_path'], '/opt/hot-deploy/ssl/enmasse-remote-ca.pem')
@@ -194,8 +204,177 @@ class TestEnmasseSecurity(TestCase):
         self.assertTrue(channel.is_active)
 
         opaque = json.loads(channel.opaque1)
+        self.assertEqual(opaque['use_for'], 'channels')
         self.assertEqual(opaque['client_cert_fingerprint'], '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')
         self.assertEqual(opaque['client_cert_subject_dn'], 'CN=enmasse.client,O=Enmasse,C=US')
+
+# ################################################################################################################################
+
+    def _get_mtls_item(self, name:'str', fields:'stranydict') -> 'stranydict':
+        """ Builds a YAML item of an mTLS definition with the given fields.
+        """
+        out:'stranydict' = {
+            'name': name,
+            'type': 'mtls',
+        }
+        out.update(fields)
+        return out
+
+# ################################################################################################################################
+
+    def _get_stored_opaque(self, name:'str') -> 'stranydict':
+        """ Returns the opaque attributes of an mTLS definition as they are stored.
+        """
+        definition = self.session.query(MTLSSecurity).filter_by(name=name).one()
+        out = json.loads(definition.opaque1)
+        return out
+
+# ################################################################################################################################
+
+    def test_mtls_use_for_default(self) -> 'None':
+        """ Test that an mTLS definition without use_for is imported as used with both sides.
+        """
+        self._setup_test_environment()
+
+        item = self._get_mtls_item('enmasse.mtls.use_for.default', {
+            'cert_path': _mtls_cert_path,
+            'client_cert_fingerprint': _mtls_fingerprint,
+        })
+
+        _ = self.security_importer.sync_security_definitions([item], self.session)
+
+        opaque = self._get_stored_opaque('enmasse.mtls.use_for.default')
+        self.assertEqual(opaque['use_for'], 'both')
+        self.assertEqual(opaque['cert_path'], _mtls_cert_path)
+        self.assertEqual(opaque['client_cert_fingerprint'], _mtls_fingerprint)
+
+# ################################################################################################################################
+
+    def test_mtls_use_for_values(self) -> 'None':
+        """ Test that each use is stored with the fields that apply to it, and with the others empty.
+        """
+        self._setup_test_environment()
+
+        channels = self._get_mtls_item('enmasse.mtls.use_for.channels', {
+            'use_for': 'channels',
+            'client_cert_fingerprint': _mtls_fingerprint,
+        })
+
+        outgoing = self._get_mtls_item('enmasse.mtls.use_for.outgoing', {
+            'use_for': 'outgoing',
+            'cert_path': _mtls_cert_path,
+        })
+
+        both = self._get_mtls_item('enmasse.mtls.use_for.both', {
+            'use_for': 'both',
+            'cert_path': _mtls_cert_path,
+            'client_cert_fingerprint': _mtls_fingerprint,
+        })
+
+        _ = self.security_importer.sync_security_definitions([channels, outgoing, both], self.session)
+
+        # A definition used with channels has no outgoing material ..
+        opaque = self._get_stored_opaque('enmasse.mtls.use_for.channels')
+        self.assertEqual(opaque['use_for'], 'channels')
+        self.assertEqual(opaque['client_cert_fingerprint'], _mtls_fingerprint)
+
+        for field in ('cert_path', 'key_path', 'ca_certs_path'):
+            self.assertEqual(opaque[field], '', f'Field {field} of a channels definition')
+
+        # .. a definition used with outgoing connections has no match criteria ..
+        opaque = self._get_stored_opaque('enmasse.mtls.use_for.outgoing')
+        self.assertEqual(opaque['use_for'], 'outgoing')
+        self.assertEqual(opaque['cert_path'], _mtls_cert_path)
+
+        for field in ('client_cert_fingerprint', 'client_cert_subject_dn'):
+            self.assertEqual(opaque[field], '', f'Field {field} of an outgoing definition')
+
+        # .. and a definition used with both has both.
+        opaque = self._get_stored_opaque('enmasse.mtls.use_for.both')
+        self.assertEqual(opaque['use_for'], 'both')
+        self.assertEqual(opaque['cert_path'], _mtls_cert_path)
+        self.assertEqual(opaque['client_cert_fingerprint'], _mtls_fingerprint)
+
+# ################################################################################################################################
+
+    def test_mtls_use_for_unknown_is_refused(self) -> 'None':
+        """ Test that a use that does not exist is refused.
+        """
+        self._setup_test_environment()
+
+        item = self._get_mtls_item('enmasse.mtls.use_for.unknown', {'use_for': 'servers'})
+
+        with self.assertRaises(Exception) as raised:
+            _ = self.security_importer.sync_security_definitions([item], self.session)
+
+        message = raised.exception.args[0]
+        self.assertIn('enmasse.mtls.use_for.unknown', message)
+        self.assertIn('servers', message)
+        self.assertIn('channels, outgoing, both', message)
+
+# ################################################################################################################################
+
+    def test_mtls_field_not_applicable_is_refused(self) -> 'None':
+        """ Test that a field the definition's use never reads is refused.
+        """
+        self._setup_test_environment()
+
+        item = self._get_mtls_item('enmasse.mtls.use_for.not_applicable', {
+            'use_for': 'channels',
+            'client_cert_fingerprint': _mtls_fingerprint,
+            'key_path': _mtls_key_path,
+        })
+
+        with self.assertRaises(Exception) as raised:
+            _ = self.security_importer.sync_security_definitions([item], self.session)
+
+        message = raised.exception.args[0]
+        self.assertIn('enmasse.mtls.use_for.not_applicable', message)
+        self.assertIn('key_path', message)
+        self.assertIn('channels', message)
+
+# ################################################################################################################################
+
+    def test_mtls_stored_without_use_for_is_updated(self) -> 'None':
+        """ Test that a definition stored without use_for counts as used with both sides,
+        and that a YAML file naming another use updates it.
+        """
+        self._setup_test_environment()
+
+        name = 'enmasse.mtls.use_for.stored'
+
+        item = self._get_mtls_item(name, {
+            'cert_path': _mtls_cert_path,
+            'client_cert_fingerprint': _mtls_fingerprint,
+        })
+
+        _ = self.security_importer.sync_security_definitions([dict(item)], self.session)
+
+        # The definition is made to look like one stored before use_for existed ..
+        definition = self.session.query(MTLSSecurity).filter_by(name=name).one()
+        opaque = json.loads(definition.opaque1)
+        del opaque['use_for']
+        definition.opaque1 = json.dumps(opaque)
+        self.session.commit()
+
+        # .. the same YAML item, still without use_for, is not an update ..
+        _, sec_updated = self.security_importer.sync_security_definitions([dict(item)], self.session)
+        self.assertEqual(len(sec_updated), 0, 'A definition stored without use_for is used with both sides')
+
+        # .. while one that names channels is ..
+        channels = self._get_mtls_item(name, {
+            'use_for': 'channels',
+            'client_cert_fingerprint': _mtls_fingerprint,
+        })
+
+        _, sec_updated = self.security_importer.sync_security_definitions([channels], self.session)
+        self.assertEqual(len(sec_updated), 1, 'Expected exactly one updated definition')
+
+        # .. and the outgoing material of the earlier use is gone.
+        opaque = self._get_stored_opaque(name)
+        self.assertEqual(opaque['use_for'], 'channels')
+        self.assertEqual(opaque['cert_path'], '')
+        self.assertEqual(opaque['client_cert_fingerprint'], _mtls_fingerprint)
 
 # ################################################################################################################################
 

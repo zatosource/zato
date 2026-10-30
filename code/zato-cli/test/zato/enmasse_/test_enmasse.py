@@ -100,9 +100,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
             _ = self.invoke_enmasse(config_path, server_dir=self.environment.server_dir)
 
         except ErrorReturnCode as e:
-            stdout:'bytes' = e.stdout # type: bytes
-            stdout = stdout.decode('utf8') # type: ignore
-            stderr:'str' = e.stderr
+            stdout = e.stdout.decode('utf8')
+            stderr = e.stderr.decode('utf8')
 
             self._warn_on_error(stdout, stderr)
             self.fail(f'Caught an exception while invoking enmasse; stdout -> {stdout}')
@@ -226,6 +225,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                 self.assertIn('enmasse.mtls.1', exported_security_by_name, 'enmasse.mtls.1 missing from export')
                 mtls_1 = exported_security_by_name['enmasse.mtls.1']
                 self.assertEqual(mtls_1['type'], 'mtls')
+                self.assertEqual(mtls_1['use_for'], 'outgoing')
+                self.assertNotIn('client_cert_fingerprint', mtls_1)
                 self.assertEqual(mtls_1['cert_path'], '/opt/hot-deploy/ssl/enmasse-client-cert.pem')
                 self.assertEqual(mtls_1['key_path'], '/opt/hot-deploy/ssl/enmasse-client-key.pem')
                 self.assertEqual(mtls_1['ca_certs_path'], '/opt/hot-deploy/ssl/enmasse-remote-ca.pem')
@@ -234,6 +235,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                 self.assertIn('enmasse.mtls.2', exported_security_by_name, 'enmasse.mtls.2 missing from export')
                 mtls_2 = exported_security_by_name['enmasse.mtls.2']
                 self.assertEqual(mtls_2['type'], 'mtls')
+                self.assertEqual(mtls_2['use_for'], 'channels')
+                self.assertNotIn('cert_path', mtls_2)
                 self.assertEqual(
                     mtls_2['client_cert_fingerprint'], '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')
                 self.assertEqual(mtls_2['client_cert_subject_dn'], 'CN=enmasse.client,O=Enmasse,C=US')

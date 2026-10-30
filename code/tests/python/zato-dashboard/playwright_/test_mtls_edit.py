@@ -11,14 +11,15 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.typing_ import any_, cast_
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,10 +28,14 @@ _Page_Url_Pattern = '/zato/security/mtls/'
 
 _Test_Name_Prefix = 'test.mtls.edit.' + CryptoManager.generate_hex_string(32) + '.'
 
+# The fields that an outgoing connection reads and those that a channel reads
+_Outgoing_Field_Names = ('cert_path', 'key_path', 'ca_certs_path')
+_Channel_Field_Names  = ('client_cert_fingerprint', 'client_cert_subject_dn')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_definition(page:'Page', suffix:'str') -> 'dict':
+def _create_definition(page:'Page', suffix:'str', use_for:'str'='both') -> 'dict':
     """ Creates an mTLS definition via the UI and returns its details.
     """
 
@@ -53,6 +58,9 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
     page.fill('#id_client_cert_fingerprint', fingerprint)
     page.fill('#id_client_cert_subject_dn', subject_dn)
 
+    # .. select the use, which disables the fields it does not read, so these are not saved ..
+    _ = page.select_option('#id_use_for', use_for)
+
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
     _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
@@ -63,6 +71,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     out = {
         'name': name,
+        'use_for': use_for,
         'cert_path': cert_path,
         'key_path': key_path,
         'ca_certs_path': ca_certs_path,
@@ -209,6 +218,103 @@ class TestMTLSEdit:
 
         taken_text = cast_('any_', taken_indicator).inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
+
+# ################################################################################################################################
+
+    def test_09_stored_use_is_restored(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a definition used with outgoing connections, opens its edit dialog and verifies
+        that the use is selected and that the match criteria are disabled and empty.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        # Navigate and create a definition ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        _ = page.wait_for_selector('#data-table', state='visible')
+
+        defn = _create_definition(page, 'restored-use', 'outgoing')
+
+        # .. reload so the form is populated from what the server stored ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        _ = page.wait_for_selector('#data-table', state='visible')
+
+        # .. open the edit dialog ..
+        _click_edit_for_row(page, defn['name'])
+
+        # .. the use is the stored one ..
+        use_for = page.input_value('#id_edit-use_for')
+        assert use_for == 'outgoing', f'Expected "outgoing", got: "{use_for}"'
+
+        # .. the outgoing fields are enabled and hold their values ..
+        for field_name in _Outgoing_Field_Names:
+            field_id = f'#id_edit-{field_name}'
+            assert page.is_enabled(field_id), f'Expected {field_id} to be enabled'
+
+            field_value = page.input_value(field_id)
+            assert field_value == defn[field_name], f'Expected "{defn[field_name]}" in {field_id}, got: "{field_value}"'
+
+        # .. and the match criteria are disabled and were never saved.
+        for field_name in _Channel_Field_Names:
+            field_id = f'#id_edit-{field_name}'
+            assert not page.is_enabled(field_id), f'Expected {field_id} to be disabled'
+
+            field_value = page.input_value(field_id)
+            assert field_value == '', f'Expected empty {field_id}, got: "{field_value}"'
+
+# ################################################################################################################################
+
+    def test_10_changed_use_is_saved(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a definition used with both sides, changes its use to channels
+        and verifies that the change is saved and that the outgoing fields are emptied.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        # Navigate and create a definition ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        _ = page.wait_for_selector('#data-table', state='visible')
+
+        defn = _create_definition(page, 'changed-use')
+
+        # .. open the edit dialog and select another use ..
+        _click_edit_for_row(page, defn['name'])
+        _ = page.select_option('#id_edit-use_for', 'channels')
+
+        # .. the outgoing fields are disabled at once ..
+        for field_name in _Outgoing_Field_Names:
+            field_id = f'#id_edit-{field_name}'
+            assert not page.is_enabled(field_id), f'Expected {field_id} to be disabled'
+
+        # .. submit and wait for the dialog to close ..
+        page.click('#edit-div input[type="submit"]')
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        time.sleep(0.3)
+
+        # .. reload so the form is populated from what the server stored ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+        _ = page.wait_for_selector('#data-table', state='visible')
+
+        # .. the row shows no certificate path ..
+        row = cast_('any_', page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))'))
+        cells = row.query_selector_all('td')
+        cert_path_cell_text = cells[3].inner_text().strip()
+        assert cert_path_cell_text == '', f'Expected no certificate path, got: "{cert_path_cell_text}"'
+
+        # .. and the edit dialog opens with the new use and with the match criteria intact.
+        _click_edit_for_row(page, defn['name'])
+
+        use_for = page.input_value('#id_edit-use_for')
+        assert use_for == 'channels', f'Expected "channels", got: "{use_for}"'
+
+        for field_name in _Outgoing_Field_Names:
+            field_value = page.input_value(f'#id_edit-{field_name}')
+            assert field_value == '', f'Expected empty {field_name}, got: "{field_value}"'
+
+        for field_name in _Channel_Field_Names:
+            field_value = page.input_value(f'#id_edit-{field_name}')
+            assert field_value == defn[field_name], f'Expected "{defn[field_name]}" in {field_name}, got: "{field_value}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

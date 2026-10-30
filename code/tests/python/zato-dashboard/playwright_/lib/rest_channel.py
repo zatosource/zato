@@ -657,10 +657,17 @@ def create_ntlm_definition(page:'Page', base_url:'str', name:'str') -> 'anydict'
 
 # ################################################################################################################################
 
-def create_mtls_definition(page:'Page', base_url:'str', name:'str', fields:'anydict | None'=None) -> 'anydict':
+def create_mtls_definition(
+    page:'Page',
+    base_url:'str',
+    name:'str',
+    fields:'anydict | None'=None,
+    use_for:'str'='',
+) -> 'anydict':
     """ Creates an mTLS security definition via the UI and returns its details.
     All the definition's fields other than the name are optional and come from the fields dictionary,
     e.g. cert_path and key_path for outgoing connections or client_cert_fingerprint for channels.
+    The use is selected before the fields are filled, so that only the fields it enables are filled.
     """
 
     form_fields = {
@@ -670,9 +677,32 @@ def create_mtls_definition(page:'Page', base_url:'str', name:'str', fields:'anyd
     if fields:
         form_fields.update(fields)
 
-    _create_definition_on_page(page, base_url, '/zato/security/mtls/', form_fields)
+    # Navigate to the definition list page ..
+    navigate_to_page(page, base_url, '/zato/security/mtls/')
+
+    # .. open the create dialog ..
+    open_create_dialog(page)
+
+    # .. select the use, if one is given, which leaves the form's default in place otherwise ..
+    if use_for:
+        _ = page.select_option('#id_use_for', use_for)
+
+    # .. fill in the fields ..
+    for field_name, value in form_fields.items():
+        page.fill(f'#id_{field_name}', value)
+
+    # .. submit and wait for the dialog to close ..
+    submit_create_form(page)
+
+    # .. and wait for the row to appear.
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = dict(form_fields)
+
+    if use_for:
+        out['use_for'] = use_for
+
     return out
 
 # ################################################################################################################################

@@ -37,10 +37,12 @@ def prepare_mtls_definition(item:'anydict') -> 'None':
         allowed = ', '.join(MTLS.Use_For_List)
         raise Exception(f'Security definition `{name}` -> invalid use_for `{use_for}`, expected one of: {allowed}')
 
-    # .. and so is a field that the definition's use never reads.
+    # .. and so is a field that the definition's use never reads, which is stored empty,
+    # the same way the Dashboard stores it, so that an update clears what an earlier use left behind.
     for field in MTLS.Not_Applicable_Fields[use_for]:
         if item.get(field):
             raise Exception(f'Security definition `{name}` -> `{field}` does not apply to use_for `{use_for}`')
+        item[field] = ''
 
 # ################################################################################################################################
 # ################################################################################################################################

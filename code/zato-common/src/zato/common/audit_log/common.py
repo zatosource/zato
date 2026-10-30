@@ -80,9 +80,6 @@ class AuditSource:
     LLM           = 'llm'
     Odoo          = 'odoo'
 
-    # The messages sent under an ebMS 2.0 agreement, the signals that answer them and the end of each exchange.
-    EbMS2         = 'ebms2'
-
     # The object name is the service, the endpoint is what invoked it.
     Service       = 'service'
 
@@ -145,7 +142,6 @@ _source_label = {
     AuditSource.Scheduler: 'Scheduler',
     AuditSource.LLM: 'LLM',
     AuditSource.Odoo: 'Odoo',
-    AuditSource.EbMS2: 'ebMS 2.0',
     AuditSource.Service: 'Service',
     AuditSource.Microsoft_Cloud: 'Microsoft cloud',
     AuditSource.Certificate: 'Certificate',
@@ -205,26 +201,6 @@ class MCPAttr:
 
 # ################################################################################################################################
 
-class B2BAttr:
-    """ The attributes the events of a B2B exchange have - the parties, the attempt number and the time
-    of the attempt as the sender's clock had it, and, once the exchange ends, its final state, the kind
-    of the signal that ended it and the error code of a failure. The service and the action belong to ebMS.
-    """
-    From_Party  = 'from_party'
-    To_Party    = 'to_party'
-    Service     = 'service'
-    Action      = 'action'
-    Attempt     = 'attempt'
-    Attempt_At  = 'attempt_at'
-    Final_State = 'final_state'
-    Signal_Kind = 'signal_kind'
-    Error_Code  = 'error_code'
-
-    # The earliest deadline of the business transaction of a message, absent when no deadline applies to it.
-    Deadline_At = 'deadline_at'
-
-# ################################################################################################################################
-
 # The searchable attributes each source's events carry in the event_attr table -
 # the free-text search covers them and the Dashboard renders them as columns of their own.
 source_attr_names = {
@@ -245,10 +221,6 @@ source_attr_names = {
 
     # The channel type the invocation came in through.
     AuditSource.Service: ('channel',),
-
-    # The parties and the operation of a message, its delivery attempt and how its exchange ended.
-    AuditSource.EbMS2: (B2BAttr.From_Party, B2BAttr.To_Party, B2BAttr.Service, B2BAttr.Action, B2BAttr.Attempt,
-        B2BAttr.Final_State, B2BAttr.Signal_Kind, B2BAttr.Error_Code),
 
     # How many days the checked certificate had left at check time.
     AuditSource.Certificate: ('days_left',),
@@ -376,34 +348,6 @@ class AuditEvent:
     Cert_Checked           = 'cert-checked'
     Health_Checked         = 'health-checked'
     Test_Transfer_Executed = 'test-transfer-executed'
-
-    # A signal that answers a B2B message the server sent, and the end of the exchange of such a message.
-    Signal_Received   = 'signal-received'
-    Message_Completed = 'message-completed'
-
-    # A B2B message sent again with its stored bytes, and a received one that the application confirmed
-    # or that was handed to it again.
-    Message_Resent      = 'message-resent'
-    Message_Delivered   = 'message-delivered'
-    Message_Redelivered = 'message-redelivered'
-
-    # A received B2B message of an ordered conversation held after a sequence gap, the gap passing its deadline,
-    # the release of the held messages, and the discarding of the conversation.
-    Message_Held           = 'message-held'
-    Sequence_Gap_Timed_Out = 'sequence-gap-timed-out'
-    Sequence_Gap_Released  = 'sequence-gap-released'
-    Conversation_Discarded = 'conversation-discarded'
-
-    # The deliveries to one B2B address suspended after consecutive transport failures, and resumed.
-    Delivery_Suspended = 'delivery-suspended'
-    Delivery_Resumed   = 'delivery-resumed'
-
-    # A B2B business message sent with the deadlines of its business transaction, a business signal or a response
-    # that refers to it, the end of its transaction when a deadline passes first, and when its delivery fails.
-    Business_Message_Sent    = 'business-message-sent'
-    Business_Reply_Received  = 'business-reply-received'
-    Business_Timed_Out       = 'business-timed-out'
-    Business_Delivery_Failed = 'business-delivery-failed'
 
 # ################################################################################################################################
 

@@ -20,7 +20,11 @@ from zato.server.connection.http_soap.outgoing.common import logger, _API_Key, _
 if 0:
     from zato.common.bearer_token import BearerTokenInfoResult
     from zato.common.soap.client import SOAPClient
-    from zato.common.typing_ import any_, strnone, strstrdict
+    from zato.common.typing_ import any_, stranydict, strnone, strstrdict
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.http_soap.outgoing.common import HTTPSAdapter
+    HTTPSAdapter = HTTPSAdapter
+    ParallelServer = ParallelServer
     SOAPClient = SOAPClient
 
 # ################################################################################################################################
@@ -84,6 +88,11 @@ class AuthMixin:
     """ How an outgoing connection authenticates itself - the credentials its security definition
     names, the TLS client certificate and the bearer token an OAuth definition resolves to.
     """
+
+    config: 'stranydict'
+    sec_type: 'str'
+    https_adapter: 'HTTPSAdapter'
+    server: 'ParallelServer'
 
     def _check_password(self) -> 'None':
         """ Notes whether this connection's password is still the placeholder that an import leaves

@@ -10,6 +10,7 @@ import logging
 import os
 import sys
 import tempfile
+from json import dumps, loads
 from unittest import TestCase, main
 
 # The directory with the throwaway test environment helpers
@@ -22,6 +23,8 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
+from zato.common.api import MTLS
+from zato.common.odb.model import MTLSSecurity
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 
@@ -154,12 +157,17 @@ class TestEnmasseSecurityExporter(TestCase):
             # must round-trip through opaque storage
             if yaml_def.get('type') == 'mtls':
                 mtls_fields = [
-                    'is_active', 'cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint',
+                    'is_active', 'use_for', 'cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint',
                     'client_cert_subject_dn',
                 ]
 
+                # The fields that the definition's use never reads are not exported at all
+                not_applicable = MTLS.Not_Applicable_Fields[yaml_def['use_for']]
+
                 for field in mtls_fields:
-                    if field in yaml_def:
+                    if field in not_applicable:
+                        self.assertNotIn(field, exported_def, f'Field {field} does not apply to "{name}"')
+                    elif field in yaml_def:
                         self.assertIn(field, exported_def, f'Field {field} missing from export of "{name}"')
                         self.assertEqual(exported_def[field], yaml_def[field], f'Field {field} mismatch for security definition "{name}"')
 
@@ -191,6 +199,49 @@ class TestEnmasseSecurityExporter(TestCase):
             if rate_limiting := yaml_def.get('rate_limiting'):
                 self.assertIn('rate_limiting', exported_def, f'rate_limiting missing from export of "{name}"')
                 self.assertEqual(exported_def['rate_limiting'], rate_limiting, f'rate_limiting mismatch for "{name}"')
+
+# ################################################################################################################################
+
+    def test_mtls_stored_without_use_for_exports_default(self) -> 'None':
+        """ An mTLS definition stored before use_for existed is exported as used with both sides,
+        together with all of its fields.
+        """
+        self._setup_test_environment()
+
+        name = 'enmasse.mtls.export.stored'
+        cert_path = '/opt/hot-deploy/ssl/outgoing/export-client-cert.pem'
+        fingerprint = '2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae'
+
+        item = {
+            'name': name,
+            'type': 'mtls',
+            'cert_path': cert_path,
+            'client_cert_fingerprint': fingerprint,
+        }
+
+        _ = self.security_importer.sync_security_definitions([item], self.session)
+
+        # The definition is made to look like one stored before use_for existed
+        definition = self.session.query(MTLSSecurity).filter_by(name=name).one()
+        opaque = loads(definition.opaque1)
+        del opaque['use_for']
+        definition.opaque1 = dumps(opaque)
+        self.session.commit()
+
+        yaml_exporter = EnmasseYAMLExporter()
+        exported_data = yaml_exporter.export_to_dict(self.session)
+
+        exported_def = cast_('stranydict', None)
+
+        for exported_item in exported_data['security']:
+            if exported_item['name'] == name:
+                exported_def = exported_item
+                break
+
+        self.assertIsNotNone(exported_def, f'{name} missing from export')
+        self.assertEqual(exported_def['use_for'], 'both')
+        self.assertEqual(exported_def['cert_path'], cert_path)
+        self.assertEqual(exported_def['client_cert_fingerprint'], fingerprint)
 
 # ################################################################################################################################
 # ################################################################################################################################

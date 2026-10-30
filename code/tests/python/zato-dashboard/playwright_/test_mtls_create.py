@@ -24,6 +24,13 @@ _Page_Url_Pattern = '/zato/security/mtls/'
 
 _Test_Name_Prefix = 'test.mtls.' + CryptoManager.generate_hex_string(32) + '.'
 
+# The fields that an outgoing connection reads and those that a channel reads
+_Outgoing_Field_Ids = ('#id_cert_path', '#id_key_path', '#id_ca_certs_path')
+_Channel_Field_Ids  = ('#id_client_cert_fingerprint', '#id_client_cert_subject_dn')
+
+# The label of the use that the create form selects on its own
+_Default_Use_Label = 'Both channels and outgoing connections'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -54,6 +61,27 @@ def _fill_definition_fields(page:'Page', name:'str') -> 'dict':
     }
 
     return out
+
+# ################################################################################################################################
+
+def _open_create_dialog(page:'Page', base_url:'str') -> 'None':
+    """ Navigates to the mTLS page and opens the create dialog.
+    """
+    _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
+    _ = page.wait_for_selector('#data-table', state='visible')
+
+    page.click('#markup .page_prompt a')
+    _ = page.wait_for_selector('#create-div', state='visible')
+
+# ################################################################################################################################
+
+def _assert_fields_state(page:'Page', field_ids:'any_', is_enabled:'bool', use_for:'str') -> 'None':
+    """ Asserts that each of the given fields is enabled or disabled.
+    """
+    for field_id in field_ids:
+        field_is_enabled = page.is_enabled(field_id)
+        assert field_is_enabled == is_enabled, \
+            f'Expected {field_id} enabled={is_enabled} for use_for "{use_for}", got: {field_is_enabled}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -291,6 +319,144 @@ class TestMTLSCreate:
         # .. verify the indicator text.
         taken_text = cast_('any_', taken_indicator).inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
+
+# ################################################################################################################################
+
+    def test_06_use_for_row_follows_name(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Verifies that the "For use with" row is the one directly below "Name" in the create dialog.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        _open_create_dialog(page, base_url)
+
+        # Read the labels of the form's rows in the order they are displayed ..
+        labels = page.eval_on_selector_all(
+            '#create-form table.form-data label',
+            'nodes => nodes.map(node => node.textContent.trim())',
+        )
+
+        # .. and confirm the first two.
+        assert labels[0] == 'Name', f'Expected "Name" in the first row, got: {labels}'
+        assert labels[1] == 'For use with', f'Expected "For use with" in the second row, got: {labels}'
+
+# ################################################################################################################################
+
+    def test_07_default_use_enables_all_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Verifies that the create dialog selects "Both channels and outgoing connections"
+        and that all five fields are enabled then.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        _open_create_dialog(page, base_url)
+
+        selected_label = page.eval_on_selector('#id_use_for', 'node => node.options[node.selectedIndex].text')
+        assert selected_label == _Default_Use_Label, f'Expected "{_Default_Use_Label}", got: "{selected_label}"'
+
+        _assert_fields_state(page, _Outgoing_Field_Ids, True, 'both')
+        _assert_fields_state(page, _Channel_Field_Ids, True, 'both')
+
+# ################################################################################################################################
+
+    def test_08_each_use_disables_its_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Selects each use in turn and verifies which fields are disabled, ending with "Both",
+        which enables all of them again.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        _open_create_dialog(page, base_url)
+
+        # A definition used with channels has no outgoing material ..
+        _ = page.select_option('#id_use_for', 'channels')
+        _assert_fields_state(page, _Outgoing_Field_Ids, False, 'channels')
+        _assert_fields_state(page, _Channel_Field_Ids, True, 'channels')
+
+        # .. one used with outgoing connections has no match criteria ..
+        _ = page.select_option('#id_use_for', 'outgoing')
+        _assert_fields_state(page, _Outgoing_Field_Ids, True, 'outgoing')
+        _assert_fields_state(page, _Channel_Field_Ids, False, 'outgoing')
+
+        # .. and one used with both has both.
+        _ = page.select_option('#id_use_for', 'both')
+        _assert_fields_state(page, _Outgoing_Field_Ids, True, 'both')
+        _assert_fields_state(page, _Channel_Field_Ids, True, 'both')
+
+# ################################################################################################################################
+
+    def test_09_use_for_select_is_not_truncated(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Verifies that the "For use with" select is wide enough for its longest label.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        _open_create_dialog(page, base_url)
+
+        widths = page.eval_on_selector('#id_use_for', 'node => [node.scrollWidth, node.clientWidth]')
+        scroll_width, client_width = widths
+
+        assert scroll_width <= client_width, \
+            f'Expected the select to fit its text, scrollWidth={scroll_width}, clientWidth={client_width}'
+
+# ################################################################################################################################
+
+    def test_10_channels_definition_has_no_outgoing_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Fills in all five fields, switches the use to "Channels" and saves the definition,
+        then verifies that it reopens with its outgoing fields empty.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        definition_name = _Test_Name_Prefix + 'channels-only'
+
+        _open_create_dialog(page, base_url)
+
+        # The outgoing fields hold values until the use is switched to one that does not read them ..
+        defn = _fill_definition_fields(page, definition_name)
+        _ = page.select_option('#id_use_for', 'channels')
+
+        # .. submit the form ..
+        page.click('#create-div input[type="submit"]')
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+
+        # .. read the server-side ID off the new row ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{definition_name}"))'
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
+
+        cells = row.query_selector_all('td')
+        cert_path_cell_text = cells[3].inner_text().strip()
+        assert cert_path_cell_text == '', f'Expected no certificate path, got: "{cert_path_cell_text}"'
+
+        id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = id_cell.inner_text().strip()
+
+        # .. reload the page so the form is populated from what the server stored ..
+        _ = page.goto(f'{base_url}{_Page_Url_Pattern}?query={definition_name}')
+        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+
+        # .. open the edit dialog ..
+        page.evaluate(f'$.fn.zato.security.mtls.edit("{item_id}")')
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+
+        # .. the use is the one it was saved with ..
+        use_for = page.input_value('#id_edit-use_for')
+        assert use_for == 'channels', f'Expected "channels", got: "{use_for}"'
+
+        # .. the outgoing fields are empty ..
+        for field_name in ('cert_path', 'key_path', 'ca_certs_path'):
+            field_value = page.input_value(f'#id_edit-{field_name}')
+            assert field_value == '', f'Expected empty {field_name}, got: "{field_value}"'
+
+        # .. and the match criteria are what was typed in.
+        fingerprint = page.input_value('#id_edit-client_cert_fingerprint')
+        assert fingerprint == defn['client_cert_fingerprint'], \
+            f'Expected fingerprint "{defn["client_cert_fingerprint"]}", got: "{fingerprint}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -23,7 +23,7 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
 
     from zato.cli.enmasse.exporter import EnmasseYAMLExporter
-    from zato.common.typing_ import anydict, list_
+    from zato.common.typing_ import anydict, anylist, list_, strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,7 +64,7 @@ class SecurityExporter:
 
 # ################################################################################################################################
 
-    def _should_skip_item(self, item, excluded_names, excluded_prefixes):
+    def _should_skip_item(self, item:'anydict', excluded_names:'strset', excluded_prefixes:'strlist') -> 'bool':
 
         # Skip items in exclude list
         if item['name'] in excluded_names:
@@ -92,7 +92,13 @@ class SecurityExporter:
 
 # ################################################################################################################################
 
-    def _process_standard_security(self, items, sec_type, excluded_names, excluded_prefixes):
+    def _process_standard_security(
+        self,
+        items:'anylist',
+        sec_type:'str',
+        excluded_names:'strset',
+        excluded_prefixes:'strlist',
+    ) -> 'anylist':
         result = []
 
         for item in items:
@@ -129,7 +135,7 @@ class SecurityExporter:
 
         return result
 
-    def _process_bearer_tokens(self, items, excluded_names, excluded_prefixes):
+    def _process_bearer_tokens(self, items:'anylist', excluded_names:'strset', excluded_prefixes:'strlist') -> 'anylist':
         result = []
 
         # Fields that might be in opaque data for dynamic tokens

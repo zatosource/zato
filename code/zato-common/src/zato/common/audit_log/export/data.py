@@ -67,7 +67,6 @@ _sources_without_data = {
     AuditSource.Scheduler,
     AuditSource.LLM,
     AuditSource.Odoo,
-    AuditSource.EbMS2,
     AuditSource.Service,
     AuditSource.Microsoft_Cloud,
     AuditSource.REST_Outgoing_Health,

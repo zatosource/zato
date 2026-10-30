@@ -338,12 +338,6 @@ $.fn.zato.http_soap.create = function(object_type) {
         });
     }
 
-    if($.fn.zato.http_soap.has_ebms_tab()) {
-        $.fn.zato.http_soap.ebms_tab.bind({
-            panel_id: 'http-soap-create-tab-panel-ebms'
-        });
-    }
-
     if($.fn.zato.http_soap.has_alerts_tab()) {
         $.fn.zato.alerts_tab.bind({
             panel_id: 'http-soap-create-tab-panel-alerts',
