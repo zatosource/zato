@@ -66,7 +66,7 @@ class TestOutconnTLSReload:
             assert other_before['client_cert_fingerprint'] == initial_fingerprint, other_before
 
             # .. the client certificate and key are replaced under the same CA ..
-            log_offset = get_log_offset()
+            log_offset = get_log_offset(run)
             new_fingerprint = reissue_client_material(run.material, needs_rename)
 
             assert new_fingerprint != initial_fingerprint

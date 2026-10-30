@@ -56,12 +56,12 @@ def run_command(command:'strlist', timeout:'float'=Docker_Timeout) -> 'subproces
 
 # ################################################################################################################################
 
-def is_container_running() -> 'bool':
+def is_container_running(container_name:'str'=Container_Name) -> 'bool':
     """ Tells whether the local Zato container exists and is running.
     """
     try:
         result = subprocess.run(
-            ['docker', 'inspect', '-f', '{{.State.Running}}', Container_Name],
+            ['docker', 'inspect', '-f', '{{.State.Running}}', container_name],
             capture_output=True, text=True, timeout=Docker_Timeout,
         )
     except FileNotFoundError:
@@ -75,30 +75,23 @@ def is_container_running() -> 'bool':
 
 # ################################################################################################################################
 
-def get_bridge_gateway() -> 'str':
+def get_bridge_gateway(container_name:'str'=Container_Name) -> 'str':
     """ Returns the docker bridge gateway address - the container reaches host ports through it.
     """
     result = run_command(
-        ['docker', 'inspect', '-f', '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}', Container_Name])
+        ['docker', 'inspect', '-f', '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}', container_name])
 
     out = result.stdout.strip()
     return out
 
 # ################################################################################################################################
 
-def get_mount_source(destination:'str') -> 'str':
-    """ Returns the host directory that is mounted into the container at the given destination,
-    or an empty string when nothing is mounted there.
-    """
-    template = '{{range .Mounts}}{{if eq .Destination "' + destination + '"}}{{.Source}}{{end}}{{end}}'
-    result = run_command(['docker', 'inspect', '-f', template, Container_Name])
-
-    out = result.stdout.strip()
-    return out
-
-# ################################################################################################################################
-
-def import_enmasse(yaml_text:'str', file_prefix:'str', timeout:'float'=Docker_Timeout) -> 'None':
+def import_enmasse(
+    yaml_text:'str',
+    file_prefix:'str',
+    timeout:'float'=Docker_Timeout,
+    container_name:'str'=Container_Name,
+    ) -> 'None':
     """ Imports the given enmasse YAML into the container's server.
     """
     host_yaml_path = os.path.join(tempfile.gettempdir(), f'{file_prefix}-{os.getpid()}.yaml')
@@ -108,30 +101,35 @@ def import_enmasse(yaml_text:'str', file_prefix:'str', timeout:'float'=Docker_Ti
         _ = yaml_file.write(yaml_text)
 
     try:
-        _ = run_command(['docker', 'cp', host_yaml_path, f'{Container_Name}:{container_yaml_path}'], timeout)
-        _ = run_command(['docker', 'exec', Container_Name,
+        _ = run_command(['docker', 'cp', host_yaml_path, f'{container_name}:{container_yaml_path}'], timeout)
+        _ = run_command(['docker', 'exec', container_name,
             Zato_Binary, 'enmasse', Server_Directory, '--verbose', '--import', '--input', container_yaml_path], timeout)
-        _ = run_command(['docker', 'exec', Container_Name, 'rm', container_yaml_path], timeout)
+        _ = run_command(['docker', 'exec', container_name, 'rm', container_yaml_path], timeout)
 
     finally:
         os.remove(host_yaml_path)
 
 # ################################################################################################################################
 
-def deploy_service_file(service_path:'str') -> 'None':
+def deploy_service_file(service_path:'str', container_name:'str'=Container_Name) -> 'None':
     """ Copies a service file into the container's hot-deployment directory.
     """
     file_name = os.path.basename(service_path)
-    _ = run_command(['docker', 'cp', service_path, f'{Container_Name}:{Pickup_Directory}/{file_name}'])
+    _ = run_command(['docker', 'cp', service_path, f'{container_name}:{Pickup_Directory}/{file_name}'])
 
 # ################################################################################################################################
 
-def invoke_service(service_name:'str', payload:'str', timeout:'float'=Docker_Timeout) -> 'str':
+def invoke_service(
+    service_name:'str',
+    payload:'str',
+    timeout:'float'=Docker_Timeout,
+    container_name:'str'=Container_Name,
+    ) -> 'str':
     """ Invokes a service in the container's server and returns everything the command printed,
     without raising, so that callers may retry while the service is still being deployed.
     """
     result = subprocess.run(
-        ['docker', 'exec', Container_Name, Zato_Binary, 'service', 'invoke', Server_Directory, service_name,
+        ['docker', 'exec', container_name, Zato_Binary, 'service', 'invoke', Server_Directory, service_name,
             '--payload', payload],
         capture_output=True, text=True, timeout=timeout,
     )
@@ -141,35 +139,35 @@ def invoke_service(service_name:'str', payload:'str', timeout:'float'=Docker_Tim
 
 # ################################################################################################################################
 
-def get_server_log_size() -> 'int':
+def get_server_log_size(container_name:'str'=Container_Name) -> 'int':
     """ Returns the current size of the server's log, in bytes, so that later reads cover only what follows.
     """
-    result = run_command(['docker', 'exec', Container_Name, 'stat', '-c', '%s', Server_Log_Path])
+    result = run_command(['docker', 'exec', container_name, 'stat', '-c', '%s', Server_Log_Path])
 
     out = int(result.stdout.strip())
     return out
 
 # ################################################################################################################################
 
-def read_server_log(offset:'int') -> 'str':
+def read_server_log(offset:'int', container_name:'str'=Container_Name) -> 'str':
     """ Returns what the server's log holds from the given byte offset onwards.
     """
     start_position = offset + 1
-    result = run_command(['docker', 'exec', Container_Name, 'tail', '-c', f'+{start_position}', Server_Log_Path])
+    result = run_command(['docker', 'exec', container_name, 'tail', '-c', f'+{start_position}', Server_Log_Path])
 
     out = result.stdout
     return out
 
 # ################################################################################################################################
 
-def wait_for_server_log(text:'str', offset:'int', timeout:'float') -> 'str':
+def wait_for_server_log(text:'str', offset:'int', timeout:'float', container_name:'str'=Container_Name) -> 'str':
     """ Waits until the server's log, read from the given byte offset, contains the given text,
     and returns what was read.
     """
     deadline = time.monotonic() + timeout
 
     while True:
-        log_text = read_server_log(offset)
+        log_text = read_server_log(offset, container_name)
 
         # Stop as soon as the text is there ..
         if text in log_text:

@@ -1049,9 +1049,8 @@ test-llm: ## Every outgoing LLM test - the offline simulator, browser lifecycle,
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-outconn-tls-local-docker: ## Replaced client certificates of outgoing REST and SOAP connections in the local container.
+test-outconn-tls-local-docker: ## Replaced client certificates of outgoing REST and SOAP connections in a container that the suite starts with the image's entrypoint.
 	$(Zato_Log_Reset)
-# Skips on its own when the local zato-4.1 container is not there
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/outconn_tls_local_docker/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_outconn_tls_local_docker -o log_cli_level=WARNING -W ignore::DeprecationWarning \

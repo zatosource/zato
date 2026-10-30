@@ -16,7 +16,7 @@ from json import dumps
 # local
 from certs import build_tls_material
 from http_test_server import HTTPSTestServer
-from local_docker import get_server_log_size, import_enmasse, invoke_service, wait_for_server_log
+from local_docker import get_server_log_size, import_enmasse, invoke_service, read_server_log, wait_for_server_log
 from soap_test_server import SOAPTestServer
 
 # ################################################################################################################################
@@ -29,8 +29,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The container that the suite starts and removes
+Container_Name = 'zato-test-outconn-tls'
+
 # Where the container reads outgoing TLS material from - a host directory is mapped to it
 Container_Material_Root = '/opt/hot-deploy/ssl/outgoing'
+
+# The file written to find out whether the server is told about changed material
+_probe_file_name = 'listener-probe.pem'
 
 # The service that invokes the connections and the file it is deployed from
 Service_Name = 'test.outconn-tls.local-docker.check'
@@ -55,13 +61,18 @@ _invoke_poll_interval = 1.0
 # How long to wait for the server to report a change to TLS material, in seconds
 _reload_timeout = 60
 
+# How long to wait for the server to report the probe file, and how often to write it again, in seconds
+_probe_timeout = 120
+_probe_interval = 3.0
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class LocalContainer:
-    """ Where the container reaches the host's endpoints and where its outgoing TLS material is mapped from.
+    """ The container's name, where it reaches the host's endpoints and where its outgoing TLS material is mapped from.
     """
+    name: 'str'
     gateway: 'str'
     host_material_root: 'str'
 
@@ -95,6 +106,7 @@ class CaseRun:
     the names of the objects it imports and the endpoint the connections invoke.
     """
     case_name: 'str'
+    container_name: 'str'
     conn_type: 'str'
     transport: 'str'
     material_kind: 'str'
@@ -138,7 +150,7 @@ def _write_material(local_container:'LocalContainer', run:'CaseRun') -> 'None':
     and a copy of the client's files for the unrelated connection, then waits until the server
     has been told about each of them, so that no report of these files arrives once the case is under way.
     """
-    log_offset = get_server_log_size()
+    log_offset = get_server_log_size(run.container_name)
 
     # A directory that a previous run left behind is replaced ..
     shutil.rmtree(run.host_case_directory, ignore_errors=True)
@@ -166,7 +178,7 @@ def _write_material(local_container:'LocalContainer', run:'CaseRun') -> 'None':
     run.other_files = _get_client_files(local_container, other_certificate_path, other_key_path, other_combined_path)
 
     # .. and the file written last is the one whose report the server logs last.
-    _ = wait_for_server_log(f'`{run.other_files.combined_path}`', log_offset, _reload_timeout)
+    _ = wait_for_server_log(f'`{run.other_files.combined_path}`', log_offset, _reload_timeout, run.container_name)
 
 # ################################################################################################################################
 
@@ -239,7 +251,7 @@ def _import_objects(run:'CaseRun') -> 'None':
     yaml_text += _get_connection_yaml(run, run.main_conn_name, Main_Path, run.main_security_name, run.main_files)
     yaml_text += _get_connection_yaml(run, run.other_conn_name, Other_Path, run.other_security_name, run.other_files)
 
-    import_enmasse(yaml_text, _yaml_file_prefix)
+    import_enmasse(yaml_text, _yaml_file_prefix, container_name=run.container_name)
 
 # ################################################################################################################################
 
@@ -267,6 +279,7 @@ def start_case(
     """
     run = CaseRun()
     run.case_name = case_name
+    run.container_name = local_container.name
     run.conn_type = conn_type
     run.transport = transport
     run.material_kind = material_kind
@@ -318,7 +331,7 @@ def invoke(run:'CaseRun', conn_name:'str', path:'str') -> 'anydict':
 
     while time.monotonic() < deadline:
 
-        last_output = invoke_service(Service_Name, payload)
+        last_output = invoke_service(Service_Name, payload, container_name=run.container_name)
 
         # The invocation is complete when the service reports it and the endpoint has recorded it
         if Result_Invoked in last_output:
@@ -333,8 +346,8 @@ def invoke(run:'CaseRun', conn_name:'str', path:'str') -> 'anydict':
 
 # ################################################################################################################################
 
-def get_log_offset() -> 'int':
-    out = get_server_log_size()
+def get_log_offset(run:'CaseRun') -> 'int':
+    out = get_server_log_size(run.container_name)
     return out
 
 # ################################################################################################################################
@@ -352,7 +365,41 @@ def wait_for_reload(run:'CaseRun', log_offset:'int') -> 'None':
         path = run.main_files.certificate_path
 
     text = f'Reloaded TLS material of outgoing connection `{run.main_conn_name}` ({run.transport}) -> `{path}`'
-    _ = wait_for_server_log(text, log_offset, _reload_timeout)
+    _ = wait_for_server_log(text, log_offset, _reload_timeout, run.container_name)
+
+# ################################################################################################################################
+
+def wait_for_tls_material_listener(local_container:'LocalContainer') -> 'None':
+    """ Writes a probe file into the mapped directory until the server reports it, which is when the listener
+    that the entrypoint started is watching the directory, then removes the file.
+    """
+    host_probe_path = os.path.join(local_container.host_material_root, _probe_file_name)
+    container_probe_path = os.path.join(Container_Material_Root, _probe_file_name)
+
+    text = f'No outgoing connection reads TLS material from `{container_probe_path}`'
+
+    log_offset = get_server_log_size(local_container.name)
+    deadline = time.monotonic() + _probe_timeout
+
+    try:
+        while True:
+
+            # The listener may not be watching yet, so the file is written again until the server reports it ..
+            with open(host_probe_path, 'w') as probe_file:
+                _ = probe_file.write('-----BEGIN CERTIFICATE-----\n')
+
+            time.sleep(_probe_interval)
+
+            # .. which ends the wait ..
+            if text in read_server_log(log_offset, local_container.name):
+                return
+
+            # .. unless the listener never reports it.
+            if time.monotonic() >= deadline:
+                raise Exception(f'The server did not report `{container_probe_path}` within {_probe_timeout}s')
+
+    finally:
+        os.remove(host_probe_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

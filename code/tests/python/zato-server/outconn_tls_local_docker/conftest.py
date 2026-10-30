@@ -8,7 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import shutil
 import sys
+import tempfile
 
 # pytest
 import pytest
@@ -27,32 +29,47 @@ sys.path.insert(0, os.path.join(_tests_directory, 'zato-dashboard', 'playwright_
 sys.path.insert(0, _this_directory)
 
 # local
-from local_docker import Container_Name, deploy_service_file, get_bridge_gateway, get_mount_source, is_container_running
-from _outconn_tls import Container_Material_Root, LocalContainer, Service_File_Path
+from local_docker import deploy_service_file, get_bridge_gateway
+from zato_container import build_image, remove_container, start_container, wait_until_started
+from _outconn_tls import Container_Material_Root, Container_Name, LocalContainer, Service_File_Path, \
+    wait_for_tls_material_listener
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def local_container() -> 'LocalContainer':
-    """ Skips the suite when the local Zato container is not running or when no host directory
-    is mapped to its directory of outgoing TLS material, otherwise deploys the service that invokes the connections.
+def local_container() -> 'any_':
+    """ Starts a container that runs the repository through the Docker repository's entrypoint,
+    with a host directory of its own mapped to the container's directory of outgoing TLS material,
+    deploys the service that invokes the connections, and removes the container and the directory at the end.
     """
-    if not is_container_running():
-        pytest.skip(f'Container `{Container_Name}` is not running')
+    host_material_root = tempfile.mkdtemp(prefix='zato-outconn-tls-')
 
-    host_material_root = get_mount_source(Container_Material_Root)
+    build_image()
+    start_container(Container_Name, {host_material_root: Container_Material_Root})
 
-    if not host_material_root:
-        pytest.skip(f'Container `{Container_Name}` has no host directory mounted at `{Container_Material_Root}`')
+    try:
+        wait_until_started(Container_Name)
 
-    deploy_service_file(Service_File_Path)
+        out = LocalContainer()
+        out.name = Container_Name
+        out.gateway = get_bridge_gateway(Container_Name)
+        out.host_material_root = host_material_root
 
-    out = LocalContainer()
-    out.gateway = get_bridge_gateway()
-    out.host_material_root = host_material_root
+        wait_for_tls_material_listener(out)
+        deploy_service_file(Service_File_Path, Container_Name)
 
-    return out
+        yield out
+
+    finally:
+        remove_container(Container_Name)
+        shutil.rmtree(host_material_root, ignore_errors=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
