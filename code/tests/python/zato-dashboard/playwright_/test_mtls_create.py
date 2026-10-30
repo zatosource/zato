@@ -24,14 +24,28 @@ _Page_Url_Pattern = '/zato/security/mtls/'
 
 _Test_Name_Prefix = 'test.mtls.' + CryptoManager.generate_hex_string(32) + '.'
 
-# The fields that an outgoing connection reads and those that a channel reads
-_Outgoing_Field_Ids = ('#id_cert_path', '#id_key_path', '#id_ca_certs_path')
-_Channel_Field_Ids  = ('#id_client_cert_fingerprint', '#id_client_cert_subject_dn')
+# The fields that a channel reads and those that an outgoing connection reads, by the tab that each set is on
+_Channel_Field_Names  = ('client_cert_fingerprint', 'client_cert_subject_dn')
+_Outgoing_Field_Names = ('cert_path', 'key_path', 'ca_certs_path')
 
-# The label of the use that the create form selects on its own
-_Default_Use_Label = 'Both channels and outgoing connections'
+# The tabs of the form, in the order they are displayed, with their labels
+_Tab_Names  = ['channels', 'outgoing']
+_Tab_Labels = ['For channels', 'For outgoing connections']
+
+# The Name field on each tab, the outgoing one being a copy of the channels one
+_Channels_Name_Id = '#id_name'
+_Outgoing_Name_Id = '#id_outgoing_name'
+
+# The panels that hold the fields of each tab
+_Channels_Panel_Id = '#mtls-create-tab-panel-channels'
+_Outgoing_Panel_Id = '#mtls-create-tab-panel-outgoing'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _select_tab(page:'Page', tab_name:'str') -> 'None':
+    page.click(f'#create-div .dashboard-tab[data-tab="{tab_name}"]')
+
 # ################################################################################################################################
 
 def _fill_definition_fields(page:'Page', name:'str') -> 'dict':
@@ -45,11 +59,15 @@ def _fill_definition_fields(page:'Page', name:'str') -> 'dict':
     subject_dn = f'CN={name},O=Test,C=US'
 
     page.fill('#id_name', name)
+
+    _select_tab(page, 'channels')
+    page.fill('#id_client_cert_fingerprint', fingerprint)
+    page.fill('#id_client_cert_subject_dn', subject_dn)
+
+    _select_tab(page, 'outgoing')
     page.fill('#id_cert_path', cert_path)
     page.fill('#id_key_path', key_path)
     page.fill('#id_ca_certs_path', ca_certs_path)
-    page.fill('#id_client_cert_fingerprint', fingerprint)
-    page.fill('#id_client_cert_subject_dn', subject_dn)
 
     out = {
         'name': name,
@@ -75,13 +93,13 @@ def _open_create_dialog(page:'Page', base_url:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _assert_fields_state(page:'Page', field_ids:'any_', is_enabled:'bool', use_for:'str') -> 'None':
-    """ Asserts that each of the given fields is enabled or disabled.
+def _assert_fields_visible(page:'Page', field_names:'any_', is_visible:'bool', tab_name:'str') -> 'None':
+    """ Asserts that each of the given fields of the create form is visible or hidden.
     """
-    for field_id in field_ids:
-        field_is_enabled = page.is_enabled(field_id)
-        assert field_is_enabled == is_enabled, \
-            f'Expected {field_id} enabled={is_enabled} for use_for "{use_for}", got: {field_is_enabled}'
+    for field_name in field_names:
+        field_is_visible = page.is_visible(f'#id_{field_name}')
+        assert field_is_visible == is_visible, \
+            f'Expected #id_{field_name} visible={is_visible} on tab "{tab_name}", got: {field_is_visible}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -322,8 +340,9 @@ class TestMTLSCreate:
 
 # ################################################################################################################################
 
-    def test_06_use_for_row_follows_name(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Verifies that the "For use with" row is the one directly below "Name" in the create dialog.
+    def test_06_tabs_open_the_dialog(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Verifies that the create dialog opens with two tabs, "For channels" and "For outgoing connections",
+        in this order, above every field, with the first one active.
         """
 
         page = logged_in_page
@@ -331,21 +350,32 @@ class TestMTLSCreate:
 
         _open_create_dialog(page, base_url)
 
-        # Read the labels of the form's rows in the order they are displayed ..
-        labels = page.eval_on_selector_all(
-            '#create-form table.form-data label',
+        # The tabs come first in the form ..
+        first_element_class = page.eval_on_selector('#create-form', 'node => node.firstElementChild.className')
+        assert first_element_class == 'dashboard-tabs', f'Expected the tabs first in the form, got: "{first_element_class}"'
+
+        # .. they are the two expected ones, in this order ..
+        tab_names = page.eval_on_selector_all(
+            '#create-div .dashboard-tab',
+            'nodes => nodes.map(node => node.getAttribute("data-tab"))',
+        )
+        assert tab_names == _Tab_Names, f'Expected tabs {_Tab_Names}, got: {tab_names}'
+
+        tab_labels = page.eval_on_selector_all(
+            '#create-div .dashboard-tab',
             'nodes => nodes.map(node => node.textContent.trim())',
         )
+        assert tab_labels == _Tab_Labels, f'Expected tab labels {_Tab_Labels}, got: {tab_labels}'
 
-        # .. and confirm the first two.
-        assert labels[0] == 'Name', f'Expected "Name" in the first row, got: {labels}'
-        assert labels[1] == 'For use with', f'Expected "For use with" in the second row, got: {labels}'
+        # .. and the channels tab is the active one.
+        active_tab = page.get_attribute('#create-div .dashboard-tab-active', 'data-tab')
+        assert active_tab == 'channels', f'Expected "channels" to be active, got: "{active_tab}"'
 
 # ################################################################################################################################
 
-    def test_07_default_use_enables_all_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Verifies that the create dialog selects "Both channels and outgoing connections"
-        and that all five fields are enabled then.
+    def test_07_each_field_is_on_one_tab(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Verifies that each tab starts with Name, followed by the fields of its own side only,
+        and that no field is submitted twice.
         """
 
         page = logged_in_page
@@ -353,17 +383,63 @@ class TestMTLSCreate:
 
         _open_create_dialog(page, base_url)
 
-        selected_label = page.eval_on_selector('#id_use_for', 'node => node.options[node.selectedIndex].text')
-        assert selected_label == _Default_Use_Label, f'Expected "{_Default_Use_Label}", got: "{selected_label}"'
+        # The channels tab holds Name and the match criteria ..
+        channel_fields = page.eval_on_selector_all(
+            f'{_Channels_Panel_Id} input',
+            'nodes => nodes.map(node => "#" + node.id)',
+        )
+        expected_channel_fields = [_Channels_Name_Id] + [f'#id_{field_name}' for field_name in _Channel_Field_Names]
+        assert channel_fields == expected_channel_fields, \
+            f'Expected {expected_channel_fields} on the channels tab, got: {channel_fields}'
 
-        _assert_fields_state(page, _Outgoing_Field_Ids, True, 'both')
-        _assert_fields_state(page, _Channel_Field_Ids, True, 'both')
+        # .. the outgoing tab holds its own Name and the paths ..
+        outgoing_fields = page.eval_on_selector_all(
+            f'{_Outgoing_Panel_Id} input',
+            'nodes => nodes.map(node => "#" + node.id)',
+        )
+        expected_outgoing_fields = [_Outgoing_Name_Id] + [f'#id_{field_name}' for field_name in _Outgoing_Field_Names]
+        assert outgoing_fields == expected_outgoing_fields, \
+            f'Expected {expected_outgoing_fields} on the outgoing tab, got: {outgoing_fields}'
+
+        # .. and no field is submitted twice.
+        for field_name in ('name',) + _Channel_Field_Names + _Outgoing_Field_Names:
+            count = page.locator(f'#create-form [name="{field_name}"]').count()
+            assert count == 1, f'Expected one "{field_name}" field in the form, found: {count}'
 
 # ################################################################################################################################
 
-    def test_08_each_use_disables_its_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Selects each use in turn and verifies which fields are disabled, ending with "Both",
-        which enables all of them again.
+    def test_08_name_is_the_same_on_both_tabs(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Types the name on one tab, then on the other, and verifies that each time both tabs show it.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        channels_name = _Test_Name_Prefix + 'typed-on-channels'
+        outgoing_name = _Test_Name_Prefix + 'typed-on-outgoing'
+
+        _open_create_dialog(page, base_url)
+
+        # A name typed on the channels tab ..
+        page.fill(_Channels_Name_Id, channels_name)
+
+        # .. is on the outgoing tab too ..
+        _select_tab(page, 'outgoing')
+        mirrored_name = page.input_value(_Outgoing_Name_Id)
+        assert mirrored_name == channels_name, f'Expected "{channels_name}" on the outgoing tab, got: "{mirrored_name}"'
+
+        # .. and a name typed on the outgoing tab ..
+        page.fill(_Outgoing_Name_Id, outgoing_name)
+
+        # .. is on the channels tab too.
+        _select_tab(page, 'channels')
+        mirrored_name = page.input_value(_Channels_Name_Id)
+        assert mirrored_name == outgoing_name, f'Expected "{outgoing_name}" on the channels tab, got: "{mirrored_name}"'
+
+# ################################################################################################################################
+
+    def test_09_each_tab_shows_its_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Switches between the tabs and verifies that each one shows its own fields and hides those of the other.
         """
 
         page = logged_in_page
@@ -371,55 +447,69 @@ class TestMTLSCreate:
 
         _open_create_dialog(page, base_url)
 
-        # A definition used with channels has no outgoing material ..
-        _ = page.select_option('#id_use_for', 'channels')
-        _assert_fields_state(page, _Outgoing_Field_Ids, False, 'channels')
-        _assert_fields_state(page, _Channel_Field_Ids, True, 'channels')
+        # The dialog opens with the name and the match criteria in view ..
+        assert page.is_visible(_Channels_Name_Id), 'Expected the name on the channels tab to be visible'
+        assert not page.is_visible(_Outgoing_Name_Id), 'Expected the name on the outgoing tab to be hidden'
+        _assert_fields_visible(page, _Channel_Field_Names, True, 'channels')
+        _assert_fields_visible(page, _Outgoing_Field_Names, False, 'channels')
 
-        # .. one used with outgoing connections has no match criteria ..
-        _ = page.select_option('#id_use_for', 'outgoing')
-        _assert_fields_state(page, _Outgoing_Field_Ids, True, 'outgoing')
-        _assert_fields_state(page, _Channel_Field_Ids, False, 'outgoing')
+        # .. the outgoing tab shows its own name and the paths instead ..
+        _select_tab(page, 'outgoing')
+        assert page.is_visible(_Outgoing_Name_Id), 'Expected the name on the outgoing tab to be visible'
+        assert not page.is_visible(_Channels_Name_Id), 'Expected the name on the channels tab to be hidden'
+        _assert_fields_visible(page, _Channel_Field_Names, False, 'outgoing')
+        _assert_fields_visible(page, _Outgoing_Field_Names, True, 'outgoing')
 
-        # .. and one used with both has both.
-        _ = page.select_option('#id_use_for', 'both')
-        _assert_fields_state(page, _Outgoing_Field_Ids, True, 'both')
-        _assert_fields_state(page, _Channel_Field_Ids, True, 'both')
+        # .. and the channels tab shows the match criteria again.
+        _select_tab(page, 'channels')
+        _assert_fields_visible(page, _Channel_Field_Names, True, 'channels')
+        _assert_fields_visible(page, _Outgoing_Field_Names, False, 'channels')
 
 # ################################################################################################################################
 
-    def test_09_use_for_select_is_not_truncated(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Verifies that the "For use with" select is wide enough for its longest label.
+    def test_10_reopened_dialog_starts_on_channels_tab(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Switches to the outgoing tab, closes the dialog and verifies that it opens on the channels tab again.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
         _open_create_dialog(page, base_url)
+        _select_tab(page, 'outgoing')
 
-        widths = page.eval_on_selector('#id_use_for', 'node => [node.scrollWidth, node.clientWidth]')
-        scroll_width, client_width = widths
+        # Close the dialog ..
+        page.click('#create-div button:has-text("Cancel")')
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
-        assert scroll_width <= client_width, \
-            f'Expected the select to fit its text, scrollWidth={scroll_width}, clientWidth={client_width}'
+        # .. open it again ..
+        page.click('#markup .page_prompt a')
+        _ = page.wait_for_selector('#create-div', state='visible')
+
+        # .. and it is back on the channels tab.
+        active_tab = page.get_attribute('#create-div .dashboard-tab-active', 'data-tab')
+        assert active_tab == 'channels', f'Expected "channels" to be active, got: "{active_tab}"'
+        _assert_fields_visible(page, _Channel_Field_Names, True, 'channels')
 
 # ################################################################################################################################
 
-    def test_10_channels_definition_has_no_outgoing_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Fills in all five fields, switches the use to "Channels" and saves the definition,
-        then verifies that it reopens with its outgoing fields empty.
+    def test_11_channels_only_definition(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Fills in the channels tab only, saves the definition and verifies that it reopens
+        with its match criteria and with empty paths.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
         definition_name = _Test_Name_Prefix + 'channels-only'
+        fingerprint = CryptoManager.generate_hex_string(32)
+        subject_dn = f'CN={definition_name},O=Test,C=US'
 
         _open_create_dialog(page, base_url)
 
-        # The outgoing fields hold values until the use is switched to one that does not read them ..
-        defn = _fill_definition_fields(page, definition_name)
-        _ = page.select_option('#id_use_for', 'channels')
+        # Only the name and the match criteria are filled in ..
+        page.fill('#id_name', definition_name)
+        page.fill('#id_client_cert_fingerprint', fingerprint)
+        page.fill('#id_client_cert_subject_dn', subject_dn)
 
         # .. submit the form ..
         page.click('#create-div input[type="submit"]')
@@ -444,19 +534,17 @@ class TestMTLSCreate:
         page.evaluate(f'$.fn.zato.security.mtls.edit("{item_id}")')
         _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
-        # .. the use is the one it was saved with ..
-        use_for = page.input_value('#id_edit-use_for')
-        assert use_for == 'channels', f'Expected "channels", got: "{use_for}"'
+        # .. the match criteria are what was typed in ..
+        stored_fingerprint = page.input_value('#id_edit-client_cert_fingerprint')
+        assert stored_fingerprint == fingerprint, f'Expected fingerprint "{fingerprint}", got: "{stored_fingerprint}"'
 
-        # .. the outgoing fields are empty ..
-        for field_name in ('cert_path', 'key_path', 'ca_certs_path'):
+        stored_subject_dn = page.input_value('#id_edit-client_cert_subject_dn')
+        assert stored_subject_dn == subject_dn, f'Expected subject DN "{subject_dn}", got: "{stored_subject_dn}"'
+
+        # .. and the paths are empty.
+        for field_name in _Outgoing_Field_Names:
             field_value = page.input_value(f'#id_edit-{field_name}')
             assert field_value == '', f'Expected empty {field_name}, got: "{field_value}"'
-
-        # .. and the match criteria are what was typed in.
-        fingerprint = page.input_value('#id_edit-client_cert_fingerprint')
-        assert fingerprint == defn['client_cert_fingerprint'], \
-            f'Expected fingerprint "{defn["client_cert_fingerprint"]}", got: "{fingerprint}"'
 
 # ################################################################################################################################
 # ################################################################################################################################

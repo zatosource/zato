@@ -253,44 +253,6 @@ All_Sec_Def_Types = sorted(Sec_Def_Type_Name)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MTLS:
-    """ Constants of mTLS security definitions.
-    """
-
-    # The name of the opaque attribute that says what a definition is used with.
-    Use_For_Field = 'use_for'
-
-    # What a definition can be used with.
-    class Use_For:
-        Channels = 'channels'
-        Outgoing = 'outgoing'
-        Both     = 'both'
-        Default  = 'both'
-
-    # The labels of the values above, in the order the Dashboard lists them.
-    Use_For_Choices = (
-        (Use_For.Channels, 'Channels'),
-        (Use_For.Outgoing, 'Outgoing connections'),
-        (Use_For.Both,     'Both channels and outgoing connections'),
-    )
-
-    # Every value a definition may be used with.
-    Use_For_List = (Use_For.Channels, Use_For.Outgoing, Use_For.Both)
-
-    # The fields that outgoing connections read and the fields that channels read.
-    Outgoing_Fields = ('cert_path', 'key_path', 'ca_certs_path')
-    Channel_Fields  = ('client_cert_fingerprint', 'client_cert_subject_dn')
-
-    # The fields that do not apply to a definition used with the given value.
-    Not_Applicable_Fields = {
-        Use_For.Channels: Outgoing_Fields,
-        Use_For.Outgoing: Channel_Fields,
-        Use_For.Both:     (),
-    }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class AUTH_RESULT:
     class BASIC_AUTH:
         INVALID_PREFIX = 'invalid-prefix'

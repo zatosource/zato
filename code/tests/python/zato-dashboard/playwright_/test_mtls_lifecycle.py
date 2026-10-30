@@ -11,14 +11,13 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page, Response
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,8 +48,9 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
     page.click('#markup .page_prompt a')
     _ = page.wait_for_selector('#create-div', state='visible')
 
-    # .. fill in the fields ..
+    # .. fill in the fields, the paths being on the outgoing tab ..
     page.fill('#id_name', name)
+    page.click('#create-div .dashboard-tab[data-tab="outgoing"]')
     page.fill('#id_cert_path', cert_path)
     page.fill('#id_key_path', key_path)
 
@@ -77,7 +77,7 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = cast_('any_', page.query_selector(row_selector))
+    row:'any_' = page.query_selector(row_selector)
     id_cell = row.query_selector('td[class*="item_id_"]')
     out = id_cell.inner_text().strip()
 
@@ -132,9 +132,9 @@ class TestMTLSLifecycle:
         # Collect console errors ..
         console_errors = [] # type: list
 
-        def _on_console(msg:'object') -> 'None':
-            if cast_('any_', msg).type == 'error':
-                console_errors.append(cast_('any_', msg).text)
+        def _on_console(msg:'any_') -> 'None':
+            if msg.type == 'error':
+                console_errors.append(msg.text)
 
         page.on('console', _on_console)
 
@@ -155,7 +155,7 @@ class TestMTLSLifecycle:
                 real_errors.append(error_text)
 
         # .. assert no real errors.
-        assert not real_errors, f'Console errors during CRUD:\n' + '\n'.join(real_errors)
+        assert not real_errors, 'Console errors during CRUD:\n' + '\n'.join(real_errors)
 
 # ################################################################################################################################
 
@@ -179,7 +179,7 @@ class TestMTLSLifecycle:
         _do_full_crud(page, base_url, 'http500-check')
 
         # .. assert no 500s.
-        assert not server_errors, f'HTTP 500+ responses during CRUD:\n' + '\n'.join(server_errors)
+        assert not server_errors, 'HTTP 500+ responses during CRUD:\n' + '\n'.join(server_errors)
 
 # ################################################################################################################################
 

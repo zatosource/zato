@@ -186,7 +186,6 @@ def _get_security_yaml(name:'str', files:'ClientFiles', ca_path:'str') -> 'str':
     out = f"""
   - name: {name}
     type: mtls
-    use_for: outgoing
     cert_path: {files.certificate_path}
     key_path: {files.key_path}
     ca_certs_path: {ca_path}

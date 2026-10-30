@@ -4,6 +4,8 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
@@ -17,6 +19,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/mtls.js"></script>
 
@@ -34,7 +38,6 @@
             'id',
             'key_path',
             'ca_certs_path',
-            'use_for',
         ]
     }
     </script>
@@ -69,7 +72,6 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -87,12 +89,11 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.key_path|default:'' }}</td>
                         <td class='ignore'>{{ item.ca_certs_path|default:'' }}</td>
-                        <td class='ignore'>{{ item.use_for }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='11'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -106,35 +107,51 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "security-mtls-create" %}" method="post" id="create-form">
-                    <table class="form-data fit-labels">
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.use_for.id_for_label }}">For use with</label></td>
-                            <td>{{ create_form.use_for }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.cert_path.id_for_label }}">Certificate path</label></td>
-                            <td>{{ create_form.cert_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.key_path.id_for_label }}">Private key path</label></td>
-                            <td>{{ create_form.key_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.ca_certs_path.id_for_label }}">CA certificates path</label></td>
-                            <td>{{ create_form.ca_certs_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.client_cert_fingerprint.id_for_label }}">Client certificate fingerprint</label></td>
-                            <td>{{ create_form.client_cert_fingerprint }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.client_cert_subject_dn.id_for_label }}">Client certificate subject DN</label></td>
-                            <td>{{ create_form.client_cert_subject_dn }}</td>
-                        </tr>
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Definition settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="channels" role="tab" aria-selected="true">For channels</button>
+                        <button type="button" class="dashboard-tab" data-tab="outgoing" role="tab" aria-selected="false">For outgoing connections</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mtls-create-tab-panel-channels" role="tabpanel">
+                        <table class="form-data fit-labels">
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
+                                <td>{{ create_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ create_form.client_cert_fingerprint.id_for_label }}">Client certificate fingerprint</label></td>
+                                <td>{{ create_form.client_cert_fingerprint }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ create_form.client_cert_subject_dn.id_for_label }}">Client certificate subject DN</label></td>
+                                <td>{{ create_form.client_cert_subject_dn }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mtls-create-tab-panel-outgoing" role="tabpanel" hidden>
+                        <table class="form-data fit-labels">
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_outgoing_name">Name</label></td>
+                                <td><input type="text" id="id_outgoing_name" class="form-tab-mirror" data-mirror-target="id_name" data-zato-validator-required="required" data-zato-validator-required-msg="This field is required" style="width:100%" /></td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ create_form.cert_path.id_for_label }}">Certificate path</label></td>
+                                <td>{{ create_form.cert_path }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ create_form.key_path.id_for_label }}">Private key path</label></td>
+                                <td>{{ create_form.key_path }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ create_form.ca_certs_path.id_for_label }}">CA certificates path</label></td>
+                                <td>{{ create_form.ca_certs_path }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
                         <tr>
                             <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
@@ -145,6 +162,7 @@
                             </td>
                         </tr>
                     </table>
+
                 </form>
             </div>
         </div>
@@ -152,35 +170,51 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "security-mtls-edit" %}" method="post" id="edit-form">
-                    <table class="form-data fit-labels">
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.use_for.id_for_label }}">For use with</label></td>
-                            <td>{{ edit_form.use_for }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.cert_path.id_for_label }}">Certificate path</label></td>
-                            <td>{{ edit_form.cert_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.key_path.id_for_label }}">Private key path</label></td>
-                            <td>{{ edit_form.key_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.ca_certs_path.id_for_label }}">CA certificates path</label></td>
-                            <td>{{ edit_form.ca_certs_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.client_cert_fingerprint.id_for_label }}">Client certificate fingerprint</label></td>
-                            <td>{{ edit_form.client_cert_fingerprint }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.client_cert_subject_dn.id_for_label }}">Client certificate subject DN</label></td>
-                            <td>{{ edit_form.client_cert_subject_dn }}</td>
-                        </tr>
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Definition settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="channels" role="tab" aria-selected="true">For channels</button>
+                        <button type="button" class="dashboard-tab" data-tab="outgoing" role="tab" aria-selected="false">For outgoing connections</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mtls-edit-tab-panel-channels" role="tabpanel">
+                        <table class="form-data fit-labels">
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
+                                <td>{{ edit_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ edit_form.client_cert_fingerprint.id_for_label }}">Client certificate fingerprint</label></td>
+                                <td>{{ edit_form.client_cert_fingerprint }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ edit_form.client_cert_subject_dn.id_for_label }}">Client certificate subject DN</label></td>
+                                <td>{{ edit_form.client_cert_subject_dn }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mtls-edit-tab-panel-outgoing" role="tabpanel" hidden>
+                        <table class="form-data fit-labels">
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-outgoing_name">Name</label></td>
+                                <td><input type="text" id="id_edit-outgoing_name" class="form-tab-mirror" data-mirror-target="id_edit-name" data-zato-validator-required="required" data-zato-validator-required-msg="This field is required" style="width:100%" /></td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ edit_form.cert_path.id_for_label }}">Certificate path</label></td>
+                                <td>{{ edit_form.cert_path }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ edit_form.key_path.id_for_label }}">Private key path</label></td>
+                                <td>{{ edit_form.key_path }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="{{ edit_form.ca_certs_path.id_for_label }}">CA certificates path</label></td>
+                                <td>{{ edit_form.ca_certs_path }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
                         <tr>
                             <td colspan="2" class="form-actions">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
@@ -192,10 +226,9 @@
                         </tr>
                     </table>
                     <input type="hidden" id="id_edit-id" name="id" />
+
                 </form>
             </div>
         </div>
-
-
 
 {% endblock %}

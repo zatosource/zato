@@ -393,11 +393,32 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
 # ################################################################################################################################
 
+    def _deploy_existing_files(self, directory_path:'str') -> 'None':
+        """ Deploys each file that a new directory holds, once its size is stable. The subdirectories
+        of the new directory are reported with created events of their own.
+        """
+        # The directory may have been removed again before its event was handled
+        if not os.path.isdir(directory_path):
+            return
+
+        for entry in os.scandir(directory_path):
+            if entry.is_file() and self._is_event_relevant(entry.path, 'created'):
+                self._check_file_stability_polling(entry.path)
+
+# ################################################################################################################################
+
     def on_created(self, event:'FileSystemEvent') -> 'None':
         """ Handle created events and start stability checking.
         """
         # Get normalized path
         event_path:'str' = event.src_path.rstrip(os.path.sep) # type: ignore
+
+        # The files that a new directory holds when it appears were written before it was watched,
+        # so with inotify no event follows their created event, and they are checked here instead.
+        if event.is_directory:
+            if not self.is_polling:
+                self._deploy_existing_files(event_path)
+            return
 
         if self._is_event_relevant(event_path, 'created'):
             # Mark this file as modified/created for later reference

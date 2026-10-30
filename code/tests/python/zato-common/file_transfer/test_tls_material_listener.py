@@ -235,3 +235,36 @@ def test_rename_into_place_is_reported(observer_type:'str') -> 'None':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@pytest.mark.parametrize('observer_type', _observer_types)
+def test_directory_moved_into_place_is_reported(observer_type:'str') -> 'None':
+    """ A certificate in a directory that is moved into the watched directory as a whole is reported by its final path,
+    although it was complete before the listener could watch the directory.
+    """
+    watched_directory = tempfile.mkdtemp(prefix='zato_test_tls_material_')
+
+    # The directory with the certificate is prepared outside the watched one ..
+    prepared_directory = tempfile.mkdtemp(prefix='zato_test_tls_material_prepared_')
+    _write_file(os.path.join(prepared_directory, 'client-cert.pem'), '-----BEGIN CERTIFICATE-----\n')
+
+    recording_session = _RecordingSession()
+    observer = _start_observer(watched_directory, recording_session, observer_type)
+
+    try:
+        # .. and moved into it in one step.
+        final_directory = os.path.join(watched_directory, 'crm')
+        os.rename(prepared_directory, final_directory)
+
+        file_path = os.path.join(final_directory, 'client-cert.pem')
+
+        was_reported = _wait_for_report(recording_session, file_path)
+        assert was_reported, f'Expected {file_path} to be reported, got: {recording_session.requests}'
+
+    finally:
+        observer.stop()
+        observer.join()
+        shutil.rmtree(watched_directory, ignore_errors=True)
+        shutil.rmtree(prepared_directory, ignore_errors=True)
+
+# ################################################################################################################################
+# ################################################################################################################################
