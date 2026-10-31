@@ -23,7 +23,7 @@ from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns,
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import anydict, anylist, intlist
+    from zato.common.typing_ import anydict, anylist, intdict, intlist
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
@@ -90,64 +90,66 @@ outgoing_fetch_query = outgoing_fetch_query.limit(bindparam('fetch_max_messages'
 
 # A pull first locks the deliverable rows it may hand out - those that no pull holds a lease on, or whose lease
 # has run out - skipping those that a concurrent pull holds, without reading their payloads ..
-_claim_candidates_query = select(delivery_table.c.id, message_table.c.data_size)
-_claim_candidates_query = _claim_candidates_query.select_from(_fetch_join)
-_claim_candidates_query = _claim_candidates_query.where(and_(
-    delivery_table.c.sub_key == bindparam('claim_sub_key'),
-    delivery_table.c.expiration_ms > bindparam('claim_now_ms'),
-    delivery_table.c.leased_until_ms < bindparam('claim_now_ms'),
+_lease_candidates_query = select(delivery_table.c.id, message_table.c.data_size)
+_lease_candidates_query = _lease_candidates_query.select_from(_fetch_join)
+_lease_candidates_query = _lease_candidates_query.where(and_(
+    delivery_table.c.sub_key == bindparam('lease_sub_key'),
+    delivery_table.c.expiration_ms > bindparam('lease_now_ms'),
+    delivery_table.c.leased_until_ms < bindparam('lease_now_ms'),
 ))
-_claim_candidates_query = _claim_candidates_query.order_by(*_order_by)
-_claim_candidates_query = _claim_candidates_query.limit(bindparam('claim_max_messages'))
-_claim_candidates_query = _claim_candidates_query.with_for_update(skip_locked=True, of=delivery_table)
+_lease_candidates_query = _lease_candidates_query.order_by(*_order_by)
+_lease_candidates_query = _lease_candidates_query.limit(bindparam('lease_max_messages'))
+_lease_candidates_query = _lease_candidates_query.with_for_update(skip_locked=True, of=delivery_table)
 
 # .. then leases those within its size budget, learning which of them it leased itself - a row that another pull
 # .. leased in the meantime no longer matches ..
-_claim_lease = delivery_table.update()
-_claim_lease = _claim_lease.where(and_(
-    delivery_table.c.id.in_(bindparam('claim_delivery_ids', expanding=True)),
-    delivery_table.c.leased_until_ms < bindparam('claim_now_ms'),
+_lease_update = delivery_table.update()
+_lease_update = _lease_update.where(and_(
+    delivery_table.c.id.in_(bindparam('lease_delivery_ids', expanding=True)),
+    delivery_table.c.leased_until_ms < bindparam('lease_now_ms'),
 ))
-_claim_lease = _claim_lease.values(
-    leased_until_ms=bindparam('claim_leased_until_ms'),
+_lease_update = _lease_update.values(
+    leased_until_ms=bindparam('lease_leased_until_ms'),
     attempt=delivery_table.c.attempt + 1,
 )
-_claim_lease = _claim_lease.returning(delivery_table.c.message_id)
+_lease_update = _lease_update.returning(delivery_table.c.message_id, delivery_table.c.attempt)
 
 # .. and reads the messages of the rows it leased.
-_claimed_messages_query = select(*message_columns)
-_claimed_messages_query = _claimed_messages_query.where(
-    message_table.c.id.in_(bindparam('claim_message_ids', expanding=True)))
-_claimed_messages_query = _claimed_messages_query.order_by(message_table.c.priority.desc(), message_table.c.id.asc())
+_leased_messages_query = select(*message_columns)
+_leased_messages_query = _leased_messages_query.where(
+    message_table.c.id.in_(bindparam('lease_message_ids', expanding=True)))
+_leased_messages_query = _leased_messages_query.order_by(message_table.c.priority.desc(), message_table.c.id.asc())
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def claim_messages(
+def lease_messages(
     engine:'Engine',
     sub_key:'str',
     max_messages:'int',
     max_len:'int',
     now_ms:'int',
     leased_until_ms:'int',
-) -> 'anylist':
+) -> 'tuple[anylist, intdict]':
     """ Leases up to max_messages deliverable rows of one subscriber, whose payloads add up to at most max_len,
-    until leased_until_ms, and returns the rows of their messages. The rows stay in the queue until the subscriber
-    acknowledges them, so a pull whose response never reaches the subscriber loses nothing.
+    until leased_until_ms, and returns the rows of their messages with the attempt number of each, by message ID.
+    The rows stay in the queue until the subscriber acknowledges them, so a pull whose response never reaches
+    the subscriber loses nothing.
     """
+    attempts:'intdict' = {}
     parameters:'anydict' = {
-        'claim_sub_key': sub_key,
-        'claim_now_ms': now_ms,
-        'claim_max_messages': max_messages,
+        'lease_sub_key': sub_key,
+        'lease_now_ms': now_ms,
+        'lease_max_messages': max_messages,
     }
 
     with engine.begin() as connection:
 
         # Lock the candidates ..
-        candidates = connection.execute(_claim_candidates_query, parameters).fetchall()
+        candidates = connection.execute(_lease_candidates_query, parameters).fetchall()
 
         if not candidates:
-            return []
+            return [], attempts
 
         # .. keep those within the size budget, except that a message larger than the budget
         # .. is handed out alone rather than holding up the queue ..
@@ -164,22 +166,24 @@ def claim_messages(
 
         # .. lease them, which only the first of two concurrent pulls succeeds in for any one row ..
         lease_parameters:'anydict' = {
-            'claim_delivery_ids': delivery_ids,
-            'claim_now_ms': now_ms,
-            'claim_leased_until_ms': leased_until_ms,
+            'lease_delivery_ids': delivery_ids,
+            'lease_now_ms': now_ms,
+            'lease_leased_until_ms': leased_until_ms,
         }
 
         message_ids:'intlist' = []
 
-        for row in connection.execute(_claim_lease, lease_parameters):
+        for row in connection.execute(_lease_update, lease_parameters):
             message_ids.append(row.message_id)
+            attempts[row.message_id] = row.attempt
 
         if not message_ids:
-            return []
+            return [], attempts
 
         # .. and read what is to be handed out.
-        out = connection.execute(_claimed_messages_query, {'claim_message_ids': message_ids}).fetchall()
+        rows = connection.execute(_leased_messages_query, {'lease_message_ids': message_ids}).fetchall()
 
+    out = (rows, attempts)
     return out
 
 # ################################################################################################################################

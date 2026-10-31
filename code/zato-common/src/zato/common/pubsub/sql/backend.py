@@ -23,7 +23,7 @@ from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
-from zato.common.pubsub.sql.pull import claim_messages, fetch_query, outgoing_fetch_query
+from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.writes import new_pending_publication
 from zato.common.util.api import new_msg_id, utcnow
@@ -424,12 +424,14 @@ class SQLPubSubBackend(SQLAdminAPI):
         now_ms = self._utc_now_ms()
         leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
 
-        rows = call_database(engine, claim_messages, engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
+        rows, attempts = call_database(engine, lease_messages, engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
 
         out:'anylist' = []
 
+        # Each copy of a message carries the number of the pull that handed it out, which a repeated copy raises.
         for row in rows:
             message = self._build_message_from_row(row)
+            message['delivery_attempt'] = attempts[row.id]
             out.append(message)
 
         return out
@@ -478,6 +480,7 @@ class SQLPubSubBackend(SQLAdminAPI):
                 'priority': message['priority'],
                 'expiration': message['expiration'],
                 'msg_id': message['msg_id'],
+                'delivery_attempt': message['delivery_attempt'],
                 'sub_key': sub_key,
                 'pub_time_iso': pub_time_iso,
                 'recv_time_iso': recv_time_iso,

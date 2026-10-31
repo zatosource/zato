@@ -7,19 +7,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import socket
 from time import monotonic
 
 # gevent
 import gevent
 
 # SQLAlchemy
-from sqlalchemy import select, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.exc import DBAPIError
 
 # Zato
 from cleanup import set_expired
 from common import delete_all_rows, get_message_rows
-from zato.common.db_env.errors import get_sqlstate, SQLState
+from zato.common.db_env.errors import get_sqlstate, is_transient, SQLState
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.config import get_pubsub_engine
@@ -55,6 +56,10 @@ _waiting_backend_query = text("""
     select pid from pg_stat_activity
     where wait_event_type = 'Lock' and datname = current_database() and pid <> pg_backend_pid()
 """)
+
+# The address and user of a database that no server listens for.
+_unreachable_host = '127.0.0.1'
+_unreachable_user = 'zato'
 
 # The query that returns how many deadlocks the database detected so far.
 _deadlocks_query = text('select deadlocks from pg_stat_database where datname = current_database()')
@@ -242,15 +247,44 @@ def _run_deadlock_flow(backend:'SQLPubSubBackend') -> 'None':
 
 # ################################################################################################################################
 
+def _run_unreachable_database_flow() -> 'None':
+    """ A connection that cannot be opened, as during a failover, is a transient condition after which
+    the sweep starts again.
+    """
+
+    # A port that was free a moment ago has no listener ..
+    with socket.socket() as probe:
+        probe.bind((_unreachable_host, 0))
+        port = probe.getsockname()[1]
+
+    engine = create_engine(f'postgresql+pg8000://{_unreachable_user}@{_unreachable_host}:{port}/{_unreachable_user}')
+
+    # .. so the connection is refused ..
+    try:
+        with engine.connect():
+            pass
+    except DBAPIError as e:
+        error = e
+    else:
+        raise AssertionError(f'A connection to port {port} was opened')
+    finally:
+        engine.dispose()
+
+    # .. which the sweep treats as transient.
+    assert is_transient(error), error
+
+# ################################################################################################################################
+
 def run_cleanup_postgresql_scenario() -> 'None':
-    """ The cleanup process on PostgreSQL under row locks held by other transactions, a terminated connection
-    and a deadlock.
+    """ The cleanup process on PostgreSQL under row locks held by other transactions, a terminated connection,
+    a deadlock and a database that cannot be reached.
     """
     backend = SQLPubSubBackend()
 
     _run_locked_rows_flow(backend)
     _run_terminated_connection_flow(backend)
     _run_deadlock_flow(backend)
+    _run_unreachable_database_flow()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -413,6 +413,7 @@ components:
         - priority
         - expiration
         - msg_id
+        - delivery_attempt
         - pub_time_iso
         - recv_time_iso
         - time_since_pub
@@ -441,6 +442,11 @@ components:
           description: Unique message identifier
           pattern: '^zpsm\.[a-z0-9-]+$'
           example: zpsm.20250829-074432-7264-d47439a9f-abc
+        delivery_attempt:
+          type: integer
+          minimum: 1
+          description: How many times the message was retrieved, 1 for the first retrieval and higher for each repeated one
+          example: 1
         correl_id:
           type: string
           description: Correlation ID for message tracking

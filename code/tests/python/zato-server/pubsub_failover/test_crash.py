@@ -61,6 +61,13 @@ _poll_seconds = 1.0
 # How many messages one push batch holds, which is how many copies a kill may repeat at most.
 _push_batch_size = 50
 
+# The status code of a request that the receiver accepted.
+_status_ok = 200
+
+# How long after the recorded time of a kill the server may still have sent a request, in seconds -
+# the time is taken once the docker command returns.
+_kill_time_tolerance = 1.0
+
 # The raw counts and the stored counts that must equal them.
 _count_queries = [
     ('queue',
@@ -95,6 +102,9 @@ class _Workload:
         # that a later pull may hand out again.
         self.failed_pulls = 0
         self.failed_ack_msg_ids:'set[str]' = set()
+
+        # When each kill happened, in seconds since the epoch, which the receiver's request times are compared with.
+        self.kill_times:'list[float]' = []
 
         self.publish_errors = 0
         self._threads:'list[threading.Thread]' = []
@@ -170,6 +180,7 @@ class _Workload:
         """ Kills the server with SIGKILL and starts its container again.
         """
         _ = docker('kill', self.server.container_name)
+        self.kill_times.append(time.time())
         _ = docker('start', self.server.container_name)
         _ = wait_until_up(self.server)
 
@@ -233,6 +244,40 @@ def _get_pending_msg_ids(env:'FailoverEnvironment', sub_key:'str') -> 'set[str]'
         out.add(row[0])
 
     return out
+
+# ################################################################################################################################
+
+def _get_repeats_not_in_flight(records:'dictlist', kill_times:'list[float]') -> 'strlist':
+    """ Returns each msg_id received successfully more than once without a kill between its first copy
+    and the next one, which no crash accounts for.
+    """
+    times_by_msg_id:'dict[str, list[float]]' = {}
+
+    for record in records:
+        if record['status_code'] != _status_ok:
+            continue
+        msg_id = record['msg_id']
+        if msg_id not in times_by_msg_id:
+            times_by_msg_id[msg_id] = []
+        times_by_msg_id[msg_id].append(record['time'])
+
+    out:'strlist' = []
+
+    for msg_id, times in times_by_msg_id.items():
+        for first_time, next_time in zip(times, times[1:]):
+            if not _is_kill_between(kill_times, first_time, next_time):
+                out.append(msg_id)
+                break
+
+    return out
+
+# ################################################################################################################################
+
+def _is_kill_between(kill_times:'list[float]', start:'float', end:'float') -> 'bool':
+    for kill_time in kill_times:
+        if start <= kill_time + _kill_time_tolerance and kill_time <= end:
+            return True
+    return False
 
 # ################################################################################################################################
 
@@ -347,6 +392,11 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
         for msg_id in repeated:
             attempts = copies_by_msg_id[msg_id]
             assert len(attempts) == len(set(attempts)), (msg_id, attempts)
+
+    # .. each repeated copy follows a first copy that was received before a kill, which the kill kept
+    # .. from being acknowledged, and is itself received after that kill ..
+    not_in_flight = _get_repeats_not_in_flight(receiver.get_request_records(), workload.kill_times)
+    assert not not_in_flight, not_in_flight[:10]
 
     # .. and the stored counts equal the rows.
     assert not _get_count_mismatches(env), _get_count_mismatches(env)

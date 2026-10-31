@@ -236,6 +236,7 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
 
     assert meta['topic_name'] == _topic
     assert meta['msg_id'] == result.msg_id
+    assert meta['delivery_attempt'] == 1
     assert meta['sub_key'] == _sub_key_1
     assert meta['size'] == len(json.dumps(dict_data))
     assert meta['priority'] == 5
@@ -283,11 +284,13 @@ def _run_pull_lease_flow(backend:'SQLPubSubBackend') -> 'None':
     finally:
         del os.environ[Env_Pull_Lease_Seconds]
 
-    # .. so both pulls received the same message ..
+    # .. so both pulls received the same message, the second copy with a higher attempt number ..
     assert len(first) == 1
     assert len(second) == 1
     assert first[0]['msg_id'] == result.msg_id
     assert second[0]['msg_id'] == result.msg_id
+    assert first[0]['delivery_attempt'] == 1
+    assert second[0]['delivery_attempt'] == 2
 
     # .. which one acknowledgement removes ..
     assert backend.ack_pulled(_sub_key_1, [result.msg_id]) == 1

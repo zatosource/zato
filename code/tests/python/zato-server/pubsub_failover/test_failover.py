@@ -52,6 +52,11 @@ _delivery_timeout_seconds = 120
 # How often the tests check the receiver, in seconds.
 _poll_seconds = 0.5
 
+# How long the database stays unavailable after the standby was started, and how long it may take
+# to accept connections once its container started again, in seconds.
+_outage_after_start_seconds = 30
+_database_ready_timeout_seconds = 120
+
 # How long a takeover may take beyond the startup of the server when a session blocks it, in seconds -
 # five seconds of waiting, then the termination of the blocking session.
 _blocked_takeover_max_seconds = 30
@@ -154,9 +159,10 @@ def _assert_repeats_have_higher_attempts(delivered:'dictlist') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_takeover_after_kill(failover_env:'FailoverEnvironment') -> 'None':
-    """ The controller starts the standby once the active server is killed, the standby takes over the database,
-    and every message published to the old server is pulled from and pushed by the new one.
+@pytest.mark.parametrize('stop_command', ['kill', 'stop'])
+def test_takeover_after_kill(failover_env:'FailoverEnvironment', stop_command:'str') -> 'None':
+    """ The controller starts the standby once the active server is killed or stopped gracefully, the standby takes over
+    the database, and every message published to the old server is pulled from and pushed by the new one.
     """
     env = failover_env
     generation = _reset_pair(env)
@@ -169,11 +175,11 @@ def test_takeover_after_kill(failover_env:'FailoverEnvironment') -> 'None':
     msg_ids = _publish(env, env.server_a, _message_count)
 
     # .. the active server is killed, and the controller notices it ..
-    controller = Controller(env.server_a, env.server_b, os.path.join(env.work_dir, 'controller-kill.jsonl'))
+    controller = Controller(env.server_a, env.server_b, os.path.join(env.work_dir, f'controller-{stop_command}.jsonl'))
     controller.start()
 
     kill_time = time.monotonic()
-    _ = docker('kill', env.server_a.container_name)
+    _ = docker(stop_command, env.server_a.container_name)
 
     try:
         exit_code = controller.wait(_switch_timeout_seconds)
@@ -236,6 +242,56 @@ def test_replaced_server_rejected(failover_env:'FailoverEnvironment') -> 'None':
     # .. so server B hands out everything.
     pulled = _pull_all(env, env.server_b)
     assert sorted(pulled) == sorted(msg_ids)
+
+    _ = docker('stop', '--time', '10', env.server_a.container_name)
+
+# ################################################################################################################################
+
+def test_takeover_from_frozen_server(failover_env:'FailoverEnvironment') -> 'None':
+    """ The active server is frozen, the standby takes over, and the frozen server resumes afterwards.
+    The resumed server publishes and hands out nothing, and the server that replaced it serves every message.
+    """
+    env = failover_env
+    generation = _reset_pair(env)
+
+    receiver = env.receivers[_topic_name]
+    receiver.clear_output()
+
+    # The push subscriber is unavailable while the messages are published, so they wait in its queue ..
+    receiver.stop()
+    msg_ids = _publish(env, env.server_a, _message_count)
+
+    # .. the active server is frozen ..
+    _ = docker('pause', env.server_a.container_name)
+
+    # .. the standby takes over in the meantime ..
+    _ = docker('start', env.server_b.container_name)
+    _ = wait_until_up(env.server_b)
+    _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+    # .. the frozen server resumes and its greenlets continue where they stopped ..
+    _ = docker('unpause', env.server_a.container_name)
+    _ = wait_until_up(env.server_a)
+
+    # .. it rejects every publication and hands out nothing ..
+    with pytest.raises(Exception, match='HTTP'):
+        _ = _publish(env, env.server_a, 1)
+
+    with pytest.raises(Exception, match='HTTP'):
+        _ = _puller(env, env.server_a).pull(max_messages=100)
+
+    # .. the generation is still the one of the server that replaced it ..
+    assert read_generation(env.database) == generation + 1
+
+    # .. which hands out every message to the pull subscriber ..
+    pulled = _pull_all(env, env.server_b)
+    assert sorted(pulled) == sorted(msg_ids)
+
+    # .. and pushes every one of them once the push subscriber returns.
+    receiver.restart()
+
+    delivered = _wait_for_deliveries(receiver, msg_ids)
+    _assert_repeats_have_higher_attempts(delivered)
 
     _ = docker('stop', '--time', '10', env.server_a.container_name)
 

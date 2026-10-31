@@ -46,6 +46,11 @@ _Mode_Hang       = 'hang'
 _Quiet_Settle_Time = 1.0
 _Quiet_Timeout     = 15.0
 
+# The headers that identify each copy of a pushed message, and the file in which each request is recorded.
+_Header_Msg_ID           = 'X-Zato-Msg-ID'
+_Header_Delivery_Attempt = 'X-Zato-Delivery-Attempt'
+_Request_Records_File    = 'requests.jsonl'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -170,6 +175,33 @@ class _RequestHandler(BaseHTTPRequestHandler):
 
 # ################################################################################################################################
 
+    def _record_request(self, status_code:'int') -> 'None':
+        """ Appends the identifier, the attempt number and the time of one request to the request records.
+        Requests that are not pub/sub deliveries carry neither header.
+        """
+        msg_id = self.headers.get(_Header_Msg_ID)
+        if msg_id is None:
+            msg_id = ''
+
+        attempt = self.headers.get(_Header_Delivery_Attempt)
+        if attempt is None:
+            attempt = '0'
+
+        record = {
+            'msg_id': msg_id,
+            'delivery_attempt': int(attempt),
+            'status_code': status_code,
+            'time': time.time(),
+        }
+
+        line = json.dumps(record) + '\n'
+        records_path = os.path.join(self.server.output_directory, _Request_Records_File)
+
+        with open(records_path, 'a') as records_file:
+            _ = records_file.write(line)
+
+# ################################################################################################################################
+
     def do_POST(self) -> 'None': # noqa: N802
         """ Handles a POST request from a Zato push delivery.
         """
@@ -188,6 +220,9 @@ class _RequestHandler(BaseHTTPRequestHandler):
         result = behavior.evaluate(body)
 
         logger.info('Evaluated -> status_code=%d, should_persist=%s', result.status_code, result.should_persist)
+
+        # .. record the request, by which a test accounts for each repeated copy of a message ..
+        self._record_request(result.status_code)
 
         # .. if we should persist, write the payload to disk ..
         if result.should_persist:
@@ -299,6 +334,25 @@ class WebhookReceiver:
             out.append(parsed)
 
         logger.info('Read %d delivered messages from %s', len(out), self.output_directory)
+
+        return out
+
+# ################################################################################################################################
+
+    def get_request_records(self) -> 'anydict_list':
+        """ Returns every request received, in the order of arrival, with its msg_id, attempt number,
+        status code and time.
+        """
+        out:'anydict_list' = []
+
+        records_path = os.path.join(self.output_directory, _Request_Records_File)
+
+        if not os.path.exists(records_path):
+            return out
+
+        with open(records_path) as records_file:
+            for line in records_file:
+                out.append(json.loads(line))
 
         return out
 
