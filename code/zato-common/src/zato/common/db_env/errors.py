@@ -94,10 +94,16 @@ def is_value_error(error:'DBAPIError') -> 'bool':
 
 def is_transient(error:'DBAPIError') -> 'bool':
     """ Whether a failed transaction may be started again unchanged - after a deadlock, a serialization failure,
-    a lock that was not available, a server that shut down or restarted, or a connection that was lost.
+    a lock that was not available, a server that shut down or restarted, a connection that was lost,
+    or a connection that could not be opened.
     """
     if error.connection_invalidated:
         out = True
+
+    # The driver reports each socket error, including those of a connection being opened, with the OSError as its cause.
+    elif isinstance(error.orig.__cause__, OSError):
+        out = True
+
     else:
         sqlstate = get_sqlstate(error)
         out = sqlstate in _transient_states

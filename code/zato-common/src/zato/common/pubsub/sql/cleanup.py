@@ -467,7 +467,7 @@ class PubSubCleanup:
 
                 # Only a locked SQLite database or a transient condition of PostgreSQL is a reason
                 # to start the sweep again - a deadlock, a serialization failure, an unavailable lock,
-                # a server that shut down or restarted, or a lost connection ..
+                # a server that shut down or restarted, or a connection that was lost or could not be opened ..
                 error_message = str(e.orig)
 
                 if _database_locked_message in error_message:
