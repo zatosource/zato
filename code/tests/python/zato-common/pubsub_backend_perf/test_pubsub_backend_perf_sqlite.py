@@ -20,6 +20,7 @@ from fanout import run_fanout_scenario
 from laggard import run_laggard_scenario
 from mass_drain import run_mass_drain_scenario
 from operations import run_operations_scenario
+from production_mix import run_production_mix_scenario
 from push import run_push_delivery_scenario
 from retention import run_retention_scenario
 from subscriptions import run_subscriptions_scenario
@@ -40,6 +41,7 @@ def test_pubsub_backend_perf_sqlite(tmp_path:'os.PathLike') -> 'None':
             run_push_delivery_scenario()
             run_fanout_scenario()
             run_document_mix_scenario()
+            run_production_mix_scenario()
             run_backbone_scenario()
             run_subscriptions_scenario()
             run_laggard_scenario()

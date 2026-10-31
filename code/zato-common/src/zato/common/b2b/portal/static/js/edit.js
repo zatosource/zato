@@ -2,7 +2,7 @@
 
 // The values of the editable blocks of an item. Each value of a block of fields opens a micro-form of its own,
 // and each row of a table opens one micro-form holding every editable value of the row. A value that is not
-// free text carries an editor in its data-edit attribute - its kind, its current value and the kind's own keys,
+// free text has an editor in its data-edit attribute - its kind, its current value and the kind's own keys,
 // such as the options of a list or the units of a duration - and is edited and shown as that kind.
 
 (function() {
