@@ -15,10 +15,10 @@ import time
 import pytest
 
 # Zato
-from failover import Controller, create_container, docker, read_generation, run_container, wait_for_generation, \
-    wait_until_up
+from failover import Controller, create_container, docker, get_container_state, read_generation, run_container, \
+    wait_for_generation, wait_until_up
 from zato.common.test.client import PublishClient, PullClient
-from zato.common.test.pubsub_database import connect
+from zato.common.test.pubsub_database import connect, is_postgresql_mode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -270,6 +270,86 @@ def test_takeover_from_open_session(failover_env:'FailoverEnvironment') -> 'None
         cursor.execute('select 1')
 
     _ = docker('stop', '--time', '10', env.server_a.container_name)
+
+# ################################################################################################################################
+
+def _wait_for_database(env:'FailoverEnvironment') -> 'None':
+    """ Waits until the pub/sub database accepts connections again.
+    """
+    deadline = time.monotonic() + _database_ready_timeout_seconds
+
+    while True:
+        try:
+            connection = connect(env.database)
+        except Exception:
+            assert time.monotonic() < deadline, f'Database not available after {_database_ready_timeout_seconds}s'
+            time.sleep(_poll_seconds)
+        else:
+            connection.close()
+            return
+
+# ################################################################################################################################
+
+def test_takeover_during_database_outage(failover_env:'FailoverEnvironment') -> 'None':
+    """ The active server is killed while the database is unavailable. The controller starts the standby,
+    which waits for the database, takes over once it returns, and serves every message published before the outage.
+    """
+    env = failover_env
+
+    # A SQLite file has no outage of its own and no standby server that could take it over.
+    if not is_postgresql_mode(env.database.mode):
+        return
+
+    generation = _reset_pair(env)
+
+    receiver = env.receivers[_topic_name]
+    receiver.clear_output()
+
+    # The push subscriber is unavailable while the messages are published, so they wait in its queue ..
+    receiver.stop()
+    msg_ids = _publish(env, env.server_a, _message_count)
+
+    # .. the database becomes unavailable ..
+    _ = docker('stop', env.database.container_name)
+
+    # .. and the active server is killed during the outage, which the controller notices ..
+    controller = Controller(env.server_a, env.server_b, os.path.join(env.work_dir, 'controller-outage.jsonl'))
+    controller.start()
+
+    _ = docker('kill', env.server_a.container_name)
+
+    # .. the standby is started while the database is still unavailable ..
+    deadline = time.monotonic() + _switch_timeout_seconds
+
+    while get_container_state(env.server_b) != 'running':
+        assert time.monotonic() < deadline, controller.read_events()
+        time.sleep(_poll_seconds)
+
+    time.sleep(_outage_after_start_seconds)
+
+    # .. the database returns, and the standby takes over with the next generation ..
+    _ = docker('start', env.database.container_name)
+    _wait_for_database(env)
+
+    try:
+        exit_code = controller.wait(_switch_timeout_seconds)
+    finally:
+        controller.stop()
+
+    assert exit_code == 0, controller.read_events()
+
+    _ = wait_until_up(env.server_b)
+    _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+    # .. it hands out every message to the pull subscriber ..
+    pulled = _pull_all(env, env.server_b)
+    assert sorted(pulled) == sorted(msg_ids)
+
+    # .. and pushes every one of them once the push subscriber returns.
+    receiver.restart()
+
+    delivered = _wait_for_deliveries(receiver, msg_ids)
+    _assert_repeats_have_higher_attempts(delivered)
 
 # ################################################################################################################################
 # ################################################################################################################################

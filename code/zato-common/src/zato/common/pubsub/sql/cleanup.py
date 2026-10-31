@@ -21,6 +21,7 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.errors import is_transient
+from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
     get_generation_file_path, get_pubsub_engine
 from zato.common.pubsub.sql.counts import compact_counts
@@ -97,6 +98,9 @@ class PubSubCleanup:
 
         # The generation of the server of this environment, which the sweeps confirm on PostgreSQL
         self._guard:'GenerationGuard | None' = None
+
+        # How long the sweeps were unable to complete
+        self._outage = OutageTracker('Pub/sub cleanup')
 
 # ################################################################################################################################
 
@@ -475,7 +479,10 @@ class PubSubCleanup:
 
                 # .. after the pause in which the other writers complete their transactions or the database returns.
                 logger.warning('Sweep postponed, %s -> retry in:%ds', cause, _lock_retry_seconds)
+                self._outage.on_failure()
                 time.sleep(_lock_retry_seconds)
+
+        self._outage.on_success()
 
         return out
 

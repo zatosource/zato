@@ -22,6 +22,7 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from zato.common.api import DATA_FORMAT, MISC, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
 from zato.common.pubsub.sql.generation import PubSubReplaced
@@ -182,6 +183,7 @@ class PushDelivery:
     def _run_delivery_loop(self, sub_key:'str') -> 'None':
         """ Drains what is pending for one subscriber key and then delivers new messages until stopped.
         """
+        outage = OutageTracker(f'PubSub delivery for sub_key `{sub_key}`')
 
         # On startup, drain everything still unacknowledged for this subscriber ..
         while not self._stop_event.is_set():
@@ -191,6 +193,7 @@ class PushDelivery:
                 break
             try:
                 pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
+                outage.on_success()
                 if not pending:
                     break
                 self._deliver_batch(pending, sub_key)
@@ -200,6 +203,7 @@ class PushDelivery:
 
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
+                outage.on_failure()
 
                 sleep(_fetch_error_sleep)
 
@@ -212,6 +216,7 @@ class PushDelivery:
             try:
                 messages = self.backend.fetch_messages(
                     sub_key, max_messages=_delivery_batch_size, block_ms=_default_delivery_block_ms)
+                outage.on_success()
                 if messages:
                     self._deliver_batch(messages, sub_key)
 
@@ -220,6 +225,7 @@ class PushDelivery:
 
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
+                outage.on_failure()
 
                 sleep(_fetch_error_sleep)
 

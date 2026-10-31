@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from time import monotonic
 
 # gevent
@@ -26,6 +27,13 @@ from workload import Workload
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from _pytest.logging import LogCaptureFixture
+    from zato.common.typing_ import strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # How long the traffic runs before the outage and after it, and how long the backlog may take to drain, in seconds.
 _traffic_before_seconds = 5
 _traffic_after_seconds = 10
@@ -34,16 +42,30 @@ _drain_timeout = 300
 # The outages, from a restart of a self-managed database to a long maintenance event of a managed service, in seconds.
 _outage_seconds = [10, 30, 120, 600]
 
+# The logger of the resume times, and the components that log theirs.
+_outage_logger_name = 'zato.common.db_env.outage'
+_resuming_components = ['Pub/sub commit writer', 'PubSub delivery for sub_key', 'Pub/sub cleanup']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _is_logged(entries:'strlist', component:'str') -> 'bool':
+    for entry in entries:
+        if entry.startswith(component):
+            return True
+    return False
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.mark.parametrize('outage_seconds', _outage_seconds)
-def test_database_outage(outage_seconds:'int') -> 'None':
+def test_database_outage(outage_seconds:'int', caplog:'LogCaptureFixture') -> 'None':
     """ The database is unavailable for a while during traffic. Publications that were not written fail and are
     repeated, nothing acknowledged is lost, every component resumes without a restart and the server remains
     the active one with its generation unchanged.
     """
     label = f'outage{outage_seconds}'
+    caplog.set_level(logging.INFO, logger=_outage_logger_name)
 
     with replicated_environment(label, True) as database:
 
@@ -83,7 +105,18 @@ def test_database_outage(outage_seconds:'int') -> 'None':
         measurements = check_delivery(database, workload, restore_time)
         measurements['acknowledged_during_outage'] = acknowledged_during
 
+        resumed_entries:'strlist' = []
+        for record in caplog.records:
+            if record.name == _outage_logger_name:
+                resumed_entries.append(record.getMessage())
+
+        measurements['resumed_entries'] = resumed_entries
+
         print(f'\nOutage {outage_seconds}s -> {measurements}')
+
+        # .. the commit writer, the push delivery and the cleanup each logged how long they took to resume ..
+        for component in _resuming_components:
+            assert _is_logged(resumed_entries, component), (component, resumed_entries)
 
         # .. nothing was acknowledged while the database was away, nothing acknowledged was lost ..
         assert acknowledged_during == 0, measurements

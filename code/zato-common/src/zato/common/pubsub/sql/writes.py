@@ -21,6 +21,7 @@ from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.errors import is_conflict, is_value_error
+from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.pubsub.sql.config import get_batch_size, get_commit_max_messages, get_commits_in_flight, \
     get_pubsub_engine
@@ -291,6 +292,8 @@ class PubSubWriter:
             max_in_flight=commits_in_flight,
         )
 
+        self._outage = OutageTracker('Pub/sub commit writer')
+
 # ################################################################################################################################
 
     def publish(self, pending:'PendingPublication') -> 'None':
@@ -319,7 +322,14 @@ class PubSubWriter:
         """ Writes all the items of one batch, in a thread of the pool under gevent with SQLite.
         """
         engine = get_pubsub_engine()
-        call_database(engine, self._write_items, engine, batch)
+
+        try:
+            call_database(engine, self._write_items, engine, batch)
+        except DBAPIError:
+            self._outage.on_failure()
+            raise
+
+        self._outage.on_success()
 
 # ################################################################################################################################
 
