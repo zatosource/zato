@@ -9,8 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import shutil
 import sys
 import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 # pytest
@@ -24,8 +26,8 @@ from failover import build_server_env, ContainerServer, create_container, get_fa
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, render_template, \
     run_quickstart_and_enmasse, SessionState
-from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, PubSubDBMode, start_pubsub_database, \
-    stop_pubsub_database
+from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_postgresql_mode, PubSubDBMode, \
+    start_pubsub_database, stop_pubsub_database
 from zato.common.test.receiver import WebhookReceiver
 
 # ################################################################################################################################
@@ -114,7 +116,7 @@ def _new_server(name:'str', state:'SessionState', rendered_yaml:'str', invoke_pa
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def failover_env() -> 'any_':
     """ Server A runs as the active server, server B is a stopped container that the controller may start.
     """
@@ -123,7 +125,34 @@ def failover_env() -> 'any_':
     if not is_postgresql_mode(mode):
         mode = PubSubDBMode.PostgreSQL
 
+    with _environment(mode) as environment:
+        yield environment
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def crash_env() -> 'any_':
+    """ The same pair of servers on the pub/sub database of the mode that Zato_Test_PubSub_DB_Mode selects,
+    which is a SQLite file in the runtime directory when the mode is SQLite.
+    """
+    mode = get_db_mode()
+
+    with _environment(mode) as environment:
+        yield environment
+
+# ################################################################################################################################
+
+@contextmanager
+def _environment(mode:'str') -> 'any_':
+    """ Builds the pair of servers on a pub/sub database of the given mode and removes everything afterwards.
+    """
     database = start_pubsub_database('failover', mode)
+
+    # A SQLite file is in the runtime directory, which the containers of the servers mount.
+    sqlite_dir = tempfile.mkdtemp(prefix='zato_pubsub_failover_sqlite_', dir=get_runtime_dir())
+
+    if not is_postgresql_mode(mode):
+        database.env = {'Zato_PubSub_DB_Path': os.path.join(sqlite_dir, 'pubsub.db')}
 
     state_a = SessionState('zato.test.pubsub_failover.a', 'server-logs-failover-a.txt')
     state_b = SessionState('zato.test.pubsub_failover.b', 'server-logs-failover-b.txt')
@@ -185,6 +214,7 @@ def failover_env() -> 'any_':
         state_a.cleanup()
         state_b.cleanup()
         stop_pubsub_database(database)
+        shutil.rmtree(sqlite_dir, ignore_errors=True)
 
 # ################################################################################################################################
 # ################################################################################################################################

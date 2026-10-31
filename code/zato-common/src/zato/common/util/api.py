@@ -363,12 +363,17 @@ def new_sub_key() -> 'str':
 
 # ################################################################################################################################
 
-def sub_key_from_sec_name(sec_name:'str') -> 'str':
-    """ Returns the subscription key derived from the name of the subscriber's security definition.
-    Each server that imports the same configuration derives the same key, so the active server and its standby
-    address the same queues in the pub/sub database.
+def sub_key_from_definition(sec_name:'str', delivery_type:'str', topic_names:'strlist') -> 'str':
+    """ Returns the subscription key derived from what identifies a subscription in a configuration file -
+    the subscriber's security definition, the delivery type and the topics. Each server that imports the same
+    configuration derives the same key, so the active server and its standby address the same queues
+    in the pub/sub database.
     """
-    digest = sha256(sec_name.encode('utf8')).hexdigest()
+    sorted_names = sorted(topic_names)
+    topic_part = ','.join(sorted_names)
+    identity = f'{sec_name}\n{delivery_type}\n{topic_part}'
+
+    digest = sha256(identity.encode('utf8')).hexdigest()
     out = f'sk{digest[:32]}'
     return out
 

@@ -12,7 +12,7 @@ import logging
 # Zato
 from zato.common.api import PubSub
 from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase, HTTPSOAP
-from zato.common.util.api import sub_key_from_sec_name
+from zato.common.util.api import sub_key_from_definition
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -133,8 +133,14 @@ class PubSubSubscriptionImporter:
 
         sec_name = session.query(SecurityBase.name).filter_by(id=definition['sec_base_id']).one().name
 
+        topic_names:'list[str]' = []
+        topic_rows = session.query(PubSubTopic.name).filter(PubSubTopic.id.in_(definition['topic_id_list'])).all()
+
+        for topic_row in topic_rows:
+            topic_names.append(topic_row.name)
+
         instance:'any_' = PubSubSubscription()
-        instance.sub_key = sub_key_from_sec_name(sec_name)
+        instance.sub_key = sub_key_from_definition(sec_name, definition['delivery_type'], topic_names)
         instance.sec_base_id = definition['sec_base_id']
         instance.delivery_type = definition['delivery_type']
         instance.push_type = definition.get('push_type')
