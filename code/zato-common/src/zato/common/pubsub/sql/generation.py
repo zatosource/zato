@@ -17,13 +17,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from logging import getLogger
 from threading import Thread
-from time import monotonic, sleep
+from time import monotonic
 
 # SQLAlchemy
 from sqlalchemy import event, text
-from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.db_env.outage import call_until_available
 from zato.common.pubsub.sql.config import get_generation_file_path
 
 # ################################################################################################################################
@@ -31,11 +31,12 @@ from zato.common.pubsub.sql.config import get_generation_file_path
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, callable_
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anylist = anylist
+    callable_ = callable_
     Connection = Connection
     Engine = Engine
 
@@ -52,11 +53,6 @@ _takeover_wait_seconds = 5
 
 # How often the sessions that hold up raising the generation are looked up again once the wait is over.
 _takeover_check_seconds = 1
-
-# How long a server that cannot reach the database waits before trying to raise the generation again,
-# at first and at most.
-_connect_retry_initial_seconds = 1
-_connect_retry_max_seconds = 30
 
 # The keys under which a pooled connection records how far its current transaction confirmed the generation.
 _state_key = 'zato_pubsub_generation_state'
@@ -309,20 +305,23 @@ def read_generation_file() -> 'int':
 
 # ################################################################################################################################
 
-def take_over(engine:'Engine') -> 'GenerationGuard':
+def _connect_and_raise_generation(get_engine:'callable_') -> 'tuple[Engine, int]':
+    """ Builds the engine, which creates the schema if needed, and raises the generation through it.
+    """
+    engine = get_engine()
+    generation = _raise_generation(engine)
+
+    out = engine, generation
+    return out
+
+# ################################################################################################################################
+
+def take_over(get_engine:'callable_') -> 'GenerationGuard':
     """ Makes this server the active one - raises the generation, waiting for the database to become available
     if it is not, records the new generation and guards every subsequent transaction of the engine with it.
+    The engine is built within the wait as well, because building it already connects to the database.
     """
-    retry_seconds = _connect_retry_initial_seconds
-
-    while True:
-        try:
-            generation = _raise_generation(engine)
-            break
-        except DBAPIError as e:
-            logger.warning('Pub/sub generation could not be raised, retry in %ss -> %s', retry_seconds, e)
-            sleep(retry_seconds)
-            retry_seconds = min(retry_seconds * 2, _connect_retry_max_seconds)
+    engine, generation = call_until_available('Pub/sub takeover', _connect_and_raise_generation, get_engine)
 
     write_generation_file(generation)
 

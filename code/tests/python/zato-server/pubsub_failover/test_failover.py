@@ -10,14 +10,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 import time
+from dataclasses import replace
 
 # pytest
 import pytest
 
 # Zato
-from failover import Controller, create_container, docker, get_container_state, read_generation, run_container, \
-    wait_for_generation, wait_until_up
+from failover import Controller, create_container, docker, get_container_state, is_server_up, LinkProxy, \
+    read_generation, run_container, wait_for_generation, wait_until_up
 from zato.common.test.client import PublishClient, PullClient
+from zato.common.test.conftest_base_pubsub import find_free_port
 from zato.common.test.pubsub_database import connect, is_postgresql_mode
 
 # ################################################################################################################################
@@ -60,6 +62,10 @@ _database_ready_timeout_seconds = 120
 # How long a takeover may take beyond the startup of the server when a session blocks it, in seconds -
 # five seconds of waiting, then the termination of the blocking session.
 _blocked_takeover_max_seconds = 30
+
+# How long the controller keeps checking the new active server before a test confirms that it was not replaced,
+# in seconds - longer than the three failed checks, one second apart, that a replacement requires.
+_controller_settle_seconds = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,24 +188,27 @@ def test_takeover_after_kill(failover_env:'FailoverEnvironment', stop_command:'s
     _ = docker(stop_command, env.server_a.container_name)
 
     try:
-        exit_code = controller.wait(_switch_timeout_seconds)
+        controller.wait_for_switch(_switch_timeout_seconds)
+
+        events = controller.read_events()
+        names:'strlist' = []
+
+        for event in events:
+            names.append(event['event'])
+
+        assert 'standby_started' in names, events
+        assert 'old_stopped' in names, events
+
+        # .. the standby is up, with the next generation, and the controller, which now checks it,
+        # .. does not replace it ..
+        _ = wait_until_up(env.server_b)
+        _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+        time.sleep(_controller_settle_seconds)
+        assert controller.get_switch_count() == 1, controller.read_events()
+
     finally:
         controller.stop()
-
-    assert exit_code == 0, controller.read_events()
-
-    events = controller.read_events()
-    names:'strlist' = []
-
-    for event in events:
-        names.append(event['event'])
-
-    assert 'standby_started' in names, events
-    assert 'old_stopped' in names, events
-
-    # .. the standby is up, with the next generation ..
-    _ = wait_until_up(env.server_b)
-    _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
 
     switch_seconds = time.monotonic() - kill_time
     logger.info('Kill to takeover: %.1fs', switch_seconds)
@@ -297,6 +306,87 @@ def test_takeover_from_frozen_server(failover_env:'FailoverEnvironment') -> 'Non
 
 # ################################################################################################################################
 
+def test_takeover_from_cut_off_server(failover_env:'FailoverEnvironment') -> 'None':
+    """ The active server is cut off from its database and from its clients while its process keeps running,
+    the standby takes over, and the links of the old server are restored afterwards. The old server publishes
+    and hands out nothing, and the server that replaced it serves every message.
+    """
+    env = failover_env
+    _ = _reset_pair(env)
+
+    receiver = env.receivers[_topic_name]
+    receiver.clear_output()
+
+    # Server A runs again, its link to the database and its HTTP port each behind a proxy, and raises the generation
+    # once more as it starts ..
+    internal_port = find_free_port()
+
+    server_a = replace(env.server_a, env=dict(env.server_a.env))
+    server_a.env['Zato_Config_Bind_Port'] = str(internal_port)
+
+    database_proxy = LinkProxy(find_free_port(), env.database.port, os.path.join(env.work_dir, 'proxy-database.log'))
+    server_a.env['Zato_PubSub_DB_Port'] = str(database_proxy.listen_port)
+
+    http_proxy = LinkProxy(server_a.port, internal_port, os.path.join(env.work_dir, 'proxy-http.log'))
+
+    _ = docker('rm', '-f', server_a.container_name)
+    database_proxy.start()
+    http_proxy.start()
+
+    try:
+        run_container(server_a)
+        _ = wait_until_up(server_a)
+
+        generation = read_generation(env.database)
+
+        # .. the push subscriber is unavailable while the messages are published, so they wait in its queue ..
+        receiver.stop()
+        msg_ids = _publish(env, server_a, _message_count)
+
+        # .. both links are cut, while the process of the server keeps running ..
+        _ = database_proxy.command('block')
+        _ = http_proxy.command('block')
+
+        assert not is_server_up(server_a)
+        assert get_container_state(server_a) == 'running'
+
+        # .. the standby takes over in the meantime ..
+        _ = docker('start', env.server_b.container_name)
+        _ = wait_until_up(env.server_b)
+        _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+        # .. the links of the old server are restored ..
+        _ = database_proxy.command('unblock')
+        _ = http_proxy.command('unblock')
+        _ = wait_until_up(server_a)
+
+        # .. it rejects every publication and hands out nothing ..
+        with pytest.raises(Exception, match='HTTP'):
+            _ = _publish(env, server_a, 1)
+
+        with pytest.raises(Exception, match='HTTP'):
+            _ = _puller(env, server_a).pull(max_messages=100)
+
+        # .. the generation is still the one of the server that replaced it ..
+        assert read_generation(env.database) == generation + 1
+
+        # .. which hands out every message to the pull subscriber ..
+        pulled = _pull_all(env, env.server_b)
+        assert sorted(pulled) == sorted(msg_ids)
+
+        # .. and pushes every one of them once the push subscriber returns.
+        receiver.restart()
+
+        delivered = _wait_for_deliveries(receiver, msg_ids)
+        _assert_repeats_have_higher_attempts(delivered)
+
+    finally:
+        _ = docker('stop', '--time', '10', server_a.container_name, check=False)
+        http_proxy.stop()
+        database_proxy.stop()
+
+# ################################################################################################################################
+
 def test_takeover_from_open_session(failover_env:'FailoverEnvironment') -> 'None':
     """ A session that holds the row of the generation open does not keep the standby from taking over,
     which terminates the session after it waited for it.
@@ -387,15 +477,18 @@ def test_takeover_during_database_outage(failover_env:'FailoverEnvironment') -> 
     _ = docker('start', env.database.container_name)
     _wait_for_database(env)
 
+    # .. while the controller, which waited for the standby through the outage, has not replaced it.
     try:
-        exit_code = controller.wait(_switch_timeout_seconds)
+        controller.wait_for_switch(_switch_timeout_seconds)
+
+        _ = wait_until_up(env.server_b)
+        _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+        time.sleep(_controller_settle_seconds)
+        assert controller.get_switch_count() == 1, controller.read_events()
+
     finally:
         controller.stop()
-
-    assert exit_code == 0, controller.read_events()
-
-    _ = wait_until_up(env.server_b)
-    _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
 
     # .. it hands out every message to the pull subscriber ..
     pulled = _pull_all(env, env.server_b)

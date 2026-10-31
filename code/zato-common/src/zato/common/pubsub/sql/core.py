@@ -21,7 +21,7 @@ from sqlalchemy import bindparam
 # Zato
 from zato.common.api import HTTP_SOAP
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
 from zato.common.pubsub.sql.generation import take_over
 from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.writes import drop_payloads, new_pending_ack, PubSubWriter
@@ -126,10 +126,8 @@ class SQLBackendCore:
         """ Makes this server the active one on PostgreSQL, whose database a standby server may take over,
         and guards each subsequent transaction with the generation raised. A SQLite file has only one server.
         """
-        engine = self.engine
-
-        if engine.dialect.name == Type_PostgreSQL:
-            self.generation_guard = take_over(engine)
+        if get_pubsub_db_type() == Type_PostgreSQL:
+            self.generation_guard = take_over(get_pubsub_engine)
 
 # ################################################################################################################################
 

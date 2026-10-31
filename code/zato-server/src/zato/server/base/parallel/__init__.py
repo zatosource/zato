@@ -37,6 +37,7 @@ from zato.common.audit_log.scheduler import record_job_complete, record_job_star
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG
 from zato.common.const import SECRETS
+from zato.common.db_env.outage import call_until_available
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
 from zato.common.log_streaming import LogStreamingManager
@@ -1759,8 +1760,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # from everything the server it replaces committed, and that server changes nothing from now on ..
         self.pubsub_backend.take_over()
 
-        # .. and only now is the state read.
-        self.config_manager._sync_pubsub_subscriptions()
+        # .. and only now is the state read. Each step that writes to the database may run again as a whole,
+        # .. so it waits for the database through an outage or a failover that begins after the takeover.
+        call_until_available('Pub/sub subscriptions sync', self.config_manager._sync_pubsub_subscriptions)
         self.config_manager._sync_pubsub_topics()
 
         # All delivery greenlets share the backend - its per-subscriber events
@@ -1771,7 +1773,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         register_delivery_handlers()
 
         # .. and the queues of the connections published to before this server started come back here.
-        self.config_manager.restore_outgoing_subscriptions()
+        call_until_available('Outgoing queues restore', self.config_manager.restore_outgoing_subscriptions)
 
         for sub_key in self.config_manager._push_subs:
             self.pubsub_push_delivery.start_sub_key(sub_key)

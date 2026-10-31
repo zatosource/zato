@@ -22,6 +22,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 # Zato
+from zato.common.test.conftest_base_pubsub import find_free_port
 from zato.common.test.pubsub_database import connect, get_runtime_dir
 
 # ################################################################################################################################
@@ -64,6 +65,12 @@ _pull_lease_seconds = '5'
 
 # The controller script next to this module.
 _controller_path = os.path.join(os.path.dirname(__file__), 'controller.py')
+
+# How often the events of the controller are read while a test waits for a switch, in seconds.
+_controller_poll_seconds = 0.5
+
+# How long a link proxy may take to answer its control endpoint after its process started, in seconds.
+_proxy_ready_timeout_seconds = 30
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -269,9 +276,10 @@ class Controller:
 
         command = [
             sys.executable, _controller_path,
-            '--ping-url', self.active.ping_url,
             '--active', self.active.container_name,
+            '--active-ping-url', self.active.ping_url,
             '--standby', self.standby.container_name,
+            '--standby-ping-url', self.standby.ping_url,
             '--interval', str(interval_seconds),
             '--failures', str(max_failures),
             '--events', self.events_path,
@@ -279,15 +287,25 @@ class Controller:
 
         self.process = subprocess.Popen(command)
 
-    def wait(self, timeout_seconds:'float') -> 'int':
-        """ Waits until the controller has switched the servers and returns its exit code.
+    def get_switch_count(self) -> 'int':
+        """ Returns how many times the controller has exchanged the roles of the servers so far.
         """
-        process = self.process
-        if process is None:
-            raise Exception('Controller not started')
+        out = 0
 
-        out = process.wait(timeout=timeout_seconds)
+        for event in self.read_events():
+            if event['event'] == 'switched':
+                out += 1
+
         return out
+
+    def wait_for_switch(self, timeout_seconds:'float') -> 'None':
+        """ Waits until the controller has exchanged the roles of the servers, while it continues to run.
+        """
+        deadline = time.monotonic() + timeout_seconds
+
+        while self.get_switch_count() == 0:
+            assert time.monotonic() < deadline, self.read_events()
+            time.sleep(_controller_poll_seconds)
 
     def stop(self) -> 'None':
         if self.process and self.process.poll() is None:
@@ -302,6 +320,59 @@ class Controller:
                 out.append(json.loads(line))
 
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LinkProxy:
+    """ A TCP proxy, run as a process of its own, in front of one port of a server - its link to the database
+    or its HTTP endpoint - which a test cuts and restores through the control endpoint of the proxy.
+    """
+
+    def __init__(self, listen_port:'int', upstream_port:'int', log_path:'str') -> 'None':
+        self.listen_port = listen_port
+        self.upstream_port = upstream_port
+        self.control_port = find_free_port()
+        self.log_path = log_path
+        self.process:'subprocess.Popen[bytes] | None' = None
+
+    def start(self) -> 'None':
+        command = [
+            sys.executable, '-m', 'zato.common.test.tcp_proxy',
+            '--listen-port', str(self.listen_port),
+            '--control-port', str(self.control_port),
+            '--upstream-port', str(self.upstream_port),
+        ]
+
+        with open(self.log_path, 'wb') as log_file:
+            self.process = subprocess.Popen(command, stdout=log_file, stderr=subprocess.STDOUT)
+
+        # The proxy is ready once its control endpoint answers.
+        deadline = time.monotonic() + _proxy_ready_timeout_seconds
+
+        while True:
+            try:
+                _ = self.command('release')
+                return
+            except OSError:
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(_ping_poll_seconds)
+
+    def command(self, name:'str') -> 'int':
+        """ Sends one command to the control endpoint of the proxy and returns its numeric result.
+        """
+        url = f'http://127.0.0.1:{self.control_port}/{name}'
+
+        with urlopen(url, timeout=_ping_timeout_seconds) as response:
+            out = int(response.read())
+
+        return out
+
+    def stop(self) -> 'None':
+        if self.process and self.process.poll() is None:
+            self.process.kill()
+            _ = self.process.wait()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -8,21 +8,59 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from time import monotonic
+from time import monotonic, sleep
+
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import floatnone
+    from zato.common.typing_ import any_, callable_, floatnone
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
+    callable_ = callable_
     floatnone = floatnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How long the first pause before a database operation is run again lasts, and how long the longest one lasts,
+# in seconds - each pause doubles the previous one.
+_retry_initial_seconds = 1
+_retry_max_seconds = 30
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def call_until_available(component:'str', func:'callable_', *args:'any_') -> 'any_':
+    """ Runs a database operation and runs it again after each database error, with pauses that grow up to a limit,
+    until it completes, and returns its result. The operation is run again as a whole, so it is one that may run
+    any number of times, e.g. a step of a startup that waits for a database through an outage or a failover.
+    """
+    outage = OutageTracker(component)
+    retry_seconds = _retry_initial_seconds
+
+    while True:
+        try:
+            out = func(*args)
+            break
+        except DBAPIError as e:
+            logger.warning('%s waiting for the database, retry in %ss -> %s', component, retry_seconds, e)
+            outage.on_failure()
+            sleep(retry_seconds)
+            retry_seconds = min(retry_seconds * 2, _retry_max_seconds)
+
+    outage.on_success()
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
