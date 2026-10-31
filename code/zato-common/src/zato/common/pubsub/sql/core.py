@@ -343,6 +343,22 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
+    def ack_pulled(self, sub_key:'str', msg_ids:'strlist') -> 'int':
+        """ Acknowledges messages that a pull handed out to one subscriber, removing them from its queue.
+        Returns how many of them were still in the queue.
+        """
+        if not msg_ids:
+            return 0
+
+        pending = self._ack(sub_key, msg_ids, None)
+        out = pending.removed_count
+
+        logger.info('ack_pulled -> sub_key:%s, given:%d, removed:%d', sub_key, len(msg_ids), out)
+
+        return out
+
+# ################################################################################################################################
+
     def claim_message(self, sub_key:'str', msg_id:'str') -> 'bool':
         """ Acknowledges a single message on behalf of one of several callers that may act on it.
         Returns True only to the caller whose acknowledgement removed the subscriber's delivery row.

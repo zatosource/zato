@@ -250,8 +250,15 @@ def _wizard(title:'str', list_path:'str', done_label:'str', steps:'anylist') -> 
     review = {'key': 'review', 'title': 'Review', 'lines': [], 'is_review': True}
     steps.append(review)
 
-    out = {'title': title, 'list_path': list_path, 'done_label': done_label, 'steps': steps}
+    out = {'title': title, 'list_path': list_path, 'done_label': done_label, 'done_when': None, 'steps': steps}
     return out
+
+# ################################################################################################################################
+
+def _done_when(wizard:'anydict', name:'str', value:'str', label:'str') -> 'None':
+    """ The label of the button that completes the wizard while the line of the given name holds the given value.
+    """
+    wizard['done_when'] = {'name': name, 'value': value, 'label': label}
 
 # ################################################################################################################################
 
@@ -380,7 +387,8 @@ def agreement_wizard(partner:'Partner') -> 'anydict':
 
 def _partner_identity() -> 'anylist':
     """ The identity of an AS2 or an AS4 partner. An ebXML partner is identified by the PartyInfo of its CPA instead,
-    which also has its name, its PartyId and its role.
+    which also has its name, its PartyId and its role. The same CPA defines the first agreement with the partner,
+    which is created together with the partner.
     """
     lines:'anylist' = []
 
@@ -419,7 +427,7 @@ def _partner_transport(protocol:'str') -> 'anylist':
     if protocol == Protocol.AS2:
         out.append(_select('as2_version', 'AS2 version', _as2_versions))
     else:
-        out.append(_switch('payload_compression', 'Payload compression', True))
+        out.append(_switch('payload_compression', 'Compression', True))
 
     out.append(_form('certificates', 'Certificates', '{signing_certificate}', [
         [_text('signing_certificate', 'Signing certificate', is_mono=True)],
@@ -458,6 +466,8 @@ def partner_wizard() -> 'anydict':
     connectivity = _step('Connectivity', connectivity_lines)
 
     out = _wizard('New partner', Path_Partners, 'Create', [details, connectivity])
+    _done_when(out, 'protocol', Protocol.ebXML, 'Create partner and agreement')
+
     return out
 
 # ################################################################################################################################

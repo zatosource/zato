@@ -6,9 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The statements by which messages are read for delivery and handed out to pulling clients. A pull removes
-# the delivery rows it hands out in the same transaction that reads them, and the rows its delete returns
-# are the only ones it hands out, so each message goes to exactly one of any number of concurrent pulls.
+# The statements by which messages are read for delivery and handed out to pulling clients. A pull leases
+# the delivery rows it hands out in the same transaction that reads them, and the rows its update returns
+# are the only ones it hands out, so each message goes to exactly one of any number of concurrent pulls
+# until its lease runs out. The subscriber's acknowledgement removes the rows.
 
 # SQLAlchemy
 from sqlalchemy import and_, bindparam, select
@@ -16,7 +17,6 @@ from sqlalchemy import and_, bindparam, select
 # Zato
 from zato.common.api import HTTP_SOAP
 from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table
-from zato.common.pubsub.sql.writes import drop_payloads
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,24 +88,33 @@ outgoing_fetch_query = outgoing_fetch_query.limit(bindparam('fetch_max_messages'
 
 # ################################################################################################################################
 
-# A pull first locks the deliverable rows it may hand out, skipping those that a concurrent pull holds,
-# without reading their payloads ..
+# A pull first locks the deliverable rows it may hand out - those that no pull holds a lease on, or whose lease
+# has run out - skipping those that a concurrent pull holds, without reading their payloads ..
 _claim_candidates_query = select(delivery_table.c.id, message_table.c.data_size)
 _claim_candidates_query = _claim_candidates_query.select_from(_fetch_join)
 _claim_candidates_query = _claim_candidates_query.where(and_(
     delivery_table.c.sub_key == bindparam('claim_sub_key'),
     delivery_table.c.expiration_ms > bindparam('claim_now_ms'),
+    delivery_table.c.leased_until_ms < bindparam('claim_now_ms'),
 ))
 _claim_candidates_query = _claim_candidates_query.order_by(*_order_by)
 _claim_candidates_query = _claim_candidates_query.limit(bindparam('claim_max_messages'))
 _claim_candidates_query = _claim_candidates_query.with_for_update(skip_locked=True, of=delivery_table)
 
-# .. then removes those within its size budget, learning which of them it removed itself ..
-_claim_delete = delivery_table.delete()
-_claim_delete = _claim_delete.where(delivery_table.c.id.in_(bindparam('claim_delivery_ids', expanding=True)))
-_claim_delete = _claim_delete.returning(delivery_table.c.message_id)
+# .. then leases those within its size budget, learning which of them it leased itself - a row that another pull
+# .. leased in the meantime no longer matches ..
+_claim_lease = delivery_table.update()
+_claim_lease = _claim_lease.where(and_(
+    delivery_table.c.id.in_(bindparam('claim_delivery_ids', expanding=True)),
+    delivery_table.c.leased_until_ms < bindparam('claim_now_ms'),
+))
+_claim_lease = _claim_lease.values(
+    leased_until_ms=bindparam('claim_leased_until_ms'),
+    attempt=delivery_table.c.attempt + 1,
+)
+_claim_lease = _claim_lease.returning(delivery_table.c.message_id)
 
-# .. and reads the messages of the rows it removed.
+# .. and reads the messages of the rows it leased.
 _claimed_messages_query = select(*message_columns)
 _claimed_messages_query = _claimed_messages_query.where(
     message_table.c.id.in_(bindparam('claim_message_ids', expanding=True)))
@@ -114,10 +123,17 @@ _claimed_messages_query = _claimed_messages_query.order_by(message_table.c.prior
 # ################################################################################################################################
 # ################################################################################################################################
 
-def claim_messages(engine:'Engine', sub_key:'str', max_messages:'int', max_len:'int', now_ms:'int') -> 'anylist':
-    """ Removes up to max_messages deliverable rows of one subscriber, whose payloads add up to at most max_len,
-    and returns the rows of their messages. Messages that no other subscriber needs
-    lose their payloads in the same transaction.
+def claim_messages(
+    engine:'Engine',
+    sub_key:'str',
+    max_messages:'int',
+    max_len:'int',
+    now_ms:'int',
+    leased_until_ms:'int',
+) -> 'anylist':
+    """ Leases up to max_messages deliverable rows of one subscriber, whose payloads add up to at most max_len,
+    until leased_until_ms, and returns the rows of their messages. The rows stay in the queue until the subscriber
+    acknowledges them, so a pull whose response never reaches the subscriber loses nothing.
     """
     parameters:'anydict' = {
         'claim_sub_key': sub_key,
@@ -146,20 +162,23 @@ def claim_messages(engine:'Engine', sub_key:'str', max_messages:'int', max_len:'
             total_len += row.data_size
             delivery_ids.append(row.id)
 
-        # .. remove them, which only the first of two concurrent pulls succeeds in for any one row ..
+        # .. lease them, which only the first of two concurrent pulls succeeds in for any one row ..
+        lease_parameters:'anydict' = {
+            'claim_delivery_ids': delivery_ids,
+            'claim_now_ms': now_ms,
+            'claim_leased_until_ms': leased_until_ms,
+        }
+
         message_ids:'intlist' = []
 
-        for row in connection.execute(_claim_delete, {'claim_delivery_ids': delivery_ids}):
+        for row in connection.execute(_claim_lease, lease_parameters):
             message_ids.append(row.message_id)
 
         if not message_ids:
             return []
 
-        # .. read what is to be handed out ..
+        # .. and read what is to be handed out.
         out = connection.execute(_claimed_messages_query, {'claim_message_ids': message_ids}).fetchall()
-
-        # .. and drop the payloads that are no longer needed.
-        _ = drop_payloads(connection, message_ids)
 
     return out
 

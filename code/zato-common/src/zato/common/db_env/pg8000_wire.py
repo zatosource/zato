@@ -126,7 +126,12 @@ def _init(self:'any_', *args:'any_', **kwargs:'any_') -> 'None':
     self._zato_statements = OrderedDict()
     self._zato_statement_ids = count()
 
-    _core_init(self, *args, **kwargs)
+    # pg8000 reports the socket errors of a new connection as InterfaceError, apart from those raised
+    # while it requests TLS, which would otherwise reach the caller as a bare OSError that no retry recognizes.
+    try:
+        _core_init(self, *args, **kwargs)
+    except OSError as e:
+        raise InterfaceError(f'Could not open a connection: {e}') from e
 
 # ################################################################################################################################
 

@@ -274,7 +274,8 @@ class Traffic:
 
     def _pull_loop(self, sub_key:'str') -> 'None':
         """ What one pull partner runs - pulls through the path of the REST API, each of which hands the messages
-        over and removes them from the queue, polling again shortly when the queue was empty.
+        over and leases them, followed by an acknowledgement that removes them from the queue,
+        polling again shortly when the queue was empty.
         """
         while self.is_consuming:
 
@@ -310,6 +311,13 @@ class Traffic:
 
                 self.minute.pulled += len(msg_ids)
                 self.total_pulled += len(msg_ids)
+
+            # The partner acknowledges what it received - messages whose acknowledgement fails
+            # are handed out again once their lease runs out.
+            try:
+                _ = self.backend.ack_pulled(sub_key, msg_ids)
+            except Exception as e:
+                self._record_error(e)
 
             sleep(0)
 

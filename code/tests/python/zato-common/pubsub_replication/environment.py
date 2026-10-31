@@ -13,6 +13,7 @@ import tempfile
 from contextlib import contextmanager
 
 # Zato
+from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, pubsub_db_env, PubSubDBMode
 from zato.common.test.pubsub_replication import start_replicated_database, stop_replicated_database
 
@@ -25,6 +26,13 @@ from workload import stop_running_workloads
 if 0:
     from collections.abc import Iterator
     from zato.common.test.pubsub_replication import ReplicatedDatabase
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How long a pulled message waits for its acknowledgement, in seconds, short enough for a test to see
+# the messages of failed acknowledgements handed out again.
+Pull_Lease_Seconds = '5'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,6 +61,7 @@ def replicated_environment(label:'str', is_sync:'bool') -> 'Iterator[ReplicatedD
     env = dict(database.env)
     env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
     env['Zato_Audit_Log_DB_Name'] = os.path.join(work_dir, 'audit.db')
+    env[ModuleCtx.Env_Pull_Lease_Seconds] = Pull_Lease_Seconds
 
     try:
         with pubsub_db_env(env):

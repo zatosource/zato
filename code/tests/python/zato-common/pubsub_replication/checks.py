@@ -122,8 +122,8 @@ def check_counts_equal_rows(database:'ReplicatedDatabase', workload:'Workload') 
 # ################################################################################################################################
 
 def check_delivery(database:'ReplicatedDatabase', workload:'Workload', restore_time:'float') -> 'anydict':
-    """ Checks that no acknowledged publication was lost, that no pull was handed out twice and that each publication
-    has one message row, and returns the measurements of the fault.
+    """ Checks that no acknowledged publication was lost, that only a message whose acknowledgement failed was pulled
+    twice, that each publication has one message row, and returns the measurements of the fault.
     """
     stored = stored_msg_ids(database)
     acknowledged = set(workload.acknowledged)
@@ -131,7 +131,8 @@ def check_delivery(database:'ReplicatedDatabase', workload:'Workload', restore_t
     # Every acknowledged publication that the database did not lose exists on the primary, once, since msg_id is unique ..
     lost = acknowledged - stored
 
-    # .. no message was handed out to the partner twice ..
+    # .. a message was handed out to the partner twice only if the partner's acknowledgement of it failed,
+    # .. or, with asynchronous replication, if the standby never received the acknowledgement ..
     pulled_counts = Counter(workload.pulled)
     duplicate_pulls:'strlist' = []
 
@@ -139,14 +140,20 @@ def check_delivery(database:'ReplicatedDatabase', workload:'Workload', restore_t
         if count > 1:
             duplicate_pulls.append(msg_id)
 
-    assert not duplicate_pulls, f'Pulled more than once: {sorted(duplicate_pulls)[:10]}'
+    unexpected_duplicates = set(duplicate_pulls) - workload.failed_ack_msg_ids
 
-    # .. a pull publication never pulled was handed out to a pull whose response was lost, so it is no longer pending ..
+    if database.is_sync:
+        assert not unexpected_duplicates, f'Pulled more than once: {sorted(unexpected_duplicates)[:10]}'
+
+    # .. every pull publication reached the partner, including those of pulls whose response was lost ..
     not_pulled = workload.acknowledged_on(Pull_Topic) - lost - set(workload.pulled)
-    still_pending = not_pulled & pending_msg_ids(database, Pull_Sub_Key)
-    assert not still_pending, f'Pending and not pulled: {sorted(still_pending)[:10]}'
+    assert not not_pulled, f'Not pulled: {sorted(not_pulled)[:10]}'
 
-    # .. and every push publication reached the subscriber, some of them more than once.
+    # .. and none of them is left in the queue, the partner having acknowledged each of them.
+    still_pending = pending_msg_ids(database, Pull_Sub_Key)
+    assert not still_pending, f'Pulled and still pending: {sorted(still_pending)[:10]}'
+
+    # Every push publication reached the subscriber, some of them more than once.
     pushed_counts = Counter(workload.pushed)
     not_pushed = workload.acknowledged_on(Push_Topic) - lost - set(pushed_counts)
     assert not not_pushed, f'Not pushed: {sorted(not_pushed)[:10]}'
@@ -159,8 +166,10 @@ def check_delivery(database:'ReplicatedDatabase', workload:'Workload', restore_t
         'acknowledged': len(acknowledged),
         'lost': len(lost),
         'lost_sample': sorted(lost)[:5],
-        'pull_lost_in_flight': len(not_pulled),
-        'failed_pulls': len(workload.failed_pull_times),
+        'repeated_pulls': len(duplicate_pulls),
+        'repeated_pulls_after_lost_acks': len(unexpected_duplicates),
+        'failed_pulls': workload.failed_pulls,
+        'failed_acks': len(workload.failed_ack_msg_ids),
         'repeated_pushes': repeated_pushes,
         'repeated_publications': len(workload.repeated_publications),
         'publish_errors': workload.publisher_state.errors,

@@ -58,6 +58,10 @@ _ping_timeout_seconds = 2
 # How long a container may take to stop gracefully, in seconds.
 _stop_timeout_seconds = 10
 
+# How long a pulled message waits for its acknowledgement, in seconds, short enough for a test to see
+# the messages of lost pull responses handed out again.
+_pull_lease_seconds = '5'
+
 # The controller script next to this module.
 _controller_path = os.path.join(os.path.dirname(__file__), 'controller.py')
 
@@ -130,6 +134,7 @@ def build_server_env(server:'ContainerServer', database:'PubSubDatabase') -> 'No
     server.env['Zato_Broker_HTTP_Port'] = str(server.broker_port)
     server.env['Zato_PubSub_Generation_File'] = os.path.join(server.server_directory, 'pubsub-generation')
     server.env['Zato_Audit_Log_DB_Name'] = os.path.join(server.server_directory, 'audit.db')
+    server.env['Zato_PubSub_Pull_Lease_Seconds'] = _pull_lease_seconds
     server.env.update(database.env)
 
 # ################################################################################################################################

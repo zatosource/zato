@@ -11,6 +11,7 @@ import logging
 import sqlite3
 import threading
 import time
+from collections import Counter
 
 # Zato
 from failover import docker, wait_until_up
@@ -85,13 +86,15 @@ class _Workload:
         self.is_publishing = threading.Event()
         self.is_pulling = threading.Event()
 
-        # What the server acknowledged to the publishers and handed out to the puller.
+        # What the server acknowledged to the publishers and handed out to the puller, with the puller's queue.
         self.acknowledged:'strlist' = []
         self.pulled:'strlist' = []
+        self.sub_key = ''
 
-        # The pulls that failed, each with the time it was sent, and the times of the kills.
-        self.failed_pull_times:'list[float]' = []
-        self.kill_times:'list[float]' = []
+        # How many pulls failed, and the messages whose acknowledgement failed, which are the only ones
+        # that a later pull may hand out again.
+        self.failed_pulls = 0
+        self.failed_ack_msg_ids:'set[str]' = set()
 
         self.publish_errors = 0
         self._threads:'list[threading.Thread]' = []
@@ -116,17 +119,32 @@ class _Workload:
         client = PullClient(self.server.base_url, self.env.puller_username, self.env.puller_password)
 
         while self.is_pulling.is_set():
-            sent_at = time.monotonic()
             try:
-                result = client.pull(max_messages=_pull_max_messages)
+                result = client.pull(max_messages=_pull_max_messages, needs_ack=False)
             except Exception:
                 with self.lock:
-                    self.failed_pull_times.append(sent_at)
+                    self.failed_pulls += 1
                 time.sleep(_retry_pause_seconds)
-            else:
+                continue
+
+            msg_ids:'strlist' = []
+
+            with self.lock:
+                for message in result['messages']:
+                    meta = message['meta']
+                    self.sub_key = meta['sub_key']
+                    msg_ids.append(meta['msg_id'])
+                    self.pulled.append(meta['msg_id'])
+
+            if not msg_ids:
+                continue
+
+            try:
+                _ = client.ack(msg_ids)
+            except Exception:
                 with self.lock:
-                    for message in result['messages']:
-                        self.pulled.append(message['meta']['msg_id'])
+                    self.failed_ack_msg_ids.update(msg_ids)
+                time.sleep(_retry_pause_seconds)
 
     def start(self) -> 'None':
         self.is_publishing.set()
@@ -151,25 +169,9 @@ class _Workload:
     def kill_and_restart(self) -> 'None':
         """ Kills the server with SIGKILL and starts its container again.
         """
-        with self.lock:
-            self.kill_times.append(time.monotonic())
-
         _ = docker('kill', self.server.container_name)
         _ = docker('start', self.server.container_name)
         _ = wait_until_up(self.server)
-
-    def get_pulls_in_flight_at_kill(self) -> 'int':
-        """ How many pulls were sent before a kill and failed, which are the pulls whose response a kill may have cut off.
-        """
-        out = 0
-
-        for sent_at in self.failed_pull_times:
-            for kill_time in self.kill_times:
-                if sent_at <= kill_time:
-                    out += 1
-                    break
-
-        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -220,10 +222,11 @@ def _get_count_mismatches(env:'FailoverEnvironment') -> 'strlist':
 
 # ################################################################################################################################
 
-def _get_pending_msg_ids(env:'FailoverEnvironment') -> 'set[str]':
-    """ Returns the identifiers of the messages that wait in any queue.
+def _get_pending_msg_ids(env:'FailoverEnvironment', sub_key:'str') -> 'set[str]':
+    """ Returns the identifiers of the messages that wait in the queue of one subscriber.
     """
-    query = 'select m.msg_id from pubsub_delivery d join pubsub_message m on m.id = d.message_id'
+    query = 'select m.msg_id from pubsub_delivery d join pubsub_message m on m.id = d.message_id ' + \
+        f"where d.sub_key = '{sub_key}'"
 
     out:'set[str]' = set()
     for row in _read_rows(env, query):
@@ -261,7 +264,8 @@ def _wait_for_deliveries(env:'FailoverEnvironment', msg_ids:'strlist') -> 'dictl
 
 def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
     """ A server killed with SIGKILL during publication, pull and push bursts and started again loses no publication
-    it acknowledged, hands out no message twice and repeats push deliveries only for those that a kill interrupted.
+    it acknowledged, hands out a pulled message again only when its acknowledgement failed and repeats push deliveries
+    only for those that a kill interrupted.
     """
     env = crash_env
     server = env.server_a
@@ -283,11 +287,18 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
     finally:
         workload.is_publishing.clear()
 
-    # .. the puller takes what is left once the publishers are done ..
+    # .. the puller takes and acknowledges what is left once the publishers are done, including the messages
+    # .. of pulls whose response a kill cut off, which their lease hands out again ..
     deadline = time.monotonic() + _delivery_timeout_seconds
 
-    while _get_pending_msg_ids(env) - set(workload.pulled):
-        assert time.monotonic() < deadline, 'Pull queue not drained'
+    while True:
+        with workload.lock:
+            not_pulled = set(workload.acknowledged) - set(workload.pulled)
+
+        if not not_pulled and not _get_pending_msg_ids(env, workload.sub_key):
+            break
+
+        assert time.monotonic() < deadline, f'Pull queue not drained, not pulled {len(not_pulled)}'
         time.sleep(_poll_seconds)
 
     workload.stop()
@@ -295,21 +306,20 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
     acknowledged = workload.acknowledged
     pulled = workload.pulled
 
-    logger.info('Acknowledged %d, pulled %d, publish errors %d, failed pulls %d',
-        len(acknowledged), len(pulled), workload.publish_errors, len(workload.failed_pull_times))
+    logger.info('Acknowledged %d, pulled %d, publish errors %d, failed pulls %d, failed acks %d',
+        len(acknowledged), len(pulled), workload.publish_errors, workload.failed_pulls, len(workload.failed_ack_msg_ids))
 
-    # No message was handed out twice ..
-    assert len(pulled) == len(set(pulled)), len(pulled) - len(set(pulled))
+    # Every acknowledged publication was pulled, and only a message whose acknowledgement failed was pulled twice ..
+    pulled_counts = Counter(pulled)
+    repeated_pulls:'set[str]' = set()
 
-    # .. every acknowledged publication was pulled, apart from those of a pull whose response a kill cut off ..
-    not_pulled = set(acknowledged) - set(pulled)
-    pulls_in_flight = workload.get_pulls_in_flight_at_kill()
+    for msg_id, count in pulled_counts.items():
+        if count > 1:
+            repeated_pulls.add(msg_id)
 
-    logger.info('Not pulled %d, pulls in flight at a kill %d', len(not_pulled), pulls_in_flight)
-    assert len(not_pulled) <= pulls_in_flight * _pull_max_messages, (len(not_pulled), pulls_in_flight)
-
-    pending = _get_pending_msg_ids(env)
-    assert not (not_pulled & pending), not_pulled & pending
+    logger.info('Repeated pulls %d', len(repeated_pulls))
+    unexpected = repeated_pulls - workload.failed_ack_msg_ids
+    assert not unexpected, sorted(unexpected)[:10]
 
     # .. every acknowledged publication was pushed ..
     delivered = _wait_for_deliveries(env, acknowledged)

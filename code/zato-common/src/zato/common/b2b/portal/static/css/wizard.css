@@ -43,10 +43,11 @@
 /* ------------------------------------------------------------ */
 
 /* Every label stands level with the first line of its control, however tall the control is,
-   and every step is as tall as the one of the most rows, so that the card keeps its size from step to step */
+   every step is as tall as the one of the most rows, and the column of the labels is as wide as the widest label
+   of every step, so that the card keeps its size and its columns from step to step and from answer to answer */
 .decision-lines {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-columns: var(--decision-label-width) minmax(0, 1fr);
     align-items: start;
     gap: var(--decision-row-gap) 28px;
     min-height: calc(var(--decision-rows) * (var(--decision-row-height) + var(--decision-row-gap)) - var(--decision-row-gap));
@@ -73,10 +74,13 @@
     display: none;
 }
 
-/* The label of a line that is not shown does not widen the column of the labels */
-.decision-line-label.decision-layer-hidden {
-    width: 0;
-    overflow: hidden;
+/* Every label of the wizard at once, measured for the width of the column of the labels and removed again */
+.decision-label-sizer {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    width: max-content;
+    visibility: hidden;
 }
 
 /* The answer of a line that is not shown does not heighten its row */

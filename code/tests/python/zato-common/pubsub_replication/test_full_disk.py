@@ -47,9 +47,6 @@ _full_seconds = 10
 _traffic_after_seconds = 10
 _drain_timeout = 300
 
-# How many messages one pull hands out at most, which bounds what a pull whose response was lost takes along.
-_pull_max_messages = 100
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -92,13 +89,8 @@ def _run_full_disk(database:'ReplicatedDatabase') -> 'None':
     sleep(_traffic_after_seconds)
     workload.stop_publishing()
 
-    # .. each pull whose response was lost may have taken at most one batch along ..
-    failed_pulls = 0
-    for failed_time in workload.failed_pull_times:
-        if failed_time >= full_time - 1:
-            failed_pulls += 1
-
-    workload.wait_until_delivered(_drain_timeout, failed_pulls * _pull_max_messages, set())
+    # .. every publication reaches its subscriber ..
+    workload.wait_until_delivered(_drain_timeout, set())
     workload.stop()
 
     measurements = check_delivery(database, workload, restore_time)

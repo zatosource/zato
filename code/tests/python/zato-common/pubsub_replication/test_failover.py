@@ -37,9 +37,6 @@ _detection_seconds = 2
 _traffic_after_seconds = 10
 _drain_timeout = 120
 
-# How many messages one pull hands out at most, which bounds what a pull whose response was lost takes along.
-_pull_max_messages = 100
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -62,7 +59,6 @@ def _run_failover(label:'str', is_sync:'bool') -> 'None':
         # The primary is lost in the middle of the traffic ..
         acknowledged_before = len(workload.acknowledged)
         kill_primary(database)
-        kill_time = monotonic()
 
         # .. and the standby is promoted once the service detects the loss ..
         sleep(_detection_seconds)
@@ -72,18 +68,11 @@ def _run_failover(label:'str', is_sync:'bool') -> 'None':
         sleep(_traffic_after_seconds)
         workload.stop_publishing()
 
-        # .. each pull whose response was lost may have taken at most one batch along ..
-        failed_pulls_after_kill = 0
-        for failed_time in workload.failed_pull_times:
-            if failed_time >= kill_time - 1:
-                failed_pulls_after_kill += 1
-
-        pull_allowance = failed_pulls_after_kill * _pull_max_messages
-
-        # .. and only the asynchronous mode may have lost acknowledged publications.
+        # .. only the asynchronous mode may have lost acknowledged publications ..
         lost = set(workload.acknowledged) - stored_msg_ids(database)
 
-        workload.wait_until_delivered(_drain_timeout, pull_allowance, lost)
+        # .. and every other publication reaches its subscriber.
+        workload.wait_until_delivered(_drain_timeout, lost)
         workload.stop()
 
         measurements = check_delivery(database, workload, restore_time)

@@ -22,7 +22,7 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
-from zato.common.pubsub.sql.config import get_batch_size
+from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
 from zato.common.pubsub.sql.pull import claim_messages, fetch_query, outgoing_fetch_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.writes import new_pending_publication
@@ -416,13 +416,15 @@ class SQLPubSubBackend(SQLAdminAPI):
         max_messages:'int'=_default_max_messages,
         max_len:'int'=_default_max_len,
     ) -> 'anylist':
-        """ Hands a subscriber's deliverable messages over to one pulling client, removing them from its queue
-        in the same transaction, so that concurrent pulls never receive the same message.
+        """ Hands a subscriber's deliverable messages over to one pulling client, leasing them in the same transaction,
+        so that concurrent pulls never receive the same message. The messages stay in the queue until the subscriber
+        acknowledges them, and a pull after their lease runs out hands them out again.
         """
         engine = self.engine
         now_ms = self._utc_now_ms()
+        leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
 
-        rows = call_database(engine, claim_messages, engine, sub_key, max_messages, max_len, now_ms)
+        rows = call_database(engine, claim_messages, engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
 
         out:'anylist' = []
 
@@ -445,7 +447,7 @@ class SQLPubSubBackend(SQLAdminAPI):
 # ################################################################################################################################
 
     def format_messages_for_rest(self, messages:'anylist', sub_key:'str') -> 'anylist':
-        """ Format messages that a pull removed from the queue into the {data, meta} structure expected by the REST API,
+        """ Format messages that a pull leased into the {data, meta} structure expected by the REST API,
         recording each reception and incrementing delivery counters.
         """
         now = utcnow()

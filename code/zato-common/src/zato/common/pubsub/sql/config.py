@@ -50,10 +50,17 @@ class ModuleCtx:
     # The environment variable overriding how many group commits may be in progress at once on PostgreSQL.
     Env_Commits_In_Flight = 'Zato_PubSub_Commits_In_Flight'
 
+    # The environment variable with how long the messages of a pull wait for their acknowledgement, in seconds,
+    # before the next pull hands them out again.
+    Env_Pull_Lease_Seconds = 'Zato_PubSub_Pull_Lease_Seconds'
+
     # The environment variable with the path to the file in which the active server records its generation.
     Env_Generation_File = 'Zato_PubSub_Generation_File'
 
 # ################################################################################################################################
+
+# How long the messages of a pull wait for their acknowledgement, in seconds.
+_default_pull_lease_seconds = 30
 
 # How many fully delivered messages one topic may retain for browsing and statistics.
 _default_delivered_max_messages = 1_000_000
@@ -180,6 +187,18 @@ def get_commit_max_messages() -> 'int':
         out = int(value)
     else:
         out = _default_commit_max_messages
+
+    return out
+
+# ################################################################################################################################
+
+def get_pull_lease_seconds() -> 'int':
+    """ Returns how long the messages of a pull wait for their acknowledgement before they are handed out again.
+    """
+    if value := os.environ.get(ModuleCtx.Env_Pull_Lease_Seconds, ''):
+        out = int(value)
+    else:
+        out = _default_pull_lease_seconds
 
     return out
 

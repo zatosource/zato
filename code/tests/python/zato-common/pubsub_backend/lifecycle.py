@@ -8,10 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import os
+from time import sleep
 
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.pubsub.sql.config import ModuleCtx
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+Env_Pull_Lease_Seconds = ModuleCtx.Env_Pull_Lease_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -204,7 +212,7 @@ def _run_fetch_limits_flow(backend:'SQLPubSubBackend') -> 'None':
 # ################################################################################################################################
 
 def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
-    """ The REST pull claims the messages it hands over, and the formatting parses JSON payloads
+    """ The REST pull leases the messages it hands over, and the formatting parses JSON payloads
     and fills in the meta envelope.
     """
     delete_all_rows()
@@ -238,7 +246,11 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
     assert meta['time_since_pub']
     assert meta['time_since_recv']
 
-    # .. and the claim removed the message from the queue.
+    # .. the lease keeps the message from the next pull ..
+    assert backend.pull_messages(_sub_key_1) == []
+
+    # .. and the acknowledgement removes it from the queue.
+    assert backend.ack_pulled(_sub_key_1, [result.msg_id]) == 1
     assert backend.fetch_messages(_sub_key_1) == []
 
     # Non-JSON payloads come back as the plain strings they are.
@@ -251,9 +263,44 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
 
 # ################################################################################################################################
 
+def _run_pull_lease_flow(backend:'SQLPubSubBackend') -> 'None':
+    """ A message whose pull was never acknowledged is handed out again once its lease runs out,
+    and an acknowledgement of a message that is no longer in the queue removes nothing.
+    """
+    delete_all_rows()
+
+    backend.subscribe(_sub_key_1, _topic)
+
+    result = backend.publish(_topic, 'leased')
+
+    # A lease of zero seconds runs out as soon as the clock moves on ..
+    os.environ[Env_Pull_Lease_Seconds] = '0'
+
+    try:
+        first = backend.pull_messages(_sub_key_1)
+        sleep(0.01)
+        second = backend.pull_messages(_sub_key_1)
+    finally:
+        del os.environ[Env_Pull_Lease_Seconds]
+
+    # .. so both pulls received the same message ..
+    assert len(first) == 1
+    assert len(second) == 1
+    assert first[0]['msg_id'] == result.msg_id
+    assert second[0]['msg_id'] == result.msg_id
+
+    # .. which one acknowledgement removes ..
+    assert backend.ack_pulled(_sub_key_1, [result.msg_id]) == 1
+
+    # .. while a repeated one finds nothing left to remove.
+    assert backend.ack_pulled(_sub_key_1, [result.msg_id]) == 0
+    assert backend.fetch_messages(_sub_key_1) == []
+
+# ################################################################################################################################
+
 def run_lifecycle_scenario() -> 'None':
     """ The message lifecycle every backend must support - publish, fetch, acknowledge,
-    expiration, fetch limits and the REST formatting.
+    expiration, fetch limits, the REST formatting and pull leases.
     """
     backend = SQLPubSubBackend()
 
@@ -261,6 +308,7 @@ def run_lifecycle_scenario() -> 'None':
     _run_expiration_flow(backend)
     _run_fetch_limits_flow(backend)
     _run_rest_formatting_flow(backend)
+    _run_pull_lease_flow(backend)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -88,6 +88,12 @@ def _pull_all(backend:'SQLPubSubBackend', sub_key:'str') -> 'anylist':
 
         assert total_len <= _max_len or len(messages) == 1, total_len
 
+        msg_ids:'strlist' = []
+        for message in messages:
+            msg_ids.append(message['msg_id'])
+
+        _ = backend.ack_pulled(sub_key, msg_ids)
+
         out.extend(messages)
 
     return out

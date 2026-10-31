@@ -137,8 +137,10 @@ class Workload:
         self.pulled:'strlist' = []
         self.pushed:'strlist' = []
 
-        # The moments at which a pull was sent whose response did not arrive.
-        self.failed_pull_times:'list[float]' = []
+        # How many pulls did not return, and the messages whose acknowledgement did not return,
+        # which are the only ones that a later pull may hand out again.
+        self.failed_pulls = 0
+        self.failed_ack_msg_ids:'set[str]' = set()
 
         self.publisher_state = ComponentState()
         self.pull_state = ComponentState()
@@ -230,18 +232,17 @@ class Workload:
 # ################################################################################################################################
 
     def _pull_loop(self) -> 'None':
-        """ The pull partner - each pull hands the messages over and removes them from the queue.
+        """ The pull partner - each pull leases the messages it hands over, and the partner's acknowledgement
+        removes them from the queue.
         """
         while self.is_consuming:
-
-            started = monotonic()
 
             try:
                 messages = self.backend.pull_messages(Pull_Sub_Key, max_messages=_pull_max_messages)
             except Exception as e:
                 self._on_error(self.pull_state, e)
                 with self.lock:
-                    self.failed_pull_times.append(started)
+                    self.failed_pulls += 1
                 sleep(_retry_sleep)
                 continue
 
@@ -251,9 +252,22 @@ class Workload:
                 sleep(_pull_poll_seconds)
                 continue
 
+            msg_ids:'strlist' = []
+
             with self.lock:
                 for message in messages:
-                    self.pulled.append(message['msg_id'])
+                    msg_id = message['msg_id']
+                    msg_ids.append(msg_id)
+                    self.pulled.append(msg_id)
+
+            try:
+                _ = self.backend.ack_pulled(Pull_Sub_Key, msg_ids)
+            except Exception as e:
+                self._on_error(self.pull_state, e)
+                with self.lock:
+                    self.failed_ack_msg_ids.update(msg_ids)
+                sleep(_retry_sleep)
+                continue
 
             sleep(0)
 
@@ -329,10 +343,9 @@ class Workload:
 
 # ################################################################################################################################
 
-    def wait_until_delivered(self, timeout_seconds:'float', pull_allowance:'int', lost:'set[str]') -> 'None':
+    def wait_until_delivered(self, timeout_seconds:'float', lost:'set[str]') -> 'None':
         """ Waits until the push subscriber received every acknowledged push publication and the partner pulled
-        every acknowledged pull publication, apart from at most pull_allowance handed out to pulls that failed
-        and apart from the publications that the database lost.
+        and acknowledged every acknowledged pull publication, apart from the publications that the database lost.
         """
         deadline = monotonic() + timeout_seconds
 
@@ -344,12 +357,19 @@ class Workload:
                 missing_pull = expected_pull - set(self.pulled)
                 missing_push = expected_push - set(self.pushed)
 
-            if len(missing_pull) <= pull_allowance and not missing_push:
-                return
+            # A message whose acknowledgement failed stays in the queue until a pull after its lease removes it.
+            if not missing_pull and not missing_push:
+                depths = self.backend.get_pending_depths([(Pull_Sub_Key, Pull_Topic)])
+                pull_depth = depths[Pull_Sub_Key]
 
-            assert monotonic() < deadline, f'Not delivered after {timeout_seconds}s, pull {len(missing_pull)} ' + \
-                f'(allowance {pull_allowance}), push {len(missing_push)}, pull errors {self.pull_state.error_messages}, ' + \
-                f'push sample {sorted(missing_push)[:5]}'
+                if pull_depth == 0:
+                    return
+            else:
+                pull_depth = -1
+
+            assert monotonic() < deadline, f'Not delivered after {timeout_seconds}s, pull {len(missing_pull)}, ' + \
+                f'pull depth {pull_depth}, push {len(missing_push)}, pull errors {self.pull_state.error_messages}, ' + \
+                f'pull sample {sorted(missing_pull)[:5]}, push sample {sorted(missing_push)[:5]}'
 
             sleep(0.5)
 

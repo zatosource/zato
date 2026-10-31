@@ -37,9 +37,6 @@ _traffic_before_seconds = 5
 _traffic_after_seconds = 10
 _drain_timeout = 300
 
-# How many messages one pull hands out at most, which bounds what a pull whose response was lost takes along.
-_pull_max_messages = 100
-
 # How long each fault lasts, in seconds, the latency added to each direction of the link, in milliseconds,
 # and how many times the connections are reset, with the pause between two resets, in seconds.
 _fault_seconds = 20
@@ -91,7 +88,7 @@ _faults = {
 @pytest.mark.parametrize('fault_name', sorted(_faults))
 def test_network_fault(fault_name:'str') -> 'None':
     """ A fault of the link between the server and the database during traffic loses nothing acknowledged,
-    hands no pull out twice, and every component resumes once the link is restored.
+    hands a pull out twice only after its acknowledgement failed, and every component resumes once the link is restored.
     """
     label = f'network.{fault_name}'
 
@@ -109,20 +106,14 @@ def test_network_fault(fault_name:'str') -> 'None':
         sleep(_traffic_before_seconds)
 
         # The fault lasts for a while in the middle of the traffic ..
-        fault_time = monotonic()
         _faults[fault_name](database)
         restore_time = monotonic()
 
         sleep(_traffic_after_seconds)
         workload.stop_publishing()
 
-        # .. each pull whose response was lost may have taken at most one batch along ..
-        failed_pulls = 0
-        for failed_time in workload.failed_pull_times:
-            if failed_time >= fault_time - 1:
-                failed_pulls += 1
-
-        workload.wait_until_delivered(_drain_timeout, failed_pulls * _pull_max_messages, set())
+        # .. every publication reaches its subscriber ..
+        workload.wait_until_delivered(_drain_timeout, set())
         workload.stop()
 
         measurements = check_delivery(database, workload, restore_time)

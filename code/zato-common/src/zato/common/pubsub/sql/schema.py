@@ -141,8 +141,13 @@ delivery_table = Table('pubsub_delivery', metadata,
     Column('priority', Integer, nullable=False),
     Column('expiration_ms', BigInteger, nullable=False),
 
-    # How many push attempts were made for this row, each one recorded before its HTTP request is sent
+    # How many push attempts were made for this row, each one recorded before its HTTP request is sent,
+    # or how many times a pull handed it out
     Column('attempt', Integer, nullable=False, server_default='0'),
+
+    # Until when the row belongs to the pull that handed it out, in milliseconds since the epoch - the subscriber
+    # acknowledges it before then, or the next pull after then hands it out again, and zero means it was not handed out.
+    Column('leased_until_ms', BigInteger, nullable=False, server_default='0'),
 
     # Acknowledgements and last-subscriber checks look deliveries up by message ..
     Index('idx_pubsub_delivery_message', 'message_id'),

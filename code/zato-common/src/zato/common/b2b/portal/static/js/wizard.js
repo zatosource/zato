@@ -143,6 +143,21 @@ wizard.renderReview = function(body) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// What completing the wizard creates can depend on an answer, and the button says so.
+wizard.doneLabel = function() {
+
+    var doneWhen = wizard.data.done_when;
+
+    if (doneWhen === null) {
+        return wizard.data.done_label;
+    }
+
+    var out = wizard.state[doneWhen.name] === doneWhen.value ? doneWhen.label : wizard.data.done_label;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 wizard.show = function(stepIndex) {
 
     // A popover of the step that is left has nothing to belong to any longer
@@ -165,7 +180,7 @@ wizard.show = function(stepIndex) {
     }
 
     document.getElementById('wizard-back').disabled = stepIndex === 0;
-    document.getElementById('wizard-next').textContent = isLast ? wizard.data.done_label : portal.config.nextLabel;
+    document.getElementById('wizard-next').textContent = isLast ? wizard.doneLabel() : portal.config.nextLabel;
 
     var path = document.getElementById('wizard').getAttribute('data-path');
     window.history.replaceState(null, '', path + '/' + step.key);
@@ -265,12 +280,46 @@ wizard.mostRows = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Each step and each answer shows other labels, so the column of the labels is measured against all of them,
+// in the font of the page, which needs to have loaded for the widths to be its own.
+wizard.labelWidth = function() {
+
+    var card = document.getElementById('wizard');
+    var sizer = portal.create('div', 'decision-label-sizer', '');
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+
+        var stepLines = wizard.data.steps[stepIndex].lines;
+
+        for (var lineIndex = 0; lineIndex < stepLines.length; lineIndex++) {
+            sizer.appendChild(portal.create('span', 'decision-line-label', stepLines[lineIndex].label));
+        }
+    }
+
+    card.appendChild(sizer);
+    var out = sizer.getBoundingClientRect().width;
+    card.removeChild(sizer);
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 wizard.init = function() {
+    document.fonts.ready.then(wizard.start);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.start = function() {
 
     wizard.data = portal.readData('wizard-data');
     wizard.state = portal.wizardLines.initialState(wizard.data.steps);
     wizard.rowCount = wizard.mostRows();
     portal.wizardLines.onChange = wizard.onChange;
+
+    var labelWidth = wizard.labelWidth();
+    document.getElementById('wizard').style.setProperty('--decision-label-width', labelWidth + 'px');
 
     document.getElementById('wizard-back').addEventListener('click', function() {
         wizard.show(wizard.current - 1);

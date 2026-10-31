@@ -308,7 +308,7 @@ class GetMessages(PubSubRESTService):
         max_messages = min(input.max_messages if input.max_messages else _max_messages_default, _max_messages_limit)
         max_len = min(input.max_len if input.max_len else _max_len_default, _max_len_limit)
 
-        # Take the messages out of the queue, which hands each of them to this client alone ..
+        # Lease the messages, which hands each of them to this client alone until it acknowledges them ..
         raw_messages = self.server.pubsub_backend.pull_messages(
             sub_key,
             max_messages=max_messages,
@@ -332,6 +332,79 @@ class GetMessages(PubSubRESTService):
         """
         # Look up in the subscriptions store
         return self.server.pubsub_subscriptions.get_sub_key_by_username(username)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AckMessages(PubSubRESTService):
+    """ Acknowledges messages that the authenticated user pulled, removing them from its queue.
+    """
+    name = 'pubsub.rest.ack-messages'
+
+    input = AsIs('msg_ids'),
+    output = Int('-ack_count'), '-is_ok', '-cid', AsIs('-status'), '-details'
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        # Local aliases
+        cid = self.cid
+        msg_ids = self.request.input.msg_ids
+
+        # Authenticate
+        username, error = self.authenticate()
+        if error:
+            self.response.payload.is_ok = False
+            self.response.payload.cid = cid
+            self.response.payload.details, self.response.payload.status, self.response.status_code = error
+            return
+
+        # Get sub_key for this user
+        sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
+
+        if not sub_key:
+            self.response.payload.is_ok = False
+            self.response.payload.cid = cid
+            self.response.payload.details = 'No subscription found for user'
+            self.response.payload.status = _status_unauthorized
+            self.response.status_code = UNAUTHORIZED
+            return
+
+        # The identifiers come from the caller, so their shape is checked before they reach the database ..
+        if not isinstance(msg_ids, list):
+            self.response.payload.is_ok = False
+            self.response.payload.cid = cid
+            self.response.payload.status = _status_bad_request
+            self.response.payload.details = 'msg_ids must be a list'
+            self.response.status_code = BAD_REQUEST
+            return
+
+        if len(msg_ids) > _max_messages_limit:
+            self.response.payload.is_ok = False
+            self.response.payload.cid = cid
+            self.response.payload.status = _status_bad_request
+            self.response.payload.details = f'msg_ids may have at most {_max_messages_limit} elements'
+            self.response.status_code = BAD_REQUEST
+            return
+
+        for msg_id in msg_ids:
+            if not isinstance(msg_id, str):
+                self.response.payload.is_ok = False
+                self.response.payload.cid = cid
+                self.response.payload.status = _status_bad_request
+                self.response.payload.details = 'Each element of msg_ids must be a string'
+                self.response.status_code = BAD_REQUEST
+                return
+
+        # .. and the messages that are still in the queue are removed from it.
+        ack_count = self.server.pubsub_backend.ack_pulled(sub_key, msg_ids)
+
+        # Build response
+        self.response.payload.is_ok = True
+        self.response.payload.cid = cid
+        self.response.payload.ack_count = ack_count
+        self.response.payload.status = _status_ok
 
 # ################################################################################################################################
 # ################################################################################################################################
