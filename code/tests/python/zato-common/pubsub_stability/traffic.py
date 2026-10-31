@@ -19,9 +19,10 @@ from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # Zato
-from production_documents import get_production_documents # pyright: ignore[reportMissingImports]
+from production_documents import get_production_documents
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.typing_ import cast_
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -36,8 +37,10 @@ if 0:
 # The service that the push subscribers of the broadcast topic invoke.
 _push_service_name = 'stability.push.target'
 
-# How long one blocking fetch of a pull partner waits, in milliseconds.
-_fetch_block_ms = 1000
+# How many messages one pull of a partner asks for, which is the maximum of the REST API,
+# and how long a partner waits before it pulls again from a queue that was empty, in seconds.
+_pull_max_messages = 1000
+_pull_poll_seconds = 0.2
 
 # The priorities and expirations of the publications, cycled through by the API clients.
 _priorities = [5, 5, 5, 7, 3, 9, 5, 1]
@@ -147,13 +150,19 @@ class Traffic:
         # When each message for a pull partner was published, by its identifier.
         self.publish_times:'anydict' = {}
 
+        # The partners that do not pull for now, those whose delivery latency is not measured,
+        # and the deliveries that a suite placed in the queues itself less those it removed, apart from the publications.
+        self.paused_sub_keys:'set[str]' = set()
+        self.unmeasured_sub_keys:'set[str]' = set()
+        self.extra_deliveries = 0
+
         self.partner_topics:'strlist' = []
         self.partner_sub_keys:'strlist' = []
         self.broadcast_topic = f'{profile.topic_prefix}.broadcast'
         self.broadcast_sub_keys:'strlist' = []
 
         self.server = _StubServer(self)
-        self.push_delivery = PushDelivery(self.server, self.backend) # type: ignore[arg-type]
+        self.push_delivery = PushDelivery(cast_('any_', self.server), self.backend)
 
         self._publisher_greenlets:'anylist' = []
         self._consumer_greenlets:'anylist' = []
@@ -211,6 +220,10 @@ class Traffic:
         """
         position = publisher_index
 
+        # The clients start spread over one interval, as independent clients do, rather than all at the same instant.
+        first_interval = self.profile.publisher_count / self.rate
+        sleep(first_interval * publisher_index / self.profile.publisher_count)
+
         while self.is_publishing:
 
             # Each client publishes at its share of the current rate ..
@@ -260,34 +273,39 @@ class Traffic:
 # ################################################################################################################################
 
     def _pull_loop(self, sub_key:'str') -> 'None':
-        """ What one pull partner runs - blocking fetches, each followed by one acknowledgement of its batch.
+        """ What one pull partner runs - pulls through the path of the REST API, each of which hands the messages
+        over and removes them from the queue, polling again shortly when the queue was empty.
         """
         while self.is_consuming:
 
+            if sub_key in self.paused_sub_keys:
+                sleep(_pull_poll_seconds)
+                continue
+
             try:
-                messages = self.backend.fetch_messages(sub_key, block_ms=_fetch_block_ms)
-
-                if not messages:
-                    continue
-
-                msg_ids:'strlist' = []
-
-                for message in messages:
-                    msg_ids.append(message['msg_id'])
-
-                _ = self.backend.ack_messages(sub_key, msg_ids)
+                messages = self.backend.pull_messages(sub_key, max_messages=_pull_max_messages)
 
             except Exception as e:
                 self._record_error(e)
                 sleep(1)
                 continue
 
+            if not messages:
+                sleep(_pull_poll_seconds)
+                continue
+
+            msg_ids:'strlist' = []
+
+            for message in messages:
+                msg_ids.append(message['msg_id'])
+
             now = monotonic()
+            is_measured = sub_key not in self.unmeasured_sub_keys
 
             with self.lock:
                 for msg_id in msg_ids:
                     started = self.publish_times.pop(msg_id, None)
-                    if started is not None:
+                    if started is not None and is_measured:
                         self.minute.delivery_seconds.append(now - started)
 
                 self.minute.pulled += len(msg_ids)
@@ -335,7 +353,7 @@ class Traffic:
         partner_messages = self.total_published - self.total_broadcast
         broadcast_deliveries = self.total_broadcast * len(self.broadcast_sub_keys)
 
-        out = partner_messages + broadcast_deliveries
+        out = partner_messages + broadcast_deliveries + self.extra_deliveries
         return out
 
 # ################################################################################################################################

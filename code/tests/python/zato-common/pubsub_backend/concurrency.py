@@ -9,10 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # gevent
 import gevent
 
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
+
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
+from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
+from zato.common.pubsub.sql.writes import new_pending_ack, PubSubDuplicateMsgID, PubSubWriter
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -21,7 +25,7 @@ from zato.common.typing_ import cast_
 if 0:
     from sqlalchemy.engine import Engine
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import anylist, intlist, strlist
+    from zato.common.typing_ import anydict, anylist, intlist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -197,6 +201,68 @@ def _run_duplicate_flow() -> 'None':
 
 # ################################################################################################################################
 
+def _publish_or_fail(backend:'SQLPubSubBackend', data:'str') -> 'str':
+    """ Publishes a message and tells whether it was stored or failed.
+    """
+    try:
+        _ = backend.publish(_topic, data)
+    except DBAPIError:
+        out = 'failed'
+    else:
+        out = 'stored'
+
+    return out
+
+# ################################################################################################################################
+
+def _run_rejected_value_flow() -> 'None':
+    """ A payload that PostgreSQL cannot store fails its own publisher alone, and the other publications
+    of its commit are stored. SQLite stores the same payload.
+    """
+    backend, writer = _new_backend()
+
+    greenlets:'anylist' = []
+
+    for index in range(_caller_count):
+
+        # One caller publishes a NUL character, which a text column of PostgreSQL rejects.
+        if index == _caller_count // 2:
+            data = 'rejected\x00message'
+        else:
+            data = f'accepted-message-{index}'
+
+        greenlet = gevent.spawn(_publish_or_fail, backend, data)
+        greenlets.append(greenlet)
+
+    _ = gevent.joinall(greenlets, raise_error=True)
+
+    outcomes:'strlist' = []
+
+    for greenlet in greenlets:
+        outcomes.append(greenlet.value)
+
+    if backend.engine.dialect.name == Type_PostgreSQL:
+        expected_failed = 1
+        expected_outcome = 'failed'
+    else:
+        expected_failed = 0
+        expected_outcome = 'stored'
+
+    assert outcomes.count('failed') == expected_failed, outcomes
+    assert outcomes[_caller_count // 2] == expected_outcome
+
+    # Every stored publication has its message and its delivery rows ..
+    stored_count = _caller_count - expected_failed
+
+    assert len(get_message_rows(_topic)) == stored_count
+    assert len(get_delivery_rows(_sub_key_1)) == stored_count
+    assert len(get_delivery_rows(_sub_key_2)) == stored_count
+
+    # .. and the publications shared their commits.
+    assert max(writer.transaction_sizes) > 1, writer.transaction_sizes
+
+# ################################################################################################################################
+
 def _ack_all(backend:'SQLPubSubBackend', sub_key:'str', msg_ids:'strlist') -> 'anylist':
     """ Acknowledges each message from a concurrent caller of its own and returns what each acknowledgement returned.
     """
@@ -256,6 +322,49 @@ def _run_concurrent_ack_flow() -> 'None':
 
 # ################################################################################################################################
 
+def _run_disjoint_ack_flow() -> 'None':
+    """ One commit with the acknowledgements of two subscribers, each about a different message,
+    removes only the two delivery rows they are about.
+    """
+    backend, writer = _new_backend()
+
+    first = backend.publish(_topic, 'disjoint-message-1')
+    second = backend.publish(_topic, 'disjoint-message-2')
+
+    # Each subscriber acknowledges a different message, both in the same commit ..
+    first_ack = new_pending_ack(_sub_key_1, [first.msg_id], None)
+    second_ack = new_pending_ack(_sub_key_2, [second.msg_id], None)
+
+    writer._write_transaction(backend.engine, [first_ack, second_ack])
+
+    # .. each acknowledgement removed its own row alone ..
+    assert first_ack.removed_count == 1
+    assert second_ack.removed_count == 1
+
+    # .. the other message of each subscriber is still in its queue ..
+    first_remaining = get_delivery_rows(_sub_key_1)
+    second_remaining = get_delivery_rows(_sub_key_2)
+
+    assert len(first_remaining) == 1
+    assert len(second_remaining) == 1
+
+    message_ids_by_msg_id:'anydict' = {}
+
+    for row in get_message_rows(_topic):
+        message_ids_by_msg_id[row.msg_id] = row.id
+
+    assert first_remaining[0].message_id == message_ids_by_msg_id[second.msg_id]
+    assert second_remaining[0].message_id == message_ids_by_msg_id[first.msg_id]
+
+    # .. so neither message is fully delivered and both keep their payloads.
+    assert first_ack.fully_delivered_count == 0
+    assert second_ack.fully_delivered_count == 0
+
+    for row in get_message_rows(_topic):
+        assert row.payload is not None
+
+# ################################################################################################################################
+
 def _run_concurrent_claim_flow() -> 'None':
     """ Of many concurrent callers claiming one message for one subscriber, exactly one succeeds.
     """
@@ -292,7 +401,9 @@ def run_concurrency_scenario() -> 'None':
     """
     _run_concurrent_publish_flow()
     _run_duplicate_flow()
+    _run_rejected_value_flow()
     _run_concurrent_ack_flow()
+    _run_disjoint_ack_flow()
     _run_concurrent_claim_flow()
 
 # ################################################################################################################################

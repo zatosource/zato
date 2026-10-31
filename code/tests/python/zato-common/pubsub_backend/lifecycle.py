@@ -153,7 +153,8 @@ def _run_expiration_flow(backend:'SQLPubSubBackend') -> 'None':
 # ################################################################################################################################
 
 def _run_fetch_limits_flow(backend:'SQLPubSubBackend') -> 'None':
-    """ Fetches respect both the message count limit and the total size budget.
+    """ Fetches respect both the message count limit and the total size budget, and a message larger
+    than the budget is returned alone.
     """
     delete_all_rows()
 
@@ -178,13 +179,27 @@ def _run_fetch_limits_flow(backend:'SQLPubSubBackend') -> 'None':
     messages = backend.fetch_messages(_sub_key_1, max_len=250)
     assert len(messages) == 2
 
-    # .. while a budget that fits everything returns everything.
+    # .. while a budget that fits everything returns everything ..
     messages = backend.fetch_messages(_sub_key_1, max_len=1000)
     assert len(messages) == 3
+
+    # .. and a message larger than the budget is returned alone rather than holding up the queue,
+    # .. in a fetch for push delivery as well as in a pull.
+    messages = backend.fetch_messages(_sub_key_1, max_len=50)
+    assert len(messages) == 1
+    assert messages[0]['data'] == payload_1
 
     # fetch_pending is the startup-recovery entry point and sees the same queue.
     pending = backend.fetch_pending(_sub_key_1)
     assert len(pending) == 3
+
+    pulled = backend.pull_messages(_sub_key_1, max_len=50)
+    assert len(pulled) == 1
+    assert pulled[0]['data'] == payload_1
+
+    pulled = backend.pull_messages(_sub_key_1, max_len=50)
+    assert len(pulled) == 1
+    assert pulled[0]['data'] == payload_2
 
 # ################################################################################################################################
 

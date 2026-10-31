@@ -133,20 +133,18 @@ def claim_messages(engine:'Engine', sub_key:'str', max_messages:'int', max_len:'
         if not candidates:
             return []
 
-        # .. keep those within the size budget ..
+        # .. keep those within the size budget, except that a message larger than the budget
+        # .. is handed out alone rather than holding up the queue ..
         delivery_ids:'intlist' = []
         total_len = 0
 
         for row in candidates:
 
-            if total_len + row.data_size > max_len:
+            if delivery_ids and total_len + row.data_size > max_len:
                 break
 
             total_len += row.data_size
             delivery_ids.append(row.id)
-
-        if not delivery_ids:
-            return []
 
         # .. remove them, which only the first of two concurrent pulls succeeds in for any one row ..
         message_ids:'intlist' = []

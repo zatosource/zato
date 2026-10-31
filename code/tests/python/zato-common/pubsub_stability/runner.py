@@ -79,17 +79,30 @@ def get_report_path(label:'str') -> 'str':
 
 # ################################################################################################################################
 
-def run_for(monitor:'Monitor', duration_seconds:'float', on_tick:'callable_ | None'=None) -> 'None':
+def run_for(
+    monitor:'Monitor',
+    duration_seconds:'float',
+    on_tick:'callable_ | None'=None,
+    is_done:'callable_ | None'=None,
+    is_done_interval:'float'=1.0,
+) -> 'None':
     """ Lets the traffic run for the given time, calling on_tick with the elapsed seconds once a second,
-    and stops early when the disk runs low.
+    and stops early when the disk runs low or when is_done, called every is_done_interval seconds, returns True.
     """
     start = monotonic()
+    next_is_done = start + is_done_interval
 
     while True:
-        elapsed = monotonic() - start
+        now = monotonic()
+        elapsed = now - start
 
         if elapsed >= duration_seconds or monitor.is_disk_low:
             break
+
+        if is_done and now >= next_is_done:
+            if is_done():
+                break
+            next_is_done = now + is_done_interval
 
         if on_tick:
             on_tick(elapsed)

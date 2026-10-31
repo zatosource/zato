@@ -149,7 +149,7 @@ checks.lineError = function(line, state) {
     if (line.kind === 'text') {
         out = checks.textError(line, state);
     }
-    else if (line.kind === 'pick') {
+    else if (line.kind === 'pick' || line.kind === 'file') {
         out = line.is_required && state[line.name] === '' ? checks.config.requiredMessage : '';
     }
     else if (line.kind === 'pick-many') {

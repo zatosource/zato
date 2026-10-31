@@ -12,7 +12,7 @@ import logging
 # Zato
 from zato.common.api import PubSub
 from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase, HTTPSOAP
-from zato.common.util.api import new_sub_key
+from zato.common.util.api import sub_key_from_sec_name
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -131,8 +131,10 @@ class PubSubSubscriptionImporter:
         logger.info('CREATE: session=%s, session.bind=%s', session, session.bind)
         logger.info('CREATE: session.bind.url=%s', session.bind.url if session.bind else 'NO BIND')
 
-        instance = PubSubSubscription()
-        instance.sub_key = new_sub_key()
+        sec_name = session.query(SecurityBase.name).filter_by(id=definition['sec_base_id']).one().name
+
+        instance:'any_' = PubSubSubscription()
+        instance.sub_key = sub_key_from_sec_name(sec_name)
         instance.sec_base_id = definition['sec_base_id']
         instance.delivery_type = definition['delivery_type']
         instance.push_type = definition.get('push_type')
@@ -173,7 +175,7 @@ class PubSubSubscriptionImporter:
         for topic_id in definition['topic_id_list']:
             logger.info('Adding topic association: subscription_id=%s, topic_id=%s', instance.id, topic_id)
 
-            sub_topic = PubSubSubscriptionTopic()
+            sub_topic:'any_' = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
             sub_topic.topic_id = topic_id
             sub_topic.pattern_matched = 'enmasse'
@@ -211,7 +213,7 @@ class PubSubSubscriptionImporter:
         # Update subscription-topic associations
         session.query(PubSubSubscriptionTopic).filter_by(subscription_id=instance.id).delete()
         for topic_id in definition['topic_id_list']:
-            sub_topic = PubSubSubscriptionTopic()
+            sub_topic:'any_' = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
             sub_topic.topic_id = topic_id
             sub_topic.pattern_matched = 'enmasse'

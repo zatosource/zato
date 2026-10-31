@@ -8,8 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.b2b.portal.sample.agreements import AS2MDNMode, AS4_Default_MPC, AS4Profile, AS4TokenType
-from zato.common.b2b.portal.sample.common import Agreements_Tab, days_from_now, Duration_Units, Path_Partners, tab_href
-from zato.common.b2b.portal.sample.parties import DUNS_Type, endpoint, ISO6523_DUNS_Type, Partner_Role, Partners, Services
+from zato.common.b2b.portal.sample.common import Agreements_Tab, CPA_Accept, days_from_now, Duration_Units, Path_Partners, \
+    tab_href
+from zato.common.b2b.portal.sample.parties import DUNS_Type, endpoint, ISO6523_DUNS_Type, Partners, Services
 from zato.common.b2b.portal.sample.protocol.common import Protocol, Protocols
 from zato.common.b2b.portal.sample.section_alerts import Path_Alert_Rules, Rules
 
@@ -194,6 +195,15 @@ def _select(name:'str', label:'str', values:'strlist', value:'str'='') -> 'anydi
 
 # ################################################################################################################################
 
+def _file(name:'str', label:'str', button_label:'str', accept:'str') -> 'anydict':
+    """ A required file, chosen with the button, of one of the types the accept list names.
+    """
+    out = {'kind': 'file', 'name': name, 'label': label, 'value': '', 'button_label': button_label, 'accept': accept,
+        'is_required': True, 'shown_when': []}
+    return out
+
+# ################################################################################################################################
+
 def _switch(name:'str', label:'str', value:'bool') -> 'anydict':
     out = {'kind': 'switch', 'name': name, 'label': label, 'value': value, 'shown_when': []}
     return out
@@ -368,25 +378,63 @@ def agreement_wizard(partner:'Partner') -> 'anydict':
 
 # ################################################################################################################################
 
-def partner_wizard() -> 'anydict':
+def _partner_identity() -> 'anylist':
+    """ The identity of an AS2 or an AS4 partner. An ebXML partner is identified by the PartyInfo of its CPA instead,
+    which also has its name, its PartyId and its role.
+    """
+    lines:'anylist' = []
 
-    details_lines = [
-        _text('name', 'Name'),
-        _patterned(_text('duns', 'PartyId', is_mono=True), _duns_pattern, _duns_message),
-        _select('protocol', 'Protocol', Protocols),
-    ]
-
-    details_lines.extend(_shown_when([
-        _select('role', 'Role', [Partner_Role, 'WholesaleProvider']),
+    lines.extend(_shown_when([
+        _file('cpa', 'CPA', 'Import CPA', CPA_Accept),
     ], 'protocol', Protocol.ebXML))
 
-    details_lines.extend(_shown_when([
+    lines.extend(_shown_when([
+        _text('name', 'Name'),
+        _patterned(_text('duns', 'PartyId', is_mono=True), _duns_pattern, _duns_message),
         _patterned(_text('as2_id', 'AS2 identifier', is_mono=True), _as2_id_pattern, _as2_id_message),
     ], 'protocol', Protocol.AS2))
 
-    details_lines.extend(_shown_when([
+    lines.extend(_shown_when([
+        _text('name', 'Name'),
+        _patterned(_text('duns', 'PartyId', is_mono=True), _duns_pattern, _duns_message),
         _select('party_id_type', 'PartyId type', [ISO6523_DUNS_Type, DUNS_Type]),
     ], 'protocol', Protocol.AS4))
+
+    return lines
+
+# ################################################################################################################################
+
+def _partner_transport(protocol:'str') -> 'anylist':
+    """ The endpoint, the transport and the certificates of an AS2 or an AS4 partner. The CPA of an ebXML partner
+    has its endpoint, its transport and its certificates, which leaves only the timeout.
+    """
+    out = [
+        _text('endpoint', 'Endpoint', is_mono=True, input_type='url'),
+        _form('transport', 'Transport', '{tls_version}, timeout {timeout}', [
+            [_select('tls_version', 'TLS', _tls_versions), _switch('client_auth', 'Client authentication', True)],
+            [_duration('timeout', 'Timeout', 30, 'seconds')],
+        ]),
+    ]
+
+    if protocol == Protocol.AS2:
+        out.append(_select('as2_version', 'AS2 version', _as2_versions))
+    else:
+        out.append(_switch('payload_compression', 'Payload compression', True))
+
+    out.append(_form('certificates', 'Certificates', '{signing_certificate}', [
+        [_text('signing_certificate', 'Signing certificate', is_mono=True)],
+        [_text('tls_certificate', 'TLS certificate', is_mono=True)],
+    ]))
+
+    out = _shown_when(out, 'protocol', protocol)
+    return out
+
+# ################################################################################################################################
+
+def partner_wizard() -> 'anydict':
+
+    details_lines:'anylist' = [_select('protocol', 'Protocol', Protocols)]
+    details_lines.extend(_partner_identity())
 
     details_lines.append(_select('category', 'Category', ['Tier 1', 'Tier 2', 'Tier 3']))
     details_lines.append(_form('contact', 'Contact', '{contact_name}, {contact_email}', [
@@ -397,30 +445,14 @@ def partner_wizard() -> 'anydict':
 
     details = _step('Partner', details_lines)
 
-    connectivity_lines = [
-        _text('endpoint', 'Endpoint', is_mono=True, input_type='url'),
-        _form('transport', 'Transport', '{tls_version}, timeout {timeout}', [
-            [_select('tls_version', 'TLS', _tls_versions), _switch('client_auth', 'Client authentication', True)],
+    connectivity_lines = _shown_when([
+        _form('transport', 'Transport', 'Timeout {timeout}', [
             [_duration('timeout', 'Timeout', 30, 'seconds')],
         ]),
-    ]
+    ], 'protocol', Protocol.ebXML)
 
-    connectivity_lines.extend(_shown_when([
-        _text('soap_action', 'SOAPAction', '"ebXML"', is_mono=True),
-    ], 'protocol', Protocol.ebXML))
-
-    connectivity_lines.extend(_shown_when([
-        _select('as2_version', 'AS2 version', _as2_versions),
-    ], 'protocol', Protocol.AS2))
-
-    connectivity_lines.extend(_shown_when([
-        _switch('payload_compression', 'Payload compression', True),
-    ], 'protocol', Protocol.AS4))
-
-    connectivity_lines.append(_form('certificates', 'Certificates', '{signing_certificate}', [
-        [_text('signing_certificate', 'Signing certificate', is_mono=True)],
-        [_text('tls_certificate', 'TLS certificate', is_mono=True)],
-    ]))
+    connectivity_lines.extend(_partner_transport(Protocol.AS2))
+    connectivity_lines.extend(_partner_transport(Protocol.AS4))
     connectivity_lines.append(_select('state', 'State', ['Onboarding', 'Active']))
 
     connectivity = _step('Connectivity', connectivity_lines)

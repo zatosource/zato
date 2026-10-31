@@ -20,7 +20,7 @@ from sqlalchemy.exc import DBAPIError
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.engine import call_database
-from zato.common.db_env.errors import is_conflict
+from zato.common.db_env.errors import is_conflict, is_value_error
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.pubsub.sql.config import get_batch_size, get_commit_max_messages, get_commits_in_flight, \
     get_pubsub_engine
@@ -196,6 +196,9 @@ class PendingAck:
     removed_count: 'int'
     fully_delivered_count: 'int'
 
+    # Why the acknowledgement could not be written, while the other items of its commit could
+    exception: 'BaseException | None'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -220,6 +223,7 @@ def new_pending_ack(sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone'
     out.sequence_ids = sequence_ids
     out.removed_count = 0
     out.fully_delivered_count = 0
+    out.exception = None
 
     return out
 
@@ -234,6 +238,7 @@ def _reset_item(item:'PendingPublication | PendingAck') -> 'None':
     else:
         item.removed_count = 0
         item.fully_delivered_count = 0
+        item.exception = None
 
 # ################################################################################################################################
 
@@ -305,6 +310,9 @@ class PubSubWriter:
         weight = len(pending.msg_ids)
         self._commit_queue.write(pending, weight=weight, is_urgent=False)
 
+        if pending.exception:
+            raise pending.exception
+
 # ################################################################################################################################
 
     def _write_batch(self, batch:'anylist') -> 'None':
@@ -328,6 +336,13 @@ class PubSubWriter:
 
             except DBAPIError as e:
 
+                # A value of one item that PostgreSQL rejects fails the whole commit, so each item is written again
+                # in a transaction of its own and only the caller of the item at fault receives the error ..
+                if len(batch) > 1 and is_value_error(e):
+                    logger.info('Pub/sub commit rejected a value, writing its %d items one by one -> %s', len(batch), e.orig)
+                    self._write_items_one_by_one(engine, batch)
+                    break
+
                 attempt += 1
 
                 if attempt > _max_conflict_retries or not is_conflict(e):
@@ -337,6 +352,22 @@ class PubSubWriter:
 
                 for item in batch:
                     _reset_item(item)
+
+# ################################################################################################################################
+
+    def _write_items_one_by_one(self, engine:'Engine', batch:'anylist') -> 'None':
+        """ Writes each item of a batch in a transaction of its own, storing in an item the error
+        of a value that PostgreSQL rejected in it.
+        """
+        for item in batch:
+            _reset_item(item)
+
+            try:
+                self._write_items(engine, [item])
+            except DBAPIError as e:
+                if not is_value_error(e):
+                    raise
+                item.exception = e
 
 # ################################################################################################################################
 
@@ -549,6 +580,7 @@ class PubSubWriter:
 
         all_message_ids:'anylist' = []
         sub_keys:'strlist' = []
+        acked_pairs:'set[tuple[str, int]]' = set()
 
         for pending, message_ids in zip(acks, message_ids_by_ack):
             all_message_ids.extend(message_ids)
@@ -556,10 +588,15 @@ class PubSubWriter:
             if pending.sub_key not in sub_keys:
                 sub_keys.append(pending.sub_key)
 
+            for message_id in message_ids:
+                acked_pairs.add((pending.sub_key, message_id))
+
         if not all_message_ids:
             return
 
-        # Read the delivery rows of the acknowledged messages that belong to the acknowledging subscribers ..
+        # Read the delivery rows of the acknowledged messages that belong to the acknowledging subscribers.
+        # The query matches every subscriber of the commit with every message of the commit, so a row
+        # of a subscriber that did not acknowledge that particular message is still pending and stays in place ..
         delivery_ids_by_pair:'anydict' = {}
 
         for chunk in _get_chunks(all_message_ids):
@@ -571,7 +608,9 @@ class PubSubWriter:
 
             for row in connection.execute(_ack_deliveries_query, parameters):
                 pair = (row.sub_key, row.message_id)
-                delivery_ids_by_pair[pair] = row.id
+
+                if pair in acked_pairs:
+                    delivery_ids_by_pair[pair] = row.id
 
         # .. remove them, in the order of their keys, so that concurrent commits lock them in the same order,
         # learning which of them this commit removed ..

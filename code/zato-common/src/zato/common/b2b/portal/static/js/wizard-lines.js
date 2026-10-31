@@ -74,6 +74,21 @@ lines.isShown = function(line, state) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Lines of one name shown for different values of another line each have a control of their own,
+// so the value a line is shown for is a part of the id of its control.
+lines.elementId = function(line) {
+
+    var out = 'line-' + line.name;
+
+    if (line.shown_when.length) {
+        out = out + '-' + line.shown_when[1];
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 lines.isBoundTo = function(line, name) {
 
     if (line.shown_when.length === 0) {
@@ -224,7 +239,7 @@ lines.buildText = function(line, state) {
 
     var input = portal.create('input', line.is_mono ? 'input-mono' : '', '');
     input.type = line.input_type;
-    input.id = 'line-' + line.name;
+    input.id = lines.elementId(line);
     input.value = state[line.name];
     input.autocomplete = 'off';
     input.spellcheck = false;
@@ -338,7 +353,7 @@ lines.buildPickMany = function(line, state) {
 lines.buildSelect = function(line, state) {
 
     var select = portal.create('select', '', '');
-    select.id = 'line-' + line.name;
+    select.id = lines.elementId(line);
 
     for (var optionIndex = 0; optionIndex < line.options.length; optionIndex++) {
         var optionSpec = line.options[optionIndex];
@@ -363,7 +378,7 @@ lines.buildSwitch = function(line, state) {
 
     var input = portal.create('input', 'switch', '');
     input.type = 'checkbox';
-    input.id = 'line-' + line.name;
+    input.id = lines.elementId(line);
     input.checked = state[line.name];
 
     input.addEventListener('change', function() {
@@ -416,8 +431,41 @@ lines.buildForm = function(line, state) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A file line is the button that opens the file chooser, with the name of the file chosen beside it.
+// Closing the chooser without a file leaves the line with no answer.
+lines.buildFile = function(line, state) {
+
+    var holder = portal.create('div', 'decision-file', '');
+    var button = portal.create('label', 'button-secondary', line.button_label);
+    var fileName = portal.create('span', 'decision-file-name', state[line.name]);
+
+    var input = portal.create('input', '', '');
+    input.type = 'file';
+    input.id = lines.elementId(line);
+    input.accept = line.accept;
+    input.hidden = true;
+
+    input.addEventListener('change', function() {
+        state[line.name] = '';
+        if (input.files.length) {
+            state[line.name] = input.files[0].name;
+        }
+        fileName.textContent = state[line.name];
+        lines.onChange();
+    });
+
+    button.appendChild(input);
+    holder.appendChild(button);
+    holder.appendChild(fileName);
+
+    return holder;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 lines.builders = {
     'text': lines.buildText,
+    'file': lines.buildFile,
     'pick': lines.buildPick,
     'pick-many': lines.buildPickMany,
     'select': lines.buildSelect,
@@ -449,7 +497,7 @@ lines.buildSlot = function(grid, slot, state) {
         var line = slot[lineIndex];
 
         var label = portal.create('label', 'decision-line-label', line.label);
-        label.setAttribute('for', 'line-' + line.name);
+        label.setAttribute('for', lines.elementId(line));
         lines.bindLayer(label, line);
 
         var lineSlot = portal.create('div', 'decision-line-slot', '');

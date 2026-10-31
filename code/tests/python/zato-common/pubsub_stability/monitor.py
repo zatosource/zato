@@ -43,6 +43,9 @@ if 0:
 # How long one measured interval lasts, in seconds.
 Minute_Seconds = 60
 
+# How long the last interval of a run must be for it to be reported, in seconds.
+_min_final_interval_seconds = 1
+
 # How many bytes one gigabyte and one megabyte have.
 _bytes_per_gb = 1024 ** 3
 _bytes_per_mb = 1024 ** 2
@@ -148,7 +151,12 @@ class Monitor:
         # Whether each minute is checked against the rate, which a suite turns off while it changes the rate itself.
         self.checks_rate = True
 
+        # Whether the current minute overlaps an overload that a suite causes, which exempts it from the rate
+        # and latency checks, and which is cleared once the minute is recorded.
+        self.is_minute_exempt = False
+
         self._start = monotonic()
+        self._minute_start = self._start
         self._process = psutil.Process()
         self._last_checkpoints = -1
         self._last_autovacuums = -1
@@ -213,13 +221,18 @@ class Monitor:
         """
         limits = self.limits
 
-        if report.publish_p99 > limits.publish_p99_seconds:
-            report.failures.append(f'publish p99 {report.publish_p99:.3f}s above {limits.publish_p99_seconds}s')
+        if self.is_minute_exempt:
+            report.details.append('overload, rate and latency not checked')
 
-        if report.delivery_p99 > limits.delivery_p99_seconds:
-            report.failures.append(f'delivery p99 {report.delivery_p99:.3f}s above {limits.delivery_p99_seconds}s')
+        else:
 
-        if self.checks_rate:
+            if report.publish_p99 > limits.publish_p99_seconds:
+                report.failures.append(f'publish p99 {report.publish_p99:.3f}s above {limits.publish_p99_seconds}s')
+
+            if report.delivery_p99 > limits.delivery_p99_seconds:
+                report.failures.append(f'delivery p99 {report.delivery_p99:.3f}s above {limits.delivery_p99_seconds}s')
+
+        if self.checks_rate and not self.is_minute_exempt:
             min_rate = self.traffic.rate * limits.min_rate_ratio
             if report.publish_rate < min_rate:
                 report.failures.append(f'publish rate {report.publish_rate:.1f}/s below {min_rate:.1f}/s')
@@ -239,7 +252,13 @@ class Monitor:
         """ Measures the minute that ends now, checks it and writes its report.
         """
         counters = self.traffic.take_minute()
-        elapsed = monotonic() - self._start
+
+        now = monotonic()
+        elapsed = now - self._start
+
+        # The last interval of a run may be shorter than a minute, so the rates are per its actual length.
+        interval_seconds = now - self._minute_start
+        self._minute_start = now
 
         memory = self._process.memory_info()
 
@@ -247,8 +266,8 @@ class Monitor:
             index=len(self.reports) + 1,
             since_start=_humanize_duration(elapsed),
             local_time=datetime.now().strftime('%H:%M:%S'),
-            publish_rate=counters.published / Minute_Seconds,
-            delivery_rate=(counters.pulled + counters.pushed) / Minute_Seconds,
+            publish_rate=counters.published / interval_seconds,
+            delivery_rate=(counters.pulled + counters.pushed) / interval_seconds,
             publish_p99=_p99(counters.publish_seconds),
             delivery_p99=_p99(counters.delivery_seconds),
             message_rows=0,
@@ -262,6 +281,8 @@ class Monitor:
 
         self._read_database(report)
         self._check(report, counters)
+
+        self.is_minute_exempt = False
 
         free_gb = disk_usage(gettempdir()).free / _bytes_per_gb
 
@@ -312,10 +333,16 @@ class Monitor:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
+        """ Stops the measurement, checking the part of a minute that passed since the last report,
+        so that nothing that happened at the end of a run goes unchecked.
+        """
         self.is_running = False
 
         for greenlet in self._greenlet:
             greenlet.kill()
+
+        if monotonic() - self._minute_start >= _min_final_interval_seconds:
+            _ = self.record_minute()
 
 # ################################################################################################################################
 

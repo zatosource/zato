@@ -158,6 +158,23 @@
     min-height: 24px;
 }
 
+/* A file line has its button and the name of the file chosen beside it, the button as tall as the line's label */
+.decision-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.decision-file .button-secondary {
+    height: 24px;
+}
+
+.decision-file-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+}
+
 /* ------------------------------------------------------------ */
 /* Wizard - summary links                                       */
 /* ------------------------------------------------------------ */

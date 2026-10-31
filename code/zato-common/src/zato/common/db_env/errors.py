@@ -50,6 +50,10 @@ _transient_states = {
     SQLState.Idle_In_Transaction_Session_Timeout,
 }
 
+# The SQLSTATE classes of the errors caused by the values of one statement - data exceptions
+# and integrity constraint violations.
+_value_error_classes = {'22', '23'}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -73,6 +77,17 @@ def is_conflict(error:'DBAPIError') -> 'bool':
     sqlstate = get_sqlstate(error)
     out = sqlstate in _conflict_states
 
+    return out
+
+# ################################################################################################################################
+
+def is_value_error(error:'DBAPIError') -> 'bool':
+    """ Whether PostgreSQL rejected a value that a statement was to write, which fails again however often it is run.
+    """
+    sqlstate = get_sqlstate(error)
+    sqlstate_class = sqlstate[:2]
+
+    out = sqlstate_class in _value_error_classes
     return out
 
 # ################################################################################################################################

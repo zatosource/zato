@@ -385,7 +385,8 @@ class SQLPubSubBackend(SQLAdminAPI):
                 if event.wait(wait_seconds):
                     rows = self._fetch_rows(sub_key, max_messages)
 
-        # .. convert the rows into message dicts, keeping within the total size budget.
+        # .. convert the rows into message dicts, keeping within the total size budget,
+        # .. except that a message larger than the budget goes out alone rather than holding up its queue.
         out:'anylist' = []
         total_len = 0
 
@@ -393,7 +394,7 @@ class SQLPubSubBackend(SQLAdminAPI):
 
             data_len = row.data_size
 
-            if total_len + data_len > max_len:
+            if out and total_len + data_len > max_len:
                 break
 
             total_len += data_len

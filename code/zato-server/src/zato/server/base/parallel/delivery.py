@@ -20,7 +20,7 @@ from gevent.lock import RLock
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from zato.common.api import DATA_FORMAT, PubSub
+from zato.common.api import DATA_FORMAT, MISC, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
@@ -57,6 +57,10 @@ _fetch_error_sleep = PubSub.Delivery.Fetch_Error_Sleep
 _delivery_defaults = PubSub.Delivery
 
 _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
+
+# How long one push to a REST endpoint may take, in seconds, the same as for an outgoing REST connection,
+# so that an endpoint that never responds fails the attempt rather than holding up the queue.
+_rest_push_timeout = MISC.DEFAULT_HTTP_TIMEOUT
 
 # The headers of a push request that identify the message and its attempt
 _header_msg_id = 'X-Zato-Msg-ID'
@@ -585,7 +589,7 @@ class PushDelivery:
             _header_delivery_attempt: str(message['delivery_attempt']),
         }
 
-        response = requests_post(url, data=dumps(envelope), headers=headers)
+        response = requests_post(url, data=dumps(envelope), headers=headers, timeout=_rest_push_timeout)
         response.raise_for_status()
 
 # ################################################################################################################################

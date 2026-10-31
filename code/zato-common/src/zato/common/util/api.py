@@ -27,6 +27,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from getpass import getuser as getpass_getuser
 from glob import glob
+from hashlib import sha256
 from inspect import isfunction
 from itertools import tee
 from io import StringIO
@@ -359,6 +360,17 @@ def new_msg_id() -> 'str':
 def new_sub_key() -> 'str':
     from edwh_uuid7 import uuid7
     return f'sk{uuid7().hex}'
+
+# ################################################################################################################################
+
+def sub_key_from_sec_name(sec_name:'str') -> 'str':
+    """ Returns the subscription key derived from the name of the subscriber's security definition.
+    Each server that imports the same configuration derives the same key, so the active server and its standby
+    address the same queues in the pub/sub database.
+    """
+    digest = sha256(sec_name.encode('utf8')).hexdigest()
+    out = f'sk{digest[:32]}'
+    return out
 
 # ################################################################################################################################
 

@@ -295,14 +295,23 @@ def seed_aged_queue(
     delivery_sub_keys:'strlist',
     message_count:'int',
     aged_days:'int',
+    is_delivered:'bool' = False,
     ) -> 'float':
     """ Seeds one topic with message_count messages published aged_days in the past,
     pending only for delivery_sub_keys - the queue of a subscriber that has not
     acknowledged anything for months while its peers (the rest of sub_keys)
     have long acknowledged everything. Bulk-loaded, like seed_backlog.
 
+    With is_delivered, the messages are delivered-message traces without their payloads,
+    which the retention of the cleanup removes.
+
     Starts from empty tables. Returns the elapsed seeding time in seconds.
     """
+    if is_delivered:
+        payload = None
+    else:
+        payload = _payload
+
     start = monotonic()
 
     connection, placeholder = connect_native()
@@ -333,7 +342,7 @@ def seed_aged_queue(
             msg_id = f'zpsm.aged.{number}'
             pub_time_ms = aged_ms - number
 
-            yield (message_id, msg_id, topic_name, _payload, 0, None, len(_payload), _payload,
+            yield (message_id, msg_id, topic_name, payload, 0, None, len(_payload), _payload,
                 _priority, _seconds_per_year, aged_iso, aged_iso, expiration_iso, pub_time_ms,
                 expiration_ms, None, None, None, None, None, _payload_crc32)
 
