@@ -15,9 +15,9 @@ from urllib.parse import quote
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anydictnone, anylist, callable_, dictlist, strdict, strlist
-    anydictnone = anydictnone
+    from zato.common.typing_ import anydict, anylist, anylistnone, callable_, dictlist, strdict, strlist
     anylist = anylist
+    anylistnone = anylistnone
     callable_ = callable_
     dictlist = dictlist
     strdict = strdict
@@ -127,16 +127,20 @@ Choices_By_Word = _choices_by_word()
 # ################################################################################################################################
 
 # The paths of the sections
-Path_Messages   = '/'
+Path_Messages   = '/messages'
 Path_Alerts     = '/alerts'
 Path_Partners   = '/partners'
 Path_Agreements = '/agreements'
 
-# The parameter of the address naming the partner whose agreements a listing shows
-Partner_Parameter = 'partner'
+# The segments of an address that open the wizard of a section and what an item keeps apart from its tabs
+New_Segment     = 'new'
+Details_Segment = 'details'
 
 # The tab of a partner listing its agreements
 Agreements_Tab = 'agreements'
+
+# The files a CPA is imported from
+CPA_Accept = '.xml,application/xml,text/xml'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,7 +186,7 @@ def href(section_path:'str', item_id:'str') -> 'str':
     """ The address of one item of a section, which its listing opens with the item selected.
     """
     item_id = quote(item_id, safe='')
-    out = f'{section_path}?id={item_id}'
+    out = f'{section_path}/{item_id}'
     return out
 
 # ################################################################################################################################
@@ -192,7 +196,15 @@ def tab_href(section_path:'str', item_id:'str', tab_key:'str') -> 'str':
     """
     item_href = href(section_path, item_id)
 
-    out = f'{item_href}&tab={tab_key}'
+    out = f'{item_href}/{tab_key}'
+    return out
+
+# ################################################################################################################################
+
+def scoped_path(section_path:'str', scope_key:'str') -> 'str':
+    """ The path of the listing of a section that shows the items of one partner only.
+    """
+    out = f'{section_path}/{scope_key}'
     return out
 
 # ################################################################################################################################
@@ -503,11 +515,14 @@ def table(
     rows:'anylist',
     *,
     is_editable:'bool'=False,
-    button:'anydictnone'=None,
+    buttons:'anylistnone'=None,
     ) -> 'anydict':
     """ A block holding a table, each column a label or an identifier column, each row a list of cells or plain texts,
-    with a button next to its title when it is given one.
+    with the buttons it is given next to its title.
     """
+    if buttons is None:
+        buttons = []
+
     out_columns:'anylist' = []
 
     for column in columns:
@@ -533,8 +548,24 @@ def table(
         'columns': out_columns,
         'rows': out_rows,
         'is_editable': is_editable,
-        'button': button,
+        'buttons': buttons,
     }
+    return out
+
+# ################################################################################################################################
+
+def link_button(label:'str', address:'str') -> 'anydict':
+    """ A button that opens the given address.
+    """
+    out = {'label': label, 'href': address, 'accept': ''}
+    return out
+
+# ################################################################################################################################
+
+def file_button(label:'str', accept:'str') -> 'anydict':
+    """ A button that opens the file chooser of the browser for the given types of files.
+    """
+    out = {'label': label, 'href': '', 'accept': accept}
     return out
 
 # ################################################################################################################################
@@ -655,8 +686,8 @@ def section(
         'wizard': None,
         'toggle': None,
         'header_link': None,
-        'new_href': f'{path}?new',
-        'scope': '',
+        'header_buttons': [],
+        'new_href': f'{path}/{New_Segment}',
         'scopes': {},
         'is_bulk': is_bulk,
         'transitions': transitions(actions_of, [each['attributes']['state'] for each in items]),

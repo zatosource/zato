@@ -127,13 +127,14 @@ search.renderCriteria = function() {
 
 search.init = function() {
 
-    var anchor = document.getElementById('search-open');
+    var anchor = document.getElementById('listing-filter');
     var form = null;
 
     search.data = portal.readData('search-data');
 
     portal.popover.attach(anchor, {
         title: search.data.form.title,
+        keepFocus: true,
         build: function() {
             form = portal.fields.buildForm(search.data.form.rows, search.formValues());
             return form.element;

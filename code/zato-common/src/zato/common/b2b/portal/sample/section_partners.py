@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.b2b.portal.sample.agreements import Agreements
+from zato.common.b2b.portal.sample.agreements import agreement_href, Agreements
 from zato.common.b2b.portal.sample.common import action, Agreements_Tab, cell, chip, choice, column, counted, \
-    days_from_now, fields, href, id_column, item, mono, Partner_Parameter, Path_Agreements, Path_Messages, Path_Partners, \
-    section, tab, table, timestamp, typed
+    CPA_Accept, days_from_now, fields, file_button, href, id_column, item, link_button, mono, New_Segment, \
+    Path_Agreements, Path_Messages, Path_Partners, scoped_path, section, tab, table, timestamp, typed
 from zato.common.b2b.portal.sample.parties import endpoint, Partners
 from zato.common.b2b.portal.sample.protocol.common import Protocols
 from zato.common.b2b.portal.sample.protocol.views import Views_By_Protocol
@@ -107,14 +107,19 @@ def _agreements(partner:'Partner') -> 'anylist':
     for agreement in Agreements:
         if agreement.partner_key == partner.key:
             agreement_rows.append([
-                mono(agreement.agreement_id, href=href(Path_Agreements, agreement.agreement_id)),
+                mono(agreement.agreement_id, href=agreement_href(agreement.agreement_id)),
                 days_from_now(agreement.end_days),
                 chip(agreement.state),
             ])
 
-    button = {'label': 'New agreement', 'href': f'{Path_Agreements}?new&{Partner_Parameter}={partner.key}'}
+    agreements_path = scoped_path(Path_Agreements, partner.key)
 
-    out = [table('Agreements', [id_column('Agreement'), 'Valid to', 'State'], agreement_rows, button=button)]
+    buttons = [
+        link_button('New agreement', f'{agreements_path}/{New_Segment}'),
+        file_button('Import CPA', CPA_Accept),
+    ]
+
+    out = [table('Agreements', [id_column('Agreement'), 'Valid to', 'State'], agreement_rows, buttons=buttons)]
     return out
 
 # ################################################################################################################################

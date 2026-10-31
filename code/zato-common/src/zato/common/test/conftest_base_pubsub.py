@@ -27,6 +27,8 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.api import PubSub
+from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, start_pubsub_database, \
+    stop_pubsub_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -220,30 +222,7 @@ def start_server_process(
     for env_key, env_value in extra_server_env.items():
         server_environment[env_key] = env_value
 
-    # .. patch server.conf so the server uses the test Redis DB ..
-    server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')
-
-    with open(server_conf_path, 'r') as server_conf_file:
-        server_conf_content = server_conf_file.read()
-
-    server_conf_content = re.sub(
-        r'^(db\s*=\s*)\d+',
-        f'\\g<1>{PubSub.Test_Redis_DB}',
-        server_conf_content,
-        flags=re.MULTILINE,
-    )
-
-    # .. patch bind port if needed so that CLI commands use the dynamic port ..
-    if patch_server_conf_bind:
-        server_conf_content = re.sub(
-            r'^(bind\s*=\s*)\S+',
-            f'\\g<1>0.0.0.0:{server_port}',
-            server_conf_content,
-            flags=re.MULTILINE,
-        )
-
-    with open(server_conf_path, 'w') as server_conf_file:
-        _ = server_conf_file.write(server_conf_content)
+    patch_server_conf(server_directory, server_port, patch_server_conf_bind)
 
     state.server_process = subprocess.Popen(
         [zato_bin, 'start', server_directory, '--fg'],
@@ -281,6 +260,35 @@ def start_server_process(
         raise
 
     return popen_time
+
+# ################################################################################################################################
+
+def patch_server_conf(server_directory:'str', server_port:'int', patch_server_conf_bind:'bool') -> 'None':
+    """ Points the server.conf of a server at the test Redis database and, if requested, at the given port.
+    """
+    server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')
+
+    with open(server_conf_path, 'r') as server_conf_file:
+        server_conf_content = server_conf_file.read()
+
+    server_conf_content = re.sub(
+        r'^(db\s*=\s*)\d+',
+        f'\\g<1>{PubSub.Test_Redis_DB}',
+        server_conf_content,
+        flags=re.MULTILINE,
+    )
+
+    # .. patch bind port if needed so that CLI commands use the dynamic port ..
+    if patch_server_conf_bind:
+        server_conf_content = re.sub(
+            r'^(bind\s*=\s*)\S+',
+            f'\\g<1>0.0.0.0:{server_port}',
+            server_conf_content,
+            flags=re.MULTILINE,
+        )
+
+    with open(server_conf_path, 'w') as server_conf_file:
+        _ = server_conf_file.write(server_conf_content)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -420,12 +428,25 @@ def create_zato_server_fixture(
             quickstart_prefix=quickstart_prefix,
         )
 
-        # .. point the pub/sub database at this environment's own file so the server,
-        # .. any subprocesses and the test process itself all share one database
-        # .. that starts empty and disappears together with the quickstart directory ..
-        pubsub_db_path = os.path.join(server_directory, 'pubsub.db')
-        os.environ['Zato_PubSub_DB_Path'] = pubsub_db_path
-        logger.info('Pub/sub database: %s', pubsub_db_path)
+        # .. point the pub/sub database at this environment's own file, or at a PostgreSQL container of this session,
+        # .. so the server, any subprocesses and the test process itself all share one database
+        # .. that starts empty and disappears together with the environment ..
+        pubsub_db_mode = get_db_mode()
+
+        # .. the generation of the active server is recorded in this environment too ..
+        generation_file_path = os.path.join(server_directory, 'pubsub-generation')
+        os.environ['Zato_PubSub_Generation_File'] = generation_file_path
+
+        if is_postgresql_mode(pubsub_db_mode):
+            pubsub_database = start_pubsub_database('live', pubsub_db_mode)
+            _ = atexit.register(stop_pubsub_database, pubsub_database)
+            os.environ.update(pubsub_database.env)
+            logger.info('Pub/sub database: %s (%s)', pubsub_database.container_name, pubsub_db_mode)
+        else:
+            pubsub_database = None
+            pubsub_db_path = os.path.join(server_directory, 'pubsub.db')
+            os.environ['Zato_PubSub_DB_Path'] = pubsub_db_path
+            logger.info('Pub/sub database: %s', pubsub_db_path)
 
         # .. the audit log gets its own file too - otherwise the test server would
         # .. write its audit events into the developer's own environment's database ..
@@ -473,6 +494,9 @@ def create_zato_server_fixture(
         yield
 
         state.cleanup()
+
+        if pubsub_database:
+            stop_pubsub_database(pubsub_database)
 
     # .. attach state to the fixture function so conftest files can reference it ..
     zato_server._state = state # type: ignore[attr-defined]

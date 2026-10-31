@@ -16,11 +16,15 @@ from gevent import sleep, spawn
 from gevent.event import Event
 from gevent.lock import RLock
 
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
+
 # Zato
 from zato.common.api import DATA_FORMAT, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Expired, \
-    Interrupt_Paused
+from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
+    Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
+from zato.common.pubsub.sql.generation import PubSubReplaced
 from zato.common.util.api import utcnow
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
@@ -53,6 +57,10 @@ _fetch_error_sleep = PubSub.Delivery.Fetch_Error_Sleep
 _delivery_defaults = PubSub.Delivery
 
 _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
+
+# The headers of a push request that identify the message and its attempt
+_header_msg_id = 'X-Zato-Msg-ID'
+_header_delivery_attempt = 'X-Zato-Delivery-Attempt'
 
 sub_key_greenlet_dict = dict[str, 'Greenlet']
 
@@ -155,16 +163,41 @@ class PushDelivery:
         """
         logger.info('PubSub delivery greenlet started for sub_key `%s`', sub_key)
 
+        try:
+            self._run_delivery_loop(sub_key)
+
+        # Another server took over the pub/sub database, so this one delivers nothing anymore.
+        except PubSubReplaced as e:
+            logger.warning('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
+            return
+
+        logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
+
+# ################################################################################################################################
+
+    def _run_delivery_loop(self, sub_key:'str') -> 'None':
+        """ Drains what is pending for one subscriber key and then delivers new messages until stopped.
+        """
+
         # On startup, drain everything still unacknowledged for this subscriber ..
         while not self._stop_event.is_set():
             if sub_key not in self.server.config_manager._push_subs:
                 break
             if sub_key in self._paused:
                 break
-            pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
-            if not pending:
-                break
-            self._deliver_batch(pending, sub_key)
+            try:
+                pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
+                if not pending:
+                    break
+                self._deliver_batch(pending, sub_key)
+
+            except PubSubReplaced:
+                raise
+
+            except Exception:
+                logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
+
+                sleep(_fetch_error_sleep)
 
         # .. then wait for new messages.
         while not self._stop_event.is_set():
@@ -177,12 +210,14 @@ class PushDelivery:
                     sub_key, max_messages=_delivery_batch_size, block_ms=_default_delivery_block_ms)
                 if messages:
                     self._deliver_batch(messages, sub_key)
+
+            except PubSubReplaced:
+                raise
+
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
 
                 sleep(_fetch_error_sleep)
-
-        logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
 
 # ################################################################################################################################
 
@@ -282,6 +317,20 @@ class PushDelivery:
             if e.reason == Interrupt_Paused:
                 logger.info('Pausing sub_key `%s` between delivery attempts, msg_id `%s`', sub_key, msg_id)
                 return False
+
+            # .. an attempt that could not be recorded was not sent, so the message stays for the next round ..
+            if e.reason == Interrupt_Database:
+                logger.info('Delivery attempt not recorded for sub_key `%s`, msg_id `%s`: %s', sub_key, msg_id, e.__cause__)
+                return False
+
+            # .. a message that left the queue in the meantime has nothing left to deliver ..
+            if e.reason == Interrupt_Withdrawn:
+                logger.info('Message left the queue before delivery, sub_key `%s`, msg_id `%s`', sub_key, msg_id)
+                return True
+
+            # .. and once another server took over the database, this one sends nothing anymore.
+            if e.reason == Interrupt_Replaced:
+                raise PubSubReplaced(str(e.__cause__)) from e
 
             self._conclude_expired(message, sub_config, sub_key)
             return True
@@ -450,6 +499,7 @@ class PushDelivery:
 
         # Outgoing connections have retry policies of their own
         if sub_key.startswith(_outgoing_sub_key_prefix):
+            self._record_attempt(message)
             deliver(message, sub_config)
             return
 
@@ -461,9 +511,29 @@ class PushDelivery:
             message_cid = ''
 
         def attempt() -> 'None':
+            self._record_attempt(message)
             deliver(message, sub_config)
 
         deliver_with_policy(policy, 0, message_cid, endpoint, attempt, should_continue)
+
+# ################################################################################################################################
+
+    def _record_attempt(self, message:'anydict') -> 'None':
+        """ Records an attempt in the database before it is sent, which on PostgreSQL confirms that this server
+        is still the active one. Each outcome other than a recorded attempt stops the round without counting
+        as a failed attempt.
+        """
+        try:
+            is_pending = self.backend.record_attempt(message)
+
+        except PubSubReplaced as e:
+            raise DeliveryInterrupted(Interrupt_Replaced, 0) from e
+
+        except DBAPIError as e:
+            raise DeliveryInterrupted(Interrupt_Database, 0) from e
+
+        if not is_pending:
+            raise DeliveryInterrupted(Interrupt_Withdrawn, 0)
 
 # ################################################################################################################################
 
@@ -504,7 +574,18 @@ class PushDelivery:
 
         url = sub_config['rest_push_url']
 
-        response = requests_post(url, data=dumps(message), headers={'Content-Type': 'application/json'})
+        # Each copy of a message carries its identifier and the number of its attempt, in the body and in the headers,
+        # by which a subscriber recognizes a copy it processed already. The delivery row is internal to the database.
+        envelope = dict(message)
+        del envelope['delivery_id']
+
+        headers = {
+            'Content-Type': 'application/json',
+            _header_msg_id: message['msg_id'],
+            _header_delivery_attempt: str(message['delivery_attempt']),
+        }
+
+        response = requests_post(url, data=dumps(envelope), headers=headers)
         response.raise_for_status()
 
 # ################################################################################################################################

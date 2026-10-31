@@ -99,28 +99,30 @@ def _get_raw_counts() -> 'tuple[anydict, anydict, anydict]':
 # ################################################################################################################################
 
 def _get_stored_counts() -> 'tuple[anydict, anydict, anydict]':
-    """ Reads the count tables, leaving out the rows that dropped to zero.
+    """ Reads the count tables, adding up the rows of each key - one on SQLite, any number of change rows
+    on PostgreSQL - and leaving out the keys that dropped to zero.
     """
-    queue_counts:'anydict' = {}
-    topic_counts:'anydict' = {}
-    publish_counts:'anydict' = {}
+    queue_sums:'anydict' = {}
+    topic_sums:'anydict' = {}
+    publish_sums:'anydict' = {}
 
     for row in _read_rows(queue_count_table):
-        assert row.depth >= 0, row
-        if row.depth > 0:
-            queue_counts[row.sub_key, row.topic_name] = row.depth
+        _add(queue_sums, (row.sub_key, row.topic_name), row.depth)
 
     for row in _read_rows(topic_count_table):
-        assert row.total >= 0, row
-        if row.total > 0:
-            topic_counts[row.topic_name] = row.total
+        _add(topic_sums, row.topic_name, row.total)
 
     for row in _read_rows(publish_count_table):
-        assert row.total >= 0, row
-        if row.total > 0:
-            publish_counts[row.topic_name, row.minute_ms, row.publisher] = row.total
+        _add(publish_sums, (row.topic_name, row.minute_ms, row.publisher), row.total)
 
-    out = queue_counts, topic_counts, publish_counts
+    out:'tuple[anydict, anydict, anydict]' = ({}, {}, {})
+
+    for sums, counts in zip((queue_sums, topic_sums, publish_sums), out):
+        for key, value in sums.items():
+            assert value >= 0, (key, value)
+            if value > 0:
+                counts[key] = value
+
     return out
 
 # ################################################################################################################################

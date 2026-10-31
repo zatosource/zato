@@ -9,9 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.b2b.portal.config import Local_Organization
 from zato.common.b2b.portal.sample.agreements import Agreements
-from zato.common.b2b.portal.sample.common import action, Agreements_Tab, cell, chip, column, days_from_now, delta, \
-    direction_cell, fields, fixed, href, id_column, item, link, minutes_ago, mono, number_value, Partner_Parameter, \
-    Path_Agreements, Path_Messages, Path_Partners, section, seconds_value, tab, tab_href, table, timestamp, typed
+from zato.common.b2b.portal.sample.common import action, Agreements_Tab, cell, chip, column, CPA_Accept, days_from_now, \
+    delta, direction_cell, fields, file_button, fixed, href, id_column, item, link, minutes_ago, mono, New_Segment, \
+    number_value, Path_Agreements, Path_Messages, Path_Partners, scoped_path, section, seconds_value, tab, tab_href, table, \
+    timestamp, typed
 from zato.common.b2b.portal.sample.parties import duration, endpoint, Partner_By_Key, Partners, Service_By_Name
 from zato.common.b2b.portal.sample.protocol.common import Vocabularies
 from zato.common.b2b.portal.sample.protocol.views import Views_By_Protocol
@@ -244,11 +245,13 @@ def _partner_section(partner:'Partner', items:'dictlist') -> 'anydict':
             partner_items.append(each)
 
     partner_href = tab_href(Path_Partners, partner.key, Agreements_Tab)
+    partner_path = scoped_path(Path_Agreements, partner.key)
 
     out = _section(partner_items)
+    out['path'] = partner_path
     out['header_link'] = {'label': partner.name, 'href': partner_href}
-    out['new_href'] = f'{Path_Agreements}?new&{Partner_Parameter}={partner.key}'
-    out['scope'] = f'{Partner_Parameter}={partner.key}'
+    out['header_buttons'] = [file_button('Import CPA', CPA_Accept)]
+    out['new_href'] = f'{partner_path}/{New_Segment}'
 
     return out
 

@@ -1,0 +1,169 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# The statements by which messages are read for delivery and handed out to pulling clients. A pull removes
+# the delivery rows it hands out in the same transaction that reads them, and the rows its delete returns
+# are the only ones it hands out, so each message goes to exactly one of any number of concurrent pulls.
+
+# SQLAlchemy
+from sqlalchemy import and_, bindparam, select
+
+# Zato
+from zato.common.api import HTTP_SOAP
+from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table
+from zato.common.pubsub.sql.writes import drop_payloads
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy.engine import Engine
+    from zato.common.typing_ import anydict, anylist, intlist
+
+    # Dummy assignments to satisfy type checkers
+    anylist = anylist
+    Engine = Engine
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_retry = HTTP_SOAP.Retry
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The message columns that the conversion of rows into message dicts consumes.
+message_columns = [
+    message_table.c.id,
+    message_table.c.msg_id,
+    message_table.c.topic_name,
+    message_table.c.payload,
+    message_table.c.payload_encrypted,
+    message_table.c.data_class,
+    message_table.c.data_size,
+    message_table.c.data_preview,
+    message_table.c.priority,
+    message_table.c.expiration,
+    message_table.c.pub_time_iso,
+    message_table.c.recv_time_iso,
+    message_table.c.expiration_time_iso,
+    message_table.c.publisher,
+    message_table.c.cid,
+    message_table.c.correl_id,
+    message_table.c.in_reply_to,
+    message_table.c.ext_client_id,
+]
+message_columns.extend(message_retry_columns)
+
+# A fetch for push delivery also reads its delivery row, whose attempts the delivery records.
+_fetch_columns:'anylist' = list(message_columns)
+_fetch_columns.append(delivery_table.c.id.label('delivery_id'))
+_fetch_columns.append(delivery_table.c.attempt)
+
+# The fetch statement runs on every delivery, so it is built once here, not per call.
+_fetch_join = delivery_table.join(message_table, message_table.c.id == delivery_table.c.message_id)
+
+_order_by = [delivery_table.c.priority.desc(), delivery_table.c.message_id.asc()]
+
+fetch_query = select(*_fetch_columns)
+fetch_query = fetch_query.select_from(_fetch_join)
+fetch_query = fetch_query.where(and_(
+    delivery_table.c.sub_key == bindparam('fetch_sub_key'),
+    delivery_table.c.expiration_ms > bindparam('fetch_now_ms'),
+))
+fetch_query = fetch_query.order_by(*_order_by)
+fetch_query = fetch_query.limit(bindparam('fetch_max_messages'))
+
+# The queue of an outgoing connection is fetched with its expired messages, which the delivery concludes in their turn
+outgoing_fetch_query = select(*_fetch_columns)
+outgoing_fetch_query = outgoing_fetch_query.select_from(_fetch_join)
+outgoing_fetch_query = outgoing_fetch_query.where(delivery_table.c.sub_key == bindparam('fetch_sub_key'))
+outgoing_fetch_query = outgoing_fetch_query.order_by(*_order_by)
+outgoing_fetch_query = outgoing_fetch_query.limit(bindparam('fetch_max_messages'))
+
+# ################################################################################################################################
+
+# A pull first locks the deliverable rows it may hand out, skipping those that a concurrent pull holds,
+# without reading their payloads ..
+_claim_candidates_query = select(delivery_table.c.id, message_table.c.data_size)
+_claim_candidates_query = _claim_candidates_query.select_from(_fetch_join)
+_claim_candidates_query = _claim_candidates_query.where(and_(
+    delivery_table.c.sub_key == bindparam('claim_sub_key'),
+    delivery_table.c.expiration_ms > bindparam('claim_now_ms'),
+))
+_claim_candidates_query = _claim_candidates_query.order_by(*_order_by)
+_claim_candidates_query = _claim_candidates_query.limit(bindparam('claim_max_messages'))
+_claim_candidates_query = _claim_candidates_query.with_for_update(skip_locked=True, of=delivery_table)
+
+# .. then removes those within its size budget, learning which of them it removed itself ..
+_claim_delete = delivery_table.delete()
+_claim_delete = _claim_delete.where(delivery_table.c.id.in_(bindparam('claim_delivery_ids', expanding=True)))
+_claim_delete = _claim_delete.returning(delivery_table.c.message_id)
+
+# .. and reads the messages of the rows it removed.
+_claimed_messages_query = select(*message_columns)
+_claimed_messages_query = _claimed_messages_query.where(
+    message_table.c.id.in_(bindparam('claim_message_ids', expanding=True)))
+_claimed_messages_query = _claimed_messages_query.order_by(message_table.c.priority.desc(), message_table.c.id.asc())
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def claim_messages(engine:'Engine', sub_key:'str', max_messages:'int', max_len:'int', now_ms:'int') -> 'anylist':
+    """ Removes up to max_messages deliverable rows of one subscriber, whose payloads add up to at most max_len,
+    and returns the rows of their messages. Messages that no other subscriber needs
+    lose their payloads in the same transaction.
+    """
+    parameters:'anydict' = {
+        'claim_sub_key': sub_key,
+        'claim_now_ms': now_ms,
+        'claim_max_messages': max_messages,
+    }
+
+    with engine.begin() as connection:
+
+        # Lock the candidates ..
+        candidates = connection.execute(_claim_candidates_query, parameters).fetchall()
+
+        if not candidates:
+            return []
+
+        # .. keep those within the size budget ..
+        delivery_ids:'intlist' = []
+        total_len = 0
+
+        for row in candidates:
+
+            if total_len + row.data_size > max_len:
+                break
+
+            total_len += row.data_size
+            delivery_ids.append(row.id)
+
+        if not delivery_ids:
+            return []
+
+        # .. remove them, which only the first of two concurrent pulls succeeds in for any one row ..
+        message_ids:'intlist' = []
+
+        for row in connection.execute(_claim_delete, {'claim_delivery_ids': delivery_ids}):
+            message_ids.append(row.message_id)
+
+        if not message_ids:
+            return []
+
+        # .. read what is to be handed out ..
+        out = connection.execute(_claimed_messages_query, {'claim_message_ids': message_ids}).fetchall()
+
+        # .. and drop the payloads that are no longer needed.
+        _ = drop_payloads(connection, message_ids)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################

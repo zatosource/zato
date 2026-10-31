@@ -15,6 +15,7 @@ import ssl
 
 # SQLAlchemy
 from sqlalchemy import text
+from sqlalchemy.engine import URL
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
@@ -50,6 +51,20 @@ _default_ports = {
 # error instead of taking turns. Writes are bounded batches, so the wait is short.
 _sqlite_busy_timeout_ms = 5000
 
+# How long a PostgreSQL connection stays idle before it sends its first keepalive probe, in seconds - below
+# the idle limits of cloud load balancers and NAT gateways, which drop idle flows silently after 240 to 350 seconds.
+_keepalive_idle_seconds = 30
+
+# How often the keepalive probes are repeated and how many unanswered ones make the connection fail.
+_keepalive_interval_seconds = 10
+_keepalive_count = 3
+
+# How long sent data may remain unacknowledged before the connection fails, in milliseconds.
+_user_timeout_ms = 60_000
+
+# How long a PostgreSQL session may hold a transaction open without activity, in milliseconds.
+_idle_in_transaction_timeout_ms = 60_000
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -77,6 +92,31 @@ def set_postgresql_no_delay(dbapi_connection:'any_', connection_record:'any_') -
     which adds that much to each row of a multi-row insert of message bodies.
     """
     dbapi_connection._usock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+# ################################################################################################################################
+
+def set_postgresql_keepalive(dbapi_connection:'any_', connection_record:'any_') -> 'None':
+    """ Makes a pg8000 connection detect a peer that is no longer reachable. An idle connection sends keepalive probes
+    well before the idle limits of cloud load balancers and NAT gateways, and a connection whose sent data remains
+    unacknowledged fails after a bounded time instead of waiting for the kernel's retransmission limit of many minutes.
+    """
+    sock = dbapi_connection._usock
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, _keepalive_idle_seconds)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, _keepalive_interval_seconds)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, _keepalive_count)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, _user_timeout_ms)
+
+# ################################################################################################################################
+
+def set_postgresql_session(dbapi_connection:'any_', connection_record:'any_') -> 'None':
+    """ Ends a session that holds a transaction open without activity, so that a client which stopped
+    responding in the middle of a transaction does not keep its row locks indefinitely.
+    """
+    cursor = dbapi_connection.cursor()
+    _ = cursor.execute(f"set idle_in_transaction_session_timeout = '{_idle_in_transaction_timeout_ms}ms'")
+    cursor.close()
+    dbapi_connection.commit()
 
 # ################################################################################################################################
 
@@ -140,7 +180,7 @@ def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stran
 
 # ################################################################################################################################
 
-def build_engine_url_from_values(values:'stranydict', db_type:'str') -> 'str':
+def build_engine_url_from_values(values:'stranydict', db_type:'str') -> 'str | URL':
     """ Builds the SQLAlchemy URL for a database out of a dict of connection values.
     """
 
@@ -162,7 +202,8 @@ def build_engine_url_from_values(values:'stranydict', db_type:'str') -> 'str':
     else:
         port = _default_ports[db_type]
 
-    out = f'{dialect}://{username}:{password}@{host}:{port}/{db_name}'
+    # .. the URL is built from its parts so that characters such as @, / or % in a password are passed as they are.
+    out = URL.create(dialect, username=username, password=password, host=host, port=port, database=db_name)
     return out
 
 # ################################################################################################################################

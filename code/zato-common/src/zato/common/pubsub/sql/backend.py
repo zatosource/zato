@@ -11,17 +11,20 @@ import json
 from dataclasses import dataclass
 from datetime import timedelta
 from logging import getLogger
+from zlib import crc32
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, select
+from sqlalchemy import and_, select
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size
-from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table, topic_sub_table
+from zato.common.pubsub.sql.pull import claim_messages, fetch_query, outgoing_fetch_query
+from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.writes import new_pending_publication
 from zato.common.util.api import new_msg_id, utcnow
 from zato.common.util.time_ import datetime_to_ms, parse_utc
@@ -54,48 +57,6 @@ _milliseconds_per_second = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The columns _build_message_from_row consumes.
-_fetch_columns = [
-    message_table.c.id,
-    message_table.c.msg_id,
-    message_table.c.topic_name,
-    message_table.c.payload,
-    message_table.c.payload_encrypted,
-    message_table.c.data_class,
-    message_table.c.data_size,
-    message_table.c.data_preview,
-    message_table.c.priority,
-    message_table.c.expiration,
-    message_table.c.pub_time_iso,
-    message_table.c.recv_time_iso,
-    message_table.c.expiration_time_iso,
-    message_table.c.publisher,
-    message_table.c.cid,
-    message_table.c.correl_id,
-    message_table.c.in_reply_to,
-    message_table.c.ext_client_id,
-]
-_fetch_columns.extend(message_retry_columns)
-
-# The fetch statement runs on every delivery, so it is built once here, not per call.
-_fetch_join = delivery_table.join(message_table, message_table.c.id == delivery_table.c.message_id)
-
-_fetch_query = select(*_fetch_columns)
-_fetch_query = _fetch_query.select_from(_fetch_join)
-_fetch_query = _fetch_query.where(and_(
-    delivery_table.c.sub_key == bindparam('fetch_sub_key'),
-    delivery_table.c.expiration_ms > bindparam('fetch_now_ms'),
-))
-_fetch_query = _fetch_query.order_by(delivery_table.c.priority.desc(), delivery_table.c.message_id.asc())
-_fetch_query = _fetch_query.limit(bindparam('fetch_max_messages'))
-
-# The queue of an outgoing connection is fetched with its expired messages, which the delivery concludes in their turn
-_outgoing_fetch_query = select(*_fetch_columns)
-_outgoing_fetch_query = _outgoing_fetch_query.select_from(_fetch_join)
-_outgoing_fetch_query = _outgoing_fetch_query.where(delivery_table.c.sub_key == bindparam('fetch_sub_key'))
-_outgoing_fetch_query = _outgoing_fetch_query.order_by(delivery_table.c.priority.desc(), delivery_table.c.message_id.asc())
-_outgoing_fetch_query = _outgoing_fetch_query.limit(bindparam('fetch_max_messages'))
 
 _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
@@ -185,6 +146,10 @@ class SQLPubSubBackend(SQLAdminAPI):
         data_size = len(serialized_data)
         data_preview = serialized_data[:_data_preview_len]
 
+        # .. a publication repeated under the same identifier is recognized by its checksum ..
+        serialized_bytes = serialized_data.encode('utf8')
+        payload_crc32 = crc32(serialized_bytes)
+
         # .. encrypt the payload at rest when configured to ..
         if self.encrypt_at_rest:
             payload = self._encrypt_payload(serialized_data)
@@ -199,6 +164,7 @@ class SQLPubSubBackend(SQLAdminAPI):
             'topic_name': topic_name,
             'payload': payload,
             'payload_encrypted': payload_encrypted,
+            'payload_crc32': payload_crc32,
             'data_class': data_class if data_class else None,
             'data_size': data_size,
             'data_preview': data_preview if data_preview else None,
@@ -376,9 +342,9 @@ class SQLPubSubBackend(SQLAdminAPI):
         }
 
         if sub_key.startswith(_outgoing_sub_key_prefix):
-            query = _outgoing_fetch_query
+            query = outgoing_fetch_query
         else:
-            query = _fetch_query
+            query = fetch_query
             parameters['fetch_now_ms'] = self._utc_now_ms()
 
         with self.engine.connect() as connection:
@@ -432,6 +398,34 @@ class SQLPubSubBackend(SQLAdminAPI):
 
             total_len += data_len
 
+            # The delivery row is what each push attempt is recorded in.
+            message = self._build_message_from_row(row)
+            message['delivery_id'] = row.delivery_id
+            message['delivery_attempt'] = row.attempt
+
+            out.append(message)
+
+        return out
+
+# ################################################################################################################################
+
+    def pull_messages(
+        self,
+        sub_key:'str',
+        max_messages:'int'=_default_max_messages,
+        max_len:'int'=_default_max_len,
+    ) -> 'anylist':
+        """ Hands a subscriber's deliverable messages over to one pulling client, removing them from its queue
+        in the same transaction, so that concurrent pulls never receive the same message.
+        """
+        engine = self.engine
+        now_ms = self._utc_now_ms()
+
+        rows = call_database(engine, claim_messages, engine, sub_key, max_messages, max_len, now_ms)
+
+        out:'anylist' = []
+
+        for row in rows:
             message = self._build_message_from_row(row)
             out.append(message)
 
@@ -450,8 +444,8 @@ class SQLPubSubBackend(SQLAdminAPI):
 # ################################################################################################################################
 
     def format_messages_for_rest(self, messages:'anylist', sub_key:'str') -> 'anylist':
-        """ Format raw messages into the {data, meta} structure expected by the REST API.
-        Also acknowledges each message and increments delivery counters.
+        """ Format messages that a pull removed from the queue into the {data, meta} structure expected by the REST API,
+        recording each reception and incrementing delivery counters.
         """
         now = utcnow()
 
@@ -502,9 +496,6 @@ class SQLPubSubBackend(SQLAdminAPI):
                 'data': data,
                 'meta': meta
             })
-
-            # .. acknowledge the message now that it is being handed over ..
-            _ = self.ack_messages(sub_key, [message['msg_id']], [message['sequence_id']])
 
             # .. record the reception in the audit log, unless the topic's audit log is off ..
             if self.audit_log:

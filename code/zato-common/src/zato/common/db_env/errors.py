@@ -1,0 +1,93 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# The conditions of PostgreSQL after which a transaction may be run again as it was - SQLSTATE codes
+# that pg8000 reports in the first argument of its exceptions, and connections that were lost.
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy.exc import DBAPIError
+
+    # Dummy assignments to satisfy type checkers
+    DBAPIError = DBAPIError
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SQLState:
+    Deadlock_Detected      = '40P01'
+    Serialization_Failure  = '40001'
+    Lock_Not_Available     = '55P03'
+    Admin_Shutdown         = '57P01'
+    Crash_Shutdown         = '57P02'
+    Cannot_Connect_Now     = '57P03'
+    Idle_Session_Timeout   = '57P05'
+    Idle_In_Transaction_Session_Timeout = '25P03'
+
+# The conflicts with concurrent transactions after which PostgreSQL rolled the transaction back as a whole.
+_conflict_states = {
+    SQLState.Deadlock_Detected,
+    SQLState.Serialization_Failure,
+    SQLState.Lock_Not_Available,
+}
+
+# The conditions in which a transaction that failed may be started again unchanged.
+_transient_states = {
+    SQLState.Deadlock_Detected,
+    SQLState.Serialization_Failure,
+    SQLState.Lock_Not_Available,
+    SQLState.Admin_Shutdown,
+    SQLState.Crash_Shutdown,
+    SQLState.Cannot_Connect_Now,
+    SQLState.Idle_Session_Timeout,
+    SQLState.Idle_In_Transaction_Session_Timeout,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_sqlstate(error:'DBAPIError') -> 'str':
+    """ Returns the SQLSTATE code of a PostgreSQL error, or an empty string for any other database.
+    """
+    args = error.orig.args
+
+    if args and isinstance(args[0], dict):
+        out = args[0]['C']
+    else:
+        out = ''
+
+    return out
+
+# ################################################################################################################################
+
+def is_conflict(error:'DBAPIError') -> 'bool':
+    """ Whether a transaction failed on a conflict with concurrent transactions, which leaves nothing of it committed.
+    """
+    sqlstate = get_sqlstate(error)
+    out = sqlstate in _conflict_states
+
+    return out
+
+# ################################################################################################################################
+
+def is_transient(error:'DBAPIError') -> 'bool':
+    """ Whether a failed transaction may be started again unchanged - after a deadlock, a serialization failure,
+    a lock that was not available, a server that shut down or restarted, or a connection that was lost.
+    """
+    if error.connection_invalidated:
+        out = True
+    else:
+        sqlstate = get_sqlstate(error)
+        out = sqlstate in _transient_states
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -81,6 +81,9 @@ Min_Free_Disk_GB = 20
 # How many bytes one gigabyte has.
 _bytes_per_gb = 1024 ** 3
 
+# The variable that selects a database other than SQLite.
+_env_type = ModuleCtx.Env_Prefix + 'Type'
+
 # What the currently running scenario looks like.
 progress_context = {
     'scenario': 'starting',
@@ -174,7 +177,7 @@ def _get_subscription_count() -> 'int':
     """ How many topic subscriptions the database holds right now -
     zero when no database is configured, e.g. between tests.
     """
-    if ModuleCtx.Env_Path not in os.environ:
+    if ModuleCtx.Env_Path not in os.environ and _env_type not in os.environ:
         return 0
 
     engine = get_pubsub_engine()

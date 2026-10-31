@@ -29,28 +29,42 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How many commits are in progress at once unless a queue is told otherwise - a database with a single writer runs one.
+Default_Max_In_Flight = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CommitQueue:
     """ Writes the items of concurrent synchronous callers in shared transactions. A caller that arrives
-    while no commit is in progress commits its own item at once. Callers that arrive during a commit wait,
-    and once the commit completes, one of the waiting callers commits the items of the next batch.
-    The next batch takes the urgent items first and the other items after them, each kind in the order
-    of arrival, for as long as the total weight of the batch is within the maximum per commit.
+    while fewer than the maximum number of commits are in progress commits its own item at once. Callers that arrive
+    when all of them are in progress wait, and once a commit completes, one of the waiting callers commits
+    the items of the next batch. The next batch takes the urgent items first and the other items after them,
+    each kind in the order of arrival, for as long as the total weight of the batch is within the maximum per commit.
     The writer of a batch stores in each item what its caller receives, and an exception
     from a commit reaches every caller whose item was part of it.
     """
 
-    def __init__(self, *, write_batch:'callable_', max_weight:'int') -> 'None':
+    def __init__(
+        self,
+        *,
+        write_batch:'callable_',
+        max_weight:'int',
+        max_in_flight:'int' = Default_Max_In_Flight,
+        ) -> 'None':
+
         self.write_batch = write_batch
         self.max_weight = max_weight
+        self.max_in_flight = max_in_flight
 
-        # Guards the waiting tickets and the commit flag
+        # Guards the waiting tickets and the number of commits in progress
         self._lock = Lock()
 
         # The tickets of the callers waiting for a commit, oldest first
         self._waiting:'commit_ticket_list' = []
 
-        # Whether a commit is in progress or a caller has been chosen to run the next one
-        self._is_committing = False
+        # How many commits are in progress, or have a caller chosen to run them
+        self._in_flight = 0
 
 # ################################################################################################################################
 
@@ -59,13 +73,13 @@ class CommitQueue:
         """
         ticket = CommitTicket(item, weight, is_urgent)
 
-        # The caller commits at once if no commit is in progress ..
+        # The caller commits at once if fewer than the maximum number of commits are in progress ..
         with self._lock:
-            if self._is_committing:
+            if self._in_flight >= self.max_in_flight:
                 self._waiting.append(ticket)
                 is_runner = False
             else:
-                self._is_committing = True
+                self._in_flight += 1
                 ticket.batch = [ticket]
                 ticket.has_started = True
                 is_runner = True
@@ -169,13 +183,14 @@ class CommitQueue:
 # ################################################################################################################################
 
     def _hand_off(self) -> 'None':
-        """ Chooses a waiting caller to run the next commit, or ends the commit in progress if no caller is waiting.
+        """ Passes the commit that ended on to a waiting caller, which is to run the next batch,
+        or ends it if no caller is waiting.
         """
         with self._lock:
 
             # Nothing is waiting, so the next caller to arrive commits at once ..
             if not self._waiting:
-                self._is_committing = False
+                self._in_flight -= 1
                 runner = None
 
             # .. otherwise, a caller of the next batch is to commit it.

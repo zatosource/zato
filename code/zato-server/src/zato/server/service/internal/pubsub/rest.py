@@ -308,14 +308,14 @@ class GetMessages(PubSubRESTService):
         max_messages = min(input.max_messages if input.max_messages else _max_messages_default, _max_messages_limit)
         max_len = min(input.max_len if input.max_len else _max_len_default, _max_len_limit)
 
-        # Fetch messages from the pub/sub database
-        raw_messages = self.server.pubsub_backend.fetch_messages(
+        # Take the messages out of the queue, which hands each of them to this client alone ..
+        raw_messages = self.server.pubsub_backend.pull_messages(
             sub_key,
             max_messages=max_messages,
             max_len=max_len
         )
 
-        # .. format and acknowledge each message for the REST pull path ..
+        # .. and format them for the REST pull path.
         messages = self.server.pubsub_backend.format_messages_for_rest(raw_messages, sub_key)
 
         # Build response

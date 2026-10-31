@@ -79,6 +79,12 @@
     overflow: hidden;
 }
 
+/* The answer of a line that is not shown does not heighten its row */
+.decision-line-slot.decision-layer-hidden {
+    height: 0;
+    overflow: hidden;
+}
+
 .decision-line-label {
     font-size: 13px;
     line-height: 24px;
@@ -100,6 +106,11 @@
 .decision-line-slot > select {
     width: var(--decision-width);
     max-width: 100%;
+}
+
+/* An address takes the whole width of the column, as the ones of real endpoints are long */
+.decision-line-slot input[type="url"] {
+    width: 100%;
 }
 
 /* A chip that opens a pick panel reads as the face of a select - solid once it has an answer, dashed while it waits for one */

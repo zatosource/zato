@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, BigInteger, cast, func, select
 
 # Zato
 from zato.common.api import PubSub
@@ -39,6 +39,16 @@ _data_preview_len = PubSub.Message.Data_Preview_Len
 
 # How many minutes of history the statistics cover unless told otherwise.
 _default_since_minutes = 60
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _sum(column:'any_') -> 'any_':
+    """ Adds up the rows of a count column. PostgreSQL returns the sum of a bigint column as a numeric,
+    which the cast turns back into a bigint, so the statistics are integers on every database type.
+    """
+    out = cast(func.sum(column), BigInteger)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,7 +101,7 @@ class SQLAdminAPI(SQLBrowseAPI):
         A subscriber with nothing waiting is not in the result.
         """
         pattern = prefix + '%'
-        depth = func.sum(queue_count_table.c.depth)
+        depth = _sum(queue_count_table.c.depth)
 
         query = select(queue_count_table.c.sub_key, depth)
         query = query.where(queue_count_table.c.sub_key.like(pattern))
@@ -129,8 +139,11 @@ class SQLAdminAPI(SQLBrowseAPI):
     def get_topics_with_messages(self) -> 'strlist':
         """ Returns the names of all the topics that currently hold any message rows.
         """
+        total = _sum(topic_count_table.c.total)
+
         query = select(topic_count_table.c.topic_name)
-        query = query.where(topic_count_table.c.total > 0)
+        query = query.group_by(topic_count_table.c.topic_name)
+        query = query.having(total > 0)
 
         out:'strlist' = []
 
@@ -214,7 +227,7 @@ class SQLAdminAPI(SQLBrowseAPI):
     def _count_pending(self, sub_key:'str', topic_name:'str') -> 'int':
         """ Returns the number of delivery rows of one (subscriber, topic) pair.
         """
-        query = select(queue_count_table.c.depth)
+        query = select(_sum(queue_count_table.c.depth))
         query = query.where(and_(
             queue_count_table.c.sub_key == sub_key,
             queue_count_table.c.topic_name == topic_name,
@@ -235,7 +248,7 @@ class SQLAdminAPI(SQLBrowseAPI):
     def _count_all(self, topic_name:'str') -> 'int':
         """ Returns the number of message rows of one topic.
         """
-        query = select(topic_count_table.c.total)
+        query = select(_sum(topic_count_table.c.total))
         query = query.where(topic_count_table.c.topic_name == topic_name)
 
         with self.engine.connect() as connection:
@@ -284,7 +297,7 @@ class SQLAdminAPI(SQLBrowseAPI):
 
         # .. add up the publication counts of each minute, across the topics and publishers ..
         minute = publish_count_table.c.minute_ms
-        count = func.sum(publish_count_table.c.total)
+        count = _sum(publish_count_table.c.total)
 
         query = select(minute, count)
         query = query.where(and_(
@@ -323,16 +336,23 @@ class SQLAdminAPI(SQLBrowseAPI):
         for topic_name in topic_names:
             lowered_names.append(topic_name.lower())
 
-        # .. and count the distinct publishers that published anything that still exists.
-        distinct_publishers = func.count(func.distinct(publish_count_table.c.publisher))
+        # .. find each publisher with anything that still exists in any of the minutes, adding up the counts
+        # .. of each topic and minute, which PostgreSQL may hold in several rows ..
+        publisher = publish_count_table.c.publisher
+        total = _sum(publish_count_table.c.total)
 
-        query = select(distinct_publishers)
-        query = query.where(and_(
+        existing = select(publisher)
+        existing = existing.where(and_(
             publish_count_table.c.topic_name.in_(lowered_names),
             publish_count_table.c.minute_ms >= window_start_ms,
-            publish_count_table.c.publisher != No_Publisher,
-            publish_count_table.c.total > 0,
+            publisher != No_Publisher,
         ))
+        existing = existing.group_by(publish_count_table.c.topic_name, publish_count_table.c.minute_ms, publisher)
+        existing = existing.having(total > 0)
+        existing = existing.subquery()
+
+        # .. and count the distinct ones.
+        query = select(func.count(func.distinct(existing.c.publisher)))
 
         with self.engine.connect() as connection:
             out = connection.execute(query).scalar()

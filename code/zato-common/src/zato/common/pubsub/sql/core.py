@@ -15,10 +15,16 @@ from time import monotonic
 from gevent import sleep
 from gevent.event import Event
 
+# SQLAlchemy
+from sqlalchemy import bindparam
+
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.pubsub.sql.config import get_pubsub_engine
-from zato.common.pubsub.sql.writes import drop_payloads_statement, new_pending_ack, PubSubWriter
+from zato.common.pubsub.sql.generation import take_over
+from zato.common.pubsub.sql.schema import delivery_table
+from zato.common.pubsub.sql.writes import drop_payloads, new_pending_ack, PubSubWriter
 from zato.common.typing_ import cast_
 from zato.common.util.time_ import datetime_to_ms, utcnow
 
@@ -29,6 +35,7 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.crypto.api import CryptoManager
+    from zato.common.pubsub.sql.generation import GenerationGuard
     from zato.common.pubsub.sql.writes import PendingAck
     from zato.common.typing_ import any_, anydict, intlist, intlistnone, strlist, strset
 
@@ -37,6 +44,7 @@ if 0:
     Connection = Connection
     CryptoManager = CryptoManager
     Engine = Engine
+    GenerationGuard = GenerationGuard
 
 sub_event_dict = dict[str, Event]
 
@@ -53,6 +61,12 @@ _retry = HTTP_SOAP.Retry
 # How long back-to-back SQLite calls may hold the event loop before the backend
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
+
+# What records one push attempt of a delivery row and returns its number.
+_record_attempt_statement = delivery_table.update()
+_record_attempt_statement = _record_attempt_statement.where(delivery_table.c.id == bindparam('attempt_delivery_id'))
+_record_attempt_statement = _record_attempt_statement.values(attempt=delivery_table.c.attempt + 1)
+_record_attempt_statement = _record_attempt_statement.returning(delivery_table.c.attempt)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,13 +108,40 @@ class SQLBackendCore:
         # Publications and acknowledgements of concurrent callers share their commits.
         self._writer = PubSubWriter()
 
+        # The generation that this server raised on PostgreSQL, if it took over the database.
+        self.generation_guard:'GenerationGuard | None' = None
+
 # ################################################################################################################################
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine behind the current Zato_PubSub_DB_Path, resolved on each access.
+        """ The engine of the pub/sub database that the Zato_PubSub_DB_* variables select, resolved on each access.
         """
         out = get_pubsub_engine()
+        return out
+
+# ################################################################################################################################
+
+    def take_over(self) -> 'None':
+        """ Makes this server the active one on PostgreSQL, whose database a standby server may take over,
+        and guards each subsequent transaction with the generation raised. A SQLite file has only one server.
+        """
+        engine = self.engine
+
+        if engine.dialect.name == Type_PostgreSQL:
+            self.generation_guard = take_over(engine)
+
+# ################################################################################################################################
+
+    @property
+    def is_replaced(self) -> 'bool':
+        """ Whether another server has taken over the pub/sub database of this one.
+        """
+        if self.generation_guard is None:
+            out = False
+        else:
+            out = self.generation_guard.is_replaced
+
         return out
 
 # ################################################################################################################################
@@ -278,9 +319,9 @@ class SQLBackendCore:
         """ Sets the payload to NULL for each of the given messages that no subscriber needs anymore.
         Returns how many payloads were dropped.
         """
-        result = connection.execute(drop_payloads_statement, {'drop_message_ids': message_ids})
+        dropped = drop_payloads(connection, message_ids)
 
-        out = result.rowcount
+        out = len(dropped)
         return out
 
 # ################################################################################################################################
@@ -320,6 +361,34 @@ class SQLBackendCore:
         """
         out = new_pending_ack(sub_key, msg_ids, sequence_ids)
         self._writer.ack(out)
+
+        return out
+
+# ################################################################################################################################
+
+    def record_attempt(self, message:'anydict') -> 'bool':
+        """ Records the next push attempt of a fetched message before its request is sent and stores its number
+        in the message. On PostgreSQL, the attempt is committed in a transaction of its own, which confirms
+        the generation of this server first, so a server that was replaced sends nothing. On SQLite, which only
+        one server uses, the attempts are counted in memory. Returns False when the message has left
+        the subscriber's queue in the meantime.
+        """
+        engine = self.engine
+
+        if engine.dialect.name == Type_SQLite:
+            message['delivery_attempt'] += 1
+            return True
+
+        parameters = {'attempt_delivery_id': message['delivery_id']}
+
+        with engine.begin() as connection:
+            attempt = connection.execute(_record_attempt_statement, parameters).scalar()
+
+        if attempt is None:
+            out = False
+        else:
+            message['delivery_attempt'] = attempt
+            out = True
 
         return out
 

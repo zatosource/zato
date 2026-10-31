@@ -1,17 +1,16 @@
-<div class="content split" id="split"{% if section.wizard %} data-new-label="{{ section.wizard.title }}" data-new-href="{{ section.new_href }}"{% endif %}{% if section.scope %} data-scope="{{ section.scope }}"{% endif %}>
+<div class="content split" id="split" data-path="{{ section.path }}"{% if section.wizard %} data-new-label="{{ section.wizard.title }}" data-new-href="{{ section.new_href }}"{% endif %}>
 
     <div class="card split-top">
 
         <div class="card-header">
-            {% if section.header_link %}<a class="link card-header-link" href="{{ section.header_link.href }}">{{ section.header_link.label }}</a>{% endif %}
             <h1 class="card-title">{{ section.title }}</h1>
+            {% if section.header_link %}<a class="link card-header-link" href="{{ section.header_link.href }}">{{ section.header_link.label }}</a>{% endif %}
             {% if section.wizard %}<a class="button-secondary card-new" href="{{ section.new_href }}">{{ section.wizard.title }}</a>{% endif %}
+            {% for button in section.header_buttons %}{% include "portal/blocks/button.html" with button_class="card-new" %}{% endfor %}
         </div>
 
         <div class="card-search">
-            <input type="search" class="card-filter" id="listing-filter" placeholder="Search" autocomplete="off" spellcheck="false">
-            {% if section.search %}<button type="button" class="button-secondary" id="search-open">Filter</button>{% endif %}
-        </div>
+            <input type="search" class="card-filter" id="listing-filter" placeholder="Search" autocomplete="off" spellcheck="false">        </div>
 
         {% if section.search %}<div class="criteria" id="criteria" hidden></div>{% endif %}
 
@@ -32,7 +31,7 @@
                             <span class="row-sources" hidden></span>
                         </td>
                         {% for cell in row.cells %}
-                        <td{% if cell.is_narrow %} class="narrow"{% endif %}><a class="listing-link" href="{{ section.path }}?id={{ row.id|urlencode:'' }}">{% include "portal/blocks/cell.html" with is_plain=True %}</a></td>
+                        <td{% if cell.is_narrow %} class="narrow"{% endif %}><a class="listing-link" href="{{ section.path }}/{{ row.id|urlencode:'' }}">{% include "portal/blocks/cell.html" with is_plain=True %}</a></td>
                         {% endfor %}
                         {% if section.toggle %}<td class="narrow row-toggle"><input type="checkbox" class="switch row-switch" data-on-state="{{ section.toggle.on_state }}" data-on-tone="{{ section.toggle.on_tone }}" data-off-state="{{ section.toggle.off_state }}" data-off-tone="{{ section.toggle.off_tone }}"{% if row.attributes.state == section.toggle.on_state %} checked{% endif %}></td>{% endif %}
                     </tr>

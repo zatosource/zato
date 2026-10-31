@@ -167,7 +167,24 @@ wizard.show = function(stepIndex) {
     document.getElementById('wizard-back').disabled = stepIndex === 0;
     document.getElementById('wizard-next').textContent = isLast ? wizard.data.done_label : portal.config.nextLabel;
 
+    var path = document.getElementById('wizard').getAttribute('data-path');
+    window.history.replaceState(null, '', path + '/' + step.key);
+
     wizard.renderSteps();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The step the address names.
+wizard.requestedStep = function() {
+
+    var key = document.getElementById('wizard').getAttribute('data-step');
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+        if (wizard.data.steps[stepIndex].key === key) {
+            return stepIndex;
+        }
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -261,7 +278,7 @@ wizard.init = function() {
 
     document.getElementById('wizard-next').addEventListener('click', wizard.onNext);
 
-    wizard.show(0);
+    wizard.show(wizard.requestedStep());
 };
 
 // ////////////////////////////////////////////////////////////////////////

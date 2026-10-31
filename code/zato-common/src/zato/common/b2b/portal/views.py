@@ -17,9 +17,8 @@ from django.views.static import serve
 # Zato
 from zato.common.b2b.portal.config import Local_Organization, Logo_Env_Variable, Logo_Path, Logo_URL, Static_Dir, \
     Static_URL
-from zato.common.b2b.portal.sample.common import Partner_Parameter, Path_Partners
+from zato.common.b2b.portal.sample.common import Details_Segment, New_Segment, Path_Messages, Path_Partners
 from zato.common.b2b.portal.sample.sections import Navigation, Sections
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,7 +26,7 @@ from zato.common.typing_ import cast_
 if 0:
     from django.http import HttpRequest
     from django.http.response import HttpResponseBase
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import anydict, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,16 +44,26 @@ def _find_item(section:'anydict', item_id:'str') -> 'anydict':
 
 # ################################################################################################################################
 
-def _active_tab(req:'HttpRequest', item:'anydict') -> 'str':
-    """ The tab the address names, or the first tab of the item when the address names none of its tabs.
+def _pick_key(tabs:'anylist', requested:'str') -> 'str':
+    """ The key of the tab the address names, or the key of the first tab when the address names none of them.
     """
-    keys = [each['key'] for each in item['tabs']]
-    out = keys[0]
+    out = tabs[0]['key']
 
-    if 'tab' in req.GET:
-        requested = cast_('str', req.GET['tab'])
-        if requested in keys:
+    for each in tabs:
+        if each['key'] == requested:
             out = requested
+
+    return out
+
+# ################################################################################################################################
+
+def _segment(segments:'strlist', index:'int') -> 'str':
+    """ The segment of the address at the given position, or an empty string when the address is shorter.
+    """
+    out = ''
+
+    if index < len(segments):
+        out = segments[index]
 
     return out
 
@@ -74,59 +83,62 @@ def _navigation(section_slug:'str') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _scope_key(req:'HttpRequest', section:'anydict') -> 'str':
-    """ The partner whose items a listing shows, named by the address or by the item the address opens,
-    or an empty string when the address names neither.
-    """
-    if Partner_Parameter in req.GET:
-        out = cast_('str', req.GET[Partner_Parameter])
-
-    elif 'id' in req.GET:
-        item_id = cast_('str', req.GET['id'])
-        item = _find_item(section, item_id)
-        out = item['attributes']['partner']
-
-    else:
-        out = ''
-
+def home_view(req:'HttpRequest') -> 'HttpResponseBase':
+    _ = req
+    out = HttpResponseRedirect(Path_Messages)
     return out
 
 # ################################################################################################################################
 
-def section_view(req:'HttpRequest', section_slug:'str') -> 'HttpResponseBase':
-    """ One listing of the portal, the details of one of its items, or the wizard that adds a new item to it.
+def section_view(req:'HttpRequest', section_slug:'str', rest:'str'='') -> 'HttpResponseBase':
+    """ One listing of the portal, the details of one of its items, or the wizard that adds a new item to it,
+    each segment of the address after the section naming what is open - the partner of a section listed by partner,
+    then either the wizard and its step, or the item, its tab, and what it keeps apart from its tabs with the tab of that.
     """
+    if section_slug not in Sections:
+        raise Http404(f'No section `{section_slug}`')
+
     section = Sections[section_slug]
+    segments:'strlist' = []
+
+    if rest:
+        segments = rest.split('/')
 
     # A section listed by partner is shown for one partner only, and without a partner the partners are shown instead
     if section['scopes']:
-        scope_key = _scope_key(req, section)
 
-        if not scope_key:
+        if not segments:
             out = HttpResponseRedirect(Path_Partners)
             return out
+
+        scope_key = segments.pop(0)
 
         if scope_key not in section['scopes']:
             raise Http404(f'No partner `{scope_key}` in `{section_slug}`')
 
         section = section['scopes'][scope_key]
 
-    is_new = 'new' in req.GET
+    first = _segment(segments, 0)
+    is_new = first == New_Segment
+
+    item = None
+    active_tab = ''
+    details_tab = ''
+    wizard_step = ''
 
     if is_new:
         if not section['wizard']:
             raise Http404(f'No wizard in `{section_slug}`')
-        item = None
-        active_tab = ''
+        wizard_step = _pick_key(section['wizard']['steps'], _segment(segments, 1))
 
-    elif 'id' in req.GET:
-        item_id = cast_('str', req.GET['id'])
-        item = _find_item(section, item_id)
-        active_tab = _active_tab(req, item)
+    elif first:
+        item = _find_item(section, first)
+        active_tab = _pick_key(item['tabs'], _segment(segments, 1))
 
-    else:
-        item = None
-        active_tab = ''
+        # .. what an item keeps apart from its tabs is opened only for an item that keeps anything apart ..
+        if _segment(segments, 2) == Details_Segment:
+            if item['details']:
+                details_tab = _pick_key(item['details'], _segment(segments, 3))
 
     context = {
         'organization': Local_Organization,
@@ -136,7 +148,9 @@ def section_view(req:'HttpRequest', section_slug:'str') -> 'HttpResponseBase':
         'section': section,
         'item': item,
         'active_tab': active_tab,
+        'details_tab': details_tab,
         'is_new': is_new,
+        'wizard_step': wizard_step,
         'static_url': Static_URL,
     }
 

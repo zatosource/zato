@@ -15,7 +15,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx
-from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
+    topic_count_table, topic_sub_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +56,9 @@ def delete_all_rows() -> 'None':
         _ = connection.execute(delivery_table.delete())
         _ = connection.execute(message_table.delete())
         _ = connection.execute(topic_sub_table.delete())
+        _ = connection.execute(queue_count_table.delete())
+        _ = connection.execute(topic_count_table.delete())
+        _ = connection.execute(publish_count_table.delete())
 
 # ################################################################################################################################
 

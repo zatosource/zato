@@ -11,6 +11,9 @@ var portal = window.portal;
 
 var detail = {};
 
+// The tab of what is kept apart from the tabs that the address asked for, until it is opened
+detail.requestedTab = null;
+
 detail.config = {
     copiedLabel: 'Copied to clipboard',
     copiedDuration: 600,
@@ -51,7 +54,7 @@ detail.showTab = function(pane, key) {
     var link = pane.querySelector('.details-open');
 
     if (link !== null) {
-        link.href = portal.selection.address(pane.getAttribute('data-id'), true);
+        link.href = portal.selection.address(pane.getAttribute('data-id'), detail.firstDetailsTab(pane));
     }
 
     for (var panelIndex = 0; panelIndex < panels.length; panelIndex++) {
@@ -68,7 +71,7 @@ detail.initTabs = function(pane) {
 
     var onClick = function(event) {
         detail.showTab(pane, event.currentTarget.getAttribute('data-tab'));
-        portal.selection.writeAddress(pane.getAttribute('data-id'), false);
+        portal.selection.writeAddress(pane.getAttribute('data-id'), null);
     };
 
     for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
@@ -263,13 +266,26 @@ detail.confirmCopy = function(control, placement) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The tabs of the popover only switch what it shows, the address stays with the tabs of the pane.
-detail.initDetailsTabs = function(root) {
+// The first tab of what an item keeps apart from its tabs.
+detail.firstDetailsTab = function(pane) {
+
+    var source = pane.querySelector('.details-source');
+    var out = source.content.querySelector('.tab').getAttribute('data-tab');
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The open tab of the popover is named by the address next to the open tab of the pane.
+detail.initDetailsTabs = function(root, itemId) {
 
     var tabs = root.querySelectorAll('.tab');
 
     var onClick = function(event) {
-        detail.showTab(root, event.currentTarget.getAttribute('data-tab'));
+        var key = event.currentTarget.getAttribute('data-tab');
+        detail.showTab(root, key);
+        portal.selection.writeAddress(itemId, key);
     };
 
     for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
@@ -308,15 +324,25 @@ detail.initDetails = function(pane) {
         appendTo: document.body,
         popperOptions: {modifiers: detail.config.detailsModifiers},
         onShow: function(instance) {
-            instance.setContent(detail.buildDetails(source, instance));
+
+            // .. it opens on the tab the address asked for, otherwise on its first tab ..
+            var key = detail.requestedTab;
+
+            if (key === null) {
+                key = detail.firstDetailsTab(pane);
+            }
+
+            detail.requestedTab = null;
+            instance.setContent(detail.buildDetails(source, instance, itemId, key));
         },
-        onShown: function() {
-            portal.selection.writeAddress(itemId, true);
+        onShown: function(instance) {
+            var key = instance.popper.querySelector('.details-tabs .tab-active').getAttribute('data-tab');
+            portal.selection.writeAddress(itemId, key);
         },
         onHidden: function(instance) {
             instance.setContent('');
             if (portal.selection.current === itemId) {
-                portal.selection.writeAddress(itemId, false);
+                portal.selection.writeAddress(itemId, null);
             }
         }
     });
@@ -324,7 +350,7 @@ detail.initDetails = function(pane) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-detail.buildDetails = function(source, instance) {
+detail.buildDetails = function(source, instance, itemId, key) {
 
     var root = source.content.firstElementChild.cloneNode(true);
     var close = portal.create('button', 'details-close', '');
@@ -335,7 +361,8 @@ detail.buildDetails = function(source, instance) {
     });
     root.appendChild(close);
 
-    detail.initDetailsTabs(root);
+    detail.showTab(root, key);
+    detail.initDetailsTabs(root, itemId);
     detail.initCode(root);
     detail.initCopyChips(root);
     portal.tooltips.attach(root);
@@ -345,17 +372,10 @@ detail.buildDetails = function(source, instance) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Opens what is kept apart from the tabs, as an address that names it asks for.
-detail.openDetails = function(pane) {
-
-    var link = pane.querySelector('.details-open');
-
-    // An address may name details for an item that keeps nothing apart
-    if (link === null) {
-        return;
-    }
-
-    link._tippy.show();
+// Opens what is kept apart from the tabs on the tab an address that names it asks for.
+detail.openDetails = function(pane, key) {
+    detail.requestedTab = key;
+    pane.querySelector('.details-open')._tippy.show();
 };
 
 // ////////////////////////////////////////////////////////////////////////

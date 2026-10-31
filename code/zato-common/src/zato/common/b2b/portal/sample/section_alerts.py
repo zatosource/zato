@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from typing import NamedTuple
 
 # Zato
-from zato.common.b2b.portal.sample.agreements import Agreements
+from zato.common.b2b.portal.sample.agreements import agreement_href, Agreements
 from zato.common.b2b.portal.sample.common import action, aside, cell, chip, choice, choices, column, fields, href, item, link, \
-    minutes_ago, mono, Path_Agreements, Path_Alerts, Path_Messages, Path_Partners, section, tab, table, timestamp
+    minutes_ago, mono, Path_Alerts, Path_Messages, Path_Partners, section, tab, table, timestamp
 from zato.common.b2b.portal.sample.parties import Partner_By_Key
 from zato.common.b2b.portal.sample.protocol.common import Vocabularies
 from zato.common.b2b.portal.sample.section_messages import state_chip
@@ -168,7 +168,7 @@ def _subject(alert:'Alert') -> 'anytuple':
     elif alert.agreement_product:
         vocabulary = Vocabularies[partner.protocol]
         agreement_id = _agreement_id(alert.partner_key, alert.agreement_product)
-        subjects.append((vocabulary.agreement_label, mono(agreement_id, href=href(Path_Agreements, agreement_id))))
+        subjects.append((vocabulary.agreement_label, mono(agreement_id, href=agreement_href(agreement_id))))
         partner_row = ('Partner', partner_link)
 
     else:

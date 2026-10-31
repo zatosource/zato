@@ -36,7 +36,7 @@ _ms_per_day = 24 * 60 * 60 * 1000
 _lock_hold_seconds = 7
 
 # What the cleanup process logs each time it postpones a sweep.
-_postponed_message = 'Sweep postponed, the database is locked'
+_postponed_message = 'Sweep postponed, '
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -233,8 +233,9 @@ class TestCleanupEmptyCounts(BaseCleanupLiveTestCase):
 # ################################################################################################################################
 
 class TestCleanupLockedDatabase(BaseCleanupLiveTestCase):
-    """ Another connection holds the write lock for longer than the busy timeout while the cleanup runs -
-    the cleanup postpones its sweep instead of ending, and completes it once the lock is released.
+    """ Another connection holds the write lock while the cleanup runs, for longer than the busy timeout of SQLite,
+    or until the connection of the cleanup process is terminated on PostgreSQL - the cleanup postpones its sweep
+    instead of ending, and completes it once the lock is released.
     """
 
     def test_cleanup_outlasts_locked_database(self) -> 'None':

@@ -7,8 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.b2b.portal.sample.agreements import agreement_href
 from zato.common.b2b.portal.sample.common import action, aside, cell, chip, code, column, delta, directed, fields, href, \
-    id_column, item, link, mono, Now, Path_Agreements, Path_Messages, Path_Partners, section, tab, table, timestamp
+    id_column, item, link, mono, Now, Path_Messages, Path_Partners, section, tab, table, timestamp
 from zato.common.b2b.portal.sample.parties import Partner_By_Key, Services
 from zato.common.b2b.portal.sample.payloads import payload
 from zato.common.b2b.portal.sample.protocol.common import Protocols, Vocabularies
@@ -114,7 +115,7 @@ def _summary(message:'anydict', conversation:'anydict') -> 'anylist':
         ('Service', mono(message['service'])),
         ('Reference', mono(message['reference'])),
         ('Protocol', message['protocol']),
-        (vocabulary.agreement_label, mono(agreement_id, href=href(Path_Agreements, agreement_id))),
+        (vocabulary.agreement_label, mono(agreement_id, href=agreement_href(agreement_id))),
         ('ConversationId', mono(message['conversation_id'])),
     ]
 

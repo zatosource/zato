@@ -201,6 +201,10 @@ class EnvDBConfig:
         self.env_password = f'{env_prefix}Password'
         self.env_name     = f'{env_prefix}Name'
 
+        # The full name of the environment variable with the path to a file holding the password,
+        # read again for each new connection so that a rotated password takes effect without a restart.
+        self.env_password_file = f'{env_prefix}Password_File'
+
         # The full names of the environment variables configuring SSL/TLS
         self.env_ssl           = f'{env_prefix}SSL'
         self.env_ssl_ca_file   = f'{env_prefix}SSL_CA_File'
@@ -246,6 +250,7 @@ def get_env_values(config:'EnvDBConfig') -> 'stranydict':
     out['port']     = os.environ.get(config.env_port, '')
     out['username'] = os.environ.get(config.env_username, '')
     out['password'] = os.environ.get(config.env_password, '')
+    out['password_file'] = os.environ.get(config.env_password_file, '')
 
     # .. SSL is off unless requested explicitly ..
     if ssl_enabled := os.environ.get(config.env_ssl, ''):

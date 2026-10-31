@@ -189,8 +189,8 @@ def _run_fetch_limits_flow(backend:'SQLPubSubBackend') -> 'None':
 # ################################################################################################################################
 
 def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
-    """ The REST formatting parses JSON payloads, fills in the meta envelope
-    and acknowledges each message it hands over.
+    """ The REST pull claims the messages it hands over, and the formatting parses JSON payloads
+    and fills in the meta envelope.
     """
     delete_all_rows()
 
@@ -199,7 +199,7 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
     dict_data = {'invoice_id': 'INV-1', 'amount': 250}
     result = backend.publish(_topic, dict_data, correl_id='correlation-rest-1')
 
-    messages = backend.fetch_messages(_sub_key_1)
+    messages = backend.pull_messages(_sub_key_1)
     formatted = backend.format_messages_for_rest(messages, _sub_key_1)
 
     assert len(formatted) == 1
@@ -223,13 +223,13 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
     assert meta['time_since_pub']
     assert meta['time_since_recv']
 
-    # .. and the hand-over acknowledged the message.
+    # .. and the claim removed the message from the queue.
     assert backend.fetch_messages(_sub_key_1) == []
 
     # Non-JSON payloads come back as the plain strings they are.
     _ = backend.publish(_topic, 'just plain text')
 
-    messages = backend.fetch_messages(_sub_key_1)
+    messages = backend.pull_messages(_sub_key_1)
     formatted = backend.format_messages_for_rest(messages, _sub_key_1)
 
     assert formatted[0]['data'] == 'just plain text'

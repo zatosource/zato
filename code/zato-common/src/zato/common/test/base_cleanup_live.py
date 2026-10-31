@@ -15,8 +15,12 @@ import sys
 import time
 import unittest
 
+# SQLAlchemy
+from sqlalchemy import text
+
 # Zato
-from zato.common.pubsub.sql.config import get_pubsub_db_path
+from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_engine
 from zato.common.test import pubsub_db
 
 # local
@@ -27,6 +31,7 @@ from zato.common.test.config_pubsub_push import TestConfig
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.engine import Engine
     from zato.common.typing_ import strlist, strstrdict
 
 # ################################################################################################################################
@@ -45,6 +50,22 @@ _delivery_timeout_seconds = 30
 
 # How often a test checks whether its messages were acknowledged, in seconds.
 _delivery_poll_seconds = 0.2
+
+# The query that finds the backend of the cleanup process of PostgreSQL while it waits for a lock ..
+_waiting_backend_query = text("""
+    select pid from pg_stat_activity
+    where wait_event_type = 'Lock' and datname = current_database() and pid <> pg_backend_pid()
+    and query like 'DELETE FROM pubsub_delivery WHERE pubsub_delivery.message_id IN %'
+""")
+
+# .. the statements of all the other backends, reported when no such backend is found ..
+_activity_query = text("""
+    select pid, state, wait_event_type, wait_event, query from pg_stat_activity
+    where datname = current_database() and pid <> pg_backend_pid()
+""")
+
+# .. and the one that terminates it.
+_terminate_backend_query = text('select pg_terminate_backend(:pid)')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,6 +120,21 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
         """ Runs the cleanup subprocess in --once mode while another connection holds the write lock
         of the shared pub/sub database for the given time, and returns what the subprocess logged.
         """
+        engine = get_pubsub_engine()
+
+        if engine.dialect.name == Type_PostgreSQL:
+            output = self._run_cleanup_while_locked_postgresql(engine, lock_seconds)
+        else:
+            output = self._run_cleanup_while_locked_sqlite(lock_seconds)
+
+        return output
+
+# ################################################################################################################################
+
+    def _run_cleanup_while_locked_sqlite(self, lock_seconds:'float') -> 'str':
+        """ Holds the write lock of the SQLite file for longer than the busy timeout of the cleanup process,
+        which postpones its sweep until the lock is released.
+        """
         db_path = get_pubsub_db_path()
 
         lock_connection = sqlite3.connect(db_path, isolation_level=None)
@@ -113,6 +149,60 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
         _ = lock_connection.execute('rollback')
         lock_connection.close()
 
+        output = self._wait_for_cleanup(process)
+        return output
+
+# ################################################################################################################################
+
+    def _run_cleanup_while_locked_postgresql(self, engine:'Engine', lock_seconds:'float') -> 'str':
+        """ Holds a share lock of the delivery table of PostgreSQL, which the deletes of the cleanup process wait for
+        while the reads of the server continue, and terminates the connection of the cleanup process while it waits,
+        which postpones its sweep until the lock is released.
+        """
+        with engine.connect() as lock_connection:
+
+            lock_transaction = lock_connection.begin()
+            _ = lock_connection.exec_driver_sql('lock table pubsub_delivery in share mode')
+
+            process = subprocess.Popen(_cleanup_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+            # The connection of the cleanup process is terminated once it waits for the lock ..
+            deadline = time.monotonic() + lock_seconds
+
+            with engine.connect() as admin_connection:
+                while True:
+                    if time.monotonic() > deadline:
+                        activity = admin_connection.execute(_activity_query).fetchall()
+                        lock_transaction.rollback()
+                        output = self._wait_for_cleanup(process)
+                        self.fail(f'The cleanup process did not wait for the lock -> {activity} -> {output}')
+                    waiting_pid = admin_connection.execute(_waiting_backend_query).scalar()
+
+                    # pg_stat_activity is read once per transaction, so each check runs in a new one.
+                    admin_connection.rollback()
+
+                    if waiting_pid is not None:
+                        break
+                    time.sleep(_delivery_poll_seconds)
+
+                _ = admin_connection.execute(_terminate_backend_query, {'pid': waiting_pid})
+                admin_connection.commit()
+
+            # .. the lock is held for the rest of the time ..
+            remaining_seconds = deadline - time.monotonic()
+            time.sleep(max(remaining_seconds, 0))
+
+            # .. and released, after which the sweep may complete.
+            lock_transaction.rollback()
+
+        output = self._wait_for_cleanup(process)
+        return output
+
+# ################################################################################################################################
+
+    def _wait_for_cleanup(self, process:'subprocess.Popen[str]') -> 'str':
+        """ Waits for the cleanup process to complete and returns what it logged.
+        """
         output, _ = process.communicate(timeout=30)
         logger.info('Cleanup process exited -> returncode:%d, output:%s', process.returncode, output)
 

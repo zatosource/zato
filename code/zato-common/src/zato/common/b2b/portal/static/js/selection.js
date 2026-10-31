@@ -4,8 +4,8 @@
 // from the item's own address, and the line between the two panes is dragged to share the height between them.
 // The actions of each item are kept in its row as hidden sources, which the links beside its state and the command
 // palette are built from. The sources follow from the state of the item, so that a change of state offers the actions
-// of the new state at once. The address names the selected item, its open tab and whether what is kept apart
-// from the tab is open, so that it always leads back to what is shown.
+// of the new state at once. The address names the selected item, its open tab and the open tab of what is kept apart
+// from the tabs, so that it always leads back to what is shown.
 
 (function() {
 
@@ -16,7 +16,8 @@ var portal = window.portal;
 var selection = {};
 
 selection.config = {
-    detailsParameter: 'details',
+    detailsSegment: 'details',
+    detailsTabAttribute: 'data-details-tab',
     selectedClass: 'listing-row-selected',
     removedClass: 'listing-row-removed',
     paneRemovedClass: 'detail-removed',
@@ -110,28 +111,18 @@ selection.activeTab = function(itemId) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A listing of the items of one partner keeps naming that partner, whether an item is open or not.
-selection.address = function(itemId, isDetails) {
+// The path of the listing, which for the items of one partner names that partner, is followed by the item,
+// its open tab, and the open tab of what it keeps apart from its tabs, or null when that is closed.
+selection.address = function(itemId, detailsTab) {
 
-    var out = window.location.pathname;
-    var parameters = [];
-    var split = document.getElementById('split');
-
-    if (split.hasAttribute('data-scope')) {
-        parameters.push(split.getAttribute('data-scope'));
-    }
+    var out = document.getElementById('split').getAttribute('data-path');
 
     if (itemId !== null) {
-        parameters.push('id=' + encodeURIComponent(itemId));
-        parameters.push('tab=' + encodeURIComponent(selection.activeTab(itemId)));
+        out += '/' + encodeURIComponent(itemId) + '/' + selection.activeTab(itemId);
     }
 
-    if (isDetails) {
-        parameters.push(selection.config.detailsParameter + '=1');
-    }
-
-    if (parameters.length > 0) {
-        out += '?' + parameters.join('&');
+    if (detailsTab !== null) {
+        out += '/' + selection.config.detailsSegment + '/' + detailsTab;
     }
 
     return out;
@@ -139,9 +130,9 @@ selection.address = function(itemId, isDetails) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-selection.writeAddress = function(itemId, isDetails) {
+selection.writeAddress = function(itemId, detailsTab) {
 
-    var address = selection.address(itemId, isDetails);
+    var address = selection.address(itemId, detailsTab);
 
     window.history.replaceState(null, '', address);
 };
@@ -186,7 +177,7 @@ selection.show = function(itemId) {
 
     selection.current = itemId;
     selection.setPaneShown(true);
-    selection.writeAddress(itemId, false);
+    selection.writeAddress(itemId, null);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -196,7 +187,7 @@ selection.close = function() {
     selection.requested = null;
     selection.mark(null);
     selection.setPaneShown(false);
-    selection.writeAddress(null, false);
+    selection.writeAddress(null, null);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -399,17 +390,16 @@ selection.init = function() {
     if (pane) {
 
         var itemId = pane.getAttribute('data-id');
-        var isDetails = new URLSearchParams(window.location.search).has(selection.config.detailsParameter);
 
         selection.prepare(itemId, pane);
         selection.current = itemId;
         selection.requested = itemId;
-        selection.writeAddress(itemId, false);
+        selection.writeAddress(itemId, null);
         selection.row(itemId).scrollIntoView({block: 'nearest'});
 
         // The address asked for what is kept apart from the open tab
-        if (isDetails) {
-            portal.detail.openDetails(pane);
+        if (pane.hasAttribute(selection.config.detailsTabAttribute)) {
+            portal.detail.openDetails(pane, pane.getAttribute(selection.config.detailsTabAttribute));
         }
     }
 };

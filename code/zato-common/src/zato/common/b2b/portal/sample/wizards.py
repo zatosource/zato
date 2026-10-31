@@ -28,7 +28,7 @@ _signature_algorithms = ['rsa-sha256', 'rsa-sha384', 'rsa-sha512']
 _digest_algorithms    = ['sha256', 'sha384', 'sha512']
 _tls_versions         = ['TLS 1.3', 'TLS 1.2']
 _channels             = ['Portal', 'Email', 'Webhook']
-_sync_reply_modes     = ['mshSignalsOnly', 'none', 'signalsOnly']
+_sync_reply_modes     = ['mshSignalsOnly', 'signalsOnly', 'responseOnly', 'signalsAndResponse', 'none']
 
 _as2_sign_algorithms       = ['SHA-256', 'SHA-384', 'SHA-512', 'SHA-1']
 _as2_encryption_algorithms = ['AES-128-CBC', 'AES-256-CBC', 'AES-128-GCM', 'AES-256-GCM']
@@ -230,14 +230,14 @@ def _form(name:'str', label:'str', summary:'str', rows:'anylist') -> 'anydict':
 # ################################################################################################################################
 
 def _step(title:'str', lines:'anylist') -> 'anydict':
-    out = {'title': title, 'lines': lines, 'is_review': False}
+    out = {'key': title.lower(), 'title': title, 'lines': lines, 'is_review': False}
     return out
 
 # ################################################################################################################################
 
 def _wizard(title:'str', list_path:'str', done_label:'str', steps:'anylist') -> 'anydict':
 
-    review = {'title': 'Review', 'lines': [], 'is_review': True}
+    review = {'key': 'review', 'title': 'Review', 'lines': [], 'is_review': True}
     steps.append(review)
 
     out = {'title': title, 'list_path': list_path, 'done_label': done_label, 'steps': steps}
@@ -267,9 +267,11 @@ def _ebxml_messaging() -> 'anylist':
             [_switch('duplicate_elimination', 'Duplicate elimination', True)],
             [_duration('persist_duration', 'Persist duration', 7, 'days')],
         ]),
-        _select('sync_reply', 'SyncReplyMode', _sync_reply_modes),
-        _form('time_limits', 'Time limits', 'Receipt within {receipt_time}, response within {perform_time}', [
-            [_duration('receipt_time', 'timeToAcknowledgeReceipt', 0, 'seconds')],
+        _select('sync_reply', 'Sync reply mode', _sync_reply_modes),
+        _form('time_limits', 'Time limits',
+            'Receipt: {receipt_time}, acceptance: {acceptance_time}, response: {perform_time}', [
+            [_duration('receipt_time', 'timeToAcknowledgeReceipt', 30, 'seconds')],
+            [_duration('acceptance_time', 'timeToAcknowledgeAcceptance', 1, 'minutes')],
             [_duration('perform_time', 'timeToPerform', 2, 'minutes')],
         ]),
         _form('ebxml_security', 'Security', '{signature_algorithm}, {digest_algorithm}', [

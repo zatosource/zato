@@ -129,7 +129,6 @@
 }
 
 .card-header-link {
-    margin-right: 6px;
     font-size: 12px;
     color: var(--text3);
 }
@@ -194,10 +193,6 @@
 
 .tippy-box[data-theme~="bulk"] > .tippy-content {
     padding: 8px 14px;
-}
-
-.card-search .button-secondary {
-    height: 28px;
 }
 
 /* Adding a new item stands right after the title of its listing */

@@ -9,17 +9,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import logging
+import os
 import signal
 import sys
 import time
 
 # SQLAlchemy
-from sqlalchemy import and_, select
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import and_, select, text
+from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.db_env.errors import is_transient
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
-    get_pubsub_engine
+    get_generation_file_path, get_pubsub_engine
+from zato.common.pubsub.sql.counts import compact_counts
+from zato.common.pubsub.sql.generation import GenerationGuard, PubSubReplaced, read_generation_file
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table
 from zato.common.util.time_ import datetime_to_ms, utcnow
@@ -65,6 +70,13 @@ _lock_retry_seconds = 1
 # What SQLite reports when the write lock could not be obtained within the busy timeout.
 _database_locked_message = 'database is locked'
 
+# How many change rows the count tables of PostgreSQL hold altogether.
+_count_rows_query = text("""
+    SELECT (SELECT count(*) FROM pubsub_queue_count)
+        + (SELECT count(*) FROM pubsub_topic_count)
+        + (SELECT count(*) FROM pubsub_publish_count)
+""")
+
 # How many milliseconds one second and one day have - timestamp columns hold epoch milliseconds.
 _ms_per_second = 1000
 _ms_per_day = 24 * 60 * 60 * _ms_per_second
@@ -83,13 +95,72 @@ class PubSubCleanup:
         self.interval_seconds = interval_seconds
         self._should_stop = False
 
+        # The generation of the server of this environment, which the sweeps confirm on PostgreSQL
+        self._guard:'GenerationGuard | None' = None
+
 # ################################################################################################################################
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine behind the current Zato_PubSub_DB_Path.
+        """ The engine of the pub/sub database that the Zato_PubSub_DB_* variables select.
         """
         out = get_pubsub_engine()
+        return out
+
+# ################################################################################################################################
+
+    def guard_with_server_generation(self) -> 'bool':
+        """ On PostgreSQL, makes the sweeps confirm the generation that the server of this environment recorded,
+        so that the cleanup process of a server that was replaced changes no row. Returns whether a sweep may run,
+        which on PostgreSQL requires a server of this environment to have taken over the database.
+        """
+        engine = self.engine
+
+        # A SQLite file has only one server ..
+        if engine.dialect.name != Type_PostgreSQL:
+            return True
+
+        # .. with no server started in this environment yet, there is no generation to confirm ..
+        generation_file_path = get_generation_file_path()
+
+        if not os.path.exists(generation_file_path):
+            logger.info('Sweep skipped, no server of this environment has taken over the database')
+            return False
+
+        # .. and the generation is read again before each sweep, as the server may have been restarted.
+        generation = read_generation_file()
+
+        if self._guard is not None:
+            if self._guard.generation == generation:
+                return True
+            self._guard.uninstall(engine)
+
+        self._guard = GenerationGuard(generation)
+        self._guard.install(engine)
+
+        return True
+
+# ################################################################################################################################
+
+    def run_guarded_sweep(self) -> 'strintdict':
+        """ Runs one sweep under the generation of the server of this environment. A sweep that did not run
+        or that the guard stopped reports nothing deleted.
+        """
+        out = {
+            'expired': 0,
+            'aged': 0,
+            'over_cap': 0,
+            'empty_counts': 0,
+        }
+
+        if not self.guard_with_server_generation():
+            return out
+
+        try:
+            out = self.sweep_until_done()
+        except PubSubReplaced as e:
+            logger.warning('Sweep stopped -> %s', e)
+
         return out
 
 # ################################################################################################################################
@@ -140,6 +211,7 @@ class PubSubCleanup:
                     message_table.c.payload.isnot(None),
                 ))
                 query = query.limit(batch_size)
+                query = query.with_for_update(skip_locked=True)
 
                 message_ids:'intlist' = []
 
@@ -189,6 +261,7 @@ class PubSubCleanup:
                     message_table.c.pub_time_ms < cutoff_ms,
                 ))
                 query = query.limit(batch_size)
+                query = query.with_for_update(skip_locked=True)
 
                 message_ids:'intlist' = []
 
@@ -282,6 +355,7 @@ class PubSubCleanup:
                         message_table.c.id <= cutoff_id,
                     ))
                     query = query.limit(batch_size)
+                    query = query.with_for_update(skip_locked=True)
 
                     message_ids:'intlist' = []
 
@@ -306,9 +380,14 @@ class PubSubCleanup:
 # ################################################################################################################################
 
     def _sweep_empty_counts(self) -> 'int':
-        """ Deletes the queue, topic and publication count rows that dropped to zero.
+        """ Deletes the queue, topic and publication count rows that dropped to zero. On PostgreSQL, the change rows
+        of each count are replaced by one row of their sum, unless the sum is zero.
         Returns how many count rows were deleted.
         """
+        if self.engine.dialect.name == Type_PostgreSQL:
+            out = self._compact_counts()
+            return out
+
         delete_queue_counts = queue_count_table.delete()
         delete_queue_counts = delete_queue_counts.where(queue_count_table.c.depth == 0)
 
@@ -327,6 +406,24 @@ class PubSubCleanup:
 
         if out:
             logger.info('Empty-count sweep -> deleted:%d', out)
+
+        return out
+
+# ################################################################################################################################
+
+    def _compact_counts(self) -> 'int':
+        """ Replaces the change rows of each count of PostgreSQL with one row of their sum
+        and returns by how many rows the count tables shrank.
+        """
+        with self.engine.begin() as connection:
+            before = connection.execute(_count_rows_query).scalar_one()
+            _ = compact_counts(connection)
+            after = connection.execute(_count_rows_query).scalar_one()
+
+        out = before - after
+
+        if out:
+            logger.info('Count compaction -> removed:%d', out)
 
         return out
 
@@ -362,15 +459,22 @@ class PubSubCleanup:
             try:
                 out = self.sweep_once()
                 break
-            except OperationalError as e:
+            except DBAPIError as e:
 
-                # Only a locked database is a reason to start the sweep again ..
+                # Only a locked SQLite database or a transient condition of PostgreSQL is a reason
+                # to start the sweep again - a deadlock, a serialization failure, an unavailable lock,
+                # a server that shut down or restarted, or a lost connection ..
                 error_message = str(e.orig)
-                if _database_locked_message not in error_message:
+
+                if _database_locked_message in error_message:
+                    cause = 'the database is locked'
+                elif is_transient(e):
+                    cause = error_message
+                else:
                     raise
 
-                # .. after the pause in which the other writers complete their transactions.
-                logger.warning('Sweep postponed, the database is locked -> retry in:%ds', _lock_retry_seconds)
+                # .. after the pause in which the other writers complete their transactions or the database returns.
+                logger.warning('Sweep postponed, %s -> retry in:%ds', cause, _lock_retry_seconds)
                 time.sleep(_lock_retry_seconds)
 
         return out
@@ -384,7 +488,7 @@ class PubSubCleanup:
 
         while not self._should_stop:
 
-            counts = self.sweep_until_done()
+            counts = self.run_guarded_sweep()
             logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
                 counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
 
@@ -439,8 +543,8 @@ def main() -> 'int':
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=log_level, format=log_format)
 
-    # .. load Zato_PubSub_DB_Path from the environment file if one was given -
-    # .. without it, the default SQLite file is used ..
+    # .. load the Zato_PubSub_DB_* variables from the environment file if one was given -
+    # .. without them, the default SQLite file is used ..
     if args.env_file:
         from zato.common.util.env import populate_environment_from_file
         _ = populate_environment_from_file(args.env_file)
@@ -460,7 +564,7 @@ def main() -> 'int':
 
     # .. run.
     if args.once:
-        counts = cleanup.sweep_until_done()
+        counts = cleanup.run_guarded_sweep()
         logger.info('Single sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
             counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
         return 0

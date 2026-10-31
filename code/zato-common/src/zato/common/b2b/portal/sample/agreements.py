@@ -13,6 +13,7 @@ from typing import NamedTuple
 from typing_extensions import TypeAlias
 
 # Zato
+from zato.common.b2b.portal.sample.common import href, Path_Agreements, scoped_path
 from zato.common.b2b.portal.sample.parties import agreement_id, Partner_By_Key
 
 # ################################################################################################################################
@@ -168,6 +169,18 @@ Agreement_By_ID = {}
 
 for _agreement in Agreements:
     Agreement_By_ID[_agreement.agreement_id] = _agreement
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def agreement_href(agreement_id:'str') -> 'str':
+    """ The address of an agreement, which is listed among the agreements of its partner.
+    """
+    agreement = Agreement_By_ID[agreement_id]
+    partner_path = scoped_path(Path_Agreements, agreement.partner_key)
+
+    out = href(partner_path, agreement_id)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1746,8 +1746,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def _start_pubsub_backend(self):
 
-        # Messages, queues and delivery state live in the SQLite file selected
-        # through Zato_PubSub_DB_Path.
+        # Messages, queues and delivery state live in the database selected through the Zato_PubSub_DB_* variables.
         audit_log = AuditLog(self.name)
 
         self.pubsub_backend = SQLPubSubBackend(
@@ -1756,6 +1755,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             encrypt_at_rest=self.encrypt_at_rest,
         )
 
+        # On PostgreSQL, this server becomes the active one before it reads any pub/sub state, so that it starts
+        # from everything the server it replaces committed, and that server changes nothing from now on ..
+        self.pubsub_backend.take_over()
+
+        # .. and only now is the state read.
         self.config_manager._sync_pubsub_subscriptions()
         self.config_manager._sync_pubsub_topics()
 

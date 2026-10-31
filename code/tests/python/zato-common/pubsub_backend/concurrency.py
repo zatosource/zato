@@ -9,13 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # gevent
 import gevent
 
-# SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.pubsub.sql.writes import PubSubWriter
+from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -132,12 +129,12 @@ def _run_concurrent_publish_flow() -> 'None':
 
 # ################################################################################################################################
 
-def _publish_duplicate(backend:'SQLPubSubBackend', msg_id:'str') -> 'str':
+def _publish_duplicate(backend:'SQLPubSubBackend', msg_id:'str', data:'str') -> 'str':
     """ Publishes a message under a given identifier and tells whether it was stored or rejected.
     """
     try:
-        _ = backend.publish(_topic, 'duplicate-message', msg_id=msg_id)
-    except IntegrityError:
+        _ = backend.publish(_topic, data, msg_id=msg_id)
+    except PubSubDuplicateMsgID:
         out = 'rejected'
     else:
         out = 'stored'
@@ -147,30 +144,37 @@ def _publish_duplicate(backend:'SQLPubSubBackend', msg_id:'str') -> 'str':
 # ################################################################################################################################
 
 def _run_duplicate_flow() -> 'None':
-    """ A message whose identifier exists already fails its own publisher alone, the others in its commit succeed.
+    """ A different message under an identifier that exists already fails its own publisher alone,
+    the same message under it is a repeated publication that succeeds with no new deliveries,
+    and the others in its commit succeed.
     """
     backend, _ignored = _new_backend()
 
     existing_msg_id = 'zpsm.test.concurrency.duplicate'
-    _ = backend.publish(_topic, 'original-message', msg_id=existing_msg_id)
+    original_data = 'original-message'
+    _ = backend.publish(_topic, original_data, msg_id=existing_msg_id)
 
     greenlets:'anylist' = []
 
     for index in range(_caller_count):
 
-        # Every tenth caller reuses the identifier that exists already.
+        # Every tenth caller reuses the identifier with different content, every fifth with the same content.
         if index % 10 == 0:
             msg_id = existing_msg_id
+            data = 'different-message'
+        elif index % 5 == 0:
+            msg_id = existing_msg_id
+            data = original_data
         else:
             msg_id = f'zpsm.test.concurrency.unique.{index}'
+            data = 'unique-message'
 
-        greenlet = gevent.spawn(_publish_duplicate, backend, msg_id)
+        greenlet = gevent.spawn(_publish_duplicate, backend, msg_id, data)
         greenlets.append(greenlet)
 
     _ = gevent.joinall(greenlets, raise_error=True)
 
-    rejected_count = 0
-    stored_count = 0
+    unique_count = 0
 
     for index, greenlet in enumerate(greenlets):
 
@@ -178,17 +182,18 @@ def _run_duplicate_flow() -> 'None':
 
         if index % 10 == 0:
             assert outcome == 'rejected', index
-            rejected_count += 1
+        elif index % 5 == 0:
+            assert outcome == 'stored', index
         else:
             assert outcome == 'stored', index
-            stored_count += 1
+            unique_count += 1
 
-    # The original and every unique message are stored, with their delivery rows.
+    # The original and every unique message are stored once each, with one delivery row each.
     message_rows = get_message_rows(_topic)
-    assert len(message_rows) == stored_count + 1
+    assert len(message_rows) == unique_count + 1
 
     delivery_rows = get_delivery_rows(_sub_key_1)
-    assert len(delivery_rows) == stored_count + 1
+    assert len(delivery_rows) == unique_count + 1
 
 # ################################################################################################################################
 

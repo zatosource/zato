@@ -18,14 +18,14 @@ from gevent import get_hub
 from gevent.monkey import is_module_patched
 
 # SQLAlchemy
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy import event as sa_event
 from sqlalchemy.pool import QueuePool
 
 # Zato
 from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    set_postgresql_no_delay, set_sqlite_pragmas
+    set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, set_sqlite_pragmas
 from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
@@ -59,6 +59,9 @@ if 0:
 _network_pool_size = 30
 _network_max_overflow = 50
 
+# The PostgreSQL advisory lock under which the schemas are created
+_schema_lock_key = 7_401_852_117_309
+
 # Engines are cached per configuration so all callers in a process share one pool
 _engine_cache:'anydict' = {}
 
@@ -72,6 +75,22 @@ install_pg8000_copy()
 
 # SQLite file engines are cached per path and pool mode
 _sqlite_file_engine_cache:'anydict' = {}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _PasswordFileReader:
+    """ Supplies each new connection with the password currently stored in a file.
+    """
+
+    def __init__(self, path:'str') -> 'None':
+        self.path = path
+
+    def on_connect(self, dialect:'any_', connection_record:'any_', cargs:'any_', cparams:'stranydict') -> 'None':
+        with open(self.path) as password_file:
+            password = password_file.read()
+
+        cparams['password'] = password.strip()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,6 +159,7 @@ def _get_cache_key(config:'EnvDBConfig') -> 'strtuple':
         config.env_port,
         config.env_username,
         config.env_password,
+        config.env_password_file,
         config.env_name,
         config.env_ssl,
         config.env_ssl_ca_file,
@@ -190,9 +210,11 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
         engine_kwargs['poolclass'] = QueuePool
         connect_args['check_same_thread'] = False
 
-    # .. PostgreSQL runs read committed ..
+    # .. PostgreSQL runs read committed, and a pooled connection that the server or a load balancer closed
+    # .. in the meantime is replaced when it is checked out instead of failing the first statement sent on it ..
     if db_type != Type_SQLite:
         engine_kwargs['isolation_level'] = 'READ COMMITTED'
+        engine_kwargs['pool_pre_ping'] = True
 
         # .. stores with many concurrent small transactions also need enough
         # .. connections for the database to group their commits into shared flushes ..
@@ -213,13 +235,26 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
 
     elif db_type == Type_PostgreSQL:
         sa_event.listen(out, 'connect', set_postgresql_no_delay)
+        sa_event.listen(out, 'connect', set_postgresql_keepalive)
+        sa_event.listen(out, 'connect', set_postgresql_session)
+
+        # .. a password kept in a file is read again for each new connection, which lets it be rotated ..
+        if password_file := values['password_file']:
+            password_reader = _PasswordFileReader(password_file)
+            sa_event.listen(out, 'do_connect', password_reader.on_connect)
 
         # .. pg8000 sends each row of a multi-row insert as a statement of its own, one round trip per row,
         # .. which SQLAlchemy replaces with multi-row statements only for the dialects that ask for it ..
         out.dialect.use_insertmanyvalues_wo_returning = True
 
-    # .. make sure the schema exists - this is idempotent ..
-    config.metadata.create_all(out)
+    # .. make sure the schema exists - this is idempotent, and on PostgreSQL the processes
+    # .. that start at the same time, e.g. a server and its cleanup process, create it one after another ..
+    if db_type == Type_PostgreSQL:
+        with out.begin() as connection:
+            _ = connection.execute(text('select pg_advisory_xact_lock(:key)'), {'key': _schema_lock_key})
+            config.metadata.create_all(connection)
+    else:
+        config.metadata.create_all(out)
 
     # .. start the checkpoints of the WAL that the commits no longer run ..
     if db_type == Type_SQLite and config.needs_background_checkpoint:

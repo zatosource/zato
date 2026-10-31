@@ -1,4 +1,4 @@
-<div class="detail" id="detail" data-id="{{ item.id }}">
+<div class="detail" id="detail" data-id="{{ item.id }}"{% if details_tab %} data-details-tab="{{ details_tab }}"{% endif %}>
 
     <div class="detail-header">
         <h2 class="detail-title portal-mono">{{ item.title }}</h2>
@@ -7,7 +7,7 @@
             <button type="button" class="tab{% if tab.key == active_tab %} tab-active{% endif %}" role="tab" data-tab="{{ tab.key }}">{{ tab.label }}</button>
             {% endfor %}
         </div>
-        {% if item.details %}<a class="link side-link details-open" href="{{ section.path }}?id={{ item.id|urlencode:'' }}&amp;tab={{ active_tab }}&amp;details=1">{{ item.details_label }}</a>{% endif %}
+        {% if item.details %}<a class="link side-link details-open" href="{{ section.path }}/{{ item.id|urlencode:'' }}/{{ active_tab }}/details/{{ item.details.0.key }}">{{ item.details_label }}</a>{% endif %}
     </div>
 
     <div class="detail-body">

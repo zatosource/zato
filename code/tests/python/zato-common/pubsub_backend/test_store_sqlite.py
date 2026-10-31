@@ -32,6 +32,7 @@ if 0:
 # ################################################################################################################################
 
 _expected_tables = {
+    'pubsub_active',
     'pubsub_delivery',
     'pubsub_message',
     'pubsub_publish_count',

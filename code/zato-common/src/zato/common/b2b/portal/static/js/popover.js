@@ -78,7 +78,9 @@ popover.attach = function(anchor, spec) {
             instance.setContent(content);
         },
         onShown: function(instance) {
-            popover.focusFirst(instance.popper);
+            if (!spec.keepFocus) {
+                popover.focusFirst(instance.popper);
+            }
         },
         onHidden: function(instance) {
             popover.resetOffset(handle);

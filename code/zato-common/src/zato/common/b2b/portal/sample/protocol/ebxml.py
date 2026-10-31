@@ -15,6 +15,7 @@ from zato.common.b2b.portal.sample.parties import DUNS_Type, endpoint, Partner_B
 from zato.common.b2b.portal.sample.payloads import CRLF, mime_message, parties, payload
 from zato.common.b2b.portal.sample.protocol.common import channel_path, is_signature_verified, Protocol, ProtocolViews, \
     transport_label
+from zato.common.b2b.portal.sample.protocol.cpa import cpa_document
 from zato.common.b2b.portal.sample.traffic import Kind
 from zato.common.typing_ import cast_
 
@@ -90,7 +91,7 @@ def _reliability(agreement:'Agreement') -> 'anylist':
         ('Retries', number_value(agreement.retries)),
         ('Retry interval', duration_value(agreement.retry_minutes, 'minutes')),
         ('Persist duration', duration_value(settings.persist_days, 'days')),
-        ('SyncReplyMode', choice(settings.sync_reply, _sync_reply_modes, is_mono=True)),
+        ('Sync reply mode', choice(settings.sync_reply, _sync_reply_modes, is_mono=True)),
         ('Message order', choice('NotGuaranteed', _message_orders, is_mono=True)),
     ]
 
@@ -125,6 +126,7 @@ def _agreement_tabs(agreement:'Agreement') -> 'anylist':
     out = [
         tab('reliability', 'Reliability', _reliability(agreement)),
         tab('security', 'Security', _security(agreement)),
+        tab('cpa', 'CPA', [code('', cpa_document(agreement))]),
     ]
     return out
 
@@ -264,7 +266,7 @@ def _envelope(message:'anydict') -> 'anylist':
         ('AckRequested', yes_no(not is_messaging)),
         ('Signed acknowledgment', yes_no(settings.is_signed_ack)),
         ('DuplicateElimination', yes_no(not is_messaging)),
-        ('SyncReplyMode', mono(settings.sync_reply)),
+        ('Sync reply mode', mono(settings.sync_reply)),
     ])
 
     out = [header, reliability]
