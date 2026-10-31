@@ -7,9 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.b2b.portal.sample import section_agreements, section_alerts, section_messages, section_partners, \
-    section_registrations, wizards
+from zato.common.b2b.portal.sample import section_agreements, section_alerts, section_messages, section_partners, wizards
 from zato.common.b2b.portal.sample.common import State_Tones
+from zato.common.b2b.portal.sample.parties import Partner_By_Key
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,14 +25,14 @@ def _build() -> 'strdictdict':
     alerts = section_alerts.build_alerts()
     rules = section_alerts.build_rules()
     partners = section_partners.build()
-    registrations = section_registrations.build()
     agreements = section_agreements.build()
     messages = section_messages.build()
 
     rules['wizard'] = wizards.rule_wizard()
     partners['wizard'] = wizards.partner_wizard()
-    registrations['wizard'] = wizards.registration_wizard()
-    agreements['wizard'] = wizards.agreement_wizard()
+    for partner_key, partner_agreements in agreements['scopes'].items():
+        partner = Partner_By_Key[partner_key]
+        partner_agreements['wizard'] = wizards.agreement_wizard(partner)
 
     # A rule is enabled and disabled by a switch in its own row
     rules['toggle'] = {
@@ -45,7 +45,7 @@ def _build() -> 'strdictdict':
 
     out:'strdictdict' = {}
 
-    for section in (alerts, rules, partners, registrations, agreements, messages):
+    for section in (alerts, rules, partners, agreements, messages):
         out[section['slug']] = section
 
     return out
@@ -66,12 +66,9 @@ def _entry(label:'str', slug:'str') -> 'anydict':
 
 # The order of priority in production, which each user may change by dragging the entries
 Navigation:'anylist' = [
-    _entry('Message log', 'messages'),
     _entry('Alerts', 'alerts'),
+    _entry('Message log', 'messages'),
     _entry('Trading partners', 'partners'),
-    _entry('Agreements', 'agreements'),
-    _entry('Registrations', 'registrations'),
-    _entry('Alert rules', 'alert-rules'),
 ]
 
 # ################################################################################################################################

@@ -22,6 +22,12 @@
     color: var(--text3);
 }
 
+.navigation-logo {
+    display: block;
+    max-width: 100%;
+    height: 30px;
+}
+
 .navigation-list {
     display: flex;
     flex-direction: column;
@@ -111,6 +117,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
+    min-height: var(--card-header-height);
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
     background: var(--panel-raised);
@@ -119,6 +126,12 @@
 .card-title {
     margin-right: 6px;
     overflow-wrap: anywhere;
+}
+
+.card-header-link {
+    margin-right: 6px;
+    font-size: 12px;
+    color: var(--text3);
 }
 
 /* A title is set apart by its size alone, never by its weight */
@@ -177,6 +190,10 @@
 .bulk-actions {
     display: inline-flex;
     gap: 16px;
+}
+
+.tippy-box[data-theme~="bulk"] > .tippy-content {
+    padding: 8px 14px;
 }
 
 .card-search .button-secondary {

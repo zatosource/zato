@@ -59,12 +59,24 @@
     min-width: 0;
 }
 
+/* Each line keeps its own height, so a taller line hidden in the same row never pushes the one shown off its label */
 .decision-layers > * {
     grid-area: 1 / 1;
+    align-self: start;
 }
 
 .decision-layer-hidden {
     visibility: hidden;
+}
+
+.decision-layers-empty {
+    display: none;
+}
+
+/* The label of a line that is not shown does not widen the column of the labels */
+.decision-line-label.decision-layer-hidden {
+    width: 0;
+    overflow: hidden;
 }
 
 .decision-line-label {
@@ -139,7 +151,9 @@
 /* Wizard - summary links                                       */
 /* ------------------------------------------------------------ */
 
+/* A summary link is exactly as tall as its label, so that the two share one middle */
 .summary-link {
+    padding-bottom: 0;
     font-size: 12px;
     line-height: 24px;
 }

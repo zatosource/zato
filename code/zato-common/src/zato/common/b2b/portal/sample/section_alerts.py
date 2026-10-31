@@ -12,8 +12,7 @@ from typing import NamedTuple
 # Zato
 from zato.common.b2b.portal.sample.agreements import Agreements
 from zato.common.b2b.portal.sample.common import action, aside, cell, chip, choice, choices, column, fields, href, item, link, \
-    minutes_ago, mono, Path_Agreements, Path_Alerts, Path_Messages, Path_Partners, Path_Registrations, section, tab, table, \
-    timestamp
+    minutes_ago, mono, Path_Agreements, Path_Alerts, Path_Messages, Path_Partners, section, tab, table, timestamp
 from zato.common.b2b.portal.sample.parties import Partner_By_Key
 from zato.common.b2b.portal.sample.protocol.common import Vocabularies
 from zato.common.b2b.portal.sample.section_messages import state_chip
@@ -23,7 +22,7 @@ from zato.common.b2b.portal.sample.traffic import Messages
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, dictlist, strlist
+    from zato.common.typing_ import anydict, anylist, anytuple, dictlist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,7 +43,6 @@ class Alert(NamedTuple):
     text: str
     message_match: str
     agreement_product: str
-    registration: str
 
 # ################################################################################################################################
 
@@ -79,8 +77,6 @@ Rules = [
         '30 days before the end of validity', ['Portal', 'Email'], ['b2b-onboarding@pinecrest-telecom.example.com']),
     Rule('duplicate', 'Duplicate messages', 'Duplicate eliminated', 'Information', 'Enabled',
         'Any message', ['Portal'], []),
-    Rule('registration', 'Registration requests', 'Registration submitted', 'Information', 'Enabled',
-        'Any registration', ['Portal', 'Email'], ['b2b-onboarding@pinecrest-telecom.example.com']),
     Rule('response-overdue', 'Overdue responses', 'Response overdue', 'Warning', 'Disabled',
         'timeToPerform exceeded', ['Portal'], []),
 ]
@@ -100,27 +96,25 @@ _partner_scopes = ['All'] + [partner.name for partner in Partner_By_Key.values()
 
 Alerts = [
     Alert('10442', 'Error',       'Open',         253, 'Delivery failed', 'delivery-failed', 'redwood',
-        'No receipt for NotifyOfOrderStatusv2 after 3 retries', 'EBMS:0202', '', ''),
+        'No receipt for NotifyOfOrderStatusv2 after 3 retries', 'EBMS:0202', ''),
     Alert('10447', 'Warning',     'Open',         17,  'Delivery retrying', 'delivery-retrying', 'lakeshore',
-        'NotifyOfOrderStatusv2 failed twice, next retry scheduled', 'Retrying', '', ''),
+        'NotifyOfOrderStatusv2 failed twice, next retry scheduled', 'Retrying', ''),
     Alert('10445', 'Error',       'Open',         75,  'Signature verification failed', 'signature', 'prairie',
-        'rqSubmitOrder refused, the signature does not verify', 'authentication-failed', '', ''),
+        'rqSubmitOrder refused, the signature does not verify', 'authentication-failed', ''),
     Alert('10439', 'Warning',     'Open',         895, 'Receipt overdue', 'receipt-overdue', 'harborlight',
-        'No ReceiptAcknowledgement for NotifyOfComplaintStatus within 5 minutes', 'TimeToAcknowledgeReceipt', '', ''),
+        'No receipt for NotifyOfComplaintStatus', 'TimeToAcknowledgeReceipt', ''),
     Alert('10444', 'Warning',     'Acknowledged', 38,  'Business signal exception', 'signal-exception', 'redwood',
-        'AcceptanceAcknowledgementException sent for rqCancelOrder', 'OrderNotCancellable', '', ''),
+        'AcceptanceAcknowledgementException sent for rqCancelOrder', 'OrderNotCancellable', ''),
     Alert('10441', 'Warning',     'Open',         140, 'Business signal exception', 'signal-exception', 'harborlight',
-        'ReceiptAcknowledgementException sent for rqFileComplaint', 'InvalidContent', '', ''),
+        'ReceiptAcknowledgementException sent for rqFileComplaint', 'InvalidContent', ''),
     Alert('10436', 'Warning',     'Open',         1310, 'Certificate expiring', 'certificate-expiry', 'redwood',
-        'Signing certificate redwood-signing-2026 expires in 9 days', '', '', ''),
+        'Signing certificate redwood-signing-2026 expires in 9 days', '', ''),
     Alert('10431', 'Warning',     'Acknowledged', 2650, 'Certificate expiring', 'certificate-expiry', 'coppercreek',
-        'Signing certificate coppercreek-signing-2026 expires in 27 days', '', '', ''),
+        'Signing certificate coppercreek-signing-2026 expires in 27 days', '', ''),
     Alert('10433', 'Warning',     'Open',         1890, 'Agreement expiring', 'agreement-expiry', 'lakeshore',
-        'Partnership version 1 of Lakeshore Communications expires in 18 days', '', 'Orders', ''),
+        'Partnership version 1 expires in 18 days', '', 'Orders'),
     Alert('10443', 'Information', 'Acknowledged', 95,  'Duplicate eliminated', 'duplicate', 'harborlight',
-        'rqChangeOrder received twice with the same MessageId', 'DuplicateElimination', '', ''),
-    Alert('10446', 'Information', 'Open',         1440, 'Registration submitted', 'registration', 'lakeshore',
-        '2026-0121 submitted for review', '', '', '2026-0121'),
+        'rqChangeOrder received twice with the same MessageId', 'DuplicateElimination', ''),
 ]
 
 # ################################################################################################################################
@@ -158,29 +152,29 @@ def _agreement_id(partner_key:'str', product:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _subject(alert:'Alert') -> 'anylist':
-    """ The field naming what the alert was raised about and the field of its partner, which for a message
-    is led by the state of the message, as that names the partner in words of its own.
+def _subject(alert:'Alert') -> 'anytuple':
+    """ The fields naming what the alert was raised about, a message, an agreement or the partner alone, and the field
+    of its partner, which for a message is led by the state of the message, as that names the partner in words of its own.
     """
     partner = Partner_By_Key[alert.partner_key]
     partner_link = link(partner.name, href(Path_Partners, partner.key))
+    subjects:'anylist' = []
 
     if alert.message_match:
         message = _message(alert.partner_key, alert.message_match)
-        subject = ('MessageId', mono(message['id'], href=href(Path_Messages, message['key'])))
+        subjects.append(('MessageId', mono(message['id'], href=href(Path_Messages, message['key']))))
         partner_row = ('Partner', [state_chip(message), partner_link])
 
     elif alert.agreement_product:
         vocabulary = Vocabularies[partner.protocol]
         agreement_id = _agreement_id(alert.partner_key, alert.agreement_product)
-        subject = (vocabulary.agreement_label, mono(agreement_id, href=href(Path_Agreements, agreement_id)))
+        subjects.append((vocabulary.agreement_label, mono(agreement_id, href=href(Path_Agreements, agreement_id))))
         partner_row = ('Partner', partner_link)
 
     else:
-        subject = ('Registration', mono(alert.registration, href=href(Path_Registrations, alert.registration)))
         partner_row = ('Partner', partner_link)
 
-    out = [subject, partner_row]
+    out = (subjects, partner_row)
     return out
 
 # ################################################################################################################################
@@ -204,11 +198,11 @@ def _alert_item(alert:'Alert') -> 'anydict':
     rule = Rule_By_Key[alert.rule]
     raised = timestamp(minutes_ago(alert.minutes_ago))
 
-    subject, partner_row = _subject(alert)
+    subjects, partner_row = _subject(alert)
 
     overview = fields('', [
         ('Alert', [mono(alert.number), chip(alert.level), chip(alert.state, role='state'), aside(raised)]),
-        subject,
+        *subjects,
         ('Description', alert.text),
         ('Rule', link(rule.name, href(Path_Alert_Rules, rule.key))),
         partner_row,
@@ -348,6 +342,8 @@ def build_alerts() -> 'anydict':
         items=items,
         actions_of=_alert_actions,
     )
+    out['header_link'] = {'label': 'Alert rules', 'href': Path_Alert_Rules}
+
     return out
 
 # ################################################################################################################################

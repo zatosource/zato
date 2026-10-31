@@ -1,5 +1,5 @@
 <div class="block">
-    {% if block.title %}<div class="block-title">{{ block.title }}</div>{% endif %}
+    {% if block.title %}<div class="block-title">{{ block.title }}{% if block.button %}<a class="button-secondary block-button" href="{{ block.button.href }}">{{ block.button.label }}</a>{% endif %}</div>{% endif %}
     <div class="block-table">
         <table class="table">
             <thead>

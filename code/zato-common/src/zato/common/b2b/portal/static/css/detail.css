@@ -103,10 +103,20 @@
 }
 
 .block-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     padding: 7px 12px;
     border-bottom: 1px solid var(--border);
     color: var(--text3);
     background: var(--panel-header);
+}
+
+/* A button in a block title is the size of the one next to the title of a listing */
+.block-title .block-button {
+    height: 24px;
+    font-size: 11px;
+    text-transform: none;
 }
 
 /* The columns of a table share its width equally, so that tables of as many columns line up with each other */

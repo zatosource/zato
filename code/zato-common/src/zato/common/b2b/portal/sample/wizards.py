@@ -8,9 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.b2b.portal.sample.agreements import AS2MDNMode, AS4_Default_MPC, AS4Profile, AS4TokenType
-from zato.common.b2b.portal.sample.common import days_from_now, Duration_Units, Path_Agreements, Path_Partners, \
-    Path_Registrations
-from zato.common.b2b.portal.sample.parties import DUNS_Type, ISO6523_DUNS_Type, Partner_Role, Partners, Services
+from zato.common.b2b.portal.sample.common import Agreements_Tab, days_from_now, Duration_Units, Path_Partners, tab_href
+from zato.common.b2b.portal.sample.parties import DUNS_Type, endpoint, ISO6523_DUNS_Type, Partner_Role, Partners, Services
 from zato.common.b2b.portal.sample.protocol.common import Protocol, Protocols
 from zato.common.b2b.portal.sample.section_alerts import Path_Alert_Rules, Rules
 
@@ -18,7 +17,9 @@ from zato.common.b2b.portal.sample.section_alerts import Path_Alert_Rules, Rules
 # ################################################################################################################################
 
 if 0:
+    from zato.common.b2b.portal.sample.parties import Partner
     from zato.common.typing_ import anydict, anylist, strlist
+    Partner = Partner
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,12 +30,9 @@ _tls_versions         = ['TLS 1.3', 'TLS 1.2']
 _channels             = ['Portal', 'Email', 'Webhook']
 _sync_reply_modes     = ['mshSignalsOnly', 'none', 'signalsOnly']
 
-_as2_sign_algorithms       = ['SHA-256', 'SHA-384', 'SHA-512']
+_as2_sign_algorithms       = ['SHA-256', 'SHA-384', 'SHA-512', 'SHA-1']
 _as2_encryption_algorithms = ['AES-128-CBC', 'AES-256-CBC', 'AES-128-GCM', 'AES-256-GCM']
 _as2_mdn_modes             = [AS2MDNMode.Sync, AS2MDNMode.Async, AS2MDNMode.Not_Requested]
-_as2_content_types         = ['application/xml', 'application/edi-x12', 'application/edifact']
-_as2_transfer_encodings    = ['binary', 'base64']
-_as2_http_transfers        = ['Content-Length', 'Chunked']
 _as2_versions              = ['1.2', '1.1', '1.0']
 
 _as4_profiles    = [AS4Profile.EDelivery2, AS4Profile.EDelivery1, AS4Profile.Peppol, AS4Profile.ICS2]
@@ -299,11 +297,6 @@ def _as2_messaging() -> 'anylist':
             [_text('async_mdn_url', 'Asynchronous MDN URL', is_mono=True, input_type='url', is_required=False)],
             [_duration('mdn_overdue', 'Overdue after', 30, 'minutes')],
         ]),
-        _form('as2_payload', 'Payload', '{content_type}, {transfer_encoding}', [
-            [_select('content_type', 'Content type', _as2_content_types)],
-            [_select('transfer_encoding', 'Content-Transfer-Encoding', _as2_transfer_encodings)],
-        ]),
-        _select('http_transfer', 'HTTP transfer', _as2_http_transfers),
     ]
 
     out = _shown_when(lines, 'protocol', Protocol.AS2)
@@ -334,15 +327,18 @@ def _as4_messaging() -> 'anylist':
     return out
 
 # ################################################################################################################################
-
-def agreement_wizard() -> 'anydict':
-
+def agreement_wizard(partner:'Partner') -> 'anydict':
+    """ The wizard of a new agreement of the given partner, starting from the protocol and the endpoint of the partner.
+    """
     valid_from = _text('valid_from', 'Valid from', days_from_now(7), input_type='date')
     valid_to = _after(_text('valid_to', 'Valid to', days_from_now(372), input_type='date'), valid_from)
 
+    partner_pick = _pick('partner', 'Partner', [_option(partner.key, partner.name, partner.duns)])
+    partner_pick['value'] = partner.key
+
     parties = _step('Parties', [
-        _pick('partner', 'Partner', _partner_options()),
-        _select('protocol', 'Protocol', Protocols),
+        partner_pick,
+        _select('protocol', 'Protocol', Protocols, partner.protocol),
         _text('agreement_id', 'Agreement', is_mono=True),
         valid_from,
         valid_to,
@@ -359,11 +355,13 @@ def agreement_wizard() -> 'anydict':
         [_number('retries', 'Retries', 3, 'retry', 'retries'), _duration('retry_interval', 'Retry interval', 5, 'minutes')],
         [_select('tls_version', 'TLS', _tls_versions), _switch('client_auth', 'Client authentication', True)],
     ]))
-    messaging_lines.append(_text('endpoint', 'Endpoint', is_mono=True, input_type='url'))
+    partner_endpoint = endpoint(partner)
+    messaging_lines.append(_text('endpoint', 'Endpoint', partner_endpoint, is_mono=True, input_type='url'))
 
     messaging = _step('Messaging', messaging_lines)
+    partner_href = tab_href(Path_Partners, partner.key, Agreements_Tab)
 
-    out = _wizard('New agreement', Path_Agreements, 'Create', [parties, messaging])
+    out = _wizard('New agreement', partner_href, 'Create', [parties, messaging])
     return out
 
 # ################################################################################################################################
@@ -426,19 +424,6 @@ def partner_wizard() -> 'anydict':
     connectivity = _step('Connectivity', connectivity_lines)
 
     out = _wizard('New partner', Path_Partners, 'Create', [details, connectivity])
-    return out
-
-# ################################################################################################################################
-
-def registration_wizard() -> 'anydict':
-
-    request = _step('Request', [
-        _pick('partner', 'Partner', _partner_options()),
-        _pick_many('services', 'Services', _service_options(), ['SubmitOrderv2'], 'None', is_required=True),
-        _text('note', 'Note', is_required=False),
-    ])
-
-    out = _wizard('New registration', Path_Registrations, 'Submit', [request])
     return out
 
 # ################################################################################################################################

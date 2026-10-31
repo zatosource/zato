@@ -15,7 +15,8 @@ from urllib.parse import quote
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, callable_, dictlist, strdict, strlist
+    from zato.common.typing_ import anydict, anydictnone, anylist, callable_, dictlist, strdict, strlist
+    anydictnone = anydictnone
     anylist = anylist
     callable_ = callable_
     dictlist = dictlist
@@ -41,16 +42,11 @@ class Tone:
 # Every word a chip may show, with the color it is drawn in
 State_Tones = {
 
-    # Trading partners, registrations and agreements
+    # Trading partners and agreements
     'Active':        Tone.Green,
     'Onboarding':    Tone.Blue,
     'Suspended':     Tone.Amber,
     'Terminated':    Tone.Grey,
-    'Draft':         Tone.Grey,
-    'Submitted':     Tone.Blue,
-    'In review':     Tone.Indigo,
-    'Approved':      Tone.Teal,
-    'Rejected':      Tone.Red,
     'Expired':       Tone.Grey,
     'Proposed':      Tone.Indigo,
     'Agreed':        Tone.Teal,
@@ -131,11 +127,16 @@ Choices_By_Word = _choices_by_word()
 # ################################################################################################################################
 
 # The paths of the sections
-Path_Messages      = '/'
-Path_Alerts        = '/alerts'
-Path_Partners      = '/partners'
-Path_Registrations = '/registrations'
-Path_Agreements    = '/agreements'
+Path_Messages   = '/'
+Path_Alerts     = '/alerts'
+Path_Partners   = '/partners'
+Path_Agreements = '/agreements'
+
+# The parameter of the address naming the partner whose agreements a listing shows
+Partner_Parameter = 'partner'
+
+# The tab of a partner listing its agreements
+Agreements_Tab = 'agreements'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,6 +183,16 @@ def href(section_path:'str', item_id:'str') -> 'str':
     """
     item_id = quote(item_id, safe='')
     out = f'{section_path}?id={item_id}'
+    return out
+
+# ################################################################################################################################
+
+def tab_href(section_path:'str', item_id:'str', tab_key:'str') -> 'str':
+    """ The address of one item of a section with the given tab of its details open.
+    """
+    item_href = href(section_path, item_id)
+
+    out = f'{item_href}&tab={tab_key}'
     return out
 
 # ################################################################################################################################
@@ -486,8 +497,16 @@ def id_column(label:'str') -> 'anydict':
     return out
 
 # ################################################################################################################################
-def table(title:'str', columns:'anylist', rows:'anylist', *, is_editable:'bool'=False) -> 'anydict':
-    """ A block holding a table, each column a label or an identifier column, each row a list of cells or plain texts.
+def table(
+    title:'str',
+    columns:'anylist',
+    rows:'anylist',
+    *,
+    is_editable:'bool'=False,
+    button:'anydictnone'=None,
+    ) -> 'anydict':
+    """ A block holding a table, each column a label or an identifier column, each row a list of cells or plain texts,
+    with a button next to its title when it is given one.
     """
     out_columns:'anylist' = []
 
@@ -508,7 +527,14 @@ def table(title:'str', columns:'anylist', rows:'anylist', *, is_editable:'bool'=
             out_row.append(value)
         out_rows.append(out_row)
 
-    out = {'kind': 'table', 'title': title, 'columns': out_columns, 'rows': out_rows, 'is_editable': is_editable}
+    out = {
+        'kind': 'table',
+        'title': title,
+        'columns': out_columns,
+        'rows': out_rows,
+        'is_editable': is_editable,
+        'button': button,
+    }
     return out
 
 # ################################################################################################################################
@@ -628,6 +654,10 @@ def section(
         'search': None,
         'wizard': None,
         'toggle': None,
+        'header_link': None,
+        'new_href': f'{path}?new',
+        'scope': '',
+        'scopes': {},
         'is_bulk': is_bulk,
         'transitions': transitions(actions_of, [each['attributes']['state'] for each in items]),
     }

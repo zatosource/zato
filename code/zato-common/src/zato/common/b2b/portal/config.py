@@ -27,6 +27,14 @@ Server_Name = 'server'
 # The organization the portal is operated by, shown above the navigation
 Local_Organization = 'Pinecrest Telecom'
 
+# The environment variable with the path to the logo of the organization, which replaces its name above the navigation
+Logo_Env_Variable = 'Zato_B2B_Gateway_Logo'
+
+Logo_Path = os.environ.get(Logo_Env_Variable)
+
+# The address the logo is served under
+Logo_URL = '/logo'
+
 Local_Party_ID = '232510151'
 
 Local_Role = 'WholesaleProvider'

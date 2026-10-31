@@ -15,7 +15,8 @@ from sqlalchemy import func, select
 
 # Zato
 from zato.common.pubsub.sql.config import get_pubsub_engine
-from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
+    topic_count_table, topic_sub_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -180,6 +181,47 @@ def count_messages_with_payload(msg_ids:'strlist') -> 'int':
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
+
+    return out
+
+# ################################################################################################################################
+
+def set_pub_time_ms(msg_ids:'strlist', pub_time_ms:'int') -> 'None':
+    """ Sets the publication time of the given messages, the way tests move messages past their retention age.
+    """
+    update_statement = message_table.update()
+    update_statement = update_statement.where(message_table.c.msg_id.in_(msg_ids))
+    update_statement = update_statement.values(pub_time_ms=pub_time_ms)
+
+    engine = get_pubsub_engine()
+
+    with engine.begin() as connection:
+        _ = connection.execute(update_statement)
+
+# ################################################################################################################################
+
+def count_empty_count_rows() -> 'int':
+    """ Counts the queue, topic and publication count rows that dropped to zero.
+    """
+    queue_query = select(func.count())
+    queue_query = queue_query.select_from(queue_count_table)
+    queue_query = queue_query.where(queue_count_table.c.depth == 0)
+
+    topic_query = select(func.count())
+    topic_query = topic_query.select_from(topic_count_table)
+    topic_query = topic_query.where(topic_count_table.c.total == 0)
+
+    publish_query = select(func.count())
+    publish_query = publish_query.select_from(publish_count_table)
+    publish_query = publish_query.where(publish_count_table.c.total == 0)
+
+    engine = get_pubsub_engine()
+
+    out = 0
+
+    with engine.connect() as connection:
+        for query in (queue_query, topic_query, publish_query):
+            out += connection.execute(query).scalar()
 
     return out
 

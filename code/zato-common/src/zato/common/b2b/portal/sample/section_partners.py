@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.b2b.portal.sample.agreements import Agreements, Registrations
-from zato.common.b2b.portal.sample.common import action, cell, chip, choice, column, counted, days_from_now, fields, href, \
-    id_column, item, mono, Path_Agreements, Path_Messages, Path_Partners, Path_Registrations, section, tab, table, timestamp, \
-    typed
+from zato.common.b2b.portal.sample.agreements import Agreements
+from zato.common.b2b.portal.sample.common import action, Agreements_Tab, cell, chip, choice, column, counted, \
+    days_from_now, fields, href, id_column, item, mono, Partner_Parameter, Path_Agreements, Path_Messages, Path_Partners, \
+    section, tab, table, timestamp, typed
 from zato.common.b2b.portal.sample.parties import endpoint, Partners
 from zato.common.b2b.portal.sample.protocol.common import Protocols
 from zato.common.b2b.portal.sample.protocol.views import Views_By_Protocol
@@ -112,24 +112,9 @@ def _agreements(partner:'Partner') -> 'anylist':
                 chip(agreement.state),
             ])
 
-    registration_rows:'anylist' = []
+    button = {'label': 'New agreement', 'href': f'{Path_Agreements}?new&{Partner_Parameter}={partner.key}'}
 
-    for registration in Registrations:
-        if registration.partner_key == partner.key:
-            registration_rows.append([
-                mono(registration.number, href=href(Path_Registrations, registration.number)),
-                registration.product,
-                chip(registration.state),
-            ])
-
-    out:'anylist' = []
-
-    if agreement_rows:
-        out.append(table('Agreements', [id_column('Agreement'), 'Valid to', 'State'], agreement_rows))
-
-    if registration_rows:
-        out.append(table('Registrations', ['Registration', 'Product', 'State'], registration_rows))
-
+    out = [table('Agreements', [id_column('Agreement'), 'Valid to', 'State'], agreement_rows, button=button)]
     return out
 
 # ################################################################################################################################
@@ -204,7 +189,7 @@ def _item(partner:'Partner') -> 'anydict':
             tab('overview', 'Overview', _overview(partner)),
             tab('identifiers', 'Identifiers', views.partner_identifiers(partner)),
             tab('certificates', 'Certificates', _certificates(partner)),
-            tab('agreements', 'Agreements', _agreements(partner)),
+            tab(Agreements_Tab, 'Agreements', _agreements(partner)),
             tab('messages', 'Messages', _messages(partner)),
         ],
     )

@@ -35,9 +35,6 @@ if 0:
 _sign_algorithms       = ['SHA-256', 'SHA-384', 'SHA-512', 'SHA-1']
 _encryption_algorithms = ['AES-128-CBC', 'AES-256-CBC', 'AES-128-GCM', 'AES-256-GCM', '3DES-CBC']
 _mdn_modes             = [AS2MDNMode.Sync, AS2MDNMode.Async, AS2MDNMode.Not_Requested]
-_content_types         = ['application/xml', 'application/edi-x12', 'application/edifact', 'application/octet-stream']
-_transfer_encodings    = ['base64', 'binary']
-_transfer_modes        = ['Content-Length', 'Chunked']
 _as2_versions          = ['1.2', '1.1', '1.3']
 _tls_versions          = ['TLS 1.2', 'TLS 1.3']
 
@@ -155,9 +152,6 @@ def _delivery(agreement:'Agreement') -> 'anylist':
 
     rows = [
         ('AS2 version', choice(_as2_version, _as2_versions)),
-        ('Content-Type', choice(_content_types[0], _content_types, is_mono=True)),
-        ('Content-Transfer-Encoding', choice(_transfer_encodings[0], _transfer_encodings, is_mono=True)),
-        ('HTTP transfer mode', choice(_transfer_modes[0], _transfer_modes)),
         ('Duplicate detection', chip('Required')),
         ('Retries', number_value(agreement.retries)),
         ('Retry interval', duration_value(agreement.retry_minutes, 'minutes')),

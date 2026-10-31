@@ -15,7 +15,8 @@ var bulk = {};
 bulk.config = {
     countSuffix: ' selected',
     placement: 'left',
-    offset: [0, 10]
+    offset: [0, 10],
+    theme: 'bulk'
 };
 
 // Whether the listing has boxes to check, the tippy beside the box in the header, and what the tippy shows
@@ -223,6 +224,7 @@ bulk.init = function() {
         hideOnClick: false,
         placement: bulk.config.placement,
         offset: bulk.config.offset,
+        theme: bulk.config.theme,
         maxWidth: 'none',
         appendTo: document.body,
         onHide: bulk.onHide

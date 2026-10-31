@@ -1,10 +1,11 @@
-<div class="content split" id="split"{% if section.wizard %} data-new-label="{{ section.wizard.title }}" data-new-href="{{ section.path }}?new"{% endif %}>
+<div class="content split" id="split"{% if section.wizard %} data-new-label="{{ section.wizard.title }}" data-new-href="{{ section.new_href }}"{% endif %}{% if section.scope %} data-scope="{{ section.scope }}"{% endif %}>
 
     <div class="card split-top">
 
         <div class="card-header">
+            {% if section.header_link %}<a class="link card-header-link" href="{{ section.header_link.href }}">{{ section.header_link.label }}</a>{% endif %}
             <h1 class="card-title">{{ section.title }}</h1>
-            {% if section.wizard %}<a class="button-secondary card-new" href="{{ section.path }}?new">{{ section.wizard.title }}</a>{% endif %}
+            {% if section.wizard %}<a class="button-secondary card-new" href="{{ section.new_href }}">{{ section.wizard.title }}</a>{% endif %}
         </div>
 
         <div class="card-search">

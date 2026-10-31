@@ -19,7 +19,11 @@
 <body class="portal">
 
 <nav class="navigation">
+    {% if has_logo %}
+    <div class="navigation-top"><img class="navigation-logo" src="{{ logo_url }}" alt="{{ organization }}"></div>
+    {% else %}
     <div class="navigation-top">{{ organization }}</div>
+    {% endif %}
     <div class="navigation-list" id="navigation-list">
         {% for entry in navigation %}
         <a class="navigation-item{% if entry.is_active %} navigation-item-active{% endif %}" href="{{ entry.href }}" draggable="true" data-slug="{{ entry.slug }}">{{ entry.label }}</a>

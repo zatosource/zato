@@ -11,6 +11,7 @@ import os
 
 # Zato
 from cleanup import run_cleanup_scenario
+from cleanup_lock import run_cleanup_lock_scenario
 from common import pubsub_path_env
 from concurrency import run_concurrency_scenario
 from count_consistency import run_count_consistency_scenario
@@ -40,6 +41,7 @@ def test_pubsub_backend_sqlite(tmp_path:'os.PathLike') -> 'None':
         run_wakeup_scenario()
         run_encryption_scenario()
         run_cleanup_scenario()
+        run_cleanup_lock_scenario()
         run_push_delivery_scenario()
         run_retry_settings_scenario()
         run_outgoing_scenario()

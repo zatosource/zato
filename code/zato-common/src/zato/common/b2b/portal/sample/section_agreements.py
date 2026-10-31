@@ -7,11 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.b2b.portal.config import Local_Organization
 from zato.common.b2b.portal.sample.agreements import Agreements
-from zato.common.b2b.portal.sample.common import action, cell, chip, column, days_from_now, direction_cell, fields, fixed, \
-    href, id_column, item, link, mono, number_value, Path_Agreements, Path_Messages, Path_Partners, section, seconds_value, \
-    tab, table, timestamp, typed
-from zato.common.b2b.portal.sample.parties import duration, endpoint, Partner_By_Key, Service_By_Name
+from zato.common.b2b.portal.sample.common import action, Agreements_Tab, cell, chip, column, days_from_now, delta, \
+    direction_cell, fields, fixed, href, id_column, item, link, minutes_ago, mono, number_value, Partner_Parameter, \
+    Path_Agreements, Path_Messages, Path_Partners, section, seconds_value, tab, tab_href, table, timestamp, typed
+from zato.common.b2b.portal.sample.parties import duration, endpoint, Partner_By_Key, Partners, Service_By_Name
 from zato.common.b2b.portal.sample.protocol.common import Vocabularies
 from zato.common.b2b.portal.sample.protocol.views import Views_By_Protocol
 from zato.common.b2b.portal.sample.section_messages import state_chip
@@ -22,14 +23,18 @@ from zato.common.b2b.portal.sample.traffic import Messages
 
 if 0:
     from zato.common.b2b.portal.sample.agreements import Agreement
+    from zato.common.b2b.portal.sample.parties import Partner
     from zato.common.typing_ import anydict, anylist, dictlist
     Agreement = Agreement
+    Partner = Partner
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # How many of the most recent messages of an agreement its detail pane lists
 _recent_message_count = 8
+
+_minutes_per_day = 24 * 60
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,6 +130,30 @@ def _messages(agreement:'Agreement') -> 'anylist':
     return out
 
 # ################################################################################################################################
+
+def _history(agreement:'Agreement') -> 'anylist':
+
+    partner = Partner_By_Key[agreement.partner_key]
+    rows:'anylist' = []
+    previous = None
+
+    for event in agreement.events:
+
+        # A change is made either by the partner's own contact or by the reviewers of the local organization
+        organization = partner.name if event.user == partner.contact else Local_Organization
+        person = cell(f'{event.user}, {organization}')
+
+        moment = minutes_ago(event.days_ago * _minutes_per_day)
+        rows.append([days_from_now(-event.days_ago), delta(moment, previous), chip(event.state), person, event.note])
+        previous = moment
+
+    # The most recent change comes first
+    rows.reverse()
+
+    out = [table('', ['Date', 'Delta', 'State', 'Changed by', 'Note'], rows)]
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _actions(state:'str') -> 'anylist':
@@ -158,13 +187,13 @@ def _item(agreement:'Agreement') -> 'anydict':
 
     tabs.extend(views.agreement_tabs(agreement))
     tabs.append(tab('messages', 'Messages', _messages(agreement)))
+    tabs.append(tab('history', 'History', _history(agreement)))
 
     out = item(
         agreement.agreement_id,
         title=agreement.agreement_id,
         cells=[
             mono(agreement.agreement_id),
-            cell(partner.name),
             cell(agreement.protocol),
             cell(agreement.product),
             cell(str(service_count)),
@@ -184,12 +213,7 @@ def _item(agreement:'Agreement') -> 'anydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build() -> 'anydict':
-
-    items:'dictlist' = []
-
-    for agreement in Agreements:
-        items.append(_item(agreement))
+def _section(items:'dictlist') -> 'anydict':
 
     out = section(
         slug='agreements',
@@ -197,7 +221,6 @@ def build() -> 'anydict':
         title='Agreements',
         columns=[
             column('Agreement'),
-            column('Partner'),
             column('Protocol', is_narrow=True),
             column('Product', is_narrow=True),
             column('Transactions', is_narrow=True),
@@ -207,6 +230,44 @@ def build() -> 'anydict':
         items=items,
         actions_of=_actions,
     )
+    return out
+
+# ################################################################################################################################
+
+def _partner_section(partner:'Partner', items:'dictlist') -> 'anydict':
+    """ The listing of the agreements of one partner, led by a link back to the agreements tab of that partner.
+    """
+    partner_items:'dictlist' = []
+
+    for each in items:
+        if each['attributes']['partner'] == partner.key:
+            partner_items.append(each)
+
+    partner_href = tab_href(Path_Partners, partner.key, Agreements_Tab)
+
+    out = _section(partner_items)
+    out['header_link'] = {'label': partner.name, 'href': partner_href}
+    out['new_href'] = f'{Path_Agreements}?new&{Partner_Parameter}={partner.key}'
+    out['scope'] = f'{Partner_Parameter}={partner.key}'
+
+    return out
+
+# ################################################################################################################################
+
+def build() -> 'anydict':
+    """ All the agreements, which items are looked up in, and the listing of each partner's own agreements,
+    which is the only listing shown.
+    """
+    items:'dictlist' = []
+
+    for agreement in Agreements:
+        items.append(_item(agreement))
+
+    out = _section(items)
+
+    for partner in Partners:
+        out['scopes'][partner.key] = _partner_section(partner, items)
+
     return out
 
 # ################################################################################################################################

@@ -110,16 +110,28 @@ selection.activeTab = function(itemId) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A listing of the items of one partner keeps naming that partner, whether an item is open or not.
 selection.address = function(itemId, isDetails) {
 
     var out = window.location.pathname;
+    var parameters = [];
+    var split = document.getElementById('split');
+
+    if (split.hasAttribute('data-scope')) {
+        parameters.push(split.getAttribute('data-scope'));
+    }
 
     if (itemId !== null) {
-        out += '?id=' + encodeURIComponent(itemId) + '&tab=' + encodeURIComponent(selection.activeTab(itemId));
+        parameters.push('id=' + encodeURIComponent(itemId));
+        parameters.push('tab=' + encodeURIComponent(selection.activeTab(itemId)));
     }
 
     if (isDetails) {
-        out += '&' + selection.config.detailsParameter + '=1';
+        parameters.push(selection.config.detailsParameter + '=1');
+    }
+
+    if (parameters.length > 0) {
+        out += '?' + parameters.join('&');
     }
 
     return out;

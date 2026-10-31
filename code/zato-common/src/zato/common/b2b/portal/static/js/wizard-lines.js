@@ -88,7 +88,7 @@ lines.isBoundTo = function(line, name) {
 
 // The rows of a step, each a list of the lines that share it. Lines bound to the same other line follow
 // one another, and the n-th line of each of its values shares the n-th row of the run, so a change
-// of that value replaces lines in their rows and never moves a row.
+// of that value replaces lines in their rows.
 lines.slots = function(stepLines) {
 
     var out = [];
@@ -472,6 +472,7 @@ lines.buildSlot = function(grid, slot, state) {
 // ////////////////////////////////////////////////////////////////////////
 
 // Shows each line under the root that the state shows, and keeps every other one in its row unseen.
+// A row with no line shown is left out of the grid altogether.
 lines.applyVisibility = function(root, state) {
 
     var elements = root.querySelectorAll('[data-shown-name]');
@@ -480,6 +481,14 @@ lines.applyVisibility = function(root, state) {
         var element = elements[elementIndex];
         var value = state[element.getAttribute('data-shown-name')];
         element.classList.toggle('decision-layer-hidden', element.getAttribute('data-shown-value') !== value);
+    }
+
+    var cells = root.querySelectorAll('.decision-layers');
+
+    for (var cellIndex = 0; cellIndex < cells.length; cellIndex++) {
+        var cell = cells[cellIndex];
+        var isEmpty = cell.querySelector(':scope > :not(.decision-layer-hidden)') === null;
+        cell.classList.toggle('decision-layers-empty', isEmpty);
     }
 };
 

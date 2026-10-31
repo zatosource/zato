@@ -15,6 +15,7 @@ import time
 
 # SQLAlchemy
 from sqlalchemy import and_, select
+from sqlalchemy.exc import OperationalError
 
 # Zato
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
@@ -55,6 +56,14 @@ _sleep_slice_seconds = 1
 # write lock the moment it released it, starving the live traffic for the sweep's
 # whole duration.
 _batch_pause_seconds = 0.025
+
+# How long the cleanup process pauses before it starts a sweep again after the database remained locked
+# by other writers for longer than the busy timeout, in seconds. A server under sustained load commits
+# its transactions one after another, so a sweep may not obtain the write lock within the busy timeout.
+_lock_retry_seconds = 1
+
+# What SQLite reports when the write lock could not be obtained within the busy timeout.
+_database_locked_message = 'database is locked'
 
 # How many milliseconds one second and one day have - timestamp columns hold epoch milliseconds.
 _ms_per_second = 1000
@@ -344,6 +353,30 @@ class PubSubCleanup:
 
 # ################################################################################################################################
 
+    def sweep_until_done(self) -> 'strintdict':
+        """ Runs one sweep and starts it again after a pause each time the database remains locked by other writers
+        for longer than the busy timeout, so that every sweep completes under any sustained load. Each deletion batch
+        is its own transaction, so a sweep started again continues with the rows that the previous attempt left.
+        """
+        while True:
+            try:
+                out = self.sweep_once()
+                break
+            except OperationalError as e:
+
+                # Only a locked database is a reason to start the sweep again ..
+                error_message = str(e.orig)
+                if _database_locked_message not in error_message:
+                    raise
+
+                # .. after the pause in which the other writers complete their transactions.
+                logger.warning('Sweep postponed, the database is locked -> retry in:%ds', _lock_retry_seconds)
+                time.sleep(_lock_retry_seconds)
+
+        return out
+
+# ################################################################################################################################
+
     def run(self) -> 'None':
         """ Runs the cleanup loop until stopped.
         """
@@ -351,7 +384,7 @@ class PubSubCleanup:
 
         while not self._should_stop:
 
-            counts = self.sweep_once()
+            counts = self.sweep_until_done()
             logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
                 counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
 
@@ -427,7 +460,7 @@ def main() -> 'int':
 
     # .. run.
     if args.once:
-        counts = cleanup.sweep_once()
+        counts = cleanup.sweep_until_done()
         logger.info('Single sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
             counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
         return 0

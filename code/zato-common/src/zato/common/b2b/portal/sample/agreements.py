@@ -76,6 +76,16 @@ AgreementSettings:TypeAlias = 'EbXMLSettings | AS2Settings | AS4Settings'
 
 # ################################################################################################################################
 
+class AgreementEvent(NamedTuple):
+    days_ago: int
+    state: str
+    user: str
+    note: str
+
+agreement_event_list = list[AgreementEvent]
+
+# ################################################################################################################################
+
 class Agreement(NamedTuple):
     partner_key: str
     product: str
@@ -88,6 +98,7 @@ class Agreement(NamedTuple):
     retry_minutes: int
     tls_version: str
     settings: 'AgreementSettings'
+    events: 'agreement_event_list'
 
     @property
     def protocol(self) -> 'str':
@@ -102,27 +113,6 @@ class Agreement(NamedTuple):
         return out
 
 # ################################################################################################################################
-
-class RegistrationEvent(NamedTuple):
-    days_ago: int
-    state: str
-    user: str
-    note: str
-
-registration_event_list = list[RegistrationEvent]
-
-# ################################################################################################################################
-
-class Registration(NamedTuple):
-    number: str
-    partner_key: str
-    product: str
-    state: str
-    services: 'strlist'
-    agreement_version: int
-    events: 'registration_event_list'
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 _order_services = ['SubmitOrderv2', 'ChangeOrderv2', 'CancelOrderv2', 'QueryOrderDetailsv2', 'NotifyOfOrderStatusv2']
@@ -131,73 +121,53 @@ _complaint_services = ['FileComplaintv2', 'EscalateComplaintv2', 'NotifyOfCompla
 
 Agreements = [
     Agreement('harborlight', 'Orders', 3, 'Active', -210, 155, _order_services, 3, 5, 'TLS 1.3',
-        EbXMLSettings(7, 'mshSignalsOnly', True)),
+        EbXMLSettings(7, 'mshSignalsOnly', True), [
+        AgreementEvent(216, 'Proposed', 'Thomas Whitaker',   'Renewal of CPA version 2'),
+        AgreementEvent(211, 'Agreed',   'Jennifer Caldwell', 'CPA agreed by both parties'),
+        AgreementEvent(210, 'Active',   'Thomas Whitaker',   'CPA version 3 in effect'),
+    ]),
     Agreement('harborlight', 'Complaints', 2, 'Active', -120, 245, _complaint_services, 3, 5, 'TLS 1.3',
-        EbXMLSettings(7, 'mshSignalsOnly', True)),
+        EbXMLSettings(7, 'mshSignalsOnly', True), [
+        AgreementEvent(126, 'Proposed', 'Thomas Whitaker',   'Renewal of CPA version 1'),
+        AgreementEvent(121, 'Agreed',   'Jennifer Caldwell', 'CPA agreed by both parties'),
+        AgreementEvent(120, 'Active',   'Thomas Whitaker',   'CPA version 2 in effect'),
+    ]),
     Agreement('redwood', 'Orders', 4, 'Active', -64, 301, ['SubmitOrderv2', 'CancelOrderv2', 'NotifyOfOrderStatusv2'],
-        3, 5, 'TLS 1.2', AS4Settings(AS4Profile.EDelivery1, AS4_Default_MPC, AS4TokenType.X509v3, True, 24)),
+        3, 5, 'TLS 1.2', AS4Settings(AS4Profile.EDelivery1, AS4_Default_MPC, AS4TokenType.X509v3, True, 24), [
+        AgreementEvent(72, 'Proposed', 'Thomas Whitaker', 'Renewal of agreement version 3 without order changes'),
+        AgreementEvent(66, 'Agreed',   'Marcus Delgado',  'P-Mode signed by both parties'),
+        AgreementEvent(64, 'Active',   'Thomas Whitaker', 'Agreement version 4 in effect'),
+    ]),
     Agreement('lakeshore', 'Orders', 1, 'Expiring', -347, 18, ['SubmitOrderv2', 'ScheduleInstallationv2',
-        'NotifyOfOrderStatusv2'], 3, 5, 'TLS 1.2', AS2Settings('SHA-256', 'AES-128-CBC', True, AS2MDNMode.Sync, True, 30)),
+        'NotifyOfOrderStatusv2'], 3, 5, 'TLS 1.2', AS2Settings('SHA-256', 'AES-128-CBC', True, AS2MDNMode.Sync, True, 30), [
+        AgreementEvent(355, 'Proposed', 'Rachel Simmons',  'Partnership version 1 issued'),
+        AgreementEvent(349, 'Agreed',   'Patricia Hollis', 'Partnership certificates exchanged'),
+        AgreementEvent(347, 'Active',   'Rachel Simmons',  'Partnership version 1 in effect'),
+        AgreementEvent(12,  'Expiring', 'Rachel Simmons',  'Renewal of partnership version 1 requested'),
+    ]),
     Agreement('prairie', 'Orders', 2, 'Suspended', -190, 175, ['SubmitOrderv2', 'NotifyOfOrderStatusv2'], 3, 5, 'TLS 1.2',
-        AS2Settings('SHA-256', 'AES-256-CBC', False, AS2MDNMode.Async, True, 60)),
+        AS2Settings('SHA-256', 'AES-256-CBC', False, AS2MDNMode.Async, True, 60), [
+        AgreementEvent(196, 'Proposed',  'Rachel Simmons', 'Partnership version 2 issued'),
+        AgreementEvent(191, 'Agreed',    'Kevin Brennan',  'Partnership certificates exchanged'),
+        AgreementEvent(190, 'Active',    'Rachel Simmons', 'Partnership version 2 in effect'),
+        AgreementEvent(12,  'Suspended', 'Rachel Simmons', 'Signature verification failures over 24 hours'),
+    ]),
     Agreement('bluemesa', 'Orders', 1, 'Proposed', 14, 379, ['SubmitOrderv2', 'QueryOrderDetailsv2',
         'NotifyOfOrderStatusv2'], 3, 15, 'TLS 1.3',
-        AS4Settings(AS4Profile.EDelivery2, AS4_Default_MPC, AS4TokenType.PKIPath, True, 24)),
+        AS4Settings(AS4Profile.EDelivery2, AS4_Default_MPC, AS4TokenType.PKIPath, True, 24), [
+        AgreementEvent(2, 'Proposed', 'Rachel Simmons', 'P-Mode issued for signature'),
+    ]),
     Agreement('coppercreek', 'Complaints', 1, 'Agreed', 5, 370, _complaint_services, 4, 10, 'TLS 1.3',
-        EbXMLSettings(14, 'mshSignalsOnly', True)),
+        EbXMLSettings(14, 'mshSignalsOnly', True), [
+        AgreementEvent(11, 'Proposed', 'Rachel Simmons', 'CPA issued for signature'),
+        AgreementEvent(4,  'Agreed',   'Daniel Foster',  'CPA agreed by both parties'),
+    ]),
 ]
 
 Agreement_By_ID = {}
 
 for _agreement in Agreements:
     Agreement_By_ID[_agreement.agreement_id] = _agreement
-
-# ################################################################################################################################
-
-Registrations = [
-    Registration('2026-0117', 'bluemesa', 'Orders', 'In review', ['SubmitOrderv2', 'QueryOrderDetailsv2',
-        'NotifyOfOrderStatusv2'], 1, [
-        RegistrationEvent(9, 'Draft',     'Ashley Whitfield', 'Registration started'),
-        RegistrationEvent(6, 'Submitted', 'Ashley Whitfield', 'Submitted for review'),
-        RegistrationEvent(2, 'In review', 'Rachel Simmons',   'Signing certificate under verification'),
-    ]),
-    Registration('2026-0112', 'coppercreek', 'Complaints', 'Approved', _complaint_services, 1, [
-        RegistrationEvent(31, 'Draft',     'Daniel Foster',  'Registration started'),
-        RegistrationEvent(24, 'Submitted', 'Daniel Foster',  'Submitted for review'),
-        RegistrationEvent(17, 'In review', 'Rachel Simmons', 'Endpoint reachable over TLS 1.3'),
-        RegistrationEvent(11, 'Approved',  'Rachel Simmons', 'CPA issued for signature'),
-    ]),
-    Registration('2026-0109', 'redwood', 'Orders', 'Active', ['SubmitOrderv2', 'CancelOrderv2',
-        'NotifyOfOrderStatusv2'], 4, [
-        RegistrationEvent(80, 'Submitted', 'Marcus Delgado',  'Renewal of agreement version 3'),
-        RegistrationEvent(72, 'In review', 'Thomas Whitaker', 'Order change removed from the scope'),
-        RegistrationEvent(66, 'Approved',  'Thomas Whitaker', 'P-Mode issued for signature'),
-        RegistrationEvent(64, 'Active',    'Thomas Whitaker', 'Agreement signed by both parties'),
-    ]),
-    Registration('2026-0104', 'harborlight', 'Complaints', 'Active', _complaint_services, 2, [
-        RegistrationEvent(140, 'Submitted', 'Jennifer Caldwell', 'Renewal of CPA version 1'),
-        RegistrationEvent(126, 'Approved',  'Thomas Whitaker',   'CPA issued for signature'),
-        RegistrationEvent(120, 'Active',    'Thomas Whitaker',   'CPA agreed by both parties'),
-    ]),
-    Registration('2026-0121', 'lakeshore', 'Orders', 'Submitted', ['SubmitOrderv2', 'ScheduleInstallationv2',
-        'NotifyOfOrderStatusv2', 'CancelOrderv2'], 2, [
-        RegistrationEvent(3, 'Draft',     'Patricia Hollis', 'Renewal of partnership version 1'),
-        RegistrationEvent(1, 'Submitted', 'Patricia Hollis', 'Order cancellation added to the scope'),
-    ]),
-    Registration('2026-0098', 'prairie', 'Orders', 'Suspended', ['SubmitOrderv2', 'NotifyOfOrderStatusv2'],
-        2, [
-        RegistrationEvent(196, 'Submitted', 'Kevin Brennan',  'Registration started'),
-        RegistrationEvent(190, 'Active',    'Rachel Simmons', 'Partnership certificates exchanged'),
-        RegistrationEvent(12,  'Suspended', 'Rachel Simmons', 'Signature verification failures over 24 hours'),
-    ]),
-    Registration('2026-0122', 'bluemesa', 'Complaints', 'Draft', _complaint_services, 1, [
-        RegistrationEvent(1, 'Draft', 'Ashley Whitfield', 'Registration started'),
-    ]),
-    Registration('2026-0087', 'lakeshore', 'Complaints', 'Rejected', ['FileComplaintv2'], 1, [
-        RegistrationEvent(48, 'Submitted', 'Patricia Hollis', 'Registration started'),
-        RegistrationEvent(41, 'Rejected',  'Rachel Simmons',  'Complaint status notifications are mandatory'),
-    ]),
-]
 
 # ################################################################################################################################
 # ################################################################################################################################

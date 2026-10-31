@@ -44,7 +44,7 @@ _aged_days = 30
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _set_expired(msg_ids:'strlist') -> 'None':
+def set_expired(msg_ids:'strlist') -> 'None':
     """ Moves the expiration of the given messages into the past, straight in the database.
     """
     engine = get_pubsub_engine()
@@ -138,7 +138,7 @@ def run_cleanup_scenario() -> 'None':
         result = backend.publish(_topic_expiry, f'cleanup-expired-{index}')
         expired_msg_ids.append(result.msg_id)
 
-    _set_expired(expired_msg_ids)
+    set_expired(expired_msg_ids)
 
     # .. the expiry sweep removes exactly the expired ones, delivery rows included ..
     counts = cleanup.sweep_once()
@@ -160,7 +160,7 @@ def run_cleanup_scenario() -> 'None':
     _ = backend.ack_message(_sub_key_1, trace_msg_id)
     _ = backend.ack_message(_sub_key_2, trace_msg_id)
 
-    _set_expired([trace_msg_id])
+    set_expired([trace_msg_id])
 
     counts = cleanup.sweep_once()
     assert counts['expired'] == 0, counts
