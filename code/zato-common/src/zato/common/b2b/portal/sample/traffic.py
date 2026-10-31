@@ -38,6 +38,7 @@ if 0:
 # The actions of the business signals
 Receipt_Action         = 'ReceiptAcknowledgement'
 Receipt_Refused_Action = 'ReceiptAcknowledgementException'
+Acceptance_Action      = 'AcceptanceAcknowledgement'
 Acceptance_Refused     = 'AcceptanceAcknowledgementException'
 
 class Kind:
@@ -61,9 +62,10 @@ class Scenario:
     Signature_Failed   = 'signature-failed'
 
 # How long after the previous message of a conversation each kind of message follows it, in seconds
-_ack_delay      = 1
-_receipt_delay  = 14
-_response_delay = 52
+_ack_delay        = 1
+_receipt_delay    = 14
+_acceptance_delay = 21
+_response_delay   = 52
 
 # The retry interval of every agreement in the sample data, in minutes
 _retry_minutes = 5
@@ -226,6 +228,19 @@ class _Conversation:
         return out
 
 # ################################################################################################################################
+
+    def has_acceptance_signal(self) -> 'bool':
+        """ Whether the service asks for an acceptance acknowledgement signal, which AS2 has no counterpart of.
+        """
+        out = False
+
+        if self.service.acceptance_seconds:
+            if self.vocabulary.has_business_signals:
+                out = True
+
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _attempt(number:'int', moment:'datetime', outcome:'str', tone:'str', tip:'str') -> 'anydict':
@@ -263,6 +278,11 @@ def _answered(conversation:'_Conversation') -> 'anydict':
         receipt = conversation.add(delay=_receipt_delay, is_inbound=False, action=Receipt_Action, kind=Kind.Signal,
             state='Delivered', ref_to=request['id'])
         _ = conversation.ack(receipt)
+
+    if conversation.has_acceptance_signal():
+        acceptance = conversation.add(delay=_acceptance_delay, is_inbound=False, action=Acceptance_Action, kind=Kind.Signal,
+            state='Delivered', ref_to=request['id'])
+        _ = conversation.ack(acceptance)
 
     response = conversation.add(delay=_response_delay, is_inbound=False, action=conversation.service.response,
         kind=Kind.Response, state='Delivered', ref_to=request['id'])

@@ -46,6 +46,7 @@ class Service(NamedTuple):
     response: str
     label: str
     receipt_seconds: int
+    acceptance_seconds: int
     perform_seconds: int
     is_notification: bool
     product: str
@@ -82,23 +83,23 @@ Complaints_Product = 'Complaints'
 
 Services = [
     Service('SubmitOrderv2',                'rqSubmitOrder',                'rsSubmitOrder',                'Order',
-        0, 120, False, Orders_Product),
+        0, 60, 120, False, Orders_Product),
     Service('ChangeOrderv2',                'rqChangeOrder',                'rsChangeOrder',                'Order change',
-        0, 120, False, Orders_Product),
+        0, 60, 120, False, Orders_Product),
     Service('CancelOrderv2',                'rqCancelOrder',                'rsCancelOrder',                'Order cancellation',
-        0, 120, False, Orders_Product),
+        0, 60, 120, False, Orders_Product),
     Service('ScheduleInstallationv2',       'rqScheduleInstallation',       'rsScheduleInstallation',       'Installation appointment',
-        120, 300, False, Orders_Product),
+        120, 240, 300, False, Orders_Product),
     Service('QueryOrderDetailsv2',          'rqQueryOrderDetails',          'rsQueryOrderDetails',          'Order details',
-        0, 60, False, Orders_Product),
+        0, 0, 60, False, Orders_Product),
     Service('NotifyOfOrderStatusv2',        'NotifyOfOrderStatus',          '',                             'Order status',
-        300, 0, True, Orders_Product),
+        300, 0, 0, True, Orders_Product),
     Service('FileComplaintv2',              'rqFileComplaint',              'rsFileComplaint',              'Complaint',
-        120, 600, False, Complaints_Product),
+        120, 300, 600, False, Complaints_Product),
     Service('EscalateComplaintv2',          'rqEscalateComplaint',          'rsEscalateComplaint',          'Complaint escalation',
-        120, 300, False, Complaints_Product),
+        120, 240, 300, False, Complaints_Product),
     Service('NotifyOfComplaintStatusv2',    'NotifyOfComplaintStatus',      '',                             'Complaint status',
-        300, 0, True, Complaints_Product),
+        300, 0, 0, True, Complaints_Product),
 ]
 
 Service_By_Name = {}

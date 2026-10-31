@@ -68,6 +68,7 @@ def _transactions(agreement:'Agreement') -> 'anylist':
 
     if vocabulary.has_business_signals:
         columns.append('Receipt')
+        columns.append('Acceptance')
 
     columns.append('Time to perform')
 
@@ -84,6 +85,12 @@ def _transactions(agreement:'Agreement') -> 'anylist':
         if vocabulary.has_business_signals:
             if service.receipt_seconds:
                 row.append(chip('Required', tip='timeToAcknowledgeReceipt ' + duration(service.receipt_seconds)))
+            else:
+                row.append(chip('Not required'))
+
+            if service.acceptance_seconds:
+                acceptance_tip = 'timeToAcknowledgeAcceptance ' + duration(service.acceptance_seconds)
+                row.append(chip('Required', tip=acceptance_tip))
             else:
                 row.append(chip('Not required'))
 
