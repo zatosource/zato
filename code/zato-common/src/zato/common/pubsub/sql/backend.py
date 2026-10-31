@@ -22,6 +22,7 @@ from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table, topic_sub_table
+from zato.common.pubsub.sql.writes import new_pending_publication
 from zato.common.util.api import new_msg_id, utcnow
 from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
@@ -219,45 +220,16 @@ class SQLPubSubBackend(SQLAdminAPI):
             _retry.Field_Backoff_Multiplier: retry_backoff_multiplier,
         }
 
-        # .. one transaction inserts the message and its delivery rows ..
-        with self.engine.begin() as connection:
+        # .. one transaction, possibly shared with other callers, inserts the message and one delivery row
+        # .. per subscriber, and a topic without subscribers has its message stored without its payload ..
+        pending = new_pending_publication(message_values)
+        self._writer.publish(pending)
 
-            # .. the subscribers as of this very publication ..
-            subscriber_keys = self._get_subscriber_keys(connection, topic_name)
-
-            # .. with no subscribers the payload is dropped immediately ..
-            if not subscriber_keys:
-                message_values['payload'] = None
-                message_values['payload_encrypted'] = False
-
-            insert_statement = message_table.insert().values(**message_values)
-            result = connection.execute(insert_statement)
-
-            primary_key = result.inserted_primary_key
-            message_row_id = primary_key[0]
-
-            # .. one delivery row per subscriber ..
-            if subscriber_keys:
-
-                delivery_rows:'anylist' = []
-
-                for sub_key in subscriber_keys:
-                    delivery_rows.append({
-                        'message_id': message_row_id,
-                        'sub_key': sub_key,
-                        'topic_name': topic_name,
-                        'priority': priority,
-                        'expiration_ms': expiration_ms,
-                    })
-
-                _ = connection.execute(delivery_table.insert(), delivery_rows)
+        subscriber_keys = pending.subscriber_keys
 
         # .. wake up the subscribers now that the transaction is committed ..
         if subscriber_keys:
             self.notify_sub_keys(subscriber_keys)
-
-        # .. give the subscribers just woken up a chance to run ..
-        self._yield_after_write()
 
         subscriber_count = len(subscriber_keys)
 

@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # With the checkpoints run in the background, the log stays below the limit and commits only append to it.
 
 # stdlib
+import os
 from logging import getLogger
 from threading import Event, Thread
 
@@ -24,11 +25,12 @@ from gevent.monkey import is_module_patched
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strnone
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     Engine = Engine
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,9 +66,18 @@ class WALCheckpointer:
     """ Checkpoints the write-ahead log of a SQLite database at each interval, in a thread of its own.
     """
 
-    def __init__(self, engine:'Engine', interval_seconds:'float'=Checkpoint_Interval_Seconds) -> 'None':
+    def __init__(
+        self,
+        engine:'Engine',
+        interval_seconds:'float' = Checkpoint_Interval_Seconds,
+        db_path:'strnone' = None,
+        ) -> 'None':
         self.engine = engine
         self.interval_seconds = interval_seconds
+
+        # The file of a database that is checkpointed only for as long as the file exists
+        self.db_path = db_path
+
         self._stop_event = Event()
         self._thread = Thread(target=self._run, name='sqlite-wal-checkpoint', daemon=True)
 
@@ -89,6 +100,11 @@ class WALCheckpointer:
     def checkpoint(self) -> 'None':
         """ Copies the pages of the log into the database file.
         """
+        # Connecting to a database whose file was removed would create a new, empty file in its place.
+        if self.db_path:
+            if not os.path.exists(self.db_path):
+                return
+
         with self.engine.connect() as connection:
             _ = connection.exec_driver_sql(_checkpoint_statement)
 

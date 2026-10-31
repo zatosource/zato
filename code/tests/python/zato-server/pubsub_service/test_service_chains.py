@@ -85,7 +85,9 @@ class TestServiceChains(unittest.TestCase):
             'data': 'fan-msg',
         })
 
-        result = self._poll_chain_received('fanout_1_count', 1)
+        # The targets receive the message independently of each other, so each of them is waited for.
+        _ = self._poll_chain_received('fanout_1_count', 1)
+        result = self._poll_chain_received('fanout_2_count', 1)
 
         self.assertGreaterEqual(result['fanout_1_count'], 1, 'fanout-target-1 should have received a message')
         self.assertGreaterEqual(result['fanout_2_count'], 1, 'fanout-target-2 should have received a message')

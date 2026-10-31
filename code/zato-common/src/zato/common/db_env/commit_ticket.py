@@ -13,12 +13,10 @@ from threading import Event
 # ################################################################################################################################
 
 if 0:
-    from zato.common.audit_log.buffer import PendingEvent
-    from zato.common.typing_ import intnone
+    from zato.common.typing_ import any_
 
     # Dummy assignments to satisfy type checkers
-    intnone = intnone
-    PendingEvent = PendingEvent
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,16 +28,21 @@ commit_ticket_list = list['CommitTicket']
 # ################################################################################################################################
 
 class CommitTicket:
-    """ One event waiting for a group commit, with what its caller receives once the commit completes.
+    """ One item waiting for a group commit, with the exception of the commit it was part of, if the commit failed.
     """
 
-    def __init__(self, pending:'PendingEvent') -> 'None':
+    def __init__(self, item:'any_', weight:'int', is_urgent:'bool') -> 'None':
 
-        # The event to write
-        self.pending = pending
+        # The item to write
+        self.item = item
 
-        # The id the database gave the event, or the exception of the commit it was part of
-        self.event_id:'intnone' = None
+        # How much of a commit's capacity the item takes
+        self.weight = weight
+
+        # Whether the item goes into the next commit ahead of the items that are not urgent
+        self.is_urgent = is_urgent
+
+        # The exception of the commit the item was part of
         self.exception:'BaseException | None' = None
 
         # The tickets this one commits, set when its caller becomes the one that runs a commit

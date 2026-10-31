@@ -132,7 +132,7 @@ def get_analytics_engine() -> 'Engine':
     The path is resolved on each call, so a changed environment variable selects another file at once.
     """
     db_path = get_analytics_db_path()
-    out = get_sqlite_file_engine(db_path, metadata, needs_pool=False)
+    out = get_sqlite_file_engine(db_path, metadata, needs_pool=False, needs_background_checkpoint=False)
 
     return out
 

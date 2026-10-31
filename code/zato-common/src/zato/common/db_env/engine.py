@@ -76,7 +76,13 @@ _sqlite_file_engine_cache:'anydict' = {}
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_sqlite_file_engine(db_path:'str', metadata:'MetaData', *, needs_pool:'bool') -> 'Engine':
+def get_sqlite_file_engine(
+    db_path:'str',
+    metadata:'MetaData',
+    *,
+    needs_pool:'bool',
+    needs_background_checkpoint:'bool',
+    ) -> 'Engine':
     """ Returns an SQLAlchemy engine for a SQLite file and creates its schema if needed.
     """
 
@@ -104,8 +110,17 @@ def get_sqlite_file_engine(db_path:'str', metadata:'MetaData', *, needs_pool:'bo
     out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
     sa_event.listen(out, 'connect', set_sqlite_pragmas)
 
+    # .. a file whose WAL is checkpointed in the background lets its commits append to a longer log ..
+    if needs_background_checkpoint:
+        sa_event.listen(out, 'connect', set_background_checkpoint_limit)
+
     # .. create the schema ..
     metadata.create_all(out)
+
+    # .. start the checkpoints of the WAL that the commits no longer run ..
+    if needs_background_checkpoint:
+        checkpointer = WALCheckpointer(out, db_path=db_path)
+        checkpointer.start()
 
     # .. and retain the engine for subsequent callers.
     _sqlite_file_engine_cache[cache_key] = out

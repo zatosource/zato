@@ -12,6 +12,8 @@ import os
 # Zato
 from cleanup import run_cleanup_scenario
 from common import pubsub_path_env
+from concurrency import run_concurrency_scenario
+from count_consistency import run_count_consistency_scenario
 from dlq_rule import run_dlq_rule_scenario
 from encryption import run_encryption_scenario
 from lifecycle import run_lifecycle_scenario
@@ -43,6 +45,8 @@ def test_pubsub_backend_sqlite(tmp_path:'os.PathLike') -> 'None':
         run_outgoing_scenario()
         run_queue_order_scenario()
         run_dlq_rule_scenario()
+        run_concurrency_scenario()
+        run_count_consistency_scenario()
 
     # The database file was created under the path the environment pointed at.
     assert os.path.exists(db_path)

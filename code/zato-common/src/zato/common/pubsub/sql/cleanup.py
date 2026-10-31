@@ -19,7 +19,8 @@ from sqlalchemy import and_, select
 # Zato
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
     get_pubsub_engine
-from zato.common.pubsub.sql.schema import delivery_table, message_table
+from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
+    topic_count_table
 from zato.common.util.time_ import datetime_to_ms, utcnow
 
 # ################################################################################################################################
@@ -295,18 +296,48 @@ class PubSubCleanup:
 
 # ################################################################################################################################
 
+    def _sweep_empty_counts(self) -> 'int':
+        """ Deletes the queue, topic and publication count rows that dropped to zero.
+        Returns how many count rows were deleted.
+        """
+        delete_queue_counts = queue_count_table.delete()
+        delete_queue_counts = delete_queue_counts.where(queue_count_table.c.depth == 0)
+
+        delete_topic_counts = topic_count_table.delete()
+        delete_topic_counts = delete_topic_counts.where(topic_count_table.c.total == 0)
+
+        delete_publish_counts = publish_count_table.delete()
+        delete_publish_counts = delete_publish_counts.where(publish_count_table.c.total == 0)
+
+        out = 0
+
+        with self.engine.begin() as connection:
+            for statement in (delete_queue_counts, delete_topic_counts, delete_publish_counts):
+                result = connection.execute(statement)
+                out += result.rowcount
+
+        if out:
+            logger.info('Empty-count sweep -> deleted:%d', out)
+
+        return out
+
+# ################################################################################################################################
+
     def sweep_once(self) -> 'strintdict':
         """ Runs one full cleanup sweep - expired messages first, then the delivered-trace
-        retention by age and by per-topic cap. Returns the per-sweep deletion counts.
+        retention by age and by per-topic cap, then the count rows that the deletions left at zero.
+        Returns the per-sweep deletion counts.
         """
         expired = self._sweep_expired()
         aged = self._sweep_aged_traces()
         over_cap = self._sweep_over_cap_traces()
+        empty_counts = self._sweep_empty_counts()
 
         out = {
             'expired': expired,
             'aged': aged,
             'over_cap': over_cap,
+            'empty_counts': empty_counts,
         }
 
         return out
@@ -321,8 +352,8 @@ class PubSubCleanup:
         while not self._should_stop:
 
             counts = self.sweep_once()
-            logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d',
-                counts['expired'], counts['aged'], counts['over_cap'])
+            logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
+                counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
 
             # Sleep in short slices so a stop request does not wait out the whole interval.
             slept_seconds = 0
@@ -397,8 +428,8 @@ def main() -> 'int':
     # .. run.
     if args.once:
         counts = cleanup.sweep_once()
-        logger.info('Single sweep completed -> expired:%d, aged:%d, over_cap:%d',
-            counts['expired'], counts['aged'], counts['over_cap'])
+        logger.info('Single sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
+            counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
         return 0
 
     cleanup.run()

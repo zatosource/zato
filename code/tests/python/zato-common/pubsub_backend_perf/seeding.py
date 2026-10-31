@@ -13,6 +13,7 @@ from time import monotonic
 
 # Zato
 from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_engine
+from zato.common.pubsub.sql.schema import metadata
 from zato.common.util.time_ import datetime_to_ms, utcnow
 
 # ################################################################################################################################
@@ -69,11 +70,15 @@ def connect_native() -> 'anytuple':
 # ################################################################################################################################
 
 def _clear_all_tables(cursor:'any_') -> 'None':
-    """ Empties all pub/sub tables.
+    """ Empties all pub/sub tables by dropping them and creating them anew, together with the triggers
+    of the count tables. SQLite deletes the rows of a table that has triggers one by one, which for
+    the backlogs of the mass scenarios takes minutes, whereas dropping a table releases its pages at once.
     """
-    _ = cursor.execute('delete from pubsub_delivery')
-    _ = cursor.execute('delete from pubsub_message')
-    _ = cursor.execute('delete from pubsub_topic_sub')
+    for table in reversed(metadata.sorted_tables):
+        _ = cursor.execute(f'drop table if exists {table.name}')
+
+    engine = get_pubsub_engine()
+    metadata.create_all(engine)
 
 # ################################################################################################################################
 

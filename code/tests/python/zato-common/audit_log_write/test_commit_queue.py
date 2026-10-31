@@ -21,10 +21,10 @@ from support import Backend_PostgreSQL, Object_Name, read_rows, record_statement
 from zato.common.audit_log import retention_runner
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.buffer import PendingEvent
-from zato.common.audit_log.commit_queue import CommitQueue
-from zato.common.audit_log.commit_ticket import CommitTicket
 from zato.common.audit_log.search_index import PostgreSQL_Pending_List_Limit_KB
 from zato.common.audit_log.search_index_merge import get_search_index_merger
+from zato.common.db_env.commit_queue import CommitQueue
+from zato.common.db_env.commit_ticket import CommitTicket
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,6 +52,12 @@ _caller_count = 64
 
 # How many events each commit of the queue tests writes at most
 _max_events = 5
+
+# How much of a commit's capacity an event of the queue tests takes, unless a test says otherwise
+_event_weight = 1
+
+# How much of a commit's capacity a heavy event of the queue tests takes
+_heavy_event_weight = 3
 
 # How long a commit of the queue tests takes, in seconds
 _commit_time = 0.01
@@ -331,13 +337,16 @@ class TestCommitQueue:
 
     def test_batches_are_capped(self) -> 'None':
         writer = _QueueWriter()
-        queue = CommitQueue(write_batch=writer.write_batch, max_events=_max_events)
+        queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events)
 
         greenlets:'anylist' = []
+        pending_events:'anylist' = []
 
         for index in range(16):
             pending = _new_pending(index)
-            greenlet = spawn(queue.write, pending)
+            pending_events.append(pending)
+
+            greenlet = spawn(queue.write, pending, weight=_event_weight, is_urgent=False)
             greenlets.append(greenlet)
 
         _ = joinall(greenlets, raise_error=True)
@@ -353,24 +362,54 @@ class TestCommitQueue:
 
         assert writer.written_cids == expected_cids
 
-        for index, greenlet in enumerate(greenlets):
-            assert greenlet.value == index + 1
+        for index, pending in enumerate(pending_events):
+            assert pending.event_id == index + 1
+
+    def test_urgent_events_go_first_and_weights_cap_batches(self) -> 'None':
+        writer = _QueueWriter()
+        writer.release_event = Event()
+
+        queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events)
+
+        # The first caller holds the commit ..
+        greenlets:'anylist' = [spawn(queue.write, _new_pending(0), weight=_event_weight, is_urgent=False)]
+        sleep(0)
+
+        # .. three heavy events wait, and two urgent ones arrive after them ..
+        for index in range(1, 4):
+            greenlet = spawn(queue.write, _new_pending(index), weight=_heavy_event_weight, is_urgent=False)
+            greenlets.append(greenlet)
+
+        for index in range(4, 6):
+            greenlet = spawn(queue.write, _new_pending(index), weight=_event_weight, is_urgent=True)
+            greenlets.append(greenlet)
+
+        sleep(0)
+
+        # .. and once the first commit completes, the urgent events go first, followed by as many heavy ones
+        # .. as fit within the maximum weight, and each of the other heavy ones goes in a commit of its own.
+        writer.release_event.set()
+        _ = joinall(greenlets, raise_error=True)
+
+        assert writer.written_cids == ['cid-0', 'cid-4', 'cid-5', 'cid-1', 'cid-2', 'cid-3']
+        assert writer.batch_sizes == [1, 3, 1, 1]
 
     def test_abandoned_waiter_is_not_written(self) -> 'None':
         writer = _QueueWriter()
         writer.release_event = Event()
 
-        queue = CommitQueue(write_batch=writer.write_batch, max_events=_max_events)
+        queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events)
 
         # The first caller holds the commit ..
-        first = spawn(queue.write, _new_pending(0))
+        first = spawn(queue.write, _new_pending(0), weight=_event_weight, is_urgent=False)
         sleep(0)
 
         # .. a second one stops waiting before its event is taken ..
-        def write_with_timeout() -> 'intnone':
+        def write_with_timeout() -> 'None':
+            pending = _new_pending(1)
+
             with Timeout(_commit_time):
-                out = queue.write(_new_pending(1))
-            return out
+                queue.write(pending, weight=_event_weight, is_urgent=False)
 
         abandoned = spawn(write_with_timeout)
         _ = abandoned.join()
@@ -378,7 +417,7 @@ class TestCommitQueue:
         assert isinstance(abandoned.exception, Timeout)
 
         # .. a third one waits ..
-        third = spawn(queue.write, _new_pending(2))
+        third = spawn(queue.write, _new_pending(2), weight=_event_weight, is_urgent=False)
         sleep(0)
 
         # .. and once the first commit completes, only the third event is written after it.
@@ -390,16 +429,19 @@ class TestCommitQueue:
 
         # The queue is idle again, so a new caller commits at once.
         writer.release_event = None
-        event_id = queue.write(_new_pending(3))
 
-        assert event_id == 3
+        pending = _new_pending(3)
+        queue.write(pending, weight=_event_weight, is_urgent=False)
+
+        assert pending.event_id == 3
         assert writer.batch_sizes == [1, 1, 1]
 
     def test_abandoned_runner_passes_its_batch_on(self) -> 'None':
-        queue = CommitQueue(write_batch=_QueueWriter().write_batch, max_events=_max_events)
+        writer = _QueueWriter()
+        queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events)
 
-        first = CommitTicket(_new_pending(0))
-        second = CommitTicket(_new_pending(1))
+        first = CommitTicket(_new_pending(0), _event_weight, False)
+        second = CommitTicket(_new_pending(1), _event_weight, False)
 
         # Two callers wait while a commit is in progress ..
         queue._is_committing = True

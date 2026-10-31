@@ -7,64 +7,41 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from threading import Lock
 
 # Zato
-from zato.common.audit_log.commit_ticket import CommitTicket
+from zato.common.db_env.commit_ticket import CommitTicket
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.audit_log.buffer import pending_event_list, PendingEvent
-    from zato.common.audit_log.commit_ticket import commit_ticket_list
-    from zato.common.typing_ import callable_, intnone
+    from zato.common.db_env.commit_ticket import commit_ticket_list
+    from zato.common.typing_ import any_, anylist, callable_
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
+    anylist = anylist
     callable_ = callable_
     commit_ticket_list = commit_ticket_list
-    intnone = intnone
-    pending_event_list = pending_event_list
-    PendingEvent = PendingEvent
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The environment variable overriding how many events one group commit writes at most
-Env_Commit_Max_Events = 'Zato_Audit_Log_Commit_Max_Events'
-
-# How many events one group commit writes at most when the environment does not say otherwise
-_default_commit_max_events = 500
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_commit_max_events() -> 'int':
-    """ Returns how many events one group commit writes at most.
-    """
-    if value := os.environ.get(Env_Commit_Max_Events, ''):
-        out = int(value)
-    else:
-        out = _default_commit_max_events
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class CommitQueue:
-    """ Writes the events of concurrent synchronous callers in shared transactions. A caller that arrives
-    while no commit is in progress commits its own event at once. Callers that arrive during a commit wait,
-    and once the commit completes, the caller that has waited longest commits the events of all the waiting
-    callers, up to the maximum per commit. Each caller receives the id of its own event, and an exception
-    from a commit reaches every caller whose event was part of it.
+    """ Writes the items of concurrent synchronous callers in shared transactions. A caller that arrives
+    while no commit is in progress commits its own item at once. Callers that arrive during a commit wait,
+    and once the commit completes, one of the waiting callers commits the items of the next batch.
+    The next batch takes the urgent items first and the other items after them, each kind in the order
+    of arrival, for as long as the total weight of the batch is within the maximum per commit.
+    The writer of a batch stores in each item what its caller receives, and an exception
+    from a commit reaches every caller whose item was part of it.
     """
 
-    def __init__(self, *, write_batch:'callable_', max_events:'int') -> 'None':
+    def __init__(self, *, write_batch:'callable_', max_weight:'int') -> 'None':
         self.write_batch = write_batch
-        self.max_events = max_events
+        self.max_weight = max_weight
 
         # Guards the waiting tickets and the commit flag
         self._lock = Lock()
@@ -77,10 +54,10 @@ class CommitQueue:
 
 # ################################################################################################################################
 
-    def write(self, pending:'PendingEvent') -> 'intnone':
-        """ Writes one event, in a commit of its own or shared with other callers, and returns its id.
+    def write(self, item:'any_', *, weight:'int', is_urgent:'bool') -> 'None':
+        """ Writes one item, in a commit of its own or shared with other callers.
         """
-        ticket = CommitTicket(pending)
+        ticket = CommitTicket(item, weight, is_urgent)
 
         # The caller commits at once if no commit is in progress ..
         with self._lock:
@@ -93,7 +70,7 @@ class CommitQueue:
                 ticket.has_started = True
                 is_runner = True
 
-        # .. otherwise, it waits until its event is written or until it is to run the next commit itself ..
+        # .. otherwise, it waits until its item is written or until it is to run the next commit itself ..
         if not is_runner:
             try:
                 _ = ticket.ready.wait()
@@ -102,7 +79,7 @@ class CommitQueue:
                 self._abandon(ticket)
                 raise
 
-        # .. a caller that runs a commit writes the events of its whole batch ..
+        # .. a caller that runs a commit writes the items of its whole batch ..
         if is_runner:
             self._commit(ticket)
 
@@ -110,14 +87,11 @@ class CommitQueue:
         if ticket.exception is not None:
             raise ticket.exception
 
-        out = ticket.event_id
-        return out
-
 # ################################################################################################################################
 
     def _start(self, ticket:'CommitTicket') -> 'bool':
         """ Returns whether the caller of a ticket that was woken up is to run the next commit,
-        rather than having had its event written by another caller.
+        rather than having had its item written by another caller.
         """
         with self._lock:
             if ticket.batch is None:
@@ -131,17 +105,17 @@ class CommitQueue:
 # ################################################################################################################################
 
     def _commit(self, runner:'CommitTicket') -> 'None':
-        """ Writes the events of a batch in one transaction, passes the queue on to the next batch
+        """ Writes the items of a batch in one transaction, passes the queue on to the next batch
         and releases the callers of this one.
         """
         tickets = cast_('commit_ticket_list', runner.batch)
 
-        batch:'pending_event_list' = []
+        batch:'anylist' = []
 
         for ticket in tickets:
-            batch.append(ticket.pending)
+            batch.append(ticket.item)
 
-        # Write all the events of the batch ..
+        # Write all the items of the batch ..
         try:
             _ = self.write_batch(batch)
 
@@ -149,11 +123,6 @@ class CommitQueue:
         except BaseException as e:
             for ticket in tickets:
                 ticket.exception = e
-
-        # .. otherwise, each of them receives the id of its own event ..
-        else:
-            for ticket in tickets:
-                ticket.event_id = ticket.pending.event_id
 
         # .. the next batch starts before the callers of this one resume ..
         self._hand_off()
@@ -164,9 +133,43 @@ class CommitQueue:
 
 # ################################################################################################################################
 
+    def _take_batch(self) -> 'commit_ticket_list':
+        """ Takes the tickets of the next commit out of the waiting ones, the urgent ones first and the others
+        after them, until the next ticket would take the total weight above the maximum. The first ticket
+        is always taken, whatever its weight.
+        """
+        urgent:'commit_ticket_list' = []
+        other:'commit_ticket_list' = []
+
+        for ticket in self._waiting:
+            if ticket.is_urgent:
+                urgent.append(ticket)
+            else:
+                other.append(ticket)
+
+        out:'commit_ticket_list' = []
+        total_weight = 0
+
+        for ticket in urgent + other:
+
+            # A ticket that does not fit waits for the next commit, and so do all the tickets behind it ..
+            if out:
+                if total_weight + ticket.weight > self.max_weight:
+                    break
+
+            out.append(ticket)
+            total_weight += ticket.weight
+
+        # .. and the tickets taken are not waiting anymore.
+        for ticket in out:
+            self._waiting.remove(ticket)
+
+        return out
+
+# ################################################################################################################################
+
     def _hand_off(self) -> 'None':
-        """ Chooses the caller that has waited longest to run the next commit, or ends the commit
-        in progress if no caller is waiting.
+        """ Chooses a waiting caller to run the next commit, or ends the commit in progress if no caller is waiting.
         """
         with self._lock:
 
@@ -175,10 +178,9 @@ class CommitQueue:
                 self._is_committing = False
                 runner = None
 
-            # .. otherwise, the oldest waiting caller is to commit everything waiting, up to the maximum.
+            # .. otherwise, a caller of the next batch is to commit it.
             else:
-                batch = self._waiting[:self.max_events]
-                del self._waiting[:self.max_events]
+                batch = self._take_batch()
 
                 runner = batch[0]
                 runner.batch = batch
@@ -189,16 +191,16 @@ class CommitQueue:
 # ################################################################################################################################
 
     def _abandon(self, ticket:'CommitTicket') -> 'None':
-        """ Takes the ticket of a caller that stopped waiting out of the queue. An event that is still waiting
+        """ Takes the ticket of a caller that stopped waiting out of the queue. An item that is still waiting
         is not written, and if the caller had been chosen to run the next commit, its batch goes back
-        to the front of the queue for the next caller to commit. An event that is part of a commit
+        to the front of the queue for the next caller to commit. An item that is part of a commit
         another caller runs is written regardless.
         """
         needs_hand_off = False
 
         with self._lock:
 
-            # The event has not been taken by any commit yet ..
+            # The item has not been taken by any commit yet ..
             if ticket in self._waiting:
                 self._waiting.remove(ticket)
 

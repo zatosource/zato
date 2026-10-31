@@ -98,7 +98,11 @@ class TestServiceTopology(unittest.TestCase):
             'data': 'broadcast',
         })
 
-        result = self._poll_service_received(f'{_service_name(7)}_count', 1)
+        # The targets receive the message independently of each other, so each of them is waited for.
+        for number in [7, 8, 9]:
+            _ = self._poll_service_received(f'{_service_name(number)}_count', 1)
+
+        result = self._poll_service_received(f'{_service_name(10)}_count', 1)
 
         for number in [7, 8, 9, 10]:
             name = _service_name(number)

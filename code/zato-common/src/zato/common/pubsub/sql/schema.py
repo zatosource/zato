@@ -11,6 +11,7 @@ from sqlalchemy import BigInteger, Boolean, Column, Identity, Index, Integer, Me
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
+from zato.common.pubsub.sql.counts import register_counts
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,9 +86,6 @@ message_table = Table('pubsub_message', metadata,
     # .. browsing walks a topic in publication order ..
     Index('idx_pubsub_message_topic', 'topic_name', 'id'),
 
-    # .. the publish timeline and publisher counts read a topic by publication time ..
-    Index('idx_pubsub_message_topic_time', 'topic_name', 'pub_time_ms'),
-
     # .. and the expiry sweep finds everything that is past its time.
     Index('idx_pubsub_message_expiration', 'expiration_ms'),
 )
@@ -115,8 +113,8 @@ delivery_table = Table('pubsub_delivery', metadata,
     # Acknowledgements and last-subscriber checks look deliveries up by message ..
     Index('idx_pubsub_delivery_message', 'message_id'),
 
-    # .. queue depths are counted per (subscriber, topic) pair ..
-    Index('idx_pubsub_delivery_sub_topic', 'sub_key', 'topic_name'),
+    # .. the pending messages of one (subscriber, topic) pair are browsed in publication order ..
+    Index('idx_pubsub_delivery_sub_topic_message', 'sub_key', 'topic_name', 'message_id'),
 
     # .. and topic-wide operations walk all deliveries of one topic.
     Index('idx_pubsub_delivery_topic', 'topic_name'),
@@ -142,6 +140,36 @@ topic_sub_table = Table('pubsub_topic_sub', metadata,
     # Publishing needs all subscribers of one topic.
     Index('idx_pubsub_topic_sub_topic', 'topic_name'),
 )
+
+# ################################################################################################################################
+
+# One row per (subscriber, topic) pair with the number of its delivery rows.
+queue_count_table = Table('pubsub_queue_count', metadata,
+    Column('sub_key', String(_short_column_len), primary_key=True),
+    Column('topic_name', String(_short_column_len), primary_key=True),
+    Column('depth', BigInteger, nullable=False),
+    sqlite_with_rowid=False,
+)
+
+# One row per topic with the number of its message rows, delivered traces included.
+topic_count_table = Table('pubsub_topic_count', metadata,
+    Column('topic_name', String(_short_column_len), primary_key=True),
+    Column('total', BigInteger, nullable=False),
+    sqlite_with_rowid=False,
+)
+
+# One row per topic, minute of publication and publisher with the number of the message rows they have in common.
+# Messages published without a publisher are counted under No_Publisher.
+publish_count_table = Table('pubsub_publish_count', metadata,
+    Column('topic_name', String(_short_column_len), primary_key=True),
+    Column('minute_ms', BigInteger, primary_key=True, autoincrement=False),
+    Column('publisher', String(_short_column_len), primary_key=True),
+    Column('total', BigInteger, nullable=False),
+    sqlite_with_rowid=False,
+)
+
+# The triggers that keep the counts in step with the rows are created along with the tables.
+register_counts(metadata)
 
 # ################################################################################################################################
 # ################################################################################################################################

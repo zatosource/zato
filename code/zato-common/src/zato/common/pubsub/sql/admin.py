@@ -10,13 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, func, literal_column, select
+from sqlalchemy import and_, func, select
 
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
-from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
+from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
+    topic_count_table, topic_sub_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,9 +33,6 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The publish timeline is bucketed by minute.
-_milliseconds_per_minute = 60 * 1000
 
 # How long the stored preview of each payload is.
 _data_preview_len = PubSub.Message.Data_Preview_Len
@@ -92,11 +91,12 @@ class SQLAdminAPI(SQLBrowseAPI):
         A subscriber with nothing waiting is not in the result.
         """
         pattern = prefix + '%'
+        depth = func.sum(queue_count_table.c.depth)
 
-        query = select(delivery_table.c.sub_key, func.count())
-        query = query.select_from(delivery_table)
-        query = query.where(delivery_table.c.sub_key.like(pattern))
-        query = query.group_by(delivery_table.c.sub_key)
+        query = select(queue_count_table.c.sub_key, depth)
+        query = query.where(queue_count_table.c.sub_key.like(pattern))
+        query = query.group_by(queue_count_table.c.sub_key)
+        query = query.having(depth > 0)
 
         out:'anydict' = {}
 
@@ -129,8 +129,8 @@ class SQLAdminAPI(SQLBrowseAPI):
     def get_topics_with_messages(self) -> 'strlist':
         """ Returns the names of all the topics that currently hold any message rows.
         """
-        query = select(message_table.c.topic_name)
-        query = query.distinct()
+        query = select(topic_count_table.c.topic_name)
+        query = query.where(topic_count_table.c.total > 0)
 
         out:'strlist' = []
 
@@ -164,14 +164,9 @@ class SQLAdminAPI(SQLBrowseAPI):
         if not sub_keys:
             return out
 
-        # .. one grouped query covers all the requested subscribers ..
-        query = select(
-            delivery_table.c.sub_key,
-            delivery_table.c.topic_name,
-            func.count().label('depth'),
-        )
-        query = query.where(delivery_table.c.sub_key.in_(sub_keys))
-        query = query.group_by(delivery_table.c.sub_key, delivery_table.c.topic_name)
+        # .. one query reads the queue depths of all the requested subscribers ..
+        query = select(queue_count_table.c.sub_key, queue_count_table.c.topic_name, queue_count_table.c.depth)
+        query = query.where(queue_count_table.c.sub_key.in_(sub_keys))
 
         with self.engine.connect() as connection:
             rows = connection.execute(query).fetchall()
@@ -217,39 +212,59 @@ class SQLAdminAPI(SQLBrowseAPI):
 # ################################################################################################################################
 
     def _count_pending(self, sub_key:'str', topic_name:'str') -> 'int':
-        """ Counts the delivery rows of one (subscriber, topic) pair.
+        """ Returns the number of delivery rows of one (subscriber, topic) pair.
         """
-        query = select(func.count())
-        query = query.select_from(delivery_table)
+        query = select(queue_count_table.c.depth)
         query = query.where(and_(
-            delivery_table.c.sub_key == sub_key,
-            delivery_table.c.topic_name == topic_name,
+            queue_count_table.c.sub_key == sub_key,
+            queue_count_table.c.topic_name == topic_name,
         ))
 
         with self.engine.connect() as connection:
-            out = connection.execute(query).scalar()
+            depth = connection.execute(query).scalar()
 
+        # A pair that never had a delivery row has no count either.
+        if depth is None:
+            depth = 0
+
+        out = depth
         return out
 
 # ################################################################################################################################
 
     def _count_all(self, topic_name:'str') -> 'int':
-        """ Counts all the message rows of one topic.
+        """ Returns the number of message rows of one topic.
         """
-        query = select(func.count())
-        query = query.select_from(message_table)
-        query = query.where(message_table.c.topic_name == topic_name)
+        query = select(topic_count_table.c.total)
+        query = query.where(topic_count_table.c.topic_name == topic_name)
 
         with self.engine.connect() as connection:
-            out = connection.execute(query).scalar()
+            total = connection.execute(query).scalar()
 
+        # A topic that never had a message has no count either.
+        if total is None:
+            total = 0
+
+        out = total
+        return out
+
+# ################################################################################################################################
+
+    def _get_window_start(self, since_minutes:'int') -> 'int':
+        """ Returns the start of the minute that began the given number of minutes ago, in milliseconds,
+        which is where the publication statistics begin.
+        """
+        now_ms = self._utc_now_ms()
+        cutoff_ms = now_ms - since_minutes * Milliseconds_Per_Minute
+
+        out = cutoff_ms - cutoff_ms % Milliseconds_Per_Minute
         return out
 
 # ################################################################################################################################
 
     def get_publish_timeline(self, topic_names:'strlist', since_minutes:'int'=_default_since_minutes) -> 'dictlist':
-        """ Return a per-minute publish count timeline aggregated across the given topics.
-        Each entry is {'timestamp': <epoch_ms>, 'count': <int>}.
+        """ Return a per-minute publish count timeline aggregated across the given topics, starting with the minute
+        that began since_minutes ago. Each entry is {'timestamp': <epoch_ms>, 'count': <int>}.
         """
 
         # Our response to produce
@@ -258,9 +273,8 @@ class SQLAdminAPI(SQLBrowseAPI):
         if not topic_names:
             return out
 
-        # Everything published since the cutoff counts ..
-        now_ms = self._utc_now_ms()
-        cutoff_ms = now_ms - since_minutes * _milliseconds_per_minute
+        # Every minute from the start of the window counts ..
+        window_start_ms = self._get_window_start(since_minutes)
 
         # .. normalize the topic names ..
         lowered_names:'strlist' = []
@@ -268,25 +282,25 @@ class SQLAdminAPI(SQLBrowseAPI):
         for topic_name in topic_names:
             lowered_names.append(topic_name.lower())
 
-        # .. bucket by minute - the width is a literal rather than a bind parameter ..
-        bucket_width = literal_column(str(_milliseconds_per_minute))
-        bucket = message_table.c.pub_time_ms - message_table.c.pub_time_ms % bucket_width
-        bucket = bucket.label('bucket')
+        # .. add up the publication counts of each minute, across the topics and publishers ..
+        minute = publish_count_table.c.minute_ms
+        count = func.sum(publish_count_table.c.total)
 
-        query = select(bucket, func.count().label('count'))
+        query = select(minute, count)
         query = query.where(and_(
-            message_table.c.topic_name.in_(lowered_names),
-            message_table.c.pub_time_ms >= cutoff_ms,
+            publish_count_table.c.topic_name.in_(lowered_names),
+            minute >= window_start_ms,
         ))
-        query = query.group_by(bucket)
-        query = query.order_by(bucket)
+        query = query.group_by(minute)
+        query = query.having(count > 0)
+        query = query.order_by(minute)
 
         with self.engine.connect() as connection:
             rows = connection.execute(query).fetchall()
 
-        # .. and return the buckets in ascending time order.
-        for row in rows:
-            entry = {'timestamp': row.bucket, 'count': row.count}
+        # .. and return the minutes in ascending time order.
+        for minute_ms, minute_count in rows:
+            entry = {'timestamp': minute_ms, 'count': minute_count}
             out.append(entry)
 
         return out
@@ -294,14 +308,14 @@ class SQLAdminAPI(SQLBrowseAPI):
 # ################################################################################################################################
 
     def count_distinct_publishers(self, topic_names:'strlist', since_minutes:'int'=_default_since_minutes) -> 'int':
-        """ Count distinct publisher identifiers across all given topics within the time window.
+        """ Count distinct publisher identifiers across all given topics, starting with the minute
+        that began since_minutes ago.
         """
         if not topic_names:
             return 0
 
-        # Everything published since the cutoff counts ..
-        now_ms = self._utc_now_ms()
-        cutoff_ms = now_ms - since_minutes * _milliseconds_per_minute
+        # Every minute from the start of the window counts ..
+        window_start_ms = self._get_window_start(since_minutes)
 
         # .. normalize the topic names ..
         lowered_names:'strlist' = []
@@ -309,14 +323,15 @@ class SQLAdminAPI(SQLBrowseAPI):
         for topic_name in topic_names:
             lowered_names.append(topic_name.lower())
 
-        # .. and count the distinct non-empty publishers.
-        distinct_publishers = func.count(func.distinct(message_table.c.publisher))
+        # .. and count the distinct publishers that published anything that still exists.
+        distinct_publishers = func.count(func.distinct(publish_count_table.c.publisher))
 
         query = select(distinct_publishers)
         query = query.where(and_(
-            message_table.c.topic_name.in_(lowered_names),
-            message_table.c.pub_time_ms >= cutoff_ms,
-            message_table.c.publisher.isnot(None),
+            publish_count_table.c.topic_name.in_(lowered_names),
+            publish_count_table.c.minute_ms >= window_start_ms,
+            publish_count_table.c.publisher != No_Publisher,
+            publish_count_table.c.total > 0,
         ))
 
         with self.engine.connect() as connection:

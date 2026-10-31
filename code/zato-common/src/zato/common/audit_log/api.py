@@ -21,7 +21,6 @@ from zato.common.audit_log.buffer import Env_Flush_Max_Size, Env_Flush_Max_Wait_
     get_flush_max_wait_ms, PendingEvent
 from zato.common.audit_log.bulk_insert import insert_events, insert_rows
 from zato.common.audit_log.classification import derive_classification
-from zato.common.audit_log.commit_queue import CommitQueue, Env_Commit_Max_Events, get_commit_max_events
 from zato.common.audit_log.common import Attr_Value_Max_Len, Audit_DB_File_Name, AuditBody, AuditClassification, \
     AuditEvent, AuditLink, AuditOutcome, AuditSource, Env_Retention_Days, \
     Env_Retention_Days_Prefix, event_attr_table, event_body_table, event_link_table, event_table, get_retention_days, \
@@ -37,6 +36,7 @@ from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, get_env_engine, \
     Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.engine import call_database
 from zato.common.util.api import as_bool, utcnow
 
@@ -72,6 +72,31 @@ __all__ = [
     'AuditClassification', 'AuditEvent', 'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx',
     'Retention_Days', 'Status_Outstanding',
 ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The environment variable overriding how many events one group commit writes at most
+Env_Commit_Max_Events = 'Zato_Audit_Log_Commit_Max_Events'
+
+# How many events one group commit writes at most when the environment does not say otherwise
+_default_commit_max_events = 500
+
+# How much of a group commit's capacity each event takes - the capacity is counted in events
+_commit_event_weight = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_commit_max_events() -> 'int':
+    """ Returns how many events one group commit writes at most.
+    """
+    if value := os.environ.get(Env_Commit_Max_Events, ''):
+        out = int(value)
+    else:
+        out = _default_commit_max_events
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -262,9 +287,11 @@ class AuditLog:
         )
 
         # .. and synchronous writes of concurrent callers share their commits.
+        commit_max_events = get_commit_max_events()
+
         self._commit_queue = CommitQueue(
             write_batch=self._write_batch,
-            max_events=get_commit_max_events(),
+            max_weight=commit_max_events,
         )
 
 # ################################################################################################################################
@@ -331,7 +358,9 @@ class AuditLog:
 
         # Write it now if batching is off, or if the caller needs the id for the events it links to this one ..
         if self.flush_max_size <= 1 or needs_id:
-            out = self._commit_queue.write(pending)
+            self._commit_queue.write(pending, weight=_commit_event_weight, is_urgent=False)
+
+            out = pending.event_id
             return out
 
         # .. or leave it in the buffer for the next flush.

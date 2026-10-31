@@ -38,6 +38,10 @@ class ModuleCtx:
     # The environment variable overriding how many rows one bulk statement may touch.
     Env_Batch_Size = 'Zato_PubSub_DB_Batch_Size'
 
+    # The environment variable overriding how many messages the publications and acknowledgements
+    # of one group commit refer to at most.
+    Env_Commit_Max_Messages = 'Zato_PubSub_Commit_Max_Messages'
+
 # ################################################################################################################################
 
 # How many fully delivered messages one topic may retain for browsing and statistics.
@@ -48,6 +52,9 @@ _default_delivered_max_days = 7
 
 # How many rows one bulk delete or update statement may touch.
 _default_batch_size = 5_000
+
+# How many messages the publications and acknowledgements of one group commit refer to at most.
+_default_commit_max_messages = 500
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,7 +75,7 @@ def get_pubsub_engine() -> 'Engine':
     """ Returns an SQLAlchemy engine for the pub/sub SQLite file, creating the schema if needed.
     """
     db_path = get_pubsub_db_path()
-    out = get_sqlite_file_engine(db_path, metadata, needs_pool=True)
+    out = get_sqlite_file_engine(db_path, metadata, needs_pool=True, needs_background_checkpoint=True)
 
     return out
 
@@ -105,6 +112,18 @@ def get_batch_size() -> 'int':
         out = int(value)
     else:
         out = _default_batch_size
+
+    return out
+
+# ################################################################################################################################
+
+def get_commit_max_messages() -> 'int':
+    """ Returns how many messages the publications and acknowledgements of one group commit refer to at most.
+    """
+    if value := os.environ.get(ModuleCtx.Env_Commit_Max_Messages, ''):
+        out = int(value)
+    else:
+        out = _default_commit_max_messages
 
     return out
 

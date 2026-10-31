@@ -10,19 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
 from time import monotonic
-from typing import NamedTuple
 
 # gevent
 from gevent import sleep
 from gevent.event import Event
 
-# SQLAlchemy
-from sqlalchemy import and_, bindparam, exists, select
-
 # Zato
 from zato.common.api import HTTP_SOAP
 from zato.common.pubsub.sql.config import get_pubsub_engine
-from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.pubsub.sql.writes import drop_payloads_statement, new_pending_ack, PubSubWriter
 from zato.common.typing_ import cast_
 from zato.common.util.time_ import datetime_to_ms, utcnow
 
@@ -33,6 +29,7 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.crypto.api import CryptoManager
+    from zato.common.pubsub.sql.writes import PendingAck
     from zato.common.typing_ import any_, anydict, intlist, intlistnone, strlist, strset
 
     # Dummy assignments to satisfy type checkers
@@ -56,43 +53,6 @@ _retry = HTTP_SOAP.Retry
 # How long back-to-back SQLite calls may hold the event loop before the backend
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
-
-# The statements below run on every publish or delivery, so they are built once here,
-# not per call - the bind parameters take their values at execution time.
-_subscriber_keys_query = select(topic_sub_table.c.sub_key)
-_subscriber_keys_query = _subscriber_keys_query.where(topic_sub_table.c.topic_name == bindparam('pub_topic_name'))
-
-_message_id_query = select(message_table.c.id)
-_message_id_query = _message_id_query.where(message_table.c.msg_id.in_(bindparam('lookup_msg_ids', expanding=True)))
-
-_ack_delete_statement = delivery_table.delete()
-_ack_delete_statement = _ack_delete_statement.where(and_(
-    delivery_table.c.sub_key == bindparam('ack_sub_key'),
-    delivery_table.c.message_id.in_(bindparam('ack_message_ids', expanding=True)),
-))
-
-# A message is still in flight while any delivery row references it -
-# the update drops the payloads of the given messages that have none left.
-_still_needed = exists()
-_still_needed = _still_needed.where(delivery_table.c.message_id == message_table.c.id)
-
-_drop_payloads_statement = message_table.update()
-_drop_payloads_statement = _drop_payloads_statement.where(and_(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)),
-    message_table.c.payload.isnot(None),
-    ~_still_needed,
-))
-_drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class AckResult(NamedTuple):
-    """ What one acknowledgement transaction removed - the subscriber's delivery rows
-    and the payloads that no subscriber needed anymore.
-    """
-    removed_count: int
-    fully_delivered_count: int
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,6 +90,9 @@ class SQLBackendCore:
 
         # When _yield_after_write last let the event loop run.
         self._last_yield = monotonic()
+
+        # Publications and acknowledgements of concurrent callers share their commits.
+        self._writer = PubSubWriter()
 
 # ################################################################################################################################
 
@@ -311,35 +274,11 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    def _get_subscriber_keys(self, connection:'Connection', topic_name:'str') -> 'strlist':
-        """ Returns all the subscriber keys of one topic, read within the caller's transaction.
-        """
-        out:'strlist' = []
-
-        for row in connection.execute(_subscriber_keys_query, {'pub_topic_name': topic_name}):
-            out.append(row.sub_key)
-
-        return out
-
-# ################################################################################################################################
-
-    def _get_message_ids(self, connection:'Connection', msg_ids:'strlist') -> 'intlist':
-        """ Maps public message identifiers to their primary keys, read within the caller's transaction.
-        """
-        out:'intlist' = []
-
-        for row in connection.execute(_message_id_query, {'lookup_msg_ids': msg_ids}):
-            out.append(row.id)
-
-        return out
-
-# ################################################################################################################################
-
     def _drop_fully_delivered_payloads(self, connection:'Connection', message_ids:'intlist') -> 'int':
         """ Sets the payload to NULL for each of the given messages that no subscriber needs anymore.
         Returns how many payloads were dropped.
         """
-        result = connection.execute(_drop_payloads_statement, {'drop_message_ids': message_ids})
+        result = connection.execute(drop_payloads_statement, {'drop_message_ids': message_ids})
 
         out = result.rowcount
         return out
@@ -354,10 +293,8 @@ class SQLBackendCore:
         if not msg_ids:
             return 0
 
-        result = self._ack_messages_once(sub_key, msg_ids, sequence_ids)
-        self._yield_after_write()
-
-        out = result.fully_delivered_count
+        pending = self._ack(sub_key, msg_ids, sequence_ids)
+        out = pending.fully_delivered_count
 
         logger.info('ack_messages -> sub_key:%s, acked:%d, fully_delivered:%d', sub_key, len(msg_ids), out)
 
@@ -369,10 +306,8 @@ class SQLBackendCore:
         """ Acknowledges a single message on behalf of one of several callers that may act on it.
         Returns True only to the caller whose acknowledgement removed the subscriber's delivery row.
         """
-        result = self._ack_messages_once(sub_key, [msg_id], None)
-        self._yield_after_write()
-
-        out = result.removed_count > 0
+        pending = self._ack(sub_key, [msg_id], None)
+        out = pending.removed_count > 0
 
         logger.info('claim_message -> sub_key:%s, msg_id:%s, claimed:%s', sub_key, msg_id, out)
 
@@ -380,35 +315,12 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    def _ack_messages_once(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'AckResult':
-        """ Runs one acknowledgement transaction.
+    def _ack(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'PendingAck':
+        """ Writes one acknowledgement, in a commit of its own or shared with the other writes in progress.
         """
+        out = new_pending_ack(sub_key, msg_ids, sequence_ids)
+        self._writer.ack(out)
 
-        # Our response to produce
-        out = AckResult(removed_count=0, fully_delivered_count=0)
-
-        with self.engine.begin() as connection:
-
-            # Map public identifiers to primary keys first ..
-            if sequence_ids is None:
-                message_ids = self._get_message_ids(connection, msg_ids)
-            else:
-                message_ids = sequence_ids
-
-            if not message_ids:
-                return out
-
-            # .. remove this subscriber's delivery rows ..
-            parameters = {
-                'ack_sub_key': sub_key,
-                'ack_message_ids': message_ids,
-            }
-            deleted = connection.execute(_ack_delete_statement, parameters)
-
-            # .. and drop the payloads of messages that no subscriber needs anymore.
-            fully_delivered_count = self._drop_fully_delivered_payloads(connection, message_ids)
-
-        out = AckResult(removed_count=deleted.rowcount, fully_delivered_count=fully_delivered_count)
         return out
 
 # ################################################################################################################################
