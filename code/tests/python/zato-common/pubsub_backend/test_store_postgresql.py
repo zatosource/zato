@@ -15,7 +15,8 @@ from sqlalchemy import inspect, text
 # Zato
 from zato.common.pubsub.sql.config import get_pubsub_engine
 from zato.common.pubsub.sql.schema import metadata
-from zato.common.test.pubsub_database import pubsub_db_env, PubSubDBMode, start_pubsub_database, stop_pubsub_database
+from zato.common.test.pubsub_database import get_suite_modes, pubsub_db_env, PubSubDBMode, start_pubsub_database, \
+    stop_pubsub_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,9 +64,14 @@ _high_churn_options = [
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
-def pubsub_database() -> 'any_':
-    database = start_pubsub_database('store', PubSubDBMode.PostgreSQL)
+_modes = get_suite_modes([PubSubDBMode.PostgreSQL])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='module', params=_modes)
+def pubsub_database(request:'pytest.FixtureRequest') -> 'any_':
+    database = start_pubsub_database('store', request.param)
 
     try:
         yield database

@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
+import sqlite3
 import subprocess
 import sys
 import time
@@ -72,6 +73,16 @@ _controller_poll_seconds = 0.5
 # How long a link proxy may take to answer its control endpoint after its process started, in seconds.
 _proxy_ready_timeout_seconds = 30
 
+# The takeovers that the audit log of a server recorded, with the previous and the new generation of each.
+_audit_takeover_query = """
+select p.value, g.value
+from event e
+join event_attr p on p.event_id = e.id and p.name = 'previous_generation'
+join event_attr g on g.event_id = e.id and g.name = 'generation'
+where e.source = 'pubsub' and e.event_type = 'takeover'
+order by e.id
+"""
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -122,6 +133,12 @@ def _container_command(server:'ContainerServer', action:'str') -> 'strlist':
 
     for name, value in server.env.items():
         out.extend(['-e', f'{name}={value}'])
+
+    # The managed modes resolve their host names through the resolver library, which the server preloads from the same path.
+    if preload := os.environ.get('LD_PRELOAD', ''):
+        preload_dir = os.path.dirname(preload)
+        out.extend(['-e', f'LD_PRELOAD={preload}'])
+        out.extend(['-v', f'{preload_dir}:{preload_dir}:ro'])
 
     out.extend([
         '--entrypoint', os.path.join(_repository_dir, 'code', 'bin', 'zato'),
@@ -255,6 +272,37 @@ def wait_for_generation(database:'PubSubDatabase', generation:'int', timeout_sec
         time.sleep(_ping_poll_seconds)
 
     out = time.monotonic() - start
+    return out
+
+# ################################################################################################################################
+
+def read_audit_rows(server:'ContainerServer', query:'str') -> 'list':
+    """ Returns the rows of a query against the audit log of a server, which is a SQLite file in its directory.
+    """
+    connection = sqlite3.connect(server.env['Zato_Audit_Log_DB_Name'])
+
+    try:
+        cursor = connection.cursor()
+        _ = cursor.execute(query)
+        out = list(cursor.fetchall())
+    finally:
+        connection.close()
+
+    return out
+
+# ################################################################################################################################
+
+def read_audit_takeovers(server:'ContainerServer', after_generation:'int') -> 'list[tuple[int, int]]':
+    """ Returns the previous and the new generation of each takeover that the audit log of a server recorded
+    above the given generation, in the order of the takeovers.
+    """
+    out:'list[tuple[int, int]]' = []
+
+    for previous_value, generation_value in read_audit_rows(server, _audit_takeover_query):
+        generation = int(generation_value)
+        if generation > after_generation:
+            out.append((int(previous_value), generation))
+
     return out
 
 # ################################################################################################################################

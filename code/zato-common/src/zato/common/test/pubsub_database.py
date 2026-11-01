@@ -8,9 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The pub/sub database of a test session - the SQLite file of its environment, or a PostgreSQL container started
 # for the session, with or without TLS, whose data directory is under the runtime directory of the tests.
+# The managed modes run the container under the profile of Amazon RDS or of Azure Database for PostgreSQL.
 
 # stdlib
-import ipaddress
 import os
 import shutil
 import socket
@@ -19,20 +19,17 @@ import subprocess
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import timedelta
-
-# cryptography
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
 
 # pg8000
 import pg8000.dbapi
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.util.api import utcnow
+from zato.common.test.pubsub_bouncer import Bouncer_Port, start_bouncer
+from zato.common.test.pubsub_certs import Chain_Plain, generate_certificates
+from zato.common.test.pubsub_network import add_round_trip_time
+from zato.common.test.pubsub_profile import get_host_name, get_profile_settings, Instance_Port, Managed_Profiles, \
+     session_dns, write_roles_script
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,14 +42,34 @@ if 0:
 # ################################################################################################################################
 
 class PubSubDBMode:
-    SQLite          = 'sqlite'
-    PostgreSQL      = 'postgresql'
-    PostgreSQL_TLS  = 'postgresql-tls'
-    PostgreSQL_MTLS = 'postgresql-mtls'
+    SQLite           = 'sqlite'
+    PostgreSQL       = 'postgresql'
+    PostgreSQL_TLS   = 'postgresql-tls'
+    PostgreSQL_MTLS  = 'postgresql-mtls'
+    PostgreSQL_RDS   = 'postgresql-rds'
+    PostgreSQL_Azure = 'postgresql-azure'
+
+# The managed modes and the names of their profiles.
+_managed_modes = {
+    PubSubDBMode.PostgreSQL_RDS: 'rds',
+    PubSubDBMode.PostgreSQL_Azure: 'azure',
+}
 
 # The modes with a PostgreSQL container and those of them that require TLS.
-_postgresql_modes = {PubSubDBMode.PostgreSQL, PubSubDBMode.PostgreSQL_TLS, PubSubDBMode.PostgreSQL_MTLS}
-_tls_modes = {PubSubDBMode.PostgreSQL_TLS, PubSubDBMode.PostgreSQL_MTLS}
+_postgresql_modes = {
+    PubSubDBMode.PostgreSQL,
+    PubSubDBMode.PostgreSQL_TLS,
+    PubSubDBMode.PostgreSQL_MTLS,
+    PubSubDBMode.PostgreSQL_RDS,
+    PubSubDBMode.PostgreSQL_Azure,
+}
+
+_tls_modes = {
+    PubSubDBMode.PostgreSQL_TLS,
+    PubSubDBMode.PostgreSQL_MTLS,
+    PubSubDBMode.PostgreSQL_RDS,
+    PubSubDBMode.PostgreSQL_Azure,
+}
 
 class ModuleCtx:
 
@@ -72,21 +89,27 @@ class ModuleCtx:
     Username = 'zato_pubsub'
     DB_Name  = 'zato_pubsub'
 
+    # The superuser of the containers of the managed modes, which stands for the internal superuser of the service
+    # and which the tests use for the operations of the service itself, such as replication and promotion
+    Service_Username = 'zato_service'
+
     # The prefix of the containers, which lets a session remove those that an interrupted session left behind
     Container_Prefix = 'zato-pubsub-test-'
+
+    # The environment variables that put PgBouncer in front of the database of a managed mode
+    # and that add a round-trip time to the network of a container, in milliseconds
+    Env_Bouncer = 'Zato_Test_PubSub_DB_Bouncer'
+    Env_Round_Trip_Ms = 'Zato_Test_PubSub_DB_Round_Trip_Ms'
 
 # How long a container may take to accept connections, in seconds, and how often it is checked.
 _ready_timeout = 120
 _ready_poll_interval = 0.5
 
-# How long the throwaway certificates are valid and how large their keys are.
-_validity_days = 7
-_key_size = 2048
-
-# The certificates are read by the database server in the container, which runs under the same user as the tests.
-_certificate_mode = 0o644
-_key_mode = 0o600
+# The directories that the database server in the container reads, which runs under the same user as the tests.
 _directory_mode = 0o755
+
+# How many characters of a random value make the name of a container of a managed mode unique.
+_name_suffix_length = 8
 
 # The settings of the PostgreSQL containers. The WAL is sized for the write volume of pub/sub and compressed,
 # backends hand their writes to the kernel every 256 kB, a vacuum reuses a buffer of its ring only after the WAL
@@ -133,9 +156,18 @@ _shm_size = '1g'
 class PubSubDatabase:
     mode: 'str'
     container_name: 'str' = ''
+    host: 'str' = 'localhost'
     port: 'int' = 0
     password: 'str' = ''
+    admin_username: 'str' = ''
+    admin_password: 'str' = ''
+    endpoint: 'str' = ''
+    profile_name: 'str' = ''
     work_dir: 'str' = ''
+    certs_dir: 'str' = ''
+    bouncer_container: 'str' = ''
+    docker_args: 'strlist' = field(default_factory=list)
+    settings: 'strlist' = field(default_factory=list)
     env: 'strstrdict' = field(default_factory=dict)
 
 # ################################################################################################################################
@@ -155,6 +187,27 @@ def get_db_mode() -> 'str':
 
 def is_postgresql_mode(mode:'str') -> 'bool':
     out = mode in _postgresql_modes
+    return out
+
+# ################################################################################################################################
+
+def is_managed_mode(mode:'str') -> 'bool':
+    out = mode in _managed_modes
+    return out
+
+# ################################################################################################################################
+
+def get_suite_modes(default_modes:'strlist') -> 'strlist':
+    """ Returns the modes that a suite covering several PostgreSQL modes runs in - only the managed mode
+    of the session if it selects one, and the default modes of the suite otherwise.
+    """
+    mode = get_db_mode()
+
+    if is_managed_mode(mode):
+        out = [mode]
+    else:
+        out = default_modes
+
     return out
 
 # ################################################################################################################################
@@ -181,84 +234,28 @@ def _find_free_port() -> 'int':
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-def _new_key() -> 'rsa.RSAPrivateKey':
-    out = rsa.generate_private_key(public_exponent=65537, key_size=_key_size)
+def get_container_address(container_name:'str') -> 'str':
+    """ Returns the IP address of a container on its network.
+    """
+    command = ['docker', 'inspect', '-f', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', container_name]
+    result = subprocess.run(command, check=True, capture_output=True, text=True)
+
+    out = result.stdout.strip()
     return out
 
 # ################################################################################################################################
 
-def _write_key(path:'str', key:'rsa.RSAPrivateKey') -> 'None':
-    data = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL,
-        serialization.NoEncryption())
-
-    with open(path, 'wb') as key_file:
-        _ = key_file.write(data)
-
-    os.chmod(path, _key_mode)
-
-# ################################################################################################################################
-
-def _write_certificate(path:'str', certificate:'x509.Certificate') -> 'None':
-    data = certificate.public_bytes(serialization.Encoding.PEM)
-
-    with open(path, 'wb') as certificate_file:
-        _ = certificate_file.write(data)
-
-    os.chmod(path, _certificate_mode)
-
-# ################################################################################################################################
-
-def _issue(subject:'str', key:'rsa.RSAPrivateKey', issuer:'str', issuer_key:'rsa.RSAPrivateKey', is_ca:'bool',
-    host_names:'strlist') -> 'x509.Certificate':
-    """ Issues one certificate, a CA's own or one signed by a CA, valid for the given host names.
+def get_database_address(database:'PubSubDatabase') -> 'str':
+    """ Returns the address that a proxy on the host forwards to - the container of a managed mode,
+    or the port that the container of any other mode publishes on the host.
     """
-    now = utcnow()
+    if database.profile_name:
+        out = get_container_address(database.container_name)
+    else:
+        out = '127.0.0.1'
 
-    builder = x509.CertificateBuilder()
-    builder = builder.subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, subject)]))
-    builder = builder.issuer_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, issuer)]))
-    builder = builder.public_key(key.public_key())
-    builder = builder.serial_number(x509.random_serial_number())
-    builder = builder.not_valid_before(now - timedelta(days=1))
-    builder = builder.not_valid_after(now + timedelta(days=_validity_days))
-    builder = builder.add_extension(x509.BasicConstraints(ca=is_ca, path_length=None), critical=True)
-
-    if host_names:
-        names:'list' = []
-        for host_name in host_names:
-            try:
-                address = ipaddress.ip_address(host_name)
-                names.append(x509.IPAddress(address))
-            except ValueError:
-                names.append(x509.DNSName(host_name))
-        builder = builder.add_extension(x509.SubjectAlternativeName(names), critical=False)
-
-    out = builder.sign(issuer_key, hashes.SHA256())
     return out
-
-# ################################################################################################################################
-
-def generate_certificates(directory:'str', host_names:'strlist') -> 'None':
-    """ Writes a CA, a server certificate for the given host names and a client certificate into a directory.
-    """
-    ca_name = 'Zato pub/sub test CA'
-
-    ca_key = _new_key()
-    ca_cert = _issue(ca_name, ca_key, ca_name, ca_key, True, [])
-
-    server_key = _new_key()
-    server_cert = _issue('localhost', server_key, ca_name, ca_key, False, host_names)
-
-    client_key = _new_key()
-    client_cert = _issue(ModuleCtx.Username, client_key, ca_name, ca_key, False, [])
-
-    _write_certificate(os.path.join(directory, 'ca.crt'), ca_cert)
-    _write_certificate(os.path.join(directory, 'server.crt'), server_cert)
-    _write_key(os.path.join(directory, 'server.key'), server_key)
-    _write_certificate(os.path.join(directory, 'client.crt'), client_cert)
-    _write_key(os.path.join(directory, 'client.key'), client_key)
 
 # ################################################################################################################################
 
@@ -309,9 +306,13 @@ def build_ssl_context(database:'PubSubDatabase') -> 'ssl.SSLContext':
 
 # ################################################################################################################################
 
-def connect(database:'PubSubDatabase', host:'str'='localhost', port:'int'=0) -> 'pg8000.dbapi.Connection':
-    """ Opens a pg8000 connection to the database of a session, outside of any engine.
+def connect(database:'PubSubDatabase', host:'str'='', port:'int'=0, is_admin:'bool'=False) -> 'pg8000.dbapi.Connection':
+    """ Opens a pg8000 connection to the database of a session, outside of any engine, under the pub/sub role
+    or under the superuser of the container.
     """
+    if not host:
+        host = database.host
+
     if not port:
         port = database.port
 
@@ -320,8 +321,15 @@ def connect(database:'PubSubDatabase', host:'str'='localhost', port:'int'=0) -> 
     else:
         ssl_context = False
 
-    out = pg8000.dbapi.connect(user=ModuleCtx.Username, password=database.password, host=host, port=port,
-        database=ModuleCtx.DB_Name, ssl_context=ssl_context, timeout=10)
+    if is_admin:
+        username = database.admin_username
+        password = database.admin_password
+    else:
+        username = ModuleCtx.Username
+        password = database.password
+
+    out = pg8000.dbapi.connect(user=username, password=password, host=host, port=port, database=ModuleCtx.DB_Name,
+        ssl_context=ssl_context, timeout=10)
 
     return out
 
@@ -356,6 +364,94 @@ def remove_stale_containers() -> 'None':
         _ = subprocess.run(['docker', 'rm', '-f', *container_ids], capture_output=True, check=False)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _prepare_database(database:'PubSubDatabase', label:'str') -> 'None':
+    """ Gives a new database its credentials, its address and the name of its container.
+    """
+    database.password = 'pubsub.' + CryptoManager.generate_hex_string()
+
+    # A managed mode has an instance host name and an endpoint host name, and its instance listens on the usual port ..
+    if profile_name := _managed_modes.get(database.mode):
+        profile = Managed_Profiles[profile_name]
+
+        suffix = CryptoManager.generate_hex_string()
+        suffix = suffix[:_name_suffix_length]
+
+        database.profile_name = profile_name
+        database.port = Instance_Port
+        database.container_name = f'{ModuleCtx.Container_Prefix}{label}-{suffix}'
+        database.host = get_host_name(profile, database.container_name)
+        database.endpoint = get_host_name(profile, f'{label}-{suffix}-endpoint')
+        database.admin_username = ModuleCtx.Service_Username
+        database.admin_password = 'service.' + CryptoManager.generate_hex_string()
+
+    # .. while the other modes publish their port on the host and connect under the superuser of the container.
+    else:
+        database.port = _find_free_port()
+        database.container_name = f'{ModuleCtx.Container_Prefix}{label}-{database.port}'
+        database.admin_username = ModuleCtx.Username
+        database.admin_password = database.password
+
+# ################################################################################################################################
+
+def get_standby_container_name(database:'PubSubDatabase') -> 'str':
+    out = f'{database.container_name}-standby'
+    return out
+
+# ################################################################################################################################
+
+def get_standby_host(database:'PubSubDatabase') -> 'str':
+    """ Returns the host name of the standby of a database of a managed mode.
+    """
+    profile = Managed_Profiles[database.profile_name]
+    standby_container_name = get_standby_container_name(database)
+
+    out = get_host_name(profile, standby_container_name)
+    return out
+
+# ################################################################################################################################
+
+def _get_host_names(database:'PubSubDatabase') -> 'strlist':
+    """ Returns the names that the server certificate of a database is valid for.
+    """
+    out = ['localhost', '127.0.0.1', database.container_name]
+
+    if database.profile_name:
+        standby_host = get_standby_host(database)
+        out.extend([database.host, database.endpoint, standby_host])
+
+    return out
+
+# ################################################################################################################################
+
+def get_container_settings(database:'PubSubDatabase', extra_settings:'strlist | None') -> 'strlist':
+    """ Returns the settings of a container, restricted to those that the service of a managed mode allows to change.
+    """
+    out = _postgresql_settings + _postgresql_diagnostics
+
+    if extra_settings:
+        out = out + extra_settings
+
+    if database.profile_name:
+        profile = Managed_Profiles[database.profile_name]
+        out = get_profile_settings(profile, out)
+
+    return out
+
+# ################################################################################################################################
+
+def _register_names(database:'PubSubDatabase') -> 'None':
+    """ Makes the instance host name and the endpoint host name of a managed mode resolve to the container.
+    """
+    runtime_dir = get_runtime_dir()
+    address = get_container_address(database.container_name)
+
+    session_dns.register(runtime_dir, database.host, address)
+    session_dns.register(runtime_dir, database.endpoint, address)
+    session_dns.check_resolution(database.endpoint, address)
+
+# ################################################################################################################################
 
 def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | None'=None,
     extra_docker_args:'strlist | None'=None) -> 'PubSubDatabase':
@@ -366,9 +462,7 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
     if not is_postgresql_mode(mode):
         return out
 
-    out.port = _find_free_port()
-    out.password = 'pubsub.' + CryptoManager.generate_hex_string()
-    out.container_name = f'{ModuleCtx.Container_Prefix}{label}-{out.port}'
+    _prepare_database(out, label)
 
     # The data directory and the certificates are under the runtime directory of the tests ..
     runtime_dir = get_runtime_dir()
@@ -388,19 +482,38 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
         '--name', out.container_name,
         '--user', f'{os.getuid()}:{os.getgid()}',
         '--shm-size', _shm_size,
-        '-e', 'POSTGRES_USER=' + ModuleCtx.Username,
-        '-e', 'POSTGRES_PASSWORD=' + out.password,
-        '-e', 'POSTGRES_DB=' + ModuleCtx.DB_Name,
         '-v', f'{data_dir}:/var/lib/postgresql/data',
-        '-p', f'{out.port}:5432',
     ]
+
+    # .. a managed mode creates the pub/sub role and its database under the superuser of the container ..
+    if out.profile_name:
+        profile = Managed_Profiles[out.profile_name]
+        chain = profile.chain
+
+        roles_script = os.path.join(certs_dir, 'roles.sql')
+        write_roles_script(roles_script, profile, ModuleCtx.Username, out.password, ModuleCtx.DB_Name)
+
+        command.extend(['-e', 'POSTGRES_USER=' + ModuleCtx.Service_Username])
+        command.extend(['-e', 'POSTGRES_PASSWORD=' + out.admin_password])
+        command.extend(['-v', f'{roles_script}:/docker-entrypoint-initdb.d/0-roles.sql:ro'])
+
+    # .. whereas the other modes create both as the superuser and publish the port on the host ..
+    else:
+        chain = Chain_Plain
+
+        command.extend(['-e', 'POSTGRES_USER=' + ModuleCtx.Username])
+        command.extend(['-e', 'POSTGRES_PASSWORD=' + out.password])
+        command.extend(['-e', 'POSTGRES_DB=' + ModuleCtx.DB_Name])
+        command.extend(['-p', f'{out.port}:5432'])
 
     # .. the TLS modes accept TCP connections over TLS only ..
     if mode in _tls_modes:
-        generate_certificates(certs_dir, ['localhost', '127.0.0.1', out.container_name])
+        host_names = _get_host_names(out)
+        generate_certificates(certs_dir, host_names, ModuleCtx.Username, chain)
 
         setup_script = os.path.join(certs_dir, 'tls-setup.sh')
-        _write_tls_setup_script(setup_script, mode == PubSubDBMode.PostgreSQL_MTLS)
+        needs_client_cert = mode == PubSubDBMode.PostgreSQL_MTLS
+        _write_tls_setup_script(setup_script, needs_client_cert)
 
         command.extend(['-v', f'{certs_dir}:/certs-in:ro'])
         command.extend(['-v', f'{setup_script}:/docker-entrypoint-initdb.d/tls-setup.sh:ro'])
@@ -408,24 +521,24 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
     if extra_docker_args:
         command.extend(extra_docker_args)
 
-    command.append(ModuleCtx.PostgreSQL_Image)
-    command.append('postgres')
+    out.docker_args = command
+    out.settings = get_container_settings(out, extra_settings)
+    out.certs_dir = certs_dir
 
-    settings = _postgresql_settings + _postgresql_diagnostics
+    _run_container(out, ModuleCtx.PostgreSQL_Image)
 
-    if extra_settings:
-        settings = settings + extra_settings
-
-    for setting in settings:
-        command.extend(['-c', setting])
-
-    _ = subprocess.run(command, check=True, capture_output=True)
+    # .. the host names of a managed mode resolve to the container ..
+    if out.profile_name:
+        _register_names(out)
+        host = out.endpoint
+    else:
+        host = 'localhost'
 
     # .. the environment of the server and of the test process point at the container ..
     out.env = {
         'Zato_PubSub_DB_Type': 'postgresql',
-        'Zato_PubSub_DB_Host': 'localhost',
-        'Zato_PubSub_DB_Port': str(out.port),
+        'Zato_PubSub_DB_Host': host,
+        'Zato_PubSub_DB_Port': f'{out.port}',
         'Zato_PubSub_DB_Username': ModuleCtx.Username,
         'Zato_PubSub_DB_Password': out.password,
         'Zato_PubSub_DB_Name': ModuleCtx.DB_Name,
@@ -439,10 +552,88 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
         out.env['Zato_PubSub_DB_SSL_Cert_File'] = os.path.join(certs_dir, 'client.crt')
         out.env['Zato_PubSub_DB_SSL_Key_File'] = os.path.join(certs_dir, 'client.key')
 
-    # .. and the container is ready once it accepts them.
+    if out.profile_name:
+        dns_env = session_dns.get_env()
+        out.env.update(dns_env)
+
+    # .. the container is ready once it accepts them ..
     _wait_until_ready(out)
 
+    # .. and the session may add the round-trip time of a network and, in a managed mode, PgBouncer.
+    _add_network(out)
+
+    if out.profile_name:
+        if os.environ.get(ModuleCtx.Env_Bouncer, ''):
+            _start_bouncer(out)
+            out.env['Zato_PubSub_DB_Port'] = f'{Bouncer_Port}'
+
     return out
+
+# ################################################################################################################################
+
+def _run_container(database:'PubSubDatabase', image:'str') -> 'None':
+    """ Runs the container of a database from an image, with its arguments and its settings.
+    """
+    command = list(database.docker_args)
+    command.append(image)
+    command.append('postgres')
+
+    for setting in database.settings:
+        command.extend(['-c', setting])
+
+    _ = subprocess.run(command, check=True, capture_output=True)
+
+# ################################################################################################################################
+
+def _add_network(database:'PubSubDatabase') -> 'None':
+    """ Adds the round-trip time that the session asks for to the network of the container.
+    """
+    if round_trip_ms := os.environ.get(ModuleCtx.Env_Round_Trip_Ms, ''):
+        add_round_trip_time(database.container_name, float(round_trip_ms))
+
+# ################################################################################################################################
+
+def _start_bouncer(database:'PubSubDatabase') -> 'None':
+    """ Starts PgBouncer in front of the database of a managed mode and makes the endpoint name resolve to it.
+    """
+    database.bouncer_container = f'{database.container_name}-bouncer'
+    address = get_container_address(database.container_name)
+
+    _ = subprocess.run(['docker', 'rm', '-f', database.bouncer_container], capture_output=True, check=False)
+
+    start_bouncer(database.bouncer_container, database.work_dir, database.certs_dir, address, database.port,
+        ModuleCtx.DB_Name, ModuleCtx.Username, database.password)
+
+    runtime_dir = get_runtime_dir()
+    bouncer_address = get_container_address(database.bouncer_container)
+    session_dns.register(runtime_dir, database.endpoint, bouncer_address)
+
+# ################################################################################################################################
+
+def replace_container(database:'PubSubDatabase', image:'str'='', extra_settings:'strlist | None'=None,
+    downtime_seconds:'float'=0) -> 'None':
+    """ Shuts the database of a managed mode down and starts it again on the same data, in a new container from
+    the given image and with the given settings changed, the way a database service reboots an instance for a minor
+    version upgrade, a change of a parameter that requires a restart or a maintenance event. The new container may
+    have another address, which its host names, its network and PgBouncer follow.
+    """
+    if not image:
+        image = ModuleCtx.PostgreSQL_Image
+
+    _ = subprocess.run(['docker', 'stop', database.container_name], check=True, capture_output=True)
+    time.sleep(downtime_seconds)
+    _ = subprocess.run(['docker', 'rm', '-f', database.container_name], check=True, capture_output=True)
+
+    if extra_settings:
+        database.settings = database.settings + extra_settings
+
+    _run_container(database, image)
+    _register_names(database)
+    _wait_until_ready(database)
+    _add_network(database)
+
+    if database.bouncer_container:
+        _start_bouncer(database)
 
 # ################################################################################################################################
 
@@ -472,6 +663,9 @@ def stop_pubsub_database(database:'PubSubDatabase') -> 'None':
     """
     if not database.container_name:
         return
+
+    if database.bouncer_container:
+        _ = subprocess.run(['docker', 'rm', '-f', database.bouncer_container], capture_output=True, check=False)
 
     _ = subprocess.run(['docker', 'rm', '-f', database.container_name], capture_output=True, check=False)
     shutil.rmtree(database.work_dir, ignore_errors=True)

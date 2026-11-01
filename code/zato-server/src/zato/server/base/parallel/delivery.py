@@ -25,8 +25,8 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
+from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.pubsub.sql.generation import PubSubReplaced
-from zato.common.util.api import utcnow
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
 
@@ -301,8 +301,11 @@ class PushDelivery:
         normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
         expiration_time = datetime.fromisoformat(normalized_expiration_iso)
 
-        # An expired message is not attempted at all ..
-        if utcnow() > expiration_time:
+        # Expirations are measured against the time of the database ..
+        clock = get_database_clock()
+
+        # .. an expired message is not attempted at all ..
+        if clock.now() > expiration_time:
             self._conclude_expired(message, sub_config, sub_key)
             return True
 
@@ -314,7 +317,7 @@ class PushDelivery:
                 return Interrupt_Paused
 
             # .. and a message that expired between two attempts is not attempted again.
-            if utcnow() > expiration_time:
+            if clock.now() > expiration_time:
                 return Interrupt_Expired
 
             return ''
@@ -386,7 +389,9 @@ class PushDelivery:
         msg += f', msg_id `{msg_id}`: {reason}'
         logger.debug(msg)
 
-        if utcnow() > expiration_time:
+        clock = get_database_clock()
+
+        if clock.now() > expiration_time:
             self._conclude_expired(message, sub_config, sub_key)
             return True
 

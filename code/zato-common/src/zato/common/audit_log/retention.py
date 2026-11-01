@@ -380,9 +380,11 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
     delete_bodies = event_body_table.delete()
     delete_bodies = delete_bodies.where(is_body_of_event)
 
+    # The body rows are locked before the event rows, in the order that _delete_events locks them in,
+    # because the retention of another server may delete the same events at the same time.
     with engine.begin() as connection:
-        _ = connection.execute(prune_statement)
         _ = connection.execute(delete_bodies)
+        _ = connection.execute(prune_statement)
 
 # ################################################################################################################################
 

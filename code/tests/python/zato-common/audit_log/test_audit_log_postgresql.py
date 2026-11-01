@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from active_standby import run_active_standby_scenario
 from attachments import run_attachment_scenario
 from common import audit_log_env, run_audit_log_scenario
 from config_audit import run_config_audit_scenario
@@ -40,6 +41,7 @@ def test_audit_log_postgresql(postgresql_server:'DatabaseServer') -> 'None':
         run_flow_resolve_scenario()
         run_scheduler_history_scenario()
         run_storage_types_scenario()
+        run_active_standby_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################

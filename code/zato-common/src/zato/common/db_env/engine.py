@@ -55,9 +55,11 @@ if 0:
 # in flight, so throughput scales with how many connections may commit at once
 # and SQLAlchemy's default cap of 5+10 is too low for stores like pub/sub.
 # The total of 80 stays below the default connection limit of PostgreSQL (100),
-# leaving room for other clients of the same database.
-_network_pool_size = 30
-_network_max_overflow = 50
+# leaving room for other clients of the same database. All of the connections are persistent,
+# because an overflow connection is closed each time it is returned, and under a steady load
+# each reconnection repeats the authentication handshake and the preparation of statements.
+_network_pool_size = 80
+_network_max_overflow = 0
 
 # The PostgreSQL advisory lock under which the schemas are created
 _schema_lock_key = 7_401_852_117_309

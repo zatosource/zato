@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, exists, select
+from sqlalchemy import and_, bindparam, exists, select, true
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import DBAPIError
@@ -75,8 +75,8 @@ class PubSubDuplicateMsgID(Exception):
 def drop_payloads(connection:'Connection', message_ids:'intlist') -> 'intlist':
     """ Sets the payload to NULL for each of the given messages that no subscriber needs anymore, in the caller's
     transaction, which has removed delivery rows of these messages before. Returns the messages it dropped
-    the payloads of. The message rows are locked in the order of their keys, which every caller follows
-    after its delivery rows, so concurrent transactions cannot deadlock on them.
+    the payloads of. The message rows that are locked are locked in the order of their keys, which every caller
+    follows after its delivery rows, so concurrent transactions cannot deadlock on them.
     """
     message_ids = sorted(message_ids)
     is_postgresql = connection.dialect.name == Type_PostgreSQL
@@ -85,10 +85,29 @@ def drop_payloads(connection:'Connection', message_ids:'intlist') -> 'intlist':
 
     for chunk in _get_chunks(message_ids):
 
-        parameters = {'drop_message_ids': chunk}
-
+        # On PostgreSQL, only the messages without a delivery row that remains are locked and looked at ..
         if is_postgresql:
+
+            needed:'set[int]' = set()
+
+            for row in connection.execute(_needed_messages_query, {'drop_message_ids': chunk}):
+                needed.add(row.id)
+
+            candidates:'intlist' = []
+
+            for message_id in chunk:
+                if message_id not in needed:
+                    candidates.append(message_id)
+
+            if not candidates:
+                continue
+
+            parameters = {'drop_message_ids': candidates}
             _ = connection.execute(_lock_messages_query, parameters).fetchall()
+
+        # .. while SQLite, with its single writer, looks at all of them.
+        else:
+            parameters = {'drop_message_ids': chunk}
 
         for row in connection.execute(_drop_payloads_statement, parameters):
             out.append(row.id)
@@ -163,6 +182,21 @@ _lock_messages_query = _lock_messages_query.where(
     message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)))
 _lock_messages_query = _lock_messages_query.order_by(message_table.c.id)
 _lock_messages_query = _lock_messages_query.with_for_update(key_share=True)
+
+# A message with a delivery row that no transaction is removing still has a subscriber, and the row is held for key share
+# until the commit, so that the transaction which removes it later waits for this one and then sees its removals.
+# Only the other messages are locked as above, which keeps the subscribers of a fanned-out message
+# from acknowledging it one transaction after another.
+_live_delivery = select(delivery_table.c.id)
+_live_delivery = _live_delivery.where(delivery_table.c.message_id == message_table.c.id)
+_live_delivery = _live_delivery.limit(1)
+_live_delivery = _live_delivery.with_for_update(read=True, key_share=True, skip_locked=True)
+_live_delivery = _live_delivery.lateral()
+
+_needed_messages_query = select(message_table.c.id)
+_needed_messages_query = _needed_messages_query.select_from(message_table.join(_live_delivery, true()))
+_needed_messages_query = _needed_messages_query.where(
+    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)))
 
 # ################################################################################################################################
 # ################################################################################################################################

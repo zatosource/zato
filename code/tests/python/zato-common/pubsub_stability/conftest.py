@@ -28,6 +28,7 @@ sys.path.insert(0, _here)
 import pytest
 
 # Zato
+from capture import limit_captured_logs
 from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx
 from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_postgresql_mode, pubsub_db_env, \
     start_pubsub_database, stop_pubsub_database
@@ -36,14 +37,25 @@ from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_po
 # ################################################################################################################################
 
 if 0:
-    from collections.abc import Iterator
+    from collections.abc import Generator, Iterator
     from zato.common.typing_ import strstrdict
+
+    nonegen = Generator[None, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # How many fully delivered messages each topic keeps during the stability runs, which bounds the tables.
 _delivered_max_messages = '10000'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def captured_log_level(request:'pytest.FixtureRequest', caplog:'pytest.LogCaptureFixture') -> 'nonegen':
+    """ Keeps the warnings and errors only in the logs that pytest captures for the report of each test.
+    """
+    yield from limit_captured_logs(request, caplog)
 
 # ################################################################################################################################
 # ################################################################################################################################

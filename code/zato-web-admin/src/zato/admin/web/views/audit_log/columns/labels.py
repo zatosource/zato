@@ -179,6 +179,7 @@ _event_type_label = {
     AuditEvent.Message_Sent: 'Message sent',
     AuditEvent.Alert_Raised: 'Alert raised',
     AuditEvent.Alert_Explained: 'Alert explained',
+    AuditEvent.Takeover: 'Takeover',
     AuditEvent.MCP_Initialize: 'MCP initialize',
     AuditEvent.MCP_Tools_List: 'MCP tools list',
     AuditEvent.MCP_Tools_Call: 'MCP tools call',

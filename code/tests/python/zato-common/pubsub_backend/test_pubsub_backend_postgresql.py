@@ -17,8 +17,8 @@ import pytest
 from cleanup_postgresql import run_cleanup_postgresql_scenario
 from scenarios import run_common_scenarios
 from zato.common.pubsub.sql.config import get_pubsub_engine
-from zato.common.test.pubsub_database import connect, pubsub_db_env, PubSubDBMode, start_pubsub_database, \
-    stop_pubsub_database
+from zato.common.test.pubsub_database import connect, get_suite_modes, pubsub_db_env, PubSubDBMode, \
+    start_pubsub_database, stop_pubsub_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,7 +30,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_modes = [PubSubDBMode.PostgreSQL, PubSubDBMode.PostgreSQL_TLS, PubSubDBMode.PostgreSQL_MTLS]
+_modes = get_suite_modes([PubSubDBMode.PostgreSQL, PubSubDBMode.PostgreSQL_TLS, PubSubDBMode.PostgreSQL_MTLS])
 
 # ################################################################################################################################
 # ################################################################################################################################

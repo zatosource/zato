@@ -9,6 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # A replicated pub/sub database of a test session - a PostgreSQL primary, a streaming standby built from a base backup
 # of the primary, and a TCP proxy that the processes of the test connect through. A failover promotes the standby
 # and repoints the proxy, the way a managed database service moves its endpoint to the promoted server.
+#
+# In the managed modes, the processes resolve the endpoint host name through the DNS server of the session, which
+# points it at the proxy, and a failover points it at the standby instead, the way the DNS of Amazon RDS and of Azure
+# moves the endpoint of a Multi-AZ or zone-redundant instance. The standby listens on the port of the proxy, so that
+# the port of the endpoint stays the same.
 
 # stdlib
 import os
@@ -19,9 +24,10 @@ from dataclasses import dataclass, field
 from urllib.request import urlopen
 
 # Zato
-from zato.common.test.pubsub_database import _find_free_port, _directory_mode, _postgresql_diagnostics, \
-     _postgresql_settings, _shm_size, connect, ModuleCtx, PubSubDBMode, PubSubDatabase, start_pubsub_database, \
-     stop_pubsub_database
+from zato.common.test.pubsub_database import _find_free_port, _directory_mode, _shm_size, connect, get_container_address, \
+     get_container_settings, get_runtime_dir, get_standby_container_name, get_standby_host, ModuleCtx, PubSubDBMode, \
+     PubSubDatabase, start_pubsub_database, stop_pubsub_database
+from zato.common.test.pubsub_profile import session_dns
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,6 +54,9 @@ _proxy_ready_timeout = 30
 # How long a command of the proxy may take, in seconds.
 _proxy_command_timeout = 10
 
+# The address that the proxy listens on.
+_proxy_host = '127.0.0.1'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -57,6 +66,7 @@ class ReplicatedDatabase:
     is_sync: 'bool'
     primary: 'PubSubDatabase'
     standby_container: 'str' = ''
+    standby_host: 'str' = 'localhost'
     standby_port: 'int' = 0
     standby_dir: 'str' = ''
     proxy_port: 'int' = 0
@@ -107,9 +117,9 @@ def _primary_settings() -> 'strlist':
 # ################################################################################################################################
 
 def _run_on_primary(database:'ReplicatedDatabase', statements:'strlist') -> 'None':
-    """ Runs statements outside of a transaction on the primary, connecting to it directly.
+    """ Runs statements outside of a transaction on the primary, connecting to it directly as its superuser.
     """
-    connection = connect(database.primary)
+    connection = connect(database.primary, is_admin=True)
     connection.autocommit = True
     cursor = connection.cursor()
 
@@ -121,6 +131,9 @@ def _run_on_primary(database:'ReplicatedDatabase', statements:'strlist') -> 'Non
 # ################################################################################################################################
 
 def _standby_conninfo(database:'ReplicatedDatabase') -> 'str':
+    """ Returns how the standby connects to the primary - through the port the primary publishes on the host,
+    or to the address of the primary on the network of the containers in the managed modes.
+    """
     primary = database.primary
 
     if database.mode == PubSubDBMode.PostgreSQL:
@@ -128,7 +141,12 @@ def _standby_conninfo(database:'ReplicatedDatabase') -> 'str':
     else:
         ssl_mode = 'require'
 
-    out = f'host=127.0.0.1 port={primary.port} user={ModuleCtx.Username} password={primary.password} ' + \
+    if primary.profile_name:
+        host = get_container_address(primary.container_name)
+    else:
+        host = '127.0.0.1'
+
+    out = f'host={host} port={primary.port} user={primary.admin_username} password={primary.admin_password} ' + \
           f'application_name={_standby_name} sslmode={ssl_mode}'
 
     return out
@@ -140,8 +158,7 @@ def _start_standby(database:'ReplicatedDatabase') -> 'None':
     """
     primary = database.primary
 
-    database.standby_port = _find_free_port()
-    database.standby_container = f'{primary.container_name}-standby'
+    database.standby_container = get_standby_container_name(primary)
     database.standby_dir = os.path.join(primary.work_dir, 'standby')
 
     os.makedirs(database.standby_dir)
@@ -150,12 +167,14 @@ def _start_standby(database:'ReplicatedDatabase') -> 'None':
     conninfo = _standby_conninfo(database)
     data_dir = '/var/lib/postgresql/data'
 
-    settings = _postgresql_settings + _postgresql_diagnostics + [
+    replication_settings = [
         f'port={database.standby_port}',
         'hot_standby=on',
         f'primary_conninfo={conninfo}',
         f'primary_slot_name={_standby_name}',
     ]
+
+    settings = get_container_settings(primary, replication_settings)
 
     postgres_command = ['postgres', '-D', data_dir]
     for setting in settings:
@@ -169,16 +188,29 @@ def _start_standby(database:'ReplicatedDatabase') -> 'None':
     command:'strlist' = [
         'docker', 'run', '-d',
         '--name', database.standby_container,
-        '--network', 'host',
         '--user', f'{os.getuid()}:{os.getgid()}',
         '--shm-size', _shm_size,
         '-v', f'{database.standby_dir}:{data_dir}',
         '--entrypoint', 'bash',
-        ModuleCtx.PostgreSQL_Image,
-        '-c', script,
     ]
 
+    # The standby of the managed modes is an instance of its own on the network of the containers ..
+    if primary.profile_name:
+        database.standby_host = get_standby_host(primary)
+
+    # .. whereas the standby of the other modes listens on the host.
+    else:
+        command.extend(['--network', 'host'])
+
+    command.append(ModuleCtx.PostgreSQL_Image)
+    command.extend(['-c', script])
+
     _ = subprocess.run(command, check=True, capture_output=True)
+
+    if primary.profile_name:
+        runtime_dir = get_runtime_dir()
+        address = get_container_address(database.standby_container)
+        session_dns.register(runtime_dir, database.standby_host, address)
 
 # ################################################################################################################################
 
@@ -188,15 +220,16 @@ def _wait_until_streaming(database:'ReplicatedDatabase', expected_state:'str') -
     deadline = time.monotonic() + _ready_timeout
 
     while True:
-        connection = connect(database.primary)
+        connection = connect(database.primary, is_admin=True)
         cursor = connection.cursor()
         cursor.execute('select state, sync_state from pg_stat_replication where application_name = %s', (_standby_name,))
         rows = cursor.fetchall()
         connection.close()
 
         for state, sync_state in rows:
-            if state == 'streaming' and sync_state == expected_state:
-                return
+            if state == 'streaming':
+                if sync_state == expected_state:
+                    return
 
         if time.monotonic() > deadline:
             raise Exception(f'Standby {database.standby_container} is not streaming, rows `{rows}`')
@@ -206,18 +239,34 @@ def _wait_until_streaming(database:'ReplicatedDatabase', expected_state:'str') -
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_primary_address(database:'ReplicatedDatabase') -> 'str':
+    """ Returns the address of the primary that the proxy forwards to.
+    """
+    primary = database.primary
+
+    if primary.profile_name:
+        out = get_container_address(primary.container_name)
+    else:
+        out = _proxy_host
+
+    return out
+
+# ################################################################################################################################
+
 def _start_proxy(database:'ReplicatedDatabase') -> 'None':
     """ Starts the TCP proxy in a process of its own, pointed at the primary.
     """
-    database.proxy_port = _find_free_port()
     database.control_port = _find_free_port()
     database.proxy_log = os.path.join(database.primary.work_dir, 'proxy.log')
 
+    upstream_host = _get_primary_address(database)
+
     command = [
         sys.executable, '-m', 'zato.common.test.tcp_proxy',
-        '--listen-port', str(database.proxy_port),
-        '--control-port', str(database.control_port),
-        '--upstream-port', str(database.primary.port),
+        '--listen-port', f'{database.proxy_port}',
+        '--control-port', f'{database.control_port}',
+        '--upstream-host', upstream_host,
+        '--upstream-port', f'{database.primary.port}',
     ]
 
     with open(database.proxy_log, 'wb') as log_file:
@@ -251,11 +300,20 @@ def start_replicated_database(label:'str', mode:'str', is_sync:'bool') -> 'Repli
     """ Starts a primary, a standby streaming from it and the proxy that the processes of the test connect through.
     """
     primary_label = f'{label}-primary'
-    primary = start_pubsub_database(primary_label, mode, extra_settings=_primary_settings())
+    primary_settings = _primary_settings()
+    primary = start_pubsub_database(primary_label, mode, extra_settings=primary_settings)
 
     out = ReplicatedDatabase(mode=mode, is_sync=is_sync, primary=primary)
 
-    # The init scripts ran when the primary was created, so replication connections are admitted from here on ..
+    # The standby of the managed modes listens on the port of the proxy, which the endpoint keeps after a failover ..
+    out.proxy_port = _find_free_port()
+
+    if primary.profile_name:
+        out.standby_port = out.proxy_port
+    else:
+        out.standby_port = _find_free_port()
+
+    # .. the init scripts ran when the primary was created, so replication connections are admitted from here on ..
     script_path = os.path.join(primary.work_dir, 'replication-setup.sh')
     _write_replication_script(script_path, mode)
     _ = subprocess.run(['docker', 'cp', script_path, f'{primary.container_name}:/tmp/replication-setup.sh'],
@@ -278,11 +336,15 @@ def start_replicated_database(label:'str', mode:'str', is_sync:'bool') -> 'Repli
         ])
         _wait_until_streaming(out, 'sync')
 
-    # .. and the processes of the test connect through the proxy.
+    # .. and the processes of the test connect through the proxy, under the endpoint name in the managed modes.
     _start_proxy(out)
 
     out.env = dict(primary.env)
-    out.env['Zato_PubSub_DB_Port'] = str(out.proxy_port)
+    out.env['Zato_PubSub_DB_Port'] = f'{out.proxy_port}'
+
+    if primary.profile_name:
+        runtime_dir = get_runtime_dir()
+        session_dns.register(runtime_dir, primary.endpoint, _proxy_host)
 
     return out
 
@@ -303,15 +365,24 @@ def stop_primary(database:'ReplicatedDatabase') -> 'None':
 # ################################################################################################################################
 
 def start_primary(database:'ReplicatedDatabase') -> 'None':
-    """ Starts the primary again and waits until it accepts connections.
+    """ Starts the primary again and waits until it accepts connections. A primary of a managed mode may receive
+    another address, which its host name and the proxy follow.
     """
-    _ = subprocess.run(['docker', 'start', database.primary.container_name], check=True, capture_output=True)
+    primary = database.primary
+
+    _ = subprocess.run(['docker', 'start', primary.container_name], check=True, capture_output=True)
+
+    if primary.profile_name:
+        runtime_dir = get_runtime_dir()
+        address = get_container_address(primary.container_name)
+        session_dns.register(runtime_dir, primary.host, address)
+        _ = proxy_command(database, f'upstream/{address}/{primary.port}')
 
     deadline = time.monotonic() + _ready_timeout
 
     while True:
         try:
-            connection = connect(database.primary)
+            connection = connect(primary)
             connection.close()
             return
         except Exception:
@@ -322,11 +393,12 @@ def start_primary(database:'ReplicatedDatabase') -> 'None':
 # ################################################################################################################################
 
 def promote_standby(database:'ReplicatedDatabase') -> 'float':
-    """ Promotes the standby, repoints the proxy at it and returns how long the promotion took, in seconds.
+    """ Promotes the standby, repoints the endpoint at it and returns how long the promotion took, in seconds.
     """
+    primary = database.primary
     start = time.monotonic()
 
-    connection = connect(database.primary, port=database.standby_port)
+    connection = connect(primary, host=database.standby_host, port=database.standby_port, is_admin=True)
     connection.autocommit = True
     cursor = connection.cursor()
     cursor.execute('select pg_promote(true, %s)', (_promote_timeout,))
@@ -338,7 +410,16 @@ def promote_standby(database:'ReplicatedDatabase') -> 'float':
         raise Exception(f'Standby {database.standby_container} was not promoted')
 
     database.is_promoted = True
-    _ = proxy_command(database, f'upstream/{database.standby_port}')
+
+    # The endpoint name of a managed mode resolves to the standby from now on ..
+    if primary.profile_name:
+        runtime_dir = get_runtime_dir()
+        address = get_container_address(database.standby_container)
+        session_dns.register(runtime_dir, primary.endpoint, address)
+
+    # .. whereas in the other modes, the proxy forwards to it.
+    else:
+        _ = proxy_command(database, f'upstream/{_proxy_host}/{database.standby_port}')
 
     out = time.monotonic() - start
     return out
@@ -348,12 +429,16 @@ def promote_standby(database:'ReplicatedDatabase') -> 'float':
 def connect_active(database:'ReplicatedDatabase') -> 'any_':
     """ Opens a pg8000 connection to whichever server is the primary now, bypassing the proxy.
     """
+    primary = database.primary
+
     if database.is_promoted:
+        host = database.standby_host
         port = database.standby_port
     else:
-        port = database.primary.port
+        host = primary.host
+        port = primary.port
 
-    out = connect(database.primary, port=port)
+    out = connect(primary, host=host, port=port)
     return out
 
 # ################################################################################################################################

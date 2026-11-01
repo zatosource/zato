@@ -75,7 +75,8 @@ class Proxy:
     """ Forwards each client connection to the current upstream port, under the conditions the control endpoint sets.
     """
 
-    def __init__(self, upstream_port:'int') -> 'None':
+    def __init__(self, upstream_host:'str', upstream_port:'int') -> 'None':
+        self.upstream_host = upstream_host
         self.upstream_port = upstream_port
         self.is_blocked = False
         self.latency_seconds = 0.0
@@ -121,7 +122,7 @@ class Proxy:
             return
 
         try:
-            upstream_socket = socket.create_connection((_host, self.upstream_port))
+            upstream_socket = socket.create_connection((self.upstream_host, self.upstream_port))
         except OSError:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, _linger_reset)
             client_socket.close()
@@ -156,7 +157,8 @@ class Proxy:
         command = parts[0]
 
         if command == 'upstream':
-            self.upstream_port = int(parts[1])
+            self.upstream_host = parts[1]
+            self.upstream_port = int(parts[2])
             result = self.reset_all()
 
         elif command == 'reset':
@@ -203,15 +205,17 @@ def main() -> 'None':
     parser = ArgumentParser()
     _ = parser.add_argument('--listen-port', type=int, required=True)
     _ = parser.add_argument('--control-port', type=int, required=True)
+    _ = parser.add_argument('--upstream-host', default=_host)
     _ = parser.add_argument('--upstream-port', type=int, required=True)
     args = parser.parse_args()
 
-    proxy = Proxy(args.upstream_port)
+    proxy = Proxy(args.upstream_host, args.upstream_port)
 
     control_server = WSGIServer((_host, args.control_port), proxy.control, log=None)
     control_server.start()
 
-    logger.info('Proxy on port %s to port %s, control on port %s', args.listen_port, args.upstream_port, args.control_port)
+    logger.info('Proxy on port %s to %s:%s, control on port %s', args.listen_port, args.upstream_host, args.upstream_port,
+        args.control_port)
 
     server = StreamServer((_host, args.listen_port), proxy.handle)
     server.serve_forever()

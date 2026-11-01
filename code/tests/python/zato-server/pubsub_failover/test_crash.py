@@ -8,15 +8,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 import sqlite3
 import threading
 import time
 from collections import Counter
 
 # Zato
-from failover import docker, wait_until_up
+from failover import docker, read_audit_rows, read_audit_takeovers, read_generation, wait_until_up
 from zato.common.test.client import PublishClient, PullClient
-from zato.common.test.pubsub_database import connect, is_postgresql_mode
+from zato.common.test.pubsub_database import connect, get_db_mode, get_runtime_dir, is_postgresql_mode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,6 +78,8 @@ _count_queries = [
         'select topic_name, count(*) from pubsub_message group by topic_name',
         'select topic_name, sum(total) from pubsub_topic_count group by topic_name'),
 ]
+# The push deliveries that the audit log of the server recorded.
+_audit_delivered_query = "select msg_id from event where source = 'pubsub' and event_type = 'delivered'"
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -305,6 +308,53 @@ def _wait_for_deliveries(env:'FailoverEnvironment', msg_ids:'strlist') -> 'dictl
         time.sleep(_poll_seconds)
 
 # ################################################################################################################################
+
+def _get_audit_deliveries(server:'ContainerServer', records:'dictlist', msg_ids:'strlist') -> 'tuple[int, strlist]':
+    """ Compares the push deliveries that the receiver accepted with those that the audit log recorded,
+    for the given messages. Returns how many accepted deliveries the audit log lacks, and each message
+    that the audit log records more often than the receiver accepted it.
+    """
+    wanted = set(msg_ids)
+    accepted:'Counter[str]' = Counter()
+    audited:'Counter[str]' = Counter()
+
+    for record in records:
+        if record['status_code'] == _status_ok and record['msg_id'] in wanted:
+            accepted[record['msg_id']] += 1
+
+    for row in read_audit_rows(server, _audit_delivered_query):
+        if row[0] in wanted:
+            audited[row[0]] += 1
+
+    lost = 0
+    surplus:'strlist' = []
+
+    for msg_id, accepted_count in accepted.items():
+        audited_count = audited[msg_id]
+        if audited_count < accepted_count:
+            lost += accepted_count - audited_count
+        elif audited_count > accepted_count:
+            surplus.append(msg_id)
+
+    out = lost, surplus
+    return out
+
+# ################################################################################################################################
+
+def _write_audit_report(lost:'int') -> 'None':
+    """ Appends the number of audit events lost per kill to the report of the crash suite.
+    """
+    directory = os.path.join(get_runtime_dir(), 'reports')
+    os.makedirs(directory, exist_ok=True)
+
+    lost_per_kill = lost / _kill_count
+    line = f'crash | {time.strftime("%H:%M:%S")} | kills {_kill_count} | audit delivery events lost {lost} | ' + \
+        f'per kill {lost_per_kill:.1f}\n'
+
+    with open(os.path.join(directory, f'crash-audit-{get_db_mode()}.txt'), 'a') as report_file:
+        _ = report_file.write(line)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
@@ -317,6 +367,13 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
 
     receiver = env.receivers[_topic_name]
     receiver.clear_output()
+
+    is_postgresql = is_postgresql_mode(env.database.mode)
+
+    if is_postgresql:
+        start_generation = read_generation(env.database)
+    else:
+        start_generation = 0
 
     workload = _Workload(env, server)
     workload.start()
@@ -388,15 +445,38 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
     assert len(repeated) <= _kill_count * _push_batch_size, len(repeated)
 
     # .. on PostgreSQL, a repeated copy carries a higher attempt number, as the attempts are recorded in the database ..
-    if is_postgresql_mode(env.database.mode):
+    if is_postgresql:
         for msg_id in repeated:
             attempts = copies_by_msg_id[msg_id]
             assert len(attempts) == len(set(attempts)), (msg_id, attempts)
 
     # .. each repeated copy follows a first copy that was received before a kill, which the kill kept
     # .. from being acknowledged, and is itself received after that kill ..
-    not_in_flight = _get_repeats_not_in_flight(receiver.get_request_records(), workload.kill_times)
+    records = receiver.get_request_records()
+    not_in_flight = _get_repeats_not_in_flight(records, workload.kill_times)
     assert not not_in_flight, not_in_flight[:10]
+
+    # .. on PostgreSQL, the audit log records each restart as a takeover from the generation before it ..
+    if is_postgresql:
+
+        takeovers = read_audit_takeovers(server, start_generation)
+        expected_takeovers:'list[tuple[int, int]]' = []
+
+        for kill_index in range(1, _kill_count + 1):
+            expected_generation = start_generation + kill_index
+            expected_takeovers.append((expected_generation - 1, expected_generation))
+
+        assert takeovers == expected_takeovers, takeovers
+
+    # .. the audit log records each push that the receiver accepted as a delivery event of its own, a repeated one included,
+    # .. except for those still in flight at a kill, whose number the report states ..
+    lost, surplus = _get_audit_deliveries(server, records, acknowledged)
+
+    logger.info('Audit delivery events lost %d in %d kills', lost, _kill_count)
+    _write_audit_report(lost)
+
+    assert not surplus, surplus[:10]
+    assert lost <= _kill_count * _push_batch_size, lost
 
     # .. and the stored counts equal the rows.
     assert not _get_count_mismatches(env), _get_count_mismatches(env)

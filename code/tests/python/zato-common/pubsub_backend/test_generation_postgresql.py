@@ -17,8 +17,8 @@ import pytest
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.generation import PubSubReplaced, read_generation_file, write_generation_file
-from zato.common.test.pubsub_database import connect, pubsub_db_env, PubSubDBMode, start_pubsub_database, \
-    stop_pubsub_database
+from zato.common.test.pubsub_database import connect, get_suite_modes, pubsub_db_env, PubSubDBMode, \
+    start_pubsub_database, stop_pubsub_database
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -37,9 +37,14 @@ _sub_key = 'zpsk.generation.guard'
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='module')
-def pubsub_database() -> 'any_':
-    database = start_pubsub_database('generation', PubSubDBMode.PostgreSQL)
+_modes = get_suite_modes([PubSubDBMode.PostgreSQL])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='module', params=_modes)
+def pubsub_database(request:'pytest.FixtureRequest') -> 'any_':
+    database = start_pubsub_database('generation', request.param)
 
     try:
         yield database

@@ -20,13 +20,15 @@ from sqlalchemy import bindparam
 
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
 from zato.common.pubsub.sql.generation import take_over
 from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.writes import drop_payloads, new_pending_ack, PubSubWriter
 from zato.common.typing_ import cast_
-from zato.common.util.time_ import datetime_to_ms, utcnow
+from zato.common.util.time_ import datetime_to_ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,6 +63,9 @@ _retry = HTTP_SOAP.Retry
 # How long back-to-back SQLite calls may hold the event loop before the backend
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
+
+# The object of the audit event that records a takeover of the pub/sub database.
+_takeover_object_name = 'pubsub-database'
 
 # What records one push attempt of a delivery row and returns its number.
 _record_attempt_statement = delivery_table.update()
@@ -127,7 +132,21 @@ class SQLBackendCore:
         and guards each subsequent transaction with the generation raised. A SQLite file has only one server.
         """
         if get_pubsub_db_type() == Type_PostgreSQL:
-            self.generation_guard = take_over(get_pubsub_engine)
+            generation_guard = take_over(get_pubsub_engine)
+            self.generation_guard = generation_guard
+
+            # Each generation is one higher than the one it replaces, which the audit log records with the takeover.
+            if self.audit_log:
+                generation = generation_guard.generation
+                previous_generation = generation - 1
+
+                attrs = {
+                    'previous_generation': f'{previous_generation}',
+                    'generation': f'{generation}',
+                }
+
+                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Takeover, _takeover_object_name,
+                    outcome=AuditOutcome.OK, attrs=attrs)
 
 # ################################################################################################################################
 
@@ -467,13 +486,12 @@ class SQLBackendCore:
 # ################################################################################################################################
 
     @staticmethod
-    def _utc_now_ms() -> 'int':
-        """ Returns the current UTC time in milliseconds since the Unix epoch.
+    def _database_now_ms() -> 'int':
+        """ Returns the time of the pub/sub database in milliseconds since the Unix epoch.
         """
-        now = utcnow()
-        milliseconds = datetime_to_ms(now)
+        clock = get_database_clock()
 
-        out = int(milliseconds)
+        out = clock.now_ms()
         return out
 
 # ################################################################################################################################

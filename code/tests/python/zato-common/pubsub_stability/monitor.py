@@ -101,6 +101,7 @@ class MinuteReport:
     open_files: 'int'
     threads: 'int'
     pool_queue: 'int'
+    is_exempt: 'bool' = False
     details: 'strlist' = field(default_factory=list)
     failures: 'strlist' = field(default_factory=list)
 
@@ -155,6 +156,11 @@ class Monitor:
         # and latency checks, and which is cleared once the minute is recorded.
         self.is_minute_exempt = False
 
+        # Whether the current minute overlaps a fault that a suite injects, which reports the errors of the minute
+        # and the database statistics it could not read rather than failing the minute, and which is cleared
+        # once the minute is recorded.
+        self.allows_errors = False
+
         self._start = monotonic()
         self._minute_start = self._start
         self._process = psutil.Process()
@@ -202,7 +208,11 @@ class Monitor:
             for table_name, (live, dead) in dead_tuples.items():
                 allowed = max(self.limits.min_dead_tuples, live * self.limits.max_dead_ratio)
                 if dead > allowed:
-                    report.failures.append(f'{table_name} has {dead} dead rows for {live} live ones')
+                    message = f'{table_name} has {dead} dead rows for {live} live ones'
+                    if self.allows_errors:
+                        report.details.append(message)
+                    else:
+                        report.failures.append(message)
 
         else:
             with engine.connect() as connection:
@@ -244,7 +254,11 @@ class Monitor:
             report.failures.append(f'WAL of {report.wal_mb:.0f} MB above {limits.max_wal_bytes // _bytes_per_mb} MB')
 
         if counters.errors:
-            report.failures.append(f'{counters.errors} error(s): {counters.error_messages}')
+            message = f'{counters.errors} error(s): {counters.error_messages}'
+            if self.allows_errors:
+                report.details.append(message)
+            else:
+                report.failures.append(message)
 
 # ################################################################################################################################
 
@@ -279,10 +293,22 @@ class Monitor:
             pool_queue=len(get_hub().threadpool),
         )
 
-        self._read_database(report)
+        # The statistics of a database that a fault keeps unavailable are reported as missing ..
+        try:
+            self._read_database(report)
+        except Exception as e:
+            message = f'database statistics not read: {e.__class__.__name__}: {e}'[:300]
+            if self.allows_errors:
+                report.details.append(message)
+            else:
+                report.failures.append(message)
+
+        # .. and everything else is checked as usual.
         self._check(report, counters)
 
+        report.is_exempt = self.is_minute_exempt
         self.is_minute_exempt = False
+        self.allows_errors = False
 
         free_gb = disk_usage(gettempdir()).free / _bytes_per_gb
 

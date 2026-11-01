@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from collections import Counter
 from dataclasses import dataclass, field
 from time import monotonic
 
@@ -29,13 +30,18 @@ from zato.server.base.parallel.delivery import PushDelivery
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strnone, strset
+
+    strcounter = Counter[str]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # The service that the push subscribers of the broadcast topic invoke.
 _push_service_name = 'stability.push.target'
+
+# What separates the key of a tracked broadcast at the start of its payload from the document that follows it.
+_broadcast_key_separator = '\n'
 
 # How many messages one pull of a partner asks for, which is the maximum of the REST API,
 # and how long a partner waits before it pulls again from a queue that was empty, in seconds.
@@ -116,7 +122,7 @@ class _StubServer:
         self.traffic = traffic
 
     def invoke(self, service_name:'str', payload:'any_', data_format:'strnone'=None) -> 'None':
-        self.traffic.on_pushed()
+        self.traffic.on_pushed(payload)
 
         # A real invocation yields on its network I/O, which lets the other greenlets run.
         sleep(0)
@@ -155,6 +161,15 @@ class Traffic:
         self.paused_sub_keys:'set[str]' = set()
         self.unmeasured_sub_keys:'set[str]' = set()
         self.extra_deliveries = 0
+
+        # Whether the traffic records each delivery, which lets a suite account for every publication - the partner
+        # messages acknowledged to their API clients and those pulled, by msg_id, and the broadcasts acknowledged
+        # to their API clients and how many times each was pushed, by the key that each broadcast then begins with.
+        self.tracks_deliveries = False
+        self.acknowledged_partner_msg_ids:'strset' = set()
+        self.pulled_msg_ids:'strset' = set()
+        self.acknowledged_broadcast_keys:'strset' = set()
+        self.pushed_broadcast_keys:'strcounter' = Counter()
 
         self.partner_topics:'strlist' = []
         self.partner_sub_keys:'strlist' = []
@@ -198,10 +213,14 @@ class Traffic:
 
 # ################################################################################################################################
 
-    def on_pushed(self) -> 'None':
+    def on_pushed(self, payload:'str') -> 'None':
         with self.lock:
             self.minute.pushed += 1
             self.total_pushed += 1
+
+            if self.tracks_deliveries:
+                key = payload.split(_broadcast_key_separator, 1)[0]
+                self.pushed_broadcast_keys[key] += 1
 
 # ################################################################################################################################
 
@@ -242,6 +261,13 @@ class Traffic:
             else:
                 topic_name = self.partner_topics[position % len(self.partner_topics)]
 
+            # A tracked broadcast begins with its key, which is its position, unique across all the API clients.
+            broadcast_key = f'{position}'
+
+            if is_broadcast:
+                if self.tracks_deliveries:
+                    document = broadcast_key + _broadcast_key_separator + document
+
             try:
                 result = self.backend.publish(topic_name, document, priority=priority, expiration=expiration)
             except Exception as e:
@@ -257,8 +283,12 @@ class Traffic:
 
                     if is_broadcast:
                         self.total_broadcast += 1
+                        if self.tracks_deliveries:
+                            self.acknowledged_broadcast_keys.add(broadcast_key)
                     else:
                         self.publish_times[result.msg_id] = started
+                        if self.tracks_deliveries:
+                            self.acknowledged_partner_msg_ids.add(result.msg_id)
 
             position += self.profile.publisher_count
 
@@ -311,6 +341,9 @@ class Traffic:
 
                 self.minute.pulled += len(msg_ids)
                 self.total_pulled += len(msg_ids)
+
+                if self.tracks_deliveries:
+                    self.pulled_msg_ids.update(msg_ids)
 
             # The partner acknowledges what it received - messages whose acknowledgement fails
             # are handed out again once their lease runs out.

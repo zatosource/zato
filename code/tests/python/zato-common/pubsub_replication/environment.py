@@ -14,7 +14,7 @@ from contextlib import contextmanager
 
 # Zato
 from zato.common.pubsub.sql.config import ModuleCtx
-from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, pubsub_db_env, PubSubDBMode
+from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_managed_mode, pubsub_db_env, PubSubDBMode
 from zato.common.test.pubsub_replication import start_replicated_database, stop_replicated_database
 
 # local
@@ -38,10 +38,15 @@ Pull_Lease_Seconds = '5'
 # ################################################################################################################################
 
 def get_replication_mode() -> 'str':
-    """ The replication suites run on PostgreSQL with TLS when the session asks for TLS, and on PostgreSQL otherwise.
+    """ The replication suites run on PostgreSQL with TLS or in a managed mode when the session asks for it,
+    and on PostgreSQL otherwise.
     """
-    if get_db_mode() == PubSubDBMode.PostgreSQL_TLS:
-        out = PubSubDBMode.PostgreSQL_TLS
+    mode = get_db_mode()
+
+    if mode == PubSubDBMode.PostgreSQL_TLS:
+        out = mode
+    elif is_managed_mode(mode):
+        out = mode
     else:
         out = PubSubDBMode.PostgreSQL
 

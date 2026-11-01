@@ -303,6 +303,9 @@ class AuditEvent:
     Alert_Raised         = 'alert-raised'
     Alert_Explained      = 'alert-explained'
     DLQ                  = 'dlq'
+
+    # A server became the active one for the pub/sub database, with the previous and the new generation in its attributes.
+    Takeover             = 'takeover'
     MCP_Initialize       = 'mcp-initialize'
     MCP_Tools_List       = 'mcp-tools-list'
     MCP_Tools_Call       = 'mcp-tools-call'

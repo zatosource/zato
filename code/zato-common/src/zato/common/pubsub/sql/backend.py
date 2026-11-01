@@ -22,11 +22,12 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
+from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
 from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.writes import new_pending_publication
-from zato.common.util.api import new_msg_id, utcnow
+from zato.common.util.api import new_msg_id
 from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
 
@@ -110,8 +111,9 @@ class SQLPubSubBackend(SQLAdminAPI):
         else:
             message_id = new_msg_id()
 
-        # .. build timestamps ..
-        now = utcnow()
+        # .. build timestamps on the time of the database ..
+        clock = get_database_clock()
+        now = clock.now()
         now_iso = now.isoformat()
 
         if pub_time:
@@ -345,7 +347,7 @@ class SQLPubSubBackend(SQLAdminAPI):
             query = outgoing_fetch_query
         else:
             query = fetch_query
-            parameters['fetch_now_ms'] = self._utc_now_ms()
+            parameters['fetch_now_ms'] = self._database_now_ms()
 
         with self.engine.connect() as connection:
             out = connection.execute(query, parameters).fetchall()
@@ -421,7 +423,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         acknowledges them, and a pull after their lease runs out hands them out again.
         """
         engine = self.engine
-        now_ms = self._utc_now_ms()
+        now_ms = self._database_now_ms()
         leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
 
         rows, attempts = call_database(engine, lease_messages, engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
@@ -452,7 +454,8 @@ class SQLPubSubBackend(SQLAdminAPI):
         """ Format messages that a pull leased into the {data, meta} structure expected by the REST API,
         recording each reception and incrementing delivery counters.
         """
-        now = utcnow()
+        clock = get_database_clock()
+        now = clock.now()
 
         out:'anylist' = []
 

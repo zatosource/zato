@@ -22,13 +22,13 @@ from sqlalchemy.exc import DBAPIError
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.errors import is_transient
 from zato.common.db_env.outage import OutageTracker
+from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
     get_generation_file_path, get_pubsub_engine
 from zato.common.pubsub.sql.counts import compact_counts
 from zato.common.pubsub.sql.generation import GenerationGuard, PubSubReplaced, read_generation_file
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table
-from zato.common.util.time_ import datetime_to_ms, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -170,13 +170,12 @@ class PubSubCleanup:
 # ################################################################################################################################
 
     @staticmethod
-    def _utc_now_ms() -> 'int':
-        """ Returns the current UTC time in milliseconds since the Unix epoch.
+    def _database_now_ms() -> 'int':
+        """ Returns the time of the pub/sub database in milliseconds since the Unix epoch.
         """
-        now = utcnow()
-        milliseconds = datetime_to_ms(now)
+        clock = get_database_clock()
 
-        out = int(milliseconds)
+        out = clock.now_ms()
         return out
 
 # ################################################################################################################################
@@ -199,7 +198,7 @@ class PubSubCleanup:
         Fully delivered traces are exempt. Returns how many messages were deleted.
         """
         batch_size = get_batch_size()
-        now_ms = self._utc_now_ms()
+        now_ms = self._database_now_ms()
 
         out = 0
 
@@ -249,7 +248,7 @@ class PubSubCleanup:
         max_days = get_delivered_max_days()
 
         # Everything published before this moment is past its retention age.
-        cutoff_ms = self._utc_now_ms() - max_days * _ms_per_day
+        cutoff_ms = self._database_now_ms() - max_days * _ms_per_day
 
         out = 0
 

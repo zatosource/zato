@@ -267,7 +267,7 @@ class SQLAdminAPI(SQLBrowseAPI):
         """ Returns the start of the minute that began the given number of minutes ago, in milliseconds,
         which is where the publication statistics begin.
         """
-        now_ms = self._utc_now_ms()
+        now_ms = self._database_now_ms()
         cutoff_ms = now_ms - since_minutes * Milliseconds_Per_Minute
 
         out = cutoff_ms - cutoff_ms % Milliseconds_Per_Minute

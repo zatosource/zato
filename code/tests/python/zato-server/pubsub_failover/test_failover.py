@@ -17,7 +17,7 @@ import pytest
 
 # Zato
 from failover import Controller, create_container, docker, get_container_state, is_server_up, LinkProxy, \
-    read_generation, run_container, wait_for_generation, wait_until_up
+    read_audit_takeovers, read_generation, run_container, wait_for_generation, wait_until_up
 from zato.common.test.client import PublishClient, PullClient
 from zato.common.test.conftest_base_pubsub import find_free_port
 from zato.common.test.pubsub_database import connect, is_postgresql_mode
@@ -212,6 +212,10 @@ def test_takeover_after_kill(failover_env:'FailoverEnvironment', stop_command:'s
 
     switch_seconds = time.monotonic() - kill_time
     logger.info('Kill to takeover: %.1fs', switch_seconds)
+
+    # .. its audit log records the takeover from the generation of the old server ..
+    takeovers = read_audit_takeovers(env.server_b, generation)
+    assert takeovers == [(generation, generation + 1)], takeovers
 
     # .. it hands out every message to the pull subscriber ..
     pulled = _pull_all(env, env.server_b)
