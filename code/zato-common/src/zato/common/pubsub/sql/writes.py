@@ -60,7 +60,7 @@ _publication_weight = 1
 _max_conflict_retries = 5
 
 # From how many delivery rows on, a commit writes them with COPY rather than with multi-row inserts on PostgreSQL.
-_copy_min_delivery_rows = 1_000
+_copy_min_delivery_rows = 200
 
 # ################################################################################################################################
 # ################################################################################################################################

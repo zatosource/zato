@@ -14,6 +14,7 @@ from sqlalchemy import BigInteger, Boolean, Column, DDL, event, Identity, Index,
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.pubsub.sql.counts import register_counts
+from zato.common.pubsub.sql.traces import register_traces
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,7 +78,7 @@ metadata = MetaData()
 
 # One row per published message. The payload is set to NULL once every subscriber
 # has acknowledged the message and the row stays behind as the delivered-message trace
-# until the retention sweep removes it. The primary key is the publication sequence.
+# until the retention sweep removes it, listed in pubsub_trace. The primary key is the publication sequence.
 message_table = Table('pubsub_message', metadata,
     _new_id_column(),
     Column('msg_id', String(_short_column_len), nullable=False),
@@ -170,6 +171,22 @@ _ = Index(
 
 # ################################################################################################################################
 
+# One row per delivered-message trace, which triggers of the database insert and delete along with
+# the message rows - see traces.py.
+trace_table = Table('pubsub_trace', metadata,
+    Column('message_id', _id_type, primary_key=True, autoincrement=False),
+    Column('topic_name', String(_short_column_len), nullable=False),
+    Column('pub_time_ms', BigInteger, nullable=False),
+
+    # The cap sweep walks the traces of one topic in publication order ..
+    Index('idx_pubsub_trace_topic', 'topic_name', 'message_id'),
+
+    # .. and the retention sweep finds the oldest ones.
+    Index('idx_pubsub_trace_pub_time', 'pub_time_ms'),
+)
+
+# ################################################################################################################################
+
 # One row per (subscriber, topic) subscription - the configuration-level
 # subscription objects live in the ODB.
 topic_sub_table = Table('pubsub_topic_sub', metadata,
@@ -213,8 +230,9 @@ publish_count_table = Table('pubsub_publish_count', metadata,
     sqlite_with_rowid=False,
 )
 
-# The triggers that keep the counts in step with the rows are created along with the tables.
+# The triggers that keep the counts and the traces in step with the rows are created along with the tables.
 register_counts(metadata)
+register_traces(metadata)
 
 # ################################################################################################################################
 
@@ -246,6 +264,9 @@ _postgresql_storage = {
     ],
     delivery_table: [
         f'ALTER TABLE pubsub_delivery SET (fillfactor = 90, {_high_churn})',
+    ],
+    trace_table: [
+        f'ALTER TABLE pubsub_trace SET ({_high_churn})',
     ],
     queue_count_table: [
         f'ALTER TABLE pubsub_queue_count SET ({_high_churn})',

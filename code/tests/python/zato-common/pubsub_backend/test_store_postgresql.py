@@ -37,6 +37,7 @@ _expected_tables = {
     'pubsub_queue_count',
     'pubsub_topic_count',
     'pubsub_topic_sub',
+    'pubsub_trace',
 }
 
 # The count tables hold insert-only change rows on PostgreSQL, so their keys are indexed, not unique.
@@ -53,6 +54,9 @@ _expected_triggers = {
     ('pubsub_message', 'pubsub_topic_count_insert'),
     ('pubsub_message', 'pubsub_topic_count_delete'),
     ('pubsub_message', 'pubsub_topic_count_update'),
+    ('pubsub_message', 'pubsub_trace_insert'),
+    ('pubsub_message', 'pubsub_trace_update'),
+    ('pubsub_message', 'pubsub_trace_delete'),
 }
 
 _high_churn_options = [
@@ -156,7 +160,7 @@ def test_postgresql_schema(pubsub_database:'PubSubDatabase') -> 'None':
                 options = _get_options(connection, table_query, table_name)
                 assert 'fillfactor=90' in options, (table_name, options)
 
-            for table_name in ('pubsub_message', 'pubsub_delivery', *_count_key_indexes):
+            for table_name in ('pubsub_message', 'pubsub_delivery', 'pubsub_trace', *_count_key_indexes):
                 options = _get_options(connection, table_query, table_name)
                 for option in _high_churn_options:
                     assert option in options, (table_name, options)

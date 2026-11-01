@@ -275,10 +275,12 @@ class SQLBrowseAPI(SQLBackendCore):
         # Normalize topic name ..
         topic_name = topic_name.lower()
 
-        # .. a left join tells for each message whether this subscriber still needs it ..
+        # .. a left join tells for each message whether this subscriber still needs it,
+        # .. and naming the topic lets the join use the index of subscriber queues ..
         join_condition = and_(
             delivery_table.c.message_id == message_table.c.id,
             delivery_table.c.sub_key == sub_key,
+            delivery_table.c.topic_name == topic_name,
         )
         joined = message_table.outerjoin(delivery_table, join_condition)
 

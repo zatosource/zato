@@ -27,12 +27,13 @@ from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 if 0:
     from sqlalchemy import MetaData
     from sqlalchemy.engine import Connection
-    from zato.common.typing_ import any_, anytuple, strlist
+    from zato.common.typing_ import any_, anylist, anytuple, strlist
 
     # Dummy assignments to satisfy type checkers
     Connection = Connection
     MetaData = MetaData
     any_ = any_
+    anylist = anylist
     anytuple = anytuple
     strlist = strlist
 
@@ -181,7 +182,7 @@ def _sqlite_statements() -> 'strlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _postgresql_function(name:'str', body:'str') -> 'str':
+def postgresql_function(name:'str', body:'str') -> 'str':
     """ A PL/pgSQL trigger function running the given statements.
     """
     out = f'CREATE OR REPLACE FUNCTION {name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN {body} RETURN NULL; END $$'
@@ -204,9 +205,9 @@ def _postgresql_queue_statements() -> 'anytuple':
     # .. limited to these two columns, so that the updates of other columns made with each delivery attempt do not run it.
     move_updated = f'{insert_into} VALUES (OLD.sub_key, OLD.topic_name, -1), (NEW.sub_key, NEW.topic_name, 1);'
 
-    insert_function = _postgresql_function('pubsub_queue_count_insert', add_inserted)
-    delete_function = _postgresql_function('pubsub_queue_count_delete', remove_deleted)
-    update_function = _postgresql_function('pubsub_queue_count_update', move_updated)
+    insert_function = postgresql_function('pubsub_queue_count_insert', add_inserted)
+    delete_function = postgresql_function('pubsub_queue_count_delete', remove_deleted)
+    update_function = postgresql_function('pubsub_queue_count_update', move_updated)
 
     after_insert = 'CREATE TRIGGER pubsub_queue_count_insert AFTER INSERT ON pubsub_delivery ' + \
         'REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION pubsub_queue_count_insert()'
@@ -261,9 +262,9 @@ def _postgresql_topic_statements() -> 'anytuple':
         f'(OLD.topic_name, {_minute("OLD")}, {_publisher("OLD")}, -1), ' + \
         f'(NEW.topic_name, {_minute("NEW")}, {_publisher("NEW")}, 1);'
 
-    insert_function = _postgresql_function('pubsub_topic_count_insert', f'{add_topics} {add_publications}')
-    delete_function = _postgresql_function('pubsub_topic_count_delete', f'{remove_topics} {remove_publications}')
-    update_function = _postgresql_function('pubsub_topic_count_update', f'{move_topic} {move_publication}')
+    insert_function = postgresql_function('pubsub_topic_count_insert', f'{add_topics} {add_publications}')
+    delete_function = postgresql_function('pubsub_topic_count_delete', f'{remove_topics} {remove_publications}')
+    update_function = postgresql_function('pubsub_topic_count_update', f'{move_topic} {move_publication}')
 
     after_insert = 'CREATE TRIGGER pubsub_topic_count_insert AFTER INSERT ON pubsub_message ' + \
         'REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION pubsub_topic_count_insert()'
@@ -325,14 +326,15 @@ def _listen(metadata:'MetaData', statement:'str', dialect_name:'str', trigger_is
 
 # ################################################################################################################################
 
-def register_counts(metadata:'MetaData') -> 'None':
-    """ Attaches the creation of the triggers to the creation of the schema. The triggers are created
-    after all the tables, each one only if it does not exist yet.
+def register_triggers(metadata:'MetaData', sqlite_statements:'strlist', postgresql_statements:'anylist') -> 'None':
+    """ Attaches the creation of the given triggers to the creation of the schema. The triggers are created
+    after all the tables, each one only if it does not exist yet. Each element of postgresql_statements
+    is a pair of the trigger functions and of the triggers that run them.
     """
-    for statement in _sqlite_statements():
+    for statement in sqlite_statements:
         _listen(metadata, statement, Type_SQLite, None)
 
-    for functions, triggers in (_postgresql_queue_statements(), _postgresql_topic_statements()):
+    for functions, triggers in postgresql_statements:
 
         # Replacing a function locks no table, so the functions are always brought to their current bodies ..
         for statement in functions:
@@ -342,6 +344,14 @@ def register_counts(metadata:'MetaData') -> 'None':
         for trigger_name, table_name, statement in triggers:
             trigger_is_missing = _TriggerIsMissing(trigger_name, table_name)
             _listen(metadata, statement, Type_PostgreSQL, trigger_is_missing)
+
+# ################################################################################################################################
+
+def register_counts(metadata:'MetaData') -> 'None':
+    """ Attaches the creation of the triggers of the counts to the creation of the schema.
+    """
+    postgresql_statements = [_postgresql_queue_statements(), _postgresql_topic_statements()]
+    register_triggers(metadata, _sqlite_statements(), postgresql_statements)
 
 # ################################################################################################################################
 # ################################################################################################################################

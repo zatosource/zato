@@ -75,7 +75,7 @@ _default_batch_size = 5_000
 _default_commit_max_messages = 500
 
 # How many group commits may be in progress at once on PostgreSQL. SQLite has a single writer.
-_default_commits_in_flight = 4
+_default_commits_in_flight = 2
 
 # The name of the file in which the active server records its generation, under the environment directory.
 _generation_file_name = 'pubsub-generation'

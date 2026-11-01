@@ -28,16 +28,17 @@ from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days
 from zato.common.pubsub.sql.counts import compact_counts
 from zato.common.pubsub.sql.generation import GenerationGuard, PubSubReplaced, read_generation_file
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
-    topic_count_table
+    topic_count_table, trace_table
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import intlist, intnone, strintdict, strlist
+    from zato.common.typing_ import any_, intlist, intnone, strintdict, strlist
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
     Connection = Connection
     Engine = Engine
 
@@ -81,6 +82,23 @@ _count_rows_query = text("""
 # How many milliseconds one second and one day have - timestamp columns hold epoch milliseconds.
 _ms_per_second = 1000
 _ms_per_day = 24 * 60 * 60 * _ms_per_second
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_trace_batch_query(condition:'any_', batch_size:'int') -> 'any_':
+    """ Returns the query of the next batch of the message rows of the traces that meet the condition.
+    The message rows are locked, and those that other transactions hold are skipped.
+    """
+    join = trace_table.join(message_table, message_table.c.id == trace_table.c.message_id)
+
+    out = select(message_table.c.id)
+    out = out.select_from(join)
+    out = out.where(condition)
+    out = out.limit(batch_size)
+    out = out.with_for_update(skip_locked=True, of=message_table)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -257,14 +275,9 @@ class PubSubCleanup:
             # Each batch is its own transaction so other work interleaves between the batches.
             with self.engine.begin() as connection:
 
-                # A NULL payload is what makes a row a delivered-message trace ..
-                query = select(message_table.c.id)
-                query = query.where(and_(
-                    message_table.c.payload.is_(None),
-                    message_table.c.pub_time_ms < cutoff_ms,
-                ))
-                query = query.limit(batch_size)
-                query = query.with_for_update(skip_locked=True)
+                # The traces are found through their own table ..
+                condition = trace_table.c.pub_time_ms < cutoff_ms
+                query = _get_trace_batch_query(condition, batch_size)
 
                 message_ids:'intlist' = []
 
@@ -293,8 +306,7 @@ class PubSubCleanup:
     def _get_trace_topics(self) -> 'strlist':
         """ Returns the names of all the topics that have any delivered-message traces.
         """
-        query = select(message_table.c.topic_name).distinct()
-        query = query.where(message_table.c.payload.is_(None))
+        query = select(trace_table.c.topic_name).distinct()
 
         out:'strlist' = []
 
@@ -312,12 +324,9 @@ class PubSubCleanup:
         """
         # The row max_messages positions into the newest-first ordering
         # is the newest one that no longer fits the cap.
-        query = select(message_table.c.id)
-        query = query.where(and_(
-            message_table.c.topic_name == topic_name,
-            message_table.c.payload.is_(None),
-        ))
-        query = query.order_by(message_table.c.id.desc())
+        query = select(trace_table.c.message_id)
+        query = query.where(trace_table.c.topic_name == topic_name)
+        query = query.order_by(trace_table.c.message_id.desc())
         query = query.limit(1)
         query = query.offset(max_messages)
 
@@ -351,14 +360,11 @@ class PubSubCleanup:
 
                 with self.engine.begin() as connection:
 
-                    query = select(message_table.c.id)
-                    query = query.where(and_(
-                        message_table.c.topic_name == topic_name,
-                        message_table.c.payload.is_(None),
-                        message_table.c.id <= cutoff_id,
-                    ))
-                    query = query.limit(batch_size)
-                    query = query.with_for_update(skip_locked=True)
+                    condition = and_(
+                        trace_table.c.topic_name == topic_name,
+                        trace_table.c.message_id <= cutoff_id,
+                    )
+                    query = _get_trace_batch_query(condition, batch_size)
 
                     message_ids:'intlist' = []
 
