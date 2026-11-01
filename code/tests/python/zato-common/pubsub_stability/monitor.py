@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the resources of the process and the free disk space, each minute checked against the limits of its suite.
 
 # stdlib
+import gc
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -46,6 +47,17 @@ Minute_Seconds = 60
 # How long the last interval of a run must be for it to be reported, in seconds.
 _min_final_interval_seconds = 1
 
+# How often the event loop is probed for how late it resumes a sleeping greenlet, in seconds.
+_loop_lag_interval = 0.1
+
+# How often the drive of the runtime data is probed with a flush of one block of its own, in seconds,
+# and the size of that block, in bytes.
+_drive_probe_interval = 0.1
+_drive_probe_block = b'\0' * 4096
+
+# How many milliseconds one second has.
+_ms_per_second = 1000
+
 # How many bytes one gigabyte and one megabyte have.
 _bytes_per_gb = 1024 ** 3
 _bytes_per_mb = 1024 ** 2
@@ -81,6 +93,10 @@ class Limits:
     max_dead_ratio: 'float' = 2.0
     min_dead_tuples: 'int' = 200_000
 
+    # A minute in which a flush of the probe of the drive took at least this long is a minute of a stalled drive,
+    # whose latencies are reported and not checked.
+    drive_stall_seconds: 'float' = 0.5
+
 # ################################################################################################################################
 
 @dataclass
@@ -101,6 +117,11 @@ class MinuteReport:
     open_files: 'int'
     threads: 'int'
     pool_queue: 'int'
+    loop_lag: 'float' = 0.0
+    gc_pause: 'float' = 0.0
+    gc_generation: 'int' = 0
+    drive_flush: 'float' = 0.0
+    cpu_percent: 'float' = 0.0
     is_exempt: 'bool' = False
     details: 'strlist' = field(default_factory=list)
     failures: 'strlist' = field(default_factory=list)
@@ -168,6 +189,22 @@ class Monitor:
         self._last_autovacuums = -1
         self._greenlet:'anylist' = []
 
+        # The longest time in the current minute for which the event loop resumed a sleeping greenlet late,
+        # and the longest garbage collection, both of which hold up every greenlet of the process.
+        self._max_loop_lag = 0.0
+        self._max_gc_pause = 0.0
+        self._max_gc_generation = 0
+        self._gc_started = 0.0
+
+        # The longest flush in the current minute of the block that the probe of the drive writes.
+        self._max_drive_flush = 0.0
+        self._drive_probe_path = os.path.join(gettempdir(), f'zato-drive-probe-{os.getpid()}')
+        self._drive_probe_fd = -1
+        self._drive_probe_greenlet:'anylist' = []
+
+        # The processor time the process used until the start of the current minute, in seconds.
+        self._cpu_seconds = 0.0
+
         self._is_postgresql = get_pubsub_engine().dialect.name == Type_PostgreSQL
 
 # ################################################################################################################################
@@ -234,6 +271,9 @@ class Monitor:
         if self.is_minute_exempt:
             report.details.append('overload, rate and latency not checked')
 
+        elif report.drive_flush >= limits.drive_stall_seconds:
+            report.details.append(f'drive flush stalled {report.drive_flush * _ms_per_second:.0f} ms, latency not checked')
+
         else:
 
             if report.publish_p99 > limits.publish_p99_seconds:
@@ -276,6 +316,12 @@ class Monitor:
 
         memory = self._process.memory_info()
 
+        # The share of one processor that the process used during the minute.
+        cpu_times = self._process.cpu_times()
+        cpu_seconds = cpu_times.user + cpu_times.system
+        cpu_used = cpu_seconds - self._cpu_seconds
+        self._cpu_seconds = cpu_seconds
+
         report = MinuteReport(
             index=len(self.reports) + 1,
             since_start=_humanize_duration(elapsed),
@@ -291,7 +337,17 @@ class Monitor:
             open_files=self._process.num_fds(),
             threads=self._process.num_threads(),
             pool_queue=len(get_hub().threadpool),
+            loop_lag=self._max_loop_lag,
+            gc_pause=self._max_gc_pause,
+            gc_generation=self._max_gc_generation,
+            drive_flush=self._max_drive_flush,
+            cpu_percent=cpu_used / interval_seconds * 100,
         )
+
+        self._max_loop_lag = 0.0
+        self._max_gc_pause = 0.0
+        self._max_gc_generation = 0
+        self._max_drive_flush = 0.0
 
         # The statistics of a database that a fault keeps unavailable are reported as missing ..
         try:
@@ -331,7 +387,9 @@ class Monitor:
             f'{report.delivery_rate:.1f}/s | {report.publish_p99 * 1000:.0f} ms | {report.delivery_p99 * 1000:.0f} ms | ' + \
             f'rows {report.message_rows}/{report.delivery_rows} | WAL {report.wal_mb:.0f} MB | ' + \
             f'RSS {report.rss_mb:.0f} MB | fds {report.open_files} | threads {report.threads} | ' + \
-            f'pool {report.pool_queue} | {result} | {"; ".join(details) if details else "---"}'
+            f'pool {report.pool_queue} | lag {report.loop_lag * _ms_per_second:.0f} ms | ' + \
+            f'GC {report.gc_pause * _ms_per_second:.0f} ms gen {report.gc_generation} | ' + \
+            f'flush {report.drive_flush * _ms_per_second:.0f} ms | CPU {report.cpu_percent:.0f}% | {result} | {"; ".join(details) if details else "---"}'
 
         with open(self.report_path, 'a') as report_file:
             _ = report_file.write(line + '\n')
@@ -352,9 +410,70 @@ class Monitor:
 
 # ################################################################################################################################
 
+    def _probe_loop_lag(self) -> 'None':
+        """ Measures how much later than requested the event loop resumes a sleeping greenlet.
+        """
+        while self.is_running:
+            started = monotonic()
+            sleep(_loop_lag_interval)
+            lag = monotonic() - started - _loop_lag_interval
+            if lag > self._max_loop_lag:
+                self._max_loop_lag = lag
+
+# ################################################################################################################################
+
+    def _on_gc(self, phase:'str', info:'anydict') -> 'None':
+        """ Measures each garbage collection of the process.
+        """
+        if phase == 'start':
+            self._gc_started = monotonic()
+            return
+
+        pause = monotonic() - self._gc_started
+
+        if pause > self._max_gc_pause:
+            self._max_gc_pause = pause
+            self._max_gc_generation = info['generation']
+
+# ################################################################################################################################
+
+    def _flush_drive_once(self) -> 'float':
+        """ Writes and flushes the block of the probe, in a thread of the pool, and returns how long the flush took.
+        """
+        _ = os.pwrite(self._drive_probe_fd, _drive_probe_block, 0)
+
+        started = monotonic()
+        os.fdatasync(self._drive_probe_fd)
+
+        out = monotonic() - started
+        return out
+
+# ################################################################################################################################
+
+    def _probe_drive(self) -> 'None':
+        """ Measures how long the drive of the runtime data takes to flush one block, independently of the database.
+        """
+        pool = get_hub().threadpool
+
+        while self.is_running:
+            elapsed = pool.apply(self._flush_drive_once)
+            if elapsed > self._max_drive_flush:
+                self._max_drive_flush = elapsed
+            sleep(_drive_probe_interval)
+
+# ################################################################################################################################
+
     def start(self) -> 'None':
         self.is_running = True
+
+        cpu_times = self._process.cpu_times()
+        self._cpu_seconds = cpu_times.user + cpu_times.system
+
+        self._drive_probe_fd = os.open(self._drive_probe_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        gc.callbacks.append(self._on_gc)
         self._greenlet.append(spawn(self._run))
+        self._greenlet.append(spawn(self._probe_loop_lag))
+        self._drive_probe_greenlet.append(spawn(self._probe_drive))
 
 # ################################################################################################################################
 
@@ -363,9 +482,17 @@ class Monitor:
         so that nothing that happened at the end of a run goes unchecked.
         """
         self.is_running = False
+        gc.callbacks.remove(self._on_gc)
 
         for greenlet in self._greenlet:
             greenlet.kill()
+
+        # The probe of the drive completes its current flush in the thread pool before the file is closed.
+        for greenlet in self._drive_probe_greenlet:
+            greenlet.join()
+
+        os.close(self._drive_probe_fd)
+        os.remove(self._drive_probe_path)
 
         if monotonic() - self._minute_start >= _min_final_interval_seconds:
             _ = self.record_minute()

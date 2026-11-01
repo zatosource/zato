@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 from math import inf
+from threading import Lock
 from time import monotonic
 from weakref import WeakKeyDictionary
 
@@ -72,6 +73,9 @@ class DatabaseClock:
         self._next_synchronization = 0.0
         self._is_synchronized = False
 
+        # What the callers that arrive during the first reading wait on.
+        self._first_reading_lock = Lock()
+
         # PostgreSQL is read on first use, whereas the time of the host is read once, now.
         if not self.is_postgresql:
             now = utcnow()
@@ -113,13 +117,29 @@ class DatabaseClock:
 
 # ################################################################################################################################
 
+    def _read_first(self) -> 'None':
+        """ Takes the first reading of the time of PostgreSQL, unless another caller took it while this one waited.
+        """
+        with self._first_reading_lock:
+            if not self._is_synchronized:
+                current = monotonic()
+                self._synchronize(current)
+
+# ################################################################################################################################
+
     def now_ms(self) -> 'int':
         """ The time of the database in milliseconds since the Unix epoch.
         """
         current = monotonic()
 
-        # A reading that is due is taken first ..
-        if current >= self._next_synchronization:
+        # The first reading is taken once, and the callers that arrive while it is under way wait for it,
+        # because until it completes, there is no time to advance ..
+        if not self._is_synchronized:
+            self._read_first()
+            current = monotonic()
+
+        # .. after which a reading that is due is taken first ..
+        elif current >= self._next_synchronization:
             self._synchronize(current)
             current = monotonic()
 
@@ -144,17 +164,25 @@ class DatabaseClock:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_database_clock() -> 'DatabaseClock':
-    """ The clock of the pub/sub database that the Zato_PubSub_DB_* variables select.
+def get_engine_clock(engine:'Engine') -> 'DatabaseClock':
+    """ The clock of the pub/sub database of one engine.
     """
-    engine = get_pubsub_engine()
-
     if clock := _clocks.get(engine):
         out = clock
     else:
         out = DatabaseClock(engine)
         _clocks[engine] = out
 
+    return out
+
+# ################################################################################################################################
+
+def get_database_clock() -> 'DatabaseClock':
+    """ The clock of the pub/sub database that the Zato_PubSub_DB_* variables select.
+    """
+    engine = get_pubsub_engine()
+
+    out = get_engine_clock(engine)
     return out
 
 # ################################################################################################################################

@@ -63,8 +63,8 @@ def test_pubsub_backend_perf_postgresql(pubsub_database:'PubSubDatabase') -> 'No
     with pubsub_db_env(pubsub_database.env):
 
         try:
-            run_publish_throughput_scenario()
-            run_delivery_throughput_scenario()
+            _ = run_publish_throughput_scenario()
+            _ = run_delivery_throughput_scenario()
             run_push_delivery_scenario()
             run_fanout_scenario()
             run_document_mix_scenario()

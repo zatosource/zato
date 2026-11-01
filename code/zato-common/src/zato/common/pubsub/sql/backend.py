@@ -22,7 +22,6 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
-from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
 from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
@@ -112,7 +111,7 @@ class SQLPubSubBackend(SQLAdminAPI):
             message_id = new_msg_id()
 
         # .. build timestamps on the time of the database ..
-        clock = get_database_clock()
+        clock = self.clock
         now = clock.now()
         now_iso = now.isoformat()
 
@@ -454,7 +453,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         """ Format messages that a pull leased into the {data, meta} structure expected by the REST API,
         recording each reception and incrementing delivery counters.
         """
-        clock = get_database_clock()
+        clock = self.clock
         now = clock.now()
 
         out:'anylist' = []

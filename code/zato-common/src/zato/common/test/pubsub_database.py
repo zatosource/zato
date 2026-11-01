@@ -85,6 +85,9 @@ class ModuleCtx:
     # The image of the PostgreSQL containers
     PostgreSQL_Image = 'postgres:16'
 
+    # The image of the previous minor version, which a minor version upgrade starts from
+    Previous_Minor_Image = 'postgres:16.14'
+
     # The credentials and the database of the containers
     Username = 'zato_pubsub'
     DB_Name  = 'zato_pubsub'
@@ -335,14 +338,14 @@ def connect(database:'PubSubDatabase', host:'str'='', port:'int'=0, is_admin:'bo
 
 # ################################################################################################################################
 
-def _wait_until_ready(database:'PubSubDatabase') -> 'None':
+def _wait_until_ready(database:'PubSubDatabase', host:'str'='', port:'int'=0) -> 'None':
     """ Waits until the database of a container accepts connections from the host.
     """
     deadline = time.monotonic() + _ready_timeout
 
     while True:
         try:
-            connection = connect(database)
+            connection = connect(database, host, port)
             connection.close()
             return
         except Exception:
@@ -454,13 +457,16 @@ def _register_names(database:'PubSubDatabase') -> 'None':
 # ################################################################################################################################
 
 def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | None'=None,
-    extra_docker_args:'strlist | None'=None) -> 'PubSubDatabase':
+    extra_docker_args:'strlist | None'=None, image:'str'='') -> 'PubSubDatabase':
     """ Starts the pub/sub database of a session in the given mode. SQLite needs nothing started.
     """
     out = PubSubDatabase(mode=mode)
 
     if not is_postgresql_mode(mode):
         return out
+
+    if not image:
+        image = ModuleCtx.PostgreSQL_Image
 
     _prepare_database(out, label)
 
@@ -525,7 +531,7 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
     out.settings = get_container_settings(out, extra_settings)
     out.certs_dir = certs_dir
 
-    _run_container(out, ModuleCtx.PostgreSQL_Image)
+    _run_container(out, image)
 
     # .. the host names of a managed mode resolve to the container ..
     if out.profile_name:
@@ -555,6 +561,9 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
     if out.profile_name:
         dns_env = session_dns.get_env()
         out.env.update(dns_env)
+
+        profile = Managed_Profiles[out.profile_name]
+        out.env['Zato_PubSub_DB_Pool_Size'] = f'{profile.pool_size}'
 
     # .. the container is ready once it accepts them ..
     _wait_until_ready(out)
@@ -607,6 +616,8 @@ def _start_bouncer(database:'PubSubDatabase') -> 'None':
     runtime_dir = get_runtime_dir()
     bouncer_address = get_container_address(database.bouncer_container)
     session_dns.register(runtime_dir, database.endpoint, bouncer_address)
+
+    _wait_until_ready(database, database.endpoint, Bouncer_Port)
 
 # ################################################################################################################################
 

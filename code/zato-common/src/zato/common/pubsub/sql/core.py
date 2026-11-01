@@ -22,7 +22,7 @@ from sqlalchemy import bindparam
 from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
-from zato.common.pubsub.sql.clock import get_database_clock
+from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
 from zato.common.pubsub.sql.generation import take_over
 from zato.common.pubsub.sql.schema import delivery_table
@@ -37,6 +37,7 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.crypto.api import CryptoManager
+    from zato.common.pubsub.sql.clock import DatabaseClock
     from zato.common.pubsub.sql.generation import GenerationGuard
     from zato.common.pubsub.sql.writes import PendingAck
     from zato.common.typing_ import any_, anydict, intlist, intlistnone, strlist, strset
@@ -45,6 +46,7 @@ if 0:
     AuditLog = AuditLog
     Connection = Connection
     CryptoManager = CryptoManager
+    DatabaseClock = DatabaseClock
     Engine = Engine
     GenerationGuard = GenerationGuard
 
@@ -116,13 +118,33 @@ class SQLBackendCore:
         # The generation that this server raised on PostgreSQL, if it took over the database.
         self.generation_guard:'GenerationGuard | None' = None
 
+        # The engine of the pub/sub database, resolved on first access.
+        self._engine:'Engine | None' = None
+
 # ################################################################################################################################
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine of the pub/sub database that the Zato_PubSub_DB_* variables select, resolved on each access.
+        """ The engine of the pub/sub database that the Zato_PubSub_DB_* variables select, resolved on first access.
+        Every transaction of this backend runs on the one engine that its generation guard is installed on.
         """
-        out = get_pubsub_engine()
+        out = self._engine
+
+        if out is None:
+            out = get_pubsub_engine()
+            self._engine = out
+
+        return out
+
+# ################################################################################################################################
+
+    @property
+    def clock(self) -> 'DatabaseClock':
+        """ The clock of the pub/sub database of this backend.
+        """
+        engine = self.engine
+
+        out = get_engine_clock(engine)
         return out
 
 # ################################################################################################################################
@@ -485,11 +507,10 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    @staticmethod
-    def _database_now_ms() -> 'int':
+    def _database_now_ms(self) -> 'int':
         """ Returns the time of the pub/sub database in milliseconds since the Unix epoch.
         """
-        clock = get_database_clock()
+        clock = self.clock
 
         out = clock.now_ms()
         return out

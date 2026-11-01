@@ -36,8 +36,8 @@ def test_pubsub_backend_perf_sqlite(tmp_path:'os.PathLike') -> 'None':
 
     try:
         with pubsub_backend_env(db_path):
-            run_publish_throughput_scenario()
-            run_delivery_throughput_scenario()
+            _ = run_publish_throughput_scenario()
+            _ = run_delivery_throughput_scenario()
             run_push_delivery_scenario()
             run_fanout_scenario()
             run_document_mix_scenario()

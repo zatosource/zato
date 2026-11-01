@@ -131,12 +131,14 @@ def read_dropped_packets(container_name:'str') -> 'int':
 # ################################################################################################################################
 
 def install_snat_chain(container_name:'str') -> 'None':
-    """ Creates the chain that every new connection to the database passes through and that counts them.
+    """ Creates the chain that every new connection to the database passes through and that counts them,
+    unless the network of the container has it already.
     """
+    jump_rule = f'INPUT -p tcp --dport {_database_port} --syn -j {_snat_chain}'
+
     lines = [
-        'set -e',
-        f'iptables -N {_snat_chain}',
-        f'iptables -I INPUT -p tcp --dport {_database_port} --syn -j {_snat_chain}',
+        f'iptables -N {_snat_chain} 2>/dev/null || true',
+        f'iptables -C {jump_rule} 2>/dev/null || iptables -I {jump_rule}',
     ]
 
     _ = run_in_network(container_name, lines)

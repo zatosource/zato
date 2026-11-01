@@ -58,6 +58,15 @@ Default_SSL = False
 # When SSL is on, the server certificate is verified unless turned off explicitly
 Default_SSL_Verify = True
 
+# Pool sizing for network databases of stores that asked for a pool - every durable
+# commit waits for the database's log flush and the flush is shared across all commits
+# in flight, so throughput scales with how many connections may commit at once
+# and SQLAlchemy's default cap of 5+10 is too low for stores like pub/sub.
+# The total of 80 stays below the default connection limit of PostgreSQL (100),
+# leaving room for other clients of the same database. A managed database whose connection limit
+# is shared by several server processes and their cleanup process is given a smaller pool per process.
+Default_Pool_Size = 80
+
 # Binary content, raw bytes on every database.
 Binary_Type = LargeBinary()
 
@@ -205,6 +214,9 @@ class EnvDBConfig:
         # read again for each new connection so that a rotated password takes effect without a restart.
         self.env_password_file = f'{env_prefix}Password_File'
 
+        # The full name of the environment variable with the number of pooled connections of a network database
+        self.env_pool_size = f'{env_prefix}Pool_Size'
+
         # The full names of the environment variables configuring SSL/TLS
         self.env_ssl           = f'{env_prefix}SSL'
         self.env_ssl_ca_file   = f'{env_prefix}SSL_CA_File'
@@ -263,6 +275,12 @@ def get_env_values(config:'EnvDBConfig') -> 'stranydict':
         out['ssl_verify'] = as_bool(verify)
     else:
         out['ssl_verify'] = Default_SSL_Verify
+
+    # .. the pool of a network database has its default size unless given ..
+    if pool_size := os.environ.get(config.env_pool_size, ''):
+        out['pool_size'] = int(pool_size)
+    else:
+        out['pool_size'] = Default_Pool_Size
 
     # .. and the certificate paths are empty unless given.
     out['ssl_ca_file']   = os.environ.get(config.env_ssl_ca_file, '')

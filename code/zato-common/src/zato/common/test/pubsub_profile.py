@@ -72,7 +72,10 @@ class ManagedProfile:
     # The connection limit of a small compute size and the connection slots that the service reserves
     connection_settings: 'strlist'
 
-    # The settings of section 7 that the service does not allow to change
+    # The pooled connections of each process, so that two servers and the cleanup process stay within the connection limit
+    pool_size: 'int'
+
+    # The PostgreSQL settings of the test containers that the service does not allow to change
     excluded_settings: 'strlist'
 
     # The settings that the service fixes or that stand in for an excluded setting
@@ -95,6 +98,9 @@ def _get_rds_profile() -> 'ManagedProfile':
         'superuser_reserved_connections=3',
         'reserved_connections=2',
     ]
+
+    # Three processes of 64 connections leave 28 of the 220 connections that are not reserved.
+    out.pool_size = 64
 
     # RDS accepts only two values of log_line_prefix ..
     out.excluded_settings = ['log_line_prefix']
@@ -125,6 +131,9 @@ def _get_azure_profile() -> 'ManagedProfile':
         'reserved_connections=5',
     ]
 
+    # Three processes of 80 connections leave 174 of the 414 connections that are not reserved.
+    out.pool_size = 80
+
     # Azure keeps track_wal_io_timing read-only and off ..
     out.excluded_settings = ['track_wal_io_timing']
 
@@ -147,7 +156,7 @@ Managed_Profiles = {
 # ################################################################################################################################
 
 def get_profile_settings(profile:'ManagedProfile', settings:'strlist') -> 'strlist':
-    """ Returns the settings of section 7 that the service allows to change, followed by those of the service itself.
+    """ Returns the PostgreSQL settings of the test containers that the service allows to change, followed by those of the service itself.
     """
     out:'strlist' = []
 
