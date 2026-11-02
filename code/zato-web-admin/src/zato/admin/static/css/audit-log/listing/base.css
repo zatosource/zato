@@ -43,6 +43,15 @@
        walk the list up under the reader. It is the height the tallest of them already came to.  */
     --audit-log-row-height: 28px;
 
+    /* The head of the pane is this tall whatever the event has in it, so an event without an
+       outcome badge does not lift the tabs and the panels below it. It is the height the head
+       already came to with the badge in it. */
+    --audit-log-pane-head-height: 20px;
+
+    /* A tag on a row narrowed down to this still shows the first letters of what it says. A row
+       whose tags cannot all stand at this width gives up a column instead. */
+    --audit-log-row-chip-min-width: 6ch;
+
     /* The dot a failed row is marked with, and how far its rail stands off the list. Both come out
        of the inset the page already keeps at its edge, so nothing in the list gives up any room. */
     --audit-log-error-dot-size: 8px;

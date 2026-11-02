@@ -32,6 +32,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    height: var(--audit-log-pane-head-height);
     margin-bottom: 8px;
 }
 

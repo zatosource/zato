@@ -26,6 +26,7 @@ from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
 from zato.common.audit_log.export.api import ModuleCtx as ExportCtx, start_audit_export, stop_audit_export
 from zato.common.crypto.api import CryptoManager
+from zato.common.util.api import new_cid
 from zato.common.version import get_version
 
 # ################################################################################################################################
@@ -69,7 +70,7 @@ _source_render_by_event_id = {
 
 def _record_content_view(req:'any_', event_id:'int', source:'str', object_name:'str') -> 'None':
     """ Records who read the content of one event - a message body or an attachment.
-    Access to patient data is itself an audited operation.
+    Access to patient data is itself an audited operation, with a cid of its own.
     """
 
     # A view record holds no patient data, so reading one is not itself a recordable
@@ -77,11 +78,14 @@ def _record_content_view(req:'any_', event_id:'int', source:'str', object_name:'
     if source == AuditSource.Config:
         return
 
+    cid = new_cid()
+
     _ = record_view_event(
         _access_log,
         actor=req.user.username,
         viewed_event_id=event_id,
         screen=_screen_browser,
+        cid=cid,
         viewed_source=source,
         viewed_object_name=object_name,
     )

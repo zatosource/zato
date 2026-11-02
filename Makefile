@@ -456,6 +456,10 @@ pyright:
 		zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
 		tests/python/
 
+# Pyright worker count and Node.js heap limit - the default heap of about 4 GB forces repeated type cache evictions over this many files
+Zato_Pyright_Threads := 8
+Zato_Pyright_Heap_MB := 16384
+
 # Every first-party Python tree
 Zato_Pyright_All_Paths := \
 	zato-cli/src \
@@ -472,7 +476,7 @@ Zato_Pyright_All_Paths := \
 
 pyright-all:
 	@echo "Running Python type checks on every first-party tree from $(CURDIR)/code"
-	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) --project pyright-all.json $(Zato_Pyright_All_Paths)
+	cd $(CURDIR)/code && NODE_OPTIONS=--max-old-space-size=$(Zato_Pyright_Heap_MB) PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) --project pyright-all.json --threads $(Zato_Pyright_Threads) $(Zato_Pyright_All_Paths)
 
 test-lint: ## Static analysis only - no test is executed. The first stage of test-all.
 	$(Zato_Log_Reset)

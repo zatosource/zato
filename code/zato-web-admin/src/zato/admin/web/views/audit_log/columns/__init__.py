@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Re-exports only - the implementation lives in the sibling modules.
 
 # Zato
-from zato.admin.web.views.audit_log.columns.labels import _all_sources_section_title, _all_sources_title, \
+from zato.admin.web.views.audit_log.columns.labels import _all_sources_title, \
     _event_type_label, _source_endpoint_label, _source_event_label, _source_except_label, _source_label, \
     _source_object_label, _source_title
 from zato.admin.web.views.audit_log.columns.tables import get_source_outcomes, _all_sources_columns, _data_preview_length, \
@@ -32,7 +32,6 @@ if 0:
 
 # For flake8
 _all_sources_columns = _all_sources_columns
-_all_sources_section_title = _all_sources_section_title
 _all_sources_title = _all_sources_title
 _data_preview_length = _data_preview_length
 _default_page = _default_page

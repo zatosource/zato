@@ -86,6 +86,13 @@ listing.config = {
     eventChipErrorTone: 'bad',
     eventChipRunningTone: 'running',
 
+    // An alert wears its event word as a chip in the error tone on every row
+    alertEventType: 'alert-raised',
+    eventChipAlertTone: 'bad',
+
+    // A row that went as it should offers nothing to be sent again
+    okOutcome: 'ok',
+
     // The outcome of a row that is still changing and what its event word reads while it is.
     runningOutcome: 'running',
     runningLabel: 'Running',

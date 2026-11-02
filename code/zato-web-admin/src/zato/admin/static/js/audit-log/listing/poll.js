@@ -60,6 +60,30 @@ listing.markNewRows = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The tags of a row narrow down to their least width before anything else gives way, so a strip
+// of them reaching past its own cell is a row whose tags have nothing left to give.
+listing.rowsFit = function(tableElement, listElement) {
+    if (tableElement.offsetWidth > listElement.clientWidth) {
+        return false;
+    }
+
+    var strips = tableElement.querySelectorAll('.audit-log-cell-main-parts');
+    var out = true;
+
+    for (var stripIndex = 0; stripIndex < strips.length; stripIndex++) {
+        var strip = strips[stripIndex];
+
+        if (strip.scrollWidth > strip.clientWidth) {
+            out = false;
+            break;
+        }
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // A row keeps every column it has room for and gives up the next one at the moment it has not.
 // Which moment that is, is measured rather than guessed - the columns are as wide as the data
 // makes them, and a width written down here could only ever be a guess at what that comes to.
@@ -83,7 +107,9 @@ listing.fitColumns = function() {
         // a moment, and a puffed row reaches past the list without the table being any wider,
         // so a list measured by its scroll width while a drag happens mid-puff would give up
         // every column it has and get none of them back.
-        if (tableElement.offsetWidth <= listElement.clientWidth) {
+        var rowsFit = listing.rowsFit(tableElement, listElement);
+
+        if (rowsFit) {
             break;
         }
 
