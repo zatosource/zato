@@ -1,8 +1,16 @@
-{% extends "zato/detail_base.html" %}
+{% extends "zato/index.html" %}
 
-{% block page_title %}{{ audit_log_title }}{% endblock %}
+{% block html_title %}{{ audit_log_title }}{% endblock %}
 
-{% block detail_css %}
+{% block "extra_css" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
+<link rel="stylesheet" type="text/css" href="/static/css/driver.css">
+<link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/status-ok.css">
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/detail-kit/detail.css">
 <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
 <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
 <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
@@ -19,23 +27,20 @@
 <link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing/list.css">
 <link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing/pane.css">
 <link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing/flow.css">
-<style nonce="{{ CSP_NONCE }}">
-img.help-icon[id=""] { display: none; }
-</style>
 {% endblock %}
 
-{% block section_title %}
-<span id="detail-section-title">{{ audit_log_title }} <span class="detail-component-pill">{{ section_title }}</span></span>
-{% endblock %}
-{% block help_icon_id %}{% endblock %}
-
-{% comment %} The listing draws its own frames - a heavy one around the whole page as well
-would be a box inside a box {% endcomment %}
-{% block progress_panel_class %}progress-panel-borderless progress-panel-no-margin{% endblock %}
-
-{% block detail_page_class %}detail-page-audit-log{% endblock %}
-
-{% block detail_js %}
+{% block "extra_js" %}
+<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/driver.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/settings.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/palette.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/tooltip.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/pagination.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/url_state.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/auto_refresh.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
@@ -108,34 +113,38 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block stat_cards %}{% endblock %}
+{% block "content" %}
+<div id="markup">
+<h2 class="zato" id="detail-section-title">{% include "zato/include/header-brand.html" with badge=section_title %}{{ audit_log_title }}</h2>
 
-{% block actions %}{% endblock %}
+<div class="search-bar">
+    <div class="prompt">
+        <form class="audit-log-search-form" id="audit-log-search-form">
+            <span class="audit-log-filter-select" id="audit-log-filter-source"></span>
+            <span class="audit-log-filter-select" id="audit-log-filter-object"></span>
 
-{% block tabs %}{% endblock %}
+            <span class="search-clear-anchor">
+                <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search .." value="{{ query }}">
+                <span class="search-clear" id="audit-log-search-clear">Clear</span>
+            </span>
 
-{% block tab_panels %}
-<div class="dashboard-tab-panel" id="dashboard-tab-panel-events" role="tabpanel">
-
-    <form class="audit-log-search-form" id="audit-log-search-form">
-        <span class="audit-log-filter-select" id="audit-log-filter-source"></span>
-        <span class="audit-log-filter-select" id="audit-log-filter-object"></span>
-
-        <span class="search-clear-anchor">
-            <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search .." value="{{ query }}">
-            <span class="search-clear" id="audit-log-search-clear">Clear</span>
-        </span>
-
-        <button type="submit" class="action-button">Search</button>
-    </form>
-
-    <div class="audit-log-activity-strip" id="audit-log-strip"></div>
-
-    <div class="audit-log-controls-row">
-        <div id="audit-log-chrome"></div>
-        <div class="detail-pagination-controls" id="audit-log-pagination-top"></div>
+            <button type="submit" class="action-button">Search</button>
+        </form>
     </div>
+</div>
 
-    <div class="audit-log-listing" id="audit-log-listing"></div>
+<div class="detail-page-audit-log">
+    <div class="dashboard-tab-panel" id="dashboard-tab-panel-events" role="tabpanel">
+
+        <div class="audit-log-activity-strip" id="audit-log-strip"></div>
+
+        <div class="audit-log-controls-row">
+            <div id="audit-log-chrome"></div>
+            <div class="detail-pagination-controls" id="audit-log-pagination-top"></div>
+        </div>
+
+        <div class="audit-log-listing" id="audit-log-listing"></div>
+    </div>
+</div>
 </div>
 {% endblock %}

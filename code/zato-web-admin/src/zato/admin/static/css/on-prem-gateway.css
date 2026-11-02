@@ -1,0 +1,36 @@
+/* ------------------------------------------------------------ */
+/* On-prem gateways - refreshed values                          */
+/* ------------------------------------------------------------ */
+
+/* Each refreshed value is at least as wide as the longest value of its column, so a gateway that connects
+   or disconnects does not change the widths that the table distributes among its columns. The connection
+   time is measured in rem because its placeholder is set in a smaller font than its value. */
+:root {
+    --on-prem-gateway-status-width: 17ch;
+    --on-prem-gateway-remote-address-width: 21ch;
+    --on-prem-gateway-connected-since-width: 17rem;
+}
+
+#data-table .on-prem-gateway-value,
+#data-table td.zato-time-ago .zato-time-ago-value {
+    display: inline-block;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+#data-table .on-prem-gateway-value-status {
+    min-width: var(--on-prem-gateway-status-width);
+}
+
+#data-table .on-prem-gateway-value-remote-address {
+    min-width: var(--on-prem-gateway-remote-address-width);
+}
+
+#data-table td.zato-time-ago .zato-time-ago-value {
+    min-width: var(--on-prem-gateway-connected-since-width);
+}
+
+/* The suffix is set in a smaller font, which with the inherited line height would make the row taller. */
+#data-table td.zato-time-ago .zato-time-ago-suffix {
+    line-height: 1;
+}

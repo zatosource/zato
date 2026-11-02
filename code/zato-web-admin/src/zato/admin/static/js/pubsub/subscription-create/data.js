@@ -42,6 +42,9 @@ form.config = {
     // The permissions page, listing those of the client whose name follows
     permissionsURL: '/zato/pubsub/permission/?query=',
 
+    // The page of outgoing REST connections
+    endpointsURL: '/zato/http-soap/?connection=outgoing&transport=plain_http',
+
     // The data table reads a checkbox of a new row by the id derived from its name
     activeInputId: 'id_is_delivery_active',
     activeInputName: 'is_delivery_active',
@@ -77,6 +80,8 @@ form.config = {
         pull: 'Pull',
         push: 'REST push',
         endpoint: 'REST endpoint',
+        noEndpoints: 'No REST endpoints',
+        addEndpoint: 'Add REST endpoint',
         searchPlaceholder: 'Search topics',
         results: 'Search results',
         selectAll: 'Select all',
@@ -131,7 +136,7 @@ form.takeData = function(data) {
 form.newState = function() {
 
     var out = {
-        kind: form.config.kindService,
+        kind: form.config.kindClient,
         services: [],
         client: '',
         delivery: form.config.deliveryPull,

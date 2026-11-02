@@ -96,6 +96,13 @@
     background: none;
 }
 
+.pubsub-subscription-create-endpoint-row {
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
 /* The switch under its label stands level with the selects under theirs */
 .pubsub-subscription-create-switch {
     display: flex;

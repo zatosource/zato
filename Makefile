@@ -6,7 +6,7 @@
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
+	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -192,8 +192,13 @@ queue-bridge:
 		$(CURDIR)/code/bin/_zato_queue_bridge; \
 	fi
 
-on-prem-gateway: ## The on-prem gateway built and run from the source tree in Zato_On_Prem_Gateway_Root, e.g. make on-prem-gateway Token=eyJhZGRyZXNzIjoi..
-	$(MAKE) -C $(Zato_On_Prem_Gateway_Root) run
+on-prem-gateway: ## The on-prem gateway built and run from the source tree in Zato_On_Prem_Gateway_Root, enrolled with the hub on this machine.
+	token=$$($(ZATO_PY) -m zato.server.on_prem_gateway_local --server-dir $(Zato_Server_Dir)) && \
+		$(MAKE) -C $(Zato_On_Prem_Gateway_Root) run Token=$$token
+
+# Without a load balancer, the address in an enrollment token has the port of the hub
+on-prem-gateway-hub: ## The on-prem gateway hub built and run from the source tree in Zato_On_Prem_Gateway_Root.
+	$(MAKE) -C $(Zato_On_Prem_Gateway_Root) hub
 
 file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
@@ -331,6 +336,7 @@ dev:
 	$$Zato_Dev_Prefix -t server -- bash -c 'make -C $(CURDIR) server; exec bash -i'
 	$$Zato_Dev_Prefix -t scheduler -- bash -c 'make -C $(CURDIR) scheduler; exec bash -i'
 	$$Zato_Dev_Prefix -t listener -- bash -c 'make -C $(CURDIR) listener; exec bash -i'
+	$$Zato_Dev_Prefix -t on-prem-gateway-hub -- bash -c 'make -C $(CURDIR) on-prem-gateway-hub; exec bash -i'
 	$(MAKE) haproxy
 
 # ############################################################################

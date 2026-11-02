@@ -11,6 +11,10 @@
     margin: 0;
 }
 
+.detail-page-audit-log .dashboard-list-detail-list {
+    border: none;
+}
+
 .audit-log-row {
     cursor: pointer;
 }

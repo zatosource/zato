@@ -2291,6 +2291,28 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def resolve_on_prem_gateway_remote_address(self, id:'int') -> 'strdict':
+        """ Returns the remote address of a connected on-prem gateway and the DNS name that the hub
+        resolves it to at the time of the call. Invoked by the Dashboard.
+        """
+        from zato.server.on_prem_gateway import OnPremGatewayManager
+
+        manager = OnPremGatewayManager(self)
+        gateway = manager.get_by_id(id)
+
+        if not gateway:
+            raise Exception(f'On-prem gateway with id `{id}` not found')
+
+        response = manager.hub.resolve_remote_address(gateway['name'])
+
+        out = {
+            'remote_address': response['remote_address'],
+            'dns_name': response['dns_name'],
+        }
+        return out
+
+# ################################################################################################################################
+
     def _import_demo_config_on_first_start(self) -> 'None':
 
         from zato.server.demo_config import import_demo_config_on_first_start

@@ -13,8 +13,8 @@ var labels = config.labels;
 form.buildKindField = function() {
 
     var kindOptions = [
-        {value: config.kindService, label: labels.service},
-        {value: config.kindClient, label: labels.client}
+        {value: config.kindClient, label: labels.client},
+        {value: config.kindService, label: labels.service}
     ];
 
     var out = form.buildSelectField('kind', labels.subscriber, kindOptions);

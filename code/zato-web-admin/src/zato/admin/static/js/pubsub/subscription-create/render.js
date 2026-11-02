@@ -81,12 +81,40 @@ form.buildSubscriberFields = function() {
             {value: config.deliveryPush, label: labels.push}
         ];
 
-        var endpointField = form.buildSelectField('endpoint', labels.endpoint, form.itemsToOptions(form.data.endpoints));
-        endpointField.querySelector('select').disabled = state.delivery !== config.deliveryPush;
-
         fields.appendChild(form.buildSelectField('client', labels.client, form.itemsToOptions(form.data.clients)));
         fields.appendChild(form.buildSelectField('delivery', labels.delivery, deliveryOptions));
-        fields.appendChild(endpointField);
+
+        if(state.delivery === config.deliveryPush) {
+
+            var hasEndpoints = form.data.endpoints.length > 0;
+            var endpointOptions = form.itemsToOptions(form.data.endpoints);
+
+            if(!hasEndpoints) {
+                endpointOptions = [{value: '', label: labels.noEndpoints}];
+            }
+
+            var endpointField = form.buildSelectField('endpoint', labels.endpoint, endpointOptions);
+
+            // With no endpoints to pick, a link to create one stands after the select
+            if(!hasEndpoints) {
+
+                var endpointSelect = endpointField.querySelector('select');
+
+                var endpointRow = document.createElement('div');
+                endpointRow.className = 'micro-form-input-row ' + config.idPrefix + 'endpoint-row';
+
+                var addLink = document.createElement('a');
+                addLink.href = config.endpointsURL;
+                addLink.target = '_blank';
+                addLink.textContent = labels.addEndpoint;
+
+                endpointField.replaceChild(endpointRow, endpointSelect);
+                endpointRow.appendChild(endpointSelect);
+                endpointRow.appendChild(addLink);
+            }
+
+            fields.appendChild(endpointField);
+        }
     }
 
     var out = fields;

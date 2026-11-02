@@ -1805,6 +1805,8 @@ urlpatterns += [
         login_required(on_prem_gateway.enrollment_token), name='on-prem-gateway-enrollment-token'),
     url(r'^zato/on-prem-gateway/reset-key/(?P<id>.*)/$',
         login_required(on_prem_gateway.reset_key), name='on-prem-gateway-reset-key'),
+    url(r'^zato/on-prem-gateway/remote-address/(?P<id>.*)/$',
+        login_required(on_prem_gateway.remote_address), name='on-prem-gateway-remote-address'),
     url(r'^zato/on-prem-gateway/refresh/$',
         login_required(on_prem_gateway.refresh), name='on-prem-gateway-refresh'),
 ]

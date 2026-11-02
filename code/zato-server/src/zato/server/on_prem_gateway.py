@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from contextlib import closing
 from logging import getLogger
+from urllib.parse import quote
 
 # requests
 import requests
@@ -301,6 +302,7 @@ class HubClient:
     def mint_token(self, name:'str', address:'str') -> 'strdict':
         """ Issues a single-use enrollment token for one gateway.
         """
+        name = quote(name, safe='')
         path = f'/gateways/{name}/enrollment-token'
         data = {'address': address}
 
@@ -313,9 +315,22 @@ class HubClient:
     def reset_key(self, name:'str') -> 'None':
         """ Revokes a gateway's key.
         """
+        name = quote(name, safe='')
         path = f'/gateways/{name}/key'
 
         _ = self._invoke('DELETE', path)
+
+# ################################################################################################################################
+
+    def resolve_remote_address(self, name:'str') -> 'strdict':
+        """ The remote address of a connected gateway and the DNS name that the hub resolves it to.
+        """
+        name = quote(name, safe='')
+        path = f'/gateways/{name}/remote-address'
+
+        out = self._invoke('GET', path)
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

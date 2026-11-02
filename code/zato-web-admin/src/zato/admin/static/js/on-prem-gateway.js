@@ -43,7 +43,26 @@ $.fn.zato.on_prem_gateway.config = {
     refresh_time_field: 'connected_since',
 
     // The columns refreshed along with the connection time
-    refreshed_columns: ['status', 'remote_address', 'gateway_version', 'platform'],
+    refreshed_columns: ['status', 'remote_address'],
+
+    // The element in a refreshed cell that has the value, with the width reserved for its column
+    value_selector: '.on-prem-gateway-value',
+    value_html: '<span class="on-prem-gateway-value on-prem-gateway-value-{0}">{1}</span>',
+
+    // The remote address of a connected gateway is a link to the DNS name the hub resolves it to
+    remote_address_column: 'remote_address',
+    remote_address_url: './remote-address/{0}/',
+    remote_address_href: "javascript:$.fn.zato.on_prem_gateway.remote_address('{0}')",
+    remote_address_tooltip_html: '<table class="zato-time-ago-tooltip"></table>',
+    remote_address_spinner_label: 'Resolving ..',
+    remote_address_labels: {
+        ip: 'IP',
+        dns: 'DNS'
+    },
+
+    // The close button of the enrollment token dialog, the same one the topic matches popup has
+    close_button_html: '<button type="button" class="topic-matches-popup-close">×</button>',
+    close_button_selector: '.topic-matches-popup-close',
 
     // The link in a row that a successful key reset is confirmed beside
     reset_key_link_text: 'Reset key',
@@ -54,7 +73,8 @@ $.fn.zato.on_prem_gateway.config = {
         edit: 'The on-prem gateway could not be updated',
         delete_: 'The on-prem gateway could not be deleted',
         enrollment_token: 'The enrollment token could not be issued',
-        reset_key: 'The key could not be reset'
+        reset_key: 'The key could not be reset',
+        remote_address: 'The remote address could not be resolved'
     },
 
     delete_confirmation: 'Are you sure you want to delete the on-prem gateway `{0}`?',
@@ -94,6 +114,11 @@ $(document).ready(function() {
     $('#enrollment_token-div').dialog({
         autoOpen: false,
         width: '40em'
+    });
+
+    // The titlebar outlives the content that each new title replaces, so the click is handled there
+    $('#enrollment_token-div').prev().css('position', 'relative').on('click', config.close_button_selector, function() {
+        $('#enrollment_token-div').dialog('close');
     });
 
     $('#enrollment-token-copy').on('click', function() {
@@ -285,16 +310,12 @@ $.fn.zato.on_prem_gateway.data_table.new_row = function(item, data, include_tr) 
     var status = $.fn.zato.on_prem_gateway.status.notEnrolled;
     var connectedSince = '';
     var remoteAddress = config.no_value_html;
-    var gatewayVersion = config.no_value_html;
-    var platform = config.no_value_html;
 
     // .. whereas an edited one keeps what its row reports until the refresh that follows the edit.
     if(!include_tr) {
         status = $.fn.zato.data_table.get_cell(item.id, '_status').text();
         connectedSince = $.fn.zato.data_table.get_cell(item.id, '_connected_since').attr('data-time-utc');
-        remoteAddress = $.fn.zato.data_table.get_cell(item.id, '_remote_address').html();
-        gatewayVersion = $.fn.zato.data_table.get_cell(item.id, '_gateway_version').html();
-        platform = $.fn.zato.data_table.get_cell(item.id, '_platform').html();
+        remoteAddress = $.fn.zato.data_table.get_cell(item.id, '_remote_address').find(config.value_selector).html();
     }
 
     if(!isActive) {
@@ -313,13 +334,11 @@ $.fn.zato.on_prem_gateway.data_table.new_row = function(item, data, include_tr) 
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', isActive ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', status);
+    row += String.format('<td>{0}</td>', String.format(config.value_html, 'status', status));
     row += String.format('<td>{0}</td>', hostCount);
     row += String.format('<td class="zato-time-ago" data-time-ago-id="{0}" data-time-utc="{1}" ' +
-        'data-time-ago-title="Connected since" data-time-ago-row-label="Connected for"></td>', item.id, connectedSince);
-    row += String.format('<td>{0}</td>', remoteAddress);
-    row += String.format('<td>{0}</td>', gatewayVersion);
-    row += String.format('<td>{0}</td>', platform);
+        'data-time-ago-no-title data-time-ago-row-label="Connected for"></td>', item.id, connectedSince);
+    row += String.format('<td>{0}</td>', String.format(config.value_html, 'remote-address', remoteAddress));
 
     // 2
     row += String.format('<td>{0}</td>',
@@ -366,13 +385,24 @@ $.fn.zato.on_prem_gateway.on_refresh = function(data) {
         $.each(config.refreshed_columns, function(ignored, name) {
 
             var cell = $.fn.zato.data_table.get_cell(id, '_' + name);
+            var valueElement = cell.find(config.value_selector);
             var value = entry[name];
 
-            if(value) {
-                cell.text(value);
+            if(!value) {
+                valueElement.html(config.no_value_html);
+            }
+            else if(name === config.remote_address_column) {
+
+                // An open tooltip is anchored to the link, so a link that still shows the same address is kept
+                if(valueElement.find('a').text() === value) {
+                    return;
+                }
+
+                var link = $('<a></a>').attr('href', String.format(config.remote_address_href, id)).text(value);
+                valueElement.empty().append(link);
             }
             else {
-                cell.html(config.no_value_html);
+                valueElement.text(value);
             }
         });
     });
@@ -485,6 +515,7 @@ $.fn.zato.on_prem_gateway.enrollment_token = function(id) {
         var title = String.format('Enrollment token, valid until {0} ({1})', expiresAt, timezone);
 
         $.fn.zato.data_table.set_dialog_title(div, title);
+        div.prev().append(config.close_button_html);
         div.dialog('open');
     }
 
@@ -509,7 +540,7 @@ $.fn.zato.on_prem_gateway.reset_key = function(id) {
         var response = $.parseJSON(data.responseText);
         var statusCell = $.fn.zato.data_table.get_cell(id, '_status');
 
-        statusCell.text($.fn.zato.on_prem_gateway.status.notEnrolled);
+        statusCell.find(config.value_selector).text($.fn.zato.on_prem_gateway.status.notEnrolled);
 
         $.fn.zato.data_table.row_updated(id);
         $.fn.zato.on_prem_gateway.show_success(link, response.message);
@@ -517,6 +548,68 @@ $.fn.zato.on_prem_gateway.reset_key = function(id) {
 
     var url = String.format('./reset-key/{0}/', id);
     $.fn.zato.post(url, callback, {});
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The name is resolved by the hub on each click, so it reflects what DNS reports at that moment.
+$.fn.zato.on_prem_gateway.remote_address = function(id) {
+
+    var config = $.fn.zato.on_prem_gateway.config;
+    var link = $.fn.zato.data_table.get_cell(id, '_remote_address').find('a').get(0);
+
+    $.fn.zato.action_runner.run({
+        link_elem: link,
+        url: String.format(config.remote_address_url, id),
+        placement: config.message_placement,
+        spinner_label: config.remote_address_spinner_label,
+        details_modal_title: config.error_titles.remote_address,
+
+        // The view replies with HTTP 200 and a JSON document on success and with an error text otherwise
+        parse: function(jqXHR, textStatus) {
+            var isHttpOk = (jqXHR.status >= 200 && jqXHR.status < 300);
+
+            return {
+                is_success: isHttpOk,
+                label: isHttpOk ? '' : config.error_titles.remote_address,
+                details_title: config.error_titles.remote_address,
+                details_body: jqXHR.responseText,
+                details_lexer: '',
+                status_code: jqXHR.status
+            };
+        },
+
+        // The tooltip stays open with both values until Escape or a click elsewhere closes it
+        on_success: function(instance, result) {
+
+            var response = $.parseJSON(result.details_body);
+            var table = $(config.remote_address_tooltip_html);
+
+            var rows = [
+                [config.remote_address_labels.ip, response.remote_address],
+                [config.remote_address_labels.dns, response.dns_name]
+            ];
+
+            $.each(rows, function(ignored, row) {
+
+                var labelCell = $('<th></th>').text(row[0]);
+                var valueCell = $('<td></td>');
+
+                if(row[1]) {
+                    valueCell.text(row[1]);
+                }
+                else {
+                    valueCell.html(config.no_value_html);
+                }
+
+                table.append($('<tr></tr>').append(labelCell, valueCell));
+            });
+
+            instance.setContent(table.get(0));
+            instance.setProps({hideOnClick: true});
+            instance.show();
+        }
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////

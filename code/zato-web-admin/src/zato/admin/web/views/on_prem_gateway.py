@@ -78,8 +78,7 @@ class Index(_Index):
     paginate = True
 
     output_required = 'id', 'name', 'is_active', 'is_key_reset_required'
-    output_optional = 'hosts', 'host_count', 'is_connected', 'has_key', 'connected_since', 'remote_address', \
-        'gateway_version', 'platform'
+    output_optional = 'hosts', 'host_count', 'is_connected', 'has_key', 'connected_since', 'remote_address'
     output_repeated = True
 
     def on_before_append_item(self, item:'Bunch') -> 'Bunch':
@@ -191,6 +190,26 @@ def reset_key(req:'HttpRequest', id:'str') -> 'any_':
 # ################################################################################################################################
 
 @method_allowed('POST')
+def remote_address(req:'HttpRequest', id:'str') -> 'any_':
+    """ Returns the remote address of a connected gateway and the DNS name that the hub resolves it to.
+    """
+    initial = {'func_name': 'resolve_on_prem_gateway_remote_address'}
+    response = id_only_service(req, 'zato.server.invoker', id, 'Could not resolve the remote address, e:`{}`', initial)
+
+    if isinstance(response, HttpResponseServerError):
+        return response
+
+    out = {
+        'remote_address': response.data.remote_address,
+        'dns_name': response.data.dns_name,
+    }
+
+    return HttpResponse(dumps(out), content_type='application/javascript')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
 def refresh(req:'HttpRequest') -> 'any_':
     """ Returns the runtime state of the gateways shown on the page, keyed by their IDs.
     """
@@ -214,8 +233,6 @@ def refresh(req:'HttpRequest') -> 'any_':
             'status': _get_status(item),
             'connected_since': item['connected_since'],
             'remote_address': item['remote_address'],
-            'gateway_version': item['gateway_version'],
-            'platform': item['platform'],
         }
 
     return HttpResponse(dumps(out), content_type='application/json')

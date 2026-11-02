@@ -2569,7 +2569,10 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc, duration_ms, title, ro
     }
     var ago_text = $.fn.zato.time_ago.humanize_detailed(age_seconds);
 
-    var out = '<div class="zato-time-ago-tooltip-title">' + title + '</div>';
+    var out = '';
+    if(title !== null) {
+        out += '<div class="zato-time-ago-tooltip-title">' + title + '</div>';
+    }
     out += '<table class="zato-time-ago-tooltip">';
     out += '<tr><th>' + row_label + '</th><td>' + ago_text + '</td></tr>';
 
@@ -2706,6 +2709,9 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
         var title = cell.attr('data-time-ago-title');
         if(!title) {
             title = config.tooltip_title;
+        }
+        if(cell.is('[data-time-ago-no-title]')) {
+            title = null;
         }
         var row_label = cell.attr('data-time-ago-row-label');
         if(!row_label) {

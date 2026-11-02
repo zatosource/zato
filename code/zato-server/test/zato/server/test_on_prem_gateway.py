@@ -232,6 +232,20 @@ class TestHubClient(TestCase):
 
 # ################################################################################################################################
 
+    def test_a_name_with_a_space_is_encoded_in_the_path(self) -> 'None':
+
+        with patch('zato.server.on_prem_gateway.requests.request') as request:
+            request.return_value = _get_response(OK, {'ok': True})
+
+            self.client.reset_key('head office')
+
+        args, _ = request.call_args
+
+        self.assertEqual(args[0], 'DELETE')
+        self.assertEqual(args[1], f'{_Hub_Admin_Url}/gateways/head%20office/key')
+
+# ################################################################################################################################
+
     def test_a_refusal_carries_the_hub_message(self) -> 'None':
 
         error = f'there is no gateway called {_Other_Gateway_Name}'

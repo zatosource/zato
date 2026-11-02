@@ -259,6 +259,9 @@ class ServerFunctionInvoker(AdminService):
         elif func_name == 'get_sdk_secret_field_names':
             type_ = self.request.raw['type_']
             response = func(type_)
+        elif func_name == 'resolve_on_prem_gateway_remote_address':
+            id = int(self.request.raw['id'])
+            response = func(id)
         elif func_name == 'deploy_env_repo':
             path = self.request.raw['path']
             files = self.request.raw.get('files') or []
