@@ -76,6 +76,9 @@ _rest_push_timeout = MISC.DEFAULT_HTTP_TIMEOUT
 _header_msg_id = 'X-Zato-Msg-ID'
 _header_delivery_attempt = 'X-Zato-Delivery-Attempt'
 
+# The header of a push response that declares the length of its body, absent from a chunked response
+_header_content_length = 'Content-Length'
+
 sub_key_greenlet_dict = dict[str, 'Greenlet']
 
 # ################################################################################################################################
@@ -638,6 +641,17 @@ class PushDelivery:
 
         response = requests_post(url, data=dumps(envelope), headers=headers, timeout=_rest_push_timeout)
         response.raise_for_status()
+
+        # A response that ends before the length it declared is a failed attempt - the endpoint closed the connection
+        # in the middle of it, so it may not have processed the message. The bytes are counted as received, before decoding.
+        content_length = response.headers.get(_header_content_length)
+
+        if content_length is not None:
+            expected = int(content_length)
+            received = response.raw.tell()
+
+            if received < expected:
+                raise Exception(f'Incomplete response from {url}, received {received} of {expected} bytes')
 
 # ################################################################################################################################
 # ################################################################################################################################

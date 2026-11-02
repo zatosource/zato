@@ -40,6 +40,9 @@ _cleanup_module = 'zato.common.pubsub.sql.cleanup'
 # How long the cleanup process may take to stop after it was asked to, in seconds.
 _cleanup_stop_timeout = 120
 
+# The isolation level in which the counts of a snapshot are read during traffic.
+_snapshot_isolation_level = 'REPEATABLE READ'
+
 # The raw counts and the stored counts that must equal them.
 _raw_queue_query = text('select sub_key, topic_name, count(*) from pubsub_delivery group by sub_key, topic_name')
 _stored_queue_query = text('select sub_key, topic_name, sum(depth) from pubsub_queue_count group by sub_key, topic_name')
@@ -140,11 +143,15 @@ def _read_counts(connection:'any_', query:'any_') -> 'anydict':
 
 # ################################################################################################################################
 
-def get_count_mismatches() -> 'strlist':
+def get_count_mismatches(is_snapshot:'bool'=False) -> 'strlist':
     """ Returns each key whose stored count differs from the number of its rows - queues, topics and publications.
+    A snapshot reads all of them in one repeatable read transaction of PostgreSQL, which is consistent during traffic.
     """
     out:'strlist' = []
     engine = get_pubsub_engine()
+
+    if is_snapshot:
+        engine = engine.execution_options(isolation_level=_snapshot_isolation_level)
 
     pairs = [
         ('queue', _raw_queue_query, _stored_queue_query),

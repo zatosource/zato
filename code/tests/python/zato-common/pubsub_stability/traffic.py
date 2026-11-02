@@ -162,12 +162,15 @@ class Traffic:
         self.unmeasured_sub_keys:'set[str]' = set()
         self.extra_deliveries = 0
 
-        # Whether the traffic records each delivery, which lets a suite account for every publication - the partner
-        # messages acknowledged to their API clients and those pulled, by msg_id, and the broadcasts acknowledged
-        # to their API clients and how many times each was pushed, by the key that each broadcast then begins with.
+        # Whether the traffic records each delivery, which lets a suite account for every publication - how many partner
+        # messages were acknowledged to their API clients, the acknowledged ones not pulled yet and the pulled ones
+        # not acknowledged yet, by msg_id, and the broadcasts acknowledged to their API clients and how many times
+        # each was pushed, by the key that each broadcast then begins with. A partner message leaves both sets
+        # once it is both acknowledged and pulled, which keeps their size bounded by the messages in flight.
         self.tracks_deliveries = False
-        self.acknowledged_partner_msg_ids:'strset' = set()
-        self.pulled_msg_ids:'strset' = set()
+        self.acknowledged_partner_count = 0
+        self.unpulled_partner_msg_ids:'strset' = set()
+        self.unacknowledged_pulled_msg_ids:'strset' = set()
         self.acknowledged_broadcast_keys:'strset' = set()
         self.pushed_broadcast_keys:'strcounter' = Counter()
 
@@ -288,7 +291,11 @@ class Traffic:
                     else:
                         self.publish_times[result.msg_id] = started
                         if self.tracks_deliveries:
-                            self.acknowledged_partner_msg_ids.add(result.msg_id)
+                            self.acknowledged_partner_count += 1
+                            if result.msg_id in self.unacknowledged_pulled_msg_ids:
+                                self.unacknowledged_pulled_msg_ids.remove(result.msg_id)
+                            else:
+                                self.unpulled_partner_msg_ids.add(result.msg_id)
 
             position += self.profile.publisher_count
 
@@ -343,7 +350,11 @@ class Traffic:
                 self.total_pulled += len(msg_ids)
 
                 if self.tracks_deliveries:
-                    self.pulled_msg_ids.update(msg_ids)
+                    for msg_id in msg_ids:
+                        if msg_id in self.unpulled_partner_msg_ids:
+                            self.unpulled_partner_msg_ids.remove(msg_id)
+                        else:
+                            self.unacknowledged_pulled_msg_ids.add(msg_id)
 
             # The partner acknowledges what it received - messages whose acknowledgement fails
             # are handed out again once their lease runs out.

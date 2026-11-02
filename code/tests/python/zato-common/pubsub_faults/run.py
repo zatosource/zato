@@ -140,7 +140,7 @@ class FaultRun:
         subscriber_count = len(traffic.broadcast_sub_keys)
 
         with traffic.lock:
-            not_pulled = len(traffic.acknowledged_partner_msg_ids - traffic.pulled_msg_ids)
+            not_pulled = len(traffic.unpulled_partner_msg_ids)
 
             not_pushed = 0
             for key in traffic.acknowledged_broadcast_keys:
@@ -183,7 +183,7 @@ class FaultRun:
         for count in traffic.pushed_broadcast_keys.values():
             repeated_pushes += count - len(traffic.broadcast_sub_keys)
 
-        self.outcome.acknowledged_partner = len(traffic.acknowledged_partner_msg_ids)
+        self.outcome.acknowledged_partner = traffic.acknowledged_partner_count
         self.outcome.acknowledged_broadcast = len(traffic.acknowledged_broadcast_keys)
         self.outcome.not_pulled = not_pulled
         self.outcome.not_pushed = not_pushed

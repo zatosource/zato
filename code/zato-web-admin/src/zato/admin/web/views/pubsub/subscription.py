@@ -165,8 +165,8 @@ class Create(_CreateEdit):
     url_name = 'pubsub-subscription-create'
     service_name = 'zato.pubsub.subscription.create'
 
-    input_required = 'topic_name', 'sec_base_id', 'delivery_type'
-    input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+    input_required = 'topic_name', 'delivery_type'
+    input_optional = 'sec_base_id', 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
     output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'security', 'delivery_type', \
         'topic_name_list', 'topic_link_list',
 
@@ -198,8 +198,9 @@ class Edit(_CreateEdit):
     url_name = 'pubsub-subscription-edit'
     service_name = 'zato.pubsub.subscription.edit'
 
-    input_required = 'sub_key', 'topic_id_list', 'sec_base_id', 'delivery_type'
-    input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+    input_required = 'sub_key', 'topic_id_list', 'delivery_type'
+    input_optional = 'sec_base_id', 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', \
+        'push_service_name'
     output_required = 'id', 'sub_key', 'security', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self) -> 'anydict':

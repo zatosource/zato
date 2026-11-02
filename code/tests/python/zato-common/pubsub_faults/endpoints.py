@@ -149,6 +149,16 @@ class Endpoint:
         length = int(headers[_header_length])
         remaining = length - len(body)
 
+        # The part of the body that arrived with the headers is consumed at the same pace as the rest of it,
+        # after which a body that arrived in full is read only once the delivery closed the connection ..
+        if is_slow:
+            sleep(len(body) * _slow_read_seconds)
+
+            if remaining == 0:
+                if not client.recv(1):
+                    return False
+
+        # .. and the rest is read one byte at a time if slowly.
         while remaining > 0:
 
             if is_slow:

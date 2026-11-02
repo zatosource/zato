@@ -9,6 +9,13 @@
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/pubsub/common.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/buttons.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-popover.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-search-box.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-search.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/pubsub/subscription-create.css">
     <style>
 
         :root {
@@ -307,6 +314,11 @@
 
     {% comment %} PubSub Subscription {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/data.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/render.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/subscriber.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/pane.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/dialog.js"></script>
 
 
     <script nonce="{{ CSP_NONCE }}">
@@ -346,6 +358,8 @@
 
     <script nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
+        $.fn.zato.pubsub.subscription_create.init();
+
         tippy('.ps-badge-pub-enabled, .ps-badge-pub-disabled', {
             content: 'Can publish messages',
             placement: 'top',
@@ -404,7 +418,7 @@
 {% include "zato/search-form.html" with page_prompt="Search"%}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create a new pub/sub subscription</a> |
+            <a href="javascript:$.fn.zato.pubsub.subscription_create.open()">Create a new pub/sub subscription</a> |
             <a href="javascript:$.fn.zato.pubsub.import_demo_config()" class="common">Import demo config</a>
         </div>
 
@@ -500,59 +514,24 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
-                    <table class="form-data fit-labels">
-                        <tr>
-                            <td style="vertical-align:middle">Enabled for</td>
-                            <td>
-                                <label for="id_is_delivery_active">Delivery</label> {{ create_form.is_delivery_active }}
-                                |
-                                <label for="id_is_pub_active">Publications</label> {{ create_form.is_pub_active }}
-                            </td>
-                        </tr>
-                        <tr style="height:20px; max-height:20px; line-height:20px;">
-                            <td style="vertical-align:middle; height:20px; max-height:20px; overflow:hidden; width:150px; line-height:20px;"><label for="id_sec_base_id">Security definition</label></td>
-                            <td style="height:20px; max-height:20px; overflow:hidden; width:400px; line-height:20px;">{{ create_form.sec_base_id }}</td>
-                        </tr>
+                <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form" class="pubsub-subscription-create">
 
-                        <tr>
-                            <td style="vertical-align:middle">
-                                Topics
-                            </td>
-                            <td id="td_topic_list" style="min-height: 25px; height: 25px; vertical-align: middle;">
-                                <div class="multi-select-div" id="multi-select-div"><table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span style="font-style: italic; color: #666;">Select a security definition to list available topics</span></td></tr></table></div>
-                            </td>
-                        </tr>
+                    <div class="micro-form-row pubsub-subscription-create-subscriber" id="pubsub-subscription-create-subscriber"></div>
 
-                        <tr>
-                            <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_delivery_type">Delivery type</label></td>
-                            <td style="vertical-align:baseline; width:400px; height:40px;">
-                                {{ create_form.delivery_type }}
-                                &nbsp;
-                                <span id="push-type-create" style="display:none;">
-                                    {{ create_form.push_type }}
-                                </span>
-                                &nbsp;
-                                <span id="rest-endpoint-create" style="width:50%; display:none;">
-                                    {{ create_form.rest_push_endpoint_id }}
-                                </span>
-                                &nbsp;
-                                <span id="push-service-create" style="width:50%; display:none;">
-                                    {{ create_form.push_service_name }}
-                                </span>
-                            </td>
-                        </tr>
+                    <div class="mcp-masking-layout">
+                        <div class="mcp-masking-cards" id="pubsub-subscription-create-cards"></div>
+                        <div class="mcp-masking-pane" id="pubsub-subscription-create-pane"></div>
+                    </div>
 
-                        <tr>
-                            <td colspan="2" class="form-actions">
-                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
-                                <span class="form-buttons">
-                                    <input type="submit" value="OK" />
-                                    <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                                </span>
-                            </td>
-                        </tr>
-                    </table>
+                    <div class="mcp-masking-total" id="pubsub-subscription-create-total"></div>
+
+                    <input type="checkbox" id="id_is_pub_active" name="is_pub_active" checked hidden>
+                    <div id="pubsub-subscription-create-inputs"></div>
+
+                    <div class="micro-form-buttons">
+                        <button type="button" class="secondary-button" onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                        <button type="button" class="action-button" id="pubsub-subscription-create-submit">Create</button>
+                    </div>
                 </form>
             </div>
         </div>

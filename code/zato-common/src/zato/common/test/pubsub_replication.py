@@ -17,6 +17,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -56,6 +57,9 @@ _proxy_command_timeout = 10
 
 # The address that the proxy listens on.
 _proxy_host = '127.0.0.1'
+
+# The name under which a container reaches the network of the host.
+_host_gateway_name = 'host.docker.internal'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,10 +120,24 @@ def _primary_settings() -> 'strlist':
 
 # ################################################################################################################################
 
-def _run_on_primary(database:'ReplicatedDatabase', statements:'strlist') -> 'None':
-    """ Runs statements outside of a transaction on the primary, connecting to it directly as its superuser.
+def _connect_active_admin(database:'ReplicatedDatabase') -> 'any_':
+    """ Opens a connection as the superuser to whichever server is the primary now, bypassing the proxy.
     """
-    connection = connect(database.primary, is_admin=True)
+    primary = database.primary
+
+    if database.is_promoted:
+        out = connect(primary, host=database.standby_host, port=database.standby_port, is_admin=True)
+    else:
+        out = connect(primary, is_admin=True)
+
+    return out
+
+# ################################################################################################################################
+
+def _run_on_primary(database:'ReplicatedDatabase', statements:'strlist') -> 'None':
+    """ Runs statements outside of a transaction on whichever server is the primary now, as its superuser.
+    """
+    connection = _connect_active_admin(database)
     connection.autocommit = True
     cursor = connection.cursor()
 
@@ -130,9 +148,8 @@ def _run_on_primary(database:'ReplicatedDatabase', statements:'strlist') -> 'Non
 
 # ################################################################################################################################
 
-def _standby_conninfo(database:'ReplicatedDatabase') -> 'str':
-    """ Returns how the standby connects to the primary - through the port the primary publishes on the host,
-    or to the address of the primary on the network of the containers in the managed modes.
+def _get_conninfo(database:'ReplicatedDatabase', host:'str', port:'int') -> 'str':
+    """ Returns how a standby connects to the server it streams from at the given address.
     """
     primary = database.primary
 
@@ -141,14 +158,25 @@ def _standby_conninfo(database:'ReplicatedDatabase') -> 'str':
     else:
         ssl_mode = 'require'
 
+    out = f'host={host} port={port} user={primary.admin_username} password={primary.admin_password} ' + \
+          f'application_name={_standby_name} sslmode={ssl_mode}'
+
+    return out
+
+# ################################################################################################################################
+
+def _standby_conninfo(database:'ReplicatedDatabase') -> 'str':
+    """ Returns how the standby connects to the primary - through the port the primary publishes on the host,
+    or to the address of the primary on the network of the containers in the managed modes.
+    """
+    primary = database.primary
+
     if primary.profile_name:
         host = get_container_address(primary.container_name)
     else:
         host = '127.0.0.1'
 
-    out = f'host={host} port={primary.port} user={primary.admin_username} password={primary.admin_password} ' + \
-          f'application_name={_standby_name} sslmode={ssl_mode}'
-
+    out = _get_conninfo(database, host, primary.port)
     return out
 
 # ################################################################################################################################
@@ -181,7 +209,7 @@ def _start_standby(database:'ReplicatedDatabase') -> 'None':
         postgres_command.append(f'-c "{setting}"')
 
     script = ' && '.join([
-        f'pg_basebackup -d "{conninfo}" -D {data_dir} -X stream -C -S {_standby_name} -R',
+        f'pg_basebackup -d "{conninfo}" -D {data_dir} -X stream -c fast -C -S {_standby_name} -R',
         'exec ' + ' '.join(postgres_command),
     ])
 
@@ -220,7 +248,7 @@ def _wait_until_streaming(database:'ReplicatedDatabase', expected_state:'str') -
     deadline = time.monotonic() + _ready_timeout
 
     while True:
-        connection = connect(database.primary, is_admin=True)
+        connection = _connect_active_admin(database)
         cursor = connection.cursor()
         cursor.execute('select state, sync_state from pg_stat_replication where application_name = %s', (_standby_name,))
         rows = cursor.fetchall()
@@ -296,6 +324,29 @@ def proxy_command(database:'ReplicatedDatabase', command:'str') -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _make_synchronous(database:'ReplicatedDatabase') -> 'None':
+    """ Makes each commit on the primary wait until the standby has the WAL of its transaction.
+    """
+    _run_on_primary(database, [
+        f"alter system set synchronous_standby_names = '{_standby_name}'",
+        "alter system set synchronous_commit = 'on'",
+        'select pg_reload_conf()',
+    ])
+    _wait_until_streaming(database, 'sync')
+
+# ################################################################################################################################
+
+def _make_asynchronous(database:'ReplicatedDatabase') -> 'None':
+    """ Lets the commits on a promoted primary return while it has no standby, the way a managed service
+    continues on a single server until it builds a new standby.
+    """
+    _run_on_primary(database, [
+        'alter system reset synchronous_standby_names',
+        'select pg_reload_conf()',
+    ])
+
+# ################################################################################################################################
+
 def start_replicated_database(label:'str', mode:'str', is_sync:'bool') -> 'ReplicatedDatabase':
     """ Starts a primary, a standby streaming from it and the proxy that the processes of the test connect through.
     """
@@ -329,12 +380,7 @@ def start_replicated_database(label:'str', mode:'str', is_sync:'bool') -> 'Repli
 
     # .. in synchronous mode, a commit returns only once the standby has the WAL of the transaction ..
     if is_sync:
-        _run_on_primary(out, [
-            f"alter system set synchronous_standby_names = '{_standby_name}'",
-            "alter system set synchronous_commit = 'on'",
-            'select pg_reload_conf()',
-        ])
-        _wait_until_streaming(out, 'sync')
+        _make_synchronous(out)
 
     # .. and the processes of the test connect through the proxy, under the endpoint name in the managed modes.
     _start_proxy(out)
@@ -423,6 +469,118 @@ def promote_standby(database:'ReplicatedDatabase') -> 'float':
 
     out = time.monotonic() - start
     return out
+
+# ################################################################################################################################
+
+def _rebuild_primary_as_standby(database:'ReplicatedDatabase') -> 'None':
+    """ Replaces the container of the original primary with a standby of the promoted server, built from a base backup
+    of it into the data directory of the original primary, on the port the original primary publishes on the host.
+    """
+    primary = database.primary
+
+    _ = subprocess.run(['docker', 'rm', '-f', primary.container_name], check=True, capture_output=True)
+
+    data_dir = os.path.join(primary.work_dir, 'data')
+    shutil.rmtree(data_dir)
+    os.makedirs(data_dir)
+    os.chmod(data_dir, 0o700)
+
+    # The promoted server listens on the network of the host, which this container reaches through its gateway ..
+    conninfo = _get_conninfo(database, _host_gateway_name, database.standby_port)
+    container_data_dir = '/var/lib/postgresql/data'
+
+    replication_settings = [
+        'hot_standby=on',
+        f'primary_conninfo={conninfo}',
+        f'primary_slot_name={_standby_name}',
+    ]
+
+    settings = get_container_settings(primary, replication_settings)
+
+    postgres_command = ['postgres', '-D', container_data_dir]
+    for setting in settings:
+        postgres_command.append(f'-c "{setting}"')
+
+    script = ' && '.join([
+        f'pg_basebackup -d "{conninfo}" -D {container_data_dir} -X stream -c fast -C -S {_standby_name} -R',
+        'exec ' + ' '.join(postgres_command),
+    ])
+
+    # .. and it keeps the name, the published port and the data directory of the original primary.
+    command = list(primary.docker_args)
+    command.extend(['--add-host', f'{_host_gateway_name}:host-gateway'])
+    command.extend(['--entrypoint', 'bash'])
+    command.append(ModuleCtx.PostgreSQL_Image)
+    command.extend(['-c', script])
+
+    _ = subprocess.run(command, check=True, capture_output=True)
+
+# ################################################################################################################################
+
+def _rebuild_standby(database:'ReplicatedDatabase') -> 'None':
+    """ Replaces the container of the original standby with a new standby of the original primary.
+    """
+    _ = subprocess.run(['docker', 'rm', '-f', database.standby_container], check=True, capture_output=True)
+    shutil.rmtree(database.standby_dir)
+
+    _start_standby(database)
+
+# ################################################################################################################################
+
+def _promote_original_primary(database:'ReplicatedDatabase') -> 'None':
+    """ Promotes the original primary, rebuilt as a standby, and repoints the proxy at it.
+    """
+    connection = connect(database.primary, is_admin=True)
+    connection.autocommit = True
+    cursor = connection.cursor()
+    cursor.execute('select pg_promote(true, %s)', (_promote_timeout,))
+    row:'any_' = cursor.fetchone()
+    is_promoted = row[0]
+    connection.close()
+
+    if not is_promoted:
+        raise Exception(f'Container {database.primary.container_name} was not promoted')
+
+    database.is_promoted = False
+    _ = proxy_command(database, f'upstream/{_proxy_host}/{database.primary.port}')
+
+# ################################################################################################################################
+
+def switch_primary(database:'ReplicatedDatabase') -> 'float':
+    """ Ends the current primary at once, promotes its standby, repoints the proxy at it and rebuilds the ended server
+    as the standby of the new primary. A failover is followed by a failback at the next call. Returns how long
+    the promotion took, in seconds. The managed modes, whose endpoint follows DNS, are not supported.
+    """
+    start = time.monotonic()
+
+    # The original standby is the primary now, so the original primary is promoted back ..
+    if database.is_promoted:
+        _ = subprocess.run(['docker', 'kill', database.standby_container], check=True, capture_output=True)
+        _promote_original_primary(database)
+
+    # .. or the original primary is the primary, so its standby is promoted ..
+    else:
+        kill_primary(database)
+        _ = promote_standby(database)
+
+    promote_seconds = time.monotonic() - start
+
+    # .. the new primary commits on its own until it has a standby again ..
+    if database.is_sync:
+        _make_asynchronous(database)
+
+    # .. which is built from a base backup of it in place of the server that ended.
+    if database.is_promoted:
+        _rebuild_primary_as_standby(database)
+    else:
+        _rebuild_standby(database)
+
+    _wait_until_streaming(database, 'async')
+
+    if database.is_sync:
+        _make_synchronous(database)
+
+    return promote_seconds
 
 # ################################################################################################################################
 
