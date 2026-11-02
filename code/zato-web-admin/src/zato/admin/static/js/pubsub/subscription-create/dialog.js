@@ -198,6 +198,7 @@ form.writeInputs = function() {
     }
 
     if(state.kind === config.kindService) {
+        form.addInput('sec_base_id', '');
         form.addInput('delivery_type', config.deliveryPush);
         form.addInput('push_type', config.pushTypeService);
         form.addInput('push_service_name', form.pendingServices.shift());

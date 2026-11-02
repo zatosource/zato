@@ -75,6 +75,10 @@ class Index(_Index):
         topic_name_list = item.topic_name_list
         item.topic_name_list = dumps(topic_name_list)
 
+        # A subscriber that is a service has no security definition, and the list leaves out fields without a value
+        if 'sec_base_id' not in item:
+            item.sec_base_id = ''
+
         return item
 
     def handle(self) -> 'anydict':
@@ -485,6 +489,39 @@ def sec_def_topic_sub_list(request:'HttpRequest', sec_base_id:'str') -> 'HttpRes
         error_text = format_exc()
 
         out = HttpResponseServerError(error_text)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def service_topic_sub_list(request:'any_') -> 'HttpResponse':
+    """ Returns HTML for all the topics, to any of which a subscriber that is a service may subscribe.
+    """
+    try:
+
+        # Get all the topics ..
+        response = request.zato.client.invoke('zato.pubsub.topic.get-list', {})
+        all_topics = set()
+
+        for item in response.data:
+            all_topics.add((item.id, item.name))
+
+        # .. build the HTML ..
+        html_content = _build_topic_checkbox_html(all_topics)
+        html_bytes = html_content.encode('utf-8')
+
+        # .. and return the response.
+        out = HttpResponse(html_bytes, content_type='text/html')
+        return out
+
+    except Exception:
+        logger.error('Exception occurred: %s', format_exc())
+
+        error_text = format_exc()
+        error_bytes = error_text.encode('utf-8')
+
+        out = HttpResponseServerError(error_bytes)
         return out
 
 # ################################################################################################################################

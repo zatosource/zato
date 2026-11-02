@@ -1,0 +1,30 @@
+security:
+
+  - name: test.pubsub.service-subscriber.publisher
+    type: basic_auth
+    username: test.pubsub.service-subscriber.publisher
+    password: "{{publisher_password}}"
+
+pubsub_topic:
+
+  - name: service-subscriber.orders
+  - name: service-subscriber.invoices
+
+pubsub_permission:
+
+  - security: test.pubsub.service-subscriber.publisher
+    pub:
+      - service-subscriber.**
+
+pubsub_subscription:
+
+  - delivery_type: push
+    push_service: test.pubsub.service-subscriber.receiver-1
+    topic_list:
+      - service-subscriber.orders
+      - service-subscriber.invoices
+
+  - delivery_type: push
+    push_service: test.pubsub.service-subscriber.receiver-2
+    topic_list:
+      - service-subscriber.orders

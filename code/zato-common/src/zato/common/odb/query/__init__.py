@@ -872,7 +872,7 @@ def _pubsub_subscription(session):
     ).\
         join(PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id).\
         join(PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id).\
-        join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
+        outerjoin(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
         outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
         order_by(PubSubTopic.name)
 

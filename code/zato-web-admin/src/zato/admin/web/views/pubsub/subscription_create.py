@@ -25,9 +25,10 @@ from zato.common.api import PubSub
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strlist
+    from zato.common.typing_ import any_, anydict, anyset, strlist
     any_ = any_
     anydict = anydict
+    anyset = anyset
     strlist = strlist
 
 # ################################################################################################################################
@@ -106,6 +107,24 @@ def _get_topic_names_for_pattern(request:'any_', pattern:'str') -> 'strlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_subscribed_service_names(request:'any_') -> 'anyset':
+    """ Returns the names of the services that are subscribers on their own, without a security definition.
+    """
+
+    # Our response to produce
+    out = set()
+
+    response = request.zato.client.invoke('zato.pubsub.subscription.get-list', {})
+
+    for item in response.data:
+        if item.sec_base_id is None:
+            out.add(item.push_service_name)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('GET')
 def get_create_form_data(request:'any_') -> 'HttpResponse':
     """ Returns the topics, the services, the API clients with the topics each of them may subscribe to,
@@ -123,12 +142,15 @@ def get_create_form_data(request:'any_') -> 'HttpResponse':
 
         topics.sort()
 
-        # .. all the services ..
+        # .. the services without a subscription ..
+        subscribed_services = _get_subscribed_service_names(request)
         service_list = get_service_list(request)
         services = []
 
         for item in service_list:
-            services.append(item['service_name'])
+            service_name = item['service_name']
+            if service_name not in subscribed_services:
+                services.append(service_name)
 
         services.sort()
 

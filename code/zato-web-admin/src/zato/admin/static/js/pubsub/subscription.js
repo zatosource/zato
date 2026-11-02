@@ -4,6 +4,15 @@
 
 $.namespace('zato.pubsub.subscription');
 
+$.fn.zato.pubsub.subscription.config = {
+    secDefTopicListURL: '/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/',
+    serviceTopicListURL: '/zato/pubsub/subscription/service-topic-sub-list/',
+    secDefURL: '/zato/security/basic-auth/?query={0}',
+    serviceURL: '/zato/service/?query={0}',
+    secDefLabel: 'Security definition',
+    serviceLabel: 'Service',
+};
+
 // Tri-state checkbox functionality
 function setupTriStateCheckbox(checkbox) {
     var Off = 0;
@@ -90,6 +99,30 @@ $.fn.zato.pubsub.subscription._topic_request_generation = 0;
 $.fn.zato.pubsub.subscription._bump_topic_request_generation = function() {
     $.fn.zato.pubsub.subscription._topic_request_generation += 1;
     return $.fn.zato.pubsub.subscription._topic_request_generation;
+};
+
+// A subscriber that is a service has no security definition and may subscribe to any topic
+$.fn.zato.pubsub.subscription.topicListURL = function(instance) {
+    var config = $.fn.zato.pubsub.subscription.config;
+    var out;
+    if(instance.sec_base_id) {
+        out = String.format(config.secDefTopicListURL, instance.sec_base_id);
+    } else {
+        out = config.serviceTopicListURL;
+    }
+    return out;
+};
+
+$.fn.zato.pubsub.subscription.subscriberURL = function(item) {
+    var config = $.fn.zato.pubsub.subscription.config;
+    var template;
+    if(item.sec_base_id) {
+        template = config.secDefURL;
+    } else {
+        template = config.serviceURL;
+    }
+    var out = String.format(template, encodeURIComponent(item.security));
+    return out;
 };
 
 $.fn.zato.data_table.PubSubSubscription = new Class({
@@ -294,14 +327,12 @@ $(document).ready(function() {
 
             $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
 
-            // Load topics for the current security definition in edit mode
-            if(instance.sec_base_id) {
-                var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', instance.sec_base_id);
-                var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
-                $.fn.zato.post(url, function(data, status) {
-                    $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);
-                }, null, null, true);
-            }
+            // Load the topics the subscriber may subscribe to in edit mode
+            var url = $.fn.zato.pubsub.subscription.topicListURL(instance);
+            var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
+            $.fn.zato.post(url, function(data, status) {
+                $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);
+            }, null, null, true);
         }
     });
 
@@ -578,7 +609,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td style="white-space:nowrap"><a href="/zato/security/basic-auth/?query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
+    row += String.format('<td style="white-space:nowrap"><a href="{0}">{1}</a></td>', $.fn.zato.pubsub.subscription.subscriberURL(item), item.security);
 
     row += String.format('<td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{0}">{0}</span></td>', item.sub_key);
 
@@ -698,10 +729,17 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         // Add hidden input for the security definition ID
         $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
 
-        // Display the security definition name as a link
-        var secName = instance.security;
-        var secLink = '<a href="/zato/security/basic-auth/?query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
-        $container.append(secLink);
+        // Display the security definition or the service as a link
+        var subscriberLink = '<a href="' + $.fn.zato.pubsub.subscription.subscriberURL(instance) + '" target="_blank">' + instance.security + '</a>';
+        $container.append(subscriberLink);
+
+        var subscriberLabel;
+        if(instance.sec_base_id) {
+            subscriberLabel = $.fn.zato.pubsub.subscription.config.secDefLabel;
+        } else {
+            subscriberLabel = $.fn.zato.pubsub.subscription.config.serviceLabel;
+        }
+        $('label[for="id_edit-sec_base_id"]').text(subscriberLabel);
     } else {
         // Default to original behavior if container doesn't exist
         form.find('#id_edit-sec_base_id').val(instance.sec_base_id);
@@ -750,7 +788,14 @@ $.fn.zato.pubsub.subscription.create_edit_submit = function(data, status, reques
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
     var instance = $.fn.zato.data_table.data[id];
 
-    var descriptor = 'Security: ' + instance.security + '\nDelivery: ' + instance.delivery_type;
+    var subscriberLabel;
+    if(instance.sec_base_id) {
+        subscriberLabel = $.fn.zato.pubsub.subscription.config.secDefLabel;
+    } else {
+        subscriberLabel = $.fn.zato.pubsub.subscription.config.serviceLabel;
+    }
+
+    var descriptor = subscriberLabel + ': ' + instance.security + '\nDelivery: ' + instance.delivery_type;
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,
@@ -893,9 +938,9 @@ $.fn.zato.pubsub.subscription._reload_edit_topics = function() {
     var instance_id = $.fn.zato.pubsub.subscription._current_edit_instance_id;
     if (instance_id) {
         var instance = $.fn.zato.data_table.data[instance_id];
-        if (instance && instance.sec_base_id) {
+        if (instance) {
             var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#id_edit-multi-select-div');
-            var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', instance.sec_base_id);
+            var url = $.fn.zato.pubsub.subscription.topicListURL(instance);
             var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
             $.fn.zato.post(url, function(data, status) {
                 $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);

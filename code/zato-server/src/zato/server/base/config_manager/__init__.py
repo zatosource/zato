@@ -100,7 +100,7 @@ if 0:
     from zato.common.ext.bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.config_dispatcher import ConfigDispatcher
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, strnone, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
@@ -2889,7 +2889,9 @@ class ConfigManager(_ConfigManagerBase):
         username = msg.username
         delivery_type = msg.delivery_type
 
-        self.server.pubsub_subscriptions.register_user(username, sec_name, sub_key)
+        # The subscriptions store holds API clients, a subscriber that is a service has no username ..
+        if username:
+            self.server.pubsub_subscriptions.register_user(username, sec_name, sub_key)
 
         for topic_item in msg.topic_name_list:
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
@@ -2982,7 +2984,7 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def cleanup_subscription(self, sub_key:'str', username:'str') -> 'None':
+    def cleanup_subscription(self, sub_key:'str', username:'strnone') -> 'None':
         """ Cleans up all in-memory and Redis state for a single subscription.
         """
         # .. collect topic names this sub_key belongs to before we remove them from memory ..
@@ -2998,8 +3000,9 @@ class ConfigManager(_ConfigManagerBase):
         # .. remove in-memory subscription configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
 
-        # .. remove user from the subscriptions store ..
-        self.server.pubsub_subscriptions.remove_user(username)
+        # .. remove user from the subscriptions store, which a subscriber that is a service was never in ..
+        if username:
+            self.server.pubsub_subscriptions.remove_user(username)
 
         # .. remove push delivery config ..
         _ = self._push_subs.pop(sub_key, None)

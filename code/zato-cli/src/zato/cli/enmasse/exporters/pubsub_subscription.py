@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase, HTTPSOAP
 
 # ################################################################################################################################
@@ -57,7 +58,7 @@ class PubSubSubscriptionExporter:
         ).\
             join(PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id).\
             join(PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id).\
-            join(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
+            outerjoin(SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id).\
             outerjoin(HTTPSOAP, PubSubSubscription.rest_push_endpoint_id == HTTPSOAP.id).\
             order_by(PubSubSubscription.id, PubSubTopic.name, SecurityBase.name).all()
 
@@ -75,9 +76,10 @@ class PubSubSubscriptionExporter:
             push_service_name = item.push_service_name
             topic_name = item.topic_name
 
-            # Validate required fields exist
+            # Validate required fields exist, a subscriber that is a service being the only one without a security definition
             if not security_name:
-                raise ValueError(f'Subscription missing security name: subscription_id={subscription_id}')
+                if push_type != PubSub.Push_Type.Service:
+                    raise ValueError(f'Subscription missing security name: subscription_id={subscription_id}')
 
             if not delivery_type:
                 raise ValueError(f'Subscription missing delivery_type: subscription_id={subscription_id} security={security_name}')
@@ -90,11 +92,13 @@ class PubSubSubscriptionExporter:
 
             # Initialize subscription group if not exists
             if group_key not in subscription_groups:
-                subscription_data = {
-                    'security': security_name,
-                    'delivery_type': delivery_type,
-                    'topic_list': []
-                }
+                subscription_data:'anydict' = {}
+
+                if security_name:
+                    subscription_data['security'] = security_name
+
+                subscription_data['delivery_type'] = delivery_type
+                subscription_data['topic_list'] = []
 
                 # Add push-specific fields
                 if delivery_type == 'push':

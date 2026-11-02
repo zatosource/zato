@@ -691,6 +691,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_service_subscriber/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \

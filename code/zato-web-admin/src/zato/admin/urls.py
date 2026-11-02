@@ -1629,6 +1629,8 @@ urlpatterns += [
     path('zato/pubsub/subscription/sec-def-topic-sub-list/<str:sec_base_id>/',
         login_required(subscription.sec_def_topic_sub_list),
         name='pubsub-subscription-sec-def-topic-sub-list'),
+    url(r'^zato/pubsub/subscription/service-topic-sub-list/$',
+        login_required(subscription.service_topic_sub_list), name='pubsub-subscription-service-topic-sub-list'),
 
     # PubSub Queue Browser
 

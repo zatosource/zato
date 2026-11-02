@@ -14,7 +14,7 @@ from zato.cli.enmasse.util.orders import get_custom_object_order, get_object_ord
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strlist
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strtuple
 
     # Add dummy assignments to satisfy type checkers
     anydict = anydict
@@ -222,6 +222,19 @@ def _write_list_field(file_handle:'any_', element:'str', field_name:'str', value
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_first_field(fields:'strlist | strtuple', item:'anydict') -> 'str':
+    """ Returns the first scalar field of the canonical order that the item carries.
+    """
+    for field in fields:
+        if ':' not in field:
+            if field in item:
+                return field
+
+    raise Exception(f'Item carries none of the fields {fields} -> {item}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _write_dict_field(file_handle:'any_', field_name:'str', value:'anydict', indent:'int'=_Section_Field_Block_Indent) -> 'None':
     """ Writes a dict-valued field as a nested YAML mapping, with list values inside it
     rendered as YAML lists (e.g. the response_cache block of a channel).
@@ -296,16 +309,18 @@ class FileWriter:
                     # .. and each item of the section is written out field by field.
                     for item in section:
 
-                        # The first field gets the dash prefix ..
-                        first_field = fields[0]
-
-                        if first_field in item:
-                            first_value = item[first_field]
-                            quoted_first = _yaml_quote(first_value)
-                            _ = file_handle.write(f'  - {first_field}: {quoted_first}\n')
+                        # The first field the item carries gets the dash prefix, e.g. a pub/sub subscription
+                        # of a service has no security key ..
+                        first_field = _get_first_field(fields, item)
+                        first_value = item[first_field]
+                        quoted_first = _yaml_quote(first_value)
+                        _ = file_handle.write(f'  - {first_field}: {quoted_first}\n')
 
                         # .. and the remaining fields align under it.
-                        for field in fields[1:]:
+                        for field in fields:
+
+                            if field == first_field:
+                                continue
 
                             # A field marked :dict in the order is a nested mapping ..
                             if ':dict' in field:

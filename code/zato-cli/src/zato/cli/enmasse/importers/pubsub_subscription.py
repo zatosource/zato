@@ -19,17 +19,26 @@ from zato.common.util.sql import set_instance_opaque_attrs
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict
+    from zato.common.typing_ import any_, anydict, intnone, stranydict, strnone
     from sqlalchemy.orm.session import Session as SASession
     any_ = any_
     anydict = anydict
+    intnone = intnone
     stranydict = stranydict
+    strnone = strnone
     SASession = SASession
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The subscription key of a subscriber that is a service is derived from this prefix and the service's name,
+# which keeps it apart from the key of a security definition that has the same name as the service.
+Service_Identity_Prefix = 'service\n'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,7 +140,11 @@ class PubSubSubscriptionImporter:
         logger.info('CREATE: session=%s, session.bind=%s', session, session.bind)
         logger.info('CREATE: session.bind.url=%s', session.bind.url if session.bind else 'NO BIND')
 
-        sec_name = session.query(SecurityBase.name).filter_by(id=definition['sec_base_id']).one().name
+        # An API client is identified by its security definition and a service by its name
+        if definition['sec_base_id']:
+            identity_name = session.query(SecurityBase.name).filter_by(id=definition['sec_base_id']).one().name
+        else:
+            identity_name = Service_Identity_Prefix + definition['push_service_name']
 
         topic_names:'list[str]' = []
         topic_rows = session.query(PubSubTopic.name).filter(PubSubTopic.id.in_(definition['topic_id_list'])).all()
@@ -140,7 +153,7 @@ class PubSubSubscriptionImporter:
             topic_names.append(topic_row.name)
 
         instance:'any_' = PubSubSubscription()
-        instance.sub_key = sub_key_from_definition(sec_name, definition['delivery_type'], topic_names)
+        instance.sub_key = sub_key_from_definition(identity_name, definition['delivery_type'], topic_names)
         instance.sec_base_id = definition['sec_base_id']
         instance.delivery_type = definition['delivery_type']
         instance.push_type = definition.get('push_type')
@@ -230,30 +243,48 @@ class PubSubSubscriptionImporter:
 
 # ################################################################################################################################
 
-    def find_existing_subscription_for_security(self, db_defs:'anydict', sec_base_id:'int') -> 'stranydict':
-        """ Finds existing subscription for a security definition. Returns None if not found.
+    def find_existing_subscription(self, db_defs:'anydict', sec_base_id:'intnone', push_service_name:'strnone') -> 'stranydict':
+        """ Finds the existing subscription of a security definition or, if sec_base_id is None,
+        of a service with no security definition. Returns an empty dict if not found.
         """
-        logger.info('Searching for existing subscription with sec_base_id=%s in %d db_defs', sec_base_id, len(db_defs))
+        logger.info('Searching for existing subscription with sec_base_id=%s, push_service_name=%s in %d db_defs',
+            sec_base_id, push_service_name, len(db_defs))
+
         for sub_key, db_def in db_defs.items():
-            db_sec_base_id = db_def.get('sec_base_id')
+            db_sec_base_id = db_def['sec_base_id']
             logger.info('Checking db_def sub_key=%s, sec_base_id=%s', sub_key, db_sec_base_id)
-            if db_sec_base_id == sec_base_id:
-                logger.info('Found matching subscription: %s', db_def)
-                return db_def
-        else:
-            # If we are here, it means this security definition must have existed
-            # but it doesn't have any subscriptions, so we can return an empty dict to indicate that.
-            logger.info('No existing subscription found for sec_base_id=%s', sec_base_id)
-            return {}
+
+            # A subscription of an API client matches by its security definition ..
+            if sec_base_id:
+                if db_sec_base_id == sec_base_id:
+                    logger.info('Found matching subscription: %s', db_def)
+                    return db_def
+
+            # .. while one of a service matches by the service's name.
+            elif db_sec_base_id is None:
+                if db_def['push_service_name'] == push_service_name:
+                    logger.info('Found matching subscription: %s', db_def)
+                    return db_def
+
+        # If we are here, it means this subscriber has no subscription yet
+        logger.info('No existing subscription found for sec_base_id=%s, push_service_name=%s', sec_base_id, push_service_name)
+        return {}
 
 # ################################################################################################################################
 
-    def should_create_pubsub_subscription_definition(self, yaml_def:'stranydict', db_defs:'anydict', sec_base_id:'int') -> 'bool':
+    def should_create_pubsub_subscription_definition(
+        self,
+        yaml_def:'stranydict',
+        db_defs:'anydict',
+        sec_base_id:'intnone',
+        push_service_name:'strnone',
+    ) -> 'bool':
         """ Determines if a pubsub subscription definition should be created.
         """
-        logger.info('Checking if should create subscription for sec_base_id=%s', sec_base_id)
-        # Check if any existing subscription exists for this security definition
-        existing_subscription = self.find_existing_subscription_for_security(db_defs, sec_base_id)
+        logger.info('Checking if should create subscription for sec_base_id=%s, push_service_name=%s', sec_base_id, push_service_name)
+
+        # Check if any existing subscription exists for this subscriber
+        existing_subscription = self.find_existing_subscription(db_defs, sec_base_id, push_service_name)
         logger.info('Found existing subscription: %s', existing_subscription)
         if existing_subscription:
             logger.info('Should NOT create - existing subscription found')
@@ -343,15 +374,29 @@ class PubSubSubscriptionImporter:
         updated = []
 
         for yaml_def in subscription_list:
-            security_name = yaml_def['security']
             topic_list = yaml_def.get('topic_list') or []
             delivery_type = yaml_def['delivery_type']
 
-            logger.info('Processing YAML pubsub subscription definition: security=%s, topics=%s, delivery_type=%s',
-                       security_name, topic_list, delivery_type)
+            # An API client subscribes through its security definition ..
+            if 'security' in yaml_def:
+                subscriber_name = yaml_def['security']
+                sec_base_id = self.get_security_base_id_by_name(subscriber_name, session)
+                push_service_name = None
 
-            # Get security base ID
-            sec_base_id = self.get_security_base_id_by_name(security_name, session)
+            # .. while a service subscribes without one, which requires push delivery to that service.
+            else:
+                if delivery_type != PubSub.Delivery_Type.Push:
+                    raise Exception(f'A pub/sub subscription without a security definition must use push delivery: {yaml_def}')
+
+                if 'push_service' not in yaml_def:
+                    raise Exception(f'A pub/sub subscription without a security definition must name a push_service: {yaml_def}')
+
+                subscriber_name = yaml_def['push_service']
+                sec_base_id = None
+                push_service_name = subscriber_name
+
+            logger.info('Processing YAML pubsub subscription definition: subscriber=%s, topics=%s, delivery_type=%s',
+                       subscriber_name, topic_list, delivery_type)
 
             # Get topic IDs
             topic_id_list = []
@@ -365,8 +410,8 @@ class PubSubSubscriptionImporter:
                 'delivery_type': delivery_type,
                 'topic_id_list': topic_id_list,
                 'is_delivery_active': yaml_def.get('is_delivery_active', True),
-                'username': security_name,
-                'name': yaml_def.get('name', security_name)
+                'username': subscriber_name,
+                'name': yaml_def.get('name', subscriber_name)
             }
 
             # Handle push-specific fields
@@ -384,11 +429,8 @@ class PubSubSubscriptionImporter:
                 if key not in ['security', 'topic_list', 'delivery_type', 'push_rest_endpoint', 'push_service', 'is_delivery_active']:
                     subscription_def[key] = value
 
-            # Create a key for tracking
-            key = f'{security_name}_{sorted(topic_list)}_{delivery_type}'
-
-            should_create = self.should_create_pubsub_subscription_definition(yaml_def, db_defs, sec_base_id)
-            logger.info('Decision for security %s: should_create=%s', security_name, should_create)
+            should_create = self.should_create_pubsub_subscription_definition(yaml_def, db_defs, sec_base_id, push_service_name)
+            logger.info('Decision for subscriber %s: should_create=%s', subscriber_name, should_create)
 
             if should_create:
 
@@ -410,7 +452,7 @@ class PubSubSubscriptionImporter:
 
             else:
 
-                existing_sub = self.find_existing_subscription_for_security(db_defs, sec_base_id)
+                existing_sub = self.find_existing_subscription(db_defs, sec_base_id, push_service_name)
 
                 # Update existing subscription
                 if self.should_update_pubsub_subscription_definition(yaml_def, existing_sub):

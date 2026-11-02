@@ -21,7 +21,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anytuple, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,6 +34,30 @@ _Outgoing_REST_Page_Url = '/zato/http-soap/?connection=outgoing&transport=plain_
 _Channel_REST_Page_Url = '/zato/http-soap/?connection=channel&transport=plain_http'
 _Outgoing_AMQP_Page_Url = '/zato/outgoing/amqp/'
 _Channel_AMQP_Page_Url = '/zato/channel/amqp/'
+
+_Subscription_Create_Link_Text       = 'Create a new pub/sub subscription'
+_Subscription_Create_Subscriber      = '#pubsub-subscription-create-subscriber'
+_Subscription_Create_Services        = _Subscription_Create_Subscriber + ' .pubsub-subscription-create-services'
+_Subscription_Create_Search          = '#pubsub-subscription-create-search'
+_Subscription_Create_Cards           = '#pubsub-subscription-create-cards'
+_Subscription_Create_Pane            = '#pubsub-subscription-create-pane'
+_Subscription_Create_Toggles         = '#pubsub-subscription-create-topics'
+_Subscription_Create_Submit          = '#pubsub-subscription-create-submit'
+_Subscription_Create_Layout_Toggles  = 'toggles'
+
+_Subscriber_Kind_Service = 'service'
+
+_Delivery_Pull = 'pull'
+_Delivery_Push = 'push'
+
+_Dropdown_Menu        = '.zato-dropdown-menu'
+_Dropdown_Menu_Filter = _Dropdown_Menu + ' .dashboard-select-filter'
+
+# How long a request of the dialog creating a subscription may take, in milliseconds
+_Subscription_Create_Timeout = 15000
+
+# How long the menu of services is given to render its rows, in milliseconds
+_Dropdown_Menu_Render_Wait = 300
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,25 +156,200 @@ def wait_for_sec_def_dropdown(page:'Page') -> 'None':
     )
 
 # ################################################################################################################################
+# ################################################################################################################################
+#
+# The dialog creating a pub/sub subscription
+#
+# ################################################################################################################################
+# ################################################################################################################################
 
-def select_sec_def_and_wait_for_topics(page:'Page', sec_name:'str') -> 'None':
-    """ Selects a security definition in the create dialog and waits for topic checkboxes to appear.
+def subscription_create_field_selector(state_key:'str') -> 'str':
+    """ Returns the selector of the select bound to one key of the subscription create form, e.g. kind, client, delivery or endpoint.
+    """
+    out = f'{_Subscription_Create_Subscriber} select[data-key="{state_key}"]'
+    return out
+
+# ################################################################################################################################
+
+def open_subscription_create_dialog(page:'Page', base_url:'str') -> 'None':
+    """ Opens the subscriptions page and the dialog creating a subscription.
     """
 
-    # Wait for the security definitions dropdown to be populated ..
-    wait_for_sec_def_dropdown(page)
+    # Go to the subscriptions page ..
+    navigate_to_page(page, base_url, _Subscription_Page_Url)
 
-    # .. select the security definition ..
-    page.select_option('#id_sec_base_id', label=sec_name)
+    # .. open the dialog ..
+    page.click(f'#markup .page_prompt a:text-is("{_Subscription_Create_Link_Text}")')
+    _ = page.wait_for_selector('#create-div', state='visible', timeout=_Subscription_Create_Timeout)
 
-    # .. trigger the change event so topics load ..
-    page.evaluate('$("#id_sec_base_id").trigger("change")')
+    # .. and wait for the form to be built from the data it loads.
+    kind_selector = subscription_create_field_selector('kind')
+    _ = page.wait_for_selector(kind_selector, state='visible', timeout=_Subscription_Create_Timeout)
 
-    # .. wait for topic checkboxes to appear.
-    page.wait_for_function(
-        'document.querySelectorAll("#multi-select-div input[name=\\"topic_name\\"]").length > 0',
-        timeout=15000
-    )
+# ################################################################################################################################
+
+def choose_subscriber_kind(page:'Page', kind:'str') -> 'None':
+    """ Chooses whether the subscriber is an API client or a service.
+    """
+    kind_selector = subscription_create_field_selector('kind')
+    _ = page.select_option(kind_selector, value=kind)
+
+    if kind == _Subscriber_Kind_Service:
+        field_selector = _Subscription_Create_Services
+    else:
+        field_selector = subscription_create_field_selector('client')
+
+    _ = page.wait_for_selector(field_selector, state='visible', timeout=_Subscription_Create_Timeout)
+
+# ################################################################################################################################
+
+def select_subscription_create_option(page:'Page', state_key:'str', label:'str') -> 'None':
+    """ Selects an option by its label in one of the selects of the subscriber row.
+    """
+    field_selector = subscription_create_field_selector(state_key)
+    _ = page.select_option(field_selector, label=label)
+
+# ################################################################################################################################
+
+def _open_subscription_services_menu(page:'Page') -> 'None':
+    page.click(_Subscription_Create_Services)
+    _ = page.wait_for_selector(_Dropdown_Menu, state='visible', timeout=_Subscription_Create_Timeout)
+
+# ################################################################################################################################
+
+def _close_subscription_services_menu(page:'Page') -> 'None':
+    page.click(_Subscription_Create_Services)
+    _ = page.wait_for_selector(_Dropdown_Menu, state='detached', timeout=_Subscription_Create_Timeout)
+
+# ################################################################################################################################
+
+def _filter_subscription_services_menu(page:'Page', service_name:'str') -> 'None':
+    """ Narrows the menu of services down to the name, if the menu is long enough to have a filter box.
+    """
+    filter_input = page.query_selector(_Dropdown_Menu_Filter)
+
+    if filter_input:
+        filter_input.fill(service_name)
+
+    page.wait_for_timeout(_Dropdown_Menu_Render_Wait)
+
+# ################################################################################################################################
+
+def _subscription_service_item_selector(service_name:'str') -> 'str':
+    out = f'{_Dropdown_Menu} .zato-dropdown-item[data-value="{service_name}"]'
+    return out
+
+# ################################################################################################################################
+
+def pick_subscription_services(page:'Page', service_names:'strlist') -> 'None':
+    """ Picks each of the services in the multi-select of services, each to receive a subscription of its own.
+    """
+    _open_subscription_services_menu(page)
+
+    for service_name in service_names:
+        _filter_subscription_services_menu(page, service_name)
+        page.click(_subscription_service_item_selector(service_name))
+
+    _close_subscription_services_menu(page)
+
+# ################################################################################################################################
+
+def is_subscription_service_offered(page:'Page', service_name:'str') -> 'bool':
+    """ Tells whether the multi-select of services offers the service.
+    """
+    _open_subscription_services_menu(page)
+    _filter_subscription_services_menu(page, service_name)
+
+    item = page.query_selector(_subscription_service_item_selector(service_name))
+
+    _close_subscription_services_menu(page)
+
+    out = item is not None
+    return out
+
+# ################################################################################################################################
+
+def get_subscription_topics_area(page:'Page') -> 'str':
+    """ Returns the selector of the part of the form that shows the topics, which depends on how many topics there are.
+    """
+    layout = page.get_attribute('#create-form', 'data-layout')
+
+    if layout == _Subscription_Create_Layout_Toggles:
+        out = _Subscription_Create_Toggles
+    else:
+        out = _Subscription_Create_Cards
+
+    return out
+
+# ################################################################################################################################
+
+def get_subscription_topic_selectors(page:'Page', topic_name:'str') -> 'anytuple':
+    """ Returns the selectors of a topic and of the same topic picked, searching for it if the topics are shown in cards.
+    """
+    layout = page.get_attribute('#create-form', 'data-layout')
+
+    if layout == _Subscription_Create_Layout_Toggles:
+        topic_selector = f'{_Subscription_Create_Toggles} [data-topic="{topic_name}"]'
+        on_selector = topic_selector + '.mcp-masking-card-on'
+    else:
+        page.fill(_Subscription_Create_Search, topic_name)
+        topic_selector = f'{_Subscription_Create_Pane} .mcp-masking-pane-field[data-topic="{topic_name}"]'
+        on_selector = topic_selector + ' .mcp-masking-switch-on'
+
+    _ = page.wait_for_selector(topic_selector, state='visible', timeout=_Subscription_Create_Timeout)
+
+    out = topic_selector, on_selector
+    return out
+
+# ################################################################################################################################
+
+def pick_subscription_topic(page:'Page', topic_name:'str') -> 'None':
+    """ Picks the topic, unless the form picked it already as the only one the subscriber sees.
+    """
+    topic_selector, on_selector = get_subscription_topic_selectors(page, topic_name)
+
+    if page.query_selector(on_selector) is None:
+        page.click(topic_selector)
+
+    _ = page.wait_for_selector(on_selector, state='attached', timeout=_Subscription_Create_Timeout)
+
+# ################################################################################################################################
+
+def unpick_subscription_topic(page:'Page', topic_name:'str') -> 'None':
+    """ Lets go of the topic if it is picked.
+    """
+    topic_selector, on_selector = get_subscription_topic_selectors(page, topic_name)
+
+    if page.query_selector(on_selector) is not None:
+        page.click(topic_selector)
+
+    _ = page.wait_for_selector(on_selector, state='detached', timeout=_Subscription_Create_Timeout)
+
+# ################################################################################################################################
+
+def submit_subscription_create_dialog(page:'Page') -> 'None':
+    """ Submits the dialog creating a subscription and waits for it to close.
+    """
+    page.click(_Subscription_Create_Submit)
+
+    try:
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=_Subscription_Create_Timeout)
+
+    except PlaywrightTimeoutError as e:
+        attention_html = page.eval_on_selector_all(
+            '#create-div .zato-validator-attention', 'elements => elements.map(element => element.outerHTML.slice(0, 200))')
+        raise Exception(f'Create dialog did not close, the parts pointed to as missing: {attention_html}') from e
+
+# ################################################################################################################################
+
+def create_service_subscription(page:'Page', base_url:'str', service_names:'strlist', topic_name:'str') -> 'None':
+    """ Creates a subscription to the topic for each of the services through the dialog, without reloading the page.
+    """
+    open_subscription_create_dialog(page, base_url)
+    choose_subscriber_kind(page, _Subscriber_Kind_Service)
+    pick_subscription_services(page, service_names)
+    pick_subscription_topic(page, topic_name)
+    submit_subscription_create_dialog(page)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -893,110 +1092,44 @@ def create_push_rest_subscription(
     topic_name:'str',
     rest_endpoint_name:'str',
     ) -> 'None':
-    """ Creates a push subscription targeting an outgoing REST connection via the UI.
+    """ Creates a push subscription of an API client, its messages pushed to an outgoing REST connection, via the UI.
     """
 
-    # Navigate to the subscriptions page ..
-    navigate_to_page(page, base_url, _Subscription_Page_Url)
+    # Open the dialog with the API client as the subscriber ..
+    open_subscription_create_dialog(page, base_url)
+    select_subscription_create_option(page, 'client', sec_name)
 
-    # .. open the create dialog ..
-    open_create_dialog_via_js(page, 'subscription')
+    # .. choose push delivery, which builds the select of REST endpoints ..
+    delivery_selector = subscription_create_field_selector('delivery')
+    _ = page.select_option(delivery_selector, value=_Delivery_Push)
 
-    # .. select the sec def and wait for topics ..
-    select_sec_def_and_wait_for_topics(page, sec_name)
-
-    # .. check the topic checkbox ..
-    page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-
-    # .. set delivery type to push ..
-    page.select_option('#id_delivery_type', value='push')
-    time.sleep(0.3)
-
-    # .. set push type to REST ..
-    page.select_option('#id_push_type', value='rest')
-    time.sleep(0.3)
-
-    # .. wait for the REST endpoints dropdown to populate ..
-    page.wait_for_function(
-        'document.querySelector("#id_rest_push_endpoint_id") && '
-        'document.querySelector("#id_rest_push_endpoint_id").options.length > 1',
-        timeout=10000
-    )
+    endpoint_selector = subscription_create_field_selector('endpoint')
+    _ = page.wait_for_selector(endpoint_selector, state='visible', timeout=_Subscription_Create_Timeout)
 
     # .. select the endpoint by its visible name ..
-    select_option_by_label(page, '#id_rest_push_endpoint_id', rest_endpoint_name)
+    select_subscription_create_option(page, 'endpoint', rest_endpoint_name)
 
-    # .. submit the form.
-    submit_create_form(page)
-
-# ################################################################################################################################
-
-def create_push_service_subscription(
-    page:'Page',
-    base_url:'str',
-    sec_name:'str',
-    topic_name:'str',
-    service_name:'str',
-    ) -> 'None':
-    """ Creates a push subscription targeting a service via the UI.
-    """
-
-    # Navigate to the subscriptions page ..
-    navigate_to_page(page, base_url, _Subscription_Page_Url)
-
-    # .. open the create dialog ..
-    open_create_dialog_via_js(page, 'subscription')
-
-    # .. select the sec def and wait for topics ..
-    select_sec_def_and_wait_for_topics(page, sec_name)
-
-    # .. check the topic checkbox ..
-    page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-
-    # .. set delivery type to push ..
-    page.select_option('#id_delivery_type', value='push')
-    time.sleep(0.3)
-
-    # .. set push type to service ..
-    page.select_option('#id_push_type', value='service')
-    time.sleep(0.3)
-
-    # .. wait for the services dropdown to populate ..
-    page.wait_for_function(
-        'document.querySelector("#id_push_service_name") && '
-        'document.querySelector("#id_push_service_name").options.length > 1',
-        timeout=10000
-    )
-
-    # .. select the service ..
-    set_select_value(page, '#id_push_service_name', service_name)
-
-    # .. submit the form.
-    submit_create_form(page)
+    # .. pick the topic and submit the form.
+    pick_subscription_topic(page, topic_name)
+    submit_subscription_create_dialog(page)
 
 # ################################################################################################################################
 
 def create_pull_subscription(page:'Page', base_url:'str', sec_name:'str', topic_name:'str') -> 'None':
-    """ Creates a pull subscription via the UI.
+    """ Creates a pull subscription of an API client via the UI.
     """
 
-    # Navigate to the subscriptions page ..
-    navigate_to_page(page, base_url, _Subscription_Page_Url)
+    # Open the dialog with the API client as the subscriber ..
+    open_subscription_create_dialog(page, base_url)
+    select_subscription_create_option(page, 'client', sec_name)
 
-    # .. open the create dialog ..
-    open_create_dialog_via_js(page, 'subscription')
+    # .. choose pull delivery ..
+    delivery_selector = subscription_create_field_selector('delivery')
+    _ = page.select_option(delivery_selector, value=_Delivery_Pull)
 
-    # .. select the sec def and wait for topics ..
-    select_sec_def_and_wait_for_topics(page, sec_name)
-
-    # .. check the topic checkbox ..
-    page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-
-    # .. set delivery type to pull ..
-    page.select_option('#id_delivery_type', value='pull')
-
-    # .. submit the form.
-    submit_create_form(page)
+    # .. pick the topic and submit the form.
+    pick_subscription_topic(page, topic_name)
+    submit_subscription_create_dialog(page)
 
 # ################################################################################################################################
 # ################################################################################################################################

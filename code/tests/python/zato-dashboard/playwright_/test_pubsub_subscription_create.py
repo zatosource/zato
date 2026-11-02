@@ -11,17 +11,20 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.test.playwright_pubsub import close_dialog_via_jquery, create_all_subscription_prerequisites, \
-    create_outgoing_rest, get_table_row_count, navigate_to_page, open_create_dialog_via_js, \
-    select_sec_def_and_wait_for_topics, setup_alert_handler, submit_create_form
-from zato.common.typing_ import any_, cast_
+from zato.common.test.playwright_pubsub import choose_subscriber_kind, close_dialog_via_jquery, \
+    create_all_subscription_prerequisites, create_outgoing_rest, create_pull_subscription, create_push_rest_subscription, \
+    get_subscription_topic_selectors, get_subscription_topics_area, get_table_row_count, navigate_to_page, \
+    open_subscription_create_dialog, pick_subscription_topic, select_subscription_create_option, \
+    subscription_create_field_selector, unpick_subscription_topic
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,21 +33,47 @@ _Subscription_Page_Url = '/zato/pubsub/subscription/'
 
 _Test_Name_Prefix = 'test.sub.' + CryptoManager.generate_hex_string(32) + '.'
 
+_No_Client_Text = 'No API client selected'
+
+_Services_Selector = '#pubsub-subscription-create-subscriber .pubsub-subscription-create-services'
+_Submit_Selector   = '#pubsub-subscription-create-submit'
+
+_Attention_Class = 'zato-validator-attention'
+
+_Kind_Client  = 'client'
+_Kind_Service = 'service'
+
+_Delivery_Pull = 'pull'
+_Delivery_Push = 'push'
+
+# How long a request of the Dashboard may take, in milliseconds
+_Timeout = 10000
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _open_subscription_create_dialog(page:'Page', base_url:'str') -> 'None':
-    """ Navigates to subscriptions page and opens the create dialog.
+def _client_row_selector(sec_name:'str') -> 'str':
+    out = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
+    return out
+
+# ################################################################################################################################
+
+def _has_attention(page:'Page', selector:'str') -> 'bool':
+    """ Tells whether the form points to the element as a missing part of a submission.
     """
+    class_names = page.get_attribute(selector, 'class')
 
-    navigate_to_page(page, base_url, _Subscription_Page_Url)
-    open_create_dialog_via_js(page, 'subscription')
+    if class_names is None:
+        return False
+
+    out = _Attention_Class in class_names
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestPubSubSubscriptionCreate:
-    """ Tests for the pub/sub subscription create flow.
+    """ Tests for the pub/sub subscription create flow, an API client as the subscriber.
     """
 
     def test_page_loads(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
@@ -94,24 +123,11 @@ class TestPubSubSubscriptionCreate:
         sec_name = prereqs['sec_name']
         topic_name = prereqs['topic_name']
 
-        # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
+        # .. create a pull subscription ..
+        create_pull_subscription(page, base_url, sec_name, topic_name)
 
-        # .. select the sec def and wait for topics ..
-        select_sec_def_and_wait_for_topics(page, sec_name)
-
-        # .. check the topic checkbox ..
-        page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-
-        # .. set delivery type to pull ..
-        _ = page.select_option('#id_delivery_type', value='pull')
-
-        # .. submit the form ..
-        submit_create_form(page)
-
-        # .. verify the new row appears with correct values.
-        row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
+        # .. and verify the new row appears with correct values.
+        row = cast_('any_', page.wait_for_selector(_client_row_selector(sec_name), state='visible', timeout=_Timeout))
 
         row_text = row.inner_text()
         assert 'Pull' in row_text, f'Expected "Pull" in row, got: "{row_text}"'
@@ -133,113 +149,15 @@ class TestPubSubSubscriptionCreate:
         # .. create an outgoing REST connection ..
         rest_name = create_outgoing_rest(page, base_url, _Test_Name_Prefix, 'push-rest1')
 
-        # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
+        # .. create a push subscription to it ..
+        create_push_rest_subscription(page, base_url, sec_name, topic_name, rest_name)
 
-        # .. select the sec def and wait for topics ..
-        select_sec_def_and_wait_for_topics(page, sec_name)
-
-        # .. check the topic checkbox ..
-        page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-
-        # .. set delivery type to push ..
-        _ = page.select_option('#id_delivery_type', value='push')
-        time.sleep(0.3)
-
-        # .. set push type to REST ..
-        _ = page.select_option('#id_push_type', value='rest')
-        time.sleep(0.3)
-
-        # .. wait for REST endpoint dropdown to populate ..
-        _ = page.wait_for_function(
-            'document.querySelector("#id_rest_push_endpoint_id") && ' +
-            'document.querySelector("#id_rest_push_endpoint_id").options.length > 1',
-            timeout=10000
-        )
-
-        # .. select the REST endpoint - the select is hidden by Chosen.js,
-        # .. so we find the option by label text and set it via JS ..
-        page.evaluate(
-            '(() => {' +
-            '  var sel = document.querySelector("#id_rest_push_endpoint_id");' +
-            '  for (var i = 0; i < sel.options.length; i++) {' +
-            '    if (sel.options[i].text === ' + repr(rest_name) + ') {' +
-            '      sel.value = sel.options[i].value;' +
-            '      $(sel).trigger("chosen:updated").trigger("change");' +
-            '      return true;' +
-            '    }' +
-            '  }' +
-            '  return false;' +
-            '})()'
-        )
-
-        # .. submit the form ..
-        submit_create_form(page)
-
-        # .. verify the new row appears with correct values.
-        row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
+        # .. and verify the new row appears with correct values.
+        row = cast_('any_', page.wait_for_selector(_client_row_selector(sec_name), state='visible', timeout=_Timeout))
 
         row_text = row.inner_text()
         assert 'Push' in row_text, f'Expected "Push" in row, got: "{row_text}"'
         assert rest_name in row_text, f'Expected REST endpoint "{rest_name}" in row, got: "{row_text}"'
-
-# ################################################################################################################################
-
-    def test_create_push_service_subscription(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-
-        page = logged_in_page
-        base_url = zato_dashboard['dashboard_url']
-
-        # Create prerequisites via the UI ..
-        prereqs = create_all_subscription_prerequisites(page, base_url, _Test_Name_Prefix, 'push-svc1')
-
-        sec_name = prereqs['sec_name']
-        topic_name = prereqs['topic_name']
-
-        # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
-
-        # .. select the sec def and wait for topics ..
-        select_sec_def_and_wait_for_topics(page, sec_name)
-
-        # .. check the topic checkbox ..
-        page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-
-        # .. set delivery type to push ..
-        _ = page.select_option('#id_delivery_type', value='push')
-        time.sleep(0.3)
-
-        # .. set push type to service ..
-        _ = page.select_option('#id_push_type', value='service')
-        time.sleep(0.3)
-
-        # .. wait for service dropdown to populate ..
-        _ = page.wait_for_function(
-            'document.querySelector("#id_push_service_name") && ' +
-            'document.querySelector("#id_push_service_name").options.length > 1',
-            timeout=10000
-        )
-
-        # .. select the first available service - the select is hidden by Chosen.js,
-        # .. so we pick the value via JS and set it with a Chosen trigger ..
-        service_name = page.evaluate(
-            'document.querySelector("#id_push_service_name option:not([value=\\"\\"])").value'
-        )
-        page.evaluate(
-            f'$("#id_push_service_name").val("{service_name}").trigger("chosen:updated").trigger("change")'
-        )
-
-        # .. submit the form ..
-        submit_create_form(page)
-
-        # .. verify the new row appears with correct values.
-        row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
-
-        row_text = row.inner_text()
-        assert 'Push' in row_text, f'Expected "Push" in row, got: "{row_text}"'
-        assert service_name in row_text, f'Expected service "{service_name}" in row, got: "{row_text}"'
 
 # ################################################################################################################################
 
@@ -252,24 +170,22 @@ class TestPubSubSubscriptionCreate:
         prereqs = create_all_subscription_prerequisites(page, base_url, _Test_Name_Prefix, 'cancel-reopen')
         sec_name = prereqs['sec_name']
 
-        # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
-
-        # .. select the sec def and wait for topics ..
-        select_sec_def_and_wait_for_topics(page, sec_name)
+        # .. open the subscription create dialog and select the client ..
+        open_subscription_create_dialog(page, base_url)
+        select_subscription_create_option(page, 'client', sec_name)
 
         # .. close the dialog ..
         close_dialog_via_jquery(page, 'create-div')
 
         # .. reopen the dialog ..
-        open_create_dialog_via_js(page, 'subscription')
+        open_subscription_create_dialog(page, base_url)
 
-        time.sleep(0.5)
+        # .. verify no client is selected and the topics area says so.
+        client_value = page.input_value(subscription_create_field_selector('client'))
+        assert client_value == '', f'Expected no client selected, got: "{client_value}"'
 
-        # .. verify the topics area shows the placeholder message.
-        topic_area_text = page.inner_text('#multi-select-div')
-        assert 'Select a security definition' in topic_area_text, \
-            f'Expected placeholder text, got: "{topic_area_text}"'
+        topic_area_text = page.inner_text(get_subscription_topics_area(page))
+        assert _No_Client_Text in topic_area_text, f'Expected placeholder text, got: "{topic_area_text}"'
 
 # ################################################################################################################################
 
@@ -283,18 +199,13 @@ class TestPubSubSubscriptionCreate:
         sec_name = prereqs['sec_name']
         topic_name = prereqs['topic_name']
 
-        # .. navigate to subscriptions page ..
-        navigate_to_page(page, base_url, _Subscription_Page_Url)
-
-        # .. count rows before ..
+        # .. open the create dialog, counting the rows before ..
+        open_subscription_create_dialog(page, base_url)
         count_before = get_table_row_count(page)
 
-        # .. open the create dialog ..
-        open_create_dialog_via_js(page, 'subscription')
-
-        # .. select sec def and topics ..
-        select_sec_def_and_wait_for_topics(page, sec_name)
-        page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
+        # .. select the client and the topic ..
+        select_subscription_create_option(page, 'client', sec_name)
+        pick_subscription_topic(page, topic_name)
 
         # .. close the dialog without submitting ..
         close_dialog_via_jquery(page, 'create-div')
@@ -307,7 +218,7 @@ class TestPubSubSubscriptionCreate:
 
 # ################################################################################################################################
 
-    def test_sec_def_selection_loads_topics(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_client_selection_shows_its_topics(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -318,19 +229,20 @@ class TestPubSubSubscriptionCreate:
         topic_name = prereqs['topic_name']
 
         # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
+        open_subscription_create_dialog(page, base_url)
 
-        # .. verify the placeholder is shown before selecting a sec def ..
-        topic_area_text = page.inner_text('#multi-select-div')
-        assert 'Select a security definition' in topic_area_text, \
-            f'Expected placeholder before sec def selection, got: "{topic_area_text}"'
+        # .. verify the placeholder is shown before selecting a client ..
+        topic_area_text = page.inner_text(get_subscription_topics_area(page))
+        assert _No_Client_Text in topic_area_text, \
+            f'Expected placeholder before client selection, got: "{topic_area_text}"'
 
-        # .. select the sec def and wait for topics ..
-        select_sec_def_and_wait_for_topics(page, sec_name)
+        # .. select the client ..
+        select_subscription_create_option(page, 'client', sec_name)
 
-        # .. verify the topic checkbox appeared.
-        checkbox = page.query_selector(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-        assert checkbox, f'Expected topic checkbox for "{topic_name}" to be present'
+        # .. and verify its only topic is shown, already picked.
+        _, on_selector = get_subscription_topic_selectors(page, topic_name)
+        picked = page.query_selector(on_selector)
+        assert picked, f'Expected the only topic "{topic_name}" of the client to be picked'
 
 # ################################################################################################################################
 
@@ -339,78 +251,94 @@ class TestPubSubSubscriptionCreate:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
+        endpoint_selector = subscription_create_field_selector('endpoint')
+        delivery_selector = subscription_create_field_selector('delivery')
+
         # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
+        open_subscription_create_dialog(page, base_url)
 
-        # .. verify push fields are hidden when Pull is selected ..
-        is_push_type_hidden = not page.is_visible('#push-type-create')
-        assert is_push_type_hidden, 'Push type span should be hidden when Pull selected'
+        # .. verify the REST endpoint field is absent when Pull is selected ..
+        delivery_value = page.input_value(delivery_selector)
+        assert delivery_value == _Delivery_Pull, f'Expected pull delivery by default, got: "{delivery_value}"'
 
-        is_rest_hidden = not page.is_visible('#rest-endpoint-create')
-        assert is_rest_hidden, 'REST endpoint should be hidden when Pull selected'
+        endpoint = page.query_selector(endpoint_selector)
+        assert endpoint is None, 'REST endpoint should be absent when Pull selected'
 
         # .. switch to push ..
-        _ = page.select_option('#id_delivery_type', value='push')
-        time.sleep(0.3)
+        _ = page.select_option(delivery_selector, value=_Delivery_Push)
 
-        # .. verify push type field appears.
-        is_push_type_visible = page.is_visible('#push-type-create')
-        assert is_push_type_visible, 'Push type span should be visible when Push selected'
+        # .. verify the REST endpoint field appears ..
+        _ = page.wait_for_selector(endpoint_selector, state='visible', timeout=_Timeout)
+
+        # .. and goes away again with pull.
+        _ = page.select_option(delivery_selector, value=_Delivery_Pull)
+        _ = page.wait_for_selector(endpoint_selector, state='detached', timeout=_Timeout)
 
 # ################################################################################################################################
 
-    def test_push_type_toggle_shows_correct_field(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_subscriber_kind_toggle_shows_correct_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        client_selector = subscription_create_field_selector('client')
+        delivery_selector = subscription_create_field_selector('delivery')
+
+        # .. open the subscription create dialog, an API client being the subscriber at first ..
+        open_subscription_create_dialog(page, base_url)
+
+        assert page.is_visible(client_selector), 'API client should be visible for an API client subscriber'
+        assert page.is_visible(delivery_selector), 'Delivery should be visible for an API client subscriber'
+        assert page.query_selector(_Services_Selector) is None, 'Services should be absent for an API client subscriber'
+
+        # .. switch to a service ..
+        choose_subscriber_kind(page, _Kind_Service)
+
+        # .. verify the services are visible and the fields of a client are gone ..
+        assert page.is_visible(_Services_Selector), 'Services should be visible for a service subscriber'
+        assert page.query_selector(client_selector) is None, 'API client should be absent for a service subscriber'
+        assert page.query_selector(delivery_selector) is None, 'Delivery should be absent for a service subscriber'
+
+        # .. and switch back.
+        choose_subscriber_kind(page, _Kind_Client)
+        assert page.query_selector(_Services_Selector) is None, 'Services should be absent once switched back'
+
+# ################################################################################################################################
+
+    def test_no_client_selected_shows_placeholder(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
         # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
-
-        # .. switch to push ..
-        _ = page.select_option('#id_delivery_type', value='push')
-        time.sleep(0.3)
-
-        # .. set push type to REST ..
-        _ = page.select_option('#id_push_type', value='rest')
-        time.sleep(0.3)
-
-        # .. verify REST endpoint is visible and service is hidden ..
-        is_rest_visible = page.is_visible('#rest-endpoint-create')
-        assert is_rest_visible, 'REST endpoint should be visible for push type REST'
-
-        is_service_hidden = not page.is_visible('#push-service-create')
-        assert is_service_hidden, 'Service should be hidden for push type REST'
-
-        # .. switch push type to service ..
-        _ = page.select_option('#id_push_type', value='service')
-        time.sleep(0.3)
-
-        # .. verify service is visible and REST is hidden.
-        is_service_visible = page.is_visible('#push-service-create')
-        assert is_service_visible, 'Service should be visible for push type Service'
-
-        is_rest_hidden = not page.is_visible('#rest-endpoint-create')
-        assert is_rest_hidden, 'REST endpoint should be hidden for push type Service'
-
-# ################################################################################################################################
-
-    def test_no_sec_def_selected_shows_placeholder(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-
-        page = logged_in_page
-        base_url = zato_dashboard['dashboard_url']
-
-        # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
+        open_subscription_create_dialog(page, base_url)
 
         # .. verify the topics area shows the placeholder message.
-        topic_area_text = page.inner_text('#multi-select-div')
-        assert 'Select a security definition' in topic_area_text, \
-            f'Expected placeholder text, got: "{topic_area_text}"'
+        topic_area_text = page.inner_text(get_subscription_topics_area(page))
+        assert _No_Client_Text in topic_area_text, f'Expected placeholder text, got: "{topic_area_text}"'
 
 # ################################################################################################################################
 
-    def test_no_topics_checked_prevents_submit(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_no_client_selected_prevents_submit(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        # .. open the subscription create dialog and submit it as it is ..
+        open_subscription_create_dialog(page, base_url)
+        page.click(_Submit_Selector)
+
+        # .. verify the form points to the client ..
+        client_selector = subscription_create_field_selector('client')
+        assert _has_attention(page, client_selector), 'Expected the API client to be pointed to as missing'
+
+        # .. and the dialog is still open.
+        time.sleep(0.5)
+        assert page.is_visible('#create-div'), 'Expected create dialog to still be open after rejection'
+
+# ################################################################################################################################
+
+    def test_no_topics_picked_prevents_submit(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -418,28 +346,25 @@ class TestPubSubSubscriptionCreate:
         # Create prerequisites ..
         prereqs = create_all_subscription_prerequisites(page, base_url, _Test_Name_Prefix, 'no-topic')
         sec_name = prereqs['sec_name']
+        topic_name = prereqs['topic_name']
 
-        # .. open the subscription create dialog ..
-        _open_subscription_create_dialog(page, base_url)
+        # .. open the subscription create dialog and select the client ..
+        open_subscription_create_dialog(page, base_url)
+        select_subscription_create_option(page, 'client', sec_name)
 
-        # .. select the sec def and wait for topics but do not check any ..
-        select_sec_def_and_wait_for_topics(page, sec_name)
-
-        # .. set up a listener for the alert dialog ..
-        alert_messages = setup_alert_handler(page)
+        # .. let go of its only topic, which the form picks on its own ..
+        unpick_subscription_topic(page, topic_name)
 
         # .. try to submit ..
-        page.click('#create-div input[type="submit"]')
-        time.sleep(1.0)
+        page.click(_Submit_Selector)
 
-        # .. verify the alert about topics was shown ..
-        assert len(alert_messages) > 0, 'Expected an alert about no topics selected'
-        assert 'topic' in alert_messages[0].lower(), \
-            f'Expected alert about topic, got: "{alert_messages[0]}"'
+        # .. verify the form points to the topics ..
+        topics_area = get_subscription_topics_area(page)
+        assert _has_attention(page, topics_area), 'Expected the topics to be pointed to as missing'
 
-        # .. verify the dialog is still open.
-        is_visible = page.is_visible('#create-div')
-        assert is_visible, 'Expected create dialog to still be open after rejection'
+        # .. and the dialog is still open.
+        time.sleep(0.5)
+        assert page.is_visible('#create-div'), 'Expected create dialog to still be open after rejection'
 
 # ################################################################################################################################
 
@@ -453,21 +378,16 @@ class TestPubSubSubscriptionCreate:
         sec_name = prereqs['sec_name']
         topic_name = prereqs['topic_name']
 
-        _open_subscription_create_dialog(page, base_url)
-        select_sec_def_and_wait_for_topics(page, sec_name)
-        page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-        _ = page.select_option('#id_delivery_type', value='pull')
-        submit_create_form(page)
+        create_pull_subscription(page, base_url, sec_name, topic_name)
 
         # .. verify the sub_key span is present in the row.
-        row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
+        row = cast_('any_', page.wait_for_selector(_client_row_selector(sec_name), state='visible', timeout=_Timeout))
 
         sub_key_span = row.query_selector('.ps-sub-key')
         assert sub_key_span, 'Expected sub_key span to be present in the row'
 
         sub_key_text = sub_key_span.get_attribute('data-sub-key')
-        assert sub_key_text, f'Expected sub_key data attribute to be non-empty'
+        assert sub_key_text, 'Expected sub_key data attribute to be non-empty'
         assert sub_key_text.startswith('sk'), f'Expected sub_key to start with "sk", got: "{sub_key_text}"'
 
 # ################################################################################################################################
@@ -482,15 +402,10 @@ class TestPubSubSubscriptionCreate:
         sec_name = prereqs['sec_name']
         topic_name = prereqs['topic_name']
 
-        _open_subscription_create_dialog(page, base_url)
-        select_sec_def_and_wait_for_topics(page, sec_name)
-        page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-        _ = page.select_option('#id_delivery_type', value='pull')
-        submit_create_form(page)
+        create_pull_subscription(page, base_url, sec_name, topic_name)
 
         # .. find the row and click the pending messages link ..
-        row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
+        row = cast_('any_', page.wait_for_selector(_client_row_selector(sec_name), state='visible', timeout=_Timeout))
 
         # .. the pending messages link is the last visible <a> with an href to the queue page ..
         pending_link = row.query_selector('td a[href*="pubsub/subscription/queue"]')
@@ -535,7 +450,7 @@ class TestPubSubSubscriptionCreate:
             navigate_to_page(page, base_url, _Subscription_Page_Url)
 
             gone = page.query_selector(demo_row_selector)
-            assert gone is None, f'Expected demo subscription row to be deleted but it is still present'
+            assert gone is None, 'Expected demo subscription row to be deleted but it is still present'
 
         # .. click "Import demo config" ..
         page.click('a:text-is("Import demo config")')

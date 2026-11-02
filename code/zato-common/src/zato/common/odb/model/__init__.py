@@ -1114,7 +1114,7 @@ class PubSubPermission(Base):
 # ################################################################################################################################
 
 class PubSubSubscription(Base):
-    """ Represents a subscription of an API client to a topic.
+    """ Represents a subscription of an API client or of a service to a topic.
     """
     __tablename__ = 'pubsub_subscription'
     __table_args__ = (
@@ -1132,7 +1132,8 @@ class PubSubSubscription(Base):
     delivery_type = Column(String(20), nullable=False)
     push_type = Column(String(20), nullable=True) # Either 'rest' or 'service'
 
-    sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    # A subscriber that is a service, with a push type of 'service', has no security definition
+    sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     sec_base = relationship('SecurityBase', backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
 
     rest_push_endpoint_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)

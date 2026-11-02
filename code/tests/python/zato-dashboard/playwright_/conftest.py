@@ -750,6 +750,10 @@ _Log_Noise_Patterns = [
     'queue bridge recv listener',
     'scheduler request listener',
 
+    # The quickstart environment runs without an on-prem gateway hub, which each server start reports,
+    # including the restarts that some of the tests perform.
+    'Could not reach the on-prem gateway hub',
+
     # The tools card tests create an Odoo connection with no Odoo behind it,
     # and its wrapper keeps retrying the ping in the background.
     'Could not ping Odoo (test.mcp.tools.',

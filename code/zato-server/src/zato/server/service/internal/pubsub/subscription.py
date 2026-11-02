@@ -86,7 +86,7 @@ def _build_topic_objects_list(topic_data_list:'any_'=None, topics:'any_'=None, t
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist, strdict
+    from zato.common.typing_ import any_, anydict, anylist, intnone, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,10 +95,58 @@ class ModuleCtx:
     Action_Subsctibe = 'Subscribe'
     Action_Unsubsctibe = 'Unsubscribe'
 
+    # What a subscription of a service stores as the pattern matched by each of its topics,
+    # because a service subscribes to any topic without a permission
+    Pattern_Matched_Service = 'service'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 _push_type = PubSub.Push_Type
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _validate_service_subscriber(session:'any_', input:'any_', sub_id:'intnone') -> 'None':
+    """ Makes sure a subscription without a security definition pushes to a service
+    that has no other subscription, sub_id being the subscription being edited, if any.
+    """
+    if input.delivery_type != PubSub.Delivery_Type.Push:
+        raise Exception('A subscription without a security definition must use push delivery')
+
+    if input.push_type != _push_type.Service:
+        raise Exception('A subscription without a security definition must push to a service')
+
+    if not input.push_service_name:
+        raise Exception('A subscription without a security definition must name a service to push to')
+
+    query = session.query(PubSubSubscription.id).\
+        filter(PubSubSubscription.sec_base_id.is_(None)).\
+        filter(PubSubSubscription.push_service_name==input.push_service_name)
+
+    if sub_id:
+        query = query.filter(PubSubSubscription.id!=sub_id)
+
+    existing = query.first()
+
+    if existing:
+        raise Exception(f'Service `{input.push_service_name}` already has a subscription')
+
+# ################################################################################################################################
+
+def _get_pattern_matched(session:'any_', sec_base:'any_', topic_name:'str') -> 'any_':
+    """ Returns the pattern under which a subscriber may subscribe to a topic.
+    """
+    if sec_base:
+
+        # Use no_autoflush to prevent premature flush during pattern evaluation
+        with session.no_autoflush:
+            out = evaluate_pattern_match(session, sec_base.name, sec_base.id, topic_name)
+
+    else:
+        out = ModuleCtx.Pattern_Matched_Service
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,13 +196,18 @@ class GetList(AdminService):
 
                 item_dict = item._asdict()
 
-                # The web-admin template uses 'security' as the display name
-                item_dict['security'] = item_dict['sec_name']
+                # The web-admin template uses 'security' as the display name,
+                # which is the service's name for a subscriber that is a service ..
+                if item_dict['sec_name'] is None:
+                    item_dict['security'] = item_dict['push_service_name']
+                else:
+                    item_dict['security'] = item_dict['sec_name']
 
-                # Include password in response only if requested
+                # .. include password in response only if requested and only a security definition has one.
                 if needs_password:
-                    password = self.crypto.decrypt(password)
-                    item_dict['password'] = password
+                    if password is not None:
+                        password = self.crypto.decrypt(password)
+                        item_dict['password'] = password
 
                 subscriptions_by_id[sub_id] = item_dict
 
@@ -233,9 +286,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub subscription.
     """
-    input = AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
+    input = AsIs('topic_name_list'), '-sec_base_id', 'delivery_type', \
         '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
-    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'security', 'delivery_type', \
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', '-sec_name', 'security', 'delivery_type', \
         AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
     def handle(self):
@@ -268,11 +321,23 @@ class Create(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                # Get the security definition
-                sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
+                # An API client subscribes through its security definition ..
+                if input.sec_base_id:
+                    sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).first()
+                    sec_name = sec_base.name
+                    username = sec_base.username
+                    subscriber_name = sec_name
 
-                logger.info('subscription Create.handle is_active trace -> sec_base.name=%s, sec_base.is_active=%r, type=%s',
-                    sec_base.name, sec_base.is_active, type(sec_base.is_active).__name__)
+                    logger.info('subscription Create.handle is_active trace -> sec_base.name=%s, sec_base.is_active=%r, type=%s',
+                        sec_base.name, sec_base.is_active, type(sec_base.is_active).__name__)
+
+                # .. while a service subscribes without one.
+                else:
+                    _validate_service_subscriber(session, input, None)
+                    sec_base = None
+                    sec_name = None
+                    username = None
+                    subscriber_name = input.push_service_name
 
                 # Generate a new subscription key
                 sub_key = input.sub_key or new_sub_key()
@@ -346,15 +411,7 @@ class Create(AdminService):
                     sub_topic.is_pub_enabled = topic_data['is_pub_enabled']
                     sub_topic.is_delivery_enabled = topic_data['is_delivery_enabled']
 
-                    with session.no_autoflush:
-                        pattern_matched = evaluate_pattern_match(
-                            session,
-                            sec_base.name,
-                            input.sec_base_id,
-                            topic.name
-                        )
-
-                    sub_topic.pattern_matched = cast_('any_', pattern_matched)
+                    sub_topic.pattern_matched = _get_pattern_matched(session, sec_base, topic.name)
 
                     session.add(sub_topic)
 
@@ -376,8 +433,8 @@ class Create(AdminService):
                 pubsub_msg.sub_key = sub.sub_key
                 pubsub_msg.is_pub_active = sub.is_pub_active
                 pubsub_msg.is_delivery_active = sub.is_delivery_active
-                pubsub_msg.sec_name = sec_base.name # type: ignore
-                pubsub_msg.username = sec_base.username
+                pubsub_msg.sec_name = sec_name
+                pubsub_msg.username = username
                 pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = input.delivery_type
                 pubsub_msg.push_type = sub.push_type
@@ -393,8 +450,8 @@ class Create(AdminService):
                 self.response.payload.is_pub_active = sub.is_pub_active
                 self.response.payload.is_delivery_active = sub.is_delivery_active
                 self.response.payload.created = sub.created
-                self.response.payload.sec_name = sec_base.name # type: ignore
-                self.response.payload.security = sec_base.name # type: ignore
+                self.response.payload.sec_name = sec_name
+                self.response.payload.security = subscriber_name
                 self.response.payload.delivery_type = sub.delivery_type
 
                 self.response.payload.topic_name_list = topic_objects_list
@@ -402,7 +459,7 @@ class Create(AdminService):
 
                 self.logger.info(
                     'CREATE: Subscription created for %s -> %s (%s) with flags: %s',
-                    sec_base.name, topic_name_list, sub.sub_key, topic_objects_list)
+                    subscriber_name, topic_name_list, sub.sub_key, topic_objects_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -410,9 +467,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub subscription.
     """
-    input = 'sub_key', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
+    input = 'sub_key', AsIs('topic_name_list'), '-sec_base_id', 'delivery_type', \
         '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name'
-    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'security', 'delivery_type', \
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', '-sec_name', 'security', 'delivery_type', \
         AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
     def handle(self):
@@ -432,7 +489,6 @@ class Edit(AdminService):
                 # Store the old delivery type before updating
                 old_delivery_type = sub.delivery_type
 
-                sub.sec_base_id = input.sec_base_id
                 sub.delivery_type = input.delivery_type
 
                 for key in ('is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'):
@@ -440,10 +496,24 @@ class Edit(AdminService):
                         value = input[key]
                         setattr(sub, key, value)
 
-                # Get the security definition
-                sec_base = session.query(SecurityBase).\
-                    filter(SecurityBase.id==sub.sec_base_id).\
-                    one()
+                # An API client subscribes through its security definition ..
+                if input.sec_base_id:
+                    sub.sec_base_id = input.sec_base_id
+                    sec_base = session.query(SecurityBase).\
+                        filter(SecurityBase.id==sub.sec_base_id).\
+                        one()
+                    sec_name = sec_base.name
+                    username = sec_base.username
+                    subscriber_name = sec_name
+
+                # .. while a service subscribes without one.
+                else:
+                    _validate_service_subscriber(session, input, sub.id)
+                    sub.sec_base_id = None
+                    sec_base = None
+                    sec_name = None
+                    username = None
+                    subscriber_name = input.push_service_name
 
                 # Delete all current topic associations
                 _ = session.query(PubSubSubscriptionTopic).\
@@ -479,8 +549,8 @@ class Edit(AdminService):
                     self.response.payload.sub_key = sub.sub_key
                     self.response.payload.is_pub_active = sub.is_pub_active
                     self.response.payload.is_delivery_active = sub.is_delivery_active
-                    self.response.payload.sec_name = sec_base.name
-                    self.response.payload.security = sec_base.name
+                    self.response.payload.sec_name = sec_name
+                    self.response.payload.security = subscriber_name
                     self.response.payload.delivery_type = sub.delivery_type
                     self.response.payload.topic_name_list = []
                     self.response.payload.topic_link_list = []
@@ -511,15 +581,7 @@ class Edit(AdminService):
                             sub_topic.is_pub_enabled = topic_data['is_pub_enabled']
                             sub_topic.is_delivery_enabled = topic_data['is_delivery_enabled']
 
-                            # Use no_autoflush to prevent premature flush during pattern evaluation
-                            with session.no_autoflush:
-                                pattern_matched = evaluate_pattern_match(
-                                    session,
-                                    sec_base.name,
-                                    input.sec_base_id,
-                                    topic.name
-                                )
-                            sub_topic.pattern_matched = cast_('any_', pattern_matched)
+                            sub_topic.pattern_matched = _get_pattern_matched(session, sec_base, topic.name)
 
                             session.add(sub_topic)
 
@@ -551,8 +613,8 @@ class Edit(AdminService):
                 pubsub_msg.sub_key = input.sub_key
                 pubsub_msg.is_pub_active = sub.is_pub_active
                 pubsub_msg.is_delivery_active = sub.is_delivery_active
-                pubsub_msg.sec_name = sec_base.name
-                pubsub_msg.username = sec_base.username
+                pubsub_msg.sec_name = sec_name
+                pubsub_msg.username = username
                 pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = sub.delivery_type
                 pubsub_msg.old_delivery_type = old_delivery_type
@@ -568,8 +630,8 @@ class Edit(AdminService):
                 self.response.payload.sub_key = sub.sub_key
                 self.response.payload.is_pub_active = sub.is_pub_active
                 self.response.payload.is_delivery_active = sub.is_delivery_active
-                self.response.payload.sec_name = sec_base.name
-                self.response.payload.security = sec_base.name
+                self.response.payload.sec_name = sec_name
+                self.response.payload.security = subscriber_name
                 self.response.payload.delivery_type = sub.delivery_type
 
                 self.response.payload.topic_name_list = topic_objects_list
@@ -606,12 +668,16 @@ class Delete(AdminService):
                 filter(PubSubSubscription.id==self.request.input.id).\
                 one()
 
-            sec_def = session.query(SecurityBase).\
-                filter(SecurityBase.id==sub.sec_base_id).\
-                one()
-
-            sec_def_name = sec_def.name
-            sec_def_username = sec_def.username
+            # A subscriber that is a service has no security definition
+            if sub.sec_base_id:
+                sec_def = session.query(SecurityBase).\
+                    filter(SecurityBase.id==sub.sec_base_id).\
+                    one()
+                sec_def_name = sec_def.name
+                sec_def_username = sec_def.username
+            else:
+                sec_def_name = None
+                sec_def_username = None
 
             session.delete(sub)
             session.commit()
