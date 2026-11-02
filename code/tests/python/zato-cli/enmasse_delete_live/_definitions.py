@@ -267,6 +267,8 @@ def _round_trip_item(section:'str') -> 'anydict':
             'secret_value': 'Zato_Enmasse_Delete_Live_Password_18', 'scopes': 'https://graph.microsoft.com/.default',
             'tenant_id': '87654321-7654-7654-7654-fedcba987654'},
         'slack': {'name': name, 'is_active': False, 'token': 'Zato_Enmasse_Delete_Live_Password_19'},
+        'discord': {'name': name, 'is_active': False, 'token': 'Zato_Enmasse_Delete_Live_Password_32',
+            'address': 'https://discord.com/api/v10', 'default_channel_id': '200000000000000001'},
         'confluence': {'name': name, 'address': 'https://example.atlassian.net', 'username': 'enmasse@example.com',
             'password': 'Zato_Enmasse_Delete_Live_Password_20', 'is_active': False},
         'jira': {'name': name, 'address': 'https://example.atlassian.net', 'username': 'enmasse@example.com',
