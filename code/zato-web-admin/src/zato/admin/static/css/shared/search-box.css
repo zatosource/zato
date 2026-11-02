@@ -1,0 +1,264 @@
+/*
+ * The search box of the dashboard - the box of the MCP gateway wizard and the search
+ * of every listing share one frame, one search glyph and one clear control.
+ * Linked by zato/index.html after the stylesheets of each page, which it restyles.
+ * The parts of the box particular to the wizard are in gateway/mcp-wizard-search-box.css.
+ */
+
+/* ------------------------------------------------------------ */
+/* Search box - tokens                                          */
+/* ------------------------------------------------------------ */
+
+:root {
+    --search-box-height: 30px;
+    --search-box-gap: 8px;
+    --search-box-radius: 4px;
+    --search-box-border-width: 1px;
+    --search-box-padding-start: 10px;
+    --search-box-padding-end: 6px;
+    --search-box-transition: 120ms ease;
+    --search-box-hover-delay: 80ms;
+    --search-box-font-size: 12.5px;
+    --search-box-icon-size: 12px;
+    --search-box-clear-size: 18px;
+    --search-box-clear-inset: 3px;
+    --search-box-clear-radius: 2px;
+    --search-box-row-gap: 8px;
+
+    /* A data URI reads no custom property - the stroke repeats --zato-ui-text-muted */
+    --search-box-icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+
+    /* Applied as a mask, the stroke only marks the shape and the background color paints it */
+    --search-box-icon-clear: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");
+}
+
+/* A listing box is as tall as the submit button beside it, and everything inside it is scaled to that height */
+.search-bar,
+.alerting-card,
+.detail-search-group {
+    --search-box-height: 27px;
+    --search-box-gap: 6px;
+    --search-box-padding-start: 8px;
+    --search-box-padding-end: 5px;
+    --search-box-font-size: 11px;
+    --search-box-icon-size: 10px;
+    --search-box-clear-size: 14px;
+    --search-box-clear-inset: 2px;
+}
+
+/* Where the text of a listing input starts and ends, one glyph and one gap clear of the padding -
+   declared in the scopes above, as a custom property resolves its var() references where it is declared */
+.search-bar,
+.alerting-card,
+.detail-search-group {
+    --search-box-text-start: calc(var(--search-box-padding-start) + var(--search-box-icon-size) + var(--search-box-gap));
+    --search-box-text-end: calc(var(--search-box-padding-end) + var(--search-box-icon-size) + var(--search-box-gap));
+}
+
+/* ------------------------------------------------------------ */
+/* Search box - the frame                                       */
+/* ------------------------------------------------------------ */
+
+/* A box holding its glyph and input as elements draws the frame around them,
+   and a listing input standing alone is the frame itself */
+.mcp-search-box,
+.badge-picker-filter.mcp-search-box,
+.detail-search-group,
+.search-bar input[type="text"],
+.alerting-card .alerting-filter-input {
+    box-sizing: border-box;
+    height: var(--search-box-height);
+    font-size: var(--search-box-font-size);
+    background-color: #fff;
+    border: var(--search-box-border-width) solid var(--zato-ui-border-strong);
+    border-radius: var(--search-box-radius);
+}
+
+.mcp-search-box,
+.badge-picker-filter.mcp-search-box,
+.detail-search-group {
+    display: flex;
+    align-items: center;
+    gap: var(--search-box-gap);
+    padding: 0 var(--search-box-padding-end) 0 var(--search-box-padding-start);
+    color: var(--zato-ui-text-muted);
+    cursor: text;
+}
+
+.search-bar input[type="text"],
+.alerting-card .alerting-filter-input {
+    padding: 0 var(--search-box-padding-end) 0 var(--search-box-text-start);
+    font-family: inherit;
+    font-weight: 400;
+    color: var(--zato-ui-text);
+    background-position: var(--search-box-padding-start) center;
+    box-shadow: none;
+    outline: none;
+}
+
+.search-bar input[type="text"],
+.alerting-card .alerting-filter-input,
+.detail-search-icon {
+    background-image: var(--search-box-icon-search);
+    background-repeat: no-repeat;
+    background-size: var(--search-box-icon-size) var(--search-box-icon-size);
+}
+
+.mcp-search-box:focus-within,
+.detail-search-group:focus-within,
+.search-bar input[type="text"]:focus,
+.alerting-card .alerting-filter-input:focus {
+    border-color: var(--zato-ui-accent);
+}
+
+/* formalize.css and shared/wizard-surface.css frame every text input and shadow it on focus,
+   and inside a box drawing the frame of its own all of it is named back here */
+.mcp-search-box input[type="text"].mcp-search-box-input,
+.mcp-search-box input[type="text"].mcp-search-box-input:focus,
+.detail-search-group input.detail-search-input {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 400;
+    color: var(--zato-ui-text);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Search box - the listing row                                 */
+/* ------------------------------------------------------------ */
+
+/* The submit button is shorter than the box, and the row centers the two on one line */
+.search-bar .prompt form {
+    display: flex;
+    align-items: center;
+    gap: var(--search-box-row-gap);
+}
+
+.search-bar .search-clear-anchor input[type="text"],
+.alerting-card .search-clear-anchor .alerting-filter-input {
+    padding-right: var(--search-box-text-end);
+}
+
+/* ------------------------------------------------------------ */
+/* Search box - the job detail page                             */
+/* ------------------------------------------------------------ */
+
+.detail-search-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.detail-search-icon {
+    flex: 0 0 auto;
+    width: var(--search-box-icon-size);
+    height: var(--search-box-icon-size);
+    background-position: center;
+}
+
+.detail-search-input-wrap {
+    position: relative;
+    flex: 1;
+    align-self: stretch;
+    min-width: 0;
+}
+
+.detail-search-group input.detail-search-input {
+    width: 100%;
+    padding-right: calc(var(--search-box-icon-size) + var(--search-box-gap));
+}
+
+/* ------------------------------------------------------------ */
+/* Search box - the clear button                                */
+/* ------------------------------------------------------------ */
+
+/* The button is larger than its icon to be easy to hit, and its margins or offsets give the extra back,
+   so the icon stands as far from the edge of the box as the glyph stands on the other side */
+.mcp-search-box button.mcp-search-box-clear,
+.mcp-search-box button.mcp-search-box-clear:focus,
+.mcp-search-box button.mcp-search-box-clear:active,
+.search-bar .search-clear,
+.alerting-card .search-clear,
+.detail-search-group .detail-search-clear {
+    width: var(--search-box-clear-size);
+    height: var(--search-box-clear-size);
+    padding: 0;
+    text-shadow: none;
+    border: none;
+    border-radius: var(--search-box-clear-radius);
+    box-shadow: none;
+    outline: none;
+    cursor: pointer;
+}
+
+.mcp-search-box button.mcp-search-box-clear,
+.mcp-search-box button.mcp-search-box-clear:focus,
+.mcp-search-box button.mcp-search-box-clear:active {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin: 0 calc(-1 * var(--search-box-clear-inset));
+    line-height: 1;
+    color: var(--zato-ui-text-muted);
+    background: transparent;
+    transition: color var(--search-box-transition);
+}
+
+.mcp-search-box:has(.mcp-search-box-input:not(:placeholder-shown)) button.mcp-search-box-clear {
+    display: inline-flex;
+}
+
+/* The listing pages show and hide their clear controls from their own scripts, and each control
+   has a word or a glyph of its own, which the mask of the icon replaces */
+.search-bar .search-clear,
+.alerting-card .search-clear,
+.detail-search-group .detail-search-clear {
+    min-width: 0;
+    font-size: 0;
+    background-color: var(--zato-ui-text-muted);
+    background-image: none;
+    mask-image: var(--search-box-icon-clear);
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: var(--search-box-icon-size) var(--search-box-icon-size);
+    transition: background-color var(--search-box-transition);
+}
+
+.search-bar .search-clear-anchor .search-clear,
+.alerting-card .search-clear-anchor .search-clear {
+    right: calc(var(--search-box-border-width) + var(--search-box-padding-end) - var(--search-box-clear-inset));
+}
+
+.detail-search-group .detail-search-clear {
+    display: none;
+    position: absolute;
+    top: 50%;
+    right: calc(-1 * var(--search-box-clear-inset));
+    transform: translateY(-50%);
+}
+
+.mcp-search-box button.mcp-search-box-clear:hover {
+    color: var(--zato-ui-accent);
+    background: transparent;
+    transition-delay: var(--search-box-hover-delay);
+}
+
+.search-bar .search-clear:hover,
+.alerting-card .search-clear:hover,
+.detail-search-group .detail-search-clear:hover {
+    background-color: var(--zato-ui-accent);
+    transition-delay: var(--search-box-hover-delay);
+}
+
+.mcp-search-box button.mcp-search-box-clear:focus-visible,
+.alerting-card .search-clear:focus-visible {
+    outline: 2px solid var(--zato-ui-accent-soft);
+    outline-offset: 1px;
+}

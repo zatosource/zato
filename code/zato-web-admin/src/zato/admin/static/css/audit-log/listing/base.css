@@ -162,7 +162,7 @@ body:has(.detail-page-audit-log) .pure-css-nav {
     margin-right: 8px;
 }
 
-/* Clear stands inside the box - the shared search-clear component provides both the badge
+/* Clear stands inside the box - shared/search-box.css provides the box, its clear control
    and the room the box keeps for it, the width alone is this page's own */
 
 .audit-log-search-input {
