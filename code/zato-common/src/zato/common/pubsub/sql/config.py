@@ -77,6 +77,9 @@ _default_commit_max_messages = 500
 # How many group commits may be in progress at once on PostgreSQL. SQLite has a single writer.
 _default_commits_in_flight = 2
 
+# How many group commits of publications may be in progress on PostgreSQL in addition to the ones above.
+_urgent_commits_in_flight = 1
+
 # The name of the file in which the active server records its generation, under the environment directory.
 _generation_file_name = 'pubsub-generation'
 
@@ -215,6 +218,21 @@ def get_commits_in_flight() -> 'int':
         out = int(value)
     else:
         out = _default_commits_in_flight
+
+    return out
+
+# ################################################################################################################################
+
+def get_urgent_commits_in_flight() -> 'int':
+    """ Returns how many group commits of publications may be in progress in addition to those that get_commits_in_flight
+    allows, so that a publication does not wait for a commit of acknowledgements - none on SQLite, which has a single writer.
+    """
+    db_type = get_pubsub_db_type()
+
+    if db_type == Default_Type:
+        out = 0
+    else:
+        out = _urgent_commits_in_flight
 
     return out
 

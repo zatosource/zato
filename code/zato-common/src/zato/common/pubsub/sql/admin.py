@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from time import monotonic
 
 # SQLAlchemy
 from sqlalchemy import and_, BigInteger, cast, func, select
@@ -372,10 +373,12 @@ class SQLAdminAPI(SQLBrowseAPI):
         # Work in bounded batches ..
         while True:
 
+            batch_started = monotonic()
+
             with self.engine.begin() as connection:
 
                 # .. take the next batch of this subscriber's delivery rows ..
-                query = select(delivery_table.c.id, delivery_table.c.message_id)
+                query = select(delivery_table.c.id)
                 query = query.where(delivery_table.c.sub_key == sub_key)
                 query = query.limit(batch_size)
 
@@ -385,24 +388,30 @@ class SQLAdminAPI(SQLBrowseAPI):
                     break
 
                 delivery_ids:'intlist' = []
-                message_ids:'intlist' = []
 
                 for row in rows:
                     delivery_ids.append(row.id)
-                    message_ids.append(row.message_id)
 
-                # .. remove the delivery rows ..
+                # .. remove the delivery rows that still exist - a consumer may have acknowledged some of them
+                # .. after the batch was read, and those count as delivered, not as cleared ..
                 delete_statement = delivery_table.delete()
                 delete_statement = delete_statement.where(delivery_table.c.id.in_(delivery_ids))
-                _ = connection.execute(delete_statement)
+                delete_statement = delete_statement.returning(delivery_table.c.message_id)
+
+                deleted_rows = connection.execute(delete_statement).fetchall()
+
+                message_ids:'intlist' = []
+
+                for deleted_row in deleted_rows:
+                    message_ids.append(deleted_row.message_id)
 
                 # .. and drop the payloads of messages no subscriber needs anymore.
                 _ = self._drop_fully_delivered_payloads(connection, message_ids)
 
-                cleared_count += len(rows)
+                cleared_count += len(message_ids)
 
             # Let the other greenlets run between the batches.
-            self._yield_after_write()
+            self._yield_after_batch(monotonic() - batch_started)
 
         logger.info('clear_queue -> sub_key:%s, cleared_count:%d', sub_key, cleared_count)
 
@@ -515,6 +524,8 @@ class SQLAdminAPI(SQLBrowseAPI):
 
         while True:
 
+            batch_started = monotonic()
+
             with self.engine.begin() as connection:
 
                 # Take the next batch of rows still carrying the old name ..
@@ -540,7 +551,7 @@ class SQLAdminAPI(SQLBrowseAPI):
                 _ = connection.execute(update_statement)
 
             # Let the other greenlets run between the batches.
-            self._yield_after_write()
+            self._yield_after_batch(monotonic() - batch_started)
 
 # ################################################################################################################################
 
@@ -574,6 +585,8 @@ class SQLAdminAPI(SQLBrowseAPI):
 
         while True:
 
+            batch_started = monotonic()
+
             with self.engine.begin() as connection:
 
                 # Take the next batch of this topic's rows ..
@@ -598,7 +611,7 @@ class SQLAdminAPI(SQLBrowseAPI):
                 _ = connection.execute(delete_statement)
 
             # Let the other greenlets run between the batches.
-            self._yield_after_write()
+            self._yield_after_batch(monotonic() - batch_started)
 
 # ################################################################################################################################
 

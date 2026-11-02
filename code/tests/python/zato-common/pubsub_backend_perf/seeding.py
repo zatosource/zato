@@ -158,6 +158,19 @@ def _finish_load(cursor:'any_') -> 'None':
 
 # ################################################################################################################################
 
+def _write_checkpoint(connection:'any_') -> 'None':
+    """ On PostgreSQL, writes the seeded pages to disk in a checkpoint of its own, so that the checkpoint
+    of the seeding does not run over the scenario that follows it and slow its WAL flushes.
+    """
+    if not _is_postgresql():
+        return
+
+    cursor = connection.cursor()
+    _ = cursor.execute('checkpoint')
+    connection.commit()
+
+# ################################################################################################################################
+
 def delete_all_rows() -> 'None':
     """ Empties all the pub/sub tables through the native driver.
     """
@@ -281,6 +294,7 @@ def seed_backlog(
 
     _finish_load(cursor)
     connection.commit()
+    _write_checkpoint(connection)
     connection.close()
 
     out = monotonic() - start
@@ -369,6 +383,7 @@ def seed_aged_queue(
 
     _finish_load(cursor)
     connection.commit()
+    _write_checkpoint(connection)
     connection.close()
 
     out = monotonic() - start

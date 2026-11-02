@@ -28,6 +28,7 @@ from zato.common.pubsub.sql.generation import take_over
 from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.writes import drop_payloads, new_pending_ack, PubSubWriter
 from zato.common.typing_ import cast_
+from zato.common.util.memory_trim import start_memory_trimmer
 from zato.common.util.time_ import datetime_to_ms
 
 # ################################################################################################################################
@@ -120,6 +121,9 @@ class SQLBackendCore:
 
         # The engine of the pub/sub database, resolved on first access.
         self._engine:'Engine | None' = None
+
+        # The memory that a burst of publications and deliveries freed returns to the operating system.
+        start_memory_trimmer()
 
 # ################################################################################################################################
 
@@ -260,6 +264,17 @@ class SQLBackendCore:
         if now - self._last_yield >= _yield_interval_seconds:
             self._last_yield = now
             sleep(0)
+
+# ################################################################################################################################
+
+    def _yield_after_batch(self, batch_seconds:'float') -> 'None':
+        """ Lets other greenlets run after one batch of an administrative operation. SQLite has a single writer,
+        so on SQLite the pause lasts as long as the batch did and publications obtain at least half of the write time.
+        """
+        if self.engine.dialect.name == Type_SQLite:
+            sleep(batch_seconds)
+        else:
+            self._yield_after_write()
 
 # ################################################################################################################################
 

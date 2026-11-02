@@ -61,7 +61,8 @@ _sleep_slice_seconds = 1
 # transaction and the pause between them is when the concurrently running servers
 # get to write - without it, a deep sweep on SQLite would reacquire the file's
 # write lock the moment it released it, starving the live traffic for the sweep's
-# whole duration.
+# whole duration. On SQLite, the pause also lasts at least as long as the batch held the write lock,
+# so that a sweep of millions of rows takes at most half of the time of the single writer.
 _batch_pause_seconds = 0.025
 
 # How long the cleanup process pauses before it starts a sweep again after the database remained locked
@@ -198,6 +199,18 @@ class PubSubCleanup:
 
 # ################################################################################################################################
 
+    def _pause_after_batch(self, batch_seconds:'float') -> 'None':
+        """ Pauses between two deletion batches, which on SQLite lasts at least as long as the batch that ended.
+        """
+        pause_seconds = _batch_pause_seconds
+
+        if self.engine.dialect.name != Type_PostgreSQL:
+            pause_seconds = max(pause_seconds, batch_seconds)
+
+        time.sleep(pause_seconds)
+
+# ################################################################################################################################
+
     def _delete_message_batch(self, connection:'Connection', message_ids:'intlist') -> 'None':
         """ Deletes the given messages along with any delivery rows that still reference them.
         """
@@ -221,6 +234,8 @@ class PubSubCleanup:
         out = 0
 
         while True:
+
+            batch_started = time.monotonic()
 
             # Each batch is its own transaction so other work interleaves between the batches.
             with self.engine.begin() as connection:
@@ -249,7 +264,7 @@ class PubSubCleanup:
                 out += len(message_ids)
 
             # The pause between the batches is when the live traffic gets to write.
-            time.sleep(_batch_pause_seconds)
+            self._pause_after_batch(time.monotonic() - batch_started)
 
         if out:
             logger.info('Expiry sweep -> deleted:%d', out)
@@ -271,6 +286,8 @@ class PubSubCleanup:
         out = 0
 
         while True:
+
+            batch_started = time.monotonic()
 
             # Each batch is its own transaction so other work interleaves between the batches.
             with self.engine.begin() as connection:
@@ -294,7 +311,7 @@ class PubSubCleanup:
                 out += len(message_ids)
 
             # The pause between the batches is when the live traffic gets to write.
-            time.sleep(_batch_pause_seconds)
+            self._pause_after_batch(time.monotonic() - batch_started)
 
         if out:
             logger.info('Aged-trace sweep -> deleted:%d, max_days:%d', out, max_days)
@@ -358,6 +375,8 @@ class PubSubCleanup:
             # .. delete the over-cap traces in bounded batches.
             while True:
 
+                batch_started = time.monotonic()
+
                 with self.engine.begin() as connection:
 
                     condition = and_(
@@ -379,7 +398,7 @@ class PubSubCleanup:
                     out += len(message_ids)
 
                 # The pause between the batches is when the live traffic gets to write.
-                time.sleep(_batch_pause_seconds)
+                self._pause_after_batch(time.monotonic() - batch_started)
 
         if out:
             logger.info('Over-cap-trace sweep -> deleted:%d, max_messages:%d', out, max_messages)

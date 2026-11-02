@@ -365,7 +365,7 @@ class TestCommitQueue:
         for index, pending in enumerate(pending_events):
             assert pending.event_id == index + 1
 
-    def test_urgent_events_go_first_and_weights_cap_batches(self) -> 'None':
+    def test_urgent_events_go_first_in_batches_of_their_own(self) -> 'None':
         writer = _QueueWriter()
         writer.release_event = Event()
 
@@ -386,13 +386,68 @@ class TestCommitQueue:
 
         sleep(0)
 
-        # .. and once the first commit completes, the urgent events go first, followed by as many heavy ones
-        # .. as fit within the maximum weight, and each of the other heavy ones goes in a commit of its own.
+        # .. and once the first commit completes, the urgent events go first in a commit that holds no other events,
+        # .. and each heavy one goes in a commit of its own, because two of them exceed the maximum weight.
         writer.release_event.set()
         _ = joinall(greenlets, raise_error=True)
 
         assert writer.written_cids == ['cid-0', 'cid-4', 'cid-5', 'cid-1', 'cid-2', 'cid-3']
-        assert writer.batch_sizes == [1, 3, 1, 1]
+        assert writer.batch_sizes == [1, 2, 1, 1, 1]
+
+    def test_urgent_lane_does_not_wait_for_other_commits(self) -> 'None':
+        writer = _QueueWriter()
+        release_event = Event()
+        writer.release_event = release_event
+
+        queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events, max_urgent_in_flight=1)
+
+        # The first caller holds the only regular commit ..
+        first = spawn(queue.write, _new_pending(0), weight=_event_weight, is_urgent=False)
+        sleep(0)
+
+        # .. another event that is not urgent waits for it ..
+        waiting = spawn(queue.write, _new_pending(1), weight=_event_weight, is_urgent=False)
+        sleep(0)
+
+        # .. while an urgent event is committed at once in the reserved lane ..
+        writer.release_event = None
+        queue.write(_new_pending(2), weight=_event_weight, is_urgent=True)
+
+        assert writer.written_cids == ['cid-2']
+
+        # .. and once the first commit completes, the waiting event follows it in the regular lane.
+        release_event.set()
+        _ = joinall([first, waiting], raise_error=True)
+
+        assert writer.written_cids == ['cid-2', 'cid-0', 'cid-1']
+        assert writer.batch_sizes == [1, 1, 1]
+        assert queue._in_flight == 0
+        assert queue._urgent_in_flight == 0
+
+    def test_lanes_take_their_own_events_first(self) -> 'None':
+        writer = _QueueWriter()
+
+        # With a reserved lane, the regular lane takes the event that is not urgent ..
+        queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events, max_urgent_in_flight=1)
+
+        urgent = CommitTicket(_new_pending(0), _event_weight, True)
+        other = CommitTicket(_new_pending(1), _event_weight, False)
+        queue._waiting.extend([urgent, other])
+
+        assert queue._take_batch(False) == [other]
+
+        # .. and the reserved lane takes the urgent one ..
+        queue._waiting.append(other)
+
+        assert queue._take_batch(True) == [urgent]
+
+        # .. while without a reserved lane, the regular lane takes the urgent event first and the other one next.
+        queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events)
+
+        queue._waiting.extend([other, urgent])
+
+        assert queue._take_batch(False) == [urgent]
+        assert queue._take_batch(False) == [other]
 
     def test_abandoned_waiter_is_not_written(self) -> 'None':
         writer = _QueueWriter()
@@ -444,11 +499,11 @@ class TestCommitQueue:
         second = CommitTicket(_new_pending(1), _event_weight, False)
 
         # Two callers wait while a commit is in progress ..
-        queue._is_committing = True
+        queue._in_flight = 1
         queue._waiting.extend([first, second])
 
         # .. the commit completes and the first of them is to run the next one ..
-        queue._hand_off()
+        queue._hand_off(False)
 
         assert first.batch == [first, second]
         assert first.ready.is_set()
@@ -460,7 +515,7 @@ class TestCommitQueue:
         assert second.batch == [second]
         assert second.ready.is_set()
         assert queue._waiting == []
-        assert queue._is_committing
+        assert queue._in_flight == 1
 
 # ################################################################################################################################
 # ################################################################################################################################

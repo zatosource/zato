@@ -51,6 +51,9 @@ class CommitTicket:
         # Whether the caller has begun the commit of its batch
         self.has_started = False
 
+        # Whether the batch of the ticket is committed in the lane reserved for urgent items
+        self.is_urgent_lane = False
+
         # Set when the commit of the ticket completes or when its caller is to run the next commit
         self.ready = Event()
 

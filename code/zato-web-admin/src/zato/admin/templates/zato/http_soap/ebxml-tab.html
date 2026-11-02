@@ -1,0 +1,45 @@
+{% comment %} The ebXML tab of the create form of a SOAP channel or a SOAP outgoing connection, included with panel_id {% endcomment %}
+<div class="dashboard-tab-panel alerts-tab-panel" id="{{ panel_id }}" role="tabpanel" hidden>
+    <div class="form-data alerts-tab-body">
+
+        <div class="alerts-tab-sections">
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">B2B</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-agreements">Agreements</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-agreements"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-agreements"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-tab-section">
+                <div class="alerts-tab-section-title">Security</div>
+                <div class="decision-lines">
+                    <div class="decision-line alerts-tab-line alerts-tab-line-popover">
+                        <label class="decision-line-label" for="{{ panel_id }}-edit-signing">Signing certificate</label>
+                        <span class="decision-line-slot"><a href="javascript:void(0)" class="summary-link" id="{{ panel_id }}-edit-signing"><span class="zato-link-face summary-link-text" id="{{ panel_id }}-summary-signing"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="alerts-tab-hidden-fields" hidden>
+
+            <select id="id_ebxml_agreement">
+                <option value="all">All ebXML agreements</option>
+                <option value="Pinecrest_Telecom_Harborlight_B2BGateway_Orders_R1.5.0_cpa3" selected>Pinecrest_Telecom_Harborlight_B2BGateway_Orders_R1.5.0_cpa3</option>
+                <option value="Pinecrest_Telecom_Harborlight_B2BGateway_Complaints_R1.5.0_cpa2">Pinecrest_Telecom_Harborlight_B2BGateway_Complaints_R1.5.0_cpa2</option>
+                <option value="Pinecrest_Telecom_Copper_B2BGateway_Complaints_R1.5.0_cpa1">Pinecrest_Telecom_Copper_B2BGateway_Complaints_R1.5.0_cpa1</option>
+            </select>
+
+            <select id="id_ebxml_signing_certificate">
+                <option value="pinecrest-signing-2026" selected>pinecrest-signing-2026</option>
+                <option value="pinecrest-signing-2025">pinecrest-signing-2025</option>
+            </select>
+        </div>
+
+    </div>
+</div>

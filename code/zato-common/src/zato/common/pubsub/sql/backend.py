@@ -11,6 +11,7 @@ import json
 from dataclasses import dataclass
 from datetime import timedelta
 from logging import getLogger
+from time import monotonic
 from zlib import crc32
 
 # SQLAlchemy
@@ -296,6 +297,8 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         while True:
 
+            batch_started = monotonic()
+
             with self.engine.begin() as connection:
 
                 query = select(delivery_table.c.id, delivery_table.c.message_id)
@@ -326,7 +329,7 @@ class SQLPubSubBackend(SQLAdminAPI):
                 cleaned_up_count += len(rows)
 
             # Let the other greenlets run between the batches.
-            self._yield_after_write()
+            self._yield_after_batch(monotonic() - batch_started)
 
         logger.info('Unsubscribed -> sub_key:%s, topic_name:%s, cleaned_up_count:%d',
             sub_key, topic_name, cleaned_up_count)

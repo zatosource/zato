@@ -105,6 +105,9 @@
     {{ delivery_tab_config|json_script:"delivery-tab-config" }}
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/tabs.js"></script>
+    {% if connection == 'channel' and transport == 'soap' %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/ebxml-tab.js"></script>
+    {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/row.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline.js"></script>
@@ -662,6 +665,9 @@
                     {% if has_channel_tabs %}
                     <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        {% if transport == 'soap' %}
+                        <button type="button" class="dashboard-tab" data-tab="ebxml" role="tab" aria-selected="false">ebXML</button>
+                        {% endif %}
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         {% if has_delivery_tab %}
                         {% include "zato/include/delivery-tab-button.html" %}
@@ -929,6 +935,10 @@
 
                     {% if has_channel_tabs %}
                     </div>
+
+                    {% if transport == 'soap' %}
+                    {% include "zato/http_soap/ebxml-tab.html" with panel_id="http-soap-create-tab-panel-ebxml" %}
+                    {% endif %}
 
                     {% include "zato/include/alerts-tab.html" with panel_id="http-soap-create-tab-panel-alerts" alerts_tab=create_alerts_tab %}
 

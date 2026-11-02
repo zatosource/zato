@@ -24,7 +24,7 @@ from zato.common.db_env.errors import is_conflict, is_value_error
 from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.pubsub.sql.config import get_batch_size, get_commit_max_messages, get_commits_in_flight, \
-    get_pubsub_engine
+    get_pubsub_engine, get_urgent_commits_in_flight
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
 
 # ################################################################################################################################
@@ -311,19 +311,21 @@ def _get_message_ids(connection:'Connection', msg_ids:'strlist') -> 'anydict':
 class PubSubWriter:
     """ Writes the publications and acknowledgements of concurrent callers in shared transactions,
     in the thread pool of the gevent hub on SQLite. Each caller waits until the transaction with its item is committed.
-    Publications go into the next transaction ahead of acknowledgements, and the size of a transaction
-    is limited by the number of messages it refers to, so that a publisher waits for at most one transaction
-    of a bounded size, however many acknowledgements of deep queues are waiting.
+    Publications are written in transactions of their own, ahead of acknowledgements, and the size of a transaction
+    is limited by the number of messages it refers to. On PostgreSQL, publications also have a commit reserved for them,
+    so that a publisher does not wait for the acknowledgements of deep queues being committed.
     """
 
     def __init__(self) -> 'None':
         commit_max_messages = get_commit_max_messages()
         commits_in_flight = get_commits_in_flight()
+        urgent_commits_in_flight = get_urgent_commits_in_flight()
 
         self._commit_queue = CommitQueue(
             write_batch=self._write_batch,
             max_weight=commit_max_messages,
             max_in_flight=commits_in_flight,
+            max_urgent_in_flight=urgent_commits_in_flight,
         )
 
         self._outage = OutageTracker('Pub/sub commit writer')

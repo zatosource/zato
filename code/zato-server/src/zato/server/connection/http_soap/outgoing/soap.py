@@ -314,16 +314,16 @@ class SOAPMixin:
 
 # ################################################################################################################################
 
-    def invoke_ebxml(self, cid:'str', info:'any_', parts:'any_', sign:'bool'=False, encrypt:'bool'=False) -> 'any_':
+    def invoke_ebxml(self, cid:'str', info:'any_', parts:'any_', sign:'bool'=False) -> 'any_':
         """ Sends an ebXML Message Service message over this connection - payloads travel
-        as MIME parts, each optionally signed and encrypted for the recipient. Returns the
-        reply's EbXMLInfo, whose attachments are the reply's own payload parts.
+        as MIME parts, optionally signed together with the envelope. Returns the synchronous
+        acknowledgment's EbXMLInfo, whose attachments are the reply's own payload parts.
         """
         self._enforce_is_active()
 
         logger.info('ebXML out -> cid=%s; %s; name:%s', cid, self.address, self.config['name'])
 
-        return self.soap_client.invoke_ebxml(info, parts, sign=sign, encrypt=encrypt, cid=cid)
+        return self.soap_client.invoke_ebxml(info, parts, sign=sign, cid=cid)
 
 # ################################################################################################################################
 # ################################################################################################################################

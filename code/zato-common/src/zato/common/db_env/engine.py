@@ -15,7 +15,7 @@ import os
 
 # gevent
 from gevent import get_hub
-from gevent.monkey import is_module_patched
+from gevent.monkey import get_original, is_module_patched
 
 # SQLAlchemy
 from sqlalchemy import create_engine, text
@@ -38,7 +38,7 @@ if 0:
     from sqlalchemy import MetaData
     from sqlalchemy.engine import Engine
     from zato.common.db_env.common import EnvDBConfig
-    from zato.common.typing_ import any_, anydict, callable_, stranydict, strtuple
+    from zato.common.typing_ import any_, anydict, anytuple, callable_, stranydict, strtuple
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
@@ -71,6 +71,14 @@ install_pg8000_copy()
 
 # SQLite file engines are cached per path and pool mode
 _sqlite_file_engine_cache:'anydict' = {}
+
+# The thread locks under which the writes of this process to one SQLite file run one at a time, by the URL of the file.
+# The busy timeout of SQLite does not queue its waiters, and with a hundred threads writing at once
+# a single thread can wait past the timeout.
+_sqlite_write_locks:'anydict' = {}
+
+# The lock of the threads of the operating system, which the threads of the gevent pool require.
+_allocate_thread_lock = get_original('_thread', 'allocate_lock')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -296,13 +304,28 @@ def needs_thread_pool(engine:'Engine') -> 'bool':
 
 # ################################################################################################################################
 
+def _call_under_lock(lock:'any_', func:'callable_', args:'anytuple') -> 'any_':
+    with lock:
+        out = func(*args)
+    return out
+
+# ################################################################################################################################
+
 def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
     """ Runs one blocking database call, in the thread pool of the gevent hub if the engine needs it.
     """
     if needs_thread_pool(engine):
+
+        url = str(engine.url)
+
+        if url not in _sqlite_write_locks:
+            _sqlite_write_locks[url] = _allocate_thread_lock()
+
+        write_lock = _sqlite_write_locks[url]
+
         hub = get_hub()
         threadpool = hub.threadpool
-        out = threadpool.apply(func, args)
+        out = threadpool.apply(_call_under_lock, (write_lock, func, args))
     else:
         out = func(*args)
 

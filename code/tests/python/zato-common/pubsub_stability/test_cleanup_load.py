@@ -54,10 +54,10 @@ _kill_after_ratio = 0.1
 _restart_delay_seconds = 5
 
 # How long another transaction holds locks during a sweep, in seconds. On PostgreSQL these are row locks on traces.
-# On SQLite it is the write lock of the database, which every writer waits for up to the busy timeout of 5 seconds,
-# so the hold is shorter than that.
+# On SQLite it is the write lock of the database, which the publications of the traffic wait for as well,
+# so the hold is shorter than the limit of the publish p99 of one second.
 _postgresql_lock_seconds = 60
-_sqlite_lock_seconds = 2
+_sqlite_lock_seconds = 0.5
 
 # How many traces the other transaction locks on PostgreSQL.
 _locked_trace_count = 10_000
@@ -129,8 +129,14 @@ class _CleanupChaos:
         self.is_locked = True
         self.log.append(f'Locks held with {count} traces left')
 
-        threadpool = get_hub().threadpool
-        self.lock_greenlets.append(spawn(threadpool.apply, _hold_locks, (self.is_postgresql,)))
+        # The SQLite driver blocks its thread, while the sockets of the PostgreSQL driver belong to the hub of this thread.
+        if self.is_postgresql:
+            greenlet = spawn(_hold_locks, self.is_postgresql)
+        else:
+            threadpool = get_hub().threadpool
+            greenlet = spawn(threadpool.apply, _hold_locks, (self.is_postgresql,))
+
+        self.lock_greenlets.append(greenlet)
 
     def release_locks(self) -> 'None':
         for greenlet in self.lock_greenlets:

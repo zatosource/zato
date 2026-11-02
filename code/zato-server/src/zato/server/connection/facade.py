@@ -405,8 +405,8 @@ class SOAPInvoker:
 
 # ################################################################################################################################
 
-    def invoke_ebxml(self, info:'any_', parts:'any_', sign:'bool'=False, encrypt:'bool'=False) -> 'any_':
-        return self.conn.invoke_ebxml(self.cid, info, parts, sign=sign, encrypt=encrypt)
+    def invoke_ebxml(self, info:'any_', parts:'any_', sign:'bool'=False) -> 'any_':
+        return self.conn.invoke_ebxml(self.cid, info, parts, sign=sign)
 
 # ################################################################################################################################
 
