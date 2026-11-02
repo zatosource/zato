@@ -12,14 +12,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import gc
 import os
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
 from shutil import disk_usage
 from tempfile import gettempdir
 from time import monotonic
+from types import FrameType
 
 # gevent
 from gevent import get_hub, sleep, spawn
+from gevent.socket import socket as GeventSocket
 
 # psutil
 import psutil
@@ -74,6 +77,14 @@ _pg_tables_query = text("""
     select relname, n_live_tup, n_dead_tup, autovacuum_count from pg_stat_user_tables
     where relname in ('pubsub_message', 'pubsub_delivery')
 """)
+
+# The environment variable that turns on the census of live objects, how many minutes pass between two censuses,
+# how many object types with the largest growth each one reports, and for how many open sockets without a peer
+# it reports what holds them.
+_env_object_census = 'Zato_Test_Object_Census'
+_object_census_minutes = 5
+_object_census_types = 15
+_object_census_sockets = 5
 
 _pg_wal_query = text('select coalesce(sum(size), 0) from pg_ls_waldir()')
 _pg_checkpoints_query = text('select checkpoints_timed + checkpoints_req from pg_stat_bgwriter')
@@ -198,6 +209,10 @@ class Monitor:
 
         # The longest flush in the current minute of the block that the probe of the drive writes.
         self._max_drive_flush = 0.0
+
+        # Whether the census of live objects runs, and the number of live objects of each type at the previous one.
+        self._takes_object_census = os.environ.get(_env_object_census, '') == '1'
+        self._object_counts:'Counter[str]' = Counter()
         self._drive_probe_path = os.path.join(gettempdir(), f'zato-drive-probe-{os.getpid()}')
         self._drive_probe_fd = -1
         self._drive_probe_greenlet:'anylist' = []
@@ -375,7 +390,72 @@ class Monitor:
         self.reports.append(report)
         self._write(report)
 
+        if self._takes_object_census and report.index % _object_census_minutes == 0:
+            self._write_object_census()
+
         return report
+
+# ################################################################################################################################
+
+    def _describe_holders(self, item:'object', census_list:'anylist') -> 'str':
+        """ Returns the types of the objects that refer to an object, and for each dictionary among them,
+        the types of the objects that refer to that dictionary, apart from the census itself.
+        """
+        out:'strlist' = []
+
+        for holder in gc.get_referrers(item):
+
+            # The list of the census and the frame that walks it refer to every socket in it.
+            if holder is census_list or isinstance(holder, FrameType):
+                continue
+
+            description = type(holder).__qualname__
+
+            if isinstance(holder, dict):
+                owners = [type(owner).__qualname__ for owner in gc.get_referrers(holder)]
+                description += f' of {owners}'
+
+            out.append(description)
+
+        return ', '.join(out)
+
+# ################################################################################################################################
+
+    def _write_object_census(self) -> 'None':
+        """ Writes the object types whose number of live instances grew the most since the previous census,
+        and what holds each open socket that has no peer.
+        """
+        counts:'Counter[str]' = Counter()
+        unconnected:'anylist' = []
+
+        for item in gc.get_objects():
+            item_type = type(item)
+            counts[f'{item_type.__module__}.{item_type.__qualname__}'] += 1
+
+            # A socket with a descriptor and no peer is either a listening one or one whose connection has ended.
+            if isinstance(item, GeventSocket) and item.fileno() != -1:
+                try:
+                    _ = item.getpeername()
+                except OSError:
+                    unconnected.append(item)
+
+        growth = counts.copy()
+        growth.subtract(self._object_counts)
+        self._object_counts = counts
+
+        types = [f'{name} {counts[name]} (+{delta})' for name, delta in growth.most_common(_object_census_types)]
+        lines = [f'{self.label} | objects | {", ".join(types)}']
+        lines.append(f'{self.label} | sockets without a peer | {len(unconnected)}')
+
+        for sock in unconnected[:_object_census_sockets]:
+            lines.append(f'{self.label} | socket {sock!r} | held by {self._describe_holders(sock, unconnected)}')
+
+        with open(self.report_path, 'a') as report_file:
+            for line in lines:
+                _ = report_file.write(line + '\n')
+
+        for line in lines:
+            print(line, flush=True)
 
 # ################################################################################################################################
 

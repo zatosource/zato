@@ -56,6 +56,54 @@ form.buildActiveField = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Each service picked is given a subscription of its own.
+form.buildServicesField = function() {
+
+    var field = document.createElement('div');
+    field.className = 'micro-form-field ' + config.idPrefix + 'field-services';
+
+    var label = document.createElement('label');
+    label.className = 'micro-form-label';
+    label.textContent = labels.services;
+
+    field.appendChild(label);
+
+    var items = [];
+
+    for(var serviceIdx = 0; serviceIdx < form.data.services.length; serviceIdx++) {
+        var serviceName = form.data.services[serviceIdx];
+        items.push({value: serviceName, label: serviceName});
+    }
+
+    var onChange = function(values) {
+        form.state.services = values;
+    };
+
+    form.servicesSelect = $.fn.zato.dashboard_kit.select.create({
+        host: field,
+        trigger_cls: 'micro-form-select ' + config.servicesTriggerClass,
+        label: '',
+        groups: [{group: '', items: items}],
+        multi: true,
+        values: form.state.services.slice(),
+        empty_label: '',
+        many_label: labels.manyServices,
+        on_change: onChange
+    });
+
+    var out = field;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+form.servicesTrigger = function() {
+    var out = form.elements.subscriber.querySelector('.' + config.servicesTriggerClass);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 form.renderSubscriber = function() {
 
     var row = form.elements.subscriber;
@@ -81,6 +129,10 @@ form.widenSelects = function() {
 
     for(var widenIdx = 0; widenIdx < selects.length; widenIdx++) {
         selects[widenIdx].style.width = (naturalWidths[widenIdx] + config.selectExtraWidth) + 'px';
+    }
+
+    if(form.state.kind === config.kindService) {
+        form.servicesSelect.fit_width();
     }
 };
 
@@ -109,8 +161,6 @@ form.onSubscriberChange = function(event) {
     if(stateKey === 'kind' || stateKey === 'client') {
         form.renderTopics();
     }
-
-    form.syncFooter();
 };
 
 // ////////////////////////////////////////////////////////////////////////

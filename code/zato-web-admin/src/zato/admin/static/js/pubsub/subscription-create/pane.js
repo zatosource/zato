@@ -1,4 +1,4 @@
-// Pub/sub - the form creating a subscription, the pane of topics, the footer and the clicks.
+// Pub/sub - the form creating a subscription, the pane of topics and the clicks.
 
 (function($) {
 
@@ -205,31 +205,20 @@ form.syncPane = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-form.syncFooter = function() {
-
-    var selectedCount = form.state.topics.length;
-
-    form.elements.total.textContent = selectedCount === 0 ? labels.noneSelected : form.countLabel(selectedCount);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 form.syncAll = function() {
     form.syncCards();
     form.syncPane();
-    form.syncFooter();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 // The cards follow what the subscriber sees, and the pane keeps its group while the group is still there.
-form.renderTopics = function() {
+form.renderCards = function() {
 
     var view = form.view;
     var groups = form.groups();
     var isFocusKept = false;
 
-    form.keepVisibleTopics();
     form.buildCards();
 
     for(var groupIdx = 0; groupIdx < groups.length; groupIdx++) {

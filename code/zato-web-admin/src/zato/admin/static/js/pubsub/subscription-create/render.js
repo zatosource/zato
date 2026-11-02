@@ -49,19 +49,6 @@ form.buildSelectField = function(stateKey, labelText, options) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-form.namesToOptions = function(nameList) {
-
-    var out = [{value: '', label: ''}];
-
-    for(var nameIdx = 0; nameIdx < nameList.length; nameIdx++) {
-        out.push({value: nameList[nameIdx], label: nameList[nameIdx]});
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 form.itemsToOptions = function(itemList) {
 
     var out = [{value: '', label: ''}];
@@ -85,7 +72,7 @@ form.buildSubscriberFields = function() {
     fields.className = 'micro-form-row ' + config.idPrefix + 'fields';
 
     if(state.kind === config.kindService) {
-        fields.appendChild(form.buildSelectField('service', labels.service, form.namesToOptions(form.data.services)));
+        fields.appendChild(form.buildServicesField());
     }
     else {
 
@@ -286,6 +273,7 @@ form.syncCards = function() {
     var view = form.view;
     var terms = view.terms;
     var allCards = form.elements.cards.querySelectorAll('.mcp-masking-card');
+    var isFocusShown = !view.isResults && allCards.length > 1;
     var foundCount = 0;
     var foundGroupCount = 0;
 
@@ -304,7 +292,7 @@ form.syncCards = function() {
         };
 
         card.classList.toggle('mcp-masking-card-on', isPicked);
-        card.classList.toggle('mcp-masking-card-focused', !view.isResults && groupName === view.focusGroup);
+        card.classList.toggle('mcp-masking-card-focused', isFocusShown && groupName === view.focusGroup);
         card.classList.toggle('mcp-masking-card-unmatched', terms.length > 0 && matched.length === 0);
         card.querySelector('.mcp-masking-card-count').textContent = form.partLabel(selectedCount, topics.length);
         form.setSwitch(card, isPicked);

@@ -1,7 +1,7 @@
 // Pub/sub - the form creating a subscription, opened in the data table's create dialog.
 // This file holds the data, the state and the helpers, render.js the subscriber's fields and the cards,
-// subscriber.js the subscriber row, pane.js the pane of topics, the footer and the clicks,
-// and dialog.js the data from the server, the dialog and the submission.
+// subscriber.js the subscriber row, pane.js the pane of topics and the clicks,
+// layouts.js the toggles of a few topics, and dialog.js the data from the server, the dialog and the submission.
 
 (function($) {
 
@@ -19,13 +19,34 @@ form.config = {
 
     dataURL: '/zato/pubsub/subscription/get-create-form-data/',
 
-    // The data table's dialog the form opens in, and its width in pixels
+    // The data table's dialog the form opens in, and its width in pixels for each layout of the topics
     dialogId: '#create-div',
-    dialogWidth: 1240,
+    formId: 'create-form',
+    dialogWidths: {
+        cards: 1240,
+        toggles: 900
+    },
+
+    // The space the dialog keeps from the window's top and bottom edges, in pixels
+    windowMargin: 16,
+
+    // The custom property that sets the height of the cards and the pane, and the most a list of toggles takes
+    heightProperty: '--mcp-masking-layout-height',
+
+    layoutCards: 'cards',
+    layoutToggles: 'toggles',
+
+    // Up to this many topics, each is one toggle and there are no cards
+    toggleTopicsMax: 3,
+
+    // The permissions page, listing those of the client whose name follows
+    permissionsURL: '/zato/pubsub/permission/?query=',
 
     // The data table reads a checkbox of a new row by the id derived from its name
     activeInputId: 'id_is_delivery_active',
     activeInputName: 'is_delivery_active',
+
+    servicesTriggerClass: 'pubsub-subscription-create-services',
 
     // How many topics a card shows
     previewCount: 3,
@@ -49,6 +70,8 @@ form.config = {
         subscriber: 'Subscriber',
         active: 'Active',
         service: 'Service',
+        services: 'Services',
+        manyServices: 'services',
         client: 'API client',
         delivery: 'Delivery',
         pull: 'Pull',
@@ -61,7 +84,9 @@ form.config = {
         noMatches: 'No matching topics',
         noTopics: 'No topics',
         noClient: 'No API client selected',
-        noneSelected: 'No topics selected',
+        noMatchingTopics: 'No matching topics for ',
+        addPermissions: 'Add permissions',
+        topicsField: 'Topics',
         topic: ' topic',
         topics: ' topics',
         of: ' of ',
@@ -79,14 +104,16 @@ form.config = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The topics of each client and the name of each endpoint are keyed by the ID a select gives as its value.
+// The names and topics of each client and the name of each endpoint are keyed by the ID a select gives as its value.
 form.takeData = function(data) {
 
+    data.clientNames = {};
     data.clientTopics = {};
     data.endpointNames = {};
 
     for(var clientIdx = 0; clientIdx < data.clients.length; clientIdx++) {
         var client = data.clients[clientIdx];
+        data.clientNames[client.id] = client.name;
         data.clientTopics[client.id] = client.topics;
     }
 
@@ -105,7 +132,7 @@ form.newState = function() {
 
     var out = {
         kind: form.config.kindService,
-        service: '',
+        services: [],
         client: '',
         delivery: form.config.deliveryPull,
         endpoint: '',
@@ -137,6 +164,13 @@ form.newView = function() {
 
 form.state = form.newState();
 form.view = form.newView();
+
+// The services still to be given a subscription of their own, one request at a time
+form.pendingServices = [];
+
+// The multi-select of services, built anew with the subscriber row
+form.servicesSelect = null;
+form.layout = form.config.layoutCards;
 form.elements = {};
 
 // ////////////////////////////////////////////////////////////////////////

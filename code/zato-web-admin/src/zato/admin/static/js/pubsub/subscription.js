@@ -398,8 +398,13 @@ $(document).ready(function() {
     var originalOnSubmitComplete = $.fn.zato.data_table.on_submit_complete;
     $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
-        // Call the original on_submit_complete function
-        return originalOnSubmitComplete(data, status, action);
+        // Call the original on_submit_complete function ..
+        originalOnSubmitComplete(data, status, action);
+
+        // .. and let the form creating subscriptions go on to its next service.
+        if(action === 'create') {
+            $.fn.zato.pubsub.subscription_create.onSubmitComplete(status);
+        }
     };
 })
 

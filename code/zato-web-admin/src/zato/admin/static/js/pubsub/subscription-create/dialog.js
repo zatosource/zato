@@ -15,10 +15,13 @@ form.init = function() {
     var elements = form.elements;
     var prefix = config.idPrefix;
 
+    elements.root = document.getElementById(config.formId);
     elements.subscriber = document.getElementById(prefix + 'subscriber');
     elements.cards = document.getElementById(prefix + 'cards');
     elements.pane = document.getElementById(prefix + 'pane');
-    elements.total = document.getElementById(prefix + 'total');
+    elements.topics = document.getElementById(prefix + 'topics');
+    elements.togglesHeader = document.getElementById(prefix + 'toggles-header');
+    elements.togglesHeader.textContent = labels.topicsField;
     elements.inputs = document.getElementById(prefix + 'inputs');
     elements.submit = document.getElementById(prefix + 'submit');
     elements.cards.appendChild(form.buildSearch());
@@ -26,6 +29,7 @@ form.init = function() {
     elements.subscriber.addEventListener('change', form.onSubscriberChange);
     elements.cards.addEventListener('click', form.onCardClick);
     elements.pane.addEventListener('click', form.onPaneClick);
+    elements.topics.addEventListener('click', form.onTopicsClick);
     elements.submit.addEventListener('click', form.submit);
 };
 
@@ -69,20 +73,57 @@ form.show = function() {
 
     form.elements.searchInput.value = '';
     form.fitSearch();
-    $.fn.zato.remove_css_attention(form.elements.total);
+    form.clearAttention();
+    form.chooseLayout();
 
     form.renderSubscriber();
     form.renderTopics();
 
-    $(config.dialogId).dialog('option', 'width', config.dialogWidth);
+    $(config.dialogId).dialog('option', 'width', config.dialogWidths[form.layout]);
     $.fn.zato.data_table._create_edit('create', labels.title, null);
     form.widenSelects();
+    form.fitHeight();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 form.open = function() {
     form.load(form.show);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The dialog can be measured only once open - the topics give up whatever height the window lacks,
+// and the dialog is centered again at its new height.
+form.fitHeight = function() {
+
+    var dialog = $(config.dialogId);
+    var root = form.elements.root;
+    var area = form.layout === config.layoutCards ? form.elements.cards.parentNode : form.elements.topics;
+
+    root.style.removeProperty(config.heightProperty);
+
+    var dialogHeight = dialog.dialog('widget').outerHeight();
+    var excess = dialogHeight + (2 * config.windowMargin) - window.innerHeight;
+
+    if(excess > 0) {
+        root.style.setProperty(config.heightProperty, (area.offsetHeight - excess) + 'px');
+    }
+
+    dialog.dialog('option', 'position', {my: 'center', at: 'center', of: window});
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+form.clearAttention = function() {
+
+    var elements = form.elements;
+    var selects = elements.subscriber.querySelectorAll('select');
+
+    $.fn.zato.remove_css_attention(selects);
+    $.fn.zato.remove_css_attention(elements.subscriber.querySelectorAll('.' + config.servicesTriggerClass));
+    $.fn.zato.remove_css_attention(elements.cards);
+    $.fn.zato.remove_css_attention(elements.topics);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -101,8 +142,8 @@ form.missingPart = function() {
     var out = null;
 
     if(state.kind === config.kindService) {
-        if(state.service === '') {
-            out = form.selectOf('service');
+        if(state.services.length === 0) {
+            out = form.servicesTrigger();
         }
     }
     else if(state.client === '') {
@@ -116,7 +157,7 @@ form.missingPart = function() {
 
     if(out === null) {
         if(state.topics.length === 0) {
-            out = form.elements.total;
+            out = form.topicsArea();
         }
     }
 
@@ -138,7 +179,7 @@ form.addInput = function(name, value) {
 // ////////////////////////////////////////////////////////////////////////
 
 // The fields the create view reads - a service receives its messages by push,
-// and a client is the security definition it authenticates with.
+// one subscription for each service, and a client is the security definition it authenticates with.
 form.writeInputs = function() {
 
     var state = form.state;
@@ -159,7 +200,7 @@ form.writeInputs = function() {
     if(state.kind === config.kindService) {
         form.addInput('delivery_type', config.deliveryPush);
         form.addInput('push_type', config.pushTypeService);
-        form.addInput('push_service_name', state.service);
+        form.addInput('push_service_name', form.pendingServices.shift());
         return;
     }
 
@@ -177,19 +218,50 @@ form.writeInputs = function() {
 
 form.submit = function() {
 
-    var selects = form.elements.subscriber.querySelectorAll('select');
     var missing = form.missingPart();
 
-    $.fn.zato.remove_css_attention(selects);
-    $.fn.zato.remove_css_attention(form.elements.total);
+    form.clearAttention();
 
     if(missing !== null) {
         $.fn.zato.draw_attention_to(missing);
         return;
     }
 
+    if(form.state.kind === config.kindService) {
+        form.pendingServices = form.state.services.slice();
+    }
+    else {
+        form.pendingServices = [];
+    }
+
+    form.submitNext();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The data table resets the form after each request, the switch included, so it is set again from the state.
+form.submitNext = function() {
+
+    var activeInput = document.getElementById(config.activeInputId);
+    activeInput.checked = form.state.isActive;
+
     form.writeInputs();
     $.fn.zato.data_table.on_submit('create');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A failed request leaves the services after it without a subscription.
+form.onSubmitComplete = function(status) {
+
+    if(status !== 'success') {
+        form.pendingServices = [];
+        return;
+    }
+
+    if(form.pendingServices.length > 0) {
+        form.submitNext();
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////

@@ -11,6 +11,8 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/buttons.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/micro-forms.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking.css">
     <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-masking-popover.css">
     <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard-search-box.css">
@@ -302,6 +304,8 @@
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select-placement.js"></script>
 
     {% comment %} Security Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/common-security.js"></script>
@@ -318,6 +322,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/render.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/subscriber.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/pane.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/layouts.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription-create/dialog.js"></script>
 
 
@@ -420,9 +425,7 @@
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.pubsub.subscription_create.open()">Create a new pub/sub subscription</a> |
             <a href="javascript:$.fn.zato.pubsub.import_demo_config()" class="common">Import demo config</a>
-        </div>
-
-            <table class="zato-table" id="data-table">
+        </div>            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
 
@@ -523,10 +526,15 @@
                         <div class="mcp-masking-pane" id="pubsub-subscription-create-pane"></div>
                     </div>
 
-                    <div class="mcp-masking-total" id="pubsub-subscription-create-total"></div>
+                    <div class="micro-form-field pubsub-subscription-create-topics">
+                        <label class="micro-form-label" id="pubsub-subscription-create-toggles-header"></label>
+                        <div class="mcp-masking-pane pubsub-subscription-create-toggles-box" id="pubsub-subscription-create-topics"></div>
+                    </div>
 
-                    <input type="checkbox" id="id_is_pub_active" name="is_pub_active" checked hidden>
-                    <div id="pubsub-subscription-create-inputs"></div>
+                    <div hidden>
+                        <input type="checkbox" id="id_is_pub_active" name="is_pub_active" checked>
+                        <div id="pubsub-subscription-create-inputs"></div>
+                    </div>
 
                     <div class="micro-form-buttons">
                         <button type="button" class="secondary-button" onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>

@@ -11,11 +11,20 @@
     --pubsub-subscription-create-font-family: "Segoe UI", "DejaVu Sans", "Liberation Sans", "Helvetica Neue", Arial, sans-serif;
     --pubsub-subscription-create-font-size: 12px;
     --pubsub-subscription-create-row-spacing: 12px;
-
     /* The cards and the pane are never taller than this, and never taller than the window
        leaves room for once the dialog's title bar, the subscriber row and the buttons are in */
     --pubsub-subscription-create-layout-height: 540px;
     --pubsub-subscription-create-chrome-height: 200px;
+
+    /* The box of toggles fits one row of them exactly - a toggle's line, its padding and border,
+       and the box's own padding and border */
+    --pubsub-subscription-create-toggle-gap: 8px;
+    --pubsub-subscription-create-toggle-line-height: 16px;
+    --pubsub-subscription-create-toggle-padding: 6px;
+    --pubsub-subscription-create-toggles-padding: 10px;
+    --pubsub-subscription-create-toggles-height: calc(var(--pubsub-subscription-create-toggle-line-height)
+        + 2 * var(--pubsub-subscription-create-toggle-padding) + 2px
+        + 2 * var(--pubsub-subscription-create-toggles-padding) + 2px);
 }
 
 /* The dialog has no popup to declare the popup palette the masking popover reads */
@@ -56,7 +65,8 @@
 
 /* Each select is as wide as its longest option, and narrower only when the row runs out of room */
 .pubsub-subscription-create-fields,
-.pubsub-subscription-create-subscriber .micro-form-field {
+.pubsub-subscription-create-subscriber .micro-form-field,
+.pubsub-subscription-create-topics {
     flex: 0 1 auto;
     min-width: 0;
     margin-bottom: 0;
@@ -67,9 +77,68 @@
     max-width: 100%;
 }
 
+/* The multi-select of services wears the face of the selects beside it */
+.pubsub-subscription-create-services {
+    align-self: flex-start;
+    justify-content: space-between;
+    background: #ffffff;
+}
+
+.pubsub-subscription-create-services.dashboard-select-trigger-open {
+    border-color: var(--zato-ui-accent);
+}
+
+.pubsub-subscription-create-services .dashboard-select-value {
+    min-width: 0;
+    padding: 0;
+    font-size: inherit;
+    color: inherit;
+    background: none;
+}
+
 /* The switch under its label stands level with the selects under theirs */
 .pubsub-subscription-create-switch {
     display: flex;
     align-items: center;
     height: var(--micro-form-input-height);
+}
+
+/* ------------------------------------------------------------ */
+/* Pub/sub subscription create - the toggles of a few topics    */
+/* ------------------------------------------------------------ */
+
+.pubsub-subscription-create[data-layout="toggles"] .mcp-masking-layout,
+.pubsub-subscription-create[data-layout="cards"] .pubsub-subscription-create-topics {
+    display: none;
+}
+
+/* The box is as tall with a message in it as with the toggles */
+.pubsub-subscription-create-toggles-box {
+    box-sizing: border-box;
+    height: var(--pubsub-subscription-create-toggles-height);
+    padding: var(--pubsub-subscription-create-toggles-padding);
+    overflow-y: auto;
+}
+
+.pubsub-subscription-create-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--pubsub-subscription-create-toggle-gap);
+}
+
+/* A toggle is a card of a single line */
+.pubsub-subscription-create-toggle {
+    padding: var(--pubsub-subscription-create-toggle-padding) 12px;
+    font-size: 12px;
+    line-height: var(--pubsub-subscription-create-toggle-line-height);
+    color: var(--zato-ui-text);
+}
+
+.pubsub-subscription-create-toggles-empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    font-size: 12px;
+    color: var(--zato-ui-text-muted);
 }
