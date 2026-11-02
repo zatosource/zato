@@ -53,10 +53,11 @@ _kill_after_ratio = 0.1
 # How long the cleanup process stays down after it was killed, in seconds.
 _restart_delay_seconds = 5
 
-# How long another transaction holds locks during a sweep, in seconds. On PostgreSQL these are row locks on traces.
+# How long another transaction holds locks during a sweep, in seconds. On PostgreSQL these are row locks on traces,
+# held for less than the idle in transaction timeout of 60 seconds after which the server ends the session.
 # On SQLite it is the write lock of the database, which the publications of the traffic wait for as well,
 # so the hold is shorter than the limit of the publish p99 of one second.
-_postgresql_lock_seconds = 60
+_postgresql_lock_seconds = 30
 _sqlite_lock_seconds = 0.5
 
 # How many traces the other transaction locks on PostgreSQL.

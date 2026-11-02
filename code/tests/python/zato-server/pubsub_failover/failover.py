@@ -30,6 +30,7 @@ from zato.common.test.pubsub_database import connect, get_runtime_dir
 # ################################################################################################################################
 
 if 0:
+    from conftest import FailoverEnvironment
     from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import dictlist, strlist, strstrdict
 
@@ -303,6 +304,19 @@ def read_audit_takeovers(server:'ContainerServer', after_generation:'int') -> 'l
         if generation > after_generation:
             out.append((int(previous_value), generation))
 
+    return out
+
+# ################################################################################################################################
+
+def reset_pair(env:'FailoverEnvironment') -> 'int':
+    """ Makes server A the active server and server B a stopped standby, and returns the current generation.
+    """
+    _ = docker('rm', '-f', env.server_b.container_name, check=False)
+    run_container(env.server_a)
+    _ = wait_until_up(env.server_a)
+    create_container(env.server_b)
+
+    out = read_generation(env.database)
     return out
 
 # ################################################################################################################################

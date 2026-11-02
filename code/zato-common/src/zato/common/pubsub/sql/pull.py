@@ -60,8 +60,11 @@ message_columns = [
 ]
 message_columns.extend(message_retry_columns)
 
-# A fetch for push delivery also reads its delivery row, whose attempts the delivery records.
-_fetch_columns:'anylist' = list(message_columns)
+# A fetch for push delivery reads the payloads apart from the other columns, because the server keeps the payloads
+# of the messages that many subscribers receive, and it also reads its delivery row, whose attempts the delivery records.
+_payload_columns = {message_table.c.payload.name, message_table.c.payload_encrypted.name}
+
+_fetch_columns:'anylist' = [column for column in message_columns if column.name not in _payload_columns]
 _fetch_columns.append(delivery_table.c.id.label('delivery_id'))
 _fetch_columns.append(delivery_table.c.attempt)
 
@@ -86,10 +89,16 @@ outgoing_fetch_query = outgoing_fetch_query.where(delivery_table.c.sub_key == bi
 outgoing_fetch_query = outgoing_fetch_query.order_by(*_order_by)
 outgoing_fetch_query = outgoing_fetch_query.limit(bindparam('fetch_max_messages'))
 
+# The payloads of the fetched messages that the server does not keep yet.
+payload_query = select(message_table.c.id, message_table.c.payload, message_table.c.payload_encrypted)
+payload_query = payload_query.where(message_table.c.id.in_(bindparam('payload_message_ids', expanding=True)))
+
 # ################################################################################################################################
 
 # A pull first locks the deliverable rows it may hand out - those that no pull holds a lease on, or whose lease
-# has run out - skipping those that a concurrent pull holds, without reading their payloads ..
+# has run out - skipping those that a concurrent pull holds, without reading their payloads. The lock is
+# FOR NO KEY UPDATE, which the key share locks that acknowledgements of other subscribers take on live delivery rows
+# do not conflict with, so a pull never skips its own rows only because another subscriber acknowledged the same message ..
 _lease_candidates_query = select(delivery_table.c.id, message_table.c.data_size)
 _lease_candidates_query = _lease_candidates_query.select_from(_fetch_join)
 _lease_candidates_query = _lease_candidates_query.where(and_(
@@ -99,7 +108,7 @@ _lease_candidates_query = _lease_candidates_query.where(and_(
 ))
 _lease_candidates_query = _lease_candidates_query.order_by(*_order_by)
 _lease_candidates_query = _lease_candidates_query.limit(bindparam('lease_max_messages'))
-_lease_candidates_query = _lease_candidates_query.with_for_update(skip_locked=True, of=delivery_table)
+_lease_candidates_query = _lease_candidates_query.with_for_update(skip_locked=True, key_share=True, of=delivery_table)
 
 # .. then leases those within its size budget, learning which of them it leased itself - a row that another pull
 # .. leased in the meantime no longer matches ..

@@ -25,6 +25,7 @@ from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
 from zato.common.pubsub.sql.generation import take_over
+from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache
 from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.writes import drop_payloads, new_pending_ack, PubSubWriter
 from zato.common.typing_ import cast_
@@ -121,6 +122,9 @@ class SQLBackendCore:
 
         # The engine of the pub/sub database, resolved on first access.
         self._engine:'Engine | None' = None
+
+        # The payloads of the messages that push delivery read most recently.
+        self.payload_cache = PayloadCache(Max_Payload_Cache_Size)
 
         # The memory that a burst of publications and deliveries freed returns to the operating system.
         start_memory_trimmer()
@@ -315,11 +319,9 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    def _build_message_from_row(self, row:'any_') -> 'anydict':
-        """ Converts one fetched row into the message dict the delivery and REST layers consume.
+    def _build_message_from_row(self, row:'any_', data:'str') -> 'anydict':
+        """ Converts one fetched row and its payload into the message dict the delivery and REST layers consume.
         """
-        data = self._load_payload_from_row(row)
-
         # The always-present fields come first ..
         out:'anydict' = {
             'msg_id': row.msg_id,

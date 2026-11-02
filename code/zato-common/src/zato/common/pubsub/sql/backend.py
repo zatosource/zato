@@ -24,7 +24,7 @@ from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
-from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query
+from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.writes import new_pending_publication
 from zato.common.util.api import new_msg_id
@@ -35,7 +35,7 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsu
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strnone
+    from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strdict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -336,9 +336,10 @@ class SQLPubSubBackend(SQLAdminAPI):
 
 # ################################################################################################################################
 
-    def _fetch_rows(self, sub_key:'str', max_messages:'int') -> 'anylist':
+    def _fetch_rows(self, sub_key:'str', max_messages:'int') -> 'tuple[anylist, strdict]':
         """ Reads the subscriber's deliverable messages in (priority highest-first,
-        publication order) sequence - one index-ordered query no matter the backlog depth.
+        publication order) sequence - one index-ordered query no matter the backlog depth -
+        and their payloads by msg_id, reading from the database only those that the payload cache does not have.
         """
         parameters = {
             'fetch_sub_key': sub_key,
@@ -351,10 +352,44 @@ class SQLPubSubBackend(SQLAdminAPI):
             query = fetch_query
             parameters['fetch_now_ms'] = self._database_now_ms()
 
-        with self.engine.connect() as connection:
-            out = connection.execute(query, parameters).fetchall()
+        payload_cache = self.payload_cache
 
-        return out
+        payloads:'strdict' = {}
+        missing:'anydict' = {}
+
+        with self.engine.connect() as connection:
+            rows = connection.execute(query, parameters).fetchall()
+
+            # The payloads kept already are used as they are ..
+            for row in rows:
+                payload = payload_cache.get(row.msg_id)
+                if payload is None:
+                    missing[row.id] = row
+                else:
+                    payloads[row.msg_id] = payload
+
+            # .. and the others are read in one more query.
+            if missing:
+                payload_parameters = {'payload_message_ids': list(missing)}
+                payload_rows = connection.execute(payload_query, payload_parameters).fetchall()
+            else:
+                payload_rows = []
+
+        for payload_row in payload_rows:
+            row = missing[payload_row.id]
+            payload = self._load_payload_from_row(payload_row)
+            payloads[row.msg_id] = payload
+
+            # A payload that was dropped already is not kept.
+            if payload_row.payload is not None:
+                payload_cache.put(row.msg_id, payload, row.data_size)
+
+        # A message that left the database between the two queries has no payload, the same as a dropped one.
+        for row in missing.values():
+            if row.msg_id not in payloads:
+                payloads[row.msg_id] = ''
+
+        return rows, payloads
 
 # ################################################################################################################################
 
@@ -377,7 +412,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         event.clear()
 
         # .. read whatever is deliverable right now ..
-        rows = self._fetch_rows(sub_key, max_messages)
+        rows, payloads = self._fetch_rows(sub_key, max_messages)
 
         # .. nothing yet - optionally wait for a publish to wake us up and look again.
         # .. A wait that times out without a wakeup means nothing was published,
@@ -387,7 +422,7 @@ class SQLPubSubBackend(SQLAdminAPI):
             if block_ms:
                 wait_seconds = block_ms / _milliseconds_per_second
                 if event.wait(wait_seconds):
-                    rows = self._fetch_rows(sub_key, max_messages)
+                    rows, payloads = self._fetch_rows(sub_key, max_messages)
 
         # .. convert the rows into message dicts, keeping within the total size budget,
         # .. except that a message larger than the budget goes out alone rather than holding up its queue.
@@ -404,7 +439,8 @@ class SQLPubSubBackend(SQLAdminAPI):
             total_len += data_len
 
             # The delivery row is what each push attempt is recorded in.
-            message = self._build_message_from_row(row)
+            data = payloads[row.msg_id]
+            message = self._build_message_from_row(row, data)
             message['delivery_id'] = row.delivery_id
             message['delivery_attempt'] = row.attempt
 
@@ -434,7 +470,8 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         # Each copy of a message carries the number of the pull that handed it out, which a repeated copy raises.
         for row in rows:
-            message = self._build_message_from_row(row)
+            data = self._load_payload_from_row(row)
+            message = self._build_message_from_row(row, data)
             message['delivery_attempt'] = attempts[row.id]
             out.append(message)
 

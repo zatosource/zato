@@ -51,9 +51,10 @@ _delivery_batch_size = 50
 _delivery_wait_seconds = 5.0
 
 # The push deliveries of one server use at most this fraction of the connections of the pub/sub pool at a time,
-# expressed as its denominator, so that when a broadcast wakes up all of its push subscribers together,
-# the remaining connections stay available to the publishers and to the pulling clients.
-_delivery_pool_share = 2
+# so that when a broadcast wakes up all of its push subscribers together, the remaining connections stay available
+# to the publishers, whose commits are shared, and to the pulling clients.
+_delivery_pool_share_numerator = 3
+_delivery_pool_share_denominator = 4
 
 # How long to wait for a subscriber's delivery greenlet to come back between two batches, which covers
 # the batch it may have started just before it was asked to pause.
@@ -98,7 +99,7 @@ class PushDelivery:
         # Each read of a queue and each recorded attempt holds one of these slots while it uses a connection,
         # and no delivery holds one while it waits for a publication or sends a message to its endpoint.
         pool_size = get_env_values(pubsub_db_config)['pool_size']
-        slot_count = pool_size // _delivery_pool_share
+        slot_count = pool_size * _delivery_pool_share_numerator // _delivery_pool_share_denominator
         self._database_slots = BoundedSemaphore(slot_count)
 
 # ################################################################################################################################

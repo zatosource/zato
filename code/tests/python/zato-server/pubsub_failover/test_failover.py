@@ -16,8 +16,8 @@ from dataclasses import replace
 import pytest
 
 # Zato
-from failover import Controller, create_container, docker, get_container_state, is_server_up, LinkProxy, \
-    read_audit_takeovers, read_generation, run_container, wait_for_generation, wait_until_up
+from failover import Controller, docker, get_container_state, is_server_up, LinkProxy, read_audit_takeovers, \
+    read_generation, reset_pair, run_container, wait_for_generation, wait_until_up
 from zato.common.test.client import PublishClient, PullClient
 from zato.common.test.conftest_base_pubsub import find_free_port
 from zato.common.test.pubsub_database import connect, is_postgresql_mode
@@ -68,19 +68,6 @@ _blocked_takeover_max_seconds = 30
 _controller_settle_seconds = 10
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _reset_pair(env:'FailoverEnvironment') -> 'int':
-    """ Makes server A the active server and server B a stopped standby, and returns the current generation.
-    """
-    _ = docker('rm', '-f', env.server_b.container_name, check=False)
-    run_container(env.server_a)
-    _ = wait_until_up(env.server_a)
-    create_container(env.server_b)
-
-    out = read_generation(env.database)
-    return out
-
 # ################################################################################################################################
 
 def _publisher(env:'FailoverEnvironment', server:'ContainerServer') -> 'PublishClient':
@@ -171,7 +158,7 @@ def test_takeover_after_kill(failover_env:'FailoverEnvironment', stop_command:'s
     the database, and every message published to the old server is pulled from and pushed by the new one.
     """
     env = failover_env
-    generation = _reset_pair(env)
+    generation = reset_pair(env)
 
     receiver = env.receivers[_topic_name]
     receiver.clear_output()
@@ -234,7 +221,7 @@ def test_replaced_server_rejected(failover_env:'FailoverEnvironment') -> 'None':
     and the server that replaced it serves everything.
     """
     env = failover_env
-    generation = _reset_pair(env)
+    generation = reset_pair(env)
 
     # Server B starts while server A is still running, as it does when the controller loses sight of server A ..
     _ = docker('start', env.server_b.container_name)
@@ -265,7 +252,7 @@ def test_takeover_from_frozen_server(failover_env:'FailoverEnvironment') -> 'Non
     The resumed server publishes and hands out nothing, and the server that replaced it serves every message.
     """
     env = failover_env
-    generation = _reset_pair(env)
+    generation = reset_pair(env)
 
     receiver = env.receivers[_topic_name]
     receiver.clear_output()
@@ -316,7 +303,7 @@ def test_takeover_from_cut_off_server(failover_env:'FailoverEnvironment') -> 'No
     and hands out nothing, and the server that replaced it serves every message.
     """
     env = failover_env
-    _ = _reset_pair(env)
+    _ = reset_pair(env)
 
     receiver = env.receivers[_topic_name]
     receiver.clear_output()
@@ -396,7 +383,7 @@ def test_takeover_from_open_session(failover_env:'FailoverEnvironment') -> 'None
     which terminates the session after it waited for it.
     """
     env = failover_env
-    generation = _reset_pair(env)
+    generation = reset_pair(env)
 
     # A session locks the row of the generation and stays open ..
     blocker = connect(env.database)
@@ -450,7 +437,7 @@ def test_takeover_during_database_outage(failover_env:'FailoverEnvironment') -> 
     if not is_postgresql_mode(env.database.mode):
         return
 
-    generation = _reset_pair(env)
+    generation = reset_pair(env)
 
     receiver = env.receivers[_topic_name]
     receiver.clear_output()

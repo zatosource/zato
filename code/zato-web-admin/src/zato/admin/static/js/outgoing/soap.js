@@ -29,7 +29,7 @@
         tabLabels: {
             main:         'Main',
             soap:         'SOAP',
-            ebxml:        'ebXML',
+            // ebxml:        'ebXML',
             security:     'Security',
             credentials:  'Body credentials',
             scheduler:    'Scheduler',
@@ -495,7 +495,7 @@
         // The Delivery tab's popover is set up once for both popups
         $.fn.zato.delivery_tab.init();
 
-        $.fn.zato.http_soap.ebxml.init({panel_id: 'out-soap-create-tab-panel-ebxml'});
+        // $.fn.zato.http_soap.ebxml.init({panel_id: 'out-soap-create-tab-panel-ebxml'});
 
         $('#data-table').tablesorter();
         $.fn.zato.data_table.class_ = $.fn.zato.data_table.OutgoingSOAP;

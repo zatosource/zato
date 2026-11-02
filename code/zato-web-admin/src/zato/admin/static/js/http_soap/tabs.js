@@ -34,9 +34,9 @@ $.fn.zato.http_soap.tabs.init = function() {
         $.fn.zato.delivery_tab.init();
     }
 
-    if($.fn.zato.http_soap.is_soap_channel()) {
-        $.fn.zato.http_soap.ebxml.init({panel_id: 'http-soap-create-tab-panel-ebxml'});
-    }
+    // if($.fn.zato.http_soap.is_soap_channel()) {
+    //     $.fn.zato.http_soap.ebxml.init({panel_id: 'http-soap-create-tab-panel-ebxml'});
+    // }
 
     if($.fn.zato.http_soap.is_rest_outgoing()) {
 
@@ -131,9 +131,9 @@ $.fn.zato.http_soap.channelTabLabels = function() {
         main: 'Main'
     };
 
-    if($.fn.zato.http_soap.is_soap_channel()) {
-        out.ebxml = 'ebXML';
-    }
+    // if($.fn.zato.http_soap.is_soap_channel()) {
+    //     out.ebxml = 'ebXML';
+    // }
 
     out.alerts = $.fn.zato.alerts_tab.tab_label();
 
