@@ -61,6 +61,9 @@ _Auth_Log_Patterns = (
     f'Basic Auth -> {Auth_Basic_No_Auth}',
 )
 
+# Log pattern produced by the server when a channel is invoked while a group assigned to it holds no members
+_Empty_Group_Log_Patterns = ('is protected by security groups that have no members',)
+
 # The group-name uniqueness probe queries a groups table missing from the quickstart ODB,
 # so the dashboard middleware logs this warning whenever a group is created via the UI
 _Group_Create_Log_Patterns = ('nDetails: ··· Error ···',)
@@ -264,7 +267,7 @@ class TestRESTChannelGroups:
 
 # ################################################################################################################################
 
-    @pytest.mark.expect_log_errors(*_Group_Log_Patterns, *_Group_Create_Log_Patterns)
+    @pytest.mark.expect_log_errors(*_Group_Log_Patterns, *_Empty_Group_Log_Patterns, *_Group_Create_Log_Patterns)
     def test_member_removed_from_one_of_two_groups(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Assigns two groups to a channel, one API key belonging to both, and verifies that removing
         the key from one group leaves it working through the other, while removing it from the other one too

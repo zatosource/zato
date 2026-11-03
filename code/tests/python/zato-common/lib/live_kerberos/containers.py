@@ -29,7 +29,9 @@ class ModuleCtx:
     # Docker details of the KDC the live tests run against
     KDC_Image          = 'debian:12-slim'
     KDC_Container_Name = 'zato-test-kdc'
-    KDC_Port           = 8788
+
+    # The port of the KDC inside the container
+    KDC_Container_Port = 88
 
     # The test realm and its principals
     Realm             = 'ZATO.TEST'
@@ -60,10 +62,11 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The krb5.conf the host uses - the KDC port is the published one and UDP is disabled
+# The krb5.conf the host uses - the KDC port is the one that Docker published and UDP is disabled
 # because Docker forwards the TCP port reliably. The credential cache lives in the shared
 # directory so that recreating the KDC also discards tickets from its previous incarnation.
-_krb5_conf_host = f"""
+# The published port is known only once the container runs, which is why the file is a template.
+_krb5_conf_host_template = f"""
 [libdefaults]
     default_realm = {ModuleCtx.Realm}
     dns_lookup_kdc = false
@@ -72,9 +75,9 @@ _krb5_conf_host = f"""
     default_ccache_name = FILE:{ModuleCtx.Shared_Dir}/ccache
 
 [realms]
-    {ModuleCtx.Realm} = {{
-        kdc = localhost:{ModuleCtx.KDC_Port}
-    }}
+    {ModuleCtx.Realm} = {{{{
+        kdc = localhost:{{kdc_port}}
+    }}}}
 """
 
 # The krb5.conf the container itself uses - inside, the KDC listens on the standard port
@@ -86,7 +89,7 @@ _krb5_conf_container = f"""
 
 [realms]
     {ModuleCtx.Realm} = {{
-        kdc = localhost:88
+        kdc = localhost:{ModuleCtx.KDC_Container_Port}
     }}
 """
 
@@ -158,7 +161,6 @@ def _write_shared_files() -> 'None':
     os.makedirs(ModuleCtx.Shared_Dir, exist_ok=True)
 
     file_map = {
-        ModuleCtx.Krb5_Config_Path: _krb5_conf_host,
         os.path.join(ModuleCtx.Shared_Dir, 'krb5.container.conf'): _krb5_conf_container,
         os.path.join(ModuleCtx.Shared_Dir, 'kdc.conf'): _kdc_conf,
     }
@@ -173,6 +175,24 @@ def _write_shared_files() -> 'None':
         _ = file_.write(_provision_script)
 
     os.chmod(script_path, 0o755)
+
+# ################################################################################################################################
+
+def _write_host_krb5_config() -> 'None':
+    """ Writes the krb5.conf the host uses, with the port that Docker assigned to the KDC.
+    """
+    result = subprocess.run(
+        ['docker', 'port', ModuleCtx.KDC_Container_Name, f'{ModuleCtx.KDC_Container_Port}/tcp'],
+        capture_output=True, text=True, check=True)
+
+    # The first line is the IPv4 binding, in the form 127.0.0.1:49153
+    first_binding = result.stdout.splitlines()[0]
+    kdc_port = first_binding.rsplit(':', 1)[1]
+
+    contents = _krb5_conf_host_template.format(kdc_port=kdc_port)
+
+    with open(ModuleCtx.Krb5_Config_Path, 'w') as file_:
+        _ = file_.write(contents)
 
 # ################################################################################################################################
 
@@ -209,7 +229,7 @@ def start_kdc() -> 'None':
     with an exported keytab and a service principal with its own keytab, both written
     to the fixed shared directory along with the krb5.conf the host uses.
     """
-    print(f'Starting the KDC container {ModuleCtx.KDC_Container_Name} on port {ModuleCtx.KDC_Port}', flush=True)
+    print(f'Starting the KDC container {ModuleCtx.KDC_Container_Name}', flush=True)
 
     _remove_stale_container()
     _write_shared_files()
@@ -218,13 +238,15 @@ def start_kdc() -> 'None':
         'docker', 'run', '-d', '--rm',
         '--name', ModuleCtx.KDC_Container_Name,
         '-v', f'{ModuleCtx.Shared_Dir}:/shared',
-        '-p', f'{ModuleCtx.KDC_Port}:88',
-        '-p', f'{ModuleCtx.KDC_Port}:88/udp',
+        '-p', f'127.0.0.1::{ModuleCtx.KDC_Container_Port}',
         ModuleCtx.KDC_Image,
         '/shared/provision.sh',
     ]
 
     _ = subprocess.run(command, check=True, capture_output=True)
+
+    # .. the host port is assigned by Docker, so that no other process can hold it already ..
+    _write_host_krb5_config()
 
     print('Waiting for the KDC container to provision the realm', flush=True)
     _wait_until_ready()

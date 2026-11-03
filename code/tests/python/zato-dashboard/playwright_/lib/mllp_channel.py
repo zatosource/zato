@@ -260,10 +260,11 @@ def delete_channel(page:'Page', base_url:'str', name:'str') -> 'None':
     page.evaluate(f'$.fn.zato.channel.hl7.mllp.delete_("{item_id}")')
     _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
     page.click('#popup_ok')
-    time.sleep(0.5)
 
-    row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
-    assert row is None, f'Channel "{name}" should be gone after delete'
+    # A channel with a REST bridge takes longer to delete, because the bridge is deleted with it,
+    # so the row is waited for rather than looked for after a fixed pause.
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    _ = page.wait_for_selector(row_selector, state='detached', timeout=Save_Timeout)
 
 # ################################################################################################################################
 # ################################################################################################################################
