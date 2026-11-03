@@ -7,10 +7,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import inspect
 import json
 import os
+import sys
+import types
+import weakref
 from http import HTTPStatus
 from unittest import TestCase
+
+# blinker
+import blinker
 
 # Bunch
 from zato.common.ext.bunch import bunchify
@@ -21,8 +28,36 @@ import django
 # Selenium
 from selenium.webdriver.common.by import By
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _install_blinker_safe_ref() -> 'None':
+    """ Provides blinker._saferef, which Selenium-Wire imports and which blinker 1.8 and later no longer ships.
+    Flask requires a blinker newer than the one that still has it, so the module is supplied here. Its safe_ref
+    returns a weak reference that is called to obtain the referenced callable, as the blinker one did.
+    """
+    if hasattr(blinker, '_saferef'):
+        return
+
+    def safe_ref(func:'any_') -> 'any_':
+        if inspect.ismethod(func):
+            out = weakref.WeakMethod(func)
+        else:
+            out = weakref.ref(func)
+        return out
+
+    module = types.ModuleType('blinker._saferef')
+    module.safe_ref = safe_ref # type: ignore
+
+    sys.modules['blinker._saferef'] = module
+    blinker._saferef = module # type: ignore
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Selenium-Wire
 if os.environ.get('ZATO_TEST_DASHBOARD'):
+    _install_blinker_safe_ref()
     from seleniumwire import webdriver
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.firefox.options import Options
@@ -33,6 +68,12 @@ if os.environ.get('ZATO_TEST_DASHBOARD'):
 from zato.admin.zato_settings import update_globals
 from zato.common.defaults import default_env_base_dir
 from zato.common.util import new_cid
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
