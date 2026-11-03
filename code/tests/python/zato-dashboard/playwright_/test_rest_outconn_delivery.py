@@ -90,7 +90,7 @@ def _open_create_dialog(page:'Page', base_url:'str', name:'str') -> 'None':
     fill_outconn_form(page, {
         'name': name,
         'host': _Host,
-        'url_path': '/test/delivery/' + CryptoManager.generate_hex_string(8),
+        'url_path': '/test/delivery/' + CryptoManager.generate_hex_string(32),
         'security_value': ZATO_NONE,
     })
 

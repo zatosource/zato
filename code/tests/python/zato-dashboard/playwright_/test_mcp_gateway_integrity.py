@@ -135,7 +135,7 @@ mcp_gateway:
         server_port = zato_dashboard['server_port']
         server_dir = zato_dashboard['server_dir']
 
-        suffix = CryptoManager.generate_hex_string(8)
+        suffix = CryptoManager.generate_hex_string(32)
         service_name = 'test.mcp.integrity.MixedCase.' + suffix
 
         # A service with capital letters in its name is deployed ..
