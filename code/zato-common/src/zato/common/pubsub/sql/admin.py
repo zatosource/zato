@@ -492,7 +492,7 @@ class SQLAdminAPI(SQLBrowseAPI):
             payload = data
             payload_encrypted = False
 
-        # .. and replace the payload with everything derived from it.
+        # .. replace the payload with everything derived from it ..
         update_statement = message_table.update()
         update_statement = update_statement.where(and_(
             message_table.c.msg_id == msg_id,
@@ -507,6 +507,9 @@ class SQLAdminAPI(SQLBrowseAPI):
 
         with self.engine.begin() as connection:
             result = connection.execute(update_statement)
+
+        # .. and the payload kept from an earlier delivery is dropped, or the next delivery would send it instead.
+        self.payload_cache.remove(msg_id)
 
         out = result.rowcount > 0
 

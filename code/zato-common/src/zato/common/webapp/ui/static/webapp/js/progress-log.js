@@ -9,10 +9,9 @@
 // (epoch seconds, a Date or an ISO string) and id. The panel follows its last line until the user scrolls
 // away from the bottom and resumes once they scroll back, keeps only so many lines, and copies all of
 // them with a button in its header. Its state - idle, live, done or failed - drives the dot in the header
-// and the colour of the progress bar. The theme is light or dark.
+// and the colour of the progress bar.
 
 var defaults = {
-    theme: 'light',
     source: '',
     copyLabel: 'Copy',
     copiedLabel: 'Copied to clipboard',
@@ -125,7 +124,6 @@ ProgressLog.prototype.build = function() {
     var root = config.container;
 
     root.classList.add('progress-log');
-    root.setAttribute('data-theme', config.theme);
     root.setAttribute('data-state', 'idle');
     root.setAttribute('data-hidden', config.isHidden ? 'true' : 'false');
 
@@ -173,13 +171,6 @@ ProgressLog.prototype.hide = function() {
 
 ProgressLog.prototype.setSource = function(text) {
     this.source.textContent = text;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-ProgressLog.prototype.setTheme = function(theme) {
-    this.config.theme = theme;
-    this.config.container.setAttribute('data-theme', theme);
 };
 
 // ////////////////////////////////////////////////////////////////////////

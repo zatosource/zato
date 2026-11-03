@@ -27,7 +27,7 @@ Max_Payload_Cache_Size = 64 * 1024 * 1024
 class PayloadCache:
     """ The payloads of the messages that push delivery read most recently, up to a total size, by the identifier
     of each message. A message pushed to many subscribers is read from the database and decrypted once
-    rather than once per subscriber. A payload never changes once published, so a payload kept here is always current.
+    rather than once per subscriber. A payload changes only through an edit of its message, which removes it from here.
     """
 
     def __init__(self, max_size:'int') -> 'None':
@@ -69,6 +69,20 @@ class PayloadCache:
         while self.size > self.max_size:
             _, (_, evicted_size) = self._payloads.popitem(last=False)
             self.size -= evicted_size
+
+# ################################################################################################################################
+
+    def remove(self, msg_id:'str') -> 'None':
+        """ Stops keeping the payload of a message, so that the next delivery reads it from the database.
+        """
+        entry = self._payloads.pop(msg_id, None)
+
+        # A payload that is not kept has nothing to subtract
+        if entry is None:
+            return
+
+        _, size = entry
+        self.size -= size
 
 # ################################################################################################################################
 # ################################################################################################################################

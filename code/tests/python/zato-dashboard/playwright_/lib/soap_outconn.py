@@ -78,7 +78,7 @@ def open_soap_outconn_page(page:'Page', base_url:'str', query:'str'='') -> 'None
 
     url_path = SOAP_Outconn_Page_Url
     if query:
-        url_path += f'&query={query}'
+        url_path += f'?query={query}'
 
     navigate_to_page(page, base_url, url_path)
 

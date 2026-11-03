@@ -115,6 +115,23 @@ table.rate-limiting-form select#repo-branch {
     --progress-log-font-size: 11px;
     --progress-log-header-font-size: 11px;
     --progress-log-lines-shown: 7;
+    --progress-log-border: rgba(255, 255, 255, 0.06);
+    --progress-log-border-strong: rgba(255, 255, 255, 0.12);
+    --progress-log-background: rgba(13, 17, 23, 0.82);
+    --progress-log-underlay: #0a0e1a;
+    --progress-log-header-background: transparent;
+    --progress-log-text: #f1f5f9;
+    --progress-log-text-muted: #94a3b8;
+    --progress-log-text-faint: #64748b;
+    --progress-log-ok: #6fae84;
+    --progress-log-ok-glow: rgba(111, 174, 132, 0.35);
+    --progress-log-error: #ef4444;
+    --progress-log-accent: #3b82f6;
+    --progress-log-accent-end: #06b6d4;
+    --progress-log-accent-soft: rgba(59, 130, 246, 0.08);
+    --progress-log-accent-soft-strong: rgba(96, 165, 250, 0.18);
+    --progress-log-track: rgba(255, 255, 255, 0.07);
+    --progress-log-shimmer: rgba(255, 255, 255, 0.55);
 
     box-sizing: border-box;
     margin-top: 12px;
