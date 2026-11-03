@@ -65,14 +65,15 @@ if os.environ.get('ZATO_TEST_DASHBOARD'):
     from selenium.webdriver.support.ui import WebDriverWait
 
 # Zato
+from dashboard_environment import start_environment, stop_environment
 from zato.admin.zato_settings import update_globals
-from zato.common.defaults import default_env_base_dir
 from zato.common.util import new_cid
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from dashboard_environment import Environment
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
@@ -84,8 +85,9 @@ class Config:
     user_password = 'sJNlk8XOQs74E'
     user_email = 'test@example.com'
 
-    web_admin_location = os.path.join(default_env_base_dir, 'web-admin')
-    web_admin_address  = 'http://localhost:8183'
+    # Both are assigned once the environment of the test case runs
+    web_admin_location = ''
+    web_admin_address  = ''
 
     status_ok = {HTTPStatus.FOUND, HTTPStatus.MOVED_PERMANENTLY, HTTPStatus.NOT_MODIFIED, HTTPStatus.OK}
     to_skip_status = {
@@ -105,6 +107,32 @@ class BaseTestCase(TestCase):
 
     # Selenium client
     client: 'webdriver.Firefox'
+
+    # The server and the dashboard this test case runs against
+    environment: 'Environment'
+
+    @classmethod
+    def setUpClass(cls) -> 'None':
+
+        if not os.environ.get('ZATO_TEST_DASHBOARD'):
+            return
+
+        cls.environment = start_environment()
+
+        Config.web_admin_location = cls.environment.dashboard_dir
+        Config.web_admin_address  = cls.environment.dashboard_address
+
+# ################################################################################################################################
+
+    @classmethod
+    def tearDownClass(cls) -> 'None':
+
+        if not os.environ.get('ZATO_TEST_DASHBOARD'):
+            return
+
+        stop_environment(cls.environment)
+
+# ################################################################################################################################
 
     def _set_up_django(self):
 
