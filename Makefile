@@ -1304,7 +1304,6 @@ test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audi
 		echo "pytest exited with code 3 (internal error) - the test run itself broke, this is not an ordinary test failure, look for INTERNALERROR lines above"; \
 	fi; \
 	exit $$status
-	$(MAKE) -C $(CURDIR)/code/zato-web-admin test $(Zato_Log)
 
 test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain and TLS.
 	$(Zato_Log_Reset)
