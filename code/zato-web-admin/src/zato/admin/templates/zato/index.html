@@ -61,6 +61,9 @@
     {% block "extra_js" %}
     {% endblock %}
 
+    {% comment %} After the stylesheets of each page, which it restyles {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/search-box.css">
+
     <script nonce="{{ CSP_NONCE }}">
 
         $(document).ready(function() {

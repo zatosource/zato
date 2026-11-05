@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 # Zato
 from conftest import ModuleCtx as ConftestCtx
 from certificates import generate_certificates
-from live_sql.containers import start_mysql, start_postgresql, stop_container
+from live_sql.containers import start_postgresql, stop_container
 from live_sql.env import build_env
 
 # ################################################################################################################################
@@ -67,7 +67,7 @@ _cache_dir = os.path.join(_base_dir, 'code', 'tests', '.pytest_cache_audit_log_u
 _certificate_dir_mode = 0o755
 
 # The backends every UI test runs against, in this order
-_backend_names = ('sqlite', 'mysql', 'postgresql', 'mysql-ssl', 'postgresql-ssl')
+_backend_names = ('sqlite', 'postgresql', 'postgresql-ssl')
 
 # The prefix all the audit log database environment variables share
 _env_prefix = 'Zato_Audit_Log_DB_'
@@ -108,8 +108,8 @@ def _run_unit_tests(env:'stranydict') -> 'int':
 
 def main() -> 'None':
     """ Runs every audit log test - the dashboard UI ones and the unit ones that write
-    to the audit log directly - against every backend: sqlite, MySQL, PostgreSQL,
-    both plain and TLS-required for the two servers. The UI tests create their own
+    to the audit log directly - against every backend: sqlite and PostgreSQL,
+    the latter both plain and TLS-required. The UI tests create their own
     server and dashboard which inherit the Zato_Audit_Log_DB_* variables set here.
     """
 
@@ -123,14 +123,6 @@ def main() -> 'None':
     failed:'strlist' = []
 
     try:
-        servers['mysql'] = start_mysql(
-            container_name=ConftestCtx.MySQL_Container,
-            port=ConftestCtx.MySQL_Port,
-            username=ConftestCtx.Username,
-            password=ConftestCtx.Password,
-            db_name=ConftestCtx.DB_Name,
-            needs_ssl=False,
-        )
         servers['postgresql'] = start_postgresql(
             container_name=ConftestCtx.PostgreSQL_Container,
             port=ConftestCtx.PostgreSQL_Port,
@@ -138,15 +130,6 @@ def main() -> 'None':
             password=ConftestCtx.Password,
             db_name=ConftestCtx.DB_Name,
             needs_ssl=False,
-        )
-        servers['mysql-ssl'] = start_mysql(
-            container_name=ConftestCtx.MySQL_SSL_Container,
-            port=ConftestCtx.MySQL_SSL_Port,
-            username=ConftestCtx.Username,
-            password=ConftestCtx.Password,
-            db_name=ConftestCtx.DB_Name,
-            needs_ssl=True,
-            certificates=certificates,
         )
         servers['postgresql-ssl'] = start_postgresql(
             container_name=ConftestCtx.PostgreSQL_SSL_Container,
@@ -161,9 +144,7 @@ def main() -> 'None':
         # The per-backend environments the components are restarted with
         backend_env:'stranydict' = {
             'sqlite': {},
-            'mysql': build_env(_env_prefix, servers['mysql'].details),
             'postgresql': build_env(_env_prefix, servers['postgresql'].details),
-            'mysql-ssl': build_env(_env_prefix, servers['mysql-ssl'].details),
             'postgresql-ssl': build_env(_env_prefix, servers['postgresql-ssl'].details),
         }
 

@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
 from re import findall
@@ -195,12 +195,10 @@ class SchedulerLogCapture(logging.Handler):
 
     def emit(self, record:'any_') -> 'None':
         try:
-            append_job_log_entry(
-                self._audit_event_id,
-                datetime.fromtimestamp(record.created).isoformat(),
-                record.levelname,
-                self.format(record),
-            )
+            created = datetime.fromtimestamp(record.created, timezone.utc)
+            message = self.format(record)
+
+            append_job_log_entry(self._audit_event_id, created, record.levelname, message)
         except Exception:
             self.handleError(record)
 

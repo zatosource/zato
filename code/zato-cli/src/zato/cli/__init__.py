@@ -117,10 +117,6 @@ ping_query=SELECT 1 FROM dual
 display_name="MS SQL"
 ping_query=SELECT 1
 
-[snowflake]
-display_name=Snowflake
-ping_query=SELECT 1
-
 [redshift+redshift_connector]
 display_name="Amazon Redshift"
 ping_query=SELECT 1

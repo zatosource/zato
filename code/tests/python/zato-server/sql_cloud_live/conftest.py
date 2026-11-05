@@ -66,7 +66,6 @@ class _SessionState:
     def __init__(self) -> 'None':
         self.server_process:'subprocess.Popen[bytes] | None' = None
         self.quickstart_directory:'str | None' = None
-        self.snowflake_server:'any_' = None
         self.redshift_server:'any_' = None
 
 # ################################################################################################################################
@@ -94,10 +93,6 @@ class _SessionState:
                 _ = shutil.copy(server_log_path, '/tmp/server-logs-sql-cloud-live.txt')
 
         self.kill_server()
-
-        if self.snowflake_server:
-            self.snowflake_server.stop()
-            self.snowflake_server = None
 
         if self.redshift_server:
             self.redshift_server.stop()
@@ -211,11 +206,10 @@ def _start_server(server_directory:'str', server_port:'int', broker_port:'int') 
 
 @pytest.fixture(scope='session', autouse=True)
 def zato_server() -> 'any_':
-    """ Session-scoped fixture that spins up the Snowflake and Redshift simulators
-    plus a Zato server with outgoing SQL connections pointing at them.
+    """ Session-scoped fixture that spins up the Redshift simulator
+    plus a Zato server with an outgoing SQL connection pointing at it.
     """
     from redshift_test_server import RedshiftTestServer
-    from snowflake_test_server import SnowflakeTestServer
 
     # Kill any leftover Zato servers ..
     _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
@@ -224,30 +218,17 @@ def zato_server() -> 'any_':
     start_time = time.monotonic()
 
     # Generate credentials ..
-    snowflake_password = 'test.snowflake.' + CryptoManager.generate_hex_string()
-    redshift_password  = 'test.redshift.' + CryptoManager.generate_hex_string()
-    invoke_password    = 'test.invoke.' + CryptoManager.generate_hex_string()
+    redshift_password = 'test.redshift.' + CryptoManager.generate_hex_string()
+    invoke_password   = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-    # Start the Snowflake simulator over plain HTTP ..
-    snowflake_server = SnowflakeTestServer(tls=False)
-    snowflake_server.start()
-    snowflake_server.configure(password=snowflake_password)
-    _state.snowflake_server = snowflake_server
-
-    # .. and the Redshift simulator over a plain TCP socket.
+    # Start the Redshift simulator over a plain TCP socket ..
     redshift_server = RedshiftTestServer(tls=False)
     redshift_server.start()
     redshift_server.configure(password=redshift_password)
     _state.redshift_server = redshift_server
 
-    # Both simulators serve the same canned rows the tests query for.
+    # .. serve the canned rows the tests query for ..
     flight_rows = [[1, 'ZA-101'], [2, 'ZA-102'], [3, 'ZA-103']]
-
-    snowflake_server.add_result(
-        r'select id, flight_number from flights',
-        columns=[('ID', 'fixed'), ('FLIGHT_NUMBER', 'text')],
-        rows=flight_rows,
-    )
 
     redshift_server.add_result(
         r'select id, flight_number from flights',
@@ -255,12 +236,10 @@ def zato_server() -> 'any_':
         rows=flight_rows,
     )
 
-    logger.info('Simulators started - snowflake:%d redshift:%d', snowflake_server.port, redshift_server.port)
+    logger.info('Simulator started - redshift:%d', redshift_server.port)
 
     # Render the enmasse template ..
     placeholders = {
-        'snowflake_password': snowflake_password,
-        'snowflake_port': snowflake_server.port,
         'redshift_password': redshift_password,
         'redshift_port': redshift_server.port,
     }
@@ -347,7 +326,6 @@ def zato_server() -> 'any_':
         'port': server_port,
         'invoke_password': invoke_password,
         'base_url': f'http://{host}:{server_port}',
-        'snowflake_server': snowflake_server,
         'redshift_server': redshift_server,
         'server_directory': server_directory,
     }

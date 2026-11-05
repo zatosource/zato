@@ -24,7 +24,7 @@ import pytest
 from zato.common.test.conftest_base_pubsub import find_free_port
 from zato.common.test.playwright_pubsub import confirm_delete, create_amqp_channel, create_amqp_topic, create_basic_auth, \
     create_outgoing_amqp, create_outgoing_rest_with_address, create_permission, create_push_rest_subscription, \
-    create_push_service_subscription, create_rest_channel, find_row_by_name, navigate_to_page, open_edit_dialog, \
+    create_rest_channel, create_service_subscription, find_row_by_name, navigate_to_page, open_edit_dialog, \
     set_select_value, submit_edit_form, trigger_delete
 from zato.common.test.rabbitmq_ import declare_and_bind, get_queue_depth, publish_to_exchange
 from zato.common.test.receiver import WebhookReceiver
@@ -266,18 +266,12 @@ def _add_rest_push_subscriber(
 def _add_service_push_subscriber(
     page:'Page',
     base_url:'str',
-    suffix:'str',
     topic_name:'str',
     service_name:'str',
     ) -> 'None':
-    """ Configures a service push subscriber for a topic via dashboard forms.
+    """ Configures a service push subscriber for a topic via dashboard forms, a service subscribing without a security definition.
     """
-    sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, suffix)
-    sec_name = sec_info['name']
-
-    _ = create_permission(page, base_url, sec_name, 'subscriber', 'sub', topic_name)
-
-    create_push_service_subscription(page, base_url, sec_name, topic_name, service_name)
+    create_service_subscription(page, base_url, [service_name], topic_name)
 
     time.sleep(_Config_Propagation_Delay)
 
@@ -433,7 +427,7 @@ class TestPubSubTopicAMQPBridge:
         try:
             # .. configure the pipeline and a service push subscriber via forms ..
             pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'servicesub', _Default_Channel_Service)
-            _add_service_push_subscriber(page, base_url, 'servicesub', pipeline['topic_name'], writer['service_name'])
+            _add_service_push_subscriber(page, base_url, pipeline['topic_name'], writer['service_name'])
 
             # .. inject a message ..
             marker = 'bridge-service-' + new_cid()
@@ -485,7 +479,7 @@ class TestPubSubTopicAMQPBridge:
 
             _add_rest_push_subscriber(page, base_url, 'multi-a', topic_name, webhook_receiver.port)
             _add_rest_push_subscriber(page, base_url, 'multi-b', topic_name, second_port)
-            _add_service_push_subscriber(page, base_url, 'multi-c', topic_name, writer['service_name'])
+            _add_service_push_subscriber(page, base_url, topic_name, writer['service_name'])
 
             # .. inject one message ..
             marker = 'bridge-multi-' + new_cid()

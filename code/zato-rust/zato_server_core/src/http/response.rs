@@ -9,7 +9,7 @@ use super::io::header_value_eq;
 /// The `Connection` header value with which a client keeps its connection open.
 pub(super) const KEEP_ALIVE_TOKEN: &[u8] = b"keep-alive";
 
-/// The protocol version of the requests that the `OpenAPI` console relays, as `ResponseParts` encodes it.
+/// The protocol version of the requests that the API portal relays, as `ResponseParts` encodes it.
 const RELAY_HTTP_VERSION: u8 = 1;
 
 /// Parses a status string like `"200 OK"` into an `http::StatusCode`.
@@ -171,7 +171,7 @@ pub(super) fn build_response_headers_only(parts: &ResponseParts<'_, '_>, buf: &m
 
 /// Serializes the status line and the headers that the HTTP server writes for a response.
 ///
-/// The `OpenAPI` console relay receives responses from `handle_http_request` without a connection
+/// The API portal relay receives responses from `handle_http_request` without a connection
 /// of its own and reports the headers that a client calling the channel directly receives.
 #[pyfunction]
 #[pyo3(signature = (status_str, headers, body, is_streaming, connection_header=None))]

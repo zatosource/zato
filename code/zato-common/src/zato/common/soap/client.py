@@ -25,31 +25,29 @@ from zato.common.soap.audit import mask_credentials
 from zato.common.soap.client_credentials import body_credential_names, inject_body_credentials
 from zato.common.soap.common import Action_Parameter, Content_Type, NS, SOAP_Action_Header, SOAP_Media_Types, \
     SOAPAddressingException, SOAPException, SOAPFault, SOAPVersion
-from zato.common.soap.ebxml import build_message as build_ebxml_message, encrypt_payload, parse_message_header, sign_payload
-from zato.common.soap.envelope import attach_body, build_envelope, get_header, get_security_header, parse_body, \
+from zato.common.soap.ebxml import build_message as build_ebxml_message, check_reply as check_ebxml_reply, \
+    parse_message_header, request_sync_acknowledgment, sign_message as sign_ebxml_message
+from zato.common.soap.envelope import attach_body, build_envelope, get_header, parse_body, \
     parse_envelope, raise_for_fault, to_bytes
 from zato.common.soap.message import SOAPMessage, to_lexical
 from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import apply_wss, keystore_from_config
+from zato.common.typing_ import cast_
 from zato.common.util.http_retry import send_with_retry
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.tls_verify import Default_Validate_TLS, resolve_tls_verify
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.mime_ import parse_header_parameters
-from zato.common.util.xml_.keystore import new_keystore
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callnone, stranydict, strdictnone, strlist, strnone
-    from zato.common.util.xml_.keystore import Keystore
+    from zato.common.typing_ import any_, anydict, anytuple, callnone, stranydict, strdictnone, strlist, strnone
     from zato.common.util.xml_.mime_ import part_list
     any_ = any_
     anydict = anydict
-    anylist = anylist
     anytuple = anytuple
-    Keystore = Keystore
     part_list = part_list
     stranydict = stranydict
     strdictnone = strdictnone
@@ -514,35 +512,22 @@ class SOAPClient:
         info:'any_',
         parts:'part_list',
         sign:'bool'=False,
-        encrypt:'bool'=False,
         cid:'str'='',
         ) -> 'any_':
-        """ Sends an ebXML Message Service message - the envelope carries the message header
-        and a manifest, the payloads travel as MIME parts, each optionally signed and encrypted
-        for the recipient.
+        """ Sends an ebXML Message Service 2.0 message and returns the synchronous acknowledgment the receiver
+        responds with - the envelope carries the message header, a request for that acknowledgment and,
+        optionally, one XMLDSig signature over the envelope and the payloads, which travel as MIME parts.
 
-        Returns the reply's EbXMLInfo, whose attachments are the reply's own payload parts. A reply
-        that is signed or encrypted for us is left as it arrived - verify_payload and decrypt_payload
-        take a part and the keystore, and only the caller knows which of the reply's parts it expects
-        to be protected and by whose key.
+        Returns the acknowledgment's EbXMLInfo, whose attachments are the reply's own payload parts.
+        Raises SOAPException if the receiver responds with an ebMS error message.
         """
-        keystore = self._ebxml_keystore()
-
-        # Each payload is signed first so the signature covers the plaintext, then encrypted.
-        signatures = []
-        encrypted_keys = []
-
-        for part in parts:
-            if sign:
-                signatures.append(sign_payload(part, keystore))
-            if encrypt:
-                encrypted_keys.append(encrypt_payload(part, keystore))
-
         envelope = build_ebxml_message(info, parts)
+        request_sync_acknowledgment(envelope)
 
-        # Any payload signatures and wrapped keys travel in the security header.
-        if signatures or encrypted_keys:
-            self._add_ebxml_security(envelope, signatures, encrypted_keys)
+        # The signature goes in last because it covers the header blocks that precede it.
+        if sign:
+            keystore = keystore_from_config(cast_('stranydict', self.security))
+            _ = sign_ebxml_message(envelope, parts, keystore)
 
         envelope_bytes = to_bytes(envelope)
         body, content_type = build_swa(envelope_bytes, parts, SOAPVersion.V11)
@@ -565,6 +550,7 @@ class SOAPClient:
             self._record_response(cid, endpoint, response, fault)
 
         out = parse_message_header(response_envelope)
+        check_ebxml_reply(response_envelope, out, info.message_id)
 
         # The reply's payloads travel as MIME parts, the body carrying only a Manifest pointing at
         # them, so a caller that never sees the parts never sees the reply's business document -
@@ -573,32 +559,6 @@ class SOAPClient:
         out.attachments = response_parts
 
         return out
-
-# ################################################################################################################################
-
-    def _ebxml_keystore(self) -> 'Keystore':
-        """ Returns the keystore an ebXML exchange uses - the WS-Security material of the
-        connection when one is configured, otherwise an empty keystore.
-        """
-        if self.security:
-            out = keystore_from_config(self.security)
-        else:
-            out = new_keystore()
-
-        return out
-
-# ################################################################################################################################
-
-    def _add_ebxml_security(self, envelope:'any_', signatures:'anylist', encrypted_keys:'anylist') -> 'None':
-        """ Places payload signatures and wrapped content keys in the message's security header.
-        """
-        security = get_security_header(envelope)
-
-        for encrypted_key in encrypted_keys:
-            security.append(encrypted_key)
-
-        for signature in signatures:
-            security.append(signature)
 
 # ################################################################################################################################
 

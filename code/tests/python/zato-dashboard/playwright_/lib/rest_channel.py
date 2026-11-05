@@ -53,6 +53,15 @@ _More_Options_Checkbox_Fields = ('merge_url_params_req', 'match_slash')
 # Fields inside the "API versioning" block
 _Api_Versioning_Fields = ('is_deprecated', 'deprecation_sunset', 'deprecation_successor')
 
+# The tab of the mTLS form that each of a definition's fields is on - the name is above the tabs
+_MTLS_Field_Tabs = {
+    'client_cert_fingerprint': 'channels',
+    'client_cert_subject_dn': 'channels',
+    'cert_path': 'outgoing',
+    'key_path': 'outgoing',
+    'ca_certs_path': 'outgoing',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 #
@@ -657,7 +666,12 @@ def create_ntlm_definition(page:'Page', base_url:'str', name:'str') -> 'anydict'
 
 # ################################################################################################################################
 
-def create_mtls_definition(page:'Page', base_url:'str', name:'str', fields:'anydict | None'=None) -> 'anydict':
+def create_mtls_definition(
+    page:'Page',
+    base_url:'str',
+    name:'str',
+    fields:'anydict | None'=None,
+) -> 'anydict':
     """ Creates an mTLS security definition via the UI and returns its details.
     All the definition's fields other than the name are optional and come from the fields dictionary,
     e.g. cert_path and key_path for outgoing connections or client_cert_fingerprint for channels.
@@ -670,7 +684,24 @@ def create_mtls_definition(page:'Page', base_url:'str', name:'str', fields:'anyd
     if fields:
         form_fields.update(fields)
 
-    _create_definition_on_page(page, base_url, '/zato/security/mtls/', form_fields)
+    # Navigate to the definition list page ..
+    navigate_to_page(page, base_url, '/zato/security/mtls/')
+
+    # .. open the create dialog ..
+    open_create_dialog(page)
+
+    # .. fill in the fields, each on the tab that it is on ..
+    for field_name, value in form_fields.items():
+        if tab_name := _MTLS_Field_Tabs.get(field_name):
+            page.click(f'#create-div .dashboard-tab[data-tab="{tab_name}"]')
+        page.fill(f'#id_{field_name}', value)
+
+    # .. submit and wait for the dialog to close ..
+    submit_create_form(page)
+
+    # .. and wait for the row to appear.
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = dict(form_fields)
     return out

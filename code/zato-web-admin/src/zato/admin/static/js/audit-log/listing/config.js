@@ -86,6 +86,13 @@ listing.config = {
     eventChipErrorTone: 'bad',
     eventChipRunningTone: 'running',
 
+    // An alert wears its event word as a chip in the error tone on every row
+    alertEventType: 'alert-raised',
+    eventChipAlertTone: 'bad',
+
+    // A row that went as it should offers nothing to be sent again
+    okOutcome: 'ok',
+
     // The outcome of a row that is still changing and what its event word reads while it is.
     runningOutcome: 'running',
     runningLabel: 'Running',
@@ -178,7 +185,7 @@ listing.config = {
     // The columns the list draws places of its own for, so the neutral presenter knows
     // which of a source's columns are left to become chips
     coreColumnKeys: {
-        'event_time_iso': true,
+        'event_time': true,
         'cid': true,
         'msg_id': true,
         'event_type': true,
@@ -193,7 +200,7 @@ listing.config = {
     nonAttrColumnKeys: {
         'data': true,
         'action': true,
-        'event_time_iso': true,
+        'event_time': true,
         'cid': true,
         'size': true
     },

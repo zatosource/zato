@@ -210,7 +210,7 @@ class HAProxyHandle:
         out[Env_Port_Name] = str(self.mllp_internal_port)
         out['Zato_Port_Server'] = str(find_free_port())
         out['Zato_Port_Dashboard'] = str(find_free_port())
-        out['Zato_Port_OpenAPI_Console'] = str(find_free_port())
+        out['Zato_Port_API_Portal'] = str(find_free_port())
         out['Zato_Port_Load_Balancer'] = str(find_free_port())
 
         return out

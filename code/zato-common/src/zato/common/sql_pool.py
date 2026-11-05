@@ -17,7 +17,6 @@ from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
-from urllib.parse import urlencode
 
 # Zato
 from zato.common.api import MS_SQL, NotGiven, SECRET_SHADOW, UNITTEST
@@ -342,26 +341,8 @@ class SQLConnectionPool:
 
         extra_parsed = parse_extra_into_dict(extra) # type: ignore
 
-        # Snowflake turns engine URL query parameters into connect arguments,
-        # so everything from the connection's extra goes onto the URL, not into create_engine.
-        snowflake_url_params = {}
-
-        if self.engine_name == 'snowflake':
-
-            # The dialect rejects these keys on the URL - they go through connect_args instead.
-            connect_args = {}
-
-            for key in ('host', 'protocol'):
-                if key in extra_parsed:
-                    connect_args[key] = extra_parsed.pop(key)
-
-            if connect_args:
-                _extra['connect_args'] = connect_args # type: ignore
-
-            snowflake_url_params.update(extra_parsed)
-
         # Redshift driver options cannot be given to create_engine directly - they belong in connect_args.
-        elif self.engine_name.startswith('redshift'):
+        if self.engine_name.startswith('redshift'):
             connect_args = {}
 
             for key in ('ssl', 'sslmode', 'client_protocol_version'):
@@ -388,10 +369,6 @@ class SQLConnectionPool:
                 _extra['poolclass'] = sa.NullPool # type: ignore
 
         engine_url = get_engine_url(self.config)
-
-        # Snowflake receives its extra options as engine URL query parameters.
-        if snowflake_url_params:
-            engine_url = engine_url + '?' + urlencode(snowflake_url_params)
 
         if engine_url.startswith('oracle://'):
             engine_url = engine_url.replace('oracle://', 'oracle+oracledb://')

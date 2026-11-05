@@ -1,0 +1,9 @@
+<div class="block">
+    {% if block.title %}<div class="block-title">{{ block.title }}</div>{% endif %}
+    <dl class="fields">
+        {% for row in block.rows %}
+        <dt>{{ row.label }}</dt>
+        <dd>{% for cell in row.cells %}<span class="fields-cell">{% include "portal/blocks/cell.html" with cell=cell %}</span>{% endfor %}</dd>
+        {% endfor %}
+    </dl>
+</div>

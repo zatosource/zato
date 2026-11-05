@@ -26,7 +26,8 @@ import requests
 # Zato
 from zato.common.api import HL7, HTTP_SOAP
 from zato.common.audit_log.api import AuditLog
-from zato.common.audit_log.common import AuditClassification, derive_http_classification, Export_Payload_Flag
+from zato.common.audit_log.classification import derive_http_classification
+from zato.common.audit_log.common import AuditClassification, Export_Payload_Flag
 from zato.common.bearer_token import normalize_scopes
 from zato.common.hl7.fhir.fields import Outgoing_Bool_Names, Outgoing_Config_Defaults, Outgoing_Int_Names
 from zato.common.json_internal import dumps

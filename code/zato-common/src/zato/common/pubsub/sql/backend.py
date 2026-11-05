@@ -11,26 +11,31 @@ import json
 from dataclasses import dataclass
 from datetime import timedelta
 from logging import getLogger
+from time import monotonic
+from zlib import crc32
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, select
+from sqlalchemy import and_, select
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
-from zato.common.pubsub.sql.config import get_batch_size
-from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table, topic_sub_table
-from zato.common.util.api import new_msg_id, utcnow
-from zato.common.util.time_ import datetime_to_ms
+from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
+from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query, payload_query
+from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
+from zato.common.pubsub.sql.writes import new_pending_publication
+from zato.common.util.api import new_msg_id
+from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strnone
+    from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strdict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,48 +58,6 @@ _milliseconds_per_second = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The columns _build_message_from_row consumes.
-_fetch_columns = [
-    message_table.c.id,
-    message_table.c.msg_id,
-    message_table.c.topic_name,
-    message_table.c.payload,
-    message_table.c.payload_encrypted,
-    message_table.c.data_class,
-    message_table.c.data_size,
-    message_table.c.data_preview,
-    message_table.c.priority,
-    message_table.c.expiration,
-    message_table.c.pub_time_iso,
-    message_table.c.recv_time_iso,
-    message_table.c.expiration_time_iso,
-    message_table.c.publisher,
-    message_table.c.cid,
-    message_table.c.correl_id,
-    message_table.c.in_reply_to,
-    message_table.c.ext_client_id,
-]
-_fetch_columns.extend(message_retry_columns)
-
-# The fetch statement runs on every delivery, so it is built once here, not per call.
-_fetch_join = delivery_table.join(message_table, message_table.c.id == delivery_table.c.message_id)
-
-_fetch_query = select(*_fetch_columns)
-_fetch_query = _fetch_query.select_from(_fetch_join)
-_fetch_query = _fetch_query.where(and_(
-    delivery_table.c.sub_key == bindparam('fetch_sub_key'),
-    delivery_table.c.expiration_ms > bindparam('fetch_now_ms'),
-))
-_fetch_query = _fetch_query.order_by(delivery_table.c.priority.desc(), delivery_table.c.message_id.asc())
-_fetch_query = _fetch_query.limit(bindparam('fetch_max_messages'))
-
-# The queue of an outgoing connection is fetched with its expired messages, which the delivery concludes in their turn
-_outgoing_fetch_query = select(*_fetch_columns)
-_outgoing_fetch_query = _outgoing_fetch_query.select_from(_fetch_join)
-_outgoing_fetch_query = _outgoing_fetch_query.where(delivery_table.c.sub_key == bindparam('fetch_sub_key'))
-_outgoing_fetch_query = _outgoing_fetch_query.order_by(delivery_table.c.priority.desc(), delivery_table.c.message_id.asc())
-_outgoing_fetch_query = _outgoing_fetch_query.limit(bindparam('fetch_max_messages'))
 
 _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
@@ -148,8 +111,9 @@ class SQLPubSubBackend(SQLAdminAPI):
         else:
             message_id = new_msg_id()
 
-        # .. build timestamps ..
-        now = utcnow()
+        # .. build timestamps on the time of the database ..
+        clock = self.clock
+        now = clock.now()
         now_iso = now.isoformat()
 
         if pub_time:
@@ -184,6 +148,10 @@ class SQLPubSubBackend(SQLAdminAPI):
         data_size = len(serialized_data)
         data_preview = serialized_data[:_data_preview_len]
 
+        # .. a publication repeated under the same identifier is recognized by its checksum ..
+        serialized_bytes = serialized_data.encode('utf8')
+        payload_crc32 = crc32(serialized_bytes)
+
         # .. encrypt the payload at rest when configured to ..
         if self.encrypt_at_rest:
             payload = self._encrypt_payload(serialized_data)
@@ -198,6 +166,7 @@ class SQLPubSubBackend(SQLAdminAPI):
             'topic_name': topic_name,
             'payload': payload,
             'payload_encrypted': payload_encrypted,
+            'payload_crc32': payload_crc32,
             'data_class': data_class if data_class else None,
             'data_size': data_size,
             'data_preview': data_preview if data_preview else None,
@@ -219,45 +188,16 @@ class SQLPubSubBackend(SQLAdminAPI):
             _retry.Field_Backoff_Multiplier: retry_backoff_multiplier,
         }
 
-        # .. one transaction inserts the message and its delivery rows ..
-        with self.engine.begin() as connection:
+        # .. one transaction, possibly shared with other callers, inserts the message and one delivery row
+        # .. per subscriber, and a topic without subscribers has its message stored without its payload ..
+        pending = new_pending_publication(message_values)
+        self._writer.publish(pending)
 
-            # .. the subscribers as of this very publication ..
-            subscriber_keys = self._get_subscriber_keys(connection, topic_name)
-
-            # .. with no subscribers the payload is dropped immediately ..
-            if not subscriber_keys:
-                message_values['payload'] = None
-                message_values['payload_encrypted'] = False
-
-            insert_statement = message_table.insert().values(**message_values)
-            result = connection.execute(insert_statement)
-
-            primary_key = result.inserted_primary_key
-            message_row_id = primary_key[0]
-
-            # .. one delivery row per subscriber ..
-            if subscriber_keys:
-
-                delivery_rows:'anylist' = []
-
-                for sub_key in subscriber_keys:
-                    delivery_rows.append({
-                        'message_id': message_row_id,
-                        'sub_key': sub_key,
-                        'topic_name': topic_name,
-                        'priority': priority,
-                        'expiration_ms': expiration_ms,
-                    })
-
-                _ = connection.execute(delivery_table.insert(), delivery_rows)
+        subscriber_keys = pending.subscriber_keys
 
         # .. wake up the subscribers now that the transaction is committed ..
         if subscriber_keys:
             self.notify_sub_keys(subscriber_keys)
-
-        # .. give the subscribers just woken up a chance to run ..
-        self._yield_after_write()
 
         subscriber_count = len(subscriber_keys)
 
@@ -278,12 +218,14 @@ class SQLPubSubBackend(SQLAdminAPI):
                 if publisher is None:
                     publisher = ''
 
+                audit_pub_time = parse_utc(pub_time_iso)
+
                 self.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
                     cid=cid,
                     msg_id=message_id,
                     correl_id=correl_id,
                     ext_client_id=ext_client_id,
-                    pub_time_iso=pub_time_iso,
+                    pub_time=audit_pub_time,
                     endpoint=publisher,
                     size=data_size,
                     priority=priority,
@@ -355,6 +297,8 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         while True:
 
+            batch_started = monotonic()
+
             with self.engine.begin() as connection:
 
                 query = select(delivery_table.c.id, delivery_table.c.message_id)
@@ -385,16 +329,17 @@ class SQLPubSubBackend(SQLAdminAPI):
                 cleaned_up_count += len(rows)
 
             # Let the other greenlets run between the batches.
-            self._yield_after_write()
+            self._yield_after_batch(monotonic() - batch_started)
 
         logger.info('Unsubscribed -> sub_key:%s, topic_name:%s, cleaned_up_count:%d',
             sub_key, topic_name, cleaned_up_count)
 
 # ################################################################################################################################
 
-    def _fetch_rows(self, sub_key:'str', max_messages:'int') -> 'anylist':
+    def _fetch_rows(self, sub_key:'str', max_messages:'int') -> 'tuple[anylist, strdict]':
         """ Reads the subscriber's deliverable messages in (priority highest-first,
-        publication order) sequence - one index-ordered query no matter the backlog depth.
+        publication order) sequence - one index-ordered query no matter the backlog depth -
+        and their payloads by msg_id, reading from the database only those that the payload cache does not have.
         """
         parameters = {
             'fetch_sub_key': sub_key,
@@ -402,15 +347,49 @@ class SQLPubSubBackend(SQLAdminAPI):
         }
 
         if sub_key.startswith(_outgoing_sub_key_prefix):
-            query = _outgoing_fetch_query
+            query = outgoing_fetch_query
         else:
-            query = _fetch_query
-            parameters['fetch_now_ms'] = self._utc_now_ms()
+            query = fetch_query
+            parameters['fetch_now_ms'] = self._database_now_ms()
+
+        payload_cache = self.payload_cache
+
+        payloads:'strdict' = {}
+        missing:'anydict' = {}
 
         with self.engine.connect() as connection:
-            out = connection.execute(query, parameters).fetchall()
+            rows = connection.execute(query, parameters).fetchall()
 
-        return out
+            # The payloads kept already are used as they are ..
+            for row in rows:
+                payload = payload_cache.get(row.msg_id)
+                if payload is None:
+                    missing[row.id] = row
+                else:
+                    payloads[row.msg_id] = payload
+
+            # .. and the others are read in one more query.
+            if missing:
+                payload_parameters = {'payload_message_ids': list(missing)}
+                payload_rows = connection.execute(payload_query, payload_parameters).fetchall()
+            else:
+                payload_rows = []
+
+        for payload_row in payload_rows:
+            row = missing[payload_row.id]
+            payload = self._load_payload_from_row(payload_row)
+            payloads[row.msg_id] = payload
+
+            # A payload that was dropped already is not kept.
+            if payload_row.payload is not None:
+                payload_cache.put(row.msg_id, payload, row.data_size)
+
+        # A message that left the database between the two queries has no payload, the same as a dropped one.
+        for row in missing.values():
+            if row.msg_id not in payloads:
+                payloads[row.msg_id] = ''
+
+        return rows, payloads
 
 # ################################################################################################################################
 
@@ -433,7 +412,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         event.clear()
 
         # .. read whatever is deliverable right now ..
-        rows = self._fetch_rows(sub_key, max_messages)
+        rows, payloads = self._fetch_rows(sub_key, max_messages)
 
         # .. nothing yet - optionally wait for a publish to wake us up and look again.
         # .. A wait that times out without a wakeup means nothing was published,
@@ -443,9 +422,10 @@ class SQLPubSubBackend(SQLAdminAPI):
             if block_ms:
                 wait_seconds = block_ms / _milliseconds_per_second
                 if event.wait(wait_seconds):
-                    rows = self._fetch_rows(sub_key, max_messages)
+                    rows, payloads = self._fetch_rows(sub_key, max_messages)
 
-        # .. convert the rows into message dicts, keeping within the total size budget.
+        # .. convert the rows into message dicts, keeping within the total size budget,
+        # .. except that a message larger than the budget goes out alone rather than holding up its queue.
         out:'anylist' = []
         total_len = 0
 
@@ -453,12 +433,46 @@ class SQLPubSubBackend(SQLAdminAPI):
 
             data_len = row.data_size
 
-            if total_len + data_len > max_len:
+            if out and total_len + data_len > max_len:
                 break
 
             total_len += data_len
 
-            message = self._build_message_from_row(row)
+            # The delivery row is what each push attempt is recorded in.
+            data = payloads[row.msg_id]
+            message = self._build_message_from_row(row, data)
+            message['delivery_id'] = row.delivery_id
+            message['delivery_attempt'] = row.attempt
+
+            out.append(message)
+
+        return out
+
+# ################################################################################################################################
+
+    def pull_messages(
+        self,
+        sub_key:'str',
+        max_messages:'int'=_default_max_messages,
+        max_len:'int'=_default_max_len,
+    ) -> 'anylist':
+        """ Hands a subscriber's deliverable messages over to one pulling client, leasing them in the same transaction,
+        so that concurrent pulls never receive the same message. The messages stay in the queue until the subscriber
+        acknowledges them, and a pull after their lease runs out hands them out again.
+        """
+        engine = self.engine
+        now_ms = self._database_now_ms()
+        leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
+
+        rows, attempts = call_database(engine, lease_messages, engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
+
+        out:'anylist' = []
+
+        # Each copy of a message carries the number of the pull that handed it out, which a repeated copy raises.
+        for row in rows:
+            data = self._load_payload_from_row(row)
+            message = self._build_message_from_row(row, data)
+            message['delivery_attempt'] = attempts[row.id]
             out.append(message)
 
         return out
@@ -476,10 +490,11 @@ class SQLPubSubBackend(SQLAdminAPI):
 # ################################################################################################################################
 
     def format_messages_for_rest(self, messages:'anylist', sub_key:'str') -> 'anylist':
-        """ Format raw messages into the {data, meta} structure expected by the REST API.
-        Also acknowledges each message and increments delivery counters.
+        """ Format messages that a pull leased into the {data, meta} structure expected by the REST API,
+        recording each reception and incrementing delivery counters.
         """
-        now = utcnow()
+        clock = self.clock
+        now = clock.now()
 
         out:'anylist' = []
 
@@ -507,6 +522,7 @@ class SQLPubSubBackend(SQLAdminAPI):
                 'priority': message['priority'],
                 'expiration': message['expiration'],
                 'msg_id': message['msg_id'],
+                'delivery_attempt': message['delivery_attempt'],
                 'sub_key': sub_key,
                 'pub_time_iso': pub_time_iso,
                 'recv_time_iso': recv_time_iso,
@@ -529,9 +545,6 @@ class SQLPubSubBackend(SQLAdminAPI):
                 'meta': meta
             })
 
-            # .. acknowledge the message now that it is being handed over ..
-            _ = self.ack_messages(sub_key, [message['msg_id']], [message['sequence_id']])
-
             # .. record the reception in the audit log, unless the topic's audit log is off ..
             if self.audit_log:
                 if message['topic_name'] not in self.audit_disabled_topics:
@@ -541,10 +554,12 @@ class SQLPubSubBackend(SQLAdminAPI):
                     if message_cid is None:
                         message_cid = ''
 
+                    audit_pub_time = parse_utc(pub_time_iso)
+
                     self.audit_log.insert(AuditSource.PubSub, AuditEvent.Received, message['topic_name'],
                         cid=message_cid,
                         msg_id=message['msg_id'],
-                        pub_time_iso=pub_time_iso,
+                        pub_time=audit_pub_time,
                         sub_key=sub_key,
                         size=data_size,
                         priority=message['priority'],

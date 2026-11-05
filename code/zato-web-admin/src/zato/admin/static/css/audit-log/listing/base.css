@@ -17,10 +17,6 @@
 
 :root {
 
-    /* The room the frame around the page used to give what stands inside it, kept now that the
-       frame itself is gone, so nothing on the page moved out to the edge along with it */
-    --audit-log-page-inset: 20px;
-
     /* The digits of a time of day - darker than the grey the dashboard mutes text to, so a
        column of them is legible at a glance, and still held back from what a row is named by */
     --audit-log-time-text: #43506a;
@@ -46,6 +42,15 @@
     /* Every row is this tall whatever it holds, so a dropped tag does not shorten the rows and
        walk the list up under the reader. It is the height the tallest of them already came to.  */
     --audit-log-row-height: 28px;
+
+    /* The head of the pane is this tall whatever the event has in it, so an event without an
+       outcome badge does not lift the tabs and the panels below it. It is the height the head
+       already came to with the badge in it. */
+    --audit-log-pane-head-height: 20px;
+
+    /* A tag on a row narrowed down to this still shows the first letters of what it says. A row
+       whose tags cannot all stand at this width gives up a column instead. */
+    --audit-log-row-chip-min-width: 6ch;
 
     /* The dot a failed row is marked with, and how far its rail stands off the list. Both come out
        of the inset the page already keeps at its edge, so nothing in the list gives up any room. */
@@ -119,35 +124,26 @@
 /* The page around the listing                                   */
 /* ------------------------------------------------------------ */
 
-/* Every settings page stands in a container that insists on being a window tall, and its
-   padding comes on top of that, so the document is always some 60px taller than the window.
-   On this page the pair is what fills the window - it measures the room the page leaves it,
-   and a floor under the page would only be measured back off the pair while keeping the page
-   scrollable. So the floor goes, and the padding below is kept small - what the pair may not
-   have is only what is really drawn under it. */
+/* The dashboard kit removes the rule under the navigation bar for the band a dashboard draws
+   beneath it. This page draws no such band, so it keeps the rule of the listing pages. */
 
-.settings-container:has(.detail-page-audit-log) {
-    min-height: 0;
-    padding-bottom: 12px;
+body:has(.detail-page-audit-log) .pure-css-nav {
+    border-bottom: 3px solid #aaa;
 }
+
+/* The page stands at the width and offset of the data table of a listing page,
+   in the typeface the dashboard kit is drawn in */
 
 .detail-page-audit-log {
-    padding-left: var(--audit-log-page-inset);
-    padding-right: var(--audit-log-page-inset);
-}
-
-/* The page itself has nothing to tab between - everything on it is an event.
-   The tabs inside the detail pane are another matter. */
-
-.detail-page-audit-log > .dashboard-tabs {
-    display: none;
+    width: 96%;
+    margin-left: 2%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .audit-log-search-form {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin: 0.5rem 0 1rem 0;
 }
 
 /* The filter selects of the all-events page stand a step apart from the search itself -
@@ -166,7 +162,7 @@
     margin-right: 8px;
 }
 
-/* Clear stands inside the box - the shared search-clear component provides both the badge
+/* Clear stands inside the box - shared/search-box.css provides the box, its clear control
    and the room the box keeps for it, the width alone is this page's own */
 
 .audit-log-search-input {

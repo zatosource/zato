@@ -12,9 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import annotations
 
-# stdlib
-from datetime import datetime
-
 # SQLAlchemy
 from sqlalchemy import and_, func, select
 
@@ -26,8 +23,10 @@ from zato.common.audit_log.api import event_table
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.typing_ import dictlist, stranydict
+    datetime = datetime
     dictlist = dictlist
     Engine = Engine
     stranydict = stranydict
@@ -73,16 +72,15 @@ def collect_outstanding_facts(
         event_table.c.source,
         event_table.c.object_name,
         func.count(),
-        func.min(event_table.c.event_time_iso),
+        func.min(event_table.c.event_time),
     ).where(and_(*conditions)).group_by(event_table.c.source, event_table.c.object_name)
 
     with engine.connect() as connection:
         rows = connection.execute(statement).fetchall()
 
-    for row_source, row_object_name, outstanding_count, oldest_iso in rows:
+    for row_source, row_object_name, outstanding_count, oldest_time in rows:
 
         # How long the oldest waiting item has been waiting
-        oldest_time = datetime.fromisoformat(oldest_iso)
         waiting = now - oldest_time
         waiting_seconds = round(waiting.total_seconds())
 

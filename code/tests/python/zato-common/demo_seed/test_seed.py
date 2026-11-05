@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from json import loads
 from time import monotonic
 
@@ -41,7 +41,7 @@ if 0:
 _server_name = 'test-demo-seed-server'
 
 # A fixed moment the assertions hinge on - a midday, so the day's curve has hours behind it
-_now = datetime(2026, 7, 15, 12, 30, 0)
+_now = datetime(2026, 7, 15, 12, 30, 0, tzinfo=timezone.utc)
 
 # How long one default-size run may take end to end - a week of 1200 messages
 # per day is about 8,500 messages and their events. The writes land in one bulk
@@ -159,7 +159,7 @@ class TestSeedContents:
         days = set()
 
         for event in events:
-            when = datetime.fromisoformat(event['event_time_iso'])
+            when = event['event_time']
             assert when <= _now
             days.add(when.date())
 
@@ -174,8 +174,8 @@ class TestSeedContents:
         _ = _run_seed()
 
         for event in _get_events():
-            when = datetime.fromisoformat(event['event_time_iso'])
-            assert when.microsecond, event['event_time_iso']
+            when = event['event_time']
+            assert when.microsecond, when
 
 # ################################################################################################################################
 
@@ -258,7 +258,7 @@ class TestSeedContents:
         outside = 0
 
         for event in events:
-            when = datetime.fromisoformat(event['event_time_iso'])
+            when = event['event_time']
 
             if burst_start <= when < burst_end:
                 inside += 1
@@ -280,7 +280,7 @@ class TestSeedContents:
         assert events
 
         for event in events:
-            when = datetime.fromisoformat(event['event_time_iso'])
+            when = event['event_time']
             assert when <= cutoff
 
 # ################################################################################################################################
@@ -412,7 +412,7 @@ class TestSeedContents:
             rows = connection.execute(select(event_dedup_table)).fetchall()
 
         entries = [row._asdict() for row in rows]
-        in_doubt = [entry for entry in entries if not entry['completed_iso']]
+        in_doubt = [entry for entry in entries if entry['completed_at'] is None]
         reprocessed = [entry for entry in entries if entry['action'] == 'reprocess']
 
         assert len(entries) == result.resubmit_count + 2
@@ -498,10 +498,10 @@ class TestSeedBehaviour:
         """ Two runs with one seed produce the same events at the same moments.
         """
         _ = _run_seed()
-        first_events = [(event['cid'], event['event_time_iso']) for event in _get_events(source=AuditSource.MLLP_Channel)]
+        first_events = [(event['cid'], event['event_time']) for event in _get_events(source=AuditSource.MLLP_Channel)]
 
         _ = _run_seed()
-        second_events = [(event['cid'], event['event_time_iso']) for event in _get_events(source=AuditSource.MLLP_Channel)]
+        second_events = [(event['cid'], event['event_time']) for event in _get_events(source=AuditSource.MLLP_Channel)]
 
         assert sorted(first_events) == sorted(second_events)
 

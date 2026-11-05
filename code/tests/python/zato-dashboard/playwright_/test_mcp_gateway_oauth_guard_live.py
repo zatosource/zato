@@ -126,7 +126,8 @@ def _wait_for_issuers(server_port:'int', url_path:'str', expected:'strlist') -> 
 def _edit_basic_auth(page:'Page', base_url:'str', definition_name:'str', script:'str') -> 'None':
     """ Opens the edit dialog of a Basic Auth definition, runs the script that changes its form and submits it.
     """
-    navigate_to_page(page, base_url, _basic_auth_page_url)
+    # The list is paginated, so the page is narrowed to the definition, or its row may be on another page ..
+    navigate_to_page(page, base_url, f'{_basic_auth_page_url}?query={definition_name}')
     definition_id = get_item_id(page, definition_name)
 
     page.evaluate(f'$.fn.zato.security.basic_auth.edit("{definition_id}")')
@@ -154,7 +155,7 @@ class TestMCPGatewayOAuthGuardLive:
         gateway = _create_oauth_gateway(page, base_url, 'last-delete')
 
         # The deletion is refused with the gateway named ..
-        navigate_to_page(page, base_url, Bearer_Page_Url)
+        navigate_to_page(page, base_url, f'{Bearer_Page_Url}?query={gateway["bearer_name"]}')
         page.evaluate(f'$.fn.zato.security.oauth.delete_("{gateway["bearer_id"]}")')
         _ = page.wait_for_selector('#popup_container', state='visible', timeout=HTTP_Timeout * 1000)
 
@@ -262,7 +263,7 @@ class TestMCPGatewayOAuthGuardLive:
         assert issuers == sorted([keycloak_issuer, _second_issuer]), issuers
 
         # The second definition is deleted ..
-        navigate_to_page(page, base_url, Bearer_Page_Url)
+        navigate_to_page(page, base_url, f'{Bearer_Page_Url}?query={second_bearer_name}')
         delete_definition(page, second_bearer_id)
 
         # .. and the metadata names only the remaining issuer.

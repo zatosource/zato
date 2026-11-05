@@ -83,7 +83,7 @@ def build_components() -> 'component_list':
     server_ping = _http_check(f'http://127.0.0.1:{Port.Server}/zato/ping', '= 200')
     mcp         = _http_check(f'http://127.0.0.1:{Port.Server}/mcp', '!= 000')
     dashboard   = _http_check(f'http://127.0.0.1:{Port.Dashboard_Internal}/accounts/login/', '= 200')
-    console     = _http_check(f'http://127.0.0.1:{Port.OpenAPI_Console}/', '!= 000')
+    portal      = _http_check(f'http://127.0.0.1:{Port.API_Portal}/', '!= 000')
 
     definitions = [
         ('Scheduler',                 'Starting scheduler',                 _process_check('[q]s-1/scheduler')),
@@ -92,7 +92,7 @@ def build_components() -> 'component_list':
         ('Server',                    'Starting server',                    server_ping),
         ('MCP gateway',               'Starting MCP gateway',               mcp),
         ('Dashboard',                 'Starting dashboard',                 dashboard),
-        ('OpenAPI console',           'Starting OpenAPI console',           console),
+        ('API portal',                'Starting API portal',                portal),
         ('Rule engine',               'Starting rule engine',               server_ping),
         ('File pickup listener',      'Starting file pickup listener',      _process_check('[p]ickup/incoming/services')),
         ('Rule engine notifications', 'Starting rule engine notifications', _process_check('[r]ule_engine.jobs.notify')),

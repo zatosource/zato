@@ -55,9 +55,9 @@
     min-height: 0;
 }
 
-/* The filter box is the same plain search box the audit log has - the width is this
-   screen's own, the badge and the room the box keeps for it come from the shared
-   search-clear component */
+/* The filter box is the same search box the audit log has - the width is this
+   screen's own, the box, its clear control and the room the box keeps for it
+   come from shared/search-box.css */
 .alerting-card .alerting-filter-input {
     width: 24rem;
 }

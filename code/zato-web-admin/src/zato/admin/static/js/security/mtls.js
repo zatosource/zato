@@ -30,23 +30,41 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.mtls.field_descriptions = {
-    'id_name': 'A unique name for this definition. ' +
-        'Used to identify it in channels, outgoing connections, logs and the dashboard.',
     'id_cert_path': 'Path to a PEM file on the server with the client certificate that outgoing connections ' +
         'present during the TLS handshake.',
     'id_key_path': 'Path to a PEM file on the server with the private key matching the certificate. ' +
         'Leave empty if the certificate file contains the key too.',
     'id_ca_certs_path': 'Path to a PEM file on the server with the CA certificates that the remote server\'s ' +
         'certificate must chain up to. Leave empty to use the system trust store.',
-    'id_client_cert_fingerprint': 'For channels - the SHA256 fingerprint of the client certificate ' +
+    'id_client_cert_fingerprint': 'The SHA256 fingerprint of the client certificate ' +
         'that is allowed to invoke channels using this definition.',
-    'id_client_cert_subject_dn': 'For channels - the subject DN of the client certificate that is allowed ' +
+    'id_client_cert_subject_dn': 'The subject DN of the client certificate that is allowed ' +
         'to invoke channels using this definition. The fingerprint takes precedence if both are given.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.security.mtls.tab_labels = {
+    channels: 'For channels',
+    outgoing: 'For outgoing connections'
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.mtls.resetTabs = function(action) {
+    var isEdit = action === 'edit';
+    $.fn.zato.form_tabs.reset({
+        div_id:       isEdit ? '#edit-div' : '#create-div',
+        panel_prefix: isEdit ? 'mtls-edit-tab-panel-' : 'mtls-create-tab-panel-',
+        default_tab:  'channels',
+        tab_labels:   $.fn.zato.security.mtls.tab_labels
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.security.mtls.create = function() {
+    $.fn.zato.security.mtls.resetTabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create an mTLS definition', null);
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
@@ -56,6 +74,7 @@ $.fn.zato.security.mtls.create = function() {
 }
 
 $.fn.zato.security.mtls.edit = function(id) {
+    $.fn.zato.security.mtls.resetTabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Edit mTLS definition', id);
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',

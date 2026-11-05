@@ -21,6 +21,7 @@ import requests
 from zato.common.api import MCP
 from zato.common.audit_log.common import AuditSource
 from zato.common.audit_log.export.config import ModuleCtx as ExportCtx
+from zato.common.util.time_ import parse_utc
 
 # Test support
 from live_otel.containers import OTelCollector
@@ -278,8 +279,11 @@ class AuditExportEnvironment(NamedTuple):
 
 # The columns the assertions compare records against, in the order the select below returns them
 _event_columns = ('id', 'cid', 'cid_sequence', 'source', 'event_type', 'object_name', 'msg_id', 'correl_id', 'ext_client_id',
-    'pub_time_iso', 'event_time_iso', 'server_name', 'endpoint', 'sub_key', 'size', 'priority', 'outcome',
+    'pub_time', 'event_time', 'server_name', 'endpoint', 'sub_key', 'size', 'priority', 'outcome',
     'application_outcome', 'classification', 'status', 'duration_ms', 'data')
+
+# The timestamp columns, which SQLite keeps as text in UTC without an offset
+_time_columns = ('pub_time', 'event_time')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -353,6 +357,10 @@ def read_events(audit_db_path:'str', source:'str', object_name:'str', min_id:'in
 
         for db_row in db_rows:
             row:'anydict' = dict(zip(_event_columns, db_row))
+
+            for name in _time_columns:
+                if (value := row[name]) is not None:
+                    row[name] = parse_utc(value)
 
             try:
                 row['document'] = loads(row['data'])

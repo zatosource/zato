@@ -10,21 +10,27 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
 from time import monotonic
-from typing import NamedTuple
 
 # gevent
 from gevent import sleep
 from gevent.event import Event
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, exists, select
+from sqlalchemy import bindparam
 
 # Zato
 from zato.common.api import HTTP_SOAP
-from zato.common.pubsub.sql.config import get_pubsub_engine
-from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.pubsub.sql.clock import get_engine_clock
+from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
+from zato.common.pubsub.sql.generation import take_over
+from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache
+from zato.common.pubsub.sql.schema import delivery_table
+from zato.common.pubsub.sql.writes import drop_payloads, new_pending_ack, PubSubWriter
 from zato.common.typing_ import cast_
-from zato.common.util.time_ import datetime_to_ms, utcnow
+from zato.common.util.memory_trim import start_memory_trimmer
+from zato.common.util.time_ import datetime_to_ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,13 +39,18 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.crypto.api import CryptoManager
+    from zato.common.pubsub.sql.clock import DatabaseClock
+    from zato.common.pubsub.sql.generation import GenerationGuard
+    from zato.common.pubsub.sql.writes import PendingAck
     from zato.common.typing_ import any_, anydict, intlist, intlistnone, strlist, strset
 
     # Dummy assignments to satisfy type checkers
     AuditLog = AuditLog
     Connection = Connection
     CryptoManager = CryptoManager
+    DatabaseClock = DatabaseClock
     Engine = Engine
+    GenerationGuard = GenerationGuard
 
 sub_event_dict = dict[str, Event]
 
@@ -57,42 +68,14 @@ _retry = HTTP_SOAP.Retry
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
 
-# The statements below run on every publish or delivery, so they are built once here,
-# not per call - the bind parameters take their values at execution time.
-_subscriber_keys_query = select(topic_sub_table.c.sub_key)
-_subscriber_keys_query = _subscriber_keys_query.where(topic_sub_table.c.topic_name == bindparam('pub_topic_name'))
+# The object of the audit event that records a takeover of the pub/sub database.
+_takeover_object_name = 'pubsub-database'
 
-_message_id_query = select(message_table.c.id)
-_message_id_query = _message_id_query.where(message_table.c.msg_id.in_(bindparam('lookup_msg_ids', expanding=True)))
-
-_ack_delete_statement = delivery_table.delete()
-_ack_delete_statement = _ack_delete_statement.where(and_(
-    delivery_table.c.sub_key == bindparam('ack_sub_key'),
-    delivery_table.c.message_id.in_(bindparam('ack_message_ids', expanding=True)),
-))
-
-# A message is still in flight while any delivery row references it -
-# the update drops the payloads of the given messages that have none left.
-_still_needed = exists()
-_still_needed = _still_needed.where(delivery_table.c.message_id == message_table.c.id)
-
-_drop_payloads_statement = message_table.update()
-_drop_payloads_statement = _drop_payloads_statement.where(and_(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)),
-    message_table.c.payload.isnot(None),
-    ~_still_needed,
-))
-_drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class AckResult(NamedTuple):
-    """ What one acknowledgement transaction removed - the subscriber's delivery rows
-    and the payloads that no subscriber needed anymore.
-    """
-    removed_count: int
-    fully_delivered_count: int
+# What records one push attempt of a delivery row and returns its number.
+_record_attempt_statement = delivery_table.update()
+_record_attempt_statement = _record_attempt_statement.where(delivery_table.c.id == bindparam('attempt_delivery_id'))
+_record_attempt_statement = _record_attempt_statement.values(attempt=delivery_table.c.attempt + 1)
+_record_attempt_statement = _record_attempt_statement.returning(delivery_table.c.attempt)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,13 +114,81 @@ class SQLBackendCore:
         # When _yield_after_write last let the event loop run.
         self._last_yield = monotonic()
 
+        # Publications and acknowledgements of concurrent callers share their commits.
+        self._writer = PubSubWriter()
+
+        # The generation that this server raised on PostgreSQL, if it took over the database.
+        self.generation_guard:'GenerationGuard | None' = None
+
+        # The engine of the pub/sub database, resolved on first access.
+        self._engine:'Engine | None' = None
+
+        # The payloads of the messages that push delivery read most recently.
+        self.payload_cache = PayloadCache(Max_Payload_Cache_Size)
+
+        # The memory that a burst of publications and deliveries freed returns to the operating system.
+        start_memory_trimmer()
+
 # ################################################################################################################################
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine behind the current Zato_PubSub_DB_Path, resolved on each access.
+        """ The engine of the pub/sub database that the Zato_PubSub_DB_* variables select, resolved on first access.
+        Every transaction of this backend runs on the one engine that its generation guard is installed on.
         """
-        out = get_pubsub_engine()
+        out = self._engine
+
+        if out is None:
+            out = get_pubsub_engine()
+            self._engine = out
+
+        return out
+
+# ################################################################################################################################
+
+    @property
+    def clock(self) -> 'DatabaseClock':
+        """ The clock of the pub/sub database of this backend.
+        """
+        engine = self.engine
+
+        out = get_engine_clock(engine)
+        return out
+
+# ################################################################################################################################
+
+    def take_over(self) -> 'None':
+        """ Makes this server the active one on PostgreSQL, whose database a standby server may take over,
+        and guards each subsequent transaction with the generation raised. A SQLite file has only one server.
+        """
+        if get_pubsub_db_type() == Type_PostgreSQL:
+            generation_guard = take_over(get_pubsub_engine)
+            self.generation_guard = generation_guard
+
+            # Each generation is one higher than the one it replaces, which the audit log records with the takeover.
+            if self.audit_log:
+                generation = generation_guard.generation
+                previous_generation = generation - 1
+
+                attrs = {
+                    'previous_generation': f'{previous_generation}',
+                    'generation': f'{generation}',
+                }
+
+                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Takeover, _takeover_object_name,
+                    outcome=AuditOutcome.OK, attrs=attrs)
+
+# ################################################################################################################################
+
+    @property
+    def is_replaced(self) -> 'bool':
+        """ Whether another server has taken over the pub/sub database of this one.
+        """
+        if self.generation_guard is None:
+            out = False
+        else:
+            out = self.generation_guard.is_replaced
+
         return out
 
 # ################################################################################################################################
@@ -220,6 +271,17 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
+    def _yield_after_batch(self, batch_seconds:'float') -> 'None':
+        """ Lets other greenlets run after one batch of an administrative operation. SQLite has a single writer,
+        so on SQLite the pause lasts as long as the batch did and publications obtain at least half of the write time.
+        """
+        if self.engine.dialect.name == Type_SQLite:
+            sleep(batch_seconds)
+        else:
+            self._yield_after_write()
+
+# ################################################################################################################################
+
     def _encrypt_payload(self, data:'str') -> 'str':
         """ Encrypts a payload before it is written to the database.
         """
@@ -257,11 +319,9 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    def _build_message_from_row(self, row:'any_') -> 'anydict':
-        """ Converts one fetched row into the message dict the delivery and REST layers consume.
+    def _build_message_from_row(self, row:'any_', data:'str') -> 'anydict':
+        """ Converts one fetched row and its payload into the message dict the delivery and REST layers consume.
         """
-        data = self._load_payload_from_row(row)
-
         # The always-present fields come first ..
         out:'anydict' = {
             'msg_id': row.msg_id,
@@ -311,37 +371,13 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    def _get_subscriber_keys(self, connection:'Connection', topic_name:'str') -> 'strlist':
-        """ Returns all the subscriber keys of one topic, read within the caller's transaction.
-        """
-        out:'strlist' = []
-
-        for row in connection.execute(_subscriber_keys_query, {'pub_topic_name': topic_name}):
-            out.append(row.sub_key)
-
-        return out
-
-# ################################################################################################################################
-
-    def _get_message_ids(self, connection:'Connection', msg_ids:'strlist') -> 'intlist':
-        """ Maps public message identifiers to their primary keys, read within the caller's transaction.
-        """
-        out:'intlist' = []
-
-        for row in connection.execute(_message_id_query, {'lookup_msg_ids': msg_ids}):
-            out.append(row.id)
-
-        return out
-
-# ################################################################################################################################
-
     def _drop_fully_delivered_payloads(self, connection:'Connection', message_ids:'intlist') -> 'int':
         """ Sets the payload to NULL for each of the given messages that no subscriber needs anymore.
         Returns how many payloads were dropped.
         """
-        result = connection.execute(_drop_payloads_statement, {'drop_message_ids': message_ids})
+        dropped = drop_payloads(connection, message_ids)
 
-        out = result.rowcount
+        out = len(dropped)
         return out
 
 # ################################################################################################################################
@@ -354,12 +390,26 @@ class SQLBackendCore:
         if not msg_ids:
             return 0
 
-        result = self._ack_messages_once(sub_key, msg_ids, sequence_ids)
-        self._yield_after_write()
-
-        out = result.fully_delivered_count
+        pending = self._ack(sub_key, msg_ids, sequence_ids)
+        out = pending.fully_delivered_count
 
         logger.info('ack_messages -> sub_key:%s, acked:%d, fully_delivered:%d', sub_key, len(msg_ids), out)
+
+        return out
+
+# ################################################################################################################################
+
+    def ack_pulled(self, sub_key:'str', msg_ids:'strlist') -> 'int':
+        """ Acknowledges messages that a pull handed out to one subscriber, removing them from its queue.
+        Returns how many of them were still in the queue.
+        """
+        if not msg_ids:
+            return 0
+
+        pending = self._ack(sub_key, msg_ids, None)
+        out = pending.removed_count
+
+        logger.info('ack_pulled -> sub_key:%s, given:%d, removed:%d', sub_key, len(msg_ids), out)
 
         return out
 
@@ -369,10 +419,8 @@ class SQLBackendCore:
         """ Acknowledges a single message on behalf of one of several callers that may act on it.
         Returns True only to the caller whose acknowledgement removed the subscriber's delivery row.
         """
-        result = self._ack_messages_once(sub_key, [msg_id], None)
-        self._yield_after_write()
-
-        out = result.removed_count > 0
+        pending = self._ack(sub_key, [msg_id], None)
+        out = pending.removed_count > 0
 
         logger.info('claim_message -> sub_key:%s, msg_id:%s, claimed:%s', sub_key, msg_id, out)
 
@@ -380,35 +428,40 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    def _ack_messages_once(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'AckResult':
-        """ Runs one acknowledgement transaction.
+    def _ack(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'PendingAck':
+        """ Writes one acknowledgement, in a commit of its own or shared with the other writes in progress.
         """
+        out = new_pending_ack(sub_key, msg_ids, sequence_ids)
+        self._writer.ack(out)
 
-        # Our response to produce
-        out = AckResult(removed_count=0, fully_delivered_count=0)
+        return out
 
-        with self.engine.begin() as connection:
+# ################################################################################################################################
 
-            # Map public identifiers to primary keys first ..
-            if sequence_ids is None:
-                message_ids = self._get_message_ids(connection, msg_ids)
-            else:
-                message_ids = sequence_ids
+    def record_attempt(self, message:'anydict') -> 'bool':
+        """ Records the next push attempt of a fetched message before its request is sent and stores its number
+        in the message. On PostgreSQL, the attempt is committed in a transaction of its own, which confirms
+        the generation of this server first, so a server that was replaced sends nothing. On SQLite, which only
+        one server uses, the attempts are counted in memory. Returns False when the message has left
+        the subscriber's queue in the meantime.
+        """
+        engine = self.engine
 
-            if not message_ids:
-                return out
+        if engine.dialect.name == Type_SQLite:
+            message['delivery_attempt'] += 1
+            return True
 
-            # .. remove this subscriber's delivery rows ..
-            parameters = {
-                'ack_sub_key': sub_key,
-                'ack_message_ids': message_ids,
-            }
-            deleted = connection.execute(_ack_delete_statement, parameters)
+        parameters = {'attempt_delivery_id': message['delivery_id']}
 
-            # .. and drop the payloads of messages that no subscriber needs anymore.
-            fully_delivered_count = self._drop_fully_delivered_payloads(connection, message_ids)
+        with engine.begin() as connection:
+            attempt = connection.execute(_record_attempt_statement, parameters).scalar()
 
-        out = AckResult(removed_count=deleted.rowcount, fully_delivered_count=fully_delivered_count)
+        if attempt is None:
+            out = False
+        else:
+            message['delivery_attempt'] = attempt
+            out = True
+
         return out
 
 # ################################################################################################################################
@@ -471,14 +524,12 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    @staticmethod
-    def _utc_now_ms() -> 'int':
-        """ Returns the current UTC time in milliseconds since the Unix epoch.
+    def _database_now_ms(self) -> 'int':
+        """ Returns the time of the pub/sub database in milliseconds since the Unix epoch.
         """
-        now = utcnow()
-        milliseconds = datetime_to_ms(now)
+        clock = self.clock
 
-        out = int(milliseconds)
+        out = clock.now_ms()
         return out
 
 # ################################################################################################################################

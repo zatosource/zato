@@ -683,7 +683,7 @@ class TestFullLoop:
 
         statement = update(event_table)
         statement = statement.where(event_table.c.id == event_id)
-        statement = statement.values(event_time_iso=(now - timedelta(seconds=600)).isoformat())
+        statement = statement.values(event_time=now - timedelta(seconds=600))
 
         with engine.begin() as connection:
             _ = connection.execute(statement)

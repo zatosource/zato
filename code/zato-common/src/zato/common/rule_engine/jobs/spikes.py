@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import argparse
-from datetime import timedelta
+from datetime import timedelta, timezone
 from logging import getLogger
 
 # typing-extensions
@@ -90,8 +90,10 @@ def run_spike_sweep(backend:'RuleSQLBackend', now:'datetime | None' = None) -> '
     if now is None:
         now = utc_now()
 
-    # The deduplicating alert store remembers spikes across sweeps ..
+    # The deduplicating alert store remembers spikes across sweeps and stores aware UTC values,
+    # .. whereas the rule engine database stores naive UTC values ..
     audit_engine = get_audit_engine()
+    alert_time = now.replace(tzinfo=timezone.utc)
 
     # .. one grouped scan covers the trailing window plus the current hour for every ruleset at once,
     # .. because a query per ruleset would put the sweep's cost on the number of rulesets ..
@@ -128,7 +130,7 @@ def run_spike_sweep(backend:'RuleSQLBackend', now:'datetime | None' = None) -> '
             Spike_Finding_Kind,
             dedup_window_seconds=Spike_Dedup_Window_Seconds,
         )
-        raise_result = raise_alert(audit_engine, rule, finding, now)
+        raise_result = raise_alert(audit_engine, rule, finding, alert_time)
 
         # .. a continuing spike was already announced, only a new one becomes an event
         # .. for the notify loop to deliver.

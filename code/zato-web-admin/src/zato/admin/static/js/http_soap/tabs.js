@@ -34,6 +34,10 @@ $.fn.zato.http_soap.tabs.init = function() {
         $.fn.zato.delivery_tab.init();
     }
 
+    // if($.fn.zato.http_soap.is_soap_channel()) {
+    //     $.fn.zato.http_soap.ebxml.init({panel_id: 'http-soap-create-tab-panel-ebxml'});
+    // }
+
     if($.fn.zato.http_soap.is_rest_outgoing()) {
 
         // Attach date-time pickers to the scheduler start date fields in both popups ..
@@ -62,6 +66,12 @@ $.fn.zato.http_soap.is_rest_channel = function() {
     var connection = $('input[name="connection"]').val();
     var transport = $('input[name="transport"]').val();
     return connection === 'channel' && transport === 'plain_http';
+}
+
+$.fn.zato.http_soap.is_soap_channel = function() {
+    var connection = $('input[name="connection"]').val();
+    var transport = $('input[name="transport"]').val();
+    return connection === 'channel' && transport === 'soap';
 }
 
 // A channel of either transport and an outgoing REST connection carry the Alerts tab -
@@ -118,9 +128,14 @@ $.fn.zato.http_soap.outgoingTabLabels = function() {
 // The tabs of a REST or SOAP channel's create and edit forms
 $.fn.zato.http_soap.channelTabLabels = function() {
     var out = {
-        main:   'Main',
-        alerts: $.fn.zato.alerts_tab.tab_label()
+        main: 'Main'
     };
+
+    // if($.fn.zato.http_soap.is_soap_channel()) {
+    //     out.ebxml = 'ebXML';
+    // }
+
+    out.alerts = $.fn.zato.alerts_tab.tab_label();
 
     if($.fn.zato.http_soap.has_delivery_tab()) {
         out.delivery = 'Delivery';

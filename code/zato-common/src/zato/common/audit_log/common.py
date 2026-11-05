@@ -8,8 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, INTERNAL_SERVER_ERROR, NOT_FOUND, \
-    REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
 
 # requests
 from requests.exceptions import ConnectionError as RequestsConnectionError, SSLError as RequestsSSLError, \
@@ -19,6 +17,10 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, SSLE
 from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
 
 # Zato
+from zato.common.audit_log.event_count import register_event_count
+from zato.common.audit_log.event_open import new_exchange_pair, register_event_open
+from zato.common.audit_log.search_index import register_search_indexes
+from zato.common.db_env.common import Binary_Type, UTC_DateTime
 from zato.common.exception import BackendInvocationError
 
 # ################################################################################################################################
@@ -301,6 +303,9 @@ class AuditEvent:
     Alert_Raised         = 'alert-raised'
     Alert_Explained      = 'alert-explained'
     DLQ                  = 'dlq'
+
+    # A server became the active one for the pub/sub database, with the previous and the new generation in its attributes.
+    Takeover             = 'takeover'
     MCP_Initialize       = 'mcp-initialize'
     MCP_Tools_List       = 'mcp-tools-list'
     MCP_Tools_Call       = 'mcp-tools-call'
@@ -443,8 +448,7 @@ class AuditLink:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The one table holding all audit events, portable across SQLite, MySQL, PostgreSQL and Oracle DB.
-# Short columns are VARCHAR because MySQL cannot index TEXT columns without a prefix length.
+# The one table holding all audit events, portable across SQLite and PostgreSQL.
 metadata = MetaData()
 
 # Event identifiers are 64-bit, except under SQLite where the autoincrement
@@ -453,21 +457,31 @@ _big_id_column = BigInteger()
 _sqlite_id_column = Integer()
 _id_column_type = _big_id_column.with_variant(_sqlite_id_column, 'sqlite')
 
+def _new_id_column() -> 'Column':
+    """ Returns the autoincrement primary key of one table.
+    """
+    out = Column('id', _id_column_type, primary_key=True, autoincrement=True)
+    return out
+
 # The column types the tables below are built out of, named once so no table definition
 # needs an inner call of its own.
 _short_column = String(_short_column_len)
 _endpoint_column = String(_endpoint_column_len)
 _attr_number_column = Numeric(20, 6, asdecimal=False)
+_time_column = UTC_DateTime()
 
-# How much of a short column an index spans when a whole one would not fit. MySQL caps a key
-# at 3072 bytes, which four full-width utf8mb4 columns overrun, and rule, source, object
-# and kind names all tell themselves apart well inside this many characters.
-_index_prefix_len = 64
+# A page of the listing is one window of the events ordered by the time they happened, newest first,
+# with ids breaking ties, and these indexes hold that order for all events, for one source and for one outcome.
+_ordered_indexes = [
+    Index('idx_event_time', 'event_time', 'id'),
+    Index('idx_event_source_time', 'source', 'event_time', 'id'),
+    Index('idx_event_outcome_time', 'outcome', 'event_time', 'id'),
+]
 
 # ################################################################################################################################
 
 _event_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column(),
     Column('cid', _short_column),
     Column('cid_sequence', Integer),
     Column('source', _short_column),
@@ -476,8 +490,8 @@ _event_columns = [
     Column('msg_id', _short_column),
     Column('correl_id', _short_column),
     Column('ext_client_id', _short_column),
-    Column('pub_time_iso', _short_column),
-    Column('event_time_iso', _short_column),
+    Column('pub_time', _time_column),
+    Column('event_time', _time_column),
     Column('server_name', _short_column),
     Column('endpoint', _endpoint_column),
     Column('sub_key', _short_column),
@@ -489,12 +503,20 @@ _event_columns = [
     Column('status', _short_column),
     Column('duration_ms', Integer),
     Column('data', Text),
+
+    # What the product reads back from an event and the free-text search does not cover, e.g. the digests of payloads.
+    Column('internal_data', Text),
+
+    # The transaction a group commit wrote the event in, on the databases whose drivers return
+    # no identifiers from a multi-row insert, so that one select by it returns them in insertion order.
+    Column('commit_id', _short_column),
+
     Index('idx_event_source_object', 'source', 'object_name', 'id'),
 
     # One object's events are read newest first by the time they happened rather than by the
     # order they were written in, and a page of them is one window of that order - without
     # this the whole of an object's history would be sorted to answer for a single page.
-    Index('idx_event_source_object_time', 'source', 'object_name', 'event_time_iso'),
+    Index('idx_event_source_object_time', 'source', 'object_name', 'event_time'),
 
     Index('idx_event_cid', 'cid', 'id'),
     Index('idx_event_msg_id', 'msg_id', 'id'),
@@ -507,10 +529,60 @@ _event_columns = [
     # The outstanding queries ask for the open events of one source before a moment in time -
     # every message whose receipt has not arrived - and the msg_id index above covers only the
     # lookup of the closing event, leaving the outer half of that question a full scan.
-    Index('idx_event_source_type_time', 'source', 'event_type', 'event_time_iso'),
+    Index('idx_event_source_type_time', 'source', 'event_type', 'event_time'),
+
+    Index('idx_event_commit_id', 'commit_id', 'id'),
 ]
 
+_event_columns.extend(_ordered_indexes)
+
 event_table = Table('event', metadata, *_event_columns)
+
+# ################################################################################################################################
+
+# The number of events of each minute and key the listing filters by, signed, so that inserts, updates and deletions
+# each add rows of their own. The key columns have the names and types of the event columns, so the conditions
+# of a search apply to both tables alike.
+_event_count_columns = [
+    _new_id_column(),
+    Column('period_start', _time_column),
+    Column('source', _short_column),
+    Column('object_name', _short_column),
+    Column('event_type', _short_column),
+    Column('outcome', _short_column),
+    Column('status', _short_column),
+    Column('event_count', BigInteger),
+
+    # The index holds every column a read of the counts uses, so a range of minutes is read from the index alone
+    Index('idx_event_count_period', 'period_start', 'source', 'object_name', 'event_type', 'outcome', 'status', 'event_count'),
+]
+
+event_count_table = Table('event_count', metadata, *_event_count_columns)
+
+register_event_count(event_table, event_count_table, _ordered_indexes)
+
+# ################################################################################################################################
+
+# The exchanges that are open - each event that opens one while no event that closes it exists.
+_event_open_columns = [
+    _new_id_column(),
+    Column('event_id', BigInteger),
+    Column('source', _short_column),
+    Column('msg_id', _short_column),
+    Column('object_name', _short_column),
+    Index('idx_event_open_event', 'event_id'),
+    Index('idx_event_open_exchange', 'source', 'msg_id', 'object_name'),
+]
+
+event_open_table = Table('event_open', metadata, *_event_open_columns)
+
+# A sent HL7 message is open until its acknowledgment, recorded under the same partner pair, arrives.
+_mllp_exchange = new_exchange_pair(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, AuditEvent.Ack_Received, True)
+
+# The sources whose exchanges pair an opening event with a closing one
+exchange_pairs = [_mllp_exchange]
+
+register_event_open(event_table, event_open_table, exchange_pairs)
 
 # ################################################################################################################################
 
@@ -518,7 +590,7 @@ event_table = Table('event', metadata, *_event_columns)
 # Values are stored as capped text, and numbers additionally go to a numeric column
 # so aggregation queries can sum and group without casting.
 _event_attr_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column(),
     Column('event_id', BigInteger),
     Column('name', _short_column),
     Column('value', _short_column),
@@ -530,19 +602,23 @@ _event_attr_columns = [
 
 event_attr_table = Table('event_attr', metadata, *_event_attr_columns)
 
+register_search_indexes(event_table, event_attr_table)
+
 # ################################################################################################################################
 
 # Message bodies live in their own table referenced from event rows - metadata inserts stay small
 # and pruning content is a bulk delete here rather than column surgery on the event table.
-# The event time is denormalized so pruning never needs a join.
+# The event time is denormalized so pruning never needs a join. An attachment keeps its file name,
+# content type and size in data and its bytes in content.
 _event_body_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column(),
     Column('event_id', BigInteger),
     Column('kind', _short_column),
-    Column('event_time_iso', _short_column),
+    Column('event_time', _time_column),
     Column('data', Text),
+    Column('content', Binary_Type),
     Index('idx_event_body_event', 'event_id'),
-    Index('idx_event_body_time', 'event_time_iso'),
+    Index('idx_event_body_time', 'event_time'),
 ]
 
 event_body_table = Table('event_body', metadata, *_event_body_columns)
@@ -552,7 +628,7 @@ event_body_table = Table('event_body', metadata, *_event_body_columns)
 # Lineage between events - resubmissions, batch membership and aggregation.
 # A link table because one event may have many parents.
 _event_link_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column(),
     Column('child_event_id', BigInteger),
     Column('parent_event_id', BigInteger),
     Column('link_type', _short_column),
@@ -568,14 +644,14 @@ event_link_table = Table('event_link', metadata, *_event_link_columns)
 # so a double-click or two overlapping bulk operations cannot double-apply one message.
 # A row acquired but never completed marks an interrupted resubmit, detectable as in-doubt.
 _event_dedup_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column(),
     Column('dedup_key', _short_column),
     Column('cid', _short_column),
     Column('action', _short_column),
     Column('actor', _short_column),
-    Column('created_iso', _short_column),
+    Column('created_at', _time_column),
     Column('outcome', _short_column),
-    Column('completed_iso', _short_column),
+    Column('completed_at', _time_column),
     Index('idx_event_dedup_key', 'dedup_key', unique=True),
     Index('idx_event_dedup_outcome', 'outcome'),
 ]
@@ -589,7 +665,7 @@ event_dedup_table = Table('event_dedup', metadata, *_event_dedup_columns)
 # no lifecycle here - what happens to an alert after it goes out lives in Jira,
 # ServiceNow or whatever else receives it.
 _alert_columns = [
-    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    _new_id_column(),
     Column('rule_name', _short_column),
     Column('source', _short_column),
     Column('object_name', _short_column),
@@ -598,99 +674,12 @@ _alert_columns = [
     Column('message', Text),
     Column('link', _endpoint_column),
     Column('count', Integer),
-    Column('first_raised_iso', _short_column),
-    Column('last_raised_iso', _short_column),
-    Index('idx_alert_rule_object', 'rule_name', 'source', 'object_name', 'kind', mysql_length={
-        'rule_name': _index_prefix_len,
-        'source': _index_prefix_len,
-        'object_name': _index_prefix_len,
-        'kind': _index_prefix_len,
-    }),
+    Column('first_raised_at', _time_column),
+    Column('last_raised_at', _time_column),
+    Index('idx_alert_rule_object', 'rule_name', 'source', 'object_name', 'kind'),
 ]
 
 alert_table = Table('alert', metadata, *_alert_columns)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Markers meaning a failure is transient - resubmitting the message as-is can work
-_transient_markers = (
-    'timeout', 'timed out', 'connection', 'refused', 'unreachable', 'reset', 'unavailable', 'temporar',
-    f'{REQUEST_TIMEOUT}', f'{TOO_MANY_REQUESTS}', f'{BAD_GATEWAY}', f'{SERVICE_UNAVAILABLE}', f'{GATEWAY_TIMEOUT}',
-)
-
-# What the status of a delivery an HL7 receiver answered with an AE or an AR opens with.
-Ack_Rejected_Marker = 'HL7 ack rejected'
-
-# Markers meaning a failure is permanent - the message needs to change before another attempt
-_permanent_markers = (
-    'validation', 'invalid', 'malformed', 'parse', 'schema', 'unauthorized', 'forbidden', 'not found', 'duplicate',
-    Ack_Rejected_Marker.lower(),
-    f'{BAD_REQUEST}', f'{UNAUTHORIZED}', f'{FORBIDDEN}', f'{NOT_FOUND}', f'{UNPROCESSABLE_ENTITY}',
-)
-
-# ################################################################################################################################
-
-def derive_classification(outcome:'str', status:'str' = '', application_outcome:'str' = '') -> 'str':
-    """ Derives the transient-vs-permanent classification of a failure out of its platform
-    and application outcomes. Successful events and failures matching no known marker stay unclassified.
-    """
-
-    # Only failures are classified ..
-    if outcome != AuditOutcome.Error:
-        return ''
-
-    # .. both outcome layers contribute to the match ..
-    combined = f'{status} {application_outcome}'.lower()
-
-    # .. a transient failure means resubmitting the message as-is can work ..
-    for marker in _transient_markers:
-        if marker in combined:
-            out = AuditClassification.Transient
-            break
-
-    # .. a permanent one means the message needs to change first ..
-    else:
-        for marker in _permanent_markers:
-            if marker in combined:
-                out = AuditClassification.Permanent
-                break
-
-        # .. and anything unmatched stays unclassified.
-        else:
-            out = ''
-
-    return out
-
-# ################################################################################################################################
-
-# The client errors that say the server could not take the request right now rather than that the request is wrong
-_transient_client_errors = (REQUEST_TIMEOUT, TOO_MANY_REQUESTS)
-
-# ################################################################################################################################
-
-def derive_http_classification(status_code:'int') -> 'str':
-    """ Classifies a rejection by the HTTP status it came with - a client error is permanent, except for the ones
-    saying the server could not take the request right now, and a server error is transient.
-    """
-
-    # A server error is something the same request can get past later ..
-    if status_code >= INTERNAL_SERVER_ERROR:
-        out = AuditClassification.Transient
-
-    # .. so is a client error that only says the server was busy or slow ..
-    elif status_code in _transient_client_errors:
-        out = AuditClassification.Transient
-
-    # .. any other client error needs the request to change first ..
-    elif status_code >= BAD_REQUEST:
-        out = AuditClassification.Permanent
-
-    # .. and anything below that is not a rejection at all.
-    else:
-        out = ''
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

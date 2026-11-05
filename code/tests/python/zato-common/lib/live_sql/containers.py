@@ -63,6 +63,12 @@ class ModuleCtx:
     # How long a single MS SQL login attempt may take
     MSSQL_Login_Timeout = 3
 
+    # The largest statement MySQL accepts, as the audit log documentation requires
+    MySQL_Max_Allowed_Packet = '--max-allowed-packet=128M'
+
+    # The data directory of the PostgreSQL image, mounted in memory for the containers that keep no data on disk
+    PostgreSQL_Memory_Data_Dir = '/var/lib/postgresql/data'
+
 
     # The queries the readiness checks run
     Ping_Query        = 'select 1'
@@ -166,12 +172,13 @@ def _create_mssql_database(port:'int', password:'str', db_name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _get_ssl_connect_args(certificates:'CertificatePaths') -> 'stranydict':
-    """ Builds the SSL context that readiness checks use with TLS-required databases.
+def _get_ssl_connect_args(certificates:'CertificatePaths', ssl_keyword:'str') -> 'stranydict':
+    """ Builds the SSL context that readiness checks use with TLS-required databases,
+    under the keyword the database driver accepts it with.
     """
     ssl_context = ssl.create_default_context(cafile=certificates.ca_cert)
 
-    out:'stranydict' = {'ssl': ssl_context}
+    out:'stranydict' = {ssl_keyword: ssl_context}
     return out
 
 # ################################################################################################################################
@@ -238,12 +245,14 @@ def start_mysql(
     ]
 
     # The TLS-required variant mounts the certificates and refuses unencrypted TCP connections.
-    # Both variants allow LOAD DATA LOCAL INFILE - the bulk-seeding path of the perf tests.
+    # Both variants allow LOAD DATA LOCAL INFILE - the bulk-seeding path of the perf tests -
+    # and accept statements of the size the audit log documents as its requirement.
     if needs_ssl:
         command.extend(['-v', f'{ssl_certificates.directory}:/certs-in:ro'])
         command.append(ModuleCtx.MySQL_Image)
         command.extend([
             '--local-infile=1',
+            ModuleCtx.MySQL_Max_Allowed_Packet,
             '--ssl-ca=/certs-in/ca.crt',
             '--ssl-cert=/certs-in/server.crt',
             '--ssl-key=/certs-in/server.key',
@@ -252,6 +261,7 @@ def start_mysql(
     else:
         command.append(ModuleCtx.MySQL_Image)
         command.append('--local-infile=1')
+        command.append(ModuleCtx.MySQL_Max_Allowed_Packet)
 
     _ = subprocess.run(command, check=True, capture_output=True)
 
@@ -259,7 +269,7 @@ def start_mysql(
     engine_url = f'mysql+pymysql://{username}:{password}@localhost:{port}/{db_name}'
 
     if needs_ssl:
-        connect_args = _get_ssl_connect_args(ssl_certificates)
+        connect_args = _get_ssl_connect_args(ssl_certificates, 'ssl')
     else:
         connect_args = {}
 
@@ -286,9 +296,14 @@ def start_postgresql(
     db_name:'str',
     needs_ssl:'bool',
     certificates:'certificatepathsnone' = None,
+    server_settings:'strlist | None' = None,
+    data_dir:'str | None' = None,
+    is_in_memory:'bool' = False,
+    cpus:'str | None' = None,
     ) -> 'DatabaseServer':
-    """ Starts a PostgreSQL container, optionally one that requires TLS for all TCP connections.
-    Certificates are always given when needs_ssl is True and they are dereferenced only then.
+    """ Starts a PostgreSQL container, optionally one that requires TLS for all TCP connections, one whose data directory
+    is in memory and one limited to the number of CPUs given. Certificates are always given when needs_ssl is True
+    and they are dereferenced only then.
     """
     ssl_certificates:'CertificatePaths' = cast_('CertificatePaths', certificates)
 
@@ -316,7 +331,21 @@ def start_postgresql(
         command.extend(['-v', f'{ssl_certificates.directory}:/certs-in:ro'])
         command.extend(['-v', f'{setup_script}:/docker-entrypoint-initdb.d/postgresql-ssl-setup.sh:ro'])
 
+    if data_dir:
+        command.extend(['--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{data_dir}:/var/lib/postgresql/data'])
+
+    if is_in_memory:
+        command.extend(['--tmpfs', ModuleCtx.PostgreSQL_Memory_Data_Dir])
+
+    if cpus:
+        command.extend(['--cpus', cpus])
+
     command.append(ModuleCtx.PostgreSQL_Image)
+
+    if server_settings:
+        command.append('postgres')
+        for setting in server_settings:
+            command.extend(['-c', setting])
 
     _ = subprocess.run(command, check=True, capture_output=True)
 
@@ -324,7 +353,7 @@ def start_postgresql(
     engine_url = f'postgresql+pg8000://{username}:{password}@localhost:{port}/{db_name}'
 
     if needs_ssl:
-        connect_args = _get_ssl_connect_args(ssl_certificates)
+        connect_args = _get_ssl_connect_args(ssl_certificates, 'ssl_context')
     else:
         connect_args = {}
 

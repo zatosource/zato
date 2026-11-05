@@ -37,9 +37,6 @@ if 0:
 engine_def = '{engine}://{username}:{password}@{host}:{port}/{db_name}'
 engine_def_sqlite = 'sqlite:///{sqlite_path}'
 
-# Snowflake has no port segment - the host field holds the account identifier.
-engine_def_snowflake = '{engine}://{username}:{password}@{host}/{db_name}'
-
 # Convenience access functions and constants.
 
 class OS_Env:
@@ -124,7 +121,6 @@ engine_display_name = {
     'postgresql': 'PostgreSQL',
     'postgresql+pg8000': 'PostgreSQL',
     'redshift+redshift_connector': 'Amazon Redshift',
-    'snowflake': 'Snowflake',
     'sqlite': 'SQLite',
 }
 

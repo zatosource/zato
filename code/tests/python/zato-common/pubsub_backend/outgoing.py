@@ -427,11 +427,16 @@ def _run_queue_isolation_flow() -> 'None':
 
     assert first_row.topic_name == down_topic, first_row.topic_name
 
-    # .. and the healthy connection's queue is empty, none of the other one's messages in it.
+    # .. and the healthy connection's queue empties, none of the other one's messages in it,
+    # .. once the acknowledgment of its last message, which follows the receipt, is committed.
     healthy_sub_key = get_outgoing_sub_key(_conn_type, _conn_id_orders)
-    healthy_rows = get_delivery_rows(healthy_sub_key)
 
-    assert not healthy_rows, healthy_rows
+    def is_healthy_queue_empty() -> 'bool':
+        healthy_rows = get_delivery_rows(healthy_sub_key)
+        out = not healthy_rows
+        return out
+
+    _wait_until(is_healthy_queue_empty, 'the healthy connection acknowledges everything delivered to it')
 
     delivery.stop()
 

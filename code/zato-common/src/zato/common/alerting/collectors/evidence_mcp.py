@@ -18,7 +18,7 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.alerting.collectors.common import is_object, is_recent, is_source
-from zato.common.alerting.collectors.evidence_rows import row_columns, rows_from, select_rows, window_start_iso, \
+from zato.common.alerting.collectors.evidence_rows import row_columns, rows_from, select_rows, window_start, \
     Max_Rows_Per_Measure
 from zato.common.alerting.collectors.mcp import Error_Code_Invalid_Params, Error_Code_Method_Not_Found
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent
@@ -125,7 +125,7 @@ def _select_attr_rows(engine:'Engine', fact:'stranydict', now:'datetime', attr_c
         is_source(fact['source']),
         is_object(fact['object_name']),
         event_table.c.event_type == AuditEvent.MCP_Tools_Call,
-        is_recent(window_start_iso(fact, now)),
+        is_recent(window_start(fact, now)),
     ]
     conditions.extend(attr_conditions)
 
@@ -184,7 +184,7 @@ def collect_throttled(engine:'Engine', fact:'stranydict', now:'datetime') -> 'di
         is_source(fact['source']),
         is_object(fact['object_name']),
         event_table.c.event_type == AuditEvent.Rate_Limited,
-        is_recent(window_start_iso(fact, now)),
+        is_recent(window_start(fact, now)),
     ]
 
     out = select_rows(engine, conditions)
@@ -204,7 +204,7 @@ def collect_repeat_calls(engine:'Engine', fact:'stranydict', now:'datetime') -> 
         event_table.c.event_type == AuditEvent.MCP_Tools_Call,
         event_table.c.sub_key == fact['repeat_call_session'],
         event_table.c.endpoint == fact['repeat_call_tool'],
-        is_recent(window_start_iso(fact, now)),
+        is_recent(window_start(fact, now)),
     ]
 
     out = select_rows(engine, conditions)

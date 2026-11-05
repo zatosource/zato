@@ -272,34 +272,6 @@ $.fn.zato.alerting.init = function(config) {
     $.fn.zato.data_table.set_field_required('#id_edit-name');
     $.fn.zato.validate_unique('#id_edit-name', 'alert_rule', 'name', null, null, config.nameExistsUrl);
 
-    // The popups close when a press lands outside them - not while the walkthrough
-    // mode is on, whose own outside click only ends the walkthrough, and not when
-    // the press lands on an alert standing above the popup.
-    document.addEventListener('mousedown', function(event) {
-
-        if($.fn.zato.how_it_works._state) {
-            return;
-        }
-
-        if(event.target.closest('#popup_container') !== null) {
-            return;
-        }
-
-        ['#create-div', '#edit-div'].forEach(function(divId) {
-            var div = $(divId);
-
-            if(!div.dialog('isOpen')) {
-                return;
-            }
-
-            if(div.dialog('widget').get(0).contains(event.target)) {
-                return;
-            }
-
-            div.dialog('close');
-        });
-    });
-
     document.getElementById('create-form').addEventListener('submit', function(event) {
         event.preventDefault();
         $.fn.zato.alerting.submitCreate();

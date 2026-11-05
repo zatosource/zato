@@ -27,6 +27,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from getpass import getuser as getpass_getuser
 from glob import glob
+from hashlib import sha256
 from inspect import isfunction
 from itertools import tee
 from io import StringIO
@@ -82,7 +83,7 @@ import requests
 import yaml
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_snowflake, engine_def_sqlite, \
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, \
      engine_display_name, MISC, Secret_Shadow, TRACE1, zato_no_op_marker
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
@@ -359,6 +360,22 @@ def new_msg_id() -> 'str':
 def new_sub_key() -> 'str':
     from edwh_uuid7 import uuid7
     return f'sk{uuid7().hex}'
+
+# ################################################################################################################################
+
+def sub_key_from_definition(sec_name:'str', delivery_type:'str', topic_names:'strlist') -> 'str':
+    """ Returns the subscription key derived from what identifies a subscription in a configuration file -
+    the subscriber's security definition, the delivery type and the topics. Each server that imports the same
+    configuration derives the same key, so the active server and its standby address the same queues
+    in the pub/sub database.
+    """
+    sorted_names = sorted(topic_names)
+    topic_part = ','.join(sorted_names)
+    identity = f'{sec_name}\n{delivery_type}\n{topic_part}'
+
+    digest = sha256(identity.encode('utf8')).hexdigest()
+    out = f'sk{digest[:32]}'
+    return out
 
 # ################################################################################################################################
 
@@ -1272,10 +1289,6 @@ def get_engine_url(args:'any_') -> 'str':
     # Pick the URL template for the engine ..
     if is_sqlite:
         template = engine_def_sqlite
-
-    # .. Snowflake keeps the account identifier in the host field and has no port segment ..
-    elif attrs['engine'] == 'snowflake':
-        template = engine_def_snowflake
 
     # .. anything else uses the standard host:port template.
     else:

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{{ title }}</title>
+    <link rel="icon" href="{{ favicon_url }}">
+    <link rel="stylesheet" href="/static/app/app.css">
+    <link rel="stylesheet" href="/static/app/app-operations.css">
+    <link rel="stylesheet" href="/static/app/app-tools.css">
+    <link rel="stylesheet" href="/static/app/app-layouts.css">
+    <link rel="stylesheet" href="/static/app/app-specification.css">
+    {% if has_custom_css %}<link rel="stylesheet" href="/branding/custom.css">{% endif %}
+</head>
+<body class="app-body">
+
+    <header class="app-header">
+        <a class="app-header-brand" href="/">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Logo" class="app-header-logo">
+            {% else %}
+            <span class="app-brand-text app-header-brand-text">{{ logo_text }}</span>
+            {% endif %}
+        </a>
+        {% if header_title %}<span class="app-header-title">{{ header_title }}</span>{% endif %}
+        <nav class="app-header-links">
+            <a href="/openapi.json" class="app-header-link">openapi.json</a>
+            <a href="/openapi.yaml" class="app-header-link">openapi.yaml</a>
+        </nav>
+        <span class="app-header-user">{{ identity }}</span>
+        <a href="/logout" class="app-header-logout" id="app-logout">Sign out</a>
+    </header>
+
+    <div class="app-status app-loading" id="app-loading">
+        <div class="app-backdrop"></div>
+        <svg class="app-spinner" viewBox="0 0 50 50">
+            <circle class="app-spinner-track" cx="25" cy="25" r="20"></circle>
+            <circle class="app-spinner-arc" cx="25" cy="25" r="20"></circle>
+        </svg>
+    </div>
+
+    <div class="app-status" id="app-status" hidden>
+        <div class="app-backdrop"></div>
+        <div class="app-status-text" id="app-status-text"></div>
+    </div>
+
+    <div class="app-workspace" id="app-workspace" hidden>
+        <aside class="app-sidebar" id="app-sidebar">
+            <div class="app-sidebar-top">
+                <div class="app-filter-box">
+                    <svg class="app-filter-icon" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="m20 20-3.5-3.5"></path>
+                    </svg>
+                    <input class="app-filter" id="app-filter" type="text" placeholder="Filter" autocomplete="off" spellcheck="false">
+                    <button class="app-filter-clear" id="app-filter-clear" type="button" aria-label="Clear" hidden>
+                        <svg class="app-filter-clear-icon" viewBox="0 0 24 24">
+                            <path d="M18 6 6 18"></path>
+                            <path d="m6 6 12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button class="app-sidebar-toggle" id="app-sidebar-toggle" type="button"></button>
+            </div>
+            <div class="app-sidebar-scroll">
+                <nav class="app-navigation" id="app-navigation"></nav>
+            </div>
+            <div class="app-sidebar-resizer" id="app-sidebar-resizer"><span class="app-sidebar-grip"></span></div>
+        </aside>
+        <main class="app-content" id="app-content"></main>
+    </div>
+
+    <div class="app-popover" id="app-popover" hidden></div>
+
+    <script src="/static/webapp/vendor/popper.min.js"></script>
+    <script src="/static/webapp/vendor/tippy-bundle.umd.min.js"></script>
+    <script src="/static/app/app-highlight.js"></script>
+    <script src="/static/app/app-key-value.js"></script>
+    <script src="/static/app/app-sidebar.js"></script>
+    <script src="/static/app/app-panels.js"></script>
+    <script src="/static/app/app-popover.js"></script>
+    <script src="/static/app/app-layouts.js"></script>
+    <script src="/static/app/app-exchange.js"></script>
+    <script src="/static/app/app-links.js"></script>
+    <script src="/static/app/app-specification.js"></script>
+    <script src="/static/app/app-render.js"></script>
+    <script src="/static/app/app-fields.js"></script>
+    <script src="/static/app/app-raw.js"></script>
+    <script src="/static/app/app-options.js"></script>
+    <script src="/static/app/app-history.js"></script>
+    <script src="/static/app/app-invoke.js"></script>
+    <script src="/static/app/app.js"></script>
+
+</body>
+</html>

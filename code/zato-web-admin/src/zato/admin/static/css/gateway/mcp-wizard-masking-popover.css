@@ -87,25 +87,18 @@
     border: 1px solid var(--zato-ui-border);
     border-radius: var(--mcp-masking-radius);
     cursor: pointer;
-    transition: border-color var(--mcp-masking-transition), box-shadow var(--mcp-masking-transition);
 }
 
-.mcp-masking-card:hover {
-    border-color: var(--zato-ui-border-strong);
-    box-shadow: var(--mcp-masking-card-shadow);
-    transition-delay: var(--mcp-masking-hover-delay);
-}
-
-.mcp-masking-card-on,
-.mcp-masking-card-on:hover {
+.mcp-masking-card-on {
     border-color: var(--zato-ui-accent);
     box-shadow: inset 0 0 0 1px var(--zato-ui-accent);
 }
 
-/* The card the pane is showing */
-.mcp-masking-card-focused,
-.mcp-masking-card-focused:hover {
-    background: var(--mcp-masking-on-bg);
+/* The card the pane is showing - its frame is doubled by a shadow rather than a wider border,
+   so nothing inside it moves */
+.mcp-masking-card-focused {
+    border-color: var(--mcp-masking-strong-color);
+    box-shadow: inset 0 0 0 1px var(--mcp-masking-strong-color), var(--mcp-masking-focused-shadow);
 }
 
 .mcp-masking-card-header {

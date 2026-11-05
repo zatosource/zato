@@ -54,10 +54,11 @@ def _random_url_path(label:'str') -> 'str':
 
 def _type_into_field(page:'Page', selector:'str', value:'str') -> 'None':
     """ Types a value character by character so the input event handler triggers the uniqueness check.
-    The field is cleared first since some fields, e.g. url_path, come prefilled.
+    The field is cleared first since some fields, e.g. url_path, come prefilled. The field is focused
+    by the clear itself rather than by a click, because the indicator of an earlier check is drawn over the field
+    and receives the pointer.
     """
     field = page.locator(selector)
-    field.click()
     field.clear()
     field.press_sequentially(value, delay=10)
 

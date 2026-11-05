@@ -214,7 +214,7 @@ def keep_entries_past_backoff(
             continue
 
         attempts = remembered['attempts']
-        last_failed = datetime.fromisoformat(remembered['last_failed_iso'])
+        last_failed = remembered['last_failed']
 
         wait = backoff_seconds(retry_backoff, attempts)
         next_attempt = last_failed + timedelta(seconds=wait)
@@ -226,7 +226,8 @@ def keep_entries_past_backoff(
             continue
 
         # .. and one past it gets its next attempt.
-        out.kept.append((entry, attempts + 1, remembered['first_failed_iso']))
+        first_failed_iso = remembered['first_failed'].isoformat()
+        out.kept.append((entry, attempts + 1, first_failed_iso))
 
     return out
 

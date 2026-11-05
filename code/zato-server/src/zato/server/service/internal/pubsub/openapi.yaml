@@ -185,7 +185,9 @@ paths:
       description: |
         Get messages from all topics the user is subscribed to. Messages are delivered in priority order
         (highest priority first), then by publish time (oldest first) within the same priority level.
-        Retrieved messages are automatically acknowledged and removed from the queue.
+        Retrieved messages are reserved for this client and remain in the queue until the client acknowledges them
+        through /pubsub/messages/ack. A message that is not acknowledged within the reservation period, 30 seconds
+        by default, is retrieved again by the next call.
       requestBody:
         required: false
         content:
@@ -259,6 +261,61 @@ paths:
                 type: string
                 description: HTML error page for malformed requests
 
+  /pubsub/messages/ack:
+    post:
+      summary: Acknowledge retrieved messages
+      description: |
+        Removes messages retrieved through /pubsub/messages/get from the queue of the user.
+        Messages that were already acknowledged, or that are no longer in the queue, are not counted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - msg_ids
+              properties:
+                msg_ids:
+                  type: array
+                  maxItems: 1000
+                  items:
+                    type: string
+                    pattern: '^zpsm\.[a-z0-9-]+$'
+                  description: The msg_id values of the messages to acknowledge
+            examples:
+              two_messages:
+                summary: Two messages
+                value:
+                  msg_ids:
+                    - zpsm.20250829-074432-7264-d47439a9f-abc
+                    - zpsm.20250829-074433-1182-a03b5c71e-abc
+      responses:
+        '200':
+          description: Messages acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AckResponse'
+        '400':
+          description: Bad request (msg_ids is not a list of strings or has more than 1000 elements)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication failed or no subscription found for user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     basicAuth:
@@ -300,6 +357,30 @@ components:
               pattern: '^zpsm\.[a-z0-9-]+$'
               example: zpsm.20250829-074432-7264-d47439a9f-abc
 
+    AckResponse:
+      type: object
+      required:
+        - is_ok
+        - cid
+        - ack_count
+        - status
+      properties:
+        is_ok:
+          type: boolean
+          example: true
+        cid:
+          type: string
+          description: Correlation ID for request tracking
+          example: correlation-id-123
+        ack_count:
+          type: integer
+          description: How many of the messages were still in the queue and were removed from it
+          example: 2
+        status:
+          type: string
+          description: HTTP status description
+          example: "200 OK"
+
     ErrorResponse:
       type: object
       required:
@@ -332,6 +413,7 @@ components:
         - priority
         - expiration
         - msg_id
+        - delivery_attempt
         - pub_time_iso
         - recv_time_iso
         - time_since_pub
@@ -360,6 +442,11 @@ components:
           description: Unique message identifier
           pattern: '^zpsm\.[a-z0-9-]+$'
           example: zpsm.20250829-074432-7264-d47439a9f-abc
+        delivery_attempt:
+          type: integer
+          minimum: 1
+          description: How many times the message was retrieved, 1 for the first retrieval and higher for each repeated one
+          example: 1
         correl_id:
           type: string
           description: Correlation ID for message tracking

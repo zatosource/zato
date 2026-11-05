@@ -325,7 +325,7 @@ $.fn.zato.audit_log.sources['file-outgoing'] = $.extend({}, defaultPresenter, {
         }
 
         if (row.event_type === config.deliveredEvent) {
-            return fileOutgoing.fill(config.resubmitDeliveredOnceText, {when: kit.format_local_time(row.event_time_iso)});
+            return fileOutgoing.fill(config.resubmitDeliveredOnceText, {when: kit.format_local_time(row.event_time)});
         }
 
         return '';

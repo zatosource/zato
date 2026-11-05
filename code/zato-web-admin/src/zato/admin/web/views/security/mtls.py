@@ -16,6 +16,12 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'security-mtls'
@@ -46,10 +52,10 @@ class _CreateEdit(CreateEdit):
     input_optional = 'cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint', 'client_cert_subject_dn'
     output_required = 'id', 'name'
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict:'anydict') -> 'None':
         initial_input_dict['is_active'] = True
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} mTLS definition `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################

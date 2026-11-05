@@ -33,9 +33,7 @@
         // The default port each database type listens on
         default_ports: {
             'sqlite': '',
-            'mysql': '3306',
-            'postgresql': '5432',
-            'oracle': '1521'
+            'postgresql': '5432'
         },
 
         save_ok_message: 'OK, saved',

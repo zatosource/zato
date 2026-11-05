@@ -16,13 +16,12 @@ from logging import DEBUG, getLogger
 from threading import RLock
 from time import monotonic, time
 from traceback import format_exc
-from urllib.parse import urlencode
 
 # Bunch
 from zato.common.ext.bunch import Bunch, bunchify
 
 # SQLAlchemy
-from sqlalchemy import and_, create_engine, event, select
+from sqlalchemy import and_, create_engine, event, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
@@ -352,8 +351,10 @@ class SessionWrapper:
             return result
 
         # .. while an SQLAlchemy result has to be turned into them. Each statement is a transaction of its own.
+        statement = text(query)
+
         with closing(self.session()) as session:
-            result = session.execute(cast_('any_', query), params)
+            result = session.execute(statement, params)
             result = cast_('any_', result)
 
             # A statement that produced rows returns them ..
@@ -604,30 +605,12 @@ class SQLConnectionPool:
         # The statements leave with the audit export only if the connection says so
         self.is_export_payload_active = asbool(self.config.get(Export_Payload_Flag, False))
 
-        # Snowflake turns engine URL query parameters into connect arguments,
-        # so everything from the connection's extra goes onto the URL, not into create_engine.
-        snowflake_url_params = {}
-
         # Oracle connects to a service name unless the connection's extra says the database
         # name is a SID - either way, the flag itself is not a create_engine argument.
         oracle_use_sid = False
 
-        if self.engine_name == 'snowflake':
-
-            # The dialect rejects these keys on the URL - they go through connect_args instead.
-            connect_args = {}
-
-            for key in ('host', 'protocol'):
-                if key in extra_parsed:
-                    connect_args[key] = extra_parsed.pop(key)
-
-            if connect_args:
-                _extra['connect_args'] = connect_args # type: ignore
-
-            snowflake_url_params.update(extra_parsed)
-
         # Redshift driver options cannot be given to create_engine directly - they belong in connect_args.
-        elif self.engine_name.startswith('redshift'):
+        if self.engine_name.startswith('redshift'):
             connect_args = {}
 
             for key in ('ssl', 'sslmode', 'client_protocol_version'):
@@ -660,10 +643,6 @@ class SQLConnectionPool:
                 _extra['poolclass'] = NullPool # type: ignore
 
         engine_url = get_engine_url(self.config)
-
-        # Snowflake receives its extra options as engine URL query parameters.
-        if snowflake_url_params:
-            engine_url = engine_url + '?' + urlencode(snowflake_url_params)
 
         # The Oracle dialect reads the URL's path as a SID, so a service name - the default -
         # moves into a query parameter instead.
@@ -779,20 +758,26 @@ class SQLConnectionPool:
         if not self.engine:
             return
 
+        # A direct-mode engine pings on its own ..
         if hasattr(self.engine, 'ping'):
-            func = self.engine.ping
             query = self.engine.ping_query
-            args = []
+            self.logger.debug('About to ping the SQL connection pool:`%s`, query:`%s`', self.config_no_sensitive, query)
+
+            start_time = time()
+            _ = self.engine.ping()
+            response_time = time() - start_time
+
+        # .. while an SQLAlchemy engine runs the ping query on a connection of its own.
         else:
-            func = self.engine.connect().execute
             query = get_ping_query(fs_sql_config, self.config)
-            args = [query]
+            self.logger.debug('About to ping the SQL connection pool:`%s`, query:`%s`', self.config_no_sensitive, query)
 
-        self.logger.debug('About to ping the SQL connection pool:`%s`, query:`%s`', self.config_no_sensitive, query)
+            statement = text(query)
 
-        start_time = time()
-        _ = func(*args)
-        response_time = time() - start_time
+            start_time = time()
+            with self.engine.connect() as connection:
+                _ = connection.execute(statement)
+            response_time = time() - start_time
 
         self.logger.debug('Ping OK, pool:`%s`, response_time:`%s` s', self.config_no_sensitive, response_time)
 
@@ -1146,11 +1131,11 @@ class ODBManager(SessionWrapper):
     def get_basic_data_service_list(self, session):
         """ Returns basic information about all the services in ODB.
         """
-        query = select([
+        query = select(
             ServiceTable.c.id,
             ServiceTable.c.name,
             ServiceTable.c.impl_name,
-        ])
+        )
 
         return session.execute(query).\
             fetchall()
@@ -1162,10 +1147,10 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
 
-            query = select([
+            query = select(
                 ServiceTable.c.name,
                 DeployedServiceTable.c.source,
-            ]).where(and_(
+            ).where(and_(
                 DeployedServiceTable.c.service_id==ServiceTable.c.id,
                 DeployedServiceTable.c.server_id==self.server_id
             ))

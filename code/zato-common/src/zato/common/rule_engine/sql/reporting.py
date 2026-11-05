@@ -14,7 +14,7 @@ from zato.common.typing_ import cast_
 
 # Local
 from .constants import Event_Type_Rule_Fired_Daily
-from .data import count_point_list, decision_record_list, CountPoint, DecisionFilter, rule_fire_point_list, \
+from .data import any_, count_point_list, decision_record_list, CountPoint, DecisionFilter, rule_fire_point_list, \
     RuleFirePoint, strlist, strset
 from .database import SessionFactory
 from .decisions import normalize_utc
@@ -116,7 +116,9 @@ class RuleReporting:
 
         # .. turn each SQL group into one typed result ..
         try:
-            for row in session.execute(query):
+            result:'any_' = session.execute(query)
+
+            for row in result:
                 key = row[0]
                 item_count = row[1]
                 point = CountPoint(key, item_count)
@@ -144,7 +146,9 @@ class RuleReporting:
 
         # .. turn each SQL group into one typed result ..
         try:
-            for row in session.execute(query):
+            result:'any_' = session.execute(query)
+
+            for row in result:
                 key = row[0]
                 item_count = row[1]
                 point = CountPoint(key, item_count)
@@ -172,7 +176,9 @@ class RuleReporting:
 
         # .. turn each SQL group into one typed result ..
         try:
-            for row in session.execute(query):
+            result:'any_' = session.execute(query)
+
+            for row in result:
                 key = row[0]
                 item_count = row[1]
                 point = CountPoint(key, item_count)
@@ -224,7 +230,9 @@ class RuleReporting:
         durations_seen = 0
 
         try:
-            for row in session.execute(query):
+            result:'any_' = session.execute(query)
+
+            for row in result:
                 outcome = row[0]
                 rules_version = row[1]
                 time_bucket = row[2]

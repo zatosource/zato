@@ -386,7 +386,7 @@ class TestWorker(TestCase):
         queue = build_stopped_queue(config, sender)
 
         queue.add(build_queued(event_id=1))
-        queue.add(build_queued(event_id=2, event_time_iso='not a time'))
+        queue.add(build_queued(event_id=2, event_time='not a time'))
 
         with self.assertLogs(_logger_name, level='ERROR') as logs:
             queue._take_batch()

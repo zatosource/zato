@@ -36,21 +36,9 @@ def _refuse_thick_mode(*args:'any_', **kwargs:'any_') -> 'None':
 # The driver has to stay in thin mode, so any call that would enable thick mode fails the check.
 oracledb.init_oracle_client = _refuse_thick_mode
 
-# What is under test is that importing one engine-building module alone
-# is enough for oracle:// URLs to load in this interpreter.
-mode = sys.argv[1]
-
-if mode == 'odb':
-    from zato.common.odb import api as engine_building_module
-
-elif mode == 'db_env':
-    from zato.common.db_env import engine as engine_building_module
-
-# .. anything else is not a recognized mode.
-else:
-    raise Exception(f'Unknown mode: {mode}')
-
-engine_building_module = engine_building_module
+# What is under test is that importing the ODB module alone is enough for oracle:// URLs to load in this interpreter.
+from zato.common.odb import api as odb_api
+odb_api = odb_api
 
 # The import made python-oracledb available under the name SQLAlchemy 1.4 knows
 assert sys.modules['cx_Oracle'] is oracledb

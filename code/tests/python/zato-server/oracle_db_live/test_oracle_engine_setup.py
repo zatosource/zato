@@ -25,7 +25,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The child script that checks one engine-building module in a plain interpreter
+# The child script that checks the ODB module in a plain interpreter
 _check_script = os.path.join(os.path.dirname(__file__), '_engine_setup_check.py')
 
 # How long the child interpreter may run
@@ -34,11 +34,11 @@ _check_timeout = 60
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _run_check(mode:'str') -> 'None':
+def _run_check() -> 'None':
     """ Runs the engine setup check in a child interpreter so no import made
     by pytest itself can mask what the module under test provides.
     """
-    command = [sys.executable, _check_script, mode]
+    command = [sys.executable, _check_script]
 
     result = subprocess.run(command, capture_output=True, text=True, timeout=_check_timeout)
 
@@ -55,14 +55,7 @@ class TestEngineSetup:
     def test_engine_setup_through_odb(self) -> 'None':
         """ Importing the ODB module alone lets oracle:// engines load in thin mode.
         """
-        _run_check('odb')
-
-# ################################################################################################################################
-
-    def test_engine_setup_through_db_env(self) -> 'None':
-        """ Importing the environment database module alone lets oracle:// engines load in thin mode.
-        """
-        _run_check('db_env')
+        _run_check()
 
 # ################################################################################################################################
 # ################################################################################################################################

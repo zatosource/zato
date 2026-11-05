@@ -18,7 +18,7 @@ from urllib.request import Request, urlopen
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, anydictnone, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +46,7 @@ class AdminClient:
 
 # ################################################################################################################################
 
-    def _invoke(self, service_name:'str', payload:'anydict'=None) -> 'tuple':
+    def _invoke(self, service_name:'str', payload:'anydictnone'=None) -> 'tuple':
         """ Invokes a service and returns both the parsed body and response headers.
         """
         url = f'{self.base_url}/zato/api/invoke/{service_name}'
@@ -73,7 +73,7 @@ class AdminClient:
 
 # ################################################################################################################################
 
-    def invoke(self, service_name:'str', payload:'anydict'=None) -> 'anydict':
+    def invoke(self, service_name:'str', payload:'anydictnone'=None) -> 'anydict':
         """ Invokes a Zato service and returns the response.
         """
         out, _ = self._invoke(service_name, payload)
@@ -259,18 +259,10 @@ class PullClient:
 
 # ################################################################################################################################
 
-    def pull(self, max_messages:'int'=0, max_len:'int'=0) -> 'anydict':
-        """ Pulls messages and returns the response dict.
+    def _post(self, path:'str', payload:'anydict') -> 'anydict':
+        """ Sends one authenticated request to a pub/sub endpoint and returns the response dict.
         """
-        url = f'{self.base_url}/pubsub/messages/get'
-
-        payload:'anydict' = {}
-
-        if max_messages:
-            payload['max_messages'] = max_messages
-
-        if max_len:
-            payload['max_len'] = max_len
+        url = f'{self.base_url}{path}'
 
         serialized = json.dumps(payload)
         body = serialized.encode()
@@ -279,18 +271,54 @@ class PullClient:
         request.add_header('Authorization', f'Basic {self._auth}')
         request.add_header('Content-Type', 'application/json')
 
-        logger.info('Pulling messages: %s', payload)
-
         try:
             with urlopen(request) as response:
                 raw = response.read()
         except HTTPError as error:
             raw = error.read()
             error_text = raw.decode('utf-8', errors='replace')
-            raise Exception(f'Pull returned HTTP {error.code}: {error_text}')
+            raise Exception(f'{path} returned HTTP {error.code}: {error_text}')
 
         out = json.loads(raw)
+        return out
+
+# ################################################################################################################################
+
+    def pull(self, max_messages:'int'=0, max_len:'int'=0, needs_ack:'bool'=True) -> 'anydict':
+        """ Pulls messages and returns the response dict. With needs_ack, the messages are acknowledged
+        as soon as they are received, otherwise the caller acknowledges them through ack.
+        """
+        payload:'anydict' = {}
+
+        if max_messages:
+            payload['max_messages'] = max_messages
+
+        if max_len:
+            payload['max_len'] = max_len
+
+        logger.info('Pulling messages: %s', payload)
+
+        out = self._post('/pubsub/messages/get', payload)
         logger.info('Pull response: %s', out)
+
+        if needs_ack:
+            msg_ids:'strlist' = []
+
+            for message in out['messages']:
+                msg_ids.append(message['meta']['msg_id'])
+
+            if msg_ids:
+                _ = self.ack(msg_ids)
+
+        return out
+
+# ################################################################################################################################
+
+    def ack(self, msg_ids:'strlist') -> 'anydict':
+        """ Acknowledges pulled messages and returns the response dict.
+        """
+        out = self._post('/pubsub/messages/ack', {'msg_ids': msg_ids})
+        logger.info('Ack response: %s', out)
         return out
 
 # ################################################################################################################################

@@ -33,7 +33,7 @@ $.fn.zato.audit_log.sources['default'] = {
                 continue;
             }
 
-            // The source wears its human name and no prefix - "REST channel" says
+            // The source wears its human name and no prefix - "REST" says
             // what it is without a word before it saying that it says it
             if (column.key === 'source') {
                 out.push({key: column.key, label: '', value: value,

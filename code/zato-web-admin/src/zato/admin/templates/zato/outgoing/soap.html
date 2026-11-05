@@ -61,6 +61,9 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/delivery-tab.js"></script>
     {{ delivery_tab_config|json_script:"delivery-tab-config" }}
 
+    {% comment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/ebxml-tab.js"></script>
+    {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap-rows.js"></script>
 
@@ -340,6 +343,9 @@
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
                         <button type="button" class="dashboard-tab" data-tab="alerts" role="tab" aria-selected="false">{{ create_alerts_tab.tab_label }}</button>
                         <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
+                        {% comment %}
+                        <button type="button" class="dashboard-tab" data-tab="ebxml" role="tab" aria-selected="false">ebXML</button>
+                        {% endcomment %}
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
@@ -410,6 +416,10 @@
                             </tr>
                         </table>
                     </div>
+
+                    {% comment %}
+                    {% include "zato/http_soap/ebxml-tab.html" with panel_id="out-soap-create-tab-panel-ebxml" %}
+                    {% endcomment %}
 
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-security" role="tabpanel" hidden>
                         <table class="form-data">

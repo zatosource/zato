@@ -4,10 +4,6 @@
 @import url("../dashboard-kit/main_chart.css");
 @import url("../dashboard-kit/log_line.css");
 
-.detail-page-scheduler {
-    --detail-search-icon-color: #8a8a8a;
-}
-
 #btn-execute-now {
     cursor: pointer;
 }
@@ -109,11 +105,6 @@
 
 #detail-history-table-head.detail-dimmed:hover {
     opacity: 1;
-}
-
-.detail-page-scheduler .detail-search-icon-svg {
-    display: block;
-    flex-shrink: 0;
 }
 
 .section-heading-flush img.help-icon {

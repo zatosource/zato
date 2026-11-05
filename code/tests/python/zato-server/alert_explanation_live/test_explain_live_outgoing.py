@@ -508,7 +508,7 @@ def _get_outgoing_responses(outgoing:'_OutgoingDescription') -> 'anylist':
         out = [dict(row._mapping) for row in connection.execute(query)]
 
     for row in out:
-        trace(Channel_Outgoing, Received, f'{outgoing.label} audit log: {row["event_time_iso"]} {row["status"]!r} {row["data"]!r}')
+        trace(Channel_Outgoing, Received, f'{outgoing.label} audit log: {row["event_time"]} {row["status"]!r} {row["data"]!r}')
 
     separator(Channel_Outgoing)
 
@@ -612,7 +612,7 @@ def _wait_for_soap_pings(count:'int') -> 'anylist':
 
         # Each new ping is traced once, when it first shows up
         for row in out[seen:]:
-            trace(Channel_Outgoing, Received, f'soap ping: {row["event_time_iso"]} {row["status"]!r} {row["data"]!r}')
+            trace(Channel_Outgoing, Received, f'soap ping: {row["event_time"]} {row["status"]!r} {row["data"]!r}')
 
         seen = len(out)
 

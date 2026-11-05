@@ -67,9 +67,10 @@ def get_ssl_values_from_config(config:'any_') -> 'stranydict':
 # ################################################################################################################################
 
 def get_ssl_connect_args(config:'any_', engine_name:'str') -> 'stranydict':
-    """ Returns the driver-level SSL connect arguments for a connection configuration,
-    an empty dict when SSL is not enabled. PyMySQL and pg8000 accept an ssl.SSLContext
-    instance under the same `ssl` keyword, while oracledb takes it under `ssl_context`
+    """ Returns the driver-level SSL connect arguments for a connection configuration.
+    When SSL is not enabled, the dict is empty, apart from PostgreSQL, for which TLS
+    is turned off explicitly. PyMySQL accepts an ssl.SSLContext instance
+    under the `ssl` keyword, pg8000 under `ssl_context`, and oracledb under `ssl_context`
     next to the TCPS protocol.
     """
 
@@ -79,15 +80,18 @@ def get_ssl_connect_args(config:'any_', engine_name:'str') -> 'stranydict':
     # Read the ssl_* keys with the defaults filled in ..
     values = get_ssl_values_from_config(config)
 
-    # .. SSL is off unless requested explicitly ..
-    if not values['ssl']:
-        return out
-
     # .. only MySQL, PostgreSQL and Oracle connections are configured through these keys -
     # .. other engines pass their SSL options through their own extra options ..
     is_mysql      = engine_name.startswith('mysql')
     is_oracle     = engine_name.startswith('oracle')
     is_postgresql = engine_name.startswith('postgres')
+
+    # .. SSL is off unless requested explicitly, which pg8000 needs to be told about,
+    # .. because without a context it attempts an unverified TLS connection first ..
+    if not values['ssl']:
+        if is_postgresql:
+            out['ssl_context'] = False
+        return out
 
     # .. Oracle needs the TCPS protocol next to its SSL context ..
     if is_oracle:
@@ -95,11 +99,15 @@ def get_ssl_connect_args(config:'any_', engine_name:'str') -> 'stranydict':
         out['ssl_context'] = build_ssl_context_from_values(values)
         return out
 
-    if not is_mysql:
-        if not is_postgresql:
-            return out
+    # .. pg8000 takes the context under its own keyword ..
+    if is_postgresql:
+        out['ssl_context'] = build_ssl_context_from_values(values)
+        return out
 
-    # .. and the MySQL and PostgreSQL drivers accept the same SSL context under the same keyword.
+    if not is_mysql:
+        return out
+
+    # .. and PyMySQL takes it under the `ssl` keyword.
     out['ssl'] = build_ssl_context_from_values(values)
 
     return out

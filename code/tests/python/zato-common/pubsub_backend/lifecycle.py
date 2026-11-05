@@ -8,10 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import os
+from time import sleep
 
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.pubsub.sql.config import ModuleCtx
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+Env_Pull_Lease_Seconds = ModuleCtx.Env_Pull_Lease_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,7 +161,8 @@ def _run_expiration_flow(backend:'SQLPubSubBackend') -> 'None':
 # ################################################################################################################################
 
 def _run_fetch_limits_flow(backend:'SQLPubSubBackend') -> 'None':
-    """ Fetches respect both the message count limit and the total size budget.
+    """ Fetches respect both the message count limit and the total size budget, and a message larger
+    than the budget is returned alone.
     """
     delete_all_rows()
 
@@ -178,19 +187,33 @@ def _run_fetch_limits_flow(backend:'SQLPubSubBackend') -> 'None':
     messages = backend.fetch_messages(_sub_key_1, max_len=250)
     assert len(messages) == 2
 
-    # .. while a budget that fits everything returns everything.
+    # .. while a budget that fits everything returns everything ..
     messages = backend.fetch_messages(_sub_key_1, max_len=1000)
     assert len(messages) == 3
+
+    # .. and a message larger than the budget is returned alone rather than holding up the queue,
+    # .. in a fetch for push delivery as well as in a pull.
+    messages = backend.fetch_messages(_sub_key_1, max_len=50)
+    assert len(messages) == 1
+    assert messages[0]['data'] == payload_1
 
     # fetch_pending is the startup-recovery entry point and sees the same queue.
     pending = backend.fetch_pending(_sub_key_1)
     assert len(pending) == 3
 
+    pulled = backend.pull_messages(_sub_key_1, max_len=50)
+    assert len(pulled) == 1
+    assert pulled[0]['data'] == payload_1
+
+    pulled = backend.pull_messages(_sub_key_1, max_len=50)
+    assert len(pulled) == 1
+    assert pulled[0]['data'] == payload_2
+
 # ################################################################################################################################
 
 def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
-    """ The REST formatting parses JSON payloads, fills in the meta envelope
-    and acknowledges each message it hands over.
+    """ The REST pull leases the messages it hands over, and the formatting parses JSON payloads
+    and fills in the meta envelope.
     """
     delete_all_rows()
 
@@ -199,7 +222,7 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
     dict_data = {'invoice_id': 'INV-1', 'amount': 250}
     result = backend.publish(_topic, dict_data, correl_id='correlation-rest-1')
 
-    messages = backend.fetch_messages(_sub_key_1)
+    messages = backend.pull_messages(_sub_key_1)
     formatted = backend.format_messages_for_rest(messages, _sub_key_1)
 
     assert len(formatted) == 1
@@ -213,6 +236,7 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
 
     assert meta['topic_name'] == _topic
     assert meta['msg_id'] == result.msg_id
+    assert meta['delivery_attempt'] == 1
     assert meta['sub_key'] == _sub_key_1
     assert meta['size'] == len(json.dumps(dict_data))
     assert meta['priority'] == 5
@@ -223,22 +247,63 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
     assert meta['time_since_pub']
     assert meta['time_since_recv']
 
-    # .. and the hand-over acknowledged the message.
+    # .. the lease keeps the message from the next pull ..
+    assert backend.pull_messages(_sub_key_1) == []
+
+    # .. and the acknowledgement removes it from the queue.
+    assert backend.ack_pulled(_sub_key_1, [result.msg_id]) == 1
     assert backend.fetch_messages(_sub_key_1) == []
 
     # Non-JSON payloads come back as the plain strings they are.
     _ = backend.publish(_topic, 'just plain text')
 
-    messages = backend.fetch_messages(_sub_key_1)
+    messages = backend.pull_messages(_sub_key_1)
     formatted = backend.format_messages_for_rest(messages, _sub_key_1)
 
     assert formatted[0]['data'] == 'just plain text'
 
 # ################################################################################################################################
 
+def _run_pull_lease_flow(backend:'SQLPubSubBackend') -> 'None':
+    """ A message whose pull was never acknowledged is handed out again once its lease runs out,
+    and an acknowledgement of a message that is no longer in the queue removes nothing.
+    """
+    delete_all_rows()
+
+    backend.subscribe(_sub_key_1, _topic)
+
+    result = backend.publish(_topic, 'leased')
+
+    # A lease of zero seconds runs out as soon as the clock moves on ..
+    os.environ[Env_Pull_Lease_Seconds] = '0'
+
+    try:
+        first = backend.pull_messages(_sub_key_1)
+        sleep(0.01)
+        second = backend.pull_messages(_sub_key_1)
+    finally:
+        del os.environ[Env_Pull_Lease_Seconds]
+
+    # .. so both pulls received the same message, the second copy with a higher attempt number ..
+    assert len(first) == 1
+    assert len(second) == 1
+    assert first[0]['msg_id'] == result.msg_id
+    assert second[0]['msg_id'] == result.msg_id
+    assert first[0]['delivery_attempt'] == 1
+    assert second[0]['delivery_attempt'] == 2
+
+    # .. which one acknowledgement removes ..
+    assert backend.ack_pulled(_sub_key_1, [result.msg_id]) == 1
+
+    # .. while a repeated one finds nothing left to remove.
+    assert backend.ack_pulled(_sub_key_1, [result.msg_id]) == 0
+    assert backend.fetch_messages(_sub_key_1) == []
+
+# ################################################################################################################################
+
 def run_lifecycle_scenario() -> 'None':
     """ The message lifecycle every backend must support - publish, fetch, acknowledge,
-    expiration, fetch limits and the REST formatting.
+    expiration, fetch limits, the REST formatting and pull leases.
     """
     backend = SQLPubSubBackend()
 
@@ -246,6 +311,7 @@ def run_lifecycle_scenario() -> 'None':
     _run_expiration_flow(backend)
     _run_fetch_limits_flow(backend)
     _run_rest_formatting_flow(backend)
+    _run_pull_lease_flow(backend)
 
 # ################################################################################################################################
 # ################################################################################################################################

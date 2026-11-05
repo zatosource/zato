@@ -7,16 +7,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from datetime import datetime, timezone
 from json import dumps
+from shutil import rmtree
+from tempfile import mkdtemp
 from unittest import TestCase
 
 # OpenTelemetry
 from opentelemetry.proto.logs.v1.logs_pb2 import SEVERITY_NUMBER_ERROR, SEVERITY_NUMBER_INFO, SEVERITY_NUMBER_WARN
 
 # Zato
-from support import attributes_of, build_queued, to_queued, CapturingAuditLog, Server_Name
+from live_sql.env import database_env
+from support import attributes_of, build_queued, to_queued, CapturingAuditLog, Default_Event_Time, Server_Name
 from zato.common.api import SCHEDULER
+from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import AuditBody, AuditClassification, AuditEvent, AuditOutcome, AuditSource, LLMAttr, \
     MCPAttr
@@ -53,6 +58,13 @@ _identity = 'maria.johnson@example.com'
 
 # The default payload cap the tests build records with
 _max_payload_size = 65536
+
+# The prefix all the audit log database environment variables share
+_env_prefix = 'Zato_Audit_Log_DB_'
+
+# When the scheduler job was planned to fire and when the pub/sub message was published
+_planned_fire_time = datetime(2026, 3, 1, 2, 0, 0, tzinfo=timezone.utc)
+_pub_time = datetime(2026, 3, 1, 10, 0, 0, tzinfo=timezone.utc)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,7 +170,7 @@ class TestRecordShape(TestCase):
             source=AuditSource.REST_Channel,
             event_type=AuditEvent.Request_Received,
             object_name='billing.invoices',
-            event_time_iso='2026-03-01T10:20:30.123456+00:00',
+            event_time=Default_Event_Time,
             endpoint='/billing/invoices',
             size=120,
             outcome=AuditOutcome.OK,
@@ -201,7 +213,7 @@ class TestRecordShape(TestCase):
         self.assertNotIn(_column('status'), attributes)
         self.assertNotIn(_column('application_outcome'), attributes)
         self.assertNotIn(_column('classification'), attributes)
-        self.assertNotIn(_column('pub_time_iso'), attributes)
+        self.assertNotIn(_column('pub_time'), attributes)
 
         # .. server_name is a resource attribute and data of a REST channel never leaves without the payload flag.
         self.assertNotIn(_column('server_name'), attributes)
@@ -613,9 +625,17 @@ class TestSources(TestCase):
 
     def test_scheduler(self) -> 'None':
 
-        _ = record_job_start(self.audit_log, 'nightly.cleanup',
-            cid='cid-job-1', job_id=12, current_run=3, planned_fire_time_iso='2026-03-01T02:00:00+00:00',
-            delay_ms=15, service='demo.cleanup')
+        # The start of a run writes its first log entry straight to the database, so the test has one of its own
+        directory = mkdtemp(prefix='zato-audit-mapping-')
+        db_path = os.path.join(directory, 'audit.db')
+
+        try:
+            with database_env(_env_prefix, {'type': AuditLogCtx.Type_SQLite, 'name': db_path}):
+                _ = record_job_start(self.audit_log, 'nightly.cleanup',
+                    cid='cid-job-1', job_id=12, current_run=3, planned_fire_time=_planned_fire_time,
+                    delay_ms=15, service='demo.cleanup')
+        finally:
+            rmtree(directory, ignore_errors=True)
 
         record, attributes = _build_record(self.audit_log.last())
 
@@ -623,7 +643,7 @@ class TestSources(TestCase):
         self.assertEqual(record.severity_text, 'INFO')
         self.assertEqual(attributes[_column('outcome')], SCHEDULER.OUTCOME.RUNNING)
         self.assertEqual(attributes[_column('endpoint')], 'demo.cleanup')
-        self.assertEqual(attributes[_column('pub_time_iso')], '2026-03-01T02:00:00+00:00')
+        self.assertEqual(attributes[_column('pub_time')], '2026-03-01T02:00:00+00:00')
 
         self.assertEqual(attributes[_attr('job_id')], 12)
         self.assertEqual(attributes[_attr('current_run')], 3)
@@ -700,7 +720,7 @@ class TestSources(TestCase):
 
         _ = self.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, 'orders.created',
             cid='cid-pub-1', msg_id='zpsm-1', correl_id='order-1', ext_client_id='orders.publisher',
-            pub_time_iso='2026-03-01T10:00:00+00:00', sub_key='zpsk-1', size=256, priority=5, outcome=AuditOutcome.OK,
+            pub_time=_pub_time, sub_key='zpsk-1', size=256, priority=5, outcome=AuditOutcome.OK,
             data='{"order_id": 1}', bodies={AuditBody.Request: '{"order_id": 1}'})
 
         record, attributes = _build_record(self.audit_log.last())
@@ -709,7 +729,7 @@ class TestSources(TestCase):
         self.assertEqual(attributes[_column('msg_id')], 'zpsm-1')
         self.assertEqual(attributes[_column('correl_id')], 'order-1')
         self.assertEqual(attributes[_column('ext_client_id')], 'orders.publisher')
-        self.assertEqual(attributes[_column('pub_time_iso')], '2026-03-01T10:00:00+00:00')
+        self.assertEqual(attributes[_column('pub_time')], '2026-03-01T10:00:00+00:00')
         self.assertEqual(attributes[_column('sub_key')], 'zpsk-1')
         self.assertEqual(attributes[_column('priority')], 5)
 

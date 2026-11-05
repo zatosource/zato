@@ -15,7 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # stdlib
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 # SQLAlchemy
 from sqlalchemy import and_, func, or_, select
@@ -29,8 +29,10 @@ from zato.common.audit_log.api import event_table
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.typing_ import dictlist, strset
+    datetime = datetime
     dictlist = dictlist
     Engine = Engine
     strset = strset
@@ -72,7 +74,6 @@ def collect_channel_status_facts(
     out:'dictlist' = []
 
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     # Every channel kind, or the one asked about - an outgoing connection has a response event too,
     # but its responses are counted by the outgoing collector, against the codes it alerts on
@@ -88,7 +89,7 @@ def collect_channel_status_facts(
     for row_source in sources:
 
         conditions = [
-            event_table.c.event_time_iso >= window_start_iso,
+            event_table.c.event_time >= window_start,
             event_table.c.source == row_source,
             event_table.c.event_type == response_event_type_by_source[row_source],
         ]
@@ -173,15 +174,14 @@ def collect_channel_silence_facts(engine:'Engine', now:'datetime', expected_name
     statement = select(
         event_table.c.source,
         event_table.c.object_name,
-        func.max(event_table.c.event_time_iso),
+        func.max(event_table.c.event_time),
     ).where(and_(*conditions)).group_by(event_table.c.source, event_table.c.object_name)
 
     with engine.connect() as connection:
         rows = connection.execute(statement).fetchall()
 
-    for row_source, row_object_name, newest_iso in rows:
+    for row_source, row_object_name, newest in rows:
 
-        newest = datetime.fromisoformat(newest_iso)
         silent = now - newest
 
         fact = new_fact(row_source, row_object_name)

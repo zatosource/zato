@@ -20,8 +20,9 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.analytics.api import get_analytics_engine, usage_table, Caller_Anonymous, Latency_Bucket_Count, \
-    Latency_Buckets_Ms, Period_Len
+    Latency_Buckets_Ms
 from zato.common.analytics.baseline import get_anomaly_periods, period_set, Baseline_Weeks, Hours_Per_Week
+from zato.common.db_env.common import Hour_Period_Format, to_hour_period
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
@@ -160,9 +161,17 @@ def get_range_cutoff(now:'datetime', time_range:'str') -> 'str':
     range_hours = Range_Hours[time_range]
     cutoff = now - timedelta(hours=range_hours)
 
-    cutoff_iso = cutoff.isoformat()
+    out = to_hour_period(cutoff)
+    return out
 
-    out = cutoff_iso[:Period_Len]
+# ################################################################################################################################
+
+def period_to_datetime(period:'str') -> 'datetime':
+    """ Converts an hourly period like 2026-07-16T14 to the moment it starts. All periods are UTC.
+    """
+    when = datetime.strptime(period, Hour_Period_Format)
+
+    out = when.replace(tzinfo=timezone.utc)
     return out
 
 # ################################################################################################################################
@@ -171,9 +180,7 @@ def period_to_ms(period:'str') -> 'int':
     """ Converts an hourly period like 2026-07-16T14 to its Unix timestamp in milliseconds.
     All periods are UTC.
     """
-    when = datetime.fromisoformat(period)
-    when = when.replace(tzinfo=timezone.utc)
-
+    when = period_to_datetime(period)
     seconds = when.timestamp()
 
     out = int(seconds * 1000)
@@ -318,15 +325,15 @@ def _build_timeline(period_counts:'period_count_dict', period_errors:'period_cou
 def get_window_periods(now:'datetime', cutoff_period:'str') -> 'strlist':
     """ Returns every hourly period of the window, from the cutoff up to now, inclusive.
     """
-    now_period = now.isoformat()[:Period_Len]
-    when = datetime.fromisoformat(cutoff_period)
+    now_period = to_hour_period(now)
+    when = period_to_datetime(cutoff_period)
 
     # Our response to produce
     out:'strlist' = []
 
     while True:
 
-        period = when.isoformat()[:Period_Len]
+        period = to_hour_period(when)
 
         if period > now_period:
             break
@@ -426,8 +433,10 @@ def _fold_rows(rows:'anylist', cutoff_period:'str', group_by_channel:'bool') -> 
 
         totals.related.add(related_name)
 
-    logger.info('Analytics-Diag: _fold_rows rows=%d skipped_before_cutoff=%d entities=%d ' \
-        'json_loads_calls=%d json_loads=%.1fms total=%.1fms',
+    fold_message = 'Analytics-Diag: _fold_rows rows=%d skipped_before_cutoff=%d entities=%d ' + \
+        'json_loads_calls=%d json_loads=%.1fms total=%.1fms'
+
+    logger.info(fold_message,
         len(rows), diag_skipped_count, len(entities), diag_loads_count, diag_loads_time * 1000,
         (perf_counter() - diag_start) * 1000)
 
@@ -545,7 +554,7 @@ def _get_screen_data(now:'datetime', time_range:'str', channel:'str', caller:'st
     baseline_weeks_hours = Baseline_Weeks * Hours_Per_Week
     baseline_hours = Range_Hours[time_range] + baseline_weeks_hours
     baseline_cutoff = now - timedelta(hours=baseline_hours)
-    baseline_cutoff_period = baseline_cutoff.isoformat()[:Period_Len]
+    baseline_cutoff_period = to_hour_period(baseline_cutoff)
 
     diag_start = perf_counter()
 
@@ -564,10 +573,12 @@ def _get_screen_data(now:'datetime', time_range:'str', channel:'str', caller:'st
     entity_rows = _build_entity_rows(entities, window_periods, top_count)
     diag_entity_rows = perf_counter()
 
+    screen_message = 'Analytics-Diag: _get_screen_data range=%s channel=%r caller=%r group_by_channel=%s top_count=%d | ' + \
+        'rows=%d entities=%d timeline=%d window_periods=%d entity_rows=%d | ' + \
+        'load=%.1fms fold=%.1fms anomalies=%.1fms timeline=%.1fms entity_rows=%.1fms total=%.1fms'
+
     logger.info(
-        'Analytics-Diag: _get_screen_data range=%s channel=%r caller=%r group_by_channel=%s top_count=%d | ' \
-        'rows=%d entities=%d timeline=%d window_periods=%d entity_rows=%d | ' \
-        'load=%.1fms fold=%.1fms anomalies=%.1fms timeline=%.1fms entity_rows=%.1fms total=%.1fms',
+        screen_message,
         time_range, channel, caller, group_by_channel, top_count,
         len(rows), len(entities), len(timeline), len(window_periods), len(entity_rows),
         (diag_loaded - diag_start) * 1000,

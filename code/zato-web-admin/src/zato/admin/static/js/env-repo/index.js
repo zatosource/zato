@@ -29,7 +29,6 @@ $.fn.zato.envRepo.config = {
     badAddressMessage: 'The address must look like https://github.com/owner/name',
     copiedMessage: 'Copied to clipboard',
     copiedShownDelay: 950,
-    progressTheme: 'dark',
     appStateNone: 'none',
     appStateCreated: 'created',
     appStateInstalled: 'installed',
@@ -70,7 +69,6 @@ $.fn.zato.envRepo.init = function() {
 
     state.log = progressLog.create({
         container: document.getElementById('progress-log'),
-        theme: config.progressTheme,
         isHidden: true,
     });
 

@@ -1,5 +1,5 @@
 /*
- * Wizard surface - the light rendering of the OpenAPI console surface,
+ * Wizard surface - the light rendering of the API portal surface,
  * applied to every wizard page on top of shared/wizard-kit.css.
  *
  * A wizard page loads it as its last stylesheet, after the instance

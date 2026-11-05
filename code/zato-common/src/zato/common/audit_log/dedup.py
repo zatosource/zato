@@ -58,16 +58,15 @@ def acquire_dedup_key(engine:'Engine', dedup_key:'str', cid:'str', action:'str',
     asked for the resubmit, so the ledger says not only what was resubmitted but by whom.
     """
     now = utcnow()
-    now_iso = now.isoformat()
 
     values = {
         'dedup_key': dedup_key,
         'cid': cid,
         'action': action,
         'actor': actor,
-        'created_iso': now_iso,
+        'created_at': now,
         'outcome': '',
-        'completed_iso': '',
+        'completed_at': None,
     }
 
     # The unique index makes the claim atomic - a concurrent duplicate loses here.
@@ -116,9 +115,8 @@ def complete_dedup_key(engine:'Engine', dedup_key:'str', outcome:'str') -> 'None
     statement = update(event_dedup_table)
     statement = statement.where(event_dedup_table.c.dedup_key == dedup_key)
     now = utcnow()
-    now_iso = now.isoformat()
 
-    statement = statement.values(outcome=outcome, completed_iso=now_iso)
+    statement = statement.values(outcome=outcome, completed_at=now)
 
     with engine.begin() as connection:
         _ = connection.execute(statement)
@@ -145,7 +143,7 @@ def get_in_doubt(engine:'Engine') -> 'dictlist':
         event_dedup_table.c.dedup_key,
         event_dedup_table.c.cid,
         event_dedup_table.c.action,
-        event_dedup_table.c.created_iso,
+        event_dedup_table.c.created_at,
     )
     statement = statement.where(event_dedup_table.c.outcome == '')
     statement = statement.order_by(event_dedup_table.c.id)
@@ -158,7 +156,7 @@ def get_in_doubt(engine:'Engine') -> 'dictlist':
                 'dedup_key': row.dedup_key,
                 'cid': row.cid,
                 'action': row.action,
-                'created_iso': row.created_iso,
+                'created_at': row.created_at,
             })
 
     return out

@@ -81,7 +81,7 @@ def _publish_throughput_share(backend:'SQLPubSubBackend', topic_names:'strlist',
 
 # ################################################################################################################################
 
-def run_publish_throughput_scenario() -> 'None':
+def run_publish_throughput_scenario() -> 'float':
     """ Publishing must sustain at least 100 messages a second across concurrent
     publishers - the shape of production traffic, where many clients publish at once.
     Every message is still its own fully durable transaction - the databases share
@@ -115,9 +115,11 @@ def run_publish_throughput_scenario() -> 'None':
     elapsed = monotonic() - start
 
     # .. and the rate must clear the floor.
-    rate = _publish_message_count / elapsed
+    out = _publish_message_count / elapsed
 
-    assert rate >= get_min_publish_rate(), f'Publish rate too low: {intcomma(int(rate))}/s over {intcomma(_publish_message_count)} messages'
+    assert out >= get_min_publish_rate(), f'Publish rate too low: {intcomma(int(out))}/s over {intcomma(_publish_message_count)} messages'
+
+    return out
 
 # ################################################################################################################################
 
@@ -138,7 +140,7 @@ def _publish_share(backend:'SQLPubSubBackend', topic_names:'strlist', publisher_
 
 # ################################################################################################################################
 
-def run_delivery_throughput_scenario() -> 'None':
+def run_delivery_throughput_scenario() -> 'float':
     """ Delivery must sustain at least 500 messages a second across the whole subscriber
     population - one consumer greenlet per subscriber doing blocking fetches with batched
     acknowledgements, which is exactly the runtime pattern of push delivery. Every queue
@@ -193,9 +195,11 @@ def run_delivery_throughput_scenario() -> 'None':
     delivered = counters['delivered']
     assert delivered == _delivery_total_count, f'Expected {intcomma(_delivery_total_count)} deliveries, got {intcomma(delivered)}'
 
-    rate = delivered / elapsed
+    out = delivered / elapsed
 
-    assert rate >= get_min_delivery_rate(), f'Delivery rate too low: {intcomma(int(rate))}/s over {intcomma(delivered)} messages'
+    assert out >= get_min_delivery_rate(), f'Delivery rate too low: {intcomma(int(out))}/s over {intcomma(delivered)} messages'
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

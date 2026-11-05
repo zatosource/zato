@@ -44,7 +44,8 @@ def pubsub_subscriptions_by_topic_id(session:'SASession', topic_id:'int') -> 'an
 # ################################################################################################################################
 
 def pubsub_subscription_topic_pairs(session:'SASession') -> 'anylist':
-    """ Returns one row per subscription-topic pair, each with the subscriber's security definition.
+    """ Returns one row per subscription-topic pair, each with the subscriber's security definition,
+    which is None for a subscriber that is a service.
     """
     out = session.query(
         PubSubSubscription.sub_key,
@@ -58,7 +59,7 @@ def pubsub_subscription_topic_pairs(session:'SASession') -> 'anylist':
     ).\
         join(PubSubSubscriptionTopic, PubSubSubscriptionTopic.subscription_id == PubSubSubscription.id).\
         join(PubSubTopic, PubSubTopic.id == PubSubSubscriptionTopic.topic_id).\
-        join(SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id).\
+        outerjoin(SecurityBase, SecurityBase.id == PubSubSubscription.sec_base_id).\
         all()
 
     return out

@@ -402,7 +402,7 @@ def _trace_responses(responses:'anylist') -> 'None':
     for row in responses:
         attrs = row['attrs']
         finish_reason = attrs.get(LLMAttr.Finish_Reason, '')
-        trace(Channel_Outgoing, Received, f'llm audit log: {row["event_time_iso"]} {row["status"]!r} ' +
+        trace(Channel_Outgoing, Received, f'llm audit log: {row["event_time"]} {row["status"]!r} ' +
             f'model={attrs[LLMAttr.Model]} finish_reason={finish_reason!r} duration={row["duration_ms"]}ms')
 
     separator(Channel_Outgoing)

@@ -37,6 +37,7 @@ from zato.common.audit_log.scheduler import record_job_complete, record_job_star
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG
 from zato.common.const import SECRETS
+from zato.common.db_env.outage import call_until_available
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
 from zato.common.log_streaming import LogStreamingManager
@@ -1013,7 +1014,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._build_mcp_tool_registries()
 
         # All services are deployed, so the OpenAPI document can be built now.
-        from zato.server.openapi_console.cache import rebuild_spec_cache
+        from zato.server.api_portal.cache import rebuild_spec_cache
         rebuild_spec_cache(self)
 
         # The server is started so we can deploy what we were told to handle on startup.
@@ -1027,7 +1028,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         self._start_queue_bridge()
 
-        self._start_openapi_console_listener()
+        self._start_api_portal_listener()
 
         self._start_rule_engine_change_listener()
 
@@ -1308,7 +1309,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             cid=cid,
             job_id=job_id,
             current_run=current_run,
-            planned_fire_time_iso=planned_fire_time_iso,
+            planned_fire_time=planned_fire_dt,
             delay_ms=delay_ms,
             service=ctx['service'],
         )
@@ -1722,14 +1723,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _start_openapi_console_listener(self) -> 'None':
-        """ Starts the greenlet that answers OpenAPI console requests arriving via Redis Streams.
+    def _start_api_portal_listener(self) -> 'None':
+        """ Starts the greenlet that answers API portal requests arriving via Redis Streams.
         """
         try:
-            from zato.server.openapi_console.listener import start_openapi_console_listener
-            start_openapi_console_listener(self)
+            from zato.server.api_portal.listener import start_api_portal_listener
+            start_api_portal_listener(self)
         except Exception:
-            logger.warning('OpenAPI console listener could not be started: %s', format_exc())
+            logger.warning('API portal listener could not be started: %s', format_exc())
 
 # ################################################################################################################################
 
@@ -1746,8 +1747,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def _start_pubsub_backend(self):
 
-        # Messages, queues and delivery state live in the SQLite file selected
-        # through Zato_PubSub_DB_Path.
+        # Messages, queues and delivery state live in the database selected through the Zato_PubSub_DB_* variables.
         audit_log = AuditLog(self.name)
 
         self.pubsub_backend = SQLPubSubBackend(
@@ -1756,7 +1756,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             encrypt_at_rest=self.encrypt_at_rest,
         )
 
-        self.config_manager._sync_pubsub_subscriptions()
+        # On PostgreSQL, this server becomes the active one before it reads any pub/sub state, so that it starts
+        # from everything the server it replaces committed, and that server changes nothing from now on ..
+        self.pubsub_backend.take_over()
+
+        # .. and only now is the state read. Each step that writes to the database may run again as a whole,
+        # .. so it waits for the database through an outage or a failover that begins after the takeover.
+        call_until_available('Pub/sub subscriptions sync', self.config_manager._sync_pubsub_subscriptions)
         self.config_manager._sync_pubsub_topics()
 
         # All delivery greenlets share the backend - its per-subscriber events
@@ -1767,7 +1773,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         register_delivery_handlers()
 
         # .. and the queues of the connections published to before this server started come back here.
-        self.config_manager.restore_outgoing_subscriptions()
+        call_until_available('Outgoing queues restore', self.config_manager.restore_outgoing_subscriptions)
 
         for sub_key in self.config_manager._push_subs:
             self.pubsub_push_delivery.start_sub_key(sub_key)
@@ -1953,7 +1959,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # .. the reloaded configuration may hold channels the cached OpenAPI document predates,
         # e.g. ones an enmasse import wrote straight to the ODB, so the document is rebuilt from it now ..
-        from zato.server.openapi_console.cache import rebuild_spec_cache
+        from zato.server.api_portal.cache import rebuild_spec_cache
         rebuild_spec_cache(self)
 
         # .. reload pub/sub permissions from database ..
@@ -2105,12 +2111,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         result = facade.run_enmasse_sync_export()
 
+        # A completed export returns the file the command wrote ..
         if result.is_ok:
             with open('/tmp/enmasse-export.yaml') as f:
                 data = f.read()
             return data
+
+        # .. while a failed one is reported as an error, never as the content of the file.
         else:
-            return result.stderr
+            message = f'Enmasse export failed, exit code: `{result.exit_code}`, timeout: `{result.timeout_msg}`, ' + \
+                f'stdout: `{result.stdout}`, stderr: `{result.stderr}`'
+            raise Exception(message)
 
 # ################################################################################################################################
 
@@ -2276,6 +2287,28 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         names = list(get_secret_field_names(self.config_manager, type_))
 
         out = {'names': names}
+        return out
+
+# ################################################################################################################################
+
+    def resolve_on_prem_gateway_remote_address(self, id:'int') -> 'strdict':
+        """ Returns the remote address of a connected on-prem gateway and the DNS name that the hub
+        resolves it to at the time of the call. Invoked by the Dashboard.
+        """
+        from zato.server.on_prem_gateway import OnPremGatewayManager
+
+        manager = OnPremGatewayManager(self)
+        gateway = manager.get_by_id(id)
+
+        if not gateway:
+            raise Exception(f'On-prem gateway with id `{id}` not found')
+
+        response = manager.hub.resolve_remote_address(gateway['name'])
+
+        out = {
+            'remote_address': response['remote_address'],
+            'dns_name': response['dns_name'],
+        }
         return out
 
 # ################################################################################################################################

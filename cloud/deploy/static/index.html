@@ -542,13 +542,30 @@ body[data-state="ready"] .deploy-progress-elapsed {
     padding: 0 var(--deploy-page-padding) 1.75rem;
 }
 
-/* The shared panel in its dark theme, filling the rest of the screen with square corners and no height cap,
+/* The shared panel in the page's own palette, filling the rest of the screen with square corners and no height cap,
    its background left translucent so the page's gradient shows through. */
 .deploy-log .progress-log {
     --progress-log-font-mono: var(--deploy-font-mono);
     --progress-log-radius: 0;
     --progress-log-max-height: none;
     --progress-log-hover-delay: var(--deploy-hover-delay);
+    --progress-log-border: var(--deploy-border);
+    --progress-log-border-strong: var(--deploy-border-strong);
+    --progress-log-background: var(--deploy-bg-panel);
+    --progress-log-underlay: var(--deploy-bg);
+    --progress-log-header-background: transparent;
+    --progress-log-text: var(--deploy-text);
+    --progress-log-text-muted: var(--deploy-text-muted);
+    --progress-log-text-faint: var(--deploy-text-faint);
+    --progress-log-ok: var(--deploy-green);
+    --progress-log-ok-glow: var(--deploy-green-glow);
+    --progress-log-error: var(--deploy-red);
+    --progress-log-accent: var(--deploy-accent);
+    --progress-log-accent-end: var(--deploy-accent-cyan);
+    --progress-log-accent-soft: var(--deploy-accent-soft);
+    --progress-log-accent-soft-strong: var(--deploy-accent-soft-strong);
+    --progress-log-track: var(--deploy-track);
+    --progress-log-shimmer: rgba(255, 255, 255, 0.55);
 
     flex: 1;
     background: var(--deploy-bg-panel);
@@ -747,7 +764,6 @@ zatoDeploy.init = function() {
 
     zatoDeploy.log = progressLog.create({
         container: document.getElementById('deploy-log'),
-        theme: 'dark',
         linesKept: zatoDeploy.config.logLinesKept,
         tooltipTheme: zatoDeploy.config.tooltipTheme,
     });

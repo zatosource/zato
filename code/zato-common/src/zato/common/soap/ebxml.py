@@ -7,12 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from copy import deepcopy
 from dataclasses import dataclass
-from os import urandom
 
 # cryptography
-from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.serialization import Encoding
 
@@ -20,33 +19,28 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from lxml import etree
 
 # Zato
-from zato.common.crypto.api import CryptoManager, is_string_equal
-from zato.common.soap.common import as_soap_security_exception, NS, SOAPException, SOAPSecurityException, SOAPVersion
+from zato.common.crypto.api import CryptoManager
+from zato.common.soap.common import NS, SOAPException, SOAPVersion
 from zato.common.soap.envelope import build_envelope, find_header, get_body, get_header, set_must_understand
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, Transform
-from zato.common.util.xml_.core import Id_Size_Bits, new_id, qname, utc_timestamp, XMLSecurityException
+from zato.common.util.xml_.core import Id_Size_Bits, qname, utc_timestamp
 from zato.common.util.xml_.mime_ import part_list
-from zato.common.util.xml_.token import parse_x509v3
-from zato.common.util.xml_.keys import recover_content_key
-from zato.common.util.xml_.signature import compute_signature_value, verify_signature_value
-from zato.common.util.xml_.trust import validate_certificate_chain
-from zato.common.util.xml_.xmlsec import decode_base64, digest_bytes, encode_base64
+from zato.common.util.xml_.xmlsec import canonicalize_inclusive, digest_bytes, encode_base64
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
-    from cryptography.x509 import Certificate
-    from zato.common.typing_ import any_, strnone
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+    from zato.common.typing_ import any_, anytuple, intlist, strlist, strnone
     from zato.common.util.xml_.keystore import Keystore
-    from zato.common.util.xml_.mime_ import Part
     any_ = any_
-    Certificate = Certificate
+    anytuple = anytuple
+    intlist = intlist
     Keystore = Keystore
-    Part = Part
-    RSAPublicKey = RSAPublicKey
+    RSAPrivateKey = RSAPrivateKey
+    strlist = strlist
     strnone = strnone
 
 # ################################################################################################################################
@@ -59,25 +53,46 @@ _eb_nsmap = {
     'eb': NS.EBXML2,
 }
 
-_xlink_href = f'{{{NS.XLINK}}}href'
-_xlink_type = f'{{{NS.XLINK}}}type'
-
-# AES-128-GCM parameters for payload encryption, matching the WS-Security body cipher.
-_content_key_size_bytes = 16
-_gcm_nonce_size_bytes   = 12
-
-# The XML Encryption type of an encrypted MIME part - a whole element's worth of octets.
-_xenc_element_type = 'http://www.w3.org/2001/04/xmlenc#Element'
-
 _ds_nsmap = {
     'ds': NS.DS,
 }
 
-_xenc_nsmap = {
-    'xenc':   NS.XENC,
-    'xenc11': NS.XENC11,
-    'ds':     NS.DS,
+_xlink_href = f'{{{NS.XLINK}}}href'
+_xlink_type = f'{{{NS.XLINK}}}type'
+
+_soap_actor = qname(NS.SOAP11, 'actor')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Actor:
+    """ The SOAP actors of the ebMS 2.0 header blocks.
+    """
+    To_Party_MSH = 'urn:oasis:names:tc:ebxml-msg:actor:toPartyMSH'
+    Next_MSH     = 'urn:oasis:names:tc:ebxml-msg:actor:nextMSH'
+    SOAP_Next    = 'http://schemas.xmlsoap.org/soap/actor/next'
+
+# The XPath filter transform of the ebMS 2.0 signature profile.
+XPath_Transform = 'http://www.w3.org/TR/1999/REC-xpath-19991116'
+
+# The prefix the XPath expression binds to the SOAP 1.1 envelope namespace.
+_xpath_soap_prefix = 'SOAP'
+
+_xpath_nsmap = {
+    _xpath_soap_prefix: NS.SOAP11,
 }
+
+# The XPath expression leaves out the header blocks addressed to the next message service handler,
+# because an intermediary may change them in transit.
+_xpath_next_msh  = f'ancestor-or-self::node()[@{_xpath_soap_prefix}:actor="{Actor.Next_MSH}"]'
+_xpath_soap_next = f'ancestor-or-self::node()[@{_xpath_soap_prefix}:actor="{Actor.SOAP_Next}"]'
+XPath_Expression = f'not({_xpath_next_msh} | {_xpath_soap_next})'
+
+# The actors whose header blocks the XPath filter leaves out.
+_excluded_actors = {Actor.Next_MSH, Actor.SOAP_Next}
+
+# The eb:Action of the message service handler's error messages.
+_action_message_error = 'MessageError'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,6 +114,13 @@ class EbXMLInfo:
     # Optional PartyId type attributes, e.g. urn:nhs:names:partyType:ocs+serviceInstance.
     from_party_type: 'strnone' = None
     to_party_type:   'strnone' = None
+
+    # The eb:Role of each party, the roles the agreement binds the parties to.
+    from_role: 'strnone' = None
+    to_role:   'strnone' = None
+
+    # The eb:type of the service. A service that is not an absolute URI requires it.
+    service_type: 'strnone' = None
 
     # The MIME payload parts of an incoming message, in the order they arrived, empty when the
     # message carries none. An ebXML message keeps its business document in a payload part rather
@@ -122,8 +144,8 @@ def new_message_id(suffix:'str'='zato') -> 'str':
 
 # ################################################################################################################################
 
-def _add_party(parent:'any_', tag:'str', party_id:'str', party_type:'strnone') -> 'None':
-    """ Adds one eb:From or eb:To block with its eb:PartyId.
+def _add_party(parent:'any_', tag:'str', party_id:'str', party_type:'strnone', role:'strnone') -> 'None':
+    """ Adds one eb:From or eb:To block with its eb:PartyId and, if given, its eb:Role.
     """
     element = etree.SubElement(parent, qname(NS.EBXML2, tag))
 
@@ -133,6 +155,22 @@ def _add_party(parent:'any_', tag:'str', party_id:'str', party_type:'strnone') -
     # The ebMS 2.0 schema is attributeFormDefault="qualified", so this is eb:type.
     if party_type:
         party.set(qname(NS.EBXML2, 'type'), party_type)
+
+    if role:
+        role_element = etree.SubElement(element, qname(NS.EBXML2, 'Role'))
+        role_element.text = role
+
+# ################################################################################################################################
+
+def _add_header_block(header:'any_', tag:'str', actor:'str') -> 'any_':
+    """ Adds one mandatory ebMS 2.0 header block addressed to the given actor.
+    """
+    out = etree.SubElement(header, qname(NS.EBXML2, tag), nsmap=_eb_nsmap)
+    out.set(qname(NS.EBXML2, 'version'), _ebxml_version)
+    out.set(_soap_actor, actor)
+    set_must_understand(out, SOAPVersion.V11)
+
+    return out
 
 # ################################################################################################################################
 
@@ -148,8 +186,8 @@ def build_message(info:'EbXMLInfo', parts:'part_list') -> 'any_':
     message_header.set(qname(NS.EBXML2, 'version'), _ebxml_version)
     set_must_understand(message_header, SOAPVersion.V11)
 
-    _add_party(message_header, 'From', info.from_party, info.from_party_type)
-    _add_party(message_header, 'To', info.to_party, info.to_party_type)
+    _add_party(message_header, 'From', info.from_party, info.from_party_type, info.from_role)
+    _add_party(message_header, 'To', info.to_party, info.to_party_type, info.to_role)
 
     cpa_id = etree.SubElement(message_header, qname(NS.EBXML2, 'CPAId'))
     cpa_id.text = info.cpa_id
@@ -159,6 +197,9 @@ def build_message(info:'EbXMLInfo', parts:'part_list') -> 'any_':
 
     service = etree.SubElement(message_header, qname(NS.EBXML2, 'Service'))
     service.text = info.service
+
+    if info.service_type:
+        service.set(qname(NS.EBXML2, 'type'), info.service_type)
 
     action = etree.SubElement(message_header, qname(NS.EBXML2, 'Action'))
     action.text = info.action
@@ -195,6 +236,175 @@ def build_message(info:'EbXMLInfo', parts:'part_list') -> 'any_':
 
 # ################################################################################################################################
 
+def request_sync_acknowledgment(envelope:'any_') -> 'None':
+    """ Asks the receiving message service handler for an unsigned acknowledgment returned
+    in the HTTP response to this very request. The receiver reads its header blocks in order,
+    and eb:SyncReply after eb:AckRequested is what makes the acknowledgment synchronous.
+    """
+    header = get_header(envelope)
+
+    ack_requested = _add_header_block(header, 'AckRequested', Actor.To_Party_MSH)
+    ack_requested.set(qname(NS.EBXML2, 'signed'), 'false')
+
+    _ = _add_header_block(header, 'SyncReply', Actor.SOAP_Next)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _index_path(element:'any_') -> 'intlist':
+    """ Returns the position of an element as the indexes of it and its ancestors under their parents.
+    """
+    out:'intlist' = []
+
+    while (parent := element.getparent()) is not None:
+        index = parent.index(element)
+        out.insert(0, index)
+        element = parent
+
+    return out
+
+# ################################################################################################################################
+
+def _remove(element:'any_') -> 'None':
+    """ Removes an element and everything under it, leaving the text that follows it in place.
+    """
+    parent = element.getparent()
+
+    if tail := element.tail:
+
+        if (previous := element.getprevious()) is not None:
+            if previous.tail is None:
+                previous.tail = tail
+            else:
+                previous.tail = previous.tail + tail
+
+        else:
+            if parent.text is None:
+                parent.text = tail
+            else:
+                parent.text = parent.text + tail
+
+    parent.remove(element)
+
+# ################################################################################################################################
+
+def _canonicalize_envelope(envelope:'any_', signature:'any_') -> 'bytes':
+    """ Returns the canonical form of the envelope that a reference with an empty URI covers - without the
+    signature, which is the enveloped-signature transform, and without the header blocks addressed
+    to the next message service handler, which is the XPath filter transform.
+    """
+    copy = deepcopy(envelope)
+
+    # The signature is in the document when it is verified, but not yet when it is computed ..
+    if signature is not None:
+        path = _index_path(signature)
+        signature_copy = copy
+
+        for index in path:
+            signature_copy = signature_copy[index]
+
+        _remove(signature_copy)
+
+    # .. and the header blocks that intermediaries may change are left out ..
+    excluded = []
+
+    for element in copy.iter():
+        if not isinstance(element.tag, str):
+            continue
+        if element.get(_soap_actor) in _excluded_actors:
+            excluded.append(element)
+
+    # .. with an excluded element under another excluded element removed along with its ancestor.
+    for element in excluded:
+        if element.getparent() is not None:
+            _remove(element)
+
+    out = canonicalize_inclusive(copy)
+    return out
+
+# ################################################################################################################################
+
+def _add_reference(signed_info:'any_', uri:'str', digest_value:'str') -> 'any_':
+    """ Adds one SHA-256 ds:Reference to a ds:SignedInfo.
+    """
+    out = etree.SubElement(signed_info, qname(NS.DS, 'Reference'))
+    out.set('URI', uri)
+
+    digest_method = etree.SubElement(out, qname(NS.DS, 'DigestMethod'))
+    digest_method.set('Algorithm', Algorithm.SHA256)
+
+    digest_value_element = etree.SubElement(out, qname(NS.DS, 'DigestValue'))
+    digest_value_element.text = digest_value
+
+    return out
+
+# ################################################################################################################################
+
+def sign_message(envelope:'any_', parts:'part_list', keystore:'Keystore') -> 'any_':
+    """ Signs an envelope and its payloads with the ebMS 2.0 XMLDSig profile - one ds:Signature directly
+    in the SOAP Header, its first reference covering the envelope and each next one a payload by its cid: URI,
+    with the signer's certificate inline in ds:KeyInfo. Returns the ds:Signature element.
+    """
+    signing_key = cast_('RSAPrivateKey', keystore.signing_key)
+
+    # The envelope is digested before the signature goes into it, which is what the enveloped transform yields ..
+    canonical_envelope = _canonicalize_envelope(envelope, None)
+    envelope_digest = digest_bytes(canonical_envelope)
+
+    header = get_header(envelope)
+    out = etree.SubElement(header, qname(NS.DS, 'Signature'), nsmap=_ds_nsmap)
+
+    signed_info = etree.SubElement(out, qname(NS.DS, 'SignedInfo'))
+
+    canonicalization_method = etree.SubElement(signed_info, qname(NS.DS, 'CanonicalizationMethod'))
+    canonicalization_method.set('Algorithm', Algorithm.C14N)
+
+    signature_method = etree.SubElement(signed_info, qname(NS.DS, 'SignatureMethod'))
+    signature_method.set('Algorithm', Algorithm.RSA_SHA256)
+
+    envelope_reference = _add_reference(signed_info, '', envelope_digest)
+
+    # .. the transforms of a reference precede its digest method ..
+    transforms = etree.Element(qname(NS.DS, 'Transforms'))
+    envelope_reference.insert(0, transforms)
+
+    enveloped = etree.SubElement(transforms, qname(NS.DS, 'Transform'))
+    enveloped.set('Algorithm', Transform.Enveloped)
+
+    xpath_transform = etree.SubElement(transforms, qname(NS.DS, 'Transform'))
+    xpath_transform.set('Algorithm', XPath_Transform)
+
+    xpath = etree.SubElement(xpath_transform, qname(NS.DS, 'XPath'), nsmap=_xpath_nsmap)
+    xpath.text = XPath_Expression
+
+    c14n = etree.SubElement(transforms, qname(NS.DS, 'Transform'))
+    c14n.set('Algorithm', Algorithm.C14N)
+
+    # .. each payload is digested over the octets of its MIME part, with no transforms ..
+    for part in parts:
+        payload_digest = digest_bytes(part.data)
+        _ = _add_reference(signed_info, f'cid:{part.content_id}', payload_digest)
+
+    # .. the SignedInfo is canonicalized where it stands, with the namespace context it is verified in ..
+    canonical_signed_info = canonicalize_inclusive(signed_info)
+    signature_bytes = signing_key.sign(canonical_signed_info, PKCS1v15(), SHA256())
+
+    signature_value = etree.SubElement(out, qname(NS.DS, 'SignatureValue'))
+    signature_value.text = encode_base64(signature_bytes)
+
+    # .. and the certificate is inline so that the receiver can match it against the agreement.
+    key_info = etree.SubElement(out, qname(NS.DS, 'KeyInfo'))
+    x509_data = etree.SubElement(key_info, qname(NS.DS, 'X509Data'))
+
+    for certificate in keystore.signing_certificate_chain:
+        certificate_element = etree.SubElement(x509_data, qname(NS.DS, 'X509Certificate'))
+        certificate_element.text = encode_base64(certificate.public_bytes(Encoding.DER))
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _find_text(parent:'any_', tag:'str') -> 'str':
     """ Returns the text of one required eb element.
     """
@@ -204,6 +414,25 @@ def _find_text(parent:'any_', tag:'str') -> 'str':
         raise SOAPException(f'MessageHeader has no `{tag}` element')
 
     out = element.text
+    return out
+
+# ################################################################################################################################
+
+def _read_party(message_header:'any_', tag:'str') -> 'anytuple':
+    """ Returns the PartyId, its type and the role of an eb:From or eb:To block.
+    """
+    element = message_header.find(qname(NS.EBXML2, tag))
+    party = element.find(qname(NS.EBXML2, 'PartyId'))
+    role = element.find(qname(NS.EBXML2, 'Role'))
+
+    party_type = party.get(qname(NS.EBXML2, 'type'))
+
+    if role is None:
+        role_text = None
+    else:
+        role_text = role.text
+
+    out = (party.text, party_type, role_text)
     return out
 
 # ################################################################################################################################
@@ -224,20 +453,16 @@ def parse_message_header(envelope:'any_') -> 'EbXMLInfo':
     # Our response to produce
     out = EbXMLInfo()
 
-    from_element = message_header.find(qname(NS.EBXML2, 'From'))
-    from_party = from_element.find(qname(NS.EBXML2, 'PartyId'))
-    out.from_party = from_party.text
-    out.from_party_type = from_party.get(qname(NS.EBXML2, 'type'))
-
-    to_element = message_header.find(qname(NS.EBXML2, 'To'))
-    to_party = to_element.find(qname(NS.EBXML2, 'PartyId'))
-    out.to_party = to_party.text
-    out.to_party_type = to_party.get(qname(NS.EBXML2, 'type'))
+    out.from_party, out.from_party_type, out.from_role = _read_party(message_header, 'From')
+    out.to_party, out.to_party_type, out.to_role = _read_party(message_header, 'To')
 
     out.cpa_id          = _find_text(message_header, 'CPAId')
     out.conversation_id = _find_text(message_header, 'ConversationId')
     out.service         = _find_text(message_header, 'Service')
     out.action          = _find_text(message_header, 'Action')
+
+    service = message_header.find(qname(NS.EBXML2, 'Service'))
+    out.service_type = service.get(qname(NS.EBXML2, 'type'))
 
     message_data = message_header.find(qname(NS.EBXML2, 'MessageData'))
     out.message_id = _find_text(message_data, 'MessageId')
@@ -250,14 +475,47 @@ def parse_message_header(envelope:'any_') -> 'EbXMLInfo':
 
 # ################################################################################################################################
 
-def get_manifest_references(envelope:'any_') -> 'list[str]':
+def check_reply(envelope:'any_', info:'EbXMLInfo', message_id:'strnone') -> 'None':
+    """ Raises SOAPException when a synchronous reply is an ebMS 2.0 error message
+    or when it does not refer to the message it was returned for.
+    """
+    header = find_header(envelope)
+    error_list = header.find(qname(NS.EBXML2, 'ErrorList'))
+
+    # An error message has an eb:ErrorList with one eb:Error per problem found ..
+    if error_list is not None:
+
+        errors:'strlist' = []
+
+        for error in error_list.findall(qname(NS.EBXML2, 'Error')):
+            error_code = error.get(qname(NS.EBXML2, 'errorCode'))
+            description = error.find(qname(NS.EBXML2, 'Description'))
+
+            if description is None:
+                errors.append(error_code)
+            else:
+                errors.append(f'{error_code} - {description.text}')
+
+        raise SOAPException(f'Message `{message_id}` was rejected -> {errors}')
+
+    # .. an error message without an eb:ErrorList is rejected as well ..
+    if info.action == _action_message_error:
+        raise SOAPException(f'Message `{message_id}` was rejected with an error message without an ErrorList')
+
+    # .. and anything else has to refer back to what was sent.
+    if info.ref_to_message_id != message_id:
+        raise SOAPException(f'Reply refers to `{info.ref_to_message_id}` instead of `{message_id}`')
+
+# ################################################################################################################################
+
+def get_manifest_references(envelope:'any_') -> 'strlist':
     """ Returns the Content-IDs the body's Manifest references, without their cid: prefixes.
     """
     body = get_body(envelope)
     manifest = body.find(qname(NS.EBXML2, 'Manifest'))
 
     # Our response to produce
-    out:'list[str]' = []
+    out:'strlist' = []
 
     if manifest is None:
         return out
@@ -268,152 +526,6 @@ def get_manifest_references(envelope:'any_') -> 'list[str]':
             out.append(href[4:])
 
     return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def sign_payload(part:'Part', keystore:'Keystore', signature_algorithm:'str'=Algorithm.RSA_SHA256) -> 'any_':
-    """ Signs one MIME payload with a detached ds:Signature that covers the raw part bytes
-    through the SwA content transform - the enterprise-certificate signing ebXML health
-    frameworks put on their payloads. Returns the ds:Signature element to travel with the message.
-    """
-    signature = etree.Element(qname(NS.DS, 'Signature'), nsmap=_ds_nsmap)
-
-    signed_info = etree.SubElement(signature, qname(NS.DS, 'SignedInfo'))
-
-    canonicalization_method = etree.SubElement(signed_info, qname(NS.DS, 'CanonicalizationMethod'))
-    canonicalization_method.set('Algorithm', Algorithm.C14N_Exclusive)
-
-    signature_method = etree.SubElement(signed_info, qname(NS.DS, 'SignatureMethod'))
-    signature_method.set('Algorithm', signature_algorithm)
-
-    # The reference covers the raw octets of the part, addressed by its Content-ID.
-    reference = etree.SubElement(signed_info, qname(NS.DS, 'Reference'))
-    reference.set('URI', f'cid:{part.content_id}')
-
-    transforms = etree.SubElement(reference, qname(NS.DS, 'Transforms'))
-    transform = etree.SubElement(transforms, qname(NS.DS, 'Transform'))
-    transform.set('Algorithm', Transform.Attachment_Content)
-
-    digest_method = etree.SubElement(reference, qname(NS.DS, 'DigestMethod'))
-    digest_method.set('Algorithm', Algorithm.SHA256)
-
-    digest_value = etree.SubElement(reference, qname(NS.DS, 'DigestValue'))
-    digest_value.text = digest_bytes(part.data)
-
-    signature_bytes = compute_signature_value(signed_info, keystore, signature_algorithm)
-
-    signature_value = etree.SubElement(signature, qname(NS.DS, 'SignatureValue'))
-    signature_value.text = encode_base64(signature_bytes)
-
-    # The signer's certificate travels inline so verifiers can pin it or chain it to an anchor.
-    key_info = etree.SubElement(signature, qname(NS.DS, 'KeyInfo'))
-    x509_data = etree.SubElement(key_info, qname(NS.DS, 'X509Data'))
-    x509_certificate = etree.SubElement(x509_data, qname(NS.DS, 'X509Certificate'))
-    x509_certificate.text = encode_base64(keystore.signing_certificate.public_bytes(Encoding.DER))
-
-    return signature
-
-# ################################################################################################################################
-
-def verify_payload(signature:'any_', part:'Part', keystore:'Keystore') -> 'any_':
-    """ Verifies a detached payload signature - the reference digest over the part bytes,
-    the signature value and the trust in the signer. Returns the signer's certificate.
-    """
-    try:
-        key_info = signature.find(qname(NS.DS, 'KeyInfo'))
-        x509_certificate = key_info.find(f'.//{qname(NS.DS, "X509Certificate")}')
-
-        if x509_certificate is None:
-            raise XMLSecurityException('Payload signature has no X509Certificate')
-
-        chain = [parse_x509v3(decode_base64(x509_certificate.text or ''))]
-        validate_certificate_chain(chain, keystore)
-
-        signed_info = signature.find(qname(NS.DS, 'SignedInfo'))
-        reference = signed_info.find(qname(NS.DS, 'Reference'))
-        digest_value_element = reference.find(qname(NS.DS, 'DigestValue'))
-        expected_digest = ''.join((digest_value_element.text or '').split())
-
-        if not is_string_equal(digest_bytes(part.data), expected_digest):
-            raise XMLSecurityException('Payload digest mismatch')
-
-        verify_signature_value(signature, chain)
-
-    except XMLSecurityException as e:
-        raise as_soap_security_exception(e) from e
-
-    out = chain[0]
-    return out
-
-# ################################################################################################################################
-
-def encrypt_payload(part:'Part', keystore:'Keystore') -> 'any_':
-    """ Encrypts a MIME payload in place with a fresh AES-128-GCM key, wrapping that key
-    for the recipient's RSA certificate with RSA-OAEP. Returns the xenc:EncryptedKey element
-    that carries the wrapped key and points back at the part.
-    """
-    # Raw key material stays on urandom rather than going through CryptoManager - these are
-    # cipher inputs of an exact byte length, not identifiers.
-    content_key = urandom(_content_key_size_bytes)
-    nonce = urandom(_gcm_nonce_size_bytes)
-
-    # Per XML Encryption 1.1 the cipher value is the nonce, the ciphertext and the tag.
-    part.data = nonce + AESGCM(content_key).encrypt(nonce, part.data, None)
-
-    encrypted_key = etree.Element(qname(NS.XENC, 'EncryptedKey'), nsmap=_xenc_nsmap)
-    encrypted_key.set('Id', new_id('EK-'))
-
-    encryption_method = etree.SubElement(encrypted_key, qname(NS.XENC, 'EncryptionMethod'))
-    encryption_method.set('Algorithm', Algorithm.RSA_OAEP)
-
-    digest_method = etree.SubElement(encryption_method, qname(NS.DS, 'DigestMethod'))
-    digest_method.set('Algorithm', Algorithm.SHA256)
-
-    mgf = etree.SubElement(encryption_method, qname(NS.XENC11, 'MGF'))
-    mgf.set('Algorithm', Algorithm.MGF1_SHA256)
-
-    certificate = cast_('Certificate', keystore.peer_encryption_certificate)
-
-    key_info = etree.SubElement(encrypted_key, qname(NS.DS, 'KeyInfo'))
-    x509_data = etree.SubElement(key_info, qname(NS.DS, 'X509Data'))
-    x509_certificate = etree.SubElement(x509_data, qname(NS.DS, 'X509Certificate'))
-    x509_certificate.text = encode_base64(certificate.public_bytes(Encoding.DER))
-
-    public_key = cast_('RSAPublicKey', certificate.public_key())
-    oaep_padding = OAEP(mgf=MGF1(SHA256()), algorithm=SHA256(), label=None)
-    wrapped_key = public_key.encrypt(content_key, oaep_padding)
-
-    cipher_data = etree.SubElement(encrypted_key, qname(NS.XENC, 'CipherData'))
-    cipher_value = etree.SubElement(cipher_data, qname(NS.XENC, 'CipherValue'))
-    cipher_value.text = encode_base64(wrapped_key)
-
-    # The reference names the part these bytes belong to, mirroring the manifest's cid addressing.
-    reference_list = etree.SubElement(encrypted_key, qname(NS.XENC, 'ReferenceList'))
-    data_reference = etree.SubElement(reference_list, qname(NS.XENC, 'DataReference'))
-    data_reference.set('URI', f'cid:{part.content_id}')
-    data_reference.set('Type', _xenc_element_type)
-
-    return encrypted_key
-
-# ################################################################################################################################
-
-def decrypt_payload(encrypted_key:'any_', part:'Part', keystore:'Keystore') -> 'None':
-    """ Decrypts a MIME payload in place, reversing encrypt_payload.
-    """
-    try:
-        content_key = recover_content_key(encrypted_key, keystore)
-    except XMLSecurityException as e:
-        raise as_soap_security_exception(e) from e
-
-    # Per XML Encryption 1.1 the GCM nonce is prefixed to the ciphertext.
-    nonce = part.data[:_gcm_nonce_size_bytes]
-    ciphertext = part.data[_gcm_nonce_size_bytes:]
-
-    try:
-        part.data = AESGCM(content_key).decrypt(nonce, ciphertext, None)
-    except Exception:
-        raise SOAPSecurityException('Could not decrypt the payload')
 
 # ################################################################################################################################
 # ################################################################################################################################

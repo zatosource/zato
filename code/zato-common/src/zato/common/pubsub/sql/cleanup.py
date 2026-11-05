@@ -9,27 +9,36 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import logging
+import os
 import signal
 import sys
 import time
 
 # SQLAlchemy
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, text
+from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.db_env.errors import is_transient
+from zato.common.db_env.outage import OutageTracker
+from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
-    get_pubsub_engine
-from zato.common.pubsub.sql.schema import delivery_table, message_table
-from zato.common.util.time_ import datetime_to_ms, utcnow
+    get_generation_file_path, get_pubsub_engine
+from zato.common.pubsub.sql.counts import compact_counts
+from zato.common.pubsub.sql.generation import GenerationGuard, PubSubReplaced, read_generation_file
+from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
+    topic_count_table, trace_table
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import intlist, intnone, strintdict, strlist
+    from zato.common.typing_ import any_, intlist, intnone, strintdict, strlist
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
     Connection = Connection
     Engine = Engine
 
@@ -52,12 +61,45 @@ _sleep_slice_seconds = 1
 # transaction and the pause between them is when the concurrently running servers
 # get to write - without it, a deep sweep on SQLite would reacquire the file's
 # write lock the moment it released it, starving the live traffic for the sweep's
-# whole duration.
+# whole duration. On SQLite, the pause also lasts at least as long as the batch held the write lock,
+# so that a sweep of millions of rows takes at most half of the time of the single writer.
 _batch_pause_seconds = 0.025
+
+# How long the cleanup process pauses before it starts a sweep again after the database remained locked
+# by other writers for longer than the busy timeout, in seconds. A server under sustained load commits
+# its transactions one after another, so a sweep may not obtain the write lock within the busy timeout.
+_lock_retry_seconds = 1
+
+# What SQLite reports when the write lock could not be obtained within the busy timeout.
+_database_locked_message = 'database is locked'
+
+# How many change rows the count tables of PostgreSQL hold altogether.
+_count_rows_query = text("""
+    SELECT (SELECT count(*) FROM pubsub_queue_count)
+        + (SELECT count(*) FROM pubsub_topic_count)
+        + (SELECT count(*) FROM pubsub_publish_count)
+""")
 
 # How many milliseconds one second and one day have - timestamp columns hold epoch milliseconds.
 _ms_per_second = 1000
 _ms_per_day = 24 * 60 * 60 * _ms_per_second
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_trace_batch_query(condition:'any_', batch_size:'int') -> 'any_':
+    """ Returns the query of the next batch of the message rows of the traces that meet the condition.
+    The message rows are locked, and those that other transactions hold are skipped.
+    """
+    join = trace_table.join(message_table, message_table.c.id == trace_table.c.message_id)
+
+    out = select(message_table.c.id)
+    out = out.select_from(join)
+    out = out.where(condition)
+    out = out.limit(batch_size)
+    out = out.with_for_update(skip_locked=True, of=message_table)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,26 +115,99 @@ class PubSubCleanup:
         self.interval_seconds = interval_seconds
         self._should_stop = False
 
+        # The generation of the server of this environment, which the sweeps confirm on PostgreSQL
+        self._guard:'GenerationGuard | None' = None
+
+        # How long the sweeps were unable to complete
+        self._outage = OutageTracker('Pub/sub cleanup')
+
 # ################################################################################################################################
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine behind the current Zato_PubSub_DB_Path.
+        """ The engine of the pub/sub database that the Zato_PubSub_DB_* variables select.
         """
         out = get_pubsub_engine()
         return out
 
 # ################################################################################################################################
 
-    @staticmethod
-    def _utc_now_ms() -> 'int':
-        """ Returns the current UTC time in milliseconds since the Unix epoch.
+    def guard_with_server_generation(self) -> 'bool':
+        """ On PostgreSQL, makes the sweeps confirm the generation that the server of this environment recorded,
+        so that the cleanup process of a server that was replaced changes no row. Returns whether a sweep may run,
+        which on PostgreSQL requires a server of this environment to have taken over the database.
         """
-        now = utcnow()
-        milliseconds = datetime_to_ms(now)
+        engine = self.engine
 
-        out = int(milliseconds)
+        # A SQLite file has only one server ..
+        if engine.dialect.name != Type_PostgreSQL:
+            return True
+
+        # .. with no server started in this environment yet, there is no generation to confirm ..
+        generation_file_path = get_generation_file_path()
+
+        if not os.path.exists(generation_file_path):
+            logger.info('Sweep skipped, no server of this environment has taken over the database')
+            return False
+
+        # .. and the generation is read again before each sweep, as the server may have been restarted.
+        generation = read_generation_file()
+
+        if self._guard is not None:
+            if self._guard.generation == generation:
+                return True
+            self._guard.uninstall(engine)
+
+        self._guard = GenerationGuard(generation)
+        self._guard.install(engine)
+
+        return True
+
+# ################################################################################################################################
+
+    def run_guarded_sweep(self) -> 'strintdict':
+        """ Runs one sweep under the generation of the server of this environment. A sweep that did not run
+        or that the guard stopped reports nothing deleted.
+        """
+        out = {
+            'expired': 0,
+            'aged': 0,
+            'over_cap': 0,
+            'empty_counts': 0,
+        }
+
+        if not self.guard_with_server_generation():
+            return out
+
+        try:
+            out = self.sweep_until_done()
+        except PubSubReplaced as e:
+            logger.warning('Sweep stopped -> %s', e)
+
         return out
+
+# ################################################################################################################################
+
+    @staticmethod
+    def _database_now_ms() -> 'int':
+        """ Returns the time of the pub/sub database in milliseconds since the Unix epoch.
+        """
+        clock = get_database_clock()
+
+        out = clock.now_ms()
+        return out
+
+# ################################################################################################################################
+
+    def _pause_after_batch(self, batch_seconds:'float') -> 'None':
+        """ Pauses between two deletion batches, which on SQLite lasts at least as long as the batch that ended.
+        """
+        pause_seconds = _batch_pause_seconds
+
+        if self.engine.dialect.name != Type_PostgreSQL:
+            pause_seconds = max(pause_seconds, batch_seconds)
+
+        time.sleep(pause_seconds)
 
 # ################################################################################################################################
 
@@ -114,11 +229,13 @@ class PubSubCleanup:
         Fully delivered traces are exempt. Returns how many messages were deleted.
         """
         batch_size = get_batch_size()
-        now_ms = self._utc_now_ms()
+        now_ms = self._database_now_ms()
 
         out = 0
 
         while True:
+
+            batch_started = time.monotonic()
 
             # Each batch is its own transaction so other work interleaves between the batches.
             with self.engine.begin() as connection:
@@ -130,6 +247,7 @@ class PubSubCleanup:
                     message_table.c.payload.isnot(None),
                 ))
                 query = query.limit(batch_size)
+                query = query.with_for_update(skip_locked=True)
 
                 message_ids:'intlist' = []
 
@@ -146,7 +264,7 @@ class PubSubCleanup:
                 out += len(message_ids)
 
             # The pause between the batches is when the live traffic gets to write.
-            time.sleep(_batch_pause_seconds)
+            self._pause_after_batch(time.monotonic() - batch_started)
 
         if out:
             logger.info('Expiry sweep -> deleted:%d', out)
@@ -163,22 +281,20 @@ class PubSubCleanup:
         max_days = get_delivered_max_days()
 
         # Everything published before this moment is past its retention age.
-        cutoff_ms = self._utc_now_ms() - max_days * _ms_per_day
+        cutoff_ms = self._database_now_ms() - max_days * _ms_per_day
 
         out = 0
 
         while True:
 
+            batch_started = time.monotonic()
+
             # Each batch is its own transaction so other work interleaves between the batches.
             with self.engine.begin() as connection:
 
-                # A NULL payload is what makes a row a delivered-message trace ..
-                query = select(message_table.c.id)
-                query = query.where(and_(
-                    message_table.c.payload.is_(None),
-                    message_table.c.pub_time_ms < cutoff_ms,
-                ))
-                query = query.limit(batch_size)
+                # The traces are found through their own table ..
+                condition = trace_table.c.pub_time_ms < cutoff_ms
+                query = _get_trace_batch_query(condition, batch_size)
 
                 message_ids:'intlist' = []
 
@@ -195,7 +311,7 @@ class PubSubCleanup:
                 out += len(message_ids)
 
             # The pause between the batches is when the live traffic gets to write.
-            time.sleep(_batch_pause_seconds)
+            self._pause_after_batch(time.monotonic() - batch_started)
 
         if out:
             logger.info('Aged-trace sweep -> deleted:%d, max_days:%d', out, max_days)
@@ -207,8 +323,7 @@ class PubSubCleanup:
     def _get_trace_topics(self) -> 'strlist':
         """ Returns the names of all the topics that have any delivered-message traces.
         """
-        query = select(message_table.c.topic_name).distinct()
-        query = query.where(message_table.c.payload.is_(None))
+        query = select(trace_table.c.topic_name).distinct()
 
         out:'strlist' = []
 
@@ -226,12 +341,9 @@ class PubSubCleanup:
         """
         # The row max_messages positions into the newest-first ordering
         # is the newest one that no longer fits the cap.
-        query = select(message_table.c.id)
-        query = query.where(and_(
-            message_table.c.topic_name == topic_name,
-            message_table.c.payload.is_(None),
-        ))
-        query = query.order_by(message_table.c.id.desc())
+        query = select(trace_table.c.message_id)
+        query = query.where(trace_table.c.topic_name == topic_name)
+        query = query.order_by(trace_table.c.message_id.desc())
         query = query.limit(1)
         query = query.offset(max_messages)
 
@@ -263,15 +375,15 @@ class PubSubCleanup:
             # .. delete the over-cap traces in bounded batches.
             while True:
 
+                batch_started = time.monotonic()
+
                 with self.engine.begin() as connection:
 
-                    query = select(message_table.c.id)
-                    query = query.where(and_(
-                        message_table.c.topic_name == topic_name,
-                        message_table.c.payload.is_(None),
-                        message_table.c.id <= cutoff_id,
-                    ))
-                    query = query.limit(batch_size)
+                    condition = and_(
+                        trace_table.c.topic_name == topic_name,
+                        trace_table.c.message_id <= cutoff_id,
+                    )
+                    query = _get_trace_batch_query(condition, batch_size)
 
                     message_ids:'intlist' = []
 
@@ -286,7 +398,7 @@ class PubSubCleanup:
                     out += len(message_ids)
 
                 # The pause between the batches is when the live traffic gets to write.
-                time.sleep(_batch_pause_seconds)
+                self._pause_after_batch(time.monotonic() - batch_started)
 
         if out:
             logger.info('Over-cap-trace sweep -> deleted:%d, max_messages:%d', out, max_messages)
@@ -295,19 +407,106 @@ class PubSubCleanup:
 
 # ################################################################################################################################
 
+    def _sweep_empty_counts(self) -> 'int':
+        """ Deletes the queue, topic and publication count rows that dropped to zero. On PostgreSQL, the change rows
+        of each count are replaced by one row of their sum, unless the sum is zero.
+        Returns how many count rows were deleted.
+        """
+        if self.engine.dialect.name == Type_PostgreSQL:
+            out = self._compact_counts()
+            return out
+
+        delete_queue_counts = queue_count_table.delete()
+        delete_queue_counts = delete_queue_counts.where(queue_count_table.c.depth == 0)
+
+        delete_topic_counts = topic_count_table.delete()
+        delete_topic_counts = delete_topic_counts.where(topic_count_table.c.total == 0)
+
+        delete_publish_counts = publish_count_table.delete()
+        delete_publish_counts = delete_publish_counts.where(publish_count_table.c.total == 0)
+
+        out = 0
+
+        with self.engine.begin() as connection:
+            for statement in (delete_queue_counts, delete_topic_counts, delete_publish_counts):
+                result = connection.execute(statement)
+                out += result.rowcount
+
+        if out:
+            logger.info('Empty-count sweep -> deleted:%d', out)
+
+        return out
+
+# ################################################################################################################################
+
+    def _compact_counts(self) -> 'int':
+        """ Replaces the change rows of each count of PostgreSQL with one row of their sum
+        and returns by how many rows the count tables shrank.
+        """
+        with self.engine.begin() as connection:
+            before = connection.execute(_count_rows_query).scalar_one()
+            _ = compact_counts(connection)
+            after = connection.execute(_count_rows_query).scalar_one()
+
+        out = before - after
+
+        if out:
+            logger.info('Count compaction -> removed:%d', out)
+
+        return out
+
+# ################################################################################################################################
+
     def sweep_once(self) -> 'strintdict':
         """ Runs one full cleanup sweep - expired messages first, then the delivered-trace
-        retention by age and by per-topic cap. Returns the per-sweep deletion counts.
+        retention by age and by per-topic cap, then the count rows that the deletions left at zero.
+        Returns the per-sweep deletion counts.
         """
         expired = self._sweep_expired()
         aged = self._sweep_aged_traces()
         over_cap = self._sweep_over_cap_traces()
+        empty_counts = self._sweep_empty_counts()
 
         out = {
             'expired': expired,
             'aged': aged,
             'over_cap': over_cap,
+            'empty_counts': empty_counts,
         }
+
+        return out
+
+# ################################################################################################################################
+
+    def sweep_until_done(self) -> 'strintdict':
+        """ Runs one sweep and starts it again after a pause each time the database remains locked by other writers
+        for longer than the busy timeout, so that every sweep completes under any sustained load. Each deletion batch
+        is its own transaction, so a sweep started again continues with the rows that the previous attempt left.
+        """
+        while True:
+            try:
+                out = self.sweep_once()
+                break
+            except DBAPIError as e:
+
+                # Only a locked SQLite database or a transient condition of PostgreSQL is a reason
+                # to start the sweep again - a deadlock, a serialization failure, an unavailable lock,
+                # a server that shut down or restarted, or a connection that was lost or could not be opened ..
+                error_message = str(e.orig)
+
+                if _database_locked_message in error_message:
+                    cause = 'the database is locked'
+                elif is_transient(e):
+                    cause = error_message
+                else:
+                    raise
+
+                # .. after the pause in which the other writers complete their transactions or the database returns.
+                logger.warning('Sweep postponed, %s -> retry in:%ds', cause, _lock_retry_seconds)
+                self._outage.on_failure()
+                time.sleep(_lock_retry_seconds)
+
+        self._outage.on_success()
 
         return out
 
@@ -320,9 +519,9 @@ class PubSubCleanup:
 
         while not self._should_stop:
 
-            counts = self.sweep_once()
-            logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d',
-                counts['expired'], counts['aged'], counts['over_cap'])
+            counts = self.run_guarded_sweep()
+            logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
+                counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
 
             # Sleep in short slices so a stop request does not wait out the whole interval.
             slept_seconds = 0
@@ -375,8 +574,8 @@ def main() -> 'int':
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=log_level, format=log_format)
 
-    # .. load Zato_PubSub_DB_Path from the environment file if one was given -
-    # .. without it, the default SQLite file is used ..
+    # .. load the Zato_PubSub_DB_* variables from the environment file if one was given -
+    # .. without them, the default SQLite file is used ..
     if args.env_file:
         from zato.common.util.env import populate_environment_from_file
         _ = populate_environment_from_file(args.env_file)
@@ -396,9 +595,9 @@ def main() -> 'int':
 
     # .. run.
     if args.once:
-        counts = cleanup.sweep_once()
-        logger.info('Single sweep completed -> expired:%d, aged:%d, over_cap:%d',
-            counts['expired'], counts['aged'], counts['over_cap'])
+        counts = cleanup.run_guarded_sweep()
+        logger.info('Single sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
+            counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
         return 0
 
     cleanup.run()

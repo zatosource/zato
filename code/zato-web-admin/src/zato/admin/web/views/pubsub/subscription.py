@@ -75,6 +75,10 @@ class Index(_Index):
         topic_name_list = item.topic_name_list
         item.topic_name_list = dumps(topic_name_list)
 
+        # A subscriber that is a service has no security definition, and the list leaves out fields without a value
+        if 'sec_base_id' not in item:
+            item.sec_base_id = ''
+
         return item
 
     def handle(self) -> 'anydict':
@@ -165,8 +169,8 @@ class Create(_CreateEdit):
     url_name = 'pubsub-subscription-create'
     service_name = 'zato.pubsub.subscription.create'
 
-    input_required = 'topic_name', 'sec_base_id', 'delivery_type'
-    input_optional = 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+    input_required = 'topic_name', 'delivery_type'
+    input_optional = 'sec_base_id', 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
     output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'security', 'delivery_type', \
         'topic_name_list', 'topic_link_list',
 
@@ -198,8 +202,9 @@ class Edit(_CreateEdit):
     url_name = 'pubsub-subscription-edit'
     service_name = 'zato.pubsub.subscription.edit'
 
-    input_required = 'sub_key', 'topic_id_list', 'sec_base_id', 'delivery_type'
-    input_optional = 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+    input_required = 'sub_key', 'topic_id_list', 'delivery_type'
+    input_optional = 'sec_base_id', 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', \
+        'push_service_name'
     output_required = 'id', 'sub_key', 'security', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self) -> 'anydict':
@@ -484,6 +489,39 @@ def sec_def_topic_sub_list(request:'HttpRequest', sec_base_id:'str') -> 'HttpRes
         error_text = format_exc()
 
         out = HttpResponseServerError(error_text)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def service_topic_sub_list(request:'any_') -> 'HttpResponse':
+    """ Returns HTML for all the topics, to any of which a subscriber that is a service may subscribe.
+    """
+    try:
+
+        # Get all the topics ..
+        response = request.zato.client.invoke('zato.pubsub.topic.get-list', {})
+        all_topics = set()
+
+        for item in response.data:
+            all_topics.add((item.id, item.name))
+
+        # .. build the HTML ..
+        html_content = _build_topic_checkbox_html(all_topics)
+        html_bytes = html_content.encode('utf-8')
+
+        # .. and return the response.
+        out = HttpResponse(html_bytes, content_type='text/html')
+        return out
+
+    except Exception:
+        logger.error('Exception occurred: %s', format_exc())
+
+        error_text = format_exc()
+        error_bytes = error_text.encode('utf-8')
+
+        out = HttpResponseServerError(error_bytes)
         return out
 
 # ################################################################################################################################

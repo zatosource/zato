@@ -52,7 +52,7 @@ def encrypt_credentials(credentials:'stranydict') -> 'str':
 
 def decrypt_credentials(token:'str') -> 'strdictnone':
     """ Decrypts the credentials from a session token. Returns None if the token is not valid,
-    e.g. it was issued before the console was last restarted.
+    e.g. it was issued before the portal was last restarted.
     """
     try:
         data = _credentials_fernet.decrypt(token.encode('utf8'))

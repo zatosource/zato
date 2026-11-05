@@ -53,10 +53,9 @@ def _window_conditions(window_seconds:'int', now:'datetime', object_name:'str') 
     about one connection, its name.
     """
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     out = [
-        event_table.c.event_time_iso >= window_start_iso,
+        event_table.c.event_time >= window_start,
         event_table.c.source == LLM_Source,
     ]
 

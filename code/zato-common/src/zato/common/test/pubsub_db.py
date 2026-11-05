@@ -7,21 +7,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Read-side helpers for server-level pub/sub tests - they open the same database
-# the test server uses, selected through Zato_PubSub_DB_Path, which the shared
-# server fixture points at the current quickstart directory.
+# the test server uses, selected through the Zato_PubSub_DB_* variables, which the shared
+# server fixture points at the current quickstart directory or at a PostgreSQL container.
 
 # SQLAlchemy
 from sqlalchemy import func, select
 
 # Zato
 from zato.common.pubsub.sql.config import get_pubsub_engine
-from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
+    topic_count_table, topic_sub_table
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import any_, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -180,6 +181,61 @@ def count_messages_with_payload(msg_ids:'strlist') -> 'int':
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
+
+    return out
+
+# ################################################################################################################################
+
+def set_pub_time_ms(msg_ids:'strlist', pub_time_ms:'int') -> 'None':
+    """ Sets the publication time of the given messages, the way tests move messages past their retention age.
+    """
+    update_statement = message_table.update()
+    update_statement = update_statement.where(message_table.c.msg_id.in_(msg_ids))
+    update_statement = update_statement.values(pub_time_ms=pub_time_ms)
+
+    engine = get_pubsub_engine()
+
+    with engine.begin() as connection:
+        _ = connection.execute(update_statement)
+
+# ################################################################################################################################
+
+def _count_zero_keys_query(key_columns:'anylist', count_column:'any_') -> 'any_':
+    """ Builds the query counting the keys of one count table whose rows add up to zero - a single row each on SQLite,
+    any number of change rows each on PostgreSQL.
+    """
+    zero_keys = select(*key_columns)
+    zero_keys = zero_keys.group_by(*key_columns)
+    zero_keys = zero_keys.having(func.sum(count_column) == 0)
+    zero_keys = zero_keys.subquery()
+
+    out = select(func.count())
+    out = out.select_from(zero_keys)
+
+    return out
+
+# ################################################################################################################################
+
+def count_empty_count_rows() -> 'int':
+    """ Counts the queue, topic and publication counts that dropped to zero.
+    """
+    queue_query = _count_zero_keys_query(
+        [queue_count_table.c.sub_key, queue_count_table.c.topic_name], queue_count_table.c.depth)
+
+    topic_query = _count_zero_keys_query(
+        [topic_count_table.c.topic_name], topic_count_table.c.total)
+
+    publish_query = _count_zero_keys_query(
+        [publish_count_table.c.topic_name, publish_count_table.c.minute_ms, publish_count_table.c.publisher],
+        publish_count_table.c.total)
+
+    engine = get_pubsub_engine()
+
+    out = 0
+
+    with engine.connect() as connection:
+        for query in (queue_query, topic_query, publish_query):
+            out += connection.execute(query).scalar()
 
     return out
 

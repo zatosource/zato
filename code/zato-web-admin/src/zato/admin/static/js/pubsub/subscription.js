@@ -4,6 +4,15 @@
 
 $.namespace('zato.pubsub.subscription');
 
+$.fn.zato.pubsub.subscription.config = {
+    secDefTopicListURL: '/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/',
+    serviceTopicListURL: '/zato/pubsub/subscription/service-topic-sub-list/',
+    secDefURL: '/zato/security/basic-auth/?query={0}',
+    serviceURL: '/zato/service/?query={0}',
+    secDefLabel: 'Security definition',
+    serviceLabel: 'Service',
+};
+
 // Tri-state checkbox functionality
 function setupTriStateCheckbox(checkbox) {
     var Off = 0;
@@ -80,9 +89,6 @@ function setupTriStateCheckbox(checkbox) {
     }
 }
 
-// Constants
-var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>';
-
 // Monotonic token bumped every time a subscription dialog opens or closes. Each topic-loading
 // request captures the token in force when it is issued, and its response is applied only if the
 // token is still current. This discards responses that belong to a dialog session that has since
@@ -93,6 +99,30 @@ $.fn.zato.pubsub.subscription._topic_request_generation = 0;
 $.fn.zato.pubsub.subscription._bump_topic_request_generation = function() {
     $.fn.zato.pubsub.subscription._topic_request_generation += 1;
     return $.fn.zato.pubsub.subscription._topic_request_generation;
+};
+
+// A subscriber that is a service has no security definition and may subscribe to any topic
+$.fn.zato.pubsub.subscription.topicListURL = function(instance) {
+    var config = $.fn.zato.pubsub.subscription.config;
+    var out;
+    if(instance.sec_base_id) {
+        out = String.format(config.secDefTopicListURL, instance.sec_base_id);
+    } else {
+        out = config.serviceTopicListURL;
+    }
+    return out;
+};
+
+$.fn.zato.pubsub.subscription.subscriberURL = function(item) {
+    var config = $.fn.zato.pubsub.subscription.config;
+    var template;
+    if(item.sec_base_id) {
+        template = config.secDefURL;
+    } else {
+        template = config.serviceURL;
+    }
+    var out = String.format(template, encodeURIComponent(item.security));
+    return out;
 };
 
 $.fn.zato.data_table.PubSubSubscription = new Class({
@@ -254,29 +284,6 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.on_sec_def_changed = function() {
-    var sec_base_id = $('#id_sec_base_id').val();
-    if(sec_base_id) {
-        var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', sec_base_id);
-        var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
-        $.fn.zato.post(url, function(data, status) {
-            $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null, sec_base_id, request_generation);
-        }, null, null, true);
-    }
-    else {
-        $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
-    }
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.subscription.cleanup_hook = function(form) {
-    // Clear the multi-select div when no security definition is selected
-    $('#multi-select-div').html(Multi_Select_Empty_Message);
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
@@ -285,32 +292,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([]);
 
-    // Add open callbacks to both create and edit dialogs for proper initialization
-    $('#create-div').dialog('option', 'open', function() {
-
-        // A new dialog session begins, so any topic-loading request from a previous session is stale.
-        $.fn.zato.pubsub.subscription._bump_topic_request_generation();
-
-        // Clean up any previous state
-        $('.loading-spinner').remove();
-        $('#rest-endpoint-create, #push-service-create, #push-type-create').hide();
-
-        // Reset delivery type to pull (default)
-        $('#id_delivery_type').val('pull');
-
-        // Setup delivery type visibility and populate REST endpoints
-        $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create', null);
-        $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
-
-        // Load REST channels
-        $.fn.zato.pubsub.subscription.loadRestChannels();
-
-        // Add event handler for security definition change
-        $('#id_sec_base_id').change(function() {
-            $.fn.zato.pubsub.on_sec_def_changed();
-        });
-    });
-
+    // Add an open callback to the edit dialog for proper initialization
     $('#edit-div').dialog('option', 'open', function() {
 
         // A new dialog session begins, so any topic-loading request from a previous session is stale.
@@ -345,14 +327,12 @@ $(document).ready(function() {
 
             $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('edit', instance_id);
 
-            // Load topics for the current security definition in edit mode
-            if(instance.sec_base_id) {
-                var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', instance.sec_base_id);
-                var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
-                $.fn.zato.post(url, function(data, status) {
-                    $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);
-                }, null, null, true);
-            }
+            // Load the topics the subscriber may subscribe to in edit mode
+            var url = $.fn.zato.pubsub.subscription.topicListURL(instance);
+            var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
+            $.fn.zato.post(url, function(data, status) {
+                $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);
+            }, null, null, true);
         }
     });
 
@@ -363,12 +343,9 @@ $(document).ready(function() {
         // Clean up any spinners and reset visibility states
         $('.loading-spinner').remove();
         $('.security-select').removeClass('hide');
-        $('#rest-endpoint-edit, #rest-endpoint-create').hide();
-        $('#push-service-edit, #push-service-create').hide();
-        $('#push-type-edit, #push-type-create').hide();
-
-        // Clear the multi-select div
-        $('#multi-select-div').html(Multi_Select_Empty_Message);
+        $('#rest-endpoint-edit').hide();
+        $('#push-service-edit').hide();
+        $('#push-type-edit').hide();
 
         // Call the original close function
         return originalClose(elem);
@@ -377,6 +354,11 @@ $(document).ready(function() {
     // Override the on_submit function to add validation
     var originalOnSubmit = $.fn.zato.data_table.on_submit;
     $.fn.zato.data_table.on_submit = function(action) {
+
+        // The form creating a subscription checks and writes its own fields
+        if(action === 'create') {
+            return originalOnSubmit.call(this, action);
+        }
 
         // Validate that at least one topic is selected or indeterminate
         var topicDivId = action === 'create' ? '#multi-select-div' : '#id_edit-multi-select-div';
@@ -447,8 +429,13 @@ $(document).ready(function() {
     var originalOnSubmitComplete = $.fn.zato.data_table.on_submit_complete;
     $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
-        // Call the original on_submit_complete function
-        return originalOnSubmitComplete(data, status, action);
+        // Call the original on_submit_complete function ..
+        originalOnSubmitComplete(data, status, action);
+
+        // .. and let the form creating subscriptions go on to its next service.
+        if(action === 'create') {
+            $.fn.zato.pubsub.subscription_create.onSubmitComplete(status);
+        }
     };
 })
 
@@ -523,53 +510,6 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             // Remove loading spinner
             $container.find('.loading-spinner').remove();
             $endpointSelect.append('<option value="">Error loading endpoints</option>');
-        }
-    });
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// Function to load REST channels using multi-checkbox component
-$.fn.zato.pubsub.subscription.loadRestChannels = function() {
-    var containerId = 'rest-channels-div';
-
-    $.ajax({
-        url: '/zato/pubsub/subscription/get-rest-channels/',
-        type: 'GET',
-        success: function(response) {
-            if (response.rest_channels.length > 0) {
-                var items = [];
-                for (var channelIdx = 0; channelIdx < response.rest_channels.length; channelIdx++) {
-                    var channel = response.rest_channels[channelIdx];
-                    items.push({
-                        id: channel.id,
-                        state: $.fn.zato.multi_checkbox.State.Off,
-                        link: '/zato/http-soap/?connection=channel&transport=plain_http&query=' + encodeURIComponent(channel.name),
-                        linkText: channel.name,
-                        description: channel.url_path
-                    });
-                }
-
-                $.fn.zato.multi_checkbox.render({
-                    containerId: containerId,
-                    items: items,
-                    inputName: 'rest_channel_id',
-                    emptyMessage: 'No REST channels available'
-                });
-            } else {
-                $('#' + containerId).html(
-                    '<table class="multi-select-table"><tr><td colspan="2">' +
-                    '<span class="multi-select-message">No REST channels available</span>' +
-                    '</td></tr></table>'
-                );
-            }
-        },
-        error: function(request, status, error) {
-            $('#' + containerId).html(
-                '<table class="multi-select-table"><tr><td colspan="2">' +
-                '<span class="multi-select-message">Error loading REST channels</span>' +
-                '</td></tr></table>'
-            );
         }
     });
 }
@@ -669,7 +609,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td style="white-space:nowrap"><a href="/zato/security/basic-auth/?query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
+    row += String.format('<td style="white-space:nowrap"><a href="{0}">{1}</a></td>', $.fn.zato.pubsub.subscription.subscriberURL(item), item.security);
 
     row += String.format('<td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{0}">{0}</span></td>', item.sub_key);
 
@@ -757,35 +697,6 @@ $.fn.zato.pubsub.subscription.field_descriptions = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.subscription.create = function() {
-
-    // Clear the multi-select div before opening create form
-    $('#multi-select-div').html(Multi_Select_Empty_Message);
-
-    // Log security definitions in the create form select
-    var $secSelect = $('#id_sec_base_id');
-    if ($secSelect.length > 0) {
-        var secOptions = [];
-        $secSelect.find('option').each(function() {
-            var $option = $(this);
-            secOptions.push({
-                value: $option.val(),
-                text: $option.text()
-            });
-        });
-    } else {
-    }
-
-    $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub subscription', null);
-    $.fn.zato.how_it_works.init({
-        badgeId: 'create-how-it-works',
-        divId: '#create-div',
-        descriptions: $.fn.zato.pubsub.subscription.field_descriptions
-    });
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.pubsub.subscription.edit = function(instance_id) {
 
     var instance = $.fn.zato.data_table.data[instance_id];
@@ -818,10 +729,17 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         // Add hidden input for the security definition ID
         $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
 
-        // Display the security definition name as a link
-        var secName = instance.security;
-        var secLink = '<a href="/zato/security/basic-auth/?query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
-        $container.append(secLink);
+        // Display the security definition or the service as a link
+        var subscriberLink = '<a href="' + $.fn.zato.pubsub.subscription.subscriberURL(instance) + '" target="_blank">' + instance.security + '</a>';
+        $container.append(subscriberLink);
+
+        var subscriberLabel;
+        if(instance.sec_base_id) {
+            subscriberLabel = $.fn.zato.pubsub.subscription.config.secDefLabel;
+        } else {
+            subscriberLabel = $.fn.zato.pubsub.subscription.config.serviceLabel;
+        }
+        $('label[for="id_edit-sec_base_id"]').text(subscriberLabel);
     } else {
         // Default to original behavior if container doesn't exist
         form.find('#id_edit-sec_base_id').val(instance.sec_base_id);
@@ -870,23 +788,18 @@ $.fn.zato.pubsub.subscription.create_edit_submit = function(data, status, reques
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
     var instance = $.fn.zato.data_table.data[id];
 
-    var descriptor = 'Security: ' + instance.security + '\nDelivery: ' + instance.delivery_type;
+    var subscriberLabel;
+    if(instance.sec_base_id) {
+        subscriberLabel = $.fn.zato.pubsub.subscription.config.secDefLabel;
+    } else {
+        subscriberLabel = $.fn.zato.pubsub.subscription.config.serviceLabel;
+    }
 
-    // Define callback to repopulate security definitions after delete completes
-    var afterDeleteCallback = function() {
-
-        // Repopulate security definitions for the create form
-        $.fn.zato.common.security.populateSecurityDefinitions(
-            'create',
-            null,
-            '/zato/pubsub/subscription/get-security-definitions/',
-            '#id_sec_base_id'
-        );
-    };
+    var descriptor = subscriberLabel + ': ' + instance.security + '\nDelivery: ' + instance.delivery_type;
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub subscription deleted:\n' + descriptor,
-        'Are you sure you want to delete pub/sub subscription?\n\n' + descriptor, null, null, null, null, afterDeleteCallback);
+        'Are you sure you want to delete pub/sub subscription?\n\n' + descriptor);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1021,26 +934,13 @@ $.fn.zato.pubsub.subscription._puff_changed_rows = function(container_selector, 
     }
 };
 
-$.fn.zato.pubsub.subscription._reload_create_topics = function() {
-    var sec_base_id = $('#id_sec_base_id').val();
-    if (sec_base_id) {
-        var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#multi-select-div');
-        var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', sec_base_id);
-        var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
-        $.fn.zato.post(url, function(data, status) {
-            $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null, sec_base_id, request_generation);
-            $.fn.zato.pubsub.subscription._puff_changed_rows('#multi-select-div', old_values);
-        }, null, null, true);
-    }
-};
-
 $.fn.zato.pubsub.subscription._reload_edit_topics = function() {
     var instance_id = $.fn.zato.pubsub.subscription._current_edit_instance_id;
     if (instance_id) {
         var instance = $.fn.zato.data_table.data[instance_id];
-        if (instance && instance.sec_base_id) {
+        if (instance) {
             var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#id_edit-multi-select-div');
-            var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/', instance.sec_base_id);
+            var url = $.fn.zato.pubsub.subscription.topicListURL(instance);
             var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
             $.fn.zato.post(url, function(data, status) {
                 $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);
@@ -1049,13 +949,6 @@ $.fn.zato.pubsub.subscription._reload_edit_topics = function() {
         }
     }
 };
-
-$.fn.zato.live_form_updates.register('create', [
-    {object_type: 'security_pubsub_subscription', target_select: '#id_sec_base_id'},
-    {object_type: 'service', target_select: '#id_push_service_name'},
-    {object_type: 'rest_outconn', target_select: '#id_rest_push_endpoint_id'},
-    {object_type: 'pubsub_topic', handler: 'multi_checkbox', container: '#multi-select-div', reload_callback: function() { $.fn.zato.pubsub.subscription._reload_create_topics(); }}
-]);
 
 // The edit form shows the security definition as a link with a hidden input,
 // so there is no security select to update live there.

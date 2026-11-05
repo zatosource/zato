@@ -139,9 +139,9 @@ class TestTwoPeopleOnOneDefinition:
         session_id = initialize_result.session_id
         assert session_id
 
-        # .. John presents her session and is turned away without being told whether it exists ..
+        # .. John presents her session and receives the same reply as for a session that does not exist ..
         response = john.tools_list(session_id)
-        assert response.status_code == BAD_REQUEST, f'Expected 400, got {response.status_code} -> {response.text}'
+        assert response.status_code == NOT_FOUND, f'Expected 404, got {response.status_code} -> {response.text}'
 
         response = john.delete(session_id)
         assert response.status_code == BAD_REQUEST, f'Expected 400, got {response.status_code} -> {response.text}'

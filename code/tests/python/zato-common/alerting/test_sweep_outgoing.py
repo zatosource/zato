@@ -133,11 +133,11 @@ def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str',
         outcome=outcome, status=status, application_outcome=fault_code, duration_ms=20)
 
     if seconds_back:
-        event_time_iso = (now - timedelta(seconds=seconds_back)).isoformat()
+        event_time = now - timedelta(seconds=seconds_back)
 
         statement = update(event_table)
         statement = statement.where(event_table.c.id.in_([request_id, response_id]))
-        statement = statement.values(event_time_iso=event_time_iso)
+        statement = statement.values(event_time=event_time)
 
         with engine.begin() as connection:
             _ = connection.execute(statement)

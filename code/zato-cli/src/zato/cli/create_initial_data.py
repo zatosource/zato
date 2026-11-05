@@ -357,6 +357,10 @@ class Create(ZatoCommand):
         get_messages_service = Service(None, 'pubsub.rest.get-messages', True, get_messages_impl, True)
         session.add(get_messages_service)
 
+        ack_messages_impl = 'zato.server.service.internal.pubsub.rest.AckMessages'
+        ack_messages_service = Service(None, 'pubsub.rest.ack-messages', True, ack_messages_impl, True)
+        session.add(ack_messages_service)
+
         subscribe_impl = 'zato.server.service.internal.pubsub.rest.Subscribe'
         subscribe_service = Service(None, 'pubsub.rest.subscribe', True, subscribe_impl, True)
         session.add(subscribe_service)
@@ -377,6 +381,12 @@ class Create(ZatoCommand):
             'plain_http', None, '/pubsub/messages/get', None, '', None, DATA_FORMAT.JSON,
             service=get_messages_service)
         session.add(get_messages_channel)
+
+        ack_messages_channel = HTTPSOAP(
+            None, 'pubsub.rest.ack-messages', True, True, 'channel',
+            'plain_http', None, '/pubsub/messages/ack', None, '', None, DATA_FORMAT.JSON,
+            service=ack_messages_service)
+        session.add(ack_messages_channel)
 
         # Subscribe and unsubscribe channels are intentionally not created -
         # those endpoints are disabled.

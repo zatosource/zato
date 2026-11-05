@@ -1,0 +1,341 @@
+'use strict';
+
+// A wizard - a strip of numbered steps, the decision lines of the current step,
+// and a review of every answer before the wizard is completed. Completing it checks every answer first,
+// and once the errors are shown, each change of an answer checks them again.
+
+(function() {
+
+// ////////////////////////////////////////////////////////////////////////
+
+var portal = window.portal;
+
+var wizard = {};
+
+wizard.current = 0;
+wizard.errors = {};
+wizard.isSubmitted = false;
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.stepNumber = function(stepIndex) {
+
+    var number = stepIndex + 1;
+    var out = number < 10 ? '0' + number : String(number);
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.renderSteps = function() {
+
+    var strip = document.getElementById('wizard-steps');
+    strip.textContent = '';
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+
+        var step = wizard.data.steps[stepIndex];
+
+        var button = portal.create('button', 'tab', '');
+        button.type = 'button';
+        button.setAttribute('role', 'tab');
+        button.classList.toggle('tab-active', stepIndex === wizard.current);
+        button.classList.toggle('tab-invalid', portal.wizardChecks.hasErrors(step, wizard.errors));
+
+        button.appendChild(portal.create('span', 'wizard-step-number', wizard.stepNumber(stepIndex)));
+        button.appendChild(portal.create('span', '', step.title));
+        button.addEventListener('click', wizard.show.bind(null, stepIndex));
+
+        strip.appendChild(button);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.renderLines = function(body, step) {
+
+    var grid = portal.create('div', 'decision-lines', '');
+    var slots = portal.wizardLines.slots(step.lines);
+
+    grid.style.setProperty('--decision-rows', String(wizard.rowCount));
+
+    for (var slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+        portal.wizardLines.buildSlot(grid, slots[slotIndex], wizard.state);
+    }
+
+    body.appendChild(grid);
+    portal.wizardLines.applyVisibility(body, wizard.state);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.reviewValue = function(text) {
+
+    var out = text
+        ? portal.create('span', 'wizard-review-value', text)
+        : portal.create('span', 'wizard-review-value-blank', portal.config.emptyLabel);
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Each value picked stands on a line of its own, and a list with nothing picked says what that means.
+wizard.reviewList = function(line) {
+
+    var values = wizard.state[line.name];
+
+    if (values.length === 0) {
+        var out = wizard.reviewValue(line.empty);
+        return out;
+    }
+
+    var list = portal.create('div', 'wizard-review-value', '');
+    var labels = portal.wizardLines.labels(line, values);
+
+    for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
+        list.appendChild(portal.create('div', '', labels[labelIndex]));
+    }
+
+    return list;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.renderReview = function(body) {
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+
+        var step = wizard.data.steps[stepIndex];
+
+        if (step.is_review) {
+            continue;
+        }
+
+        var group = portal.create('div', 'wizard-review-group', '');
+        group.appendChild(portal.create('div', 'wizard-review-group-label', step.title));
+
+        for (var lineIndex = 0; lineIndex < step.lines.length; lineIndex++) {
+
+            var line = step.lines[lineIndex];
+
+            if (!portal.wizardLines.isShown(line, wizard.state)) {
+                continue;
+            }
+
+            var row = portal.create('div', 'wizard-review-row', '');
+            row.appendChild(portal.create('span', 'wizard-review-key', line.label));
+
+            if (line.kind === 'pick-many') {
+                row.appendChild(wizard.reviewList(line));
+            }
+            else {
+                row.appendChild(wizard.reviewValue(portal.wizardLines.display(line, wizard.state)));
+            }
+
+            group.appendChild(row);
+        }
+
+        body.appendChild(group);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What completing the wizard creates can depend on an answer, and the button says so.
+wizard.doneLabel = function() {
+
+    var doneWhen = wizard.data.done_when;
+
+    if (doneWhen === null) {
+        return wizard.data.done_label;
+    }
+
+    var out = wizard.state[doneWhen.name] === doneWhen.value ? doneWhen.label : wizard.data.done_label;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.show = function(stepIndex) {
+
+    // A popover of the step that is left has nothing to belong to any longer
+    window.tippy.hideAll({duration: 0});
+
+    wizard.current = stepIndex;
+
+    var step = wizard.data.steps[stepIndex];
+    var isLast = stepIndex === wizard.data.steps.length - 1;
+
+    var body = document.getElementById('wizard-body');
+    body.textContent = '';
+
+    if (step.is_review) {
+        wizard.renderReview(body);
+    }
+    else {
+        wizard.renderLines(body, step);
+        portal.wizardLines.showErrors(body, wizard.errors);
+    }
+
+    document.getElementById('wizard-back').disabled = stepIndex === 0;
+    document.getElementById('wizard-next').textContent = isLast ? wizard.doneLabel() : portal.config.nextLabel;
+
+    var path = document.getElementById('wizard').getAttribute('data-path');
+    window.history.replaceState(null, '', path + '/' + step.key);
+
+    wizard.renderSteps();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The step the address names.
+wizard.requestedStep = function() {
+
+    var key = document.getElementById('wizard').getAttribute('data-step');
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+        if (wizard.data.steps[stepIndex].key === key) {
+            return stepIndex;
+        }
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.check = function() {
+    wizard.errors = portal.wizardChecks.errors(wizard.data.steps, wizard.state);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.onChange = function() {
+
+    var body = document.getElementById('wizard-body');
+
+    portal.wizardLines.applyVisibility(body, wizard.state);
+
+    // .. errors appear only once completing the wizard has been attempted ..
+    if (!wizard.isSubmitted) {
+        return;
+    }
+
+    wizard.check();
+    portal.wizardLines.showErrors(body, wizard.errors);
+    wizard.renderSteps();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The first step with an error, or -1 when every answer is valid.
+wizard.firstInvalid = function() {
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+        if (portal.wizardChecks.hasErrors(wizard.data.steps[stepIndex], wizard.errors)) {
+            return stepIndex;
+        }
+    }
+
+    return -1;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.onNext = function() {
+
+    if (wizard.current < wizard.data.steps.length - 1) {
+        wizard.show(wizard.current + 1);
+        return;
+    }
+
+    wizard.isSubmitted = true;
+    wizard.check();
+
+    var invalid = wizard.firstInvalid();
+
+    // .. an answer with an error keeps the wizard open on the step where it is ..
+    if (invalid !== -1) {
+        wizard.show(invalid);
+        return;
+    }
+
+    // The last step completes the wizard and returns to the listing it was opened from
+    window.location.href = wizard.data.list_path;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.mostRows = function() {
+
+    var out = 0;
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+        var rowCount = portal.wizardLines.slots(wizard.data.steps[stepIndex].lines).length;
+        out = Math.max(out, rowCount);
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Each step and each answer shows other labels, so the column of the labels is measured against all of them,
+// in the font of the page, which needs to have loaded for the widths to be its own.
+wizard.labelWidth = function() {
+
+    var card = document.getElementById('wizard');
+    var sizer = portal.create('div', 'decision-label-sizer', '');
+
+    for (var stepIndex = 0; stepIndex < wizard.data.steps.length; stepIndex++) {
+
+        var stepLines = wizard.data.steps[stepIndex].lines;
+
+        for (var lineIndex = 0; lineIndex < stepLines.length; lineIndex++) {
+            sizer.appendChild(portal.create('span', 'decision-line-label', stepLines[lineIndex].label));
+        }
+    }
+
+    card.appendChild(sizer);
+    var out = sizer.getBoundingClientRect().width;
+    card.removeChild(sizer);
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.init = function() {
+    document.fonts.ready.then(wizard.start);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+wizard.start = function() {
+
+    wizard.data = portal.readData('wizard-data');
+    wizard.state = portal.wizardLines.initialState(wizard.data.steps);
+    wizard.rowCount = wizard.mostRows();
+    portal.wizardLines.onChange = wizard.onChange;
+
+    var labelWidth = wizard.labelWidth();
+    document.getElementById('wizard').style.setProperty('--decision-label-width', labelWidth + 'px');
+
+    document.getElementById('wizard-back').addEventListener('click', function() {
+        wizard.show(wizard.current - 1);
+    });
+
+    document.getElementById('wizard-next').addEventListener('click', wizard.onNext);
+
+    wizard.show(wizard.requestedStep());
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+portal.wizard = wizard;
+
+document.addEventListener('DOMContentLoaded', wizard.init);
+
+// ////////////////////////////////////////////////////////////////////////
+
+})();

@@ -1146,7 +1146,7 @@ class ServiceStore:
 
         # The deployed services may change the OpenAPI document, so it is rebuilt now,
         # with breaking changes against the previous document reported in the deploy output.
-        from zato.server.openapi_console.cache import rebuild_spec_cache
+        from zato.server.api_portal.cache import rebuild_spec_cache
         rebuild_spec_cache(self.server)
 
 # ################################################################################################################################

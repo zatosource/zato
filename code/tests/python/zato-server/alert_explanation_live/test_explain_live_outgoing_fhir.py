@@ -86,7 +86,7 @@ class TestExplainLiveOutgoingFHIROutcomes:
         responses = _get_outcome_responses(AuditSource.FHIR, _outcome_name)
 
         for row in responses:
-            trace(Channel_Outgoing, Received, f'outcome audit log: {row["event_time_iso"]} {row["status"]!r} ' +
+            trace(Channel_Outgoing, Received, f'outcome audit log: {row["event_time"]} {row["status"]!r} ' +
                 f'{row["application_outcome"]!r} {row["data"]!r}')
 
         separator(Channel_Outgoing)
@@ -444,7 +444,7 @@ def _wait_for_pings(count:'int') -> 'anylist':
 
         # Each new ping is traced once, when it first shows up
         for row in out[seen:]:
-            trace(Channel_Outgoing, Received, f'fhir ping: {row["event_time_iso"]} {row["status"]!r} ' +
+            trace(Channel_Outgoing, Received, f'fhir ping: {row["event_time"]} {row["status"]!r} ' +
                 f'{row["application_outcome"]!r}')
 
         seen = len(out)

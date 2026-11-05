@@ -161,7 +161,7 @@ def sftp_shell(logged_in_page:'Page', zato_dashboard:'anydict') -> 'any_':
     # A directory of this machine's own, which is where files fetched from the server land
     local_dir = mkdtemp(prefix='zato-test-sftp-shell-local-')
 
-    name = _Test_Name_Prefix + CryptoManager.generate_hex_string(8)
+    name = _Test_Name_Prefix + CryptoManager.generate_hex_string(32)
     conn_id = ''
 
     try:
@@ -220,7 +220,7 @@ class TestOutgoingSFTPCommandShell:
         file_names = [] # type: list
 
         for index in range(3):
-            file_name = f'listed-{index}-{CryptoManager.generate_hex_string(8)}.txt'
+            file_name = f'listed-{index}-{CryptoManager.generate_hex_string(32)}.txt'
             _ = _write_remote_file(sftp_shell['server'], file_name, f'contents of file {index}')
             file_names.append(file_name)
 
@@ -247,7 +247,7 @@ class TestOutgoingSFTPCommandShell:
 
         # Write a file whose contents nothing else could produce ..
         content = 'zato-sftp-shell-' + CryptoManager.generate_hex_string(32)
-        remote_name = 'fetched-' + CryptoManager.generate_hex_string(8) + '.txt'
+        remote_name = 'fetched-' + CryptoManager.generate_hex_string(32) + '.txt'
         remote_path = _write_remote_file(sftp_shell['server'], remote_name, content)
 
         local_path = os.path.join(sftp_shell['local_dir'], remote_name)
@@ -274,7 +274,7 @@ class TestOutgoingSFTPCommandShell:
 
         # Write a local file ..
         content = 'zato-sftp-shell-upload-' + CryptoManager.generate_hex_string(32)
-        file_name = 'uploaded-' + CryptoManager.generate_hex_string(8) + '.txt'
+        file_name = 'uploaded-' + CryptoManager.generate_hex_string(32) + '.txt'
         local_path = os.path.join(sftp_shell['local_dir'], file_name)
 
         with open(local_path, 'w', encoding='utf8') as file_handle:
@@ -305,7 +305,7 @@ class TestOutgoingSFTPCommandShell:
         page = sftp_shell['page']
         remote_dir = sftp_shell['remote_dir']
 
-        file_name = 'multi-' + CryptoManager.generate_hex_string(8) + '.txt'
+        file_name = 'multi-' + CryptoManager.generate_hex_string(32) + '.txt'
         _ = _write_remote_file(sftp_shell['server'], file_name, 'multi line command test')
 
         _open_command_shell(page, sftp_shell['base_url'], sftp_shell['name'])
@@ -456,7 +456,7 @@ class TestOutgoingSFTPCommandShell:
         address = f'{server.host}:{server.port}'
 
         # A name that consists of digits alone.
-        hex_string = CryptoManager.generate_hex_string(8)
+        hex_string = CryptoManager.generate_hex_string(32)
         number = int(hex_string, 16)
         name = str(number)
 

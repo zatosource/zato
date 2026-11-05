@@ -284,7 +284,7 @@ class ClientSuite:
         caller = bearer_caller(oauth_live.gateway_url, token)
 
         min_id = last_event_id(oauth_live.audit_db_path, ModuleCtx.Gateway_Name)
-        time_from = utcnow().isoformat()
+        time_from = utcnow()
 
         # The conversation of the revision with sessions ..
         initialize_result = caller.initialize()
@@ -311,7 +311,7 @@ class ClientSuite:
         response = caller.tools_call_stateless(ModuleCtx.Echo_Service, _echo_arguments)
         assert response.status_code == OK, response.text
 
-        time_to = utcnow().isoformat()
+        time_to = utcnow()
 
         # .. the record of the tool call says who called and through what ..
         event = wait_for_event_of_type(oauth_live.audit_db_path, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
@@ -322,7 +322,7 @@ class ClientSuite:
         assert event['endpoint'] == ModuleCtx.Echo_Service
         assert event['ext_client_id'] == identity
         assert event['sub_key'] == session_id
-        assert time_from <= event['event_time_iso'] <= time_to, (time_from, event['event_time_iso'], time_to)
+        assert time_from <= event['event_time'] <= time_to, (time_from, event['event_time'], time_to)
 
         data = event['data']
         assert data['remote_address'] == ModuleCtx.Remote_Address

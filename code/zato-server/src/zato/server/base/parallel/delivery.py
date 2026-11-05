@@ -14,15 +14,22 @@ from traceback import format_exc
 # gevent
 from gevent import sleep, spawn
 from gevent.event import Event
-from gevent.lock import RLock
+from gevent.lock import BoundedSemaphore, RLock
+
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
 
 # Zato
-from zato.common.api import DATA_FORMAT, PubSub
+from zato.common.api import DATA_FORMAT, MISC, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Expired, \
-    Interrupt_Paused
-from zato.common.util.api import utcnow
+from zato.common.db_env.common import get_env_values
+from zato.common.db_env.outage import OutageTracker
+from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
+    Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
+from zato.common.pubsub.sql.config import pubsub_db_config
+from zato.common.pubsub.sql.generation import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
+from zato.common.util.time_ import parse_utc
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,7 +37,7 @@ from zato.common.util.retry import RetryPolicy
 if 0:
     from gevent import Greenlet
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import anydict, callable_, intlist, strlist, strset
+    from zato.common.typing_ import anydict, anylist, callable_, intlist, strlist, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -38,8 +45,16 @@ if 0:
 
 logger = getLogger(__name__)
 
-_default_delivery_block_ms = 5000
 _delivery_batch_size = 50
+
+# How long a delivery greenlet waits for a publication when its queue is empty, in seconds.
+_delivery_wait_seconds = 5.0
+
+# The push deliveries of one server use at most this fraction of the connections of the pub/sub pool at a time,
+# so that when a broadcast wakes up all of its push subscribers together, the remaining connections stay available
+# to the publishers, whose commits are shared, and to the pulling clients.
+_delivery_pool_share_numerator = 3
+_delivery_pool_share_denominator = 4
 
 # How long to wait for a subscriber's delivery greenlet to come back between two batches, which covers
 # the batch it may have started just before it was asked to pause.
@@ -52,6 +67,17 @@ _fetch_error_sleep = PubSub.Delivery.Fetch_Error_Sleep
 _delivery_defaults = PubSub.Delivery
 
 _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
+
+# How long one push to a REST endpoint may take, in seconds, the same as for an outgoing REST connection,
+# so that an endpoint that never responds fails the attempt rather than holding up the queue.
+_rest_push_timeout = MISC.DEFAULT_HTTP_TIMEOUT
+
+# The headers of a push request that identify the message and its attempt
+_header_msg_id = 'X-Zato-Msg-ID'
+_header_delivery_attempt = 'X-Zato-Delivery-Attempt'
+
+# The header of a push response that declares the length of its body, absent from a chunked response
+_header_content_length = 'Content-Length'
 
 sub_key_greenlet_dict = dict[str, 'Greenlet']
 
@@ -72,6 +98,12 @@ class PushDelivery:
         self._greenlets:'sub_key_greenlet_dict' = {}
         self._paused:'strset' = set()
         self._lock = RLock()
+
+        # Each read of a queue and each recorded attempt holds one of these slots while it uses a connection,
+        # and no delivery holds one while it waits for a publication or sends a message to its endpoint.
+        pool_size = get_env_values(pubsub_db_config)['pool_size']
+        slot_count = pool_size * _delivery_pool_share_numerator // _delivery_pool_share_denominator
+        self._database_slots = BoundedSemaphore(slot_count)
 
 # ################################################################################################################################
 
@@ -154,16 +186,45 @@ class PushDelivery:
         """
         logger.info('PubSub delivery greenlet started for sub_key `%s`', sub_key)
 
+        try:
+            self._run_delivery_loop(sub_key)
+
+        # Another server took over the pub/sub database, so this one delivers nothing anymore.
+        except PubSubReplaced as e:
+            logger.warning('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
+            return
+
+        logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
+
+# ################################################################################################################################
+
+    def _run_delivery_loop(self, sub_key:'str') -> 'None':
+        """ Drains what is pending for one subscriber key and then delivers new messages until stopped.
+        """
+        outage = OutageTracker(f'PubSub delivery for sub_key `{sub_key}`')
+
         # On startup, drain everything still unacknowledged for this subscriber ..
         while not self._stop_event.is_set():
             if sub_key not in self.server.config_manager._push_subs:
                 break
             if sub_key in self._paused:
                 break
-            pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
-            if not pending:
-                break
-            self._deliver_batch(pending, sub_key)
+            try:
+                with self._database_slots:
+                    pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
+                outage.on_success()
+                if not pending:
+                    break
+                self._deliver_batch(pending, sub_key)
+
+            except PubSubReplaced:
+                raise
+
+            except Exception:
+                logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
+                outage.on_failure()
+
+                sleep(_fetch_error_sleep)
 
         # .. then wait for new messages.
         while not self._stop_event.is_set():
@@ -172,16 +233,39 @@ class PushDelivery:
             if sub_key in self._paused:
                 break
             try:
-                messages = self.backend.fetch_messages(
-                    sub_key, max_messages=_delivery_batch_size, block_ms=_default_delivery_block_ms)
+                messages = self._fetch_new(sub_key)
+                outage.on_success()
                 if messages:
                     self._deliver_batch(messages, sub_key)
+
+            except PubSubReplaced:
+                raise
+
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
+                outage.on_failure()
 
                 sleep(_fetch_error_sleep)
 
-        logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
+# ################################################################################################################################
+
+    def _fetch_new(self, sub_key:'str') -> 'anylist':
+        """ Reads the deliverable messages of a subscriber and, if there are none, waits for a publication
+        and reads them again, holding a database slot during each read and never during the wait.
+        """
+        # Each read clears the wake-up event of the subscriber before its query ..
+        with self._database_slots:
+            out = self.backend.fetch_messages(sub_key, max_messages=_delivery_batch_size)
+
+        # .. so a publication committed after the query leaves the event set and the wait returns at once,
+        # .. whereas a wait that ends without a publication means there is nothing new to read.
+        if not out:
+            event = self.backend.get_sub_event(sub_key)
+            if event.wait(_delivery_wait_seconds):
+                with self._database_slots:
+                    out = self.backend.fetch_messages(sub_key, max_messages=_delivery_batch_size)
+
+        return out
 
 # ################################################################################################################################
 
@@ -255,8 +339,11 @@ class PushDelivery:
         normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
         expiration_time = datetime.fromisoformat(normalized_expiration_iso)
 
-        # An expired message is not attempted at all ..
-        if utcnow() > expiration_time:
+        # Expirations are measured against the time of the database ..
+        clock = self.backend.clock
+
+        # .. an expired message is not attempted at all ..
+        if clock.now() > expiration_time:
             self._conclude_expired(message, sub_config, sub_key)
             return True
 
@@ -268,7 +355,7 @@ class PushDelivery:
                 return Interrupt_Paused
 
             # .. and a message that expired between two attempts is not attempted again.
-            if utcnow() > expiration_time:
+            if clock.now() > expiration_time:
                 return Interrupt_Expired
 
             return ''
@@ -281,6 +368,20 @@ class PushDelivery:
             if e.reason == Interrupt_Paused:
                 logger.info('Pausing sub_key `%s` between delivery attempts, msg_id `%s`', sub_key, msg_id)
                 return False
+
+            # .. an attempt that could not be recorded was not sent, so the message stays for the next round ..
+            if e.reason == Interrupt_Database:
+                logger.info('Delivery attempt not recorded for sub_key `%s`, msg_id `%s`: %s', sub_key, msg_id, e.__cause__)
+                return False
+
+            # .. a message that left the queue in the meantime has nothing left to deliver ..
+            if e.reason == Interrupt_Withdrawn:
+                logger.info('Message left the queue before delivery, sub_key `%s`, msg_id `%s`', sub_key, msg_id)
+                return True
+
+            # .. and once another server took over the database, this one sends nothing anymore.
+            if e.reason == Interrupt_Replaced:
+                raise PubSubReplaced(str(e.__cause__)) from e
 
             self._conclude_expired(message, sub_config, sub_key)
             return True
@@ -326,7 +427,9 @@ class PushDelivery:
         msg += f', msg_id `{msg_id}`: {reason}'
         logger.debug(msg)
 
-        if utcnow() > expiration_time:
+        clock = self.backend.clock
+
+        if clock.now() > expiration_time:
             self._conclude_expired(message, sub_config, sub_key)
             return True
 
@@ -396,12 +499,15 @@ class PushDelivery:
         if correl_id is None:
             correl_id = ''
 
+        # .. the publication time arrives from the broker as an ISO 8601 string ..
+        pub_time = parse_utc(message['pub_time_iso'])
+
         # .. now, write out the event.
         self.backend.audit_log.insert(AuditSource.PubSub, event_type, message['topic_name'],
             cid=message_cid,
             msg_id=message['msg_id'],
             correl_id=correl_id,
-            pub_time_iso=message['pub_time_iso'],
+            pub_time=pub_time,
             endpoint=endpoint,
             sub_key=sub_key,
             size=message['data_size'],
@@ -446,6 +552,7 @@ class PushDelivery:
 
         # Outgoing connections have retry policies of their own
         if sub_key.startswith(_outgoing_sub_key_prefix):
+            self._record_attempt(message)
             deliver(message, sub_config)
             return
 
@@ -457,9 +564,30 @@ class PushDelivery:
             message_cid = ''
 
         def attempt() -> 'None':
+            self._record_attempt(message)
             deliver(message, sub_config)
 
         deliver_with_policy(policy, 0, message_cid, endpoint, attempt, should_continue)
+
+# ################################################################################################################################
+
+    def _record_attempt(self, message:'anydict') -> 'None':
+        """ Records an attempt in the database before it is sent, which on PostgreSQL confirms that this server
+        is still the active one. Each outcome other than a recorded attempt stops the round without counting
+        as a failed attempt.
+        """
+        try:
+            with self._database_slots:
+                is_pending = self.backend.record_attempt(message)
+
+        except PubSubReplaced as e:
+            raise DeliveryInterrupted(Interrupt_Replaced, 0) from e
+
+        except DBAPIError as e:
+            raise DeliveryInterrupted(Interrupt_Database, 0) from e
+
+        if not is_pending:
+            raise DeliveryInterrupted(Interrupt_Withdrawn, 0)
 
 # ################################################################################################################################
 
@@ -500,8 +628,30 @@ class PushDelivery:
 
         url = sub_config['rest_push_url']
 
-        response = requests_post(url, data=dumps(message), headers={'Content-Type': 'application/json'})
+        # Each copy of a message carries its identifier and the number of its attempt, in the body and in the headers,
+        # by which a subscriber recognizes a copy it processed already. The delivery row is internal to the database.
+        envelope = dict(message)
+        del envelope['delivery_id']
+
+        headers = {
+            'Content-Type': 'application/json',
+            _header_msg_id: message['msg_id'],
+            _header_delivery_attempt: str(message['delivery_attempt']),
+        }
+
+        response = requests_post(url, data=dumps(envelope), headers=headers, timeout=_rest_push_timeout)
         response.raise_for_status()
+
+        # A response that ends before the length it declared is a failed attempt - the endpoint closed the connection
+        # in the middle of it, so it may not have processed the message. The bytes are counted as received, before decoding.
+        content_length = response.headers.get(_header_content_length)
+
+        if content_length is not None:
+            expected = int(content_length)
+            received = response.raw.tell()
+
+            if received < expected:
+                raise Exception(f'Incomplete response from {url}, received {received} of {expected} bytes')
 
 # ################################################################################################################################
 # ################################################################################################################################

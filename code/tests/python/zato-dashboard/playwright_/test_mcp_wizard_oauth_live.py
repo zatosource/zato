@@ -86,8 +86,8 @@ class TestMCPWizardOAuthLive:
         server_port = zato_dashboard['server_port']
 
         gateway_name = _test_name_prefix + 'create-edit'
-        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(8)
-        new_url_path = '/mcp/oauth-live-moved/' + CryptoManager.generate_hex_string(8)
+        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(32)
+        new_url_path = '/mcp/oauth-live-moved/' + CryptoManager.generate_hex_string(32)
 
         # The definition is picked in the wizard itself ..
         bearer_name = _create_bearer_definition(page, base_url, 'create-edit.bearer')
@@ -139,7 +139,7 @@ class TestMCPWizardOAuthLive:
         server_port = zato_dashboard['server_port']
 
         gateway_name = _test_name_prefix + 'groups-page'
-        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(8)
+        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(32)
 
         bearer_name = _create_bearer_definition(page, base_url, 'groups-page.bearer')
 
@@ -180,7 +180,7 @@ class TestMCPWizardOAuthLive:
         server_port = zato_dashboard['server_port']
 
         gateway_name = _test_name_prefix + 'refused-edit'
-        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(8)
+        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(32)
 
         bearer_name = _create_bearer_definition(page, base_url, 'refused-edit.bearer')
         basic_auth_name = create_basic_auth(page, base_url, _test_name_prefix, 'refused-edit')['name']
@@ -217,7 +217,7 @@ class TestMCPWizardOAuthLive:
         server_port = zato_dashboard['server_port']
 
         gateway_name = _test_name_prefix + 'refused-create'
-        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(8)
+        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(32)
 
         basic_auth_name = create_basic_auth(page, base_url, _test_name_prefix, 'refused-create')['name']
 
@@ -251,7 +251,7 @@ class TestMCPWizardOAuthLive:
         server_port = zato_dashboard['server_port']
 
         gateway_name = _test_name_prefix + 'oauth-off'
-        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(8)
+        url_path = '/mcp/oauth-live/' + CryptoManager.generate_hex_string(32)
 
         bearer_name = _create_bearer_definition(page, base_url, 'oauth-off.bearer')
 

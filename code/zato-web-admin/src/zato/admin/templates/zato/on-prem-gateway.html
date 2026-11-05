@@ -7,6 +7,9 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/pubsub/common.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/on-prem-gateway.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -24,12 +27,13 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
     {% comment %} On-prem gateways {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/on-prem-gateway.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
-    $.fn.zato.data_table.center_column_names.push('Status', 'Systems', 'Connected since', 'Remote address', 'Version');
+    $.fn.zato.data_table.center_column_names.push('Status', 'Systems', 'Connected since', 'Remote address');
 
     $.fn.zato.data_table.get_columns = function() {
         return [
@@ -43,8 +47,6 @@
             '_host_count',
             '_connected_since',
             '_remote_address',
-            '_gateway_version',
-            '_platform',
 
             {% comment %} 2 {% endcomment %}
             '_enrollment_token',
@@ -87,8 +89,6 @@
                         <th><a href="#">Systems</a></th>
                         <th class="zato-time-ago-header"><a href="#">Connected since</a></th>
                         <th><a href="#">Remote address</a></th>
-                        <th><a href="#">Version</a></th>
-                        <th><a href="#">Platform</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -107,12 +107,10 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.status }}</td>
+                        <td><span class="on-prem-gateway-value on-prem-gateway-value-status">{{ item.status }}</span></td>
                         <td>{{ item.host_count }}</td>
-                        <td class="zato-time-ago" data-time-ago-id="{{ item.id }}" data-time-utc="{{ item.connected_since }}" data-time-ago-title="Connected since" data-time-ago-row-label="Connected for"></td>
-                        <td>{{ item.remote_address|no_value_indicator }}</td>
-                        <td>{{ item.gateway_version|no_value_indicator }}</td>
-                        <td>{{ item.platform|no_value_indicator }}</td>
+                        <td class="zato-time-ago" data-time-ago-id="{{ item.id }}" data-time-utc="{{ item.connected_since }}" data-time-ago-no-title data-time-ago-row-label="Connected for"></td>
+                        <td><span class="on-prem-gateway-value on-prem-gateway-value-remote-address">{% if item.remote_address %}<a href="javascript:$.fn.zato.on_prem_gateway.remote_address('{{ item.id }}')">{{ item.remote_address }}</a>{% else %}{{ item.remote_address|no_value_indicator }}{% endif %}</span></td>
                         <td><a href="javascript:$.fn.zato.on_prem_gateway.enrollment_token('{{ item.id }}')">Enrollment token</a></td>
                         <td><a href="javascript:$.fn.zato.on_prem_gateway.reset_key('{{ item.id }}')">Reset key</a></td>
                         <td><a href="javascript:$.fn.zato.on_prem_gateway.edit('{{ item.id }}')">Edit</a></td>
@@ -125,7 +123,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='18'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 

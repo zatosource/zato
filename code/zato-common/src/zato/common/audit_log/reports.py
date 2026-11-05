@@ -38,13 +38,12 @@ Default_Range = Range_Week
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_range_cutoff(now:'datetime', time_range:'str') -> 'str':
-    """ Returns the ISO timestamp the given range reaches back to.
+def get_range_cutoff(now:'datetime', time_range:'str') -> 'datetime':
+    """ Returns the moment the given range reaches back to.
     """
     range_hours = Range_Hours[time_range]
-    cutoff = now - timedelta(hours=range_hours)
 
-    out = cutoff.isoformat()
+    out = now - timedelta(hours=range_hours)
     return out
 
 # ################################################################################################################################

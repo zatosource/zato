@@ -81,7 +81,7 @@ _failure_message_selector = '#user-message.user-message-failure'
 def make_url_path(label:'str') -> 'str':
     """ Returns a URL path no other test uses, e.g. /mcp/groups-live/rename/1a2b3c4d.
     """
-    suffix = CryptoManager.generate_hex_string(8)
+    suffix = CryptoManager.generate_hex_string(32)
 
     out = f'/mcp/{label}/{suffix}'
     return out
@@ -230,7 +230,7 @@ def run_enmasse_import(zato_dashboard:'anydict', yaml_content:'str') -> 'subproc
     enmasse_env = os.environ.copy()
     _ = enmasse_env.pop('COVERAGE_PROCESS_START', None)
 
-    file_suffix = CryptoManager.generate_hex_string(8)
+    file_suffix = CryptoManager.generate_hex_string(32)
     input_path = os.path.join(tempfile.gettempdir(), f'zato-mcp-gateway-live-{os.getpid()}-{file_suffix}.yaml')
 
     with open(input_path, 'w') as input_file:

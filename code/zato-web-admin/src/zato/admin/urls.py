@@ -77,6 +77,7 @@ from zato.admin.web.views.pubsub import queue as pubsub_queue
 from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
+from zato.admin.web.views.pubsub import subscription_create
 from zato.admin.web.views import audit_log
 from zato.admin.web.views.analytics import screens as analytics_screens
 from zato.admin.web.views import channel_usage
@@ -1623,9 +1624,13 @@ urlpatterns += [
         login_required(subscription.get_service_list), name='pubsub-subscription-get-service-list'),
     url(r'^zato/pubsub/subscription/get-topics-by-security/$',
         login_required(subscription.get_topics_by_security), name='pubsub-subscription-get-topics-by-security'),
+    url(r'^zato/pubsub/subscription/get-create-form-data/$',
+        login_required(subscription_create.get_create_form_data), name='pubsub-subscription-get-create-form-data'),
     path('zato/pubsub/subscription/sec-def-topic-sub-list/<str:sec_base_id>/',
         login_required(subscription.sec_def_topic_sub_list),
         name='pubsub-subscription-sec-def-topic-sub-list'),
+    url(r'^zato/pubsub/subscription/service-topic-sub-list/$',
+        login_required(subscription.service_topic_sub_list), name='pubsub-subscription-service-topic-sub-list'),
 
     # PubSub Queue Browser
 
@@ -1802,6 +1807,8 @@ urlpatterns += [
         login_required(on_prem_gateway.enrollment_token), name='on-prem-gateway-enrollment-token'),
     url(r'^zato/on-prem-gateway/reset-key/(?P<id>.*)/$',
         login_required(on_prem_gateway.reset_key), name='on-prem-gateway-reset-key'),
+    url(r'^zato/on-prem-gateway/remote-address/(?P<id>.*)/$',
+        login_required(on_prem_gateway.remote_address), name='on-prem-gateway-remote-address'),
     url(r'^zato/on-prem-gateway/refresh/$',
         login_required(on_prem_gateway.refresh), name='on-prem-gateway-refresh'),
 ]

@@ -115,7 +115,7 @@ class TestChannelHL7MLLPRestBridge:
     is saved again through the wizard. Deleting the channel deletes the bridge.
     """
 
-    # Deleting the bridge removes a REST endpoint, which the OpenAPI console notes as a breaking change
+    # Deleting the bridge removes a REST endpoint, which the API portal notes as a breaking change
     @pytest.mark.expect_log_errors('No matching MLLP channel for message', 'OpenAPI breaking change: endpoint removed')
     def test_the_bridge_receives_what_mllp_does_and_survives_an_edit(
         self,

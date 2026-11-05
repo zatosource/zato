@@ -11,6 +11,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import timezone
+
+# SQLAlchemy
+from sqlalchemy import DateTime, LargeBinary, String
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.functions import FunctionElement
+from sqlalchemy.types import TypeDecorator
 
 # Zato
 from zato.common.defaults import default_env_base_dir
@@ -20,20 +27,27 @@ from zato.common.util.api import as_bool
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy import MetaData
-    from zato.common.typing_ import stranydict
+    from sqlalchemy.engine import Dialect
+    from sqlalchemy.sql.compiler import SQLCompiler
+    from sqlalchemy.types import TypeEngine
+    from zato.common.typing_ import any_, stranydict
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
+    datetime = datetime
+    Dialect = Dialect
     MetaData = MetaData
+    SQLCompiler = SQLCompiler
+    TypeEngine = TypeEngine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # Recognized database types
 Type_SQLite     = 'sqlite'
-Type_MySQL      = 'mysql'
 Type_PostgreSQL = 'postgresql'
-Type_Oracle     = 'oracle'
 
 # What is used when the type variable is not set
 Default_Type = Type_SQLite
@@ -44,6 +58,119 @@ Default_SSL = False
 # When SSL is on, the server certificate is verified unless turned off explicitly
 Default_SSL_Verify = True
 
+# Pool sizing for network databases of stores that asked for a pool - every durable
+# commit waits for the database's log flush and the flush is shared across all commits
+# in flight, so throughput scales with how many connections may commit at once
+# and SQLAlchemy's default cap of 5+10 is too low for stores like pub/sub.
+# The total of 80 stays below the default connection limit of PostgreSQL (100),
+# leaving room for other clients of the same database. A managed database whose connection limit
+# is shared by several server processes and their cleanup process is given a smaller pool per process.
+Default_Pool_Size = 80
+
+# Binary content, raw bytes on every database.
+Binary_Type = LargeBinary()
+
+# The hour a timestamp falls in, in the form YYYY-MM-DDTHH, as Python and each database format it.
+Hour_Period_Format = '%Y-%m-%dT%H'
+_sqlite_hour_format = '%Y-%m-%dT%H'
+_postgresql_hour_format = 'YYYY-MM-DD"T"HH24'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UTC_DateTime(TypeDecorator):
+    """ A point in time in UTC. It accepts timezone-aware datetimes, keeps them in UTC and returns them timezone-aware
+    in UTC on every database. PostgreSQL stores a timestamp with a time zone and SQLite stores the text form
+    SQLAlchemy defines for its DATETIME type.
+    """
+    impl = DateTime
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect:'Dialect') -> 'TypeEngine':
+        datetime_type = DateTime(timezone=True)
+
+        out = dialect.type_descriptor(datetime_type)
+        return out
+
+# ################################################################################################################################
+
+    def process_bind_param(self, value:'datetime | None', dialect:'Dialect') -> 'datetime | None':
+
+        # A column that is not set stays NULL ..
+        if value is None:
+            return None
+
+        # .. every value is stored in UTC ..
+        out = value.astimezone(timezone.utc)
+
+        # .. and SQLite, whose type has no time zone, receives it without one.
+        if dialect.name != Type_PostgreSQL:
+            out = out.replace(tzinfo=None)
+
+        return out
+
+# ################################################################################################################################
+
+    def process_result_value(self, value:'datetime | None', dialect:'Dialect') -> 'datetime | None':
+
+        # A column that is not set is returned as None ..
+        if value is None:
+            return None
+
+        # .. PostgreSQL returns the time in the time zone of the session ..
+        if dialect.name == Type_PostgreSQL:
+            out = value.astimezone(timezone.utc)
+
+        # .. while SQLite returns it in UTC without a time zone.
+        else:
+            out = value.replace(tzinfo=timezone.utc)
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _HourPeriod(FunctionElement):
+    """ The hour a timestamp column falls in, as the text YYYY-MM-DDTHH, compiled to the date function of each database.
+    """
+    type = String()
+    name = 'hour_period'
+    inherit_cache = True
+
+# ################################################################################################################################
+
+def hour_period(column:'any_') -> '_HourPeriod':
+    """ The SQL expression of the hour the given timestamp column falls in, in the form of Hour_Period_Format.
+    """
+    out = _HourPeriod(column)
+    return out
+
+# ################################################################################################################################
+
+def to_hour_period(value:'datetime') -> 'str':
+    """ The hour the given moment falls in, in UTC and in the form the hour_period expression returns.
+    """
+    value_utc = value.astimezone(timezone.utc)
+
+    out = value_utc.strftime(Hour_Period_Format)
+    return out
+
+# ################################################################################################################################
+
+@compiles(_HourPeriod, Type_SQLite)
+def compile_hour_period_sqlite(element:'_HourPeriod', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+    column = compiler.process(element.clauses, **kwargs)
+    out = f"strftime('{_sqlite_hour_format}', {column})"
+    return out
+
+# ################################################################################################################################
+
+@compiles(_HourPeriod, Type_PostgreSQL)
+def compile_hour_period_postgresql(element:'_HourPeriod', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+    column = compiler.process(element.clauses, **kwargs)
+    out = f"to_char({column} AT TIME ZONE 'UTC', '{_postgresql_hour_format}')"
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -52,7 +179,15 @@ class EnvDBConfig:
     selecting it, its default SQLite file name and the schema it needs.
     """
 
-    def __init__(self, *, env_prefix:'str', sqlite_file_name:'str', metadata:'MetaData', needs_pool:'bool'=False) -> 'None':
+    def __init__(
+        self,
+        *,
+        env_prefix:'str',
+        sqlite_file_name:'str',
+        metadata:'MetaData',
+        needs_pool:'bool' = False,
+        needs_background_checkpoint:'bool' = False,
+        ) -> 'None':
 
         self.env_prefix = env_prefix
         self.sqlite_file_name = sqlite_file_name
@@ -64,6 +199,9 @@ class EnvDBConfig:
         # many small transactions, such as pub/sub, need a real pool instead.
         self.needs_pool = needs_pool
 
+        # Whether the WAL of a SQLite database is checkpointed in a thread of its own rather than by the commits
+        self.needs_background_checkpoint = needs_background_checkpoint
+
         # The full names of the environment variables selecting and configuring the database
         self.env_type     = f'{env_prefix}Type'
         self.env_host     = f'{env_prefix}Host'
@@ -71,6 +209,13 @@ class EnvDBConfig:
         self.env_username = f'{env_prefix}Username'
         self.env_password = f'{env_prefix}Password'
         self.env_name     = f'{env_prefix}Name'
+
+        # The full name of the environment variable with the path to a file holding the password,
+        # read again for each new connection so that a rotated password takes effect without a restart.
+        self.env_password_file = f'{env_prefix}Password_File'
+
+        # The full name of the environment variable with the number of pooled connections of a network database
+        self.env_pool_size = f'{env_prefix}Pool_Size'
 
         # The full names of the environment variables configuring SSL/TLS
         self.env_ssl           = f'{env_prefix}SSL'
@@ -117,6 +262,7 @@ def get_env_values(config:'EnvDBConfig') -> 'stranydict':
     out['port']     = os.environ.get(config.env_port, '')
     out['username'] = os.environ.get(config.env_username, '')
     out['password'] = os.environ.get(config.env_password, '')
+    out['password_file'] = os.environ.get(config.env_password_file, '')
 
     # .. SSL is off unless requested explicitly ..
     if ssl_enabled := os.environ.get(config.env_ssl, ''):
@@ -129,6 +275,12 @@ def get_env_values(config:'EnvDBConfig') -> 'stranydict':
         out['ssl_verify'] = as_bool(verify)
     else:
         out['ssl_verify'] = Default_SSL_Verify
+
+    # .. the pool of a network database has its default size unless given ..
+    if pool_size := os.environ.get(config.env_pool_size, ''):
+        out['pool_size'] = int(pool_size)
+    else:
+        out['pool_size'] = Default_Pool_Size
 
     # .. and the certificate paths are empty unless given.
     out['ssl_ca_file']   = os.environ.get(config.env_ssl_ca_file, '')

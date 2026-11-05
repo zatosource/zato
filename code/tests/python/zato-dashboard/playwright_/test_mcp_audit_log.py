@@ -268,7 +268,7 @@ class TestMCPAuditLog:
         # .. the section title names the source, compared case-insensitively because of CSS styling ..
         title_text = page.inner_text('#detail-section-title')
         title_text = title_text.lower()
-        assert title_text.startswith(_MCP_Title), f'Expected the title to start with "{_MCP_Title}", got: "{title_text}"'
+        assert title_text.endswith(_MCP_Title), f'Expected the title to end with "{_MCP_Title}", got: "{title_text}"'
 
         # .. the polling loop that waited for enforcement produced its own initialize events,
         # .. so the newest two rows are what matters - the conversation's call and its initialize ..

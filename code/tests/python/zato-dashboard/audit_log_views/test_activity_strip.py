@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from json import dumps, loads
 
 # Zato
@@ -50,14 +51,19 @@ _env_prefix = 'Zato_Audit_Log_DB_'
 # Three events over exactly two hours - the window the strip derives is two hours wide,
 # and with sixteen buckets each one is 7.5 minutes, so the events land in the first
 # bucket, the middle one and - the window's very last moment - the last one.
-_first_time_iso = '2026-01-01T10:00:00+00:00'
-_middle_time_iso = '2026-01-01T11:00:00+00:00'
-_last_time_iso = '2026-01-01T12:00:00+00:00'
+_first_time = datetime(2026, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
+_middle_time = datetime(2026, 1, 1, 11, 0, 0, tzinfo=timezone.utc)
+_last_time = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+# The same moments as the bucket edges of the response carry them
+_first_time_iso = _first_time.isoformat()
+_middle_time_iso = _middle_time.isoformat()
+_last_time_iso = _last_time.isoformat()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _insert_event(connection:'any_', object_name:'str', event_time_iso:'str', outcome:'str') -> 'None':
+def _insert_event(connection:'any_', object_name:'str', event_time:'datetime', outcome:'str') -> 'None':
     insert = event_table.insert().values(
         cid='cid-activity-strip',
         source=AuditSource.MLLP_Channel,
@@ -66,8 +72,7 @@ def _insert_event(connection:'any_', object_name:'str', event_time_iso:'str', ou
         msg_id='',
         correl_id='',
         ext_client_id='',
-        pub_time_iso='',
-        event_time_iso=event_time_iso,
+        event_time=event_time,
         server_name=_server_name,
         endpoint='',
         sub_key='',
@@ -102,10 +107,10 @@ def _strip_events(tmp_path:'any_') -> 'envgen':
         engine = get_audit_engine()
 
         with engine.begin() as connection:
-            _insert_event(connection, _channel_name, _first_time_iso, AuditOutcome.OK)
-            _insert_event(connection, _channel_name, _middle_time_iso, AuditOutcome.Error)
-            _insert_event(connection, _channel_name, _last_time_iso, AuditOutcome.OK)
-            _insert_event(connection, _other_channel_name, _middle_time_iso, AuditOutcome.OK)
+            _insert_event(connection, _channel_name, _first_time, AuditOutcome.OK)
+            _insert_event(connection, _channel_name, _middle_time, AuditOutcome.Error)
+            _insert_event(connection, _channel_name, _last_time, AuditOutcome.OK)
+            _insert_event(connection, _other_channel_name, _middle_time, AuditOutcome.OK)
 
         yield
 

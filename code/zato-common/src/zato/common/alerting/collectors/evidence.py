@@ -23,7 +23,7 @@ from zato.common.alerting.collectors.common import is_failed, is_object, is_rece
 from zato.common.alerting.collectors.evidence_mcp import attach_mcp_details, collect_invalid_calls, collect_mcp_truncations, \
     collect_rejections, collect_repeat_calls, collect_throttled
 from zato.common.alerting.collectors.evidence_rows import row_columns as _row_columns, rows_from as _rows_from, \
-    select_rows as _select_rows, window_start_iso as _window_start_iso, Max_Rows_Per_Measure
+    select_rows as _select_rows, window_start as _window_start, Max_Rows_Per_Measure
 from zato.common.alerting.collectors.file_transfer import Attr_Schedule
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, AuditBody, AuditEvent, AuditOutcome, \
     AuditSource
@@ -200,7 +200,7 @@ def collect_failed_events(engine:'Engine', fact:'stranydict', now:'datetime') ->
         is_source(source),
         is_object(fact['object_name']),
         is_failed(),
-        is_recent(_window_start_iso(fact, now)),
+        is_recent(_window_start(fact, now)),
     ]
 
     out = _select_rows(engine, conditions)
@@ -221,7 +221,7 @@ def collect_llm_completions(engine:'Engine', fact:'stranydict', now:'datetime') 
         is_object(fact['object_name']),
         event_attr_table.c.name == LLMAttr.Finish_Reason,
         event_attr_table.c.value.in_(list(_llm_counted_finish_reasons)),
-        is_recent(_window_start_iso(fact, now)),
+        is_recent(_window_start(fact, now)),
     ]
 
     attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
@@ -270,7 +270,7 @@ def collect_events_of_type(engine:'Engine', fact:'stranydict', now:'datetime', e
         is_source(fact['source']),
         is_object(fact['object_name']),
         event_table.c.event_type == event_type,
-        is_recent(_window_start_iso(fact, now)),
+        is_recent(_window_start(fact, now)),
     ]
 
     out = _select_rows(engine, conditions)
@@ -284,7 +284,7 @@ def collect_all_events(engine:'Engine', fact:'stranydict', now:'datetime') -> 'd
     conditions = [
         is_source(fact['source']),
         is_object(fact['object_name']),
-        is_recent(_window_start_iso(fact, now)),
+        is_recent(_window_start(fact, now)),
     ]
 
     out = _select_rows(engine, conditions)
@@ -300,7 +300,7 @@ def collect_troubled_runs(engine:'Engine', fact:'stranydict', now:'datetime') ->
     conditions = [
         is_source(AuditSource.File_Outgoing),
         event_table.c.event_type == AuditEvent.Run_Completed,
-        is_recent(_window_start_iso(fact, now)),
+        is_recent(_window_start(fact, now)),
     ]
 
     statement = select(*_row_columns).where(and_(*conditions)).order_by(event_table.c.id.desc())
@@ -341,7 +341,7 @@ def collect_deliveries(engine:'Engine', fact:'stranydict', now:'datetime') -> 'd
         event_table.c.event_type == AuditEvent.Delivered,
         event_attr_table.c.name == Attr_Schedule,
         event_attr_table.c.value == fact['object_name'],
-        is_recent(_window_start_iso(fact, now)),
+        is_recent(_window_start(fact, now)),
     ]
 
     attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
@@ -363,7 +363,7 @@ def collect_test_transfers(engine:'Engine', fact:'stranydict', now:'datetime') -
     conditions = [
         is_source(Probe_Source_Test_Transfer),
         is_object(fact['object_name']),
-        is_recent(_window_start_iso(fact, now)),
+        is_recent(_window_start(fact, now)),
     ]
 
     out = _select_rows(engine, conditions)
@@ -513,7 +513,7 @@ def collect_baseline(
         baseline_object_name = fact['object_name']
 
     source = fact['source']
-    window_start_iso = _window_start_iso(fact, now)
+    window_start = _window_start(fact, now)
     outcome_conditions = _outcome_conditions(source)
 
     # How many events succeeded in the window ..
@@ -521,7 +521,7 @@ def collect_baseline(
         is_source(source),
         is_object(baseline_object_name),
         event_table.c.outcome == AuditOutcome.OK,
-        is_recent(window_start_iso),
+        is_recent(window_start),
     ]
     ok_conditions.extend(outcome_conditions)
 
@@ -546,7 +546,7 @@ def collect_baseline(
         is_source(source),
         is_object(baseline_object_name),
         event_table.c.outcome.in_([AuditOutcome.OK, AuditOutcome.Error]),
-        is_recent(window_start_iso),
+        is_recent(window_start),
     ]
     newest_conditions.extend(outcome_conditions)
 

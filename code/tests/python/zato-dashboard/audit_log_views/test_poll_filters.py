@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.audit_log.search import build_search_conditions
+from zato.common.db_env.common import Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,7 +45,7 @@ def _build(
     no status and no time window, so what comes back is the picks' own doing.
     """
     out = build_search_conditions(
-        sources, object_names, [], '', '',
+        Type_SQLite, sources, object_names, [], '', '',
         sources_excluded=sources_excluded, object_names_excluded=object_names_excluded)
 
     return out

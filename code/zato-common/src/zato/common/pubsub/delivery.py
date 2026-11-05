@@ -34,9 +34,13 @@ logger = getLogger(__name__)
 
 _round_wait = PubSub.Delivery.Retry_Round_Wait
 
-# Why a round was stopped between two of its attempts
-Interrupt_Paused  = 'paused'
-Interrupt_Expired = 'expired'
+# Why a round was stopped between two of its attempts, or before an attempt was sent - the message left the queue
+# in the meantime, the attempt could not be recorded in the database, or another server took over the database.
+Interrupt_Paused    = 'paused'
+Interrupt_Expired   = 'expired'
+Interrupt_Withdrawn = 'withdrawn'
+Interrupt_Database  = 'database'
+Interrupt_Replaced  = 'replaced'
 
 _percent = 100
 

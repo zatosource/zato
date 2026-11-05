@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.rule_engine.changes import Change_Version_Created, Change_Version_Published, Change_Version_Restored
-from zato.common.typing_ import cast_
+from zato.common.typing_ import anytuple, cast_
 
 # Local
 from .approvals import assert_version_publishable, is_gate_enabled
@@ -112,7 +112,7 @@ class VersionStore:
                 statement = insert(rule_version_table)
                 insert_result = session.execute(statement, version_values)
                 insert_result = cast_(CursorResult, insert_result)
-                primary_key = insert_result.inserted_primary_key
+                primary_key = cast_(anytuple, insert_result.inserted_primary_key)
                 version_id = primary_key[0]
 
                 # .. append its history event in the same commit ..
@@ -281,7 +281,7 @@ class VersionStore:
                 statement = insert(rule_version_table)
                 insert_result = session.execute(statement, restored_values)
                 insert_result = cast_(CursorResult, insert_result)
-                primary_key = insert_result.inserted_primary_key
+                primary_key = cast_(anytuple, insert_result.inserted_primary_key)
                 restored_id = primary_key[0]
 
                 # .. record where the restored document came from ..

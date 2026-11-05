@@ -1,29 +1,19 @@
 /* A panel that shows the lines of a running job as they arrive - a header with a live dot, a source label,
    a progress percentage and a Copy button, a thin progress bar under the header, and the lines themselves,
-   each with its time. Every value it reads is defined here, a host page that needs other colours or sizes
-   sets these variables on the panel's container. */
+   each with its time. Its sizes are defined here, a host page that needs other sizes sets these variables
+   on the panel's container. Its colors are always set by the host page on the panel's container:
+   --progress-log-border, --progress-log-border-strong, --progress-log-background, --progress-log-underlay,
+   --progress-log-header-background, --progress-log-text, --progress-log-text-muted, --progress-log-text-faint,
+   --progress-log-ok, --progress-log-ok-glow, --progress-log-error, --progress-log-accent,
+   --progress-log-accent-end, --progress-log-accent-soft, --progress-log-accent-soft-strong,
+   --progress-log-track and --progress-log-shimmer. */
 
 .progress-log {
     --progress-log-font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
     --progress-log-font-size: 0.7812rem;
     --progress-log-header-font-size: 0.75rem;
     --progress-log-line-height: 1.7;
-    --progress-log-border: #d8dce0;
-    --progress-log-border-strong: #b0b0b0;
     --progress-log-radius: 5px;
-    --progress-log-background: #fdfefe;
-    --progress-log-header-background: #f8fafc;
-    --progress-log-text: #2c3e50;
-    --progress-log-text-muted: #666666;
-    --progress-log-text-faint: #999999;
-    --progress-log-ok: #067f39;
-    --progress-log-ok-glow: rgba(6, 127, 57, 0.35);
-    --progress-log-error: #c0392b;
-    --progress-log-accent: #5794d0;
-    --progress-log-accent-end: #06b6d4;
-    --progress-log-accent-soft: rgba(87, 148, 208, 0.08);
-    --progress-log-accent-soft-strong: rgba(87, 148, 208, 0.18);
-    --progress-log-track: #e2e6ea;
     --progress-log-min-height: 6.875rem;
     --progress-log-lines-shown: 12;
     --progress-log-padding-x: 1.125rem;
@@ -40,36 +30,16 @@
     min-height: var(--progress-log-min-height);
     border: 1px solid var(--progress-log-border);
     border-radius: var(--progress-log-radius);
-    background: var(--progress-log-background);
     overflow: hidden;
     min-width: 0;
+
+    /* A translucent panel color stands over a solid one, so the host page does not show through */
+    background-color: var(--progress-log-underlay);
+    background-image: linear-gradient(var(--progress-log-background), var(--progress-log-background));
 }
 
 .progress-log[data-hidden="true"] {
     display: none;
-}
-
-/* The dark theme, the one of the deployment page. */
-.progress-log[data-theme="dark"] {
-    --progress-log-border: rgba(255, 255, 255, 0.06);
-    --progress-log-border-strong: rgba(255, 255, 255, 0.12);
-    --progress-log-background: rgba(13, 17, 23, 0.82);
-    --progress-log-header-background: transparent;
-    --progress-log-text: #f1f5f9;
-    --progress-log-text-muted: #94a3b8;
-    --progress-log-text-faint: #64748b;
-    --progress-log-ok: #6fae84;
-    --progress-log-ok-glow: rgba(111, 174, 132, 0.35);
-    --progress-log-error: #ef4444;
-    --progress-log-accent: #3b82f6;
-    --progress-log-accent-end: #06b6d4;
-    --progress-log-accent-soft: rgba(59, 130, 246, 0.08);
-    --progress-log-accent-soft-strong: rgba(96, 165, 250, 0.18);
-    --progress-log-track: rgba(255, 255, 255, 0.07);
-
-    /* The translucent panel colour over a solid dark one, so a light host page does not show through. */
-    background-color: #0a0e1a;
-    background-image: linear-gradient(var(--progress-log-background), var(--progress-log-background));
 }
 
 /* ------------------------------------------------------------ */
@@ -209,7 +179,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    background: linear-gradient(90deg, transparent, var(--progress-log-shimmer), transparent);
     animation: progress-log-shimmer 1.4s linear infinite;
 }
 
@@ -235,8 +205,8 @@
     font-size: var(--progress-log-font-size);
     line-height: var(--progress-log-line-height);
     color: var(--progress-log-text-muted);
-    mask-image: linear-gradient(to bottom, transparent, #000 var(--progress-log-fade));
-    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--progress-log-fade));
+    mask-image: linear-gradient(to bottom, transparent, black var(--progress-log-fade));
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--progress-log-fade));
 }
 
 .progress-log-lines::-webkit-scrollbar {

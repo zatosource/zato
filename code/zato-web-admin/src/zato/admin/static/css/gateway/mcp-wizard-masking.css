@@ -25,14 +25,12 @@
     --mcp-field-list-gutter-tail: 24px;
     --mcp-field-list-gutter-bg: rgba(0, 0, 0, 0.03);
 
-    --mcp-masking-hover-delay: 80ms;
     --mcp-masking-transition: 120ms ease;
     --mcp-masking-heading-color: var(--zato-seablue);
     --mcp-masking-strong-color: var(--zato-seablue-light1);
-    --mcp-masking-on-bg: rgba(47, 129, 191, 0.1);
+    --mcp-masking-focused-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
     --mcp-masking-row-hover-delay: 30ms;
     --mcp-masking-row-fade: 90ms ease;
-    --mcp-masking-card-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     --mcp-masking-radius: 4px;
 
     /* The popover's fixed size - its width is masking-popover.js's, the pane's width

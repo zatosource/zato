@@ -226,7 +226,7 @@ class APIKeyEditTestCase(TestCase):
 
         url_data.on_config_event_SECURITY_APIKEY_EDIT(_make_apikey_edit_msg())
 
-        # Security groups and the OpenAPI console read the definition by its ID, so the key has to be there too
+        # Security groups and the API portal read the definition by its ID, so the key has to be there too
         sec_def = cast_('any_', url_data.apikey_get_by_id(_security_id))
         self.assertEqual(sec_def['name'], _new_name)
         self.assertEqual(sec_def['password'], _apikey_value)

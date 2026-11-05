@@ -202,8 +202,8 @@ class TestSOAPChannelAuditLog:
         # .. the section title names the source, compared case-insensitively because of CSS styling ..
         title_text = page.inner_text('#detail-section-title')
         title_text = title_text.lower()
-        assert title_text.startswith(_SOAP_Channel_Title), \
-            f'Expected the title to start with "{_SOAP_Channel_Title}", got: "{title_text}"'
+        assert title_text.endswith(_SOAP_Channel_Title), \
+            f'Expected the title to end with "{_SOAP_Channel_Title}", got: "{title_text}"'
 
         # .. the section title pill shows the channel name, compared case-insensitively
         # .. because the pill is uppercased with CSS ..

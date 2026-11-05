@@ -165,9 +165,9 @@ class GatewayMCPImporter(GenericConnectionImporter):
         """ The ID of one security group that already exists in the database,
         or None if there is no such group.
         """
-        query = select([
+        query = select(
             GenericObject.id,
-        ]).where(and_(
+        ).where(and_(
             GenericObject.name == group_name,
             GenericObject.type_ == Groups.Type.Group_Parent,
             GenericObject.subtype == Groups.Type.API_Clients,
@@ -175,7 +175,7 @@ class GatewayMCPImporter(GenericConnectionImporter):
 
         row = session.execute(query).fetchone()
 
-        out = row['id'] if row is not None else None
+        out = row.id if row is not None else None
         return out
 
 # ################################################################################################################################

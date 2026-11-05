@@ -17,7 +17,7 @@ from __future__ import annotations
 
 # stdlib
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 # SQLAlchemy
 from sqlalchemy import select, update
@@ -29,11 +29,13 @@ from zato.common.audit_log.common import alert_table
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.alerting.model import AlertRule, Finding
     from zato.common.typing_ import anydict, intnone
     AlertRule = AlertRule
     anydict = anydict
+    datetime = datetime
     Engine = Engine
     Finding = Finding
     intnone = intnone
@@ -96,14 +98,12 @@ def raise_alert(engine:'Engine', rule:'AlertRule', finding:'Finding', now:'datet
     # Our response to produce
     out = RaiseResult()
 
-    now_iso = now.isoformat()
-
     existing = _find_open_alert(engine, rule.name, finding)
 
     if existing:
 
         # An alert younger than the window absorbs the repetition ..
-        last_raised = datetime.fromisoformat(existing['last_raised_iso'])
+        last_raised = existing['last_raised_at']
         window_end = last_raised + timedelta(seconds=rule.dedup_window_seconds)
 
         if now < window_end:
@@ -112,7 +112,7 @@ def raise_alert(engine:'Engine', rule:'AlertRule', finding:'Finding', now:'datet
 
             statement = update(alert_table)
             statement = statement.where(alert_table.c.id == existing['id'])
-            statement = statement.values(count=new_count, last_raised_iso=now_iso, message=finding.message)
+            statement = statement.values(count=new_count, last_raised_at=now, message=finding.message)
 
             with engine.begin() as connection:
                 _ = connection.execute(statement)
@@ -133,8 +133,8 @@ def raise_alert(engine:'Engine', rule:'AlertRule', finding:'Finding', now:'datet
         'message': finding.message,
         'link': finding.link,
         'count': 1,
-        'first_raised_iso': now_iso,
-        'last_raised_iso': now_iso,
+        'first_raised_at': now,
+        'last_raised_at': now,
     }
 
     with engine.begin() as connection:

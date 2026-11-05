@@ -17,7 +17,7 @@ from sqlalchemy import select
 from live_sql.env import database_env
 from zato.common.analytics.api import get_analytics_engine, get_latency_bucket_index, usage_table, watermark_table, \
     Latency_Bucket_Count, Latency_Buckets_Ms, ModuleCtx as AnalyticsCtx
-from zato.common.analytics.query import get_percentile
+from zato.common.analytics.query import get_percentile, period_to_datetime
 from zato.common.analytics.rollup import run_rollup
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.json_internal import loads
@@ -99,15 +99,15 @@ def _insert_event(
     event_type:'str',
     channel:'str',
     caller:'str',
-    event_time_iso:'str',
+    period:'str',
     status:'str',
     duration_ms:'int',
     size:'int',
 ) -> 'None':
-    """ Writes one audit event with a controlled event time, which is how the test
+    """ Writes one audit event at the start of the given hourly period, which is how the test
     places events in known hourly periods.
     """
-    event_time_iso = f'{event_time_iso}:00:00+00:00'
+    event_time = period_to_datetime(period)
 
     insert_statement = event_table.insert().values(
         cid='cid-analytics-test',
@@ -117,8 +117,7 @@ def _insert_event(
         msg_id='',
         correl_id='',
         ext_client_id=caller,
-        pub_time_iso='',
-        event_time_iso=event_time_iso,
+        event_time=event_time,
         server_name=_server_name,
         endpoint='analytics.test.service',
         sub_key='',
@@ -264,35 +263,35 @@ def run_rollup_scenario() -> 'None':
     # Events the rollup must ignore go in first, so the watermark assertion below
     # can compare against the id of the newest channel response ..
     _insert_event(source=AuditSource.PubSub, event_type=AuditEvent.Published, channel='analytics.test.topic',
-        caller='', event_time_iso=_period_one, status='', duration_ms=0, size=1)
+        caller='', period=_period_one, status='', duration_ms=0, size=1)
 
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Request_Received, channel=_channel_a,
-        caller='', event_time_iso=_period_one, status='', duration_ms=0, size=1)
+        caller='', period=_period_one, status='', duration_ms=0, size=1)
 
     # .. three successes of one caller in one hour, with known durations and sizes ..
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Response_Sent, channel=_channel_a,
-        caller=_caller_alice, event_time_iso=_period_one, status='200 OK', duration_ms=10, size=100)
+        caller=_caller_alice, period=_period_one, status='200 OK', duration_ms=10, size=100)
 
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Response_Sent, channel=_channel_a,
-        caller=_caller_alice, event_time_iso=_period_one, status='200 OK', duration_ms=30, size=200)
+        caller=_caller_alice, period=_period_one, status='200 OK', duration_ms=30, size=200)
 
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Response_Sent, channel=_channel_a,
-        caller=_caller_alice, event_time_iso=_period_one, status='200 OK', duration_ms=3000, size=300)
+        caller=_caller_alice, period=_period_one, status='200 OK', duration_ms=3000, size=300)
 
     # .. an authorization failure of the same caller ..
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Response_Sent, channel=_channel_a,
-        caller=_caller_alice, event_time_iso=_period_one, status='403 Forbidden', duration_ms=5, size=50)
+        caller=_caller_alice, period=_period_one, status='403 Forbidden', duration_ms=5, size=50)
 
     # .. a rate-limited request that never authenticated, so it has no caller ..
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Response_Sent, channel=_channel_a,
-        caller='', event_time_iso=_period_one, status='429 Too Many Requests', duration_ms=1, size=10)
+        caller='', period=_period_one, status='429 Too Many Requests', duration_ms=1, size=10)
 
     # .. and another channel's caller in the next hour.
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Response_Sent, channel=_channel_b,
-        caller=_caller_bob, event_time_iso=_period_two, status='200 OK', duration_ms=100, size=20)
+        caller=_caller_bob, period=_period_two, status='200 OK', duration_ms=100, size=20)
 
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Response_Sent, channel=_channel_b,
-        caller=_caller_bob, event_time_iso=_period_two, status='200 OK', duration_ms=100, size=30)
+        caller=_caller_bob, period=_period_two, status='200 OK', duration_ms=100, size=30)
 
     # The first run aggregates the seven channel responses and nothing else ..
     result = run_rollup()
@@ -346,7 +345,7 @@ def run_rollup_scenario() -> 'None':
 
     # .. while a new event folds into the already existing hourly row.
     _insert_event(source=AuditSource.REST_Channel, event_type=AuditEvent.Response_Sent, channel=_channel_a,
-        caller=_caller_alice, event_time_iso=_period_one, status='200 OK', duration_ms=10, size=100)
+        caller=_caller_alice, period=_period_one, status='200 OK', duration_ms=10, size=100)
 
     incremental_result = run_rollup()
     assert incremental_result.event_count == 1

@@ -74,7 +74,7 @@ class _UnmappableModelTypeMapper(TypeMapper):
 # ################################################################################################################################
 
 def _get_entry(name:'str', url_path:'str', **entry_fields:'any_') -> 'anydict':
-    """ Returns the entry of one service, as the console's document lists it.
+    """ Returns the entry of one service, as the portal's document lists it.
     """
     out:'anydict' = {
         'name': name,
@@ -117,7 +117,7 @@ def _build_spec(entries:'any_', models:'anydict', type_mapper:'TypeMapper | None
 # ################################################################################################################################
 
 def _read_models(*model_classes:'type') -> 'anydict':
-    """ Reads models at runtime, the way the console's document reads the models of deployed services.
+    """ Reads models at runtime, the way the portal's document reads the models of deployed services.
     """
     out:'anydict' = {}
 

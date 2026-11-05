@@ -261,6 +261,12 @@ def zato_dashboard() -> 'any_':
     server_env.update(scheduler_env_config)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
+    # The pub/sub database lives inside this test server's own directory, so that the server does not
+    # share a file, and a schema from an earlier checkout, with any other environment on this machine.
+    # Tests that read the database directly find it through the fixture below.
+    pubsub_db_path = os.path.join(server_dir, 'pubsub.db')
+    server_env['Zato_PubSub_DB_Path'] = pubsub_db_path
+
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
         env=server_env,
@@ -349,6 +355,7 @@ def zato_dashboard() -> 'any_':
         'dashboard_url': f'http://{host}:{dashboard_port}',
         'password': _Password,
         'server_dir': server_dir,
+        'pubsub_db_path': pubsub_db_path,
         'dashboard_dir': dashboard_dir,
         'temporary_dir': temporary_dir,
         'server_process': server_process,

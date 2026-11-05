@@ -304,7 +304,7 @@ def _get_fault_responses() -> 'anylist':
         out = [dict(row._mapping) for row in connection.execute(query)]
 
     for row in out:
-        trace(Channel_Outgoing, Received, f'faulting audit log: {row["event_time_iso"]} {row["status"]!r} ' +
+        trace(Channel_Outgoing, Received, f'faulting audit log: {row["event_time"]} {row["status"]!r} ' +
             f'{row["application_outcome"]!r} {row["data"]!r}')
 
     separator(Channel_Outgoing)

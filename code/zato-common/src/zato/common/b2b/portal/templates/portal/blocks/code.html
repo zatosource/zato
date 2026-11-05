@@ -1,0 +1,7 @@
+<div class="block">
+    {% if block.title %}<div class="block-title">{{ block.title }}</div>{% endif %}
+    <div class="code-host">
+        <pre class="code">{{ block.text }}</pre>
+        <button type="button" class="copy-button">Copy</button>
+    </div>
+</div>

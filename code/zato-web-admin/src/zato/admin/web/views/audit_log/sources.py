@@ -28,12 +28,17 @@ from zato.common.hl7.display import parse_and_render
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from zato.common.typing_ import any_, anydict
     any_ = any_
     anydict = anydict
+    datetime = datetime
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# How the moment of a record reads in its parsed view, to the second, in UTC.
+_record_time_format = '%Y-%m-%d %H:%M:%S'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -176,7 +181,7 @@ def _view_source_label(source:'str') -> 'str':
 
 # ################################################################################################################################
 
-def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str':
+def render_view_record(engine:'any_', data:'str', event_time:'datetime') -> 'str':
     """ Renders a log access view record as the answer it exists to give - who viewed
     what and when, in business terms. The viewed event is resolved against the event table
     at render time, so the record reads by the message's own coordinates rather than by
@@ -240,9 +245,9 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
 
     lines.append(f'Screen:     {screen}')
 
-    # When the reading happened is the view event's own moment - trimmed of its
+    # When the reading happened is the view event's own moment - without its
     # microseconds and offset, and last, the way time reads everywhere on the page
-    when = event_time_iso.replace('T', ' ').split('.')[0]
+    when = event_time.strftime(_record_time_format)
     lines.append(f'When:       {when} UTC')
 
     out = '\n'.join(lines)
@@ -262,7 +267,7 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
     # The run's own row - what ran, when, and how it ended
     run_query = select(
         event_table.c.object_name, event_table.c.endpoint, event_table.c.outcome,
-        event_table.c.duration_ms, event_table.c.event_time_iso, event_table.c.data).where(
+        event_table.c.duration_ms, event_table.c.event_time, event_table.c.data).where(
         event_table.c.id == event_id)
 
     # The run number and delay ride in the attrs
@@ -284,7 +289,7 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
     if run_row is None:
         return ''
 
-    object_name, endpoint, outcome, duration_ms, event_time_iso, error = run_row
+    object_name, endpoint, outcome, duration_ms, event_time, error = run_row
 
     attrs = {}
 
@@ -305,9 +310,9 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
         delay_human = format_duration_ms(delay_ms)
         request_lines.append(f'Delay:      {delay_human}')
 
-    # When the run started is the event's own moment - trimmed of its microseconds
+    # When the run started is the event's own moment - without its microseconds
     # and offset, the way time reads everywhere on the page
-    started = event_time_iso.replace('T', ' ').split('.')[0]
+    started = event_time.strftime(_record_time_format)
     request_lines.append(f'Started:    {started} UTC')
 
     # The response side.

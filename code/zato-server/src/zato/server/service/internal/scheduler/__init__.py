@@ -33,6 +33,7 @@ from zato.common.util.interval import unit_from_interval
 from zato.common.util.rest_invocation import clear_linked_job_fields, update_linked_job_fields
 from zato.common.typing_ import any_, anylist, anytuple
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
+from zato.common.util.time_ import parse_utc
 from zato.server.service import Int, Bool, List
 from zato.server.service.internal import AdminService
 
@@ -88,6 +89,18 @@ def _item_by_id(items, id_):
         if item['id'] == id_:
             return item
     return None
+
+# ################################################################################################################################
+
+def _parse_optional_time(value:'any_') -> 'datetime | None':
+    """ Parses an optional ISO 8601 timestamp of the input, None when the caller did not send one.
+    """
+    if value in _not_sent:
+        out = None
+    else:
+        out = parse_utc(value)
+
+    return out
 
 # ################################################################################################################################
 
@@ -787,8 +800,11 @@ class GetHistory(_SchedulerAdmin):
         try:
             job_id = self.request.input.id
             since_timestamp = self.request.input.get('since_timestamp')
-            since_iso = self.request.input.get('since_iso') or ''
+            since_iso = self.request.input.get('since_iso')
             outcomes = self.request.input.get('outcomes')
+
+            # The range the page shows reaches back to this moment, when the page chose one
+            range_since = _parse_optional_time(since_iso)
             if not outcomes:
                 outcomes = SCHEDULER.OUTCOME.All
 
@@ -801,7 +817,8 @@ class GetHistory(_SchedulerAdmin):
                 for run in self.request.input.get('running_runs') or []:
                     running_runs.append(int(run))
 
-                result = get_history_since(job_id, job_name, since_timestamp, outcomes, running_runs, since_iso)
+                since = parse_utc(since_timestamp)
+                result = get_history_since(job_id, job_name, since, outcomes, running_runs, range_since)
                 self.response.payload = {'rows': result['rows'], 'total': result['total']}
             else:
                 page = self.request.input.get('page')
@@ -814,7 +831,7 @@ class GetHistory(_SchedulerAdmin):
 
                 offset = (page - 1) * page_size
 
-                result = get_history_page(job_id, job_name, offset, page_size, outcomes, since_iso)
+                result = get_history_page(job_id, job_name, offset, page_size, outcomes, range_since)
 
                 self.response.payload = {
                     'rows': result['records'],
@@ -934,10 +951,15 @@ class GetCurrentState(_SchedulerAdmin):
         try:
             from contextlib import closing
 
-            chart_since_iso = self.request.input.chart_since_iso or ''
-            chart_until_iso = self.request.input.chart_until_iso or ''
-            recent_since_iso = self.request.input.recent_since_iso or ''
+            chart_since_iso = self.request.input.chart_since_iso
+            chart_until_iso = self.request.input.chart_until_iso
+            recent_since_iso = self.request.input.recent_since_iso
             recent_limit = self.request.input.recent_limit or 100
+
+            # The chart window and the recent table's boundary are optional on input
+            chart_since = _parse_optional_time(chart_since_iso)
+            chart_until = _parse_optional_time(chart_until_iso)
+            recent_since = _parse_optional_time(recent_since_iso)
 
             with closing(self.odb.session()) as session:
                 job_rows = session.query(Job).all()
@@ -1025,18 +1047,16 @@ class GetCurrentState(_SchedulerAdmin):
                     total_executions += per_job[outcome_key]
 
             # .. get chart_buckets from the audit log (pre-aggregated) ..
-            chart_buckets = get_chart_data(chart_since_iso, chart_until_iso)
+            chart_buckets = get_chart_data(chart_since, chart_until)
 
             # .. get recent events for the table ..
-            recent_events = get_timeline_events_since(recent_since_iso, recent_limit)
+            recent_events = get_timeline_events_since(recent_since, recent_limit)
 
             # .. compute header tile stats from a fixed 1-hour window,
             # .. independent of whatever chart range the user picked ..
             now = datetime.now(timezone.utc)
             hour_ago = now - timedelta(hours=1)
-            hour_since_iso = hour_ago.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-            hour_until_iso = now.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-            hour_buckets = get_chart_data(hour_since_iso, hour_until_iso)
+            hour_buckets = get_chart_data(hour_ago, now)
 
             runs_last_hour = 0
             recent_last_hour = 0

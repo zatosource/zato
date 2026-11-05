@@ -1,0 +1,495 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import logging
+import os
+import time
+from dataclasses import replace
+
+# pytest
+import pytest
+
+# Zato
+from failover import Controller, docker, get_container_state, is_server_up, LinkProxy, read_audit_takeovers, \
+    read_generation, reset_pair, run_container, wait_for_generation, wait_until_up
+from zato.common.test.client import PublishClient, PullClient
+from zato.common.test.conftest_base_pubsub import find_free_port
+from zato.common.test.pubsub_database import connect, is_postgresql_mode
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from conftest import FailoverEnvironment
+    from failover import ContainerServer
+    from zato.common.test.receiver import WebhookReceiver
+    from zato.common.typing_ import dictlist, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger('zato.test.pubsub_failover')
+
+# The topic of the tests, which has a pull subscriber and a push subscriber.
+_topic_name = 'iam.user.created'
+
+# How many messages each test publishes.
+_message_count = 20
+
+# How long the controller may take to switch the servers, in seconds.
+_switch_timeout_seconds = 300
+
+# How long a server may take to take over the database once its container started, in seconds.
+_takeover_timeout_seconds = 180
+
+# How long push deliveries may take to reach the receiver, in seconds.
+_delivery_timeout_seconds = 120
+
+# How often the tests check the receiver, in seconds.
+_poll_seconds = 0.5
+
+# How long the database stays unavailable after the standby was started, and how long it may take
+# to accept connections once its container started again, in seconds.
+_outage_after_start_seconds = 30
+_database_ready_timeout_seconds = 120
+
+# How long a takeover may take beyond the startup of the server when a session blocks it, in seconds -
+# five seconds of waiting, then the termination of the blocking session.
+_blocked_takeover_max_seconds = 30
+
+# How long the controller keeps checking the new active server before a test confirms that it was not replaced,
+# in seconds - longer than the three failed checks, one second apart, that a replacement requires.
+_controller_settle_seconds = 10
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _publisher(env:'FailoverEnvironment', server:'ContainerServer') -> 'PublishClient':
+    out = PublishClient(server.base_url, env.publisher_username, env.publisher_password)
+    return out
+
+# ################################################################################################################################
+
+def _puller(env:'FailoverEnvironment', server:'ContainerServer') -> 'PullClient':
+    out = PullClient(server.base_url, env.puller_username, env.puller_password)
+    return out
+
+# ################################################################################################################################
+
+def _publish(env:'FailoverEnvironment', server:'ContainerServer', count:'int') -> 'strlist':
+    publisher = _publisher(env, server)
+    out:'strlist' = []
+
+    for index in range(count):
+        result = publisher.publish(_topic_name, {'failover_test_index': index})
+        out.append(result['msg_id'])
+
+    return out
+
+# ################################################################################################################################
+
+def _pull_all(env:'FailoverEnvironment', server:'ContainerServer') -> 'strlist':
+    """ Pulls everything pending for the pull subscriber through the given server and returns the identifiers.
+    """
+    puller = _puller(env, server)
+    out:'strlist' = []
+
+    while True:
+        result = puller.pull(max_messages=100)
+        if result['message_count'] == 0:
+            break
+        for message in result['messages']:
+            out.append(message['meta']['msg_id'])
+
+    return out
+
+# ################################################################################################################################
+
+def _wait_for_deliveries(receiver:'WebhookReceiver', msg_ids:'strlist') -> 'dictlist':
+    """ Waits until the receiver has every one of the given messages and returns what it received.
+    """
+    deadline = time.monotonic() + _delivery_timeout_seconds
+    expected = set(msg_ids)
+
+    while True:
+
+        delivered = receiver.get_delivered_messages()
+        received:'set[str]' = set()
+
+        for message in delivered:
+            received.add(message['msg_id'])
+
+        missing = expected - received
+
+        if not missing:
+            return delivered
+
+        assert time.monotonic() < deadline, f'Not delivered: {sorted(missing)}'
+        time.sleep(_poll_seconds)
+
+# ################################################################################################################################
+
+def _assert_repeats_have_higher_attempts(delivered:'dictlist') -> 'None':
+    """ Every repeated copy of a message carries the same identifier with a higher attempt number.
+    """
+    attempts_by_msg_id:'dict[str, list[int]]' = {}
+
+    for message in delivered:
+        msg_id = message['msg_id']
+        if msg_id not in attempts_by_msg_id:
+            attempts_by_msg_id[msg_id] = []
+        attempts_by_msg_id[msg_id].append(message['delivery_attempt'])
+
+    for msg_id, attempts in attempts_by_msg_id.items():
+        assert len(attempts) == len(set(attempts)), (msg_id, attempts)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.mark.parametrize('stop_command', ['kill', 'stop'])
+def test_takeover_after_kill(failover_env:'FailoverEnvironment', stop_command:'str') -> 'None':
+    """ The controller starts the standby once the active server is killed or stopped gracefully, the standby takes over
+    the database, and every message published to the old server is pulled from and pushed by the new one.
+    """
+    env = failover_env
+    generation = reset_pair(env)
+
+    receiver = env.receivers[_topic_name]
+    receiver.clear_output()
+
+    # The push subscriber is unavailable while the messages are published, so they wait in its queue ..
+    receiver.stop()
+    msg_ids = _publish(env, env.server_a, _message_count)
+
+    # .. the active server is killed, and the controller notices it ..
+    controller = Controller(env.server_a, env.server_b, os.path.join(env.work_dir, f'controller-{stop_command}.jsonl'))
+    controller.start()
+
+    kill_time = time.monotonic()
+    _ = docker(stop_command, env.server_a.container_name)
+
+    try:
+        controller.wait_for_switch(_switch_timeout_seconds)
+
+        events = controller.read_events()
+        names:'strlist' = []
+
+        for event in events:
+            names.append(event['event'])
+
+        assert 'standby_started' in names, events
+        assert 'old_stopped' in names, events
+
+        # .. the standby is up, with the next generation, and the controller, which now checks it,
+        # .. does not replace it ..
+        _ = wait_until_up(env.server_b)
+        _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+        time.sleep(_controller_settle_seconds)
+        assert controller.get_switch_count() == 1, controller.read_events()
+
+    finally:
+        controller.stop()
+
+    switch_seconds = time.monotonic() - kill_time
+    logger.info('Kill to takeover: %.1fs', switch_seconds)
+
+    # .. its audit log records the takeover from the generation of the old server ..
+    takeovers = read_audit_takeovers(env.server_b, generation)
+    assert takeovers == [(generation, generation + 1)], takeovers
+
+    # .. it hands out every message to the pull subscriber ..
+    pulled = _pull_all(env, env.server_b)
+    assert sorted(pulled) == sorted(msg_ids)
+
+    # .. and pushes every one of them once the push subscriber returns.
+    receiver.restart()
+
+    delivered = _wait_for_deliveries(receiver, msg_ids)
+    _assert_repeats_have_higher_attempts(delivered)
+
+# ################################################################################################################################
+
+def test_replaced_server_rejected(failover_env:'FailoverEnvironment') -> 'None':
+    """ A server whose generation was replaced while it kept running publishes, hands out and changes nothing,
+    and the server that replaced it serves everything.
+    """
+    env = failover_env
+    generation = reset_pair(env)
+
+    # Server B starts while server A is still running, as it does when the controller loses sight of server A ..
+    _ = docker('start', env.server_b.container_name)
+    _ = wait_until_up(env.server_b)
+    _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+    # .. server A rejects every publication ..
+    with pytest.raises(Exception, match='HTTP'):
+        _ = _publish(env, env.server_a, 1)
+
+    # .. server B accepts them ..
+    msg_ids = _publish(env, env.server_b, 5)
+
+    # .. server A hands out nothing ..
+    with pytest.raises(Exception, match='HTTP'):
+        _ = _puller(env, env.server_a).pull(max_messages=100)
+
+    # .. so server B hands out everything.
+    pulled = _pull_all(env, env.server_b)
+    assert sorted(pulled) == sorted(msg_ids)
+
+    _ = docker('stop', '--time', '10', env.server_a.container_name)
+
+# ################################################################################################################################
+
+def test_takeover_from_frozen_server(failover_env:'FailoverEnvironment') -> 'None':
+    """ The active server is frozen, the standby takes over, and the frozen server resumes afterwards.
+    The resumed server publishes and hands out nothing, and the server that replaced it serves every message.
+    """
+    env = failover_env
+    generation = reset_pair(env)
+
+    receiver = env.receivers[_topic_name]
+    receiver.clear_output()
+
+    # The push subscriber is unavailable while the messages are published, so they wait in its queue ..
+    receiver.stop()
+    msg_ids = _publish(env, env.server_a, _message_count)
+
+    # .. the active server is frozen ..
+    _ = docker('pause', env.server_a.container_name)
+
+    # .. the standby takes over in the meantime ..
+    _ = docker('start', env.server_b.container_name)
+    _ = wait_until_up(env.server_b)
+    _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+    # .. the frozen server resumes and its greenlets continue where they stopped ..
+    _ = docker('unpause', env.server_a.container_name)
+    _ = wait_until_up(env.server_a)
+
+    # .. it rejects every publication and hands out nothing ..
+    with pytest.raises(Exception, match='HTTP'):
+        _ = _publish(env, env.server_a, 1)
+
+    with pytest.raises(Exception, match='HTTP'):
+        _ = _puller(env, env.server_a).pull(max_messages=100)
+
+    # .. the generation is still the one of the server that replaced it ..
+    assert read_generation(env.database) == generation + 1
+
+    # .. which hands out every message to the pull subscriber ..
+    pulled = _pull_all(env, env.server_b)
+    assert sorted(pulled) == sorted(msg_ids)
+
+    # .. and pushes every one of them once the push subscriber returns.
+    receiver.restart()
+
+    delivered = _wait_for_deliveries(receiver, msg_ids)
+    _assert_repeats_have_higher_attempts(delivered)
+
+    _ = docker('stop', '--time', '10', env.server_a.container_name)
+
+# ################################################################################################################################
+
+def test_takeover_from_cut_off_server(failover_env:'FailoverEnvironment') -> 'None':
+    """ The active server is cut off from its database and from its clients while its process keeps running,
+    the standby takes over, and the links of the old server are restored afterwards. The old server publishes
+    and hands out nothing, and the server that replaced it serves every message.
+    """
+    env = failover_env
+    _ = reset_pair(env)
+
+    receiver = env.receivers[_topic_name]
+    receiver.clear_output()
+
+    # Server A runs again, its link to the database and its HTTP port each behind a proxy, and raises the generation
+    # once more as it starts ..
+    internal_port = find_free_port()
+
+    server_a = replace(env.server_a, env=dict(env.server_a.env))
+    server_a.env['Zato_Config_Bind_Port'] = str(internal_port)
+
+    database_proxy = LinkProxy(find_free_port(), env.database.port, os.path.join(env.work_dir, 'proxy-database.log'))
+    server_a.env['Zato_PubSub_DB_Port'] = str(database_proxy.listen_port)
+
+    http_proxy = LinkProxy(server_a.port, internal_port, os.path.join(env.work_dir, 'proxy-http.log'))
+
+    _ = docker('rm', '-f', server_a.container_name)
+    database_proxy.start()
+    http_proxy.start()
+
+    try:
+        run_container(server_a)
+        _ = wait_until_up(server_a)
+
+        generation = read_generation(env.database)
+
+        # .. the push subscriber is unavailable while the messages are published, so they wait in its queue ..
+        receiver.stop()
+        msg_ids = _publish(env, server_a, _message_count)
+
+        # .. both links are cut, while the process of the server keeps running ..
+        _ = database_proxy.command('block')
+        _ = http_proxy.command('block')
+
+        assert not is_server_up(server_a)
+        assert get_container_state(server_a) == 'running'
+
+        # .. the standby takes over in the meantime ..
+        _ = docker('start', env.server_b.container_name)
+        _ = wait_until_up(env.server_b)
+        _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+        # .. the links of the old server are restored ..
+        _ = database_proxy.command('unblock')
+        _ = http_proxy.command('unblock')
+        _ = wait_until_up(server_a)
+
+        # .. it rejects every publication and hands out nothing ..
+        with pytest.raises(Exception, match='HTTP'):
+            _ = _publish(env, server_a, 1)
+
+        with pytest.raises(Exception, match='HTTP'):
+            _ = _puller(env, server_a).pull(max_messages=100)
+
+        # .. the generation is still the one of the server that replaced it ..
+        assert read_generation(env.database) == generation + 1
+
+        # .. which hands out every message to the pull subscriber ..
+        pulled = _pull_all(env, env.server_b)
+        assert sorted(pulled) == sorted(msg_ids)
+
+        # .. and pushes every one of them once the push subscriber returns.
+        receiver.restart()
+
+        delivered = _wait_for_deliveries(receiver, msg_ids)
+        _assert_repeats_have_higher_attempts(delivered)
+
+    finally:
+        _ = docker('stop', '--time', '10', server_a.container_name, check=False)
+        http_proxy.stop()
+        database_proxy.stop()
+
+# ################################################################################################################################
+
+def test_takeover_from_open_session(failover_env:'FailoverEnvironment') -> 'None':
+    """ A session that holds the row of the generation open does not keep the standby from taking over,
+    which terminates the session after it waited for it.
+    """
+    env = failover_env
+    generation = reset_pair(env)
+
+    # A session locks the row of the generation and stays open ..
+    blocker = connect(env.database)
+    cursor = blocker.cursor()
+    cursor.execute('select generation from pubsub_active where id = 1 for share')
+
+    # .. the standby is started ..
+    start = time.monotonic()
+    _ = docker('start', env.server_b.container_name)
+
+    startup_seconds = wait_until_up(env.server_b)
+    _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+    takeover_seconds = time.monotonic() - start
+    logger.info('Startup %.1fs, takeover %.1fs', startup_seconds, takeover_seconds)
+
+    assert takeover_seconds < startup_seconds + _blocked_takeover_max_seconds, (startup_seconds, takeover_seconds)
+
+    # .. and the session was terminated.
+    with pytest.raises(Exception):
+        cursor.execute('select 1')
+
+    _ = docker('stop', '--time', '10', env.server_a.container_name)
+
+# ################################################################################################################################
+
+def _wait_for_database(env:'FailoverEnvironment') -> 'None':
+    """ Waits until the pub/sub database accepts connections again.
+    """
+    deadline = time.monotonic() + _database_ready_timeout_seconds
+
+    while True:
+        try:
+            connection = connect(env.database)
+        except Exception:
+            assert time.monotonic() < deadline, f'Database not available after {_database_ready_timeout_seconds}s'
+            time.sleep(_poll_seconds)
+        else:
+            connection.close()
+            return
+
+# ################################################################################################################################
+
+def test_takeover_during_database_outage(failover_env:'FailoverEnvironment') -> 'None':
+    """ The active server is killed while the database is unavailable. The controller starts the standby,
+    which waits for the database, takes over once it returns, and serves every message published before the outage.
+    """
+    env = failover_env
+
+    # A SQLite file has no outage of its own and no standby server that could take it over.
+    if not is_postgresql_mode(env.database.mode):
+        return
+
+    generation = reset_pair(env)
+
+    receiver = env.receivers[_topic_name]
+    receiver.clear_output()
+
+    # The push subscriber is unavailable while the messages are published, so they wait in its queue ..
+    receiver.stop()
+    msg_ids = _publish(env, env.server_a, _message_count)
+
+    # .. the database becomes unavailable ..
+    _ = docker('stop', env.database.container_name)
+
+    # .. and the active server is killed during the outage, which the controller notices ..
+    controller = Controller(env.server_a, env.server_b, os.path.join(env.work_dir, 'controller-outage.jsonl'))
+    controller.start()
+
+    _ = docker('kill', env.server_a.container_name)
+
+    # .. the standby is started while the database is still unavailable ..
+    deadline = time.monotonic() + _switch_timeout_seconds
+
+    while get_container_state(env.server_b) != 'running':
+        assert time.monotonic() < deadline, controller.read_events()
+        time.sleep(_poll_seconds)
+
+    time.sleep(_outage_after_start_seconds)
+
+    # .. the database returns, and the standby takes over with the next generation ..
+    _ = docker('start', env.database.container_name)
+    _wait_for_database(env)
+
+    # .. while the controller, which waited for the standby through the outage, has not replaced it.
+    try:
+        controller.wait_for_switch(_switch_timeout_seconds)
+
+        _ = wait_until_up(env.server_b)
+        _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
+
+        time.sleep(_controller_settle_seconds)
+        assert controller.get_switch_count() == 1, controller.read_events()
+
+    finally:
+        controller.stop()
+
+    # .. it hands out every message to the pull subscriber ..
+    pulled = _pull_all(env, env.server_b)
+    assert sorted(pulled) == sorted(msg_ids)
+
+    # .. and pushes every one of them once the push subscriber returns.
+    receiver.restart()
+
+    delivered = _wait_for_deliveries(receiver, msg_ids)
+    _assert_repeats_have_higher_attempts(delivered)
+
+# ################################################################################################################################
+# ################################################################################################################################

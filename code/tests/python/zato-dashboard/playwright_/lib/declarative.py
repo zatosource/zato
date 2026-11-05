@@ -16,8 +16,8 @@ import time
 from sqlalchemy import select
 
 # Zato
-from zato.common.pubsub.sql.config import get_pubsub_engine
-from zato.common.pubsub.sql.schema import message_table
+from zato.common.db_env.engine import get_sqlite_file_engine
+from zato.common.pubsub.sql.schema import message_table, metadata
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -108,6 +108,7 @@ def wait_for_callback_entry(marker:'str', timeout:'float'=Delivery_Timeout) -> '
 # ################################################################################################################################
 
 def wait_for_topic_message(
+    pubsub_db_path:'str',
     topic_name:'str',
     marker:'str',
     timeout:'float'=Delivery_Timeout,
@@ -115,9 +116,8 @@ def wait_for_topic_message(
     """ Waits until the SQL pub/sub store receives a message published to the given topic
     whose data preview contains the marker and returns that message's row as a dict.
     """
-    # The store the server publishes to - selected through the same
-    # Zato_PubSub_DB_Path the server itself reads.
-    engine = get_pubsub_engine()
+    # The store the server publishes to - the file the server was started with through Zato_PubSub_DB_Path
+    engine = get_sqlite_file_engine(pubsub_db_path, metadata, needs_pool=False, needs_background_checkpoint=False)
 
     # Topic names are lowercased on publish
     topic_name = topic_name.lower()

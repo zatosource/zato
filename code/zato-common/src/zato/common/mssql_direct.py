@@ -11,9 +11,11 @@ import re
 from logging import getLogger
 from traceback import format_exc
 
+# PyTDS
+import pytds
+
 # SQLAlchemy
 from sqlalchemy.pool import QueuePool as SAQueuePool
-from sqlalchemy.pool.dbapi_proxy import _DBProxy
 
 # Zato
 from zato.common.api import MS_SQL
@@ -23,7 +25,7 @@ from zato.common.api import MS_SQL
 
 if 0:
     from zato.common.odb.api import SessionWrapper
-    from zato.common.typing_ import anylist, stranydict, strdictnone, strset
+    from zato.common.typing_ import any_, anylist, stranydict, strdictnone, strset
     SessionWrapper = SessionWrapper
     stranydict = stranydict
 
@@ -106,14 +108,6 @@ def _validate_params(query:'str', params:'strdictnone') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_queue_pool(pool_kwargs):
-    class _QueuePool(SAQueuePool):
-        def __init__(self, creator, *args, **kwargs):
-            super(_QueuePool, self).__init__(creator, **pool_kwargs)
-    return _QueuePool
-
-# ################################################################################################################################
-
 class SimpleSession:
     """ A simple object simulating SQLAlchemy sessions. Statements and procedure calls go back
     through the wrapper that owns the session, which is what puts them in the audit log.
@@ -154,9 +148,6 @@ class MSSQLDirectAPI:
         extra           # type: stranydict
     ) -> 'None':
 
-        # PyTDS
-        import pytds
-
         # Max. overflow is user-configurable
         max_overflow = extra.get('max_overflow', 0)
 
@@ -171,12 +162,20 @@ class MSSQLDirectAPI:
             'timeout': 3
         }
 
-        self._pool = _DBProxy(pytds, get_queue_pool(self._pool_kwargs))
+        self._pool = SAQueuePool(self._create_connection, **self._pool_kwargs)
+
+# ################################################################################################################################
+
+    def _create_connection(self) -> 'any_':
+        """ Opens one new database connection for the pool.
+        """
+        out = pytds.connect(**self._connect_kwargs)
+        return out
 
 # ################################################################################################################################
 
     def connect(self):
-        return self._pool.connect(**self._connect_kwargs)
+        return self._pool.connect()
 
 # ################################################################################################################################
 

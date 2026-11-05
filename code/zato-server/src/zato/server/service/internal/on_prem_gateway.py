@@ -334,16 +334,9 @@ class Sync(_Base):
 
     def handle(self) -> 'None':
 
+        # The configuration is published even if it has no gateways, so the hub removes the ones that no longer exist,
+        # an unavailable hub being reported in the log.
         manager = self.get_manager()
-
-        # No publication is required if no gateway has been configured ..
-        gateways = manager.get_list()
-
-        if not gateways:
-            self.logger.info('No on-prem gateways are configured, nothing to push')
-            return
-
-        # .. otherwise the configuration is published, an unavailable hub being reported in the log.
         manager.sync()
 
 # ################################################################################################################################

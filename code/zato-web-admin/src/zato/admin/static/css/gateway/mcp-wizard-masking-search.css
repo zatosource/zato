@@ -1,7 +1,7 @@
 /*
  * MCP gateway wizard - the search across the cards of the Data masking popover.
  * The popover is in gateway/mcp-wizard-masking-popover.css, loaded before this file,
- * and the box itself in gateway/mcp-wizard-search-box.css.
+ * and the box itself in shared/search-box.css and gateway/mcp-wizard-search-box.css.
  */
 
 /* ------------------------------------------------------------ */

@@ -32,6 +32,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    height: var(--audit-log-pane-head-height);
     margin-bottom: 8px;
 }
 
@@ -72,6 +73,7 @@
    The leftover room now lies to the right of the two of them, where it crowds nothing,
    and the actions alone keep to the far edge. */
 
+.audit-log-pane-head .dashboard-tag,
 .audit-log-pane-head .audit-log-outcome-filter {
     flex: none;
 }

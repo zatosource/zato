@@ -158,7 +158,7 @@ def ftp_shell(logged_in_page:'Page', zato_dashboard:'anydict') -> 'any_':
     ftp_server = FTPTestServer()
     ftp_server.start()
 
-    name = _Test_Name_Prefix + CryptoManager.generate_hex_string(8)
+    name = _Test_Name_Prefix + CryptoManager.generate_hex_string(32)
     conn_id = ''
 
     try:
@@ -205,7 +205,7 @@ class TestOutgoingFTPCommandShell:
         file_names:'strlist' = []
 
         for file_number in range(3):
-            hex_string = CryptoManager.generate_hex_string(8)
+            hex_string = CryptoManager.generate_hex_string(32)
             file_name = f'listed-{file_number}-{hex_string}.txt'
             _ = _write_remote_file(server, file_name, f'contents of file {file_number}')
             file_names.append(file_name)
@@ -236,7 +236,7 @@ class TestOutgoingFTPCommandShell:
 
         # Write a file whose contents nothing else could produce ..
         content = 'zato-ftp-shell-' + CryptoManager.generate_hex_string(32)
-        remote_name = 'fetched-' + CryptoManager.generate_hex_string(8) + '.txt'
+        remote_name = 'fetched-' + CryptoManager.generate_hex_string(32) + '.txt'
         _ = _write_remote_file(server, remote_name, content)
 
         # .. read it through the shell ..
@@ -259,8 +259,8 @@ class TestOutgoingFTPCommandShell:
         server = ftp_shell['server']
 
         # A file to move and a directory to move it into.
-        file_name = 'moved-' + CryptoManager.generate_hex_string(8) + '.txt'
-        directory = 'made-' + CryptoManager.generate_hex_string(8)
+        file_name = 'moved-' + CryptoManager.generate_hex_string(32) + '.txt'
+        directory = 'made-' + CryptoManager.generate_hex_string(32)
 
         _ = _write_remote_file(server, file_name, 'file to be moved')
 
@@ -293,7 +293,7 @@ class TestOutgoingFTPCommandShell:
         name = ftp_shell['name']
         server = ftp_shell['server']
 
-        file_name = 'multi-' + CryptoManager.generate_hex_string(8) + '.txt'
+        file_name = 'multi-' + CryptoManager.generate_hex_string(32) + '.txt'
         _ = _write_remote_file(server, file_name, 'multi line command test')
 
         _open_command_shell(page, base_url, name)
@@ -453,7 +453,7 @@ class TestOutgoingFTPCommandShell:
         # A port with nothing listening on it.
         closed_port = _find_closed_port()
 
-        name = _Test_Name_Prefix + CryptoManager.generate_hex_string(8)
+        name = _Test_Name_Prefix + CryptoManager.generate_hex_string(32)
         conn_id = ''
 
         try:
@@ -491,7 +491,7 @@ class TestOutgoingFTPCommandShell:
         server = ftp_shell['server']
 
         # A name that consists of digits alone.
-        hex_string = CryptoManager.generate_hex_string(8)
+        hex_string = CryptoManager.generate_hex_string(32)
         number = int(hex_string, 16)
         name = str(number)
 

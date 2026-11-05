@@ -13,6 +13,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from base64 import b64encode
 from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, OK
 
+# cryptography
+from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
+from cryptography.hazmat.primitives.hashes import SHA256
+from cryptography.x509 import load_der_x509_certificate
+
 # lxml
 import lxml.etree as etree
 
@@ -27,12 +32,13 @@ from zato.common.audit_log.api import AuditEvent
 from zato.common.soap.audit import Mask
 from zato.common.soap.client import SOAPClient
 from zato.common.soap.common import Content_Type, FaultCode, NS, SOAPException, SOAPFault, SOAPVersion
-from zato.common.soap.ebxml import decrypt_payload, EbXMLInfo, verify_payload
+from zato.common.soap.ebxml import EbXMLInfo
 from zato.common.soap.envelope import attach_body, build_envelope
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.security.wss import Mode
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.mime_ import new_content_id, Part
+from zato.common.util.xml_.xmlsec import canonicalize_inclusive, decode_base64, digest_bytes
 
 # Test helpers
 from client_fixtures import cdc_message as _cdc_message, sender_x509 as _sender_x509
@@ -41,7 +47,9 @@ from client_fixtures import cdc_message as _cdc_message, sender_x509 as _sender_
 # ################################################################################################################################
 
 if 0:
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
     from zato.common.typing_ import any_
+    RSAPublicKey = RSAPublicKey
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,8 +173,8 @@ class TestMTOM:
 # ################################################################################################################################
 
 class TestEbXML:
-    """ ebMS 2.0 message service exchanges - NHS Spine and Norway Helsenett shapes, including
-    the enterprise-certificate signing and encryption those frameworks put on the payloads.
+    """ ebMS 2.0 message service exchanges with synchronous acknowledgments, including
+    the XMLDSig signature over the envelope and its payloads.
     """
 
     def test_message_and_acknowledgment_over_mutual_tls(self, soap_mtls_server:'any_'):
@@ -199,11 +207,14 @@ class TestEbXML:
         assert acknowledgment.ref_to_message_id == info.message_id
         assert len(soap_mtls_server.last_request['parts']) == 1
 
-    def test_signed_and_encrypted_payload_roundtrip(self, soap_server:'any_', parties:'any_'):
-        soap_server.configure('/ebxml-secure', ebxml=True)
+    def test_signed_message_with_sync_acknowledgment_request(self, soap_server:'any_', parties:'any_'):
+        """ A signed message has one ds:Signature directly in the SOAP Header, after the request for
+        a synchronous acknowledgment, covering the envelope and each payload by its cid: URI.
+        """
+        soap_server.configure('/ebxml-signed', ebxml=True)
 
         config = {
-            'address': soap_server.url('/ebxml-secure'),
+            'address': soap_server.url('/ebxml-signed'),
             'soap_version': SOAPVersion.V11,
             'security': _sender_x509(parties, sign=False, encrypt=False),
         }
@@ -215,33 +226,50 @@ class TestEbXML:
         info.service = 'urn:helse:svc'
         info.action = 'Send'
 
-        original = b'<Melding>sensitive HIS payload</Melding>'
         part = Part()
         part.content_id = new_content_id()
-        part.data = original
+        part.data = b'<Melding>signed HIS payload</Melding>'
 
         client = SOAPClient(config)
-        acknowledgment = client.invoke_ebxml(info, [part], sign=True, encrypt=True)
+        acknowledgment = client.invoke_ebxml(info, [part], sign=True)
         client.close()
 
         assert acknowledgment.action == 'Acknowledgment'
 
-        # The payload that reached the server is encrypted, and its signature and wrapped key rode along.
+        # The header blocks are in the order the receiver processes them ..
+        header = soap_server.last_request['envelope'].find(f'{{{NS.SOAP11}}}Header')
+        tags = []
+
+        for element in header:
+            tags.append(element.tag)
+
+        assert tags == [
+            f'{{{NS.EBXML2}}}MessageHeader',
+            f'{{{NS.EBXML2}}}AckRequested',
+            f'{{{NS.EBXML2}}}SyncReply',
+            f'{{{NS.DS}}}Signature',
+        ]
+
+        # .. the payload reference is a digest over the octets of the part as it arrived ..
+        signature = header.find(f'{{{NS.DS}}}Signature')
+        signed_info = signature.find(f'{{{NS.DS}}}SignedInfo')
+        references = signed_info.findall(f'{{{NS.DS}}}Reference')
+
+        assert references[0].get('URI') == ''
+        assert references[1].get('URI') == f'cid:{part.content_id}'
+
         received_part = soap_server.last_request['parts'][0]
-        assert received_part.data != original
-        assert original not in received_part.data
+        payload_digest = references[1].find(f'{{{NS.DS}}}DigestValue').text
+        assert payload_digest == digest_bytes(received_part.data)
 
-        security = soap_server.last_request['envelope'].find(f'.//{{{NS.WSSE}}}Security')
-        signature = security.find(f'{{{NS.DS}}}Signature')
-        encrypted_key = security.find(f'{{{NS.XENC}}}EncryptedKey')
-        assert signature is not None
-        assert encrypted_key is not None
+        # .. and the signature value verifies against the certificate inline in the KeyInfo.
+        certificate_text = signature.find(f'.//{{{NS.DS}}}X509Certificate').text
+        certificate = load_der_x509_certificate(decode_base64(certificate_text))
+        assert certificate == parties.sender.signing_certificate
 
-        # The receiver decrypts the payload and verifies the signature over the recovered plaintext.
-        receiver_keystore = _make_receiver_keystore(parties)
-        decrypt_payload(encrypted_key, received_part, receiver_keystore)
-        assert received_part.data == original
-        _ = verify_payload(signature, received_part, receiver_keystore)
+        signature_value = decode_base64(signature.find(f'{{{NS.DS}}}SignatureValue').text)
+        public_key = cast_('RSAPublicKey', certificate.public_key())
+        public_key.verify(signature_value, canonicalize_inclusive(signed_info), PKCS1v15(), SHA256())
 
     def test_reply_payloads_reach_the_caller(self, soap_server:'any_'):
         """ An ebXML reply keeps its business document in a payload part, the body carrying only a
@@ -307,18 +335,6 @@ class TestEbXML:
 
         assert reply.action == 'Acknowledgment'
         assert reply.attachments == []
-
-# ################################################################################################################################
-
-def _make_receiver_keystore(parties:'any_'):
-    """ The receiver's keystore, holding its decryption key and the sender's pinned certificate.
-    """
-    from zato.common.util.xml_.keystore import new_keystore
-
-    out = new_keystore()
-    out.decryption_key = parties.receiver.decryption_key
-    out.peer_signing_certificate = parties.sender.signing_certificate
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

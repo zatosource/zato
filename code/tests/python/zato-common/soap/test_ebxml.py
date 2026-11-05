@@ -29,27 +29,27 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The NHS Spine party type - OCS codes plus a service instance.
-_nhs_party_type = 'urn:nhs:names:partyType:ocs+serviceInstance'
+# The party type of the tests - a node code plus a service instance.
+_party_type = 'urn:zato:b2b:test:party-type:node+instance'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _nhs_info():
-    """ Addressing details the way an NHS Spine MHS message carries them.
+def _info():
+    """ The addressing details of a business message between two test nodes.
     """
 
     # Our response to produce
     out = EbXMLInfo()
 
-    out.from_party = 'A1234-0000123'
-    out.from_party_type = _nhs_party_type
-    out.to_party = 'B5678-0000456'
-    out.to_party_type = _nhs_party_type
-    out.cpa_id = 'S1001A1234'
+    out.from_party = 'NODE1-0000123'
+    out.from_party_type = _party_type
+    out.to_party = 'NODE2-0000456'
+    out.to_party_type = _party_type
+    out.cpa_id = 'C1001A0042'
     out.conversation_id = 'C9E984B5-2F8C-4A6B-B1D3-DDBB1E9DE988'
-    out.service = 'urn:nhs:names:services:pdsquery'
-    out.action = 'QUPA_IN000006UK02'
+    out.service = 'urn:zato:b2b:test:services:records:query'
+    out.action = 'RecordQuery_v2'
 
     return out
 
@@ -65,25 +65,24 @@ def _reparse(envelope:'any_'):
 # ################################################################################################################################
 
 class TestMessageHeader:
-    """ The ebMS 2.0 MessageHeader - NHS Spine MHS and Norway Helsenett
-    both wrap their clinical payloads in it.
+    """ The ebMS 2.0 MessageHeader, which carries the addressing of every business message.
     """
 
     def test_header_roundtrip(self):
-        envelope = build_message(_nhs_info(), [])
+        envelope = build_message(_info(), [])
 
         parsed = parse_message_header(_reparse(envelope))
 
-        assert parsed.from_party == 'A1234-0000123'
-        assert parsed.from_party_type == _nhs_party_type
-        assert parsed.to_party == 'B5678-0000456'
-        assert parsed.cpa_id == 'S1001A1234'
+        assert parsed.from_party == 'NODE1-0000123'
+        assert parsed.from_party_type == _party_type
+        assert parsed.to_party == 'NODE2-0000456'
+        assert parsed.cpa_id == 'C1001A0042'
         assert parsed.conversation_id == 'C9E984B5-2F8C-4A6B-B1D3-DDBB1E9DE988'
-        assert parsed.service == 'urn:nhs:names:services:pdsquery'
-        assert parsed.action == 'QUPA_IN000006UK02'
+        assert parsed.service == 'urn:zato:b2b:test:services:records:query'
+        assert parsed.action == 'RecordQuery_v2'
 
     def test_message_id_and_timestamp_are_generated(self):
-        envelope = build_message(_nhs_info(), [])
+        envelope = build_message(_info(), [])
 
         parsed = parse_message_header(_reparse(envelope))
 
@@ -95,17 +94,17 @@ class TestMessageHeader:
         assert timestamp.text.endswith('Z')
 
     def test_ref_to_message_id_on_replies(self):
-        info = _nhs_info()
-        info.ref_to_message_id = 'ORIGINAL-ID@spine'
+        info = _info()
+        info.ref_to_message_id = 'ORIGINAL-ID@b2b.test'
 
         envelope = build_message(info, [])
         parsed = parse_message_header(_reparse(envelope))
 
-        assert parsed.ref_to_message_id == 'ORIGINAL-ID@spine'
+        assert parsed.ref_to_message_id == 'ORIGINAL-ID@b2b.test'
 
     def test_header_is_soap11_and_must_understand(self):
-        # NHS Spine ebXML runs on SOAP 1.1.
-        envelope = build_message(_nhs_info(), [])
+        # ebMS 2.0 is bound to SOAP 1.1.
+        envelope = build_message(_info(), [])
 
         assert envelope.tag == f'{{{NS.SOAP11}}}Envelope'
 
@@ -127,27 +126,27 @@ class TestMessageHeader:
 
 class TestManifestAndSwA:
     """ The Manifest plus SwA packaging - the payload travels as a MIME part
-    the body's Manifest points at, per HIS 1037:2011 and the Spine MHS spec.
+    that the Manifest of the body references, as ebMS 2.0 defines it.
     """
 
     def test_manifest_references_each_part(self):
         part = Part()
-        part.content_id = new_content_id('spine')
+        part.content_id = new_content_id('b2b.test')
         part.content_type = 'text/xml'
-        part.data = b'<QUPA_IN000006UK02>patient query</QUPA_IN000006UK02>'
+        part.data = b'<RecordQuery>record query</RecordQuery>'
 
-        envelope = build_message(_nhs_info(), [part])
+        envelope = build_message(_info(), [part])
 
         references = get_manifest_references(envelope)
         assert references == [part.content_id]
 
     def test_swa_packaging_roundtrip(self):
         part = Part()
-        part.content_id = new_content_id('spine')
+        part.content_id = new_content_id('b2b.test')
         part.content_type = 'text/xml'
-        part.data = b'<QUPA_IN000006UK02>patient query</QUPA_IN000006UK02>'
+        part.data = b'<RecordQuery>record query</RecordQuery>'
 
-        envelope = build_message(_nhs_info(), [part])
+        envelope = build_message(_info(), [part])
         body, content_type = build_swa(to_bytes(envelope), [part], SOAPVersion.V11)
 
         # The other side unpacks the multipart and follows the manifest to the payload.
@@ -155,7 +154,7 @@ class TestManifestAndSwA:
         received = parse_envelope(envelope_bytes)
 
         parsed = parse_message_header(received)
-        assert parsed.action == 'QUPA_IN000006UK02'
+        assert parsed.action == 'RecordQuery_v2'
 
         references = get_manifest_references(received)
         assert len(parts) == 1
@@ -163,7 +162,7 @@ class TestManifestAndSwA:
         assert parts[0].data == part.data
 
     def test_no_manifest_without_parts(self):
-        envelope = build_message(_nhs_info(), [])
+        envelope = build_message(_info(), [])
 
         references = get_manifest_references(envelope)
         assert references == []

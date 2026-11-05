@@ -100,9 +100,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
             _ = self.invoke_enmasse(config_path, server_dir=self.environment.server_dir)
 
         except ErrorReturnCode as e:
-            stdout:'bytes' = e.stdout # type: bytes
-            stdout = stdout.decode('utf8') # type: ignore
-            stderr:'str' = e.stderr
+            stdout = e.stdout.decode('utf8')
+            stderr = e.stderr.decode('utf8')
 
             self._warn_on_error(stdout, stderr)
             self.fail(f'Caught an exception while invoking enmasse; stdout -> {stdout}')

@@ -51,7 +51,7 @@ _echo_arguments = {'invoice_id': 'INV-2026-0042'}
 
 # The columns of a row every record carries when they are set
 _compared_columns = ('cid', 'cid_sequence', 'source', 'event_type', 'object_name', 'msg_id', 'correl_id', 'ext_client_id',
-    'pub_time_iso', 'endpoint', 'sub_key', 'size', 'priority', 'outcome', 'application_outcome', 'classification', 'status',
+    'endpoint', 'sub_key', 'size', 'priority', 'outcome', 'application_outcome', 'classification', 'status',
     'duration_ms')
 
 # What a log line of the export starts with, with the address of the collector following
@@ -95,9 +95,8 @@ def _outsider_token() -> 'str':
 
 # ################################################################################################################################
 
-def _iso_to_ns(value:'str') -> 'int':
-    parsed = datetime.fromisoformat(value)
-    out = int(parsed.timestamp()) * 1_000_000_000 + parsed.microsecond * 1000
+def _to_ns(value:'datetime') -> 'int':
+    out = int(value.timestamp()) * 1_000_000_000 + value.microsecond * 1000
     return out
 
 # ################################################################################################################################
@@ -138,6 +137,14 @@ def _assert_record_matches_row(record:'anydict', row:'anydict') -> 'None':
         else:
             assert attributes[key] == value, f'{key}: expected `{value}`, got `{attributes.get(key)}`'
 
+    # .. the publication time as ISO 8601 when it is set ..
+    pub_time_key = _column('pub_time')
+
+    if (pub_time := row['pub_time']) is None:
+        assert pub_time_key not in attributes, f'{pub_time_key} should be absent, got `{attributes[pub_time_key]}`'
+    else:
+        assert attributes[pub_time_key] == pub_time.isoformat()
+
     # .. server_name and data have no column attribute ..
     assert _column('server_name') not in attributes
     assert _column('data') not in attributes
@@ -150,7 +157,7 @@ def _assert_record_matches_row(record:'anydict', row:'anydict') -> 'None':
     # .. the event name, the body and the time.
     assert record['event_name'] == f'{MappingCtx.Prefix}.' + row['event_type']
     assert record['body'] == '{} {} {} {}'.format(row['source'], row['event_type'], row['object_name'], row['outcome'])
-    assert record['time_unix_nano'] == _iso_to_ns(row['event_time_iso'])
+    assert record['time_unix_nano'] == _to_ns(row['event_time'])
     assert record['observed_time_unix_nano'] >= record['time_unix_nano']
 
     if row['outcome'] == AuditOutcome.Error:

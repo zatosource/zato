@@ -197,7 +197,7 @@ class ZatoApplication:
         def request_handler(request_ctx:'dict') -> 'tuple':
             return handle_http_request(server, request_ctx, new_cid_server, local_tz_offset_secs)
 
-        # .. which the OpenAPI console relays its requests through as well, once the server process has started ..
+        # .. which the API portal relays its requests through as well, once the server process has started ..
         server.http_request_handler = request_handler
 
         # .. and initialize the server.

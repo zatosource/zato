@@ -21,7 +21,7 @@ from zato.common.pubsub.outgoing import Direction_In, Direction_Out, get_directi
     Key_Pub_Time, locate_outgoing_conn
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.api import new_msg_id
-from zato.common.util.time_ import utcnow
+from zato.common.util.time_ import parse_utc, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,11 +243,14 @@ def _insert_dlq_audit_event(
     if not audit_log:
         return
 
+    # The envelope carries the publication time as an ISO 8601 string
+    pub_time = parse_utc(envelope[Key_Pub_Time])
+
     _ = audit_log.insert(AuditSource.PubSub, AuditEvent.DLQ, dlq_topic_name,
         cid=cid,
         msg_id=dlq_msg_id,
         correl_id=cid,
-        pub_time_iso=envelope[Key_Pub_Time],
+        pub_time=pub_time,
         endpoint=envelope[Key_Conn_Name],
         sub_key=get_dlq_sub_key(envelope[Key_Conn_Type], envelope[Key_Conn_ID]),
         size=len(data),

@@ -20,10 +20,6 @@ function apply_patches() {
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/requests/models.py.diff
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/requests/sessions.py.diff
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/ws4py/server/geventserver.py.diff
-    patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/dialects/postgresql/pg8000.py.diff
-    patch --forward -p0 -d $localpath/eggs < $localpath/patches/pg8000/core.py.diff
-
-    patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/crud.py.diff || true
 }
 
 # Install libraries using uv

@@ -34,7 +34,7 @@ _Test_Name_Prefix = 'test.rest.internal.' + rand_string() + '.'
 _Echo_Service = 'demo.echo'
 
 # The built-in pub/sub channels are internal and must never expose Invoke or Audit log links
-_Internal_Channels = ('pubsub.rest.publish', 'pubsub.rest.get-messages')
+_Internal_Channels = ('pubsub.rest.publish', 'pubsub.rest.get-messages', 'pubsub.rest.ack-messages')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -243,10 +243,10 @@ class GroupsManager:
         # Work in a new SQL transaction ..
         with closing(self.session()) as session:
 
-            q = select([
+            q = select(
                 ModelGenericObjectTable.c.parent_object_id,
                 func.count(ModelGenericObjectTable.c.parent_object_id),
-                ]).\
+                ).\
                 where(and_(
                     ModelGenericObjectTable.c.type_ == Groups.Type.Group_Member,
                     ModelGenericObjectTable.c.subtype == group_type,

@@ -1,19 +1,19 @@
 .PHONY: build install clean default \
-	server-build scheduler-build io-build common-core-build queue-bridge-build mq-client \
-	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean rust-target-prune \
-	server-install scheduler-install io-install common-core-install queue-bridge-install \
+	server-build scheduler-build io-build common-core-build pg-wire-build queue-bridge-build mq-client \
+	server-clean scheduler-clean io-clean common-core-clean pg-wire-clean queue-bridge-clean rust-target-prune \
+	server-install scheduler-install io-install common-core-install pg-wire-install queue-bridge-install \
 	health-install health-build health-clean \
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener sftp openapi-console openapi-console-demo openapi-console-tutorial mcp-demo \
+	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
-	test-edifact test-soap test-openapi test-openapi-console-live \
-	test-llm \
+	test-edifact test-soap test-openapi test-api-portal-live \
+	test-llm test-outconn-tls-local-docker \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
@@ -53,7 +53,7 @@ MQ_CLIENT_DIR := $(CURDIR)/lib/mqm
 MQ_CLIENT_URL := https://zato.io/mqclient-linux-x64.tar.gz
 MQ_CLIENT_LIB := $(MQ_CLIENT_DIR)/lib64/libmqm_r.so
 
-# Scalar bundle for the OpenAPI console - the version is pinned in package.json
+# Scalar bundle for the API portal - the version is pinned in package.json
 SCALAR_PACKAGE_JSON := $(CURDIR)/code/zato-openapi/package.json
 SCALAR_BUNDLE := $(CURDIR)/code/zato-openapi/src/zato/openapi/app/static/scalar/scalar.standalone.js
 
@@ -109,7 +109,7 @@ PERF_ARGS     := $(if $(HEAVY),heavy,) $(if $(JSON),json,) $(PERF_TIER)
 
 default: dev
 
-build: common-core-build server-build scheduler-build io-build queue-bridge-build
+build: common-core-build pg-wire-build server-build scheduler-build io-build queue-bridge-build
 # build: ... fhir-rust-build  # FHIR commented out for now
 
 server-build: rust-target-prune
@@ -136,6 +136,12 @@ common-core-build: rust-target-prune
 	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml
+
+pg-wire-build: rust-target-prune
+	@echo ">>> Building pg-wire"
+	$(LOAD_CARGO_ENV) && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_pg_wire/Cargo.toml
 
 mq-client:
 	@if [ ! -f $(MQ_CLIENT_LIB) ]; then \
@@ -186,26 +192,38 @@ queue-bridge:
 		$(CURDIR)/code/bin/_zato_queue_bridge; \
 	fi
 
+on-prem-gateway: ## The on-prem gateway built and run from the source tree in Zato_On_Prem_Gateway_Root, enrolled with the hub on this machine.
+	token=$$($(ZATO_PY) -m zato.server.on_prem_gateway_local --server-dir $(Zato_Server_Dir)) && \
+		$(MAKE) -C $(Zato_On_Prem_Gateway_Root) run Token=$$token
+
+# Without a load balancer, the address in an enrollment token has the port of the hub
+on-prem-gateway-hub: ## The on-prem gateway hub built and run from the source tree in Zato_On_Prem_Gateway_Root.
+	$(MAKE) -C $(Zato_On_Prem_Gateway_Root) hub
+
 file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
 
 sftp: ## Three development OpenSSH SFTP servers in containers on ports 33101-33103 for local file transfer work, each logging under its own label.
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/sftp_dev/run.py
 
-openapi-console:
+api-portal:
 	$(ZATO_PY) -m zato.openapi.app.run
 
-openapi-console-demo: export Zato_OpenAPI_Console_Header_Title = Demo console
-openapi-console-demo: ## Healthcare demo for the OpenAPI console - services, security definitions, groups and REST channels, then the console itself.
-	$(ZATO_PY) -m zato.openapi.console.demo.install --server-dir $(Zato_Server_Dir) --zato $(CURDIR)/code/bin/zato
-	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
-	$(MAKE) openapi-console
+api-portal-demo: export Zato_API_Portal_Header_Title = Demo portal
+api-portal-demo: ## Healthcare demo for the API portal - services, security definitions, groups and REST channels, then the portal itself.
+	$(ZATO_PY) -m zato.openapi.portal.demo.install --server-dir $(Zato_Server_Dir) --zato $(CURDIR)/code/bin/zato
+	echo "API portal: http://localhost:$(Zato_Port_API_Portal)"
+	$(MAKE) api-portal
 
-openapi-console-tutorial: export Zato_OpenAPI_Console_Header_Title = Main tutorial
-openapi-console-tutorial: ## The main tutorial for the OpenAPI console - its service, connections, API key, REST channel and scheduler job, then the console itself.
-	$(ZATO_PY) -m zato.openapi.console.demo.tutorial --server-dir $(Zato_Server_Dir)
-	echo "OpenAPI console: http://localhost:$(Zato_Port_OpenAPI_Console)/openapi/console"
-	$(MAKE) openapi-console
+b2b-portal: ## A static mockup of the B2B portal, with sample data and no server behind it.
+	echo "B2B portal: http://localhost:8186/"
+	$(ZATO_PY) -m zato.common.b2b.portal.run
+
+api-portal-tutorial: export Zato_API_Portal_Header_Title = Main tutorial
+api-portal-tutorial: ## The main tutorial for the API portal - its service, connections, API key, REST channel and scheduler job, then the portal itself.
+	$(ZATO_PY) -m zato.openapi.portal.demo.tutorial --server-dir $(Zato_Server_Dir)
+	echo "API portal: http://localhost:$(Zato_Port_API_Portal)"
+	$(MAKE) api-portal
 
 # The container the MCP healthcare demo runs in and the host ports its Dashboard and its server are published on
 Zato_MCP_Demo_Image          ?= ghcr.io/zatosource/zato-4.1:latest
@@ -268,6 +286,13 @@ listener:
 # The name the Docker image's entrypoint invokes
 file-pickup-listener: listener
 
+# Where the certificates, keys and CA certificates that outgoing connections read are kept
+Zato_TLS_Material_Dir ?= /opt/hot-deploy/ssl
+
+# Reports changed TLS material to the server, which refreshes the outgoing connections that read it
+tls-material-listener:
+	py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py $(Zato_TLS_Material_Dir) --tls-material --observer $(Zato_File_Listener_Observer)
+
 haproxy:
 	@mkdir -p $(HAPROXY_DEV_DIR)
 	@touch $(HOME)/env/qs-1/blocked-paths.txt
@@ -297,7 +322,7 @@ haproxy:
 		$(HAPROXY_CFG) > $(HAPROXY_DEV_DIR)/haproxy.cfg
 	Zato_Port_Server=$(Zato_Port_Server) \
 	Zato_Port_Dashboard=$(Zato_Port_Dashboard) \
-	Zato_Port_OpenAPI_Console=$(Zato_Port_OpenAPI_Console) \
+	Zato_Port_API_Portal=$(Zato_Port_API_Portal) \
 	Zato_Port_Load_Balancer=$(Zato_Port_Load_Balancer) \
 	Zato_Port_MLLP=$(Zato_Port_MLLP) \
 	Zato_Port_MLLP_SSL=$(Zato_Port_MLLP_SSL) \
@@ -311,6 +336,7 @@ dev:
 	$$Zato_Dev_Prefix -t server -- bash -c 'make -C $(CURDIR) server; exec bash -i'
 	$$Zato_Dev_Prefix -t scheduler -- bash -c 'make -C $(CURDIR) scheduler; exec bash -i'
 	$$Zato_Dev_Prefix -t listener -- bash -c 'make -C $(CURDIR) listener; exec bash -i'
+	$$Zato_Dev_Prefix -t on-prem-gateway-hub -- bash -c 'make -C $(CURDIR) on-prem-gateway-hub; exec bash -i'
 	$(MAKE) haproxy
 
 # ############################################################################
@@ -343,6 +369,8 @@ io-install: io-build
 
 common-core-install: common-core-build
 
+pg-wire-install: pg-wire-build
+
 queue-bridge-install: queue-bridge-build
 
 # ############################################################################
@@ -363,6 +391,9 @@ io-clean:
 
 common-core-clean:
 	rm -rf $(ZATO_RUST)/zato_common_core/target
+
+pg-wire-clean:
+	rm -rf $(ZATO_RUST)/zato_pg_wire/target
 
 queue-bridge-clean:
 	rm -rf $(ZATO_RUST)/zato_queue_bridge/target
@@ -425,6 +456,10 @@ pyright:
 		zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
 		tests/python/
 
+# Pyright worker count and Node.js heap limit - the default heap of about 4 GB forces repeated type cache evictions over this many files
+Zato_Pyright_Threads := 8
+Zato_Pyright_Heap_MB := 16384
+
 # Every first-party Python tree
 Zato_Pyright_All_Paths := \
 	zato-cli/src \
@@ -441,7 +476,7 @@ Zato_Pyright_All_Paths := \
 
 pyright-all:
 	@echo "Running Python type checks on every first-party tree from $(CURDIR)/code"
-	cd $(CURDIR)/code && PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) --project pyright-all.json $(Zato_Pyright_All_Paths)
+	cd $(CURDIR)/code && NODE_OPTIONS=--max-old-space-size=$(Zato_Pyright_Heap_MB) PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) --project pyright-all.json --threads $(Zato_Pyright_Threads) $(Zato_Pyright_All_Paths)
 
 test-lint: ## Static analysis only - no test is executed. The first stage of test-all.
 	$(Zato_Log_Reset)
@@ -489,7 +524,7 @@ sbom: ## Generate a CycloneDX SBOM of the Python environment.
 	print(f'>>> Wrote {path} ({len(components)} {suffix})'); \
 	"
 
-scalar-update: ## Re-download the Scalar bundle pinned in zato-openapi/package.json into the console's static directory.
+scalar-update: ## Re-download the Scalar bundle pinned in zato-openapi/package.json into the portal's static directory.
 	version=$$($(ZATO_PY) -c "import json; print(json.load(open('$(SCALAR_PACKAGE_JSON)'))['dependencies']['@scalar/api-reference'])") && \
 	echo ">>> Downloading @scalar/api-reference@$$version" && \
 	curl -fL https://cdn.jsdelivr.net/npm/@scalar/api-reference@$$version/dist/browser/standalone.min.js -o $(SCALAR_BUNDLE) && \
@@ -590,6 +625,11 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/zato-server/test/zato/commands_/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_commands -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+# The TLS material listener reads inotify events in an OS thread, which a gevent-patched process blocks
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/file_transfer/test_tls_material_listener.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_tls_material_listener -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 # fuzz_disabled
 test-server-fuzz: ## Server property, fuzz and mutation tests.
@@ -651,6 +691,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_service_subscriber/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
@@ -951,21 +992,21 @@ test-audit-export: ## Audit log export to OpenTelemetry - the offline mapping an
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-openapi: ## Offline OpenAPI tests - the type mapping of models and annotations, the generator, the console's document, client and relay.
+test-openapi: ## Offline OpenAPI tests - the type mapping of models and annotations, the generator, the portal's document, client and relay.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-openapi/generator/ \
-		$(CURDIR)/code/tests/python/zato-openapi/console_client/ \
-		$(CURDIR)/code/tests/python/zato-server/openapi_console/ \
+		$(CURDIR)/code/tests/python/zato-openapi/portal_client/ \
+		$(CURDIR)/code/tests/python/zato-server/api_portal/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_openapi -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-openapi-console-live: ## OpenAPI console tests against a live server - the document after a start, after a restart and per channel method.
+test-api-portal-live: ## API portal tests against a live server - the document after a start, after a restart and per channel method.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/openapi_console_live/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_openapi_console_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(CURDIR)/code/tests/python/zato-server/api_portal_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_api_portal_live -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
@@ -1022,7 +1063,15 @@ test-llm: ## Every outgoing LLM test - the offline simulator, browser lifecycle,
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-sql: ## Every SQL test - Snowflake and Redshift against local protocol simulators, offline and through a live Zato server.
+test-outconn-tls-local-docker: ## Replaced client certificates of outgoing REST and SOAP connections in a container that the suite starts with the image's entrypoint.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/outconn_tls_local_docker/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_outconn_tls_local_docker -o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Log)
+
+test-sql: ## Every SQL test - Redshift against a local protocol simulator, offline and through a live Zato server.
 	$(Zato_Log_Reset)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/sql_cloud/ \
@@ -1255,7 +1304,6 @@ test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audi
 		echo "pytest exited with code 3 (internal error) - the test run itself broke, this is not an ordinary test failure, look for INTERNALERROR lines above"; \
 	fi; \
 	exit $$status
-	$(MAKE) -C $(CURDIR)/code/zato-web-admin test $(Zato_Log)
 
 test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain and TLS.
 	$(Zato_Log_Reset)
@@ -1527,7 +1575,7 @@ Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
-	test-openapi-console-live test-file-transfer
+	test-api-portal-live test-file-transfer
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui
@@ -1664,6 +1712,7 @@ CLIPPY_CMD = . $(HOME)/.cargo/env && CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) \
 format-zato: ## Check Rust formatting across all public crates.
 	. $(HOME)/.cargo/env && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    -- --check && \
+	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             -- --check && \
@@ -1674,6 +1723,7 @@ format: format-zato ## Check Rust formatting everywhere.
 clippy-zato: rust-target-prune ## Clippy all public Rust crates.
 	. $(HOME)/.cargo/env && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
+	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
@@ -1699,6 +1749,7 @@ ZATO_DYLINT_FLAGS := -A non-thread-safe-call-in-test $(ZATO_DYLINT_FLAGS_COMMON)
 dylint-zato: rust-target-prune ## Dylint all public Rust crates.
 	. $(HOME)/.cargo/env && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    -- --tests && \
+	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             -- --tests && \
@@ -1709,6 +1760,7 @@ dylint: dylint-zato ## Dylint everything.
 rust-deny-zato: ## Dependency audit (advisories, licenses, bans) for public crates.
 	. $(HOME)/.cargo/env && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
@@ -1736,7 +1788,7 @@ GEIGER_NOISE := ^Failed to match \(ignoring source\) package:|^Failed to parse f
 
 geiger-zato: ## Report unsafe usage in public crate dependency trees.
 	. $(HOME)/.cargo/env && \
-	for crate in zato_common_core zato_server_core zato_scheduler_core; do \
+	for crate in zato_common_core zato_pg_wire zato_server_core zato_scheduler_core; do \
 		out=$$(cargo geiger --manifest-path $(ZATO_RUST_DIR)/$$crate/Cargo.toml 2>&1); \
 		status=$$?; \
 		echo "$$out" | grep -Ev '$(GEIGER_NOISE)'; \
@@ -1773,7 +1825,7 @@ HAPROXY_DEV_DIR := /tmp/zato-haproxy-dev
 # so a dev run supplies the same values the image's own defaults use
 Zato_Port_Server ?= 17010
 Zato_Port_Dashboard ?= 8183
-Zato_Port_OpenAPI_Console ?= 8185
+Zato_Port_API_Portal ?= 8185
 Zato_Port_Load_Balancer ?= 11223
 Zato_Port_MLLP ?= 11553
 Zato_Port_MLLP_SSL ?= 11554
@@ -1795,7 +1847,7 @@ HL7_DEV_HTTP_LB_PORT  := 21225
 HL7_DEV_REST_PORT     := 27010
 HL7_DEV_MLLP_PORT     := 21312
 HL7_DEV_DASH_PORT     := 28183
-HL7_DEV_CONSOLE_PORT  := 28185
+HL7_DEV_PORTAL_PORT   := 28185
 HL7_DEV_STATS_PORT    := 28404
 
 hl7-haproxy: ## Start HAProxy in full debug mode on dev ports.
@@ -1811,7 +1863,7 @@ hl7-haproxy: ## Start HAProxy in full debug mode on dev ports.
 		$(HAPROXY_CFG) > $(HL7_DEV_DIR)/haproxy.cfg
 	Zato_Port_Server=$(HL7_DEV_REST_PORT) \
 	Zato_Port_Dashboard=$(HL7_DEV_DASH_PORT) \
-	Zato_Port_OpenAPI_Console=$(HL7_DEV_CONSOLE_PORT) \
+	Zato_Port_API_Portal=$(HL7_DEV_PORTAL_PORT) \
 	Zato_Port_Load_Balancer=$(HL7_DEV_FRONTEND_PORT) \
 	Zato_Port_MLLP=$(HL7_DEV_MLLP_PORT) \
 	Zato_Load_Balancer_Stats_Password=dev \

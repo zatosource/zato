@@ -15,6 +15,7 @@ from time import monotonic, sleep
 import pytest
 
 # Zato
+from audit_log_ui import select_row
 from audit_toggle import wait_for_table
 
 # ################################################################################################################################
@@ -29,8 +30,12 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-# The endpoint of the Dashboard view the row action talks to
+# The endpoint of the Dashboard view the resubmit action talks to
 _Resubmit_Url_Path = '/zato/audit-log/resubmit/'
+
+# The resubmit action of the event the pane holds - the list offers the action only on a row
+# whose outcome is not ok, while the pane offers it on every event its source can resubmit.
+_Pane_Resubmit_Link_Selector = '.audit-log-pane-head .audit-log-pane-actions a.audit-log-resubmit-link'
 
 # How long to keep retrying while the connections of an exchange propagate to the server
 _Propagation_Timeout = 60
@@ -57,11 +62,21 @@ def row_selector_of_event(event_label:'str') -> 'str':
 
 # ################################################################################################################################
 
-def get_resubmit_label(page:'Page', row_selector:'str') -> 'str':
-    """ Returns the text of the resubmit action of one row. The text is read out of the DOM
-    rather than the rendered text because a list drawn narrow drops its action column with CSS.
+def _select_event(page:'Page', row_selector:'str') -> 'None':
+    """ Selects the row of one event and waits until the pane holds that event, which is where
+    the resubmit action of every resubmittable event is offered.
     """
-    out = page.eval_on_selector(row_selector + ' a.audit-log-resubmit-link', 'element => element.textContent')
+    row = page.query_selector(row_selector)
+    select_row(page, row)
+
+# ################################################################################################################################
+
+def get_resubmit_label(page:'Page', row_selector:'str') -> 'str':
+    """ Returns the text of the resubmit action of one row's event, as the pane offers it.
+    """
+    _select_event(page, row_selector)
+
+    out = page.inner_text(_Pane_Resubmit_Link_Selector)
     return out
 
 # ################################################################################################################################
@@ -75,15 +90,16 @@ def _is_resubmit_response(response:'any_') -> 'bool':
 # ################################################################################################################################
 
 def click_resubmit(page:'Page', row_selector:'str') -> 'anydict | None':
-    """ Clicks the resubmit action of one row and returns the parsed report, or None if the endpoint
-    did not answer with one.
+    """ Clicks the resubmit action of one row's event in the pane and returns the parsed report,
+    or None if the endpoint did not answer with one.
     """
-    selector = row_selector + ' a.audit-log-resubmit-link'
 
-    # The click goes through the DOM rather than the pointer because a list drawn narrow
-    # drops its action column with CSS - the delegated handler fires either way.
+    # The pane is brought to this row's event first ..
+    _select_event(page, row_selector)
+
+    # .. and its resubmit action is clicked.
     with page.expect_response(_is_resubmit_response, timeout=_Response_Timeout_Ms) as response_info:
-        page.eval_on_selector(selector, 'element => element.click()')
+        page.click(_Pane_Resubmit_Link_Selector)
 
     response = response_info.value
 

@@ -67,6 +67,30 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
+    /* The classes of one text row - a tri-state row wears its state, the included look
+       being the picked one and the excluded look its own, and a two-state row only knows picked */
+    ns.select.row_class = function(value, config) {
+        var out = 'zato-dropdown-item';
+
+        if (config.get_state) {
+            var state = config.get_state(value);
+
+            if (state === 'included') {
+                out += ' zato-dropdown-item-selected';
+            }
+            else if (state === 'excluded') {
+                out += ' zato-dropdown-item-excluded';
+            }
+        }
+        else if (config.is_picked(value)) {
+            out += ' zato-dropdown-item-selected';
+        }
+
+        return out;
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
     /* One row of the menu. item_style 'value_label' draws the value and its label as
        two spans - the suggestion flavour - and 'text' draws one plain span, the select
        flavour, marked when config.is_picked says the value is a picked one. */
@@ -86,22 +110,8 @@
             row.appendChild(label_span);
         }
         else {
-
-            // A tri-state row wears its state - the included look is the picked one,
-            // the excluded look is its own - and a two-state row only knows picked
-            if (config.get_state) {
-                var state = config.get_state(item.value);
-
-                if (state === 'included') {
-                    row.className = 'zato-dropdown-item zato-dropdown-item-selected';
-                }
-                else if (state === 'excluded') {
-                    row.className = 'zato-dropdown-item zato-dropdown-item-excluded';
-                }
-            }
-            else if (config.is_picked(item.value)) {
-                row.className = 'zato-dropdown-item zato-dropdown-item-selected';
-            }
+            row.className = ns.select.row_class(item.value, config);
+            row.setAttribute('data-value', item.value);
 
             var text_span = document.createElement('span');
             text_span.className = 'zato-dropdown-item-text';
@@ -120,11 +130,13 @@
         row.onclick = function() {
 
             // A toggling pick leaves the menu up, so several can be picked in one
-            // visit, and the rows are redrawn so every mark stays truthful - the
-            // pick's own, and the All row's, which stands for no picks at all ..
+            // visit, and the marks of the rows are set again in place so every one
+            // stays truthful - the pick's own, and the All row's, which stands for
+            // no picks at all. The rows themselves stay, so the one under the pointer
+            // keeps its hover look ..
             if (config.toggle_pick) {
                 config.on_select(item.value);
-                config.rerender();
+                config.remark();
             }
 
             // .. a kept-open pick takes its row along, the suggestion flavour ..
@@ -251,6 +263,19 @@
             }
         };
 
+        // The keyboard's active row stays active whatever mark it now wears
+        config.remark = function() {
+            var marked_rows = rows_host.querySelectorAll('.zato-dropdown-item');
+
+            for (var row_idx = 0; row_idx < marked_rows.length; row_idx++) {
+                var row = marked_rows[row_idx];
+                var is_active = row.classList.contains(active_row_class);
+
+                row.className = ns.select.row_class(row.getAttribute('data-value'), config);
+                row.classList.toggle(active_row_class, is_active);
+            }
+        };
+
         if (config.with_filter) {
             var filter_input = document.createElement('input');
             filter_input.type = 'text';
@@ -309,15 +334,17 @@
     /* A select - a trigger showing what is picked, the menu underneath picking it. config:
          host:        selector or element the trigger is rendered into
          trigger_cls: the classes the trigger wears - the page's own look, not the kit's
-         label:       what the select is called, standing before the value
+         label:       what the select is called, standing before the value, and an empty
+                      string for a select whose label stands outside of it
          groups:      [{group, items: [{value, label}]}]
          value:       the value picked at the start
          on_change:   callback(value), called on picks that change the value
        With multi: true, several values can be picked at once - picks toggle and the menu
        stays up. Then `values` replaces `value`, on_change receives the picked list,
        `empty_label` is what the trigger says when nothing is picked and `many_label`
-       the word after the count when more than one is. The menu opens with an All row
-       at the top, named by `empty_label` - picking it lets every other pick go.
+       the word after the count when more than one is. With all_row: true, the menu
+       opens with an All row at the top, named by `empty_label` - picking it lets every
+       other pick go.
        An optional `on_close` is fired once when the menu goes away, which is where
        a page that reloads on its filters applies what was toggled in one visit.
        With tri_state: true on top of multi, every item carries one of three states and
@@ -329,13 +356,14 @@
        mid-sentence names its own form there and every other value keeps its label.
        Picks of both kinds at once read by the includes with the excluded ones
        counted after them, `excluded_label` being the word after that count.
-       Returns {set_groups} plus {get_value, set_value} or {get_values, set_values},
+       Returns {set_groups, fit_width} plus {get_value, set_value} or {get_values, set_values},
        and a tri-state select adds {get_excluded, set_excluded}. */
     ns.select.create = function(config) {
         var host = $(config.host)[0];
         var groups = config.groups;
         var multi = config.multi === true;
         var tri_state = config.tri_state === true;
+        var all_row = config.all_row === true;
 
         var current_value = config.value;
         var current_values = config.values;
@@ -352,10 +380,12 @@
         var trigger = document.createElement('span');
         trigger.className = 'dashboard-select-trigger ' + config.trigger_cls;
 
-        var label_span = document.createElement('span');
-        label_span.className = 'dashboard-select-label';
-        label_span.textContent = config.label;
-        trigger.appendChild(label_span);
+        if (config.label !== '') {
+            var label_span = document.createElement('span');
+            label_span.className = 'dashboard-select-label';
+            label_span.textContent = config.label;
+            trigger.appendChild(label_span);
+        }
 
         var value_span = document.createElement('span');
         value_span.className = 'dashboard-select-value';
@@ -549,11 +579,11 @@
                 return;
             }
 
-            // A multi-select's menu opens with an All row of its own at the top,
+            // A multi-select's menu may open with an All row of its own at the top,
             // the one pick that stands for no picks at all
             var menu_groups = groups;
 
-            if (multi) {
+            if (all_row) {
                 var all_group = {group: '', items: [{value: all_value, label: config.empty_label}]};
                 menu_groups = [all_group].concat(groups);
             }
@@ -583,6 +613,37 @@
             set_groups: function(new_groups) {
                 groups = new_groups;
                 apply();
+            },
+
+            /* The trigger takes the width of the widest value it can show - nothing picked,
+               any one item, or the count of every item - so no pick ever resizes it.
+               A trigger off screen measures nothing, so this is called once it is shown. */
+            fit_width: function() {
+                var texts = [config.empty_label];
+
+                for (var group_idx = 0; group_idx < groups.length; group_idx++) {
+                    var items = groups[group_idx].items;
+
+                    for (var item_idx = 0; item_idx < items.length; item_idx++) {
+                        texts.push(items[item_idx].label);
+                    }
+                }
+
+                if (multi) {
+                    texts.push(item_count() + ' ' + config.many_label);
+                }
+
+                trigger.style.width = '';
+
+                var widest = 0;
+
+                for (var text_idx = 0; text_idx < texts.length; text_idx++) {
+                    value_span.textContent = texts[text_idx];
+                    widest = Math.max(widest, trigger.offsetWidth);
+                }
+
+                apply();
+                trigger.style.width = widest + 'px';
             },
 
             /* A disabled select stands aside - its menu, if up, goes away with it and

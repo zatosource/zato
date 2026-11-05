@@ -9,8 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ConsoleAuthType:
-    """ The kinds of credentials callers sign in to the OpenAPI console with. Basic Auth covers every username
+class PortalAuthType:
+    """ The kinds of credentials callers sign in to the API portal with. Basic Auth covers every username
     and password pair - Dashboard users, Basic Auth definitions and the client IDs and secrets of Bearer tokens.
     Bearer token covers the tokens themselves, static ones and JWTs, verified the way inbound REST channels verify them.
     """

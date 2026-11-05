@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 import pytest
 
 # Zato
-from live_sql.containers import start_mysql, start_postgresql, stop_container
+from live_sql.containers import start_postgresql, stop_container
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,39 +33,19 @@ if 0:
 
 class ModuleCtx:
 
-    # Host ports the containers listen on - distinct from the audit log test suite's
+    # The host port the container listens on - distinct from the audit log test suite's
     # so both suites can run at the same time.
-    MySQL_Port      = 23316
     PostgreSQL_Port = 25442
 
-    # Names of the containers so stale ones can be removed
-    MySQL_Container      = 'zato-analytics-test-mysql'
+    # The name of the container so a stale one can be removed
     PostgreSQL_Container = 'zato-analytics-test-postgresql'
 
-    # Database credentials shared by all the containers
+    # The database credentials of the container
     Username = 'zato_analytics'
     Password = 'test-analytics-password'
     DB_Name  = 'zato_analytics'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def mysql_server() -> 'servergen':
-    """ A plain MySQL server started on demand in a container, holding the audit log.
-    """
-    server = start_mysql(
-        container_name=ModuleCtx.MySQL_Container,
-        port=ModuleCtx.MySQL_Port,
-        username=ModuleCtx.Username,
-        password=ModuleCtx.Password,
-        db_name=ModuleCtx.DB_Name,
-        needs_ssl=False,
-    )
-    yield server
-
-    stop_container(server.container_name)
-
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')

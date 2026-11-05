@@ -75,9 +75,6 @@ Error_Sources = (ErrorSource.Auth, ErrorSource.Rate_Limit, ErrorSource.Upstream,
 # What a caller that authenticated with no security definition is reported as
 Caller_Anonymous = 'Anonymous'
 
-# An ISO timestamp cut to this many characters is an hourly period, e.g. 2026-07-16T14
-Period_Len = 13
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -135,7 +132,7 @@ def get_analytics_engine() -> 'Engine':
     The path is resolved on each call, so a changed environment variable selects another file at once.
     """
     db_path = get_analytics_db_path()
-    out = get_sqlite_file_engine(db_path, metadata, needs_pool=False)
+    out = get_sqlite_file_engine(db_path, metadata, needs_pool=False, needs_background_checkpoint=False)
 
     return out
 

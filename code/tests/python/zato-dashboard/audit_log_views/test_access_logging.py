@@ -306,13 +306,13 @@ def test_a_queued_message_read_or_downloaded_writes_one_content_viewed_row_each(
         # The record reads by the message's coordinates, there being no event to resolve it against
         engine = get_audit_engine()
 
-        data_query = select(event_table.c.data, event_table.c.event_time_iso)
+        data_query = select(event_table.c.data, event_table.c.event_time)
         data_query = data_query.where(event_table.c.id == view_events[0]['id'])
 
         with engine.connect() as connection:
-            data, event_time_iso = connection.execute(data_query).fetchone()
+            data, event_time = connection.execute(data_query).fetchone()
 
-        rendered = render_view_record(engine, data, event_time_iso)
+        rendered = render_view_record(engine, data, event_time)
 
         assert f'Viewed by:  {_username}' in rendered
         assert f'Viewed:     {_queue_conn_name} ({_queue_conn_type})' in rendered

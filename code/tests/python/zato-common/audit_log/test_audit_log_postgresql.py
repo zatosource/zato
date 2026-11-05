@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from active_standby import run_active_standby_scenario
 from attachments import run_attachment_scenario
 from common import audit_log_env, run_audit_log_scenario
 from config_audit import run_config_audit_scenario
@@ -14,6 +15,7 @@ from flow_resolve import run_flow_resolve_scenario
 from resubmit_core import run_resubmit_core_scenario
 from retention_tiers import run_retention_tiers_scenario
 from scheduler_history import run_scheduler_history_scenario
+from storage_types import run_storage_types_scenario
 from structured import run_structured_events_scenario
 
 # ################################################################################################################################
@@ -38,6 +40,8 @@ def test_audit_log_postgresql(postgresql_server:'DatabaseServer') -> 'None':
         run_attachment_scenario()
         run_flow_resolve_scenario()
         run_scheduler_history_scenario()
+        run_storage_types_scenario()
+        run_active_standby_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################

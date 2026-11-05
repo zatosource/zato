@@ -12,9 +12,8 @@ from zato.common.audit_log.common import AuditEvent, AuditSource
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What the all-events page - the one no source narrows down - calls itself and its section.
+# What the all-events page - the one no source narrows down - calls itself.
 _all_sources_title = 'Audit log'
-_all_sources_section_title = 'All sources'
 
 # What each source is called in the filter selects of the all-events page.
 # Every member of AuditSource is here, in the order the selects offer them.
@@ -83,13 +82,13 @@ _source_event_label = {
     AuditSource.MLLP_Outgoing: 'MLLP outgoing',
     AuditSource.Odoo: 'Odoo',
     AuditSource.PubSub: 'Pub/sub',
-    AuditSource.REST_Channel: 'REST channel',
-    AuditSource.REST_Outgoing: 'REST outgoing',
+    AuditSource.REST_Channel: 'REST',
+    AuditSource.REST_Outgoing: 'REST',
     AuditSource.REST_Outgoing_Health: 'REST check',
     AuditSource.Scheduler: 'Scheduler',
     AuditSource.Service: 'Service',
-    AuditSource.SOAP_Channel: 'SOAP channel',
-    AuditSource.SOAP_Outgoing: 'SOAP outgoing',
+    AuditSource.SOAP_Channel: 'SOAP',
+    AuditSource.SOAP_Outgoing: 'SOAP',
     AuditSource.SOAP_Outgoing_Health: 'SOAP check',
     AuditSource.SQL_Outgoing: 'SQL',
     AuditSource.Test_Transfer: 'Test transfer',
@@ -179,6 +178,7 @@ _event_type_label = {
     AuditEvent.Message_Sent: 'Message sent',
     AuditEvent.Alert_Raised: 'Alert raised',
     AuditEvent.Alert_Explained: 'Alert explained',
+    AuditEvent.Takeover: 'Takeover',
     AuditEvent.MCP_Initialize: 'MCP initialize',
     AuditEvent.MCP_Tools_List: 'MCP tools list',
     AuditEvent.MCP_Tools_Call: 'MCP tools call',

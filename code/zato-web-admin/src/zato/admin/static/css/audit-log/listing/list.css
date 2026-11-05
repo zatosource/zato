@@ -11,6 +11,10 @@
     margin: 0;
 }
 
+.detail-page-audit-log .dashboard-list-detail-list {
+    border: none;
+}
+
 .audit-log-row {
     cursor: pointer;
 }
@@ -34,9 +38,9 @@
 
 /* The columns before the main one each hold one width, written down where the cell is styled -
    sized by content they would be laid out anew every time a filter changes which rows are on
-   view, moving everything to their right. The main column stays as wide as what it holds,
-   nothing wraps, and the room the row has over goes to the empty cell at its end. A list dragged
-   narrow drops the columns it no longer has room for one at a time. */
+   view, moving everything to their right. The main column takes the room the row has over and
+   nothing wraps. A list dragged narrow narrows the tags of each row first and drops the columns
+   it no longer has room for one at a time after that. */
 
 /* A cell asks for the row's height, which a table reads as the least it may be */
 
@@ -160,15 +164,6 @@
     text-align: right;
 }
 
-/* The one cell that asks for everything, which is what a table hands its leftover room to. It
-   holds nothing, so that room reads as the end of the row, and every column before it is left
-   at the width of what it holds. */
-
-.audit-log-cell-filler {
-    width: 100%;
-    padding: 0;
-}
-
 /* A row saying there is nothing to list, or that there soon will be, spans the whole table and
    is a sentence rather than a column */
 
@@ -179,11 +174,44 @@
 }
 
 /* What an event says about itself, always on the one line - a row of a list read a hundred at a
-   time is one row tall whatever it is holding. It is as wide as the tags it holds, the room the
-   row has over being the filler's business. */
+   time is one row tall whatever it is holding.
+
+   It is the one cell that asks for everything, which is what a table hands its leftover room to,
+   and it gives none of that back to what it holds - a cell sized by its tags would size the
+   column for every row by the widest of them. Each row's tags narrow within it on their own, the
+   longest of them the most, down to the least width a tag keeps. */
 
 .audit-log-cell-main {
+    width: 100%;
+    max-width: 0;
     line-height: 20px;
+}
+
+.audit-log-cell-main-parts {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.audit-log-cell-main-parts .dashboard-chip {
+    min-width: var(--audit-log-row-chip-min-width);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The event chip stands in a box of its own, which on a line of text would set the chip on
+   the text's baseline rather than in the middle of the row */
+
+.audit-log-row-event-chip {
+    display: flex;
+}
+
+/* What an event is, and that it went out again, are read whole or not at all */
+
+.audit-log-cell-main-parts .audit-log-row-event,
+.audit-log-cell-main-parts .audit-log-row-event-chip,
+.audit-log-cell-main-parts .audit-log-resubmitted-marker {
+    flex: none;
 }
 
 /* What an event is, for the events that are not a message going one way or the other - it is
@@ -245,7 +273,8 @@
 }
 
 /* A list dragged narrow gives its columns up one at a time, in the order they are least missed
-   in, and nothing that stays gets any narrower for it. Which way an event went goes before what
+   in, once the tags of a row stand at their least width and still do not fit, and every tag
+   takes back the room a column leaves. Which way an event went goes before what
    kind of event it was, that goes before what it has in common with others, that goes before
    when it happened, and the event's own number is never given up, because it is what a row is
    pointed at by.

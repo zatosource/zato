@@ -12,7 +12,7 @@ from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Test_Set, \
     Definition_Type_Vocabulary, Documents_Key
-from zato.server.openapi_console.rule_engine import _ruleset_operation, _scenario_example
+from zato.server.api_portal.rule_engine import _ruleset_operation, _scenario_example
 
 # ################################################################################################################################
 # ################################################################################################################################

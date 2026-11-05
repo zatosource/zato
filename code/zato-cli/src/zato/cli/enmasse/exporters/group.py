@@ -70,11 +70,11 @@ class GroupExporter:
         self._load_tier_names(session)
 
         # Get all groups
-        query = select([
+        query = select(
             GenericObject.id,
             GenericObject.name,
             GenericObject.opaque1
-            ]).where(and_(
+            ).where(and_(
                 GenericObject.type_ == Groups.Type.Group_Parent,
                 GenericObject.subtype == Groups.Type.API_Clients,
             ))
@@ -91,15 +91,15 @@ class GroupExporter:
 
         # For each group, get its members
         for group in groups:
-            group_id = group['id']
-            group_name = group['name']
+            group_id = group.id
+            group_name = group.name
 
             # Query to find all members of this group
-            member_query = select([
+            member_query = select(
                 GenericObject.id,
                 GenericObject.name,
                 GenericObject.opaque1 # Contains the security definition reference
-                ]).where(and_(
+                ).where(and_(
                     GenericObject.type_ == Groups.Type.Group_Member,
                     GenericObject.subtype == Groups.Type.API_Clients,
                     GenericObject.parent_object_id == group_id,
@@ -110,7 +110,7 @@ class GroupExporter:
             # Get security definition names from member references
             member_names = []
             for member in members:
-                member_full_name = member['name']
+                member_full_name = member.name
 
                 if not member_full_name:
                     logger.warning(f'Member object for group "{group_name}" has an empty name. Skipping member.')
@@ -148,7 +148,7 @@ class GroupExporter:
             }
 
             # A group may reference a quota tier - it is stored by id but exported by name
-            if opaque1 := group['opaque1']:
+            if opaque1 := group.opaque1:
                 opaque = loads(opaque1)
                 if tier_id := opaque.get('quota_tier'):
                     group_def['quota_tier'] = self.tier_name_by_id[tier_id]
@@ -190,15 +190,15 @@ class GroupExporter:
                 raise ValueError(error_msg)
 
             # Query for the security definition name from SecurityBase
-            query = select([
+            query = select(
                 SecurityBase.name
-                ]).where(and_(
+                ).where(and_(
                     SecurityBase.id == sec_id, # sec_id is already an int
                 ))
 
             result = session.execute(query).fetchone()
             if result:
-                return result['name']
+                return result.name
 
         except Exception as e:
             error_msg = f'Error resolving security reference {reference}: {e}'

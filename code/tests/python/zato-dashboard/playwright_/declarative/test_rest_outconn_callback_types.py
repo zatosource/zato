@@ -243,7 +243,7 @@ class TestRESTOutconnCallbackTypes:
         assert result.get('status_code') == OK, f'Expected OK from the declarative invocation, got: {result}'
 
         # .. and the mapped payload arrived on the topic.
-        entry = wait_for_topic_message(topic['name'], marker)
+        entry = wait_for_topic_message(zato_dashboard['pubsub_db_path'], topic['name'], marker)
 
         assert entry['topic_name'] == topic['name'].lower(), f'Expected the topic name in the message, got: {entry}'
         assert marker in entry['data_preview'], f'Expected the marker in the published data, got: {entry}'

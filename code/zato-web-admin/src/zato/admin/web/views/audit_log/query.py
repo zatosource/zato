@@ -10,10 +10,12 @@ is enriched with before it reaches the browser.
 """
 
 # SQLAlchemy
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, String
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.functions import FunctionElement
 
 # Zato
-from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_numeric_columns, \
+from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_numeric_columns, _row_time_columns, \
     _source_attr_columns, _source_body_preview
 from zato.admin.web.views.audit_log.sources import _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
@@ -21,16 +23,19 @@ from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.audit_log.resubmit import Resend_Hop_Service
 from zato.common.audit_log.service import Attribute_Channel
+from zato.common.db_env.common import Type_SQLite
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.sql.compiler import SQLCompiler
     from zato.common.typing_ import any_, anydict, anylist
     any_ = any_
     anydict = anydict
     anylist = anylist
+    SQLCompiler = SQLCompiler
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,9 +46,37 @@ _checksum_attr = 'checksum'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _normalize_row(row:'anydict') -> 'None':
-    """ Turns the NULLs of one row's text columns into empty strings, so that every cell
-    the frontend reads is a value of the type its column says it is.
+class _NotIndexed(FunctionElement):
+    """ A text column whose condition the database does not use to choose an index.
+    """
+    type = String()
+    name = 'not_indexed'
+    inherit_cache = True
+
+# ################################################################################################################################
+
+@compiles(_NotIndexed)
+def compile_not_indexed(element:'_NotIndexed', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+    out = compiler.process(element.clauses, **kwargs)
+    return out
+
+# ################################################################################################################################
+
+@compiles(_NotIndexed, Type_SQLite)
+def compile_not_indexed_sqlite(element:'_NotIndexed', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
+
+    # SQLite does not use a condition on a column under the unary plus operator to constrain an index.
+    column = compiler.process(element.clauses, **kwargs)
+    out = '+' + column
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def normalize_row(row:'anydict') -> 'None':
+    """ Turns the NULLs of one row's text columns into empty strings and its timestamps into
+    their ISO 8601 form, so that every cell the frontend reads is a value of the type its column says it is.
     """
     for key, value in row.items():
 
@@ -54,6 +87,9 @@ def _normalize_row(row:'anydict') -> 'None':
 
         if value is None:
             row[key] = ''
+
+        elif key in _row_time_columns:
+            row[key] = value.isoformat()
 
 # ################################################################################################################################
 
@@ -77,7 +113,7 @@ def _group_by_source(rows:'anylist') -> 'anydict':
 
 # ################################################################################################################################
 
-def _hydrate_rows(connection:'any_', rows:'anylist') -> 'None':
+def hydrate_rows(connection:'any_', rows:'anylist') -> 'None':
     """ Brings a set of rows read straight out of the event table up to the shape the frontend reads,
     whatever sources they came from - the same shape a page of a listing arrives in, so one row
     renderer serves both.
@@ -218,10 +254,15 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
 
     is_resubmit_of_row = event_table.c.correl_id.in_(cids)
 
+    # SQLite has no statistics to tell that the correlation ids select far fewer rows than the source
+    # or the outcome do, so only the correlation ids are left to choose its index by.
+    unindexed_source = _NotIndexed(event_table.c.source)
+    unindexed_outcome = _NotIndexed(event_table.c.outcome)
+
     conditions = and_(
-        event_table.c.source == source,
+        unindexed_source == source,
         is_resubmit_of_row,
-        event_table.c.outcome == AuditOutcome.OK,
+        unindexed_outcome == AuditOutcome.OK,
     )
 
     statement = select(event_table.c.correl_id).where(conditions)
@@ -370,21 +411,25 @@ def _attach_checksum_counts(connection:'any_', rows:'anylist') -> 'None':
 
     attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
     delivered_count = func.count(event_table.c.id)
-    last_delivered_iso = func.max(event_table.c.event_time_iso)
+    last_delivered = func.max(event_table.c.event_time)
 
     is_same_source = event_table.c.source == AuditSource.File_Outgoing
     is_delivered = event_table.c.event_type == AuditEvent.Delivered
     is_checksum_attr = event_attr_table.c.name == _checksum_attr
     is_wanted_checksum = event_attr_table.c.value.in_(rows_by_checksum)
 
-    statement = select(event_attr_table.c.value, delivered_count, last_delivered_iso)
+    statement = select(event_attr_table.c.value, delivered_count, last_delivered)
     statement = statement.select_from(attr_join)
     statement = statement.where(and_(is_same_source, is_delivered, is_checksum_attr, is_wanted_checksum))
     statement = statement.group_by(event_attr_table.c.value)
 
     result = connection.execute(statement)
 
-    for checksum, delivered_count, last_delivered_iso in result:
+    for checksum, delivered_count, last_delivered in result:
+
+        # The browser receives the time in ISO 8601 form
+        last_delivered_iso = last_delivered.isoformat()
+
         for row in rows_by_checksum[checksum]:
             row['delivered_count_for_checksum'] = delivered_count
             row['last_delivered_iso_for_checksum'] = last_delivered_iso

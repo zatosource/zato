@@ -46,8 +46,8 @@ listing.buildRow = function(row) {
         outcome: row.outcome,
         status: row.status,
         classification: row.classification,
-        timeIso: row.event_time_iso,
-        timeLocal: kit.format_local_time_precise(row.event_time_iso),
+        timeIso: row.event_time,
+        timeLocal: kit.format_local_time_precise(row.event_time),
         size: row.size,
         durationMs: row.duration_ms,
         parents: row.parents,
@@ -131,6 +131,21 @@ listing.actionHTML = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The list offers an action only on a row that did not go as it should, the pane offers it on every row
+listing.rowOffersAction = function(rowModel) {
+    var out = false;
+
+    if (rowModel.actionLabel !== undefined) {
+        if (rowModel.outcome !== listing.config.okOutcome) {
+            out = true;
+        }
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // Which cells the events now on the page have anything to say in
 listing.updateColumns = function() {
     var columns = {action: false};
@@ -138,7 +153,7 @@ listing.updateColumns = function() {
     for (var rowIndex = 0; rowIndex < listing.visible.length; rowIndex++) {
         var rowModel = listing.visible[rowIndex];
 
-        if (rowModel.actionLabel !== undefined) {
+        if (listing.rowOffersAction(rowModel)) {
             columns.action = true;
         }
     }
@@ -153,9 +168,9 @@ listing.updateColumns = function() {
 listing.columnCount = function() {
     var columns = listing.columns;
 
-    // Where a row stands, when it happened, which way it went, what it was, and the cell at the
-    // end that takes up whatever room the row has over, are the five the list always holds.
-    var out = 5;
+    // Where a row stands, when it happened, which way it went and what it was are the four
+    // the list always holds.
+    var out = 4;
 
     if (columns.action) {
         out += 1;
@@ -185,6 +200,10 @@ listing.eventChip = function(rowModel) {
 
     if (rowModel.outcome === config.errorOutcome) {
         tone = config.eventChipErrorTone;
+    }
+
+    if (rowModel.eventType === config.alertEventType) {
+        tone = config.eventChipAlertTone;
     }
 
     // A running event reads as such in the running tone.
@@ -264,7 +283,7 @@ listing.rowHTML = function(rowModel) {
         html += ' title="' + listing.escapeHTML(sentence) + '"';
     }
 
-    html += '>';
+    html += '><div class="audit-log-cell-main-parts">';
 
     var saysNothingOfKind = rowModel.role === 'none' || rowModel.role === 'access';
     var saysItsKind = saysNothingOfKind && rowModel.eventType !== listing.config.viewEventType;
@@ -284,7 +303,12 @@ listing.rowHTML = function(rowModel) {
     }
     else {
         if (saysItsKind) {
-            html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventLabel) + '</span>';
+            if (rowModel.eventType === listing.config.alertEventType) {
+                html += '<span class="audit-log-row-event-chip">' + kit.chips.render_one(listing.eventChip(rowModel)) + '</span>';
+            }
+            else {
+                html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventLabel) + '</span>';
+            }
         }
 
         html += chipsHTML;
@@ -296,16 +320,17 @@ listing.rowHTML = function(rowModel) {
             listing.escapeHTML($.fn.zato.audit_log.config.resubmittedMarkerLabel) + '</span>';
     }
 
-    html += '</td>';
+    html += '</div></td>';
 
     if (columns.action) {
-        html += '<td class="audit-log-cell-action">' + listing.actionHTML(rowModel) + '</td>';
-    }
+        html += '<td class="audit-log-cell-action">';
 
-    // Every column of a fixed table gives its width, and the room the row has over has to go
-    // somewhere - it goes into this last empty cell, so no column that is being read is stretched
-    // to swallow it and every one of them stands where it says it does.
-    html += '<td class="audit-log-cell-filler"></td>';
+        if (listing.rowOffersAction(rowModel)) {
+            html += listing.actionHTML(rowModel);
+        }
+
+        html += '</td>';
+    }
 
     html += '</tr>';
 

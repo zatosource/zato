@@ -16,8 +16,8 @@ from traceback import format_exc
 from zato.common.api import FileTransfer
 from zato.common.audit_log.common import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_schedule_event
-from zato.common.audit_log.file_transfer_run import build_ledger_record, Decision_Failed, Decision_Picked_Up, \
-    Decision_Quarantined, Decision_Skipped, find_seen_before, iso_days_ago, load_attempt_memory, Phase_Acking, \
+from zato.common.audit_log.file_transfer_run import build_ledger_record, days_ago, Decision_Failed, Decision_Picked_Up, \
+    Decision_Quarantined, Decision_Skipped, find_seen_before, load_attempt_memory, Phase_Acking, \
     Phase_Checking_Directory, Phase_Claiming, Phase_Delivering, Phase_Listing, Phase_Reading, Phase_Waiting, \
     Retry_Memory_Days, Seen_Before_Window_Days, Skip_Claimed_Elsewhere
 from zato.common.model.file_transfer_ import FileTransferItem
@@ -304,7 +304,7 @@ def _process_one_file(
 
             # .. look up an earlier delivery of the same checksum ..
             checksum = spooled.checksum
-            seen_before_since = iso_days_ago(Seen_Before_Window_Days)
+            seen_before_since = days_ago(Seen_Before_Window_Days)
             seen_before = find_seen_before(conn_name, schedule_name, checksum, seen_before_since)
 
             # .. and invoke the target service under the file's cid.
@@ -375,7 +375,7 @@ def _process_one_file(
 
     if seen_before:
         delivered['seen_before_event_id'] = seen_before['event_id']
-        delivered['seen_before_iso'] = seen_before['event_time_iso']
+        delivered['seen_before_iso'] = seen_before['event_time'].isoformat()
         delivered['seen_before_file_name'] = seen_before['file_name']
 
     # The delivery carries today's count against the schedule's expectation.
@@ -521,8 +521,8 @@ def _select_files(
 
     # .. and keep the files past their retry backoff.
     if candidates:
-        since_iso = iso_days_ago(Retry_Memory_Days)
-        memory = load_attempt_memory(run.conn_name, run.schedule_name, since_iso)
+        since = days_ago(Retry_Memory_Days)
+        memory = load_attempt_memory(run.conn_name, run.schedule_name, since)
         now = utcnow()
         selection = keep_entries_past_backoff(candidates, memory, schedule['retry_backoff'], now)
         _note_skips(run, selection)

@@ -167,7 +167,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
             like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
             where_clause = ' OR '.join(like_clauses)
             query = f'SELECT id FROM sec_base WHERE {where_clause}'
-            result = session.execute(query)
+            result = session.execute(text(query))
             security_ids = [row[0] for row in result.fetchall()]
 
             if security_ids:
@@ -176,7 +176,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
 
                 # Delete from sec_base
                 delete_query = f'DELETE FROM sec_base WHERE {where_clause}'
-                result = session.execute(delete_query)
+                result = session.execute(text(delete_query))
                 session.commit()
                 logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from sec_base matching prefixes: {', '.join(prefixes)}')
         except SQLAlchemyError as e:
@@ -198,14 +198,14 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                         ids_string = ', '.join(str(id) for id in security_ids)
                         query = f'DELETE FROM {table_name} WHERE id IN ({ids_string})'
 
-                    result = session.execute(query)
+                    result = session.execute(text(query))
                     session.commit()
 
                     if result.rowcount > 0:
                         row_suffix = 's' if result.rowcount != 1 else ''
                         id_suffix = 's' if len(security_ids) != 1 else ''
                         logger.info(f'Deleted {result.rowcount} row{row_suffix} from {table_name} with ID{id_suffix} from sec_base')
-                        deleted_names = [row[1] for row in session.execute(f'SELECT name FROM {table_name} WHERE id IN ({ids_string})').fetchall()]
+                        deleted_names = [row[1] for row in session.execute(text(f'SELECT name FROM {table_name} WHERE id IN ({ids_string})')).fetchall()]
                         logger.debug(f'Deleted security names from {table_name}: {deleted_names}')
                 except SQLAlchemyError as e:
                     session.rollback()
@@ -288,7 +288,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
             like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
             where_clause = ' OR '.join(like_clauses)
             query = f'SELECT id FROM job WHERE {where_clause}'
-            result = session.execute(query)
+            result = session.execute(text(query))
             job_ids = [row[0] for row in result.fetchall()]
 
             if job_ids:
@@ -298,7 +298,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                 ids_string = ', '.join(str(id) for id in job_ids)
                 delete_query = f'DELETE FROM job_interval_based WHERE job_id IN ({ids_string})'
 
-                result = session.execute(delete_query)
+                result = session.execute(text(delete_query))
                 session.commit()
                 suffix = 's' if result.rowcount != 1 else ''
                 logger.info(f'Deleted {result.rowcount} row{suffix} from job_interval_based linked to jobs matching prefixes: {', '.join(prefixes)}')
@@ -327,7 +327,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                         like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
                         where_clause = ' OR '.join(like_clauses)
                         result = session.execute(
-                            f'DELETE FROM {table_name} WHERE {where_clause}'
+                            text(f'DELETE FROM {table_name} WHERE {where_clause}')
                         )
 
                         # Commit the changes
@@ -492,7 +492,7 @@ if __name__ == '__main__':
     session = get_session_from_server_dir(server_path)
 
     # Execute a simple query
-    result = session.execute('select 1+1 as result').scalar()
+    result = session.execute(text('select 1+1 as result')).scalar()
 
     # Print the result
     print(f'Query result: {result}')

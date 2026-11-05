@@ -245,7 +245,10 @@ class SQLBrowseAPI(SQLBackendCore):
             delivery_table.c.sub_key == sub_key,
             delivery_table.c.topic_name == topic_name,
         ))
-        query = self._apply_cursor_and_order(query, message_table.c.id, cursor, reverse)
+
+        # The delivery rows are ordered by their own message column, which the index of subscriber queues holds in order,
+        # whereas ordering by the joined message identifier makes SQLite sort the whole queue for each page.
+        query = self._apply_cursor_and_order(query, delivery_table.c.message_id, cursor, reverse)
         query = query.limit(page_size)
 
         with self.engine.connect() as connection:
@@ -272,10 +275,12 @@ class SQLBrowseAPI(SQLBackendCore):
         # Normalize topic name ..
         topic_name = topic_name.lower()
 
-        # .. a left join tells for each message whether this subscriber still needs it ..
+        # .. a left join tells for each message whether this subscriber still needs it,
+        # .. and naming the topic lets the join use the index of subscriber queues ..
         join_condition = and_(
             delivery_table.c.message_id == message_table.c.id,
             delivery_table.c.sub_key == sub_key,
+            delivery_table.c.topic_name == topic_name,
         )
         joined = message_table.outerjoin(delivery_table, join_condition)
 

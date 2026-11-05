@@ -17,10 +17,9 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.audit_log.columns import get_source_outcomes, _all_sources_columns, _all_sources_section_title, \
-    _all_sources_title, _endpoint_page_url, _event_type_label, _object_page_url, _poll_url, _run_page_url, _source_columns, \
-    _source_endpoint_label, _source_event_label, _source_except_label, _source_label, _source_object_label, \
-    _source_page_url, _source_title
+from zato.admin.web.views.audit_log.columns import get_source_outcomes, _all_sources_columns, _all_sources_title, \
+    _endpoint_page_url, _event_type_label, _object_page_url, _poll_url, _run_page_url, _source_columns, _source_endpoint_label, \
+    _source_event_label, _source_except_label, _source_label, _source_object_label, _source_page_url, _source_title
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding
 from zato.common.audit_log.api import event_table, get_audit_engine
 from zato.common.audit_log.file_transfer_words import file_transfer_words
@@ -101,15 +100,18 @@ def object_index(req:'any_') -> 'TemplateResponse':
     event_type = req.GET.get('event_type', '')
 
     # The listing draws each row's cells and chips out of this source's columns - the
-    # all-events page reads by the columns every source shares, the source among them.
+    # all-events page reads by the columns every source shares, the source among them,
+    # and its header is the pill alone.
     if source:
         columns = _source_columns[source]
         audit_log_title = _source_title[source]
         section_title = object_name
+        heading_text = audit_log_title
     else:
         columns = _all_sources_columns
         audit_log_title = _all_sources_title
-        section_title = _all_sources_section_title
+        section_title = _all_sources_title
+        heading_text = ''
 
     # Every rendering of the page offers the source and object filter selects
     filter_options = _get_filter_options()
@@ -141,6 +143,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'object_name': object_name,
         'audit_log_title': audit_log_title,
         'section_title': section_title,
+        'heading_text': heading_text,
         'poll_url': _poll_url,
         'columns_json': columns_json,
         'outcomes_json': outcomes_json,

@@ -1,0 +1,1 @@
+{% if button.accept %}<label class="button-secondary {{ button_class }}"><input type="file" accept="{{ button.accept }}" hidden>{{ button.label }}</label>{% else %}<a class="button-secondary {{ button_class }}" href="{{ button.href }}">{{ button.label }}</a>{% endif %}

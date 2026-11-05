@@ -78,7 +78,6 @@ def collect_outgoing_status_facts(
     out:'dictlist' = []
 
     window_start = now - timedelta(seconds=window_seconds)
-    window_start_iso = window_start.isoformat()
 
     # Every outgoing source counted by status, or the one asked about
     if source:
@@ -93,7 +92,7 @@ def collect_outgoing_status_facts(
     for row_source in sources:
 
         conditions = [
-            event_table.c.event_time_iso >= window_start_iso,
+            event_table.c.event_time >= window_start,
             event_table.c.source == row_source,
             event_table.c.event_type == response_event_type_by_source[row_source],
         ]

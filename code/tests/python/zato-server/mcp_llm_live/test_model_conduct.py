@@ -35,7 +35,7 @@ _hopeless_max_turns = 3
 _word_of_success = 'cancelled successfully'
 
 # The words a plain failure answer carries at least one of
-_failure_words = ('cannot', 'could not', 'unable', 'fail', 'error', 'not possible', 'not be')
+_failure_words = ('cannot', 'could not', "couldn't", 'unable', 'fail', 'error', 'not possible', 'not be', 'refused', 'rejected')
 
 # The raw PII values of the customer record that tokenization must keep away from the model -
 # the broken-checksum IMEI is absent because validation deliberately leaves it in place

@@ -12,11 +12,11 @@ var fileOutgoing = $.fn.zato.audit_log.fileOutgoing;
 // /////////////////////////////////////////////////////////////////////////////
 
 fileOutgoing.byTimeThenId = function(first, second) {
-    if (first.event_time_iso < second.event_time_iso) {
+    if (first.event_time < second.event_time) {
         return -1;
     }
 
-    if (first.event_time_iso > second.event_time_iso) {
+    if (first.event_time > second.event_time) {
         return 1;
     }
 
@@ -76,7 +76,7 @@ fileOutgoing.stepFor = function(label, row, title) {
     }
 
     return {label: label, state: fileOutgoing.stateOf(row), durationText: durationText,
-        eventId: row.id, title: title, isFoldable: false, timeIso: row.event_time_iso, gapText: ''};
+        eventId: row.id, title: title, isFoldable: false, timeIso: row.event_time, gapText: ''};
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -260,7 +260,7 @@ fileOutgoing.storeJourneySteps = function(rows, rowModel) {
     for (var index = 0; index < rows.length; index++) {
         var row = rows[index];
 
-        if (row.event_time_iso <= storeRow.event_time_iso) {
+        if (row.event_time <= storeRow.event_time) {
             continue;
         }
 
