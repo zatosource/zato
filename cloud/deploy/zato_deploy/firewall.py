@@ -27,10 +27,16 @@ _Rule_Prefix = '-A PREROUTING '
 # ################################################################################################################################
 
 def _get_rule(port:'int') -> 'strlist':
-    """ Returns the rule that sends new connections to a port to this program for as long as it exists,
-    while connections that were accepted already stay where they are.
+    """ Returns the rule that sends new connections to a port of this host to this program for as long as it exists,
+    while connections that were accepted already stay where they are. The connections that the container opens
+    to the same port elsewhere pass through PREROUTING as well, which is why only the addresses of this host match.
     """
-    out = ['-p', 'tcp', '--dport', str(port), '-j', 'REDIRECT', '--to-ports', str(Port.Deploy)]
+    out = [
+        '-p', 'tcp',
+        '-m', 'addrtype', '--dst-type', 'LOCAL',
+        '--dport', str(port),
+        '-j', 'REDIRECT', '--to-ports', str(Port.Deploy),
+    ]
     return out
 
 # ################################################################################################################################
