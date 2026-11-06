@@ -9,15 +9,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
-import threading
+from collections import deque
 from datetime import datetime
+from threading import Event, Thread
+from traceback import format_exc
+
+# redis
+from redis import Redis
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from redis import Redis
-    Redis = Redis
+    from logging import LogRecord
+
+    LogRecord = LogRecord
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,43 +36,71 @@ logger = logging.getLogger(__name__)
 # How many entries the log stream may hold - older ones are trimmed away by Redis itself.
 max_log_stream_entries = 1000
 
+# The loggers whose records are never streamed
+_excluded_logger_names = {'zato.common.log_streaming', 'zato.stream_manager', 'zato.sse_stream', 'zato.admin.web.util'}
+
+strdeque = deque[str]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class RedisHandler(logging.Handler):
+    """ Adds log records to a capped Redis stream. The handler only queues each entry in memory
+    and a writer of its own sends the queue to Redis, so the lock of the handler is never held
+    while a greenlet waits for the network.
+    """
+    def __init__(
+        self,
+        channel:'str'='zato.logs',
+        redis_host:'str'='localhost',
+        redis_port:'int'=6379,
+        redis_db:'int'=0,
+        ) -> 'None':
 
-    def __init__(self, channel='zato.logs', redis_host='localhost', redis_port=6379, redis_db=0):
         super().__init__()
+
         self.channel = channel
-        self._local = threading.local()
-        self.redis_host = redis_host
-        self.redis_port = redis_port
-        self.redis_db = redis_db
-        self.emit_count = 0
+        self.client = Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
 
-    def _get_redis_client(self) -> 'Redis':
-        client = getattr(self._local, 'redis_client', None)
-        if client is None:
-            import redis
-            client = redis.Redis(
-                host=self.redis_host,
-                port=self.redis_port,
-                db=self.redis_db,
-                decode_responses=True
-            )
-            self._local.redis_client = client
-        return client
+        # The queue holds no more entries than the stream itself retains ..
+        self.pending:'strdeque' = deque(maxlen=max_log_stream_entries)
+        self.has_pending = Event()
 
-    def emit(self, record):
-        if record.name in ('zato.common.log_streaming', 'zato.redis_handler', 'zato.stream_manager', 'zato.sse_stream', 'zato.admin.web.util'):
+        # .. and the writer is the only place that sends them to Redis.
+        self.writer = Thread(target=self._write_pending, name='zato-log-streaming', daemon=True)
+        self.writer.start()
+
+# ################################################################################################################################
+
+    def _write_pending(self) -> 'None':
+
+        while True:
+
+            # Wait until there is anything to write ..
+            _ = self.has_pending.wait()
+            self.has_pending.clear()
+
+            # .. collect everything queued so far ..
+            pipeline = self.client.pipeline(transaction=False)
+
+            while self.pending:
+                data = self.pending.popleft()
+                _ = pipeline.xadd(self.channel, {'data': data}, maxlen=max_log_stream_entries, approximate=True)
+
+            # .. and write it in one round trip.
+            try:
+                _ = pipeline.execute()
+            except Exception:
+                logger.warning('Could not write log entries to stream `%s` -> %s', self.channel, format_exc())
+
+# ################################################################################################################################
+
+    def emit(self, record:'LogRecord') -> 'None':
+
+        if record.name in _excluded_logger_names:
             return
 
         try:
-            self.emit_count += 1
-            redis_logger = logging.getLogger('zato.redis_handler')
-            redis_logger.debug('RedisHandler.emit: emit_count={}, record.name={}, record.levelname={}'.format(
-                self.emit_count, record.name, record.levelname))
-
             if record.args:
                 try:
                     record.msg = record.msg % record.args
@@ -88,19 +122,12 @@ class RedisHandler(logging.Handler):
                 'lineno': record.lineno
             }
 
-            client = self._get_redis_client()
-            json_data = json.dumps(log_entry)
-            redis_logger.debug('RedisHandler.emit: adding to stream={}, json_data length={}'.format(
-                self.channel, len(json_data)))
-
-            # A capped stream, unlike pubsub, retains entries so readers can poll for them later
-            result = client.xadd(self.channel, {'data': json_data}, maxlen=max_log_stream_entries, approximate=True)
-            redis_logger.debug('RedisHandler.emit: xadd result (entry id)={}'.format(result))
+            # A capped stream, unlike pubsub, retains entries so readers can poll for them later.
+            data = json.dumps(log_entry)
+            self.pending.append(data)
+            self.has_pending.set()
 
         except Exception:
-            from traceback import format_exc
-            redis_logger = logging.getLogger('zato.redis_handler')
-            redis_logger.error('RedisHandler.emit error: {}'.format(format_exc()))
             self.handleError(record)
 
 # ################################################################################################################################
@@ -116,7 +143,7 @@ class LogStreamingManager:
         # 'zato_admin'
     }
 
-    def __init__(self, logger_name=''):
+    def __init__(self, logger_name:'str'='') -> 'None':
         self.logger_name = logger_name
         self.logger = logging.getLogger(logger_name)
         self.redis_handler = None
@@ -178,10 +205,10 @@ class LogStreamingManager:
 
     def toggle_streaming(self):
         if self.is_streaming_enabled():
-            self.disable_streaming()
+            _ = self.disable_streaming()
             return False
         else:
-            self.enable_streaming()
+            _ = self.enable_streaming()
             return True
 
 # ################################################################################################################################

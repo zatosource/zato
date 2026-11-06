@@ -1421,6 +1421,10 @@ class Lets_Encrypt:
         HAProxy_Config   = 'Zato_Lets_Encrypt_HAProxy_Config'
         Check_Interval   = 'Zato_Lets_Encrypt_Check_Interval'
 
+        # The HTTPS port that the Dashboard and the API share when Dashboard host names are set.
+        HTTPS_Port           = 'Zato_Port_HTTPS'
+        Dashboard_Host_Names = 'Zato_Dashboard_Host_Names'
+
     # The values used when the corresponding environment variables are not set.
     class Default:
         SSL_Dir        = '/opt/hot-deploy/ssl'

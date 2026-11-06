@@ -24,7 +24,7 @@ from zato.common.util.eval_ import as_bool
 
 if 0:
     from zato.common.lets_encrypt.paths import SSLPaths
-    from zato.common.typing_ import strlist, strnone, strstrdict
+    from zato.common.typing_ import intnone, strlist, strnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,6 +167,46 @@ def get_haproxy_config(environ:'strstrdict') -> 'str':
 
 # ################################################################################################################################
 
+def get_port(environ:'strstrdict') -> 'int':
+    """ Returns the port the TLS-ALPN-01 challenges are answered on.
+    """
+    port = _get_value(environ, Lets_Encrypt.Env.Port, str(Lets_Encrypt.Default.Port))
+
+    out = int(port)
+    return out
+
+# ################################################################################################################################
+
+def get_dashboard_host_names(environ:'strstrdict') -> 'strlist':
+    """ Returns the host names under which the shared HTTPS port serves the Dashboard, given as a comma-separated list.
+    """
+    out:'strlist' = []
+
+    if Lets_Encrypt.Env.Dashboard_Host_Names not in environ:
+        return out
+
+    for name in environ[Lets_Encrypt.Env.Dashboard_Host_Names].split(','):
+        name = name.strip()
+        if name:
+            out.append(name)
+
+    return out
+
+# ################################################################################################################################
+
+def get_https_port(environ:'strstrdict') -> 'intnone':
+    """ Returns the HTTPS port the Dashboard and the API share, if Dashboard host names turn it on.
+    """
+    dashboard_host_names = get_dashboard_host_names(environ)
+
+    if not dashboard_host_names:
+        return None
+
+    out = int(environ[Lets_Encrypt.Env.HTTPS_Port])
+    return out
+
+# ################################################################################################################################
+
 def get_config(environ:'strstrdict') -> 'LetsEncryptConfig':
     """ Builds the configuration from environment variables.
     """
@@ -176,9 +216,7 @@ def get_config(environ:'strstrdict') -> 'LetsEncryptConfig':
     out.staging_server = _get_value(environ, Lets_Encrypt.Env.Staging_Server, Lets_Encrypt.Default.Staging_Server)
     out.paths = get_paths(environ)
     out.haproxy_config = get_haproxy_config(environ)
-
-    port = _get_value(environ, Lets_Encrypt.Env.Port, str(Lets_Encrypt.Default.Port))
-    out.port = int(port)
+    out.port = get_port(environ)
 
     # Only a non-public ACME server needs a CA of its own ..
     if Lets_Encrypt.Env.CA_File in environ:

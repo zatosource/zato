@@ -11,14 +11,17 @@ from json import loads
 from logging import getLogger
 from threading import RLock
 from time import monotonic
+from warnings import catch_warnings
 
 # MSAL
 from msal import ConfidentialClientApplication
 
-# Office-365
-from O365 import Account
-from O365.connection import MSGraphProtocol
-from O365.utils.token import MemoryTokenBackend
+# Office-365 - importing it sets every DeprecationWarning to always show whenever Python runs with any -W option,
+# which the warning filters of the process are restored from once the import completes.
+with catch_warnings():
+    from O365 import Account
+    from O365.connection import MSGraphProtocol
+    from O365.utils.token import MemoryTokenBackend
 
 # Zato
 from zato.common.api import Microsoft365

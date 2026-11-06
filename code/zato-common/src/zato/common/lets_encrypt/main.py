@@ -15,7 +15,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.lets_encrypt.client import obtain
-from zato.common.lets_encrypt.config import get_check_interval, get_config, is_enabled
+from zato.common.lets_encrypt.config import get_check_interval, get_config, get_https_port, is_enabled
 from zato.common.lets_encrypt.state import LockBusy
 
 # ################################################################################################################################
@@ -47,6 +47,13 @@ def run_once(environ:'strstrdict') -> 'None':
         return
 
     config = get_config(environ)
+
+    # The shared HTTPS port passes the challenges on only once HAProxy runs, so before that they are answered on it directly
+    https_port = get_https_port(environ)
+
+    if https_port is not None:
+        config.port = https_port
+
     _ = obtain(config, needs_reload=False)
 
 # ################################################################################################################################

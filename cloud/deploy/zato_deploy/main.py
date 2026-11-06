@@ -141,7 +141,7 @@ def main() -> 'None':
             # .. nothing can listen before there is a certificate ..
             pem_path = obtain_certificate(progress, config)
             server = start_server(progress, pem_path)
-            add_redirect()
+            add_redirect(config.progress_page_port)
             _touch(Path.Serving_Marker)
 
             # .. Docker's data goes to the local disk before Docker runs ..
@@ -152,13 +152,13 @@ def main() -> 'None':
 
             # .. and Docker puts its own rules in front of the redirect, which each time goes back to the top ..
             start_docker(progress)
-            keep_redirect_first()
+            keep_redirect_first(config.progress_page_port)
 
             _get_image(progress, config)
             environment = prepare_environment(progress)
 
             container_ip = start_container(progress, config, environment)
-            keep_redirect_first()
+            keep_redirect_first(config.progress_page_port)
 
             # .. the container runs through its own stages ..
             watch.start()
@@ -187,9 +187,9 @@ def main() -> 'None':
             log_host_snapshot('failed')
             _wait_forever()
 
-    # .. and in either case the port goes back to the Dashboard in the end.
+    # .. and in either case the port goes back to the container in the end.
     finally:
-        remove_redirect()
+        remove_redirect(config.progress_page_port)
         watch.stop()
         if server:
             server.server_close()
