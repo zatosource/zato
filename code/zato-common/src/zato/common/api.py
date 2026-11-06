@@ -516,6 +516,8 @@ class SCHEDULER:
         TIMEOUT = 'timeout'
         RUNNING = 'running'
         SKIPPED_ALREADY_IN_FLIGHT = 'skipped_already_in_flight'
+        SKIPPED_ALREADY_RUN = 'skipped_already_run'
+        SKIPPED_NOT_ACTIVE = 'skipped_not_active'
         All = 'all'
 
     InitialSleepTime = 0.1

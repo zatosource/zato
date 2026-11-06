@@ -152,6 +152,19 @@ def get_sqlite_file_engine(
 
 # ################################################################################################################################
 
+def create_schema(engine:'Engine', metadata:'MetaData') -> 'None':
+    """ Creates the tables of a schema that do not exist yet. On PostgreSQL, the processes that start at the same time,
+    e.g. a server and its cleanup process, create it one after another.
+    """
+    if engine.dialect.name == Type_PostgreSQL:
+        with engine.begin() as connection:
+            _ = connection.execute(text('select pg_advisory_xact_lock(:key)'), {'key': _schema_lock_key})
+            metadata.create_all(connection)
+    else:
+        metadata.create_all(engine)
+
+# ################################################################################################################################
+
 def _get_cache_key(config:'EnvDBConfig') -> 'strtuple':
     """ Returns a cache key covering all the environment variables that influence the engine.
     """
@@ -252,14 +265,8 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
         # .. which SQLAlchemy replaces with multi-row statements only for the dialects that ask for it ..
         out.dialect.use_insertmanyvalues_wo_returning = True
 
-    # .. make sure the schema exists - this is idempotent, and on PostgreSQL the processes
-    # .. that start at the same time, e.g. a server and its cleanup process, create it one after another ..
-    if db_type == Type_PostgreSQL:
-        with out.begin() as connection:
-            _ = connection.execute(text('select pg_advisory_xact_lock(:key)'), {'key': _schema_lock_key})
-            config.metadata.create_all(connection)
-    else:
-        config.metadata.create_all(out)
+    # .. make sure the schema exists ..
+    create_schema(out, config.metadata)
 
     # .. start the checkpoints of the WAL that the commits no longer run ..
     if db_type == Type_SQLite and config.needs_background_checkpoint:

@@ -49,6 +49,9 @@ _repository_dir = os.environ['ZATO_TEST_BASE_DIR']
 # The home directory of the zato user of the image.
 _container_home = '/opt/zato'
 
+# The program that a container runs, with the arguments of the start command of a server.
+_zato_entrypoint = os.path.join(_repository_dir, 'code', 'bin', 'zato')
+
 # How long a server may take to answer its ping endpoint after its container started, in seconds.
 _ready_timeout_seconds = 180
 
@@ -98,6 +101,9 @@ class ContainerServer:
     broker_port: 'int'
     env: 'strstrdict' = field(default_factory=dict)
 
+    # A launcher in place of the zato command starts other processes of the container before the server.
+    entrypoint: 'str' = _zato_entrypoint
+
     @property
     def base_url(self) -> 'str':
         out = f'http://127.0.0.1:{self.port}'
@@ -142,7 +148,7 @@ def _container_command(server:'ContainerServer', action:'str') -> 'strlist':
         out.extend(['-v', f'{preload_dir}:{preload_dir}:ro'])
 
     out.extend([
-        '--entrypoint', os.path.join(_repository_dir, 'code', 'bin', 'zato'),
+        '--entrypoint', server.entrypoint,
         _runtime_image,
         'start', server.server_directory, '--fg',
     ])

@@ -98,8 +98,10 @@ pub const fn plural<'word>(count: usize, singular: &'word str, plural_form: &'wo
 ///
 /// A reload means the server (re)started, so any previously in-flight jobs
 /// will never receive completion callbacks - clear their `in_flight` state.
-pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::model::SchedulerJob]) {
-    let new_ids: std::collections::HashSet<i64> = new_jobs.iter().map(|job| job.id).collect();
+/// The run state of each job is restored from what the server loaded from the common database,
+/// which holds the runs claimed by every server, not only by this one.
+pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::model::ReloadedJob]) {
+    let new_ids: std::collections::HashSet<i64> = new_jobs.iter().map(|reloaded| reloaded.job.id).collect();
     let old_ids: std::collections::HashSet<i64> = state.jobs.keys().copied().collect();
 
     for removed_id in old_ids.difference(&new_ids) {
@@ -121,10 +123,15 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
         }
     }
 
-    for scheduler_job in new_jobs {
+    let now = chrono::Utc::now();
+
+    for reloaded in new_jobs {
+        let scheduler_job = &reloaded.job;
         let job_id = scheduler_job.id;
+        let last_slot = parse_last_slot(reloaded, &scheduler_job.name);
         if let Some(existing) = state.jobs.get_mut(&job_id) {
             existing.update_from_job(scheduler_job);
+            existing.restore_run_state(reloaded.current_run, last_slot, now);
             let interval = humanize_ms(existing.interval_ms);
             let next = existing.next_fire_utc.map_or_else(|| "none".to_string(), |fire| fire.to_rfc3339());
             tracing::info!(
@@ -134,7 +141,8 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
                 scheduler_job.service,
             );
         } else {
-            let running_job = RunningJob::from_scheduler_job(scheduler_job);
+            let mut running_job = RunningJob::from_scheduler_job(scheduler_job);
+            running_job.restore_run_state(reloaded.current_run, last_slot, now);
             let interval = humanize_ms(running_job.interval_ms);
             let next = running_job
                 .next_fire_utc
@@ -146,6 +154,21 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
                 scheduler_job.service,
             );
             state.jobs.insert(job_id, running_job);
+        }
+    }
+}
+
+/// Parses the last claimed slot of a reloaded job into a UTC datetime.
+///
+/// A slot that cannot be parsed is logged and treated as absent, so the job keeps its
+/// regular schedule and only the catch-up of a missed slot is given up.
+fn parse_last_slot(reloaded: &crate::model::ReloadedJob, job_name: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+    let raw = reloaded.last_slot_iso.as_deref()?;
+    match chrono::DateTime::parse_from_rfc3339(raw) {
+        Ok(slot) => Some(slot.with_timezone(&chrono::Utc)),
+        Err(err) => {
+            tracing::error!("Job `{job_name}`: could not parse last_slot_iso `{raw}`: {err}");
+            None
         }
     }
 }

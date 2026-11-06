@@ -45,14 +45,18 @@ $.fn.zato.scheduler.job_detail.config = {
                 'error': '#f06060',
                 'timeout': '#e8b830',
                 'running': '#bbb',
-                'skipped_already_in_flight': '#c4a8e8'
+                'skipped_already_in_flight': '#c4a8e8',
+                'skipped_already_run': '#a9bccd',
+                'skipped_not_active': '#d9b77a'
             },
             backgrounds: {
                 'ok': 'rgba(91, 155, 213, 0.22)',
                 'error': 'rgba(224, 82, 82, 0.22)',
                 'timeout': 'rgba(212, 160, 23, 0.22)',
                 'running': 'rgba(187, 187, 187, 0.15)',
-                'skipped_already_in_flight': 'rgba(167, 134, 213, 0.22)'
+                'skipped_already_in_flight': 'rgba(167, 134, 213, 0.22)',
+                'skipped_already_run': 'rgba(130, 156, 180, 0.22)',
+                'skipped_not_active': 'rgba(196, 160, 96, 0.22)'
             },
             labels: $.fn.zato.scheduler.dashboard.outcome_labels,
             short_labels: $.fn.zato.scheduler.dashboard.outcome_short_labels,
@@ -100,7 +104,7 @@ $.fn.zato.scheduler.job_detail._get_hidden_series = function() {
     return hidden;
 };
 
-$.fn.zato.scheduler.job_detail._outcome_keys = ['ok', 'skipped_already_in_flight', 'timeout', 'error'];
+$.fn.zato.scheduler.job_detail._outcome_keys = ['ok', 'skipped_already_in_flight', 'skipped_already_run', 'skipped_not_active', 'timeout', 'error'];
 
 $.fn.zato.scheduler.job_detail._visible_outcomes_from_hidden = function(hidden) {
     var keys = $.fn.zato.scheduler.job_detail._outcome_keys;

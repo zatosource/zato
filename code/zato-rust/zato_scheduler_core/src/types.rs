@@ -97,6 +97,9 @@ pub struct FireBatch {
     pub current_run: u32,
     /// ISO timestamp of the planned fire time, so the server can record the run's delay.
     pub planned_fire_time_iso: String,
+    /// ISO timestamp of the schedule slot this firing belongs to, which is the planned
+    /// fire time without jitter, or an empty string for a forced execution outside the schedule.
+    pub nominal_fire_time_iso: String,
     /// Service to invoke on success.
     pub on_success_service: Option<String>,
     /// Scheduler job to execute on success.

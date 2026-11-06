@@ -238,6 +238,8 @@ class TestRecordShape(TestCase):
             SCHEDULER.OUTCOME.RUNNING:                   (SEVERITY_NUMBER_INFO,  'INFO'),
             SCHEDULER.OUTCOME.TIMEOUT:                   (SEVERITY_NUMBER_ERROR, 'ERROR'),
             SCHEDULER.OUTCOME.SKIPPED_ALREADY_IN_FLIGHT: (SEVERITY_NUMBER_WARN,  'WARN'),
+            SCHEDULER.OUTCOME.SKIPPED_ALREADY_RUN:       (SEVERITY_NUMBER_INFO,  'INFO'),
+            SCHEDULER.OUTCOME.SKIPPED_NOT_ACTIVE:        (SEVERITY_NUMBER_WARN,  'WARN'),
         }
 
         for outcome, severity in expected.items():

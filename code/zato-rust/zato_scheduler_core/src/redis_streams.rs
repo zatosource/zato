@@ -17,7 +17,7 @@ use chrono::Utc;
 use serde::Deserialize;
 
 use crate::job::RunningJob;
-use crate::model::SchedulerJob;
+use crate::model::{ReloadedJob, SchedulerJob};
 use crate::reload_jobs;
 use crate::scheduler::SchedulerShared;
 use crate::types::{FireBatch, JobId, OutgoingEvent, TimeoutEvent};
@@ -154,6 +154,8 @@ pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch
         .arg(batch.current_run)
         .arg("planned_fire_time_iso")
         .arg(&batch.planned_fire_time_iso)
+        .arg("nominal_fire_time_iso")
+        .arg(&batch.nominal_fire_time_iso)
         .arg("payload")
         .arg(&payload)
         .query(conn);
@@ -364,8 +366,8 @@ struct MarkCompletePayload {
 /// Payload for reload command.
 #[derive(Deserialize)]
 struct ReloadPayload {
-    /// Full list of jobs from ODB.
-    jobs: Vec<SchedulerJob>,
+    /// Full list of jobs from ODB, each with its run state from the common database.
+    jobs: Vec<ReloadedJob>,
 }
 
 /// Adds a job the server has just created to the running set.
@@ -493,6 +495,8 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
         current_run: running_job.current_run,
         // A forced execution is due the moment it is requested
         planned_fire_time_iso: now_iso,
+        // A forced execution belongs to no slot of the schedule
+        nominal_fire_time_iso: String::new(),
         on_success_service: running_job.on_success_service.clone(),
         on_success_job: running_job.on_success_job.clone(),
         on_error_service: running_job.on_error_service.clone(),

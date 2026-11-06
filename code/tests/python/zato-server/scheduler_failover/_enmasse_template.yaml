@@ -1,0 +1,49 @@
+scheduler:
+
+  - name: test.scheduler.every-second
+    service: test.scheduler.failover.record-run
+    job_type: interval_based
+    seconds: 1
+    start_date: "{{grid_start}}"
+    is_active: true
+    extra: '{"job": "test.scheduler.every-second", "run_seconds": 0}'
+
+  - name: test.scheduler.jitter
+    service: test.scheduler.failover.record-run
+    job_type: interval_based
+    seconds: 5
+    jitter_ms: 1500
+    start_date: "{{grid_start}}"
+    is_active: true
+    extra: '{"job": "test.scheduler.jitter", "run_seconds": 0}'
+
+  - name: test.scheduler.repeats
+    service: test.scheduler.failover.record-run
+    job_type: interval_based
+    seconds: 2
+    repeats: 20
+    start_date: "{{grid_start}}"
+    is_active: true
+    extra: '{"job": "test.scheduler.repeats", "run_seconds": 0}'
+
+  - name: test.scheduler.long-run
+    service: test.scheduler.failover.record-run
+    job_type: interval_based
+    seconds: 30
+    start_date: "{{grid_start}}"
+    is_active: true
+    extra: '{"job": "test.scheduler.long-run", "run_seconds": 20}'
+
+  - name: test.scheduler.one-time-past
+    service: test.scheduler.failover.record-run
+    job_type: one_time
+    start_date: "{{past_start}}"
+    is_active: true
+    extra: '{"job": "test.scheduler.one-time-past", "run_seconds": 0}'
+
+  - name: test.scheduler.one-time-gap
+    service: test.scheduler.failover.record-run
+    job_type: one_time
+    start_date: "{{gap_start}}"
+    is_active: true
+    extra: '{"job": "test.scheduler.one-time-gap", "run_seconds": 0}'

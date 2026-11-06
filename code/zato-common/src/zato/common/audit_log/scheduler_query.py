@@ -65,6 +65,8 @@ _chart_outcomes = (
     SCHEDULER.OUTCOME.ERROR,
     SCHEDULER.OUTCOME.TIMEOUT,
     SCHEDULER.OUTCOME.SKIPPED_ALREADY_IN_FLIGHT,
+    SCHEDULER.OUTCOME.SKIPPED_ALREADY_RUN,
+    SCHEDULER.OUTCOME.SKIPPED_NOT_ACTIVE,
 )
 
 # All the outcomes a per-job aggregate counts
@@ -74,6 +76,8 @@ _countable_outcomes = (
     SCHEDULER.OUTCOME.TIMEOUT,
     SCHEDULER.OUTCOME.RUNNING,
     SCHEDULER.OUTCOME.SKIPPED_ALREADY_IN_FLIGHT,
+    SCHEDULER.OUTCOME.SKIPPED_ALREADY_RUN,
+    SCHEDULER.OUTCOME.SKIPPED_NOT_ACTIVE,
 )
 
 # How many of a job's newest outcomes its summary reports
@@ -492,6 +496,8 @@ def get_chart_data(since:'datetime | None' = None, until:'datetime | None' = Non
             SCHEDULER.OUTCOME.ERROR: 0,
             SCHEDULER.OUTCOME.TIMEOUT: 0,
             SCHEDULER.OUTCOME.SKIPPED_ALREADY_IN_FLIGHT: 0,
+            SCHEDULER.OUTCOME.SKIPPED_ALREADY_RUN: 0,
+            SCHEDULER.OUTCOME.SKIPPED_NOT_ACTIVE: 0,
         })
 
     for event_ms, outcome in collected:
@@ -514,6 +520,8 @@ def get_chart_data(since:'datetime | None' = None, until:'datetime | None' = Non
             'error': counts[SCHEDULER.OUTCOME.ERROR],
             'timeout': counts[SCHEDULER.OUTCOME.TIMEOUT],
             'skipped_already_in_flight': counts[SCHEDULER.OUTCOME.SKIPPED_ALREADY_IN_FLIGHT],
+            'skipped_already_run': counts[SCHEDULER.OUTCOME.SKIPPED_ALREADY_RUN],
+            'skipped_not_active': counts[SCHEDULER.OUTCOME.SKIPPED_NOT_ACTIVE],
         })
 
     out = {

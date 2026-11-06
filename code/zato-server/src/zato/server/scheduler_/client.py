@@ -19,11 +19,16 @@ from redis import Redis
 # requests
 import requests
 
+# Zato
+from zato.common.typing_ import cast_
+from zato.server.scheduler_.run_state import ModuleCtx as RunStateCtx
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, strset
+    from zato.server.scheduler_.run_state import SchedulerRunState
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +102,7 @@ class SchedulerClient:
 
     def _ensure_reply_group(self) -> 'None':
         try:
-            self.redis.xgroup_create(ModuleCtx.Reply_Stream, ModuleCtx.Consumer_Group, id='$', mkstream=True)
+            _ = self.redis.xgroup_create(ModuleCtx.Reply_Stream, ModuleCtx.Consumer_Group, id='$', mkstream=True)
         except Exception as exc:
             if 'BUSYGROUP' in str(exc):
                 pass
@@ -114,7 +119,7 @@ class SchedulerClient:
         correlation_id = uuid4().hex
         payload_json = json.dumps(payload) if payload is not None else '{}'
 
-        self.redis.xadd(ModuleCtx.Command_Stream, {
+        _ = self.redis.xadd(ModuleCtx.Command_Stream, {
             'command': command,
             'correlation_id': correlation_id,
             'payload': payload_json,
@@ -126,13 +131,13 @@ class SchedulerClient:
         deadline = time.monotonic() + ModuleCtx.Reply_Timeout
 
         while time.monotonic() < deadline:
-            result = self.redis.xreadgroup(
+            result = cast_('anylist', self.redis.xreadgroup(
                 groupname=ModuleCtx.Consumer_Group,
                 consumername=ModuleCtx.Consumer_Name,
                 streams={ModuleCtx.Reply_Stream: '>'},
                 count=10,
                 block=1000,
-            )
+            ))
 
             if not result:
                 continue
@@ -141,10 +146,10 @@ class SchedulerClient:
                 for msg_id, fields in messages:
                     reply_corr = fields['correlation_id']
                     if reply_corr == correlation_id:
-                        self.redis.xack(ModuleCtx.Reply_Stream, ModuleCtx.Consumer_Group, msg_id)
+                        _ = self.redis.xack(ModuleCtx.Reply_Stream, ModuleCtx.Consumer_Group, msg_id)
                         return {'status': fields['status']}
 
-                    self.redis.xack(ModuleCtx.Reply_Stream, ModuleCtx.Consumer_Group, msg_id)
+                    _ = self.redis.xack(ModuleCtx.Reply_Stream, ModuleCtx.Consumer_Group, msg_id)
 
         logger.info('Timed out waiting for reply to command=%s correlation_id=%s', command, correlation_id)
         return {'status': 'timeout'}
@@ -167,24 +172,24 @@ class SchedulerClient:
 # ################################################################################################################################
 
     def stop(self, timeout_s:'float'=30.0) -> 'None':
-        self.invoke('stop', needs_reply=True)
+        _ = self.invoke('stop', needs_reply=True)
 
 # ################################################################################################################################
 
     def create_job(self, job_id:'int', job_data:'anydict') -> 'None':
         job_data['id'] = job_id
-        self.invoke('create_job', {'job_id': job_id, 'job_data': job_data})
+        _ = self.invoke('create_job', {'job_id': job_id, 'job_data': job_data})
 
 # ################################################################################################################################
 
     def edit_job(self, job_id:'int', job_data:'anydict') -> 'None':
         job_data['id'] = job_id
-        self.invoke('edit_job', {'job_id': job_id, 'job_data': job_data})
+        _ = self.invoke('edit_job', {'job_id': job_id, 'job_data': job_data})
 
 # ################################################################################################################################
 
     def delete_job(self, job_id:'int') -> 'None':
-        self.invoke('delete_job', {'job_id': job_id})
+        _ = self.invoke('delete_job', {'job_id': job_id})
 
 # ################################################################################################################################
 
@@ -192,12 +197,12 @@ class SchedulerClient:
 
         # The name lets the scheduler find the job even when its runtime ID
         # diverged from the ODB one, e.g. after a redeployment.
-        self.invoke('execute_job', {'job_id': job_id, 'name': name})
+        _ = self.invoke('execute_job', {'job_id': job_id, 'name': name})
 
 # ################################################################################################################################
 
     def mark_complete(self, job_id:'int', outcome:'str', duration_ms:'int', current_run:'int', error:'str') -> 'None':
-        self.invoke('mark_complete', {
+        _ = self.invoke('mark_complete', {
             'job_id': job_id,
             'outcome': outcome,
             'duration_ms': duration_ms,
@@ -207,20 +212,34 @@ class SchedulerClient:
 
 # ################################################################################################################################
 
-    def reload(self, odb_adapter:'any_'=None) -> 'None':
-        """ Loads all jobs from ODB via the adapter and sends them to the scheduler. """
-        if odb_adapter is None:
-            self.invoke('reload', {'jobs': []}, needs_reply=True)
-            return
-
+    def reload(self, odb_adapter:'any_', run_state:'SchedulerRunState') -> 'None':
+        """ Loads all jobs from ODB via the adapter and sends them to the scheduler, each with the run state
+        that the common database holds for it, so the scheduler continues the runs of any server before this one.
+        """
         raw_jobs = odb_adapter.get_scheduler_jobs()
+
+        job_names:'strset' = set()
+        for entry in raw_jobs.values():
+            job_names.add(entry['name'])
+
+        run_state_by_name = run_state.get_reload_state(job_names)
+
         jobs = []
         for job_id, entry in raw_jobs.items():
             job = dict(entry)
             job['id'] = job_id
+
+            # A job that never ran on any server has no run state yet.
+            if job_run_state := run_state_by_name.get(entry['name']):
+                job['current_run'] = job_run_state[RunStateCtx.Key_Run_Count]
+                job['last_slot_iso'] = job_run_state[RunStateCtx.Key_Last_Slot]
+            else:
+                job['current_run'] = 0
+                job['last_slot_iso'] = None
+
             jobs.append(job)
 
-        self.invoke('reload', {'jobs': jobs}, needs_reply=True)
+        _ = self.invoke('reload', {'jobs': jobs}, needs_reply=True)
 
 # ################################################################################################################################
 
