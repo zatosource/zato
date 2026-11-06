@@ -19,7 +19,9 @@
             'expired': '#b35e00',
             'timeout': '#b35e00',
             'running': '#888',
-            'skipped_already_in_flight': '#7b5ea7'
+            'skipped_already_in_flight': '#7b5ea7',
+            'skipped_already_run': '#5b7083',
+            'skipped_not_active': '#8a6d3b'
         },
 
         // The badge backgrounds behind those colours
@@ -29,7 +31,9 @@
             'expired': 'rgba(179, 94, 0, 0.12)',
             'timeout': 'rgba(179, 94, 0, 0.12)',
             'running': 'rgba(136, 136, 136, 0.12)',
-            'skipped_already_in_flight': 'rgba(123, 94, 167, 0.12)'
+            'skipped_already_in_flight': 'rgba(123, 94, 167, 0.12)',
+            'skipped_already_run': 'rgba(91, 112, 131, 0.12)',
+            'skipped_not_active': 'rgba(138, 109, 59, 0.12)'
         },
 
         // The stronger colours a chart draws its bars in
@@ -39,7 +43,9 @@
             'expired': '#b45309',
             'timeout': '#b45309',
             'running': '#aaa',
-            'skipped_already_in_flight': '#6b4d94'
+            'skipped_already_in_flight': '#6b4d94',
+            'skipped_already_run': '#6b8299',
+            'skipped_not_active': '#9c7a3c'
         },
 
         // The washed-out ends of those bars
@@ -49,7 +55,9 @@
             'expired': '#fde8cd',
             'timeout': '#fde8cd',
             'running': '#e0e0e0',
-            'skipped_already_in_flight': '#ddd0ef'
+            'skipped_already_in_flight': '#ddd0ef',
+            'skipped_already_run': '#dbe3ea',
+            'skipped_not_active': '#efe2c8'
         },
 
         labels: {
@@ -58,11 +66,15 @@
             'expired': 'Expired',
             'timeout': 'Timeout',
             'running': 'Running',
-            'skipped_already_in_flight': 'Skipped (already in flight)'
+            'skipped_already_in_flight': 'Skipped (already in flight)',
+            'skipped_already_run': 'Skipped (already run)',
+            'skipped_not_active': 'Skipped (not active)'
         },
 
         short_labels: {
-            'skipped_already_in_flight': 'Skipped'
+            'skipped_already_in_flight': 'Skipped',
+            'skipped_already_run': 'Skipped',
+            'skipped_not_active': 'Skipped'
         },
 
         tooltips: {

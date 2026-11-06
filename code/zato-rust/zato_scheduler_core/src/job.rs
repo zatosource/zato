@@ -90,6 +90,8 @@ pub struct RunningJob {
 
     /// Next scheduled fire time in UTC.
     pub next_fire_utc: Option<DateTime<Utc>>,
+    /// Slot of the schedule that the next firing belongs to, which is its fire time without jitter.
+    pub next_nominal_utc: Option<DateTime<Utc>>,
     /// Monotonic instant corresponding to `next_fire_utc`.
     pub next_fire_instant: Option<Instant>,
     /// Whether the job is currently executing.
@@ -175,6 +177,7 @@ impl RunningJob {
             on_error_service: job.on_error_service.clone(),
             on_error_job: job.on_error_job.clone(),
             next_fire_utc: None,
+            next_nominal_utc: None,
             next_fire_instant: None,
             in_flight: false,
             in_flight_since: None,
@@ -231,8 +234,43 @@ impl RunningJob {
         if self.is_active && (schedule_changed || just_activated) {
             self.compute_next_fire(Utc::now());
         } else if !self.is_active {
-            self.next_fire_utc = None;
-            self.next_fire_instant = None;
+            self.clear_next_fire();
+        }
+    }
+
+    /// Restores the run state that the server loaded from the common database for this job.
+    ///
+    /// A job whose repeats are used up, or a one-time job that already ran, does not fire again.
+    /// An interval-based job whose latest due slot lies after the last claimed slot fires
+    /// once for that slot at `now`, and every older missed slot is skipped.
+    pub fn restore_run_state(&mut self, current_run: u32, last_slot: Option<DateTime<Utc>>, now: DateTime<Utc>) {
+        self.current_run = current_run;
+
+        // An inactive job has no schedule to restore - activating it later computes one.
+        if !self.is_active {
+            return;
+        }
+
+        if self.is_repeats_exhausted() {
+            self.clear_next_fire();
+            return;
+        }
+
+        // A one-time job that already ran gets no fire time here, because its counter is above zero.
+        self.compute_next_fire(now);
+
+        if self.job_type != JobType::IntervalBased {
+            return;
+        }
+
+        // Without a claimed slot the job never ran anywhere, so there is nothing it missed.
+        let Some(last_slot) = last_slot else { return };
+        let Some(latest_due) = self.latest_due_slot(now) else { return };
+
+        if latest_due > last_slot {
+            self.next_fire_utc = Some(now);
+            self.next_nominal_utc = Some(latest_due);
+            self.sync_instant_from_utc(now);
         }
     }
 
@@ -243,13 +281,16 @@ impl RunningJob {
                 if let Some(start) = self.start_date {
                     if start > now {
                         self.next_fire_utc = Some(start);
+                        self.next_nominal_utc = Some(start);
                     } else if self.current_run == 0 {
+                        // The start date has passed without a run, so the slot is due at once.
                         self.next_fire_utc = Some(now);
+                        self.next_nominal_utc = Some(start);
                     } else {
-                        self.next_fire_utc = None;
+                        self.clear_next_fire();
                     }
                 } else {
-                    self.next_fire_utc = None;
+                    self.clear_next_fire();
                 }
             }
             JobType::IntervalBased => {
@@ -258,14 +299,16 @@ impl RunningJob {
                         let nth = self.find_next_n(start, now);
                         let base_ms = nth * self.interval_ms;
                         let jitter = self.compute_jitter();
+                        let nominal_offset_ms = i64::try_from(base_ms).unwrap_or(i64::MAX);
                         let total_ms = i64::try_from(base_ms + jitter).unwrap_or(i64::MAX);
                         let new_fire = start + chrono::Duration::milliseconds(total_ms);
                         self.next_fire_utc = Some(new_fire);
+                        self.next_nominal_utc = Some(start + chrono::Duration::milliseconds(nominal_offset_ms));
                     } else {
-                        self.next_fire_utc = None;
+                        self.clear_next_fire();
                     }
                 } else {
-                    self.next_fire_utc = None;
+                    self.clear_next_fire();
                 }
             }
         }
@@ -275,16 +318,11 @@ impl RunningJob {
     /// Advances to the next fire time after the current run completes.
     pub fn advance_to_next(&mut self, now: DateTime<Utc>) {
         if self.job_type == JobType::OneTime {
-            self.next_fire_utc = None;
-            self.next_fire_instant = None;
+            self.clear_next_fire();
             return;
         }
-        if let Some(max) = self.repeats
-            && max > 0
-            && self.current_run >= max
-        {
-            self.next_fire_utc = None;
-            self.next_fire_instant = None;
+        if self.is_repeats_exhausted() {
+            self.clear_next_fire();
             return;
         }
         let reference = match self.next_fire_utc {
@@ -316,6 +354,39 @@ impl RunningJob {
     /// Public wrapper around `sync_instant_from_utc`.
     pub fn sync_instant_from_utc_pub(&mut self, now: DateTime<Utc>) {
         self.sync_instant_from_utc(now);
+    }
+
+    /// Tells whether the job has a repeat limit and has fired that many times.
+    const fn is_repeats_exhausted(&self) -> bool {
+        match self.repeats {
+            Some(max) => max > 0 && self.current_run >= max,
+            None => false,
+        }
+    }
+
+    /// Clears the next fire time and its slot, so the job does not fire until a schedule is computed again.
+    const fn clear_next_fire(&mut self) {
+        self.next_fire_utc = None;
+        self.next_nominal_utc = None;
+        self.next_fire_instant = None;
+    }
+
+    /// Returns the latest slot of an interval-based schedule that is at or before `now`.
+    ///
+    /// Returns `None` when the job has no interval or no start date, or when `now` is before the start date.
+    #[must_use]
+    pub fn latest_due_slot(&self, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
+        if self.interval_ms == 0 {
+            return None;
+        }
+        let start = self.start_date?;
+        if now < start {
+            return None;
+        }
+        let elapsed_ms = (now - start).num_milliseconds().unsigned_abs();
+        let elapsed_slots = elapsed_ms / self.interval_ms;
+        let offset_ms = i64::try_from(elapsed_slots * self.interval_ms).unwrap_or(i64::MAX);
+        Some(start + chrono::Duration::milliseconds(offset_ms))
     }
 
     /// Finds the next interval multiple `n` such that `start + n * interval > now`.

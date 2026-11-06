@@ -36,6 +36,8 @@ from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG
+from zato.common.common_db.config import check_common_db_config
+from zato.common.common_db.store import SharedObjectStore
 from zato.common.const import SECRETS
 from zato.common.db_env.outage import call_until_available
 from zato.common.facade import SecurityFacade
@@ -89,6 +91,7 @@ from zato.server.quota_tiers import QuotaTiersManager
 from zato.server.rule_engine_api import start_rule_engine_change_listener
 from zato.server.scheduler_.adapter import SchedulerODBAdapter
 from zato.server.scheduler_.client import ModuleCtx as SchedulerStreamCtx, SchedulerClient
+from zato.server.scheduler_.run_state import SchedulerRunState
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,11 +105,13 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset, strtuple
     from zato.server.connection.http_soap.url_data import URLData
+    from zato.server.scheduler_.run_state import ClaimResult
     from zato.server.service.store import ServiceStore
     from zato.input_output import IOProcessor  # type: ignore[attr-defined]
     from zato.server.startup_callable import StartupCallableTool
 
     bunch_ = bunch_
+    ClaimResult = ClaimResult
     KombuMessage = KombuMessage
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
@@ -220,6 +225,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     quota_tiers_manager: 'QuotaTiersManager'
 
     pubsub_backend: 'SQLPubSubBackend'
+    shared_objects: 'SharedObjectStore'
+    _scheduler_run_state: 'SchedulerRunState'
     pubsub_push_delivery: 'PushDelivery'
     pubsub_pattern_matcher: 'PatternMatcher'
     pubsub_subscriptions: 'SubscriptionsStore'
@@ -1126,11 +1133,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             # Job runs are recorded in the audit log the same way any other source's events are.
             self._scheduler_audit_log = AuditLog(self.name)
 
+            # Each run of a job is claimed in the common database first, so a slot runs once across all servers.
+            self._scheduler_run_state = SchedulerRunState(self.shared_objects)
+
             self._scheduler = SchedulerClient()
-            self._scheduler.reload(odb_adapter=scheduler_adapter)
+
+            # The consumer group of the fire stream exists before the reload, because the scheduler fires
+            # the jobs that are due at once, and a group created afterwards would not receive these events.
+            self._start_scheduler_fire_listener()
+
+            self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
             self._scheduler_started = True
 
-            self._start_scheduler_fire_listener()
             self._start_scheduler_request_listener(scheduler_adapter)
 
             logger.info('Scheduler client connected, fire and request listeners started')
@@ -1256,7 +1270,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                             command = fields['command']
                             if command == 'request_jobs':
                                 logger.info('Scheduler requested jobs, sending reload')
-                                self._scheduler.reload(odb_adapter=scheduler_adapter)
+                                self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
                             _ = req_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception as exc:
@@ -1300,8 +1314,16 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             delay_ms = 0
 
         # .. the cid the record carries is the very cid the service runs under, so everything
-        # the service touches downstream shares it and the run seeds the message flow.
+        # the service touches downstream shares it and the run seeds the message flow ..
         cid = new_cid_server()
+
+        # .. the run is claimed in the common database first, so a slot that another server ran already,
+        # or a firing on a server that is no longer the active one, does not run here.
+        claim = self._scheduler_run_state.claim(job_name, ctx['nominal_fire_time_iso'])
+
+        if not claim.is_claimed:
+            self._skip_fire_event(ctx, claim, cid, planned_fire_dt, delay_ms)
+            return
 
         audit_event_id = record_job_start(
             self._scheduler_audit_log,
@@ -1324,6 +1346,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'zato_ctx': {
                 'scheduler_job_id': job_id,
                 'scheduler_current_run': current_run,
+                'scheduler_nominal_fire_time': ctx['nominal_fire_time_iso'],
                 'scheduler_audit_event_id': audit_event_id,
             },
         })
@@ -1381,6 +1404,49 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         if on_callback_job:
             _ = spawn(self._invoke_callback_job, on_callback_job, callback_context, event_label)
+
+# ################################################################################################################################
+
+    def _skip_fire_event(
+        self,
+        ctx:'anydict',
+        claim:'ClaimResult',
+        cid:'str',
+        planned_fire_dt:'datetime',
+        delay_ms:'int',
+        ) -> 'None':
+        """ Concludes a firing that this server does not run, without invoking the job's service.
+        """
+        job_id = ctx['job_id']
+        job_name = ctx['name']
+        current_run = ctx['current_run']
+
+        logger.info('Fire event: run skipped job_id=%s name=%s run=%s slot=%s outcome=%s reason=%s',
+            job_id, job_name, current_run, ctx['nominal_fire_time_iso'], claim.outcome, claim.reason)
+
+        # The scheduler clears the run from in-flight first, so the next firing of the job is not held back ..
+        try:
+            self._scheduler.mark_complete(job_id, claim.outcome, 0, current_run, claim.reason)
+        except Exception:
+            logger.warning('Fire event: mark_complete failed job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())
+
+        # .. and the skipped run is recorded in the audit log, which may be unreachable for the same reason
+        # that the claim could not be made.
+        try:
+            audit_event_id = record_job_start(
+                self._scheduler_audit_log,
+                job_name,
+                cid=cid,
+                job_id=job_id,
+                current_run=current_run,
+                planned_fire_time=planned_fire_dt,
+                delay_ms=delay_ms,
+                service=ctx['service'],
+            )
+            if audit_event_id:
+                record_job_complete(audit_event_id, outcome=claim.outcome, duration_ms=0, error=claim.reason)
+        except Exception:
+            logger.warning('Fire event: skipped run not recorded job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())
 
 # ################################################################################################################################
 
@@ -1756,9 +1822,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             encrypt_at_rest=self.encrypt_at_rest,
         )
 
-        # On PostgreSQL, this server becomes the active one before it reads any pub/sub state, so that it starts
-        # from everything the server it replaces committed, and that server changes nothing from now on ..
+        # The common database confirms the generation in the row of the pub/sub database, so on PostgreSQL both are one ..
+        check_common_db_config()
+
+        # .. on PostgreSQL, this server becomes the active one before it reads any pub/sub state, so that it starts
+        # .. from everything the server it replaces committed, and that server changes nothing from now on ..
         self.pubsub_backend.take_over()
+
+        # .. every transaction of the common database confirms the same generation ..
+        self.shared_objects = SharedObjectStore()
+
+        if generation_guard := self.pubsub_backend.generation_guard:
+            self.shared_objects.install_generation_guard(generation_guard, self.pubsub_backend.engine)
 
         # .. and only now is the state read. Each step that writes to the database may run again as a whole,
         # .. so it waits for the database through an outage or a failover that begins after the takeover.
@@ -1973,7 +2048,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. reload the scheduler if it was started ..
         if self._scheduler_started:
             scheduler_adapter = SchedulerODBAdapter(self.odb)
-            self._scheduler.reload(odb_adapter=scheduler_adapter)
+            self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
 
         # .. reload the queue bridge if it was started ..
         if self._queue_bridge_started:

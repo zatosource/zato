@@ -16,7 +16,9 @@
         'timeout': 'dashboard-outcome-timeout',
         'expired': 'dashboard-outcome-timeout',
         'running': 'dashboard-outcome-running',
-        'skipped_already_in_flight': 'dashboard-outcome-skipped'
+        'skipped_already_in_flight': 'dashboard-outcome-skipped',
+        'skipped_already_run': 'dashboard-outcome-skipped',
+        'skipped_not_active': 'dashboard-outcome-skipped'
     };
 
     /* Build an outcome palette object. `palette.bar_colors`, `.colors`,

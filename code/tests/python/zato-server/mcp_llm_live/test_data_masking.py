@@ -212,7 +212,7 @@ class TestMaskingThroughModel:
         assert _constants.Masked_Value in all_requests_text, all_requests_text
 
         # .. the model still received what was not masked ..
-        assert _helpers.text_contains(result.final_text, _constants.Customer_Name), result.final_text
+        assert _constants.Customer_Name in all_requests_text, all_requests_text
 
         # .. and the final answer is as free of the masked values as the requests were.
         for value in masked_values:

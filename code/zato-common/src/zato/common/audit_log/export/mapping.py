@@ -69,6 +69,8 @@ severity_by_outcome:'stranydict' = {
     AuditOutcome.Error:                          _error,
     SCHEDULER.OUTCOME.TIMEOUT:                   _error,
     SCHEDULER.OUTCOME.SKIPPED_ALREADY_IN_FLIGHT: _warn,
+    SCHEDULER.OUTCOME.SKIPPED_ALREADY_RUN:       _info,
+    SCHEDULER.OUTCOME.SKIPPED_NOT_ACTIVE:        _warn,
 }
 
 _nanoseconds_per_second      = 1_000_000_000

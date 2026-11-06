@@ -580,7 +580,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = $.fn.zato.dashboard_kit.palette.
         var padding_top = 12;
         var padding_right = 8;
 
-        var outcome_keys = ['ok', 'error', 'timeout', 'skipped_already_in_flight'];
+        var outcome_keys = ['ok', 'error', 'timeout', 'skipped_already_in_flight', 'skipped_already_run', 'skipped_not_active'];
         var bar_colors = dash.outcome_bar_colors;
         var labels = dash.outcome_labels;
         var hidden_outcomes = dash._get_hidden_outcomes();
@@ -598,12 +598,15 @@ $.fn.zato.scheduler.dashboard.outcome_palette = $.fn.zato.dashboard_kit.palette.
                 var sb_month = sb_date.getMonth();
                 if (!_monthly[sb_month]) {
                     _monthly[sb_month] = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0,
+                        skipped_already_run: 0, skipped_not_active: 0,
                         start: new Date(server_buckets[sb_idx].start_iso).getTime(), end: 0};
                 }
                 _monthly[sb_month].ok += server_buckets[sb_idx].ok;
                 _monthly[sb_month].error += server_buckets[sb_idx].error;
                 _monthly[sb_month].timeout += server_buckets[sb_idx].timeout;
                 _monthly[sb_month].skipped_already_in_flight += server_buckets[sb_idx].skipped_already_in_flight;
+                _monthly[sb_month].skipped_already_run += server_buckets[sb_idx].skipped_already_run;
+                _monthly[sb_month].skipped_not_active += server_buckets[sb_idx].skipped_not_active;
                 _monthly[sb_month].end = new Date(server_buckets[sb_idx].end_iso).getTime();
             }
             for (var month_idx = 0; month_idx < 12; month_idx++) {
@@ -615,7 +618,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = $.fn.zato.dashboard_kit.palette.
             var display_bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
             var merge_factor = Math.max(1, Math.floor(server_buckets.length / display_bucket_count));
             for (var merge_index = 0; merge_index < server_buckets.length; merge_index += merge_factor) {
-                var merged = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0, start: 0, end: 0};
+                var merged = {ok: 0, error: 0, timeout: 0, skipped_already_in_flight: 0,
+                    skipped_already_run: 0, skipped_not_active: 0, start: 0, end: 0};
                 var merge_end = Math.min(merge_index + merge_factor, server_buckets.length);
                 merged.start = new Date(server_buckets[merge_index].start_iso).getTime();
                 merged.end = new Date(server_buckets[merge_end - 1].end_iso).getTime();
@@ -625,6 +629,8 @@ $.fn.zato.scheduler.dashboard.outcome_palette = $.fn.zato.dashboard_kit.palette.
                     merged.error += source.error;
                     merged.timeout += source.timeout;
                     merged.skipped_already_in_flight += source.skipped_already_in_flight;
+                    merged.skipped_already_run += source.skipped_already_run;
+                    merged.skipped_not_active += source.skipped_not_active;
                 }
                 buckets.push(merged);
             }

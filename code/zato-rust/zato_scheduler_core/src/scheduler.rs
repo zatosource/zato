@@ -289,6 +289,7 @@ pub fn collect_due_jobs(
         }
 
         let planned = fire_utc.to_rfc3339();
+        let nominal = running_job.next_nominal_utc.map_or_else(String::new, |slot| slot.to_rfc3339());
 
         running_job.current_run += 1;
         let delay_ms = (now - fire_utc).num_milliseconds().max(0);
@@ -314,6 +315,7 @@ pub fn collect_due_jobs(
             job_type: running_job.job_type.clone(),
             current_run: running_job.current_run,
             planned_fire_time_iso: planned,
+            nominal_fire_time_iso: nominal,
             on_success_service: running_job.on_success_service.clone(),
             on_success_job: running_job.on_success_job.clone(),
             on_error_service: running_job.on_error_service.clone(),

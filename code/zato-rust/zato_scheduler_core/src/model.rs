@@ -104,3 +104,17 @@ pub struct SchedulerJob {
     #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
     pub on_error_job: Option<String>,
 }
+
+/// A scheduler job as the server sends it in a reload, with the run state from the common database.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ReloadedJob {
+    /// The job definition from the ODB.
+    #[serde(flatten)]
+    pub job: SchedulerJob,
+    /// Number of runs of the job claimed so far by any server, zero for a job that never ran.
+    #[serde(default)]
+    pub current_run: u32,
+    /// ISO timestamp of the latest schedule slot claimed by any server, if the job ever ran on its schedule.
+    #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
+    pub last_slot_iso: Option<String>,
+}
