@@ -73,9 +73,11 @@ def _run_lego(progress:'Progress', config:'Config') -> 'None':
         '--pem',
         '--no-random-sleep',
         '--force-cert-domains',
-        '--domains', config.fqdn,
         '--profile', Lego.Profile,
     ]
+
+    for domain in config.certificate_domains:
+        command.extend(['--domains', domain])
 
     run_logged(progress, command)
 
@@ -84,14 +86,23 @@ def _run_lego(progress:'Progress', config:'Config') -> 'None':
 def _create_self_signed(progress:'Progress', config:'Config') -> 'None':
     """ Creates the certificate the page is served with when Let's Encrypt could not issue one.
     """
+    common_name = config.certificate_domains[0]
+
+    dns_names = []
+
+    for domain in config.certificate_domains:
+        dns_names.append(f'DNS:{domain}')
+
+    subject_alt_name = ','.join(dns_names)
+
     command = [
         'openssl', 'req', '-x509',
         '-newkey', 'ec',
         '-pkeyopt', 'ec_paramgen_curve:prime256v1',
         '-nodes',
         '-days', str(_Self_Signed_Days),
-        '-subj', f'/CN={config.fqdn}',
-        '-addext', f'subjectAltName=DNS:{config.fqdn}',
+        '-subj', f'/CN={common_name}',
+        '-addext', f'subjectAltName={subject_alt_name}',
         '-keyout', Path.Self_Signed_Key,
         '-out', Path.Self_Signed_Cert,
     ]
@@ -118,9 +129,11 @@ def obtain_certificate(progress:'Progress', config:'Config') -> 'str':
     progress.advance_to(Stage_ID.Certificate)
     os.makedirs(Path.Lets_Encrypt_Dir, exist_ok=True)
 
+    domains = ', '.join(config.certificate_domains)
+
     # The container renews the certificate from an earlier boot in the same directory ..
     if os.path.exists(Path.Lets_Encrypt_PEM):
-        progress.log(f'Certificate for {config.fqdn} found in {Path.Lets_Encrypt_Dir}', Line_Kind.OK)
+        progress.log(f'Certificate for {domains} found in {Path.Lets_Encrypt_Dir}', Line_Kind.OK)
         return Path.Lets_Encrypt_PEM
 
     # .. otherwise it is obtained now ..
@@ -136,7 +149,7 @@ def obtain_certificate(progress:'Progress', config:'Config') -> 'str':
         out = Path.Self_Signed_PEM
 
     else:
-        progress.log(f'Certificate for {config.fqdn} obtained', Line_Kind.OK)
+        progress.log(f'Certificate for {domains} obtained', Line_Kind.OK)
         out = Path.Lets_Encrypt_PEM
 
     return out

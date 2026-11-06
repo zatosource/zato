@@ -108,7 +108,6 @@ class Container:
     Env_INI_File     = '/opt/hot-deploy/enmasse/env.ini'
     Requirements     = '/opt/hot-deploy/python-reqs/requirements.txt'
     Host_Link_Dir    = '/opt/zato/host-link'
-    Published_Ports  = ['22022:22', '443:11228', '8184:8184', '11224:11224', '11553:11553']
 
 # ################################################################################################################################
 
@@ -216,10 +215,13 @@ class StageFailed(Exception):
 
 @dataclass(init=False)
 class Config:
-    fqdn:               str
-    admin_username:     str
-    image:              str
-    is_install_updates: bool
+    fqdn:                str
+    admin_username:      str
+    image:               str
+    is_install_updates:  bool
+    certificate_domains: strlist
+    published_ports:     strlist
+    progress_page_port:  int
 
 # ################################################################################################################################
 
@@ -312,10 +314,13 @@ def load_config(path:'str') -> 'Config':
     container_values = read_env_file(Path.Container_Env)
 
     out = Config()
-    out.fqdn               = values['fqdn']
-    out.admin_username     = values['admin_username']
-    out.image              = values['image']
-    out.is_install_updates = container_values['Zato_Install_Updates'] not in _Updates_Off
+    out.fqdn                = values['fqdn']
+    out.admin_username      = values['admin_username']
+    out.image               = values['image']
+    out.is_install_updates  = container_values['Zato_Install_Updates'] not in _Updates_Off
+    out.certificate_domains = values['certificate_domains'].split(',')
+    out.published_ports     = values['published_ports'].split(',')
+    out.progress_page_port  = int(values['progress_page_port'])
 
     return out
 

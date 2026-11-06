@@ -21,16 +21,26 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# New connections to the Dashboard's port go to this program for as long as the rule exists,
-# while connections that were accepted already stay where they are.
-_Rule = ['-p', 'tcp', '--dport', str(Port.Dashboard), '-j', 'REDIRECT', '--to-ports', str(Port.Deploy)]
-
-# How the rule reads in the output of iptables -S.
-_Rule_Listed = f'--dport {Port.Dashboard} -j REDIRECT --to-ports {Port.Deploy}'
-
 _Rule_Prefix = '-A PREROUTING '
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _get_rule(port:'int') -> 'strlist':
+    """ Returns the rule that sends new connections to a port to this program for as long as it exists,
+    while connections that were accepted already stay where they are.
+    """
+    out = ['-p', 'tcp', '--dport', str(port), '-j', 'REDIRECT', '--to-ports', str(Port.Deploy)]
+    return out
+
+# ################################################################################################################################
+
+def _get_rule_listed(port:'int') -> 'str':
+    """ Returns how the rule reads in the output of iptables -S.
+    """
+    out = f'--dport {port} -j REDIRECT --to-ports {Port.Deploy}'
+    return out
+
 # ################################################################################################################################
 
 def _iptables(arguments:'strlist') -> 'CommandResult':
@@ -43,11 +53,12 @@ def _iptables(arguments:'strlist') -> 'CommandResult':
 
 # ################################################################################################################################
 
-def _get_rule_numbers() -> 'tuple[bool, list[int]]':
+def _get_rule_numbers(port:'int') -> 'tuple[bool, list[int]]':
     """ Returns whether the rule is the first one in PREROUTING and the numbers of all its copies there.
     """
     result = _iptables(['-S', 'PREROUTING'])
     listed = result.stdout.splitlines()
+    rule_listed = _get_rule_listed(port)
 
     numbers:'list[int]' = []
     rule_number = 0
@@ -56,7 +67,7 @@ def _get_rule_numbers() -> 'tuple[bool, list[int]]':
         if not line.startswith(_Rule_Prefix):
             continue
         rule_number += 1
-        if _Rule_Listed in line:
+        if rule_listed in line:
             numbers.append(rule_number)
 
     is_first = 1 in numbers
@@ -67,11 +78,11 @@ def _get_rule_numbers() -> 'tuple[bool, list[int]]':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def add_redirect() -> 'None':
-    """ Sends new connections to the Dashboard's port to this program.
+def add_redirect(port:'int') -> 'None':
+    """ Sends new connections to the port of the progress page to this program.
     """
     arguments = ['-I', 'PREROUTING', '1']
-    arguments.extend(_Rule)
+    arguments.extend(_get_rule(port))
 
     result = _iptables(arguments)
 
@@ -80,16 +91,16 @@ def add_redirect() -> 'None':
 
 # ################################################################################################################################
 
-def keep_redirect_first() -> 'None':
+def keep_redirect_first(port:'int') -> 'None':
     """ Moves the rule back to the top of PREROUTING, because Docker adds rules of its own there.
     """
-    is_first, numbers = _get_rule_numbers()
+    is_first, numbers = _get_rule_numbers(port)
 
     if is_first:
         return
 
     # Inserting the rule first means there is no moment without one ..
-    add_redirect()
+    add_redirect(port)
 
     # .. and the copies further down, now one position lower each, are deleted from the bottom up.
     for number in reversed(numbers):
@@ -98,14 +109,16 @@ def keep_redirect_first() -> 'None':
 
 # ################################################################################################################################
 
-def remove_redirect() -> 'None':
-    """ Hands the Dashboard's port over to the container, for each new connection from now on.
+def remove_redirect(port:'int') -> 'None':
+    """ Hands the port of the progress page over to the container, for each new connection from now on.
     """
+    rule = _get_rule(port)
+
     check = ['-C', 'PREROUTING']
-    check.extend(_Rule)
+    check.extend(rule)
 
     delete = ['-D', 'PREROUTING']
-    delete.extend(_Rule)
+    delete.extend(rule)
 
     while True:
         result = _iptables(check)

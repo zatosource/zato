@@ -158,6 +158,10 @@ else:
         f'https://{common_name}:{dashboard_ssl_port}'
     ]
 
+# The host name under which the shared HTTPS port serves the Dashboard is trusted as well
+if dashboard_host_name := os.environ.get('Zato_Dashboard_Host_Name'):
+    CSRF_TRUSTED_ORIGINS.append(f'https://{dashboard_host_name}')
+
 APPEND_SLASH = True
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

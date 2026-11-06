@@ -248,7 +248,7 @@ def start_container(progress:'Progress', config:'Config', environment:'Environme
     command = ['docker', 'run', '-d', '--name', Container.Name]
     command.extend(['--log-driver=journald', '--log-opt', f'tag={Container.Log_Tag}'])
 
-    for port in Container.Published_Ports:
+    for port in config.published_ports:
         command.extend(['-p', port])
 
     for mount in build_mounts(environment):

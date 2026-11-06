@@ -677,7 +677,7 @@ body[data-state="ready"] .deploy-progress-elapsed {
                 <path fill="currentColor" d="M208.08524,21.89144c4.72073,0.19627,8.55629,4.03181,8.55629,8.75255v52.81088c-0.09853,4.72073-3.83556,8.45775-8.55629,8.65401h-5.40886c-4.81926,0-8.75255-3.93328-8.85107-8.65401V30.64399c0-4.81927,3.93329-8.75255,8.85107-8.75255H208.08524z M205.72527,85.91337c2.06519,0,3.73701-1.67184,3.73701-3.83554V31.92251c0-2.1637-1.67183-3.83555-3.73701-3.83555h-1.08224c-2.06517,0.09853-3.73701,1.77037-3.73701,3.83555v50.15532c0,2.06517,1.67184,3.73701,3.73701,3.83554H205.72527z"/>
             </svg>
         </div>
-        <div class="deploy-header-host"><span id="deploy-host-name"></span><span class="deploy-header-host-port">:8184</span></div>
+        <div class="deploy-header-host"><span id="deploy-host-name"></span><span id="deploy-host-port" class="deploy-header-host-port"></span></div>
     </header>
 
     <main class="deploy-main">
@@ -747,6 +747,7 @@ zatoDeploy.init = function() {
     var elements = zatoDeploy.elements;
 
     elements.hostName = document.getElementById('deploy-host-name');
+    elements.hostPort = document.getElementById('deploy-host-port');
     elements.stepCurrent = document.getElementById('deploy-step-current');
     elements.stepTotal = document.getElementById('deploy-step-total');
     elements.title = document.getElementById('deploy-title');
@@ -770,6 +771,11 @@ zatoDeploy.init = function() {
     zatoDeploy.log.setState('live');
 
     elements.hostName.textContent = window.location.hostname;
+
+    // The address has no port when it is the default one for HTTPS
+    if (window.location.port) {
+        elements.hostPort.textContent = ':' + window.location.port;
+    }
 
     zatoDeploy.poll();
 };
