@@ -12,6 +12,7 @@ import logging.config
 import os
 
 # Zato
+from zato.common.lets_encrypt.config import get_dashboard_host_names
 from zato.common.util.open_ import open_r
 
 # SQLAlchemy
@@ -158,8 +159,8 @@ else:
         f'https://{common_name}:{dashboard_ssl_port}'
     ]
 
-# The host name under which the shared HTTPS port serves the Dashboard is trusted as well
-if dashboard_host_name := os.environ.get('Zato_Dashboard_Host_Name'):
+# The host names under which the shared HTTPS port serves the Dashboard are trusted as well
+for dashboard_host_name in get_dashboard_host_names(dict(os.environ)):
     CSRF_TRUSTED_ORIGINS.append(f'https://{dashboard_host_name}')
 
 APPEND_SLASH = True

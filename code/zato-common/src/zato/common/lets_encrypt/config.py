@@ -177,13 +177,29 @@ def get_port(environ:'strstrdict') -> 'int':
 
 # ################################################################################################################################
 
-def get_https_port(environ:'strstrdict') -> 'intnone':
-    """ Returns the HTTPS port the Dashboard and the API share, if a Dashboard host name turns it on.
+def get_dashboard_host_names(environ:'strstrdict') -> 'strlist':
+    """ Returns the host names under which the shared HTTPS port serves the Dashboard, given as a comma-separated list.
     """
-    if Lets_Encrypt.Env.Dashboard_Host_Name not in environ:
-        return None
+    out:'strlist' = []
 
-    if not environ[Lets_Encrypt.Env.Dashboard_Host_Name]:
+    if Lets_Encrypt.Env.Dashboard_Host_Names not in environ:
+        return out
+
+    for name in environ[Lets_Encrypt.Env.Dashboard_Host_Names].split(','):
+        name = name.strip()
+        if name:
+            out.append(name)
+
+    return out
+
+# ################################################################################################################################
+
+def get_https_port(environ:'strstrdict') -> 'intnone':
+    """ Returns the HTTPS port the Dashboard and the API share, if Dashboard host names turn it on.
+    """
+    dashboard_host_names = get_dashboard_host_names(environ)
+
+    if not dashboard_host_names:
         return None
 
     out = int(environ[Lets_Encrypt.Env.HTTPS_Port])
