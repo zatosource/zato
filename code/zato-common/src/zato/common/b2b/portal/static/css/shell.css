@@ -8,19 +8,40 @@
     flex-direction: column;
     flex-shrink: 0;
     width: 210px;
-    border-right: 1px solid var(--border);
     background: var(--chrome);
 }
 
 .navigation-top {
+    position: relative;
     display: flex;
     align-items: center;
     height: var(--navigation-top-height);
     padding: 10px 20px;
-    border-bottom: 1px solid var(--border);
     font-size: 12.5px;
     letter-spacing: 0.02em;
     color: var(--text3);
+}
+
+.navigation-top::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background: var(--grip-line);
+}
+
+/* The line at the right edge of the pane meets the line under the top and fades out before its bottom end */
+.navigation-handle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: linear-gradient(180deg, var(--fading-line-end));
+    transform: translateX(-50%);
 }
 
 .navigation-logo {
@@ -177,29 +198,32 @@
     flex-direction: column;
 }
 
-/* The title and what follows it stand on one baseline, as their sizes differ */
+/* The line of the title is as tall as a control in the header, so that the header is as tall whatever stands in it.
+   The title and a link beside it share a baseline, as their sizes differ, and a control is centered on the line. */
 .card-header {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     gap: 10px;
-    min-height: var(--card-header-height);
     padding: 18px var(--page-gutter) 4px;
+}
+
+.card-header .card-title,
+.card-header .card-header-link {
+    align-self: baseline;
+}
+
+.card-header .card-title {
+    line-height: var(--header-control-height);
 }
 
 /* A title is set apart by its size alone, never by its weight */
 .card-title,
-.detail-title,
 .wizard-title {
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 400;
     letter-spacing: 0.005em;
     color: var(--text);
-}
-
-.card-title,
-.wizard-title {
-    font-size: 18px;
 }
 
 .card-title {
@@ -260,7 +284,7 @@
 
 /* Adding a new item stands right after the title of its listing */
 .card-header .card-new {
-    height: 24px;
+    height: var(--header-control-height);
     font-size: 11px;
 }
 
@@ -316,7 +340,7 @@
     right: 0;
     left: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--grip-line) 15%, var(--grip-line) 85%, transparent);
+    background: linear-gradient(90deg, var(--fading-line));
 }
 
 /* A grip is a small lit bar - a shaded face, a rim of light and a shadow under it */
@@ -490,13 +514,6 @@
     background: var(--button-face);
     box-shadow: 0 1px 2px var(--shadow-strong);
     cursor: pointer;
-    transition: border-color 0.1s ease;
-}
-
-.button-secondary:hover {
-    border-color: var(--button-edge-hover);
-    background: var(--button-face-hover);
-    transition-delay: var(--hover-delay);
 }
 
 .button-action {
@@ -505,26 +522,10 @@
     background: var(--action-face);
 }
 
-.button-action:hover {
-    background: var(--action-face-hover);
-    transition-delay: var(--hover-delay);
-}
-
 .button-danger {
     border-color: var(--danger-edge);
     color: var(--danger-ink);
     background: var(--danger-face);
-}
-
-.button-danger:hover {
-    background: var(--danger-face-hover);
-    transition-delay: var(--hover-delay);
-}
-
-.button-action:active,
-.button-secondary:active,
-.button-danger:active {
-    box-shadow: inset 0 1px 3px var(--shadow-strong);
 }
 
 .button-action:disabled,
@@ -610,11 +611,32 @@
 }
 
 .direction-inbound {
-    border-left: 8px solid var(--triangle-inbound);
+    --triangle-base: var(--triangle-inbound);
+    border-left: 8px solid var(--triangle-color);
 }
 
 .direction-outbound {
-    border-right: 8px solid var(--triangle-outbound);
+    --triangle-base: var(--triangle-outbound);
+    border-right: 8px solid var(--triangle-color);
+}
+
+.direction {
+    --triangle-color: var(--triangle-base);
+}
+
+/* Beside a chip, a triangle is drawn in the tone of the chip .. */
+.direction-toned {
+    --triangle-color: var(--tone);
+}
+
+/* .. except in a listing, where it keeps the color of its direction, only tinted by the chip of an error or a retry */
+.listing .direction-toned {
+    --triangle-color: var(--triangle-base);
+}
+
+.listing .direction-toned.portal-tone-red,
+.listing .direction-toned.portal-tone-amber {
+    --triangle-color: color-mix(in srgb, var(--tone) var(--triangle-tint), var(--triangle-base));
 }
 
 .pill.editable {

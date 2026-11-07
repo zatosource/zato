@@ -66,18 +66,20 @@
     --teal: #6fd3c9;
     --grey: #ababab;
 
-    /* The triangles of the directions of messages are deeper than any chip, so that no state is taken for them */
+    /* The triangles of the directions of messages are deeper than any chip, so that no state is taken for them.
+       In a listing, a triangle beside a chip of an error or a retry is tinted by that much of the tone of the chip. */
     --triangle-inbound: #3f9a62;
     --triangle-outbound: #444444;
+    --triangle-tint: 35%;
 
-    --accent: #f6c66a;
-    --accent-tint: rgba(246, 166, 5, 0.10);
+    --accent: var(--affirmative);
+    --accent-tint: color-mix(in srgb, var(--affirmative) 10%, transparent);
 
     --stripe: rgba(255, 255, 255, 0.022);
     --row-hover: rgba(255, 255, 255, 0.055);
-    --scrollbar-thumb: #333333;
-    --scrollbar-thumb-hover: #4a4a4a;
-    --scrollbar-track: #141414;
+    /* A scrollbar lightens whatever surface it lies on by the same amount, so that it is seen on every one of them */
+    --scrollbar-thumb: rgba(255, 255, 255, 0.18);
+    --scrollbar-track: transparent;
     --shadow-strong: rgba(0, 0, 0, 0.75);
     --sheen: rgba(255, 255, 255, 0.07);
     --grip: #7a7a7a;
@@ -90,6 +92,10 @@
     --grip-rim: rgba(255, 255, 255, 0.22);
     --grip-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
     --grip-line: rgba(255, 255, 255, 0.16);
+
+    /* A line between panes fades out before both of its ends */
+    --fading-line: transparent, var(--grip-line) 15%, var(--grip-line) 85%, transparent;
+    --fading-line-end: var(--grip-line) 85%, transparent;
 
     /* A badge standing open in a row of them is raised off it, the ones not chosen are sunk into it */
     --badge-fill: rgba(255, 255, 255, 0.10);
@@ -106,14 +112,14 @@
     --button-edge: #4a4a4a;
     --button-edge-hover: #616161;
     --button-ink: #e4e4e4;
-    --action-face: linear-gradient(#5c4815, #45360e);
-    --action-face-hover: linear-gradient(#6c5519, #523f11);
-    --action-edge: #a9842c;
-    --action-ink: #ffe3a3;
+    --affirmative: #5cb85c;
+    --action-face: linear-gradient(color-mix(in srgb, var(--affirmative) 35%, #161616), color-mix(in srgb, var(--affirmative) 25%, #161616));
+    --action-edge: var(--affirmative);
+    --action-ink: color-mix(in srgb, var(--affirmative) 30%, #ffffff);
     --danger-face: linear-gradient(#4a1d1d, #391515);
-    --danger-face-hover: linear-gradient(#5a2323, #451a1a);
     --danger-edge: #8c3636;
     --danger-ink: #ffb4ac;
+    --danger-link: #ff5f52;
 
     --focus-edge: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
 
@@ -137,8 +143,8 @@
     --calendar-cell: 34px;
     --filter-width: 720px;
 
-    /* As tall as a header with a button beside its title, so that every listing starts at the same height */
-    --card-header-height: 48px;
+    /* The height of a control beside the title of a listing, which the line of the title has too */
+    --header-control-height: 24px;
     --split-height: 48%;
     --split-minimum: 140px;
     --field-label-minimum: 96px;
@@ -159,7 +165,7 @@
     --toggle-off-background: #3a3a3a;
     --toggle-on-background: #3a3a3a;
     --toggle-knob-color: #8e8e8e;
-    --toggle-knob-on-color: var(--accent);
+    --toggle-knob-on-color: var(--affirmative);
 
     --check-size: 14px;
     --check-mark-color: #1a1a1a;
@@ -204,10 +210,6 @@ body.portal {
 .portal ::-webkit-scrollbar-thumb {
     border-radius: var(--radius);
     background: var(--scrollbar-thumb);
-}
-
-.portal ::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover);
 }
 
 .portal-mono {

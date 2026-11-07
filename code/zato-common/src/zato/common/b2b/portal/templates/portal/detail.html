@@ -1,7 +1,6 @@
-<div class="detail" id="detail" data-id="{{ item.id }}"{% if details_tab %} data-details-tab="{{ details_tab }}"{% endif %}>
+<div class="detail" id="detail" data-id="{{ item.id }}" data-title="{{ item.title }}"{% if details_tab %} data-details-tab="{{ details_tab }}"{% endif %}>
 
     <div class="detail-header">
-        <h2 class="detail-title portal-mono">{{ item.title }}</h2>
         <div class="tabs" role="tablist"{% if item.tabs|length == 1 %} hidden{% endif %}>
             {% for tab in item.tabs %}
             <button type="button" class="tab{% if tab.key == active_tab %} tab-active{% endif %}" role="tab" data-tab="{{ tab.key }}">{{ tab.label }}</button>

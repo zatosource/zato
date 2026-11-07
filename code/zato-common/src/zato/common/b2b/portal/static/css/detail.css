@@ -18,12 +18,6 @@
     background: var(--panel-raised);
 }
 
-.detail-title {
-    margin-right: 6px;
-    font-size: 14px;
-    overflow-wrap: anywhere;
-}
-
 .detail-body {
     flex: 1;
     min-height: 0;
@@ -44,10 +38,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 2px;
-}
-
-.detail-header .tabs {
-    margin-left: 16px;
 }
 
 /* A row of badges - the one standing open is raised off the row, the others are sunk into it */

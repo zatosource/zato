@@ -83,7 +83,22 @@
 }
 
 .link-danger {
-    color: var(--danger-ink);
+    color: var(--danger-link);
+}
+
+/* The label of a link and every label it may have stand in one cell, only the label is seen */
+.inline-action {
+    display: inline-grid;
+    justify-items: start;
+}
+
+.inline-action-label,
+.inline-action-sizer {
+    grid-area: 1 / 1;
+}
+
+.inline-action-sizer {
+    visibility: hidden;
 }
 
 /* ------------------------------------------------------------ */

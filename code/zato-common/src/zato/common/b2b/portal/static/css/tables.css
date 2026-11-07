@@ -69,9 +69,13 @@
     padding: 0;
     border-bottom: 1px solid var(--rule);
 }
-/* A disabled item is drawn faintly, its switch excepted */
+/* A disabled item is drawn faintly, its switch excepted, and its chips lose their tones */
 .listing tr[data-attribute-state="Disabled"] td:not(.row-toggle) {
     opacity: var(--inactive-opacity);
+}
+
+.listing tr[data-attribute-state="Disabled"] .pill {
+    --tone: var(--grey);
 }
 
 .listing .listing-select {

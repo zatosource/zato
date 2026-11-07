@@ -263,7 +263,9 @@ navigation.init = function() {
     var list = navigation.list();
     var entries = list.querySelectorAll('.navigation-item');
 
+    // A double click on the line at the edge of the pane collapses or expands the pane, as the toggle does
     document.getElementById('navigation-handle').addEventListener('mousedown', navigation.startResize);
+    document.getElementById('navigation-handle').addEventListener('dblclick', navigation.onToggleClick);
     document.getElementById('navigation-toggle').addEventListener('click', navigation.onToggleClick);
 
     navigation.restore();

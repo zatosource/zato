@@ -15,6 +15,9 @@ var detail = {};
 detail.requestedTab = null;
 
 detail.config = {
+    directionClass: 'direction',
+    tonePattern: /portal-tone-\S+/,
+    tonePrefix: 'portal-tone-',
     copiedLabel: 'Copied to clipboard',
     copiedDuration: 600,
 
@@ -89,10 +92,18 @@ detail.setState = function(pane, text, tone) {
     for (var pillIndex = 0; pillIndex < pills.length; pillIndex++) {
 
         var pill = pills[pillIndex];
+        var triangle = pill.previousElementSibling;
 
         pill.textContent = text;
-        pill.className = 'pill portal-tone-' + tone;
+        pill.className = 'pill ' + detail.config.tonePrefix + tone;
         pill.removeAttribute('data-tip');
+
+        // The triangle of the direction of a message is drawn in the tone of the chip it leads
+        if (triangle !== null) {
+            if (triangle.classList.contains(detail.config.directionClass)) {
+                triangle.className = triangle.className.replace(detail.config.tonePattern, detail.config.tonePrefix + tone);
+            }
+        }
 
         // A tip described the state the pill had before
         if (pill._tippy) {
