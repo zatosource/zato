@@ -567,13 +567,6 @@
     font-size: 12px;
     color: var(--text3);
 }
-
-.link:hover,
-.editable:not(.pill):hover {
-    color: var(--link-hover);
-    transition-delay: var(--hover-delay);
-}
-
 /* ------------------------------------------------------------ */
 /* Shell - pills                                                */
 /* ------------------------------------------------------------ */

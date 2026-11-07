@@ -124,8 +124,6 @@
     --focus-edge: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
 
     --link-dash: rgba(255, 255, 255, 0.35);
-    --link-hover: var(--accent);
-
     --radius: 2px;
     --field-indent: 9px;
     --hover-delay: 0.12s;
@@ -162,10 +160,11 @@
     --toggle-knob-size: 10px;
     --toggle-knob-offset: 2px;
     --toggle-travel: 12px;
-    --toggle-off-background: #3a3a3a;
-    --toggle-on-background: #3a3a3a;
+    --toggle-off-background: var(--border-strong);
+    /* A switch that is on is drawn as the chip of an enabled item - the face in a wash of the tone, the knob in the tone */
+    --toggle-on-background: color-mix(in srgb, var(--green) 18%, transparent);
     --toggle-knob-color: #8e8e8e;
-    --toggle-knob-on-color: var(--affirmative);
+    --toggle-knob-on-color: var(--green);
 
     --check-size: 14px;
     --check-mark-color: #1a1a1a;
