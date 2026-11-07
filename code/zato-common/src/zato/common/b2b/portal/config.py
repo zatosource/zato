@@ -35,6 +35,13 @@ Logo_Path = os.environ.get(Logo_Env_Variable)
 # The address the logo is served under
 Logo_URL = '/logo'
 
+# The cookie the browser keeps the width of the navigation pane in, in pixels, after the pane is resized
+Navigation_Width_Cookie = 'navigation-width'
+
+# The cookie the browser keeps in whether the navigation pane is collapsed, and the value it has when it is
+Navigation_Collapsed_Cookie = 'navigation-collapsed'
+Navigation_Collapsed_Value = '1'
+
 Local_Party_ID = '232510151'
 
 Local_Role = 'WholesaleProvider'

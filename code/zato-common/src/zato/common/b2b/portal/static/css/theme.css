@@ -79,9 +79,17 @@
     --scrollbar-thumb-hover: #4a4a4a;
     --scrollbar-track: #141414;
     --shadow-strong: rgba(0, 0, 0, 0.75);
-    --shadow-soft: rgba(0, 0, 0, 0.55);
     --sheen: rgba(255, 255, 255, 0.07);
     --grip: #7a7a7a;
+
+    /* The grips of the lines between panes */
+    --grip-length: 28px;
+    --grip-thickness: 4px;
+    --grip-face: #363636;
+    --grip-shading: linear-gradient(rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.18));
+    --grip-rim: rgba(255, 255, 255, 0.22);
+    --grip-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    --grip-line: rgba(255, 255, 255, 0.16);
 
     /* A badge standing open in a row of them is raised off it, the ones not chosen are sunk into it */
     --badge-fill: rgba(255, 255, 255, 0.10);
@@ -128,7 +136,9 @@
     --decision-row-gap: 12px;
     --calendar-cell: 34px;
     --filter-width: 720px;
-    --card-header-height: 49px;
+
+    /* As tall as a header with a button beside its title, so that every listing starts at the same height */
+    --card-header-height: 48px;
     --split-height: 48%;
     --split-minimum: 140px;
     --field-label-minimum: 96px;
@@ -137,6 +147,9 @@
     --inactive-opacity: 0.5;
     --details-height: 440px;
     --page-gutter: 24px;
+    --navigation-collapsed-width: 40px;
+    --navigation-top-height: 55px;
+    --navigation-toggle-size: 22px;
 
     --toggle-width: 26px;
     --toggle-height: 14px;

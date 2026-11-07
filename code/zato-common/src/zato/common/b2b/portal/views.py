@@ -15,8 +15,8 @@ from django.shortcuts import render
 from django.views.static import serve
 
 # Zato
-from zato.common.b2b.portal.config import Local_Organization, Logo_Env_Variable, Logo_Path, Logo_URL, Static_Dir, \
-    Static_URL
+from zato.common.b2b.portal.config import Local_Organization, Logo_Env_Variable, Logo_Path, Logo_URL, \
+    Navigation_Collapsed_Cookie, Navigation_Collapsed_Value, Navigation_Width_Cookie, Static_Dir, Static_URL
 from zato.common.b2b.portal.sample.common import Details_Segment, New_Segment, Path_Messages, Path_Partners
 from zato.common.b2b.portal.sample.sections import Navigation, Sections
 
@@ -78,6 +78,30 @@ def _navigation(section_slug:'str') -> 'anylist':
         entry['is_active'] = entry['slug'] == section_slug
         out.append(entry)
 
+    return out
+
+# ################################################################################################################################
+
+def _navigation_width(req:'HttpRequest') -> 'str':
+    """ The width of the navigation pane in pixels, as the browser kept it after the pane was last resized,
+    or an empty string when the pane has never been resized.
+    """
+    out = ''
+
+    if width := req.COOKIES.get(Navigation_Width_Cookie):
+        if width.isdigit():
+            out = width
+
+    return out
+
+# ################################################################################################################################
+
+def _is_navigation_collapsed(req:'HttpRequest') -> 'bool':
+    """ Whether the navigation pane was left collapsed on an earlier page.
+    """
+    value = req.COOKIES.get(Navigation_Collapsed_Cookie)
+
+    out = value == Navigation_Collapsed_Value
     return out
 
 # ################################################################################################################################
@@ -145,6 +169,11 @@ def section_view(req:'HttpRequest', section_slug:'str', rest:'str'='') -> 'HttpR
         'has_logo': bool(Logo_Path),
         'logo_url': Logo_URL,
         'navigation': _navigation(section_slug),
+        'navigation_width': _navigation_width(req),
+        'navigation_width_cookie': Navigation_Width_Cookie,
+        'is_navigation_collapsed': _is_navigation_collapsed(req),
+        'navigation_collapsed_cookie': Navigation_Collapsed_Cookie,
+        'navigation_collapsed_value': Navigation_Collapsed_Value,
         'section': section,
         'item': item,
         'active_tab': active_tab,

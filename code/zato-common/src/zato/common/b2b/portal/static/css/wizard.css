@@ -7,11 +7,6 @@
     flex-direction: column;
     max-width: 54em;
     margin: 0 auto;
-    padding: 20px 24px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--panel);
-    box-shadow: 0 10px 30px var(--shadow-soft), inset 0 1px 0 var(--sheen);
 }
 
 /* ------------------------------------------------------------ */
@@ -183,9 +178,7 @@
 /* Wizard - summary links                                       */
 /* ------------------------------------------------------------ */
 
-/* A summary link is exactly as tall as its label, so that the two share one middle */
 .summary-link {
-    padding-bottom: 0;
     font-size: 12px;
     line-height: 24px;
 }
@@ -257,8 +250,9 @@
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    margin-top: 8px;
+    margin-top: 24px;
     padding: 16px 0 4px;
+    border-top: 1px solid var(--border);
 }
 
 .wizard-footer-center {

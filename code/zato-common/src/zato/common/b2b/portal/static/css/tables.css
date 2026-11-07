@@ -52,6 +52,7 @@
 .listing-scroll {
     flex: 1;
     min-height: 0;
+    padding: 0 var(--page-gutter);
     overflow-x: auto;
     overflow-y: scroll;
 }
@@ -61,10 +62,12 @@
     position: sticky;
     top: 0;
     z-index: 1;
+    background: var(--background);
 }
 
 .listing td {
     padding: 0;
+    border-bottom: 1px solid var(--rule);
 }
 /* A disabled item is drawn faintly, its switch excepted */
 .listing tr[data-attribute-state="Disabled"] td:not(.row-toggle) {
@@ -103,7 +106,7 @@
 }
 
 .listing-empty {
-    padding: 18px 16px;
+    padding: 18px 10px;
     font-size: 12.5px;
     color: var(--text5);
 }
@@ -116,8 +119,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
+    padding: 0 var(--page-gutter) 14px;
 }
 
 .criteria .chip {

@@ -29,7 +29,7 @@
     min-height: 0;
     overflow-x: auto;
     overflow-y: scroll;
-    padding: 16px;
+    padding: 18px var(--page-gutter);
 }
 
 .detail-removed .detail-body {
@@ -163,6 +163,33 @@
 
 .fields dd .inline-actions {
     margin-left: 4px;
+}
+
+/* ------------------------------------------------------------ */
+/* Detail - blocks of the selected item                         */
+/* ------------------------------------------------------------ */
+
+.detail-body .block {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+.detail-body .block + .block {
+    margin-top: 24px;
+}
+
+.detail-body .block-title {
+    padding: 0 10px 6px;
+    background: transparent;
+}
+
+.detail-body .fields {
+    padding: 12px 10px;
+}
+
+.detail-body .table th {
+    background: transparent;
 }
 
 /* ------------------------------------------------------------ */

@@ -3,6 +3,7 @@
 /* ------------------------------------------------------------ */
 
 .navigation {
+    position: relative;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -14,7 +15,7 @@
 .navigation-top {
     display: flex;
     align-items: center;
-    height: 55px;
+    height: var(--navigation-top-height);
     padding: 10px 20px;
     border-bottom: 1px solid var(--border);
     font-size: 12.5px;
@@ -26,6 +27,54 @@
     display: block;
     max-width: 100%;
     height: 30px;
+}
+
+/* The toggle stands on the right edge of the pane, its middle where the line under the top meets that edge */
+.navigation-toggle {
+    position: absolute;
+    top: calc(var(--navigation-top-height) - var(--navigation-toggle-size) / 2);
+    right: calc(var(--navigation-toggle-size) / -2);
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: var(--navigation-toggle-size);
+    height: var(--navigation-toggle-size);
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    color: var(--text4);
+    background: var(--chrome);
+    cursor: pointer;
+}
+
+.navigation-toggle-icon {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.navigation-toggle-expand,
+.navigation-collapsed .navigation-toggle-collapse {
+    display: none;
+}
+
+.navigation-collapsed .navigation-toggle-expand {
+    display: block;
+}
+
+/* A collapsed pane keeps its toggle and the line it is dragged open by, and nothing else */
+.navigation-collapsed {
+    width: var(--navigation-collapsed-width);
+}
+
+.navigation-collapsed .navigation-logo,
+.navigation-collapsed .navigation-organization,
+.navigation-collapsed .navigation-list {
+    display: none;
 }
 
 .navigation-list {
@@ -83,6 +132,26 @@
     opacity: 0.5;
 }
 
+/* The line at the right edge of the pane is dragged by the grip in its middle */
+.navigation-handle {
+    position: absolute;
+    top: 0;
+    right: -7px;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 15px;
+    cursor: col-resize;
+}
+
+.navigation-resizing,
+.navigation-resizing * {
+    cursor: col-resize;
+    user-select: none;
+}
+
 /* ------------------------------------------------------------ */
 /* Shell - main column and cards                                */
 /* ------------------------------------------------------------ */
@@ -100,37 +169,22 @@
     min-height: 0;
     overflow-x: auto;
     overflow-y: scroll;
-    padding: 20px 24px;
+    padding: 18px var(--page-gutter);
 }
 
 .card {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--panel);
-    box-shadow: 0 10px 30px var(--shadow-soft), inset 0 1px 0 var(--sheen);
 }
 
+/* The title and what follows it stand on one baseline, as their sizes differ */
 .card-header {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: baseline;
     gap: 10px;
     min-height: var(--card-header-height);
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel-raised);
-}
-
-.card-title {
-    margin-right: 6px;
-    overflow-wrap: anywhere;
-}
-
-.card-header-link {
-    font-size: 12px;
-    color: var(--text3);
+    padding: 18px var(--page-gutter) 4px;
 }
 
 /* A title is set apart by its size alone, never by its weight */
@@ -141,6 +195,16 @@
     font-weight: 400;
     letter-spacing: 0.005em;
     color: var(--text);
+}
+
+.card-title,
+.wizard-title {
+    font-size: 18px;
+}
+
+.card-title {
+    margin-right: 6px;
+    overflow-wrap: anywhere;
 }
 
 /* ------------------------------------------------------------ */
@@ -163,8 +227,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
+    padding: 10px var(--page-gutter) 14px;
 }
 
 .portal input[type="search"].card-filter {
@@ -208,6 +271,7 @@
 .split {
     display: flex;
     flex-direction: column;
+    padding: 0;
     overflow: hidden;
 }
 
@@ -223,23 +287,58 @@
     overflow: hidden;
 }
 
+/* A pane snapped shut leaves the whole split to the other one */
+.split-top-shut .split-top,
+.split-bottom-shut .split-bottom {
+    display: none;
+}
+
+.split-top-shut .split-bottom {
+    flex-grow: 1;
+}
+
 /* The line between the panes is dragged by the grip in its middle */
 .split-handle {
     position: relative;
-    flex: 0 0 14px;
+    display: flex;
+    flex: 0 0 15px;
+    justify-content: center;
+    align-items: center;
+    margin: 0 var(--page-gutter);
     cursor: row-resize;
 }
 
+/* The line under the grip fades out before the edges of the split */
 .split-handle::before {
     content: "";
     position: absolute;
     top: 50%;
-    left: 50%;
-    width: 43px;
-    height: 7px;
-    background-image: radial-gradient(circle, var(--grip) 1px, transparent 1.5px);
-    background-size: 4px 4px;
-    transform: translate(-50%, -50%);
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--grip-line) 15%, var(--grip-line) 85%, transparent);
+}
+
+/* A grip is a small lit bar - a shaded face, a rim of light and a shadow under it */
+.split-handle::after,
+.navigation-handle::after {
+    content: "";
+    position: relative;
+    border: 1px solid var(--grip-rim);
+    border-radius: var(--grip-thickness);
+    background-color: var(--grip-face);
+    background-image: var(--grip-shading);
+    box-shadow: var(--grip-shadow);
+}
+
+.split-handle::after {
+    width: var(--grip-length);
+    height: var(--grip-thickness);
+}
+
+.navigation-handle::after {
+    width: var(--grip-thickness);
+    height: var(--grip-length);
 }
 
 .split-dragging,
@@ -439,19 +538,17 @@
 /* Shell - links                                                */
 /* ------------------------------------------------------------ */
 
+/* The underline is drawn outside the box of the link, so that the box is exactly as tall as the text */
 .link,
 .editable:not(.pill) {
-    padding-bottom: 2px;
     border: none;
     font-family: inherit;
     font-size: inherit;
-    text-decoration: none;
+    text-decoration: underline dashed var(--link-dash);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
     color: var(--text);
-    background-color: transparent;
-    background-image: repeating-linear-gradient(90deg, var(--link-dash) 0, var(--link-dash) 3px, transparent 3px, transparent 6px);
-    background-position: 0 100%;
-    background-repeat: no-repeat;
-    background-size: 100% 1px;
+    background: transparent;
     cursor: pointer;
     transition: color 0.1s ease;
 }
@@ -459,6 +556,14 @@
 /* A link beside a heading that leads to more of what the heading shows */
 .side-link {
     font-size: 11px;
+    color: var(--text3);
+}
+
+/* Small text on the baseline of a much larger title reads lower than it is, which one pixel up evens out */
+.card-header-link {
+    position: relative;
+    top: -1px;
+    font-size: 12px;
     color: var(--text3);
 }
 
