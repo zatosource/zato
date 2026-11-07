@@ -1,0 +1,106 @@
+/* ------------------------------------------------------------ */
+/* Flat - the listing and the selected item on the page itself  */
+/* ------------------------------------------------------------ */
+
+.split-flat {
+    padding: 0;
+}
+
+.split-flat .card {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.split-flat .card-header {
+    min-height: 0;
+    padding: 18px var(--page-gutter) 4px;
+    border-bottom: none;
+    background: transparent;
+}
+
+.split-flat .card-title {
+    font-size: 18px;
+}
+
+.split-flat .card-search {
+    padding: 10px var(--page-gutter) 14px;
+    border-bottom: none;
+}
+
+.split-flat .criteria {
+    padding: 0 var(--page-gutter) 14px;
+    border-bottom: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Flat - the listing                                           */
+/* ------------------------------------------------------------ */
+
+.split-flat .listing-scroll {
+    padding: 0 var(--page-gutter);
+}
+
+.split-flat .listing td {
+    border-bottom: 1px solid var(--rule);
+}
+
+.split-flat .listing-empty {
+    padding: 18px 10px;
+}
+
+/* ------------------------------------------------------------ */
+/* Flat - the line between the listing and the selected item    */
+/* ------------------------------------------------------------ */
+
+.split-flat .split-handle {
+    flex-basis: 15px;
+    margin: 0 var(--page-gutter);
+    background: linear-gradient(var(--border), var(--border)) center / 100% 1px no-repeat;
+}
+
+/* The grip covers the line under it */
+.split-flat .split-handle::before {
+    background-color: var(--background);
+}
+
+/* ------------------------------------------------------------ */
+/* Flat - the selected item                                     */
+/* ------------------------------------------------------------ */
+
+.split-flat .detail-body {
+    padding: 18px var(--page-gutter);
+}
+
+/* ------------------------------------------------------------ */
+/* Flat - blocks of the selected item                           */
+/* ------------------------------------------------------------ */
+
+.split-flat .block {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+.split-flat .block + .block {
+    margin-top: 24px;
+}
+
+.split-flat .block-title {
+    padding: 0 10px 6px;
+    background: transparent;
+}
+
+.split-flat .fields {
+    padding: 12px 10px;
+}
+
+.split-flat .table th {
+    background: transparent;
+}
+
+/* The header of the listing stays above the rows scrolled under it, so it is as opaque as the page */
+.split-flat .listing th {
+    background: var(--background);
+}

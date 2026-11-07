@@ -79,11 +79,13 @@
     transition-delay: var(--hover-delay);
 }
 
+/* The fill of a tab changes from a color to a gradient when it opens, which a transition draws as a flash */
 .tab-active,
 .tab-active:hover {
     color: var(--text);
     background: var(--badge-chosen-fill);
     box-shadow: var(--badge-chosen-shadow);
+    transition: none;
 }
 
 /* ------------------------------------------------------------ */

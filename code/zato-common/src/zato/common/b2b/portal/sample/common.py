@@ -666,9 +666,11 @@ def section(
     items:'dictlist',
     actions_of:'callable_',
     is_bulk:'bool'=True,
+    is_flat:'bool'=False,
     ) -> 'anydict':
     """ One listing of the portal. Its rows can be checked to act on many at once, unless is_bulk is False
-    because what its items can do is not done to many of them together.
+    because what its items can do is not done to many of them together. With is_flat, the listing and the selected item
+    are drawn directly on the page background, without cards, borders or shadows around them.
     """
 
     # A narrow column is centered, which each of its cells needs to know of
@@ -690,6 +692,7 @@ def section(
         'new_href': f'{path}/{New_Segment}',
         'scopes': {},
         'is_bulk': is_bulk,
+        'is_flat': is_flat,
         'transitions': transitions(actions_of, [each['attributes']['state'] for each in items]),
     }
     return out

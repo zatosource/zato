@@ -1,4 +1,4 @@
-<div class="content split" id="split" data-path="{{ section.path }}"{% if section.wizard %} data-new-label="{{ section.wizard.title }}" data-new-href="{{ section.new_href }}"{% endif %}>
+<div class="content split{% if section.is_flat %} split-flat{% endif %}" id="split" data-path="{{ section.path }}"{% if section.wizard %} data-new-label="{{ section.wizard.title }}" data-new-href="{{ section.new_href }}"{% endif %}>
 
     <div class="card split-top">
 

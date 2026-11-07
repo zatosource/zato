@@ -334,6 +334,7 @@ def build() -> 'anydict':
         items=items,
         actions_of=_actions,
         is_bulk=False,
+        is_flat=True,
     )
     out['search'] = _search()
 
