@@ -181,6 +181,11 @@ fn split(tcp: TcpStream, mut connection: Connection) -> Result<(LinkSender, Link
     // A message is encrypted whole before it is written, so its size is bounded only by the protocol.
     connection.set_buffer_limit(None);
 
+    // A message that arrived together with the last record of the handshake was decrypted by the handshake,
+    // and no later read of the TCP stream returns it.
+    let mut plaintext = Vec::new();
+    take_plaintext(&mut connection, &mut plaintext)?;
+
     // The receiver blocks until the peer sends something or the link is shut down.
     tcp.set_read_timeout(None)?;
     let reader = tcp.try_clone()?;
@@ -191,7 +196,7 @@ fn split(tcp: TcpStream, mut connection: Connection) -> Result<(LinkSender, Link
     let receiver = LinkReceiver {
         shared,
         tcp: reader,
-        plaintext: Vec::new(),
+        plaintext,
         buffer: vec![0_u8; READ_BUFFER_SIZE],
     };
     Ok((sender, receiver))
@@ -281,25 +286,76 @@ impl LinkReceiver {
 /// Feeds encrypted bytes to the TLS connection and collects the plaintext they contain.
 fn decrypt(shared: &Mutex<SharedEnd>, plaintext: &mut Vec<u8>, mut received: &[u8]) -> Result<(), Error> {
     let mut shared = shared.lock();
-    let mut chunk = [0_u8; 16 * 1024];
 
     while !received.is_empty() {
         let _ = shared.connection.read_tls(&mut received)?;
         let _ = shared.connection.process_new_packets().map_err(|error| tls_error("TLS", error))?;
-
-        loop {
-            match shared.connection.reader().read(&mut chunk) {
-                Ok(0) => break,
-                Ok(count) => {
-                    let bytes = chunk.get(..count).ok_or_else(|| Error::other("read past the buffer"))?;
-                    plaintext.extend_from_slice(bytes);
-                }
-                Err(error) if error.kind() == ErrorKind::WouldBlock => break,
-                Err(error) => return Err(error),
-            }
-        }
+        take_plaintext(&mut shared.connection, plaintext)?;
     }
 
     // Key updates and alerts produced by the bytes just read are answered at once.
     shared.flush_records()
+}
+
+/// Appends the plaintext that the TLS connection has decrypted so far.
+fn take_plaintext(connection: &mut Connection, plaintext: &mut Vec<u8>) -> Result<(), Error> {
+    let mut chunk = [0_u8; 16 * 1024];
+    loop {
+        match connection.reader().read(&mut chunk) {
+            Ok(0) => return Ok(()),
+            Ok(count) => {
+                let bytes = chunk.get(..count).ok_or_else(|| Error::other("read past the buffer"))?;
+                plaintext.extend_from_slice(bytes);
+            }
+            Err(error) if error.kind() == ErrorKind::WouldBlock => return Ok(()),
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_support::{Certificates, LOOPBACK, NODE_A, NODE_B};
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+    use std::thread;
+
+    /// How many links are opened, since a message reaches the other end together with the last record
+    /// of the handshake on only some of them.
+    const LINK_COUNT: usize = 50;
+
+    /// How long a message may take to reach the other end.
+    const RECEIVE_TIMEOUT: Duration = Duration::from_secs(5);
+
+    #[test]
+    fn a_message_sent_right_after_the_handshake_is_received() {
+        let certificates = Certificates::issue();
+        let standby_tls = Arc::new(TlsContext::load(&certificates.files(NODE_B)).unwrap());
+        let active_tls = TlsContext::load(&certificates.files(NODE_A)).unwrap();
+        let hello = Message::Hello {
+            generation: 1,
+            active_node: NODE_A.to_owned(),
+        };
+
+        for _ in 0..LINK_COUNT {
+            let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let (received_sender, received) = mpsc::channel();
+            let tls = Arc::clone(&standby_tls);
+            let standby = thread::spawn(move || {
+                let (tcp, _) = listener.accept().unwrap();
+                let accepted = tls.accept(tcp).unwrap();
+                let (message, _) = accepted.receiver.receive().unwrap();
+                received_sender.send(message).unwrap();
+            });
+
+            let (sender, _receiver) = active_tls.connect(NODE_B, LOOPBACK, port).unwrap();
+            sender.send(&hello, RECEIVE_TIMEOUT).unwrap();
+            let message = received.recv_timeout(RECEIVE_TIMEOUT).expect("the standby received no message");
+            assert_eq!(message, hello);
+            standby.join().unwrap();
+            sender.close();
+        }
+    }
 }

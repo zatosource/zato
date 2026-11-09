@@ -193,3 +193,171 @@ impl Referee for ConsulReferee {
         entries.iter().map(decode_value).collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::referee::VERSION_ABSENT;
+    use crate::test_support::{LOOPBACK, NODE_A, NODE_B};
+    use std::process::Command;
+    use std::thread;
+    use std::time::Instant;
+
+    /// The Consul image of the test container.
+    const CONSUL_IMAGE: &str = "hashicorp/consul:1.21.4";
+
+    /// The port of the Consul HTTP API inside the container.
+    const CONSUL_PORT: &str = "8500/tcp";
+
+    /// How long the container may take to elect itself the leader.
+    const STARTUP_TIMEOUT: Duration = Duration::from_mins(1);
+
+    /// How long to wait between two checks of the leader.
+    const STARTUP_POLL: Duration = Duration::from_millis(250);
+
+    /// The port on which nothing listens.
+    const CLOSED_PORT: u16 = 1;
+
+    /// A Consul agent in development mode in a container removed on drop.
+    struct ConsulContainer {
+        /// The name of the container.
+        name: String,
+
+        /// The address of its HTTP API on the host.
+        address: String,
+    }
+
+    impl ConsulContainer {
+        /// Starts the container and waits until the agent has a leader.
+        fn start() -> Self {
+            let name = format!("zato-ha-consul-test-{}", std::process::id());
+            let publish = format!("{LOOPBACK}::8500");
+            docker(&[
+                "run",
+                "--detach",
+                "--rm",
+                "--name",
+                &name,
+                "--publish",
+                &publish,
+                CONSUL_IMAGE,
+                "agent",
+                "-dev",
+                "-client",
+                "0.0.0.0",
+            ]);
+            let mapping = docker(&["port", &name, CONSUL_PORT]);
+            let host_port = mapping.lines().next().unwrap().trim();
+            let container = Self {
+                name,
+                address: format!("http://{host_port}"),
+            };
+            container.wait_for_leader();
+            container
+        }
+
+        /// Waits until the agent answers with the address of a leader.
+        fn wait_for_leader(&self) {
+            let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(REQUEST_TIMEOUT)).build().into();
+            let url = format!("{}/v1/status/leader", self.address);
+            let deadline = Instant::now() + STARTUP_TIMEOUT;
+            while Instant::now() < deadline {
+                if let Ok(mut response) = agent.get(&url).call() {
+                    let leader = response.body_mut().read_to_string().unwrap();
+                    if leader.trim() != "\"\"" {
+                        return;
+                    }
+                }
+                thread::sleep(STARTUP_POLL);
+            }
+            panic!("Consul at {} elected no leader within {STARTUP_TIMEOUT:?}", self.address);
+        }
+
+        /// Returns a client of the record under `key`.
+        fn referee(&self, key: &str) -> ConsulReferee {
+            ConsulReferee::new(&self.address, "", key, None).unwrap()
+        }
+    }
+
+    impl Drop for ConsulContainer {
+        fn drop(&mut self) {
+            let _ = Command::new("docker").args(["rm", "--force", &self.name]).output();
+        }
+    }
+
+    /// Runs the `docker` command and returns its standard output, failing the test if it fails.
+    fn docker(args: &[&str]) -> String {
+        let output = Command::new("docker").args(args).output().unwrap();
+        assert!(
+            output.status.success(),
+            "docker {}: {}",
+            args.join(" "),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap()
+    }
+
+    /// Returns the version of the record, which must exist.
+    fn version(referee: &ConsulReferee) -> u64 {
+        referee.read().unwrap().unwrap().version
+    }
+
+    /// An absent record is created by exactly one of two writers.
+    fn check_creation(consul: &ConsulContainer) {
+        let referee = consul.referee("zato/ha/creation");
+        assert!(referee.read().unwrap().is_none());
+        assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), VERSION_ABSENT).unwrap());
+        assert!(!referee.compare_and_set(&RefereeRecord::solo(1, NODE_B), VERSION_ABSENT).unwrap());
+        assert_eq!(referee.read().unwrap().unwrap().value, RefereeRecord::solo(1, NODE_A));
+    }
+
+    /// A write that names a version older than the current one is refused.
+    fn check_stale_version(consul: &ConsulContainer) {
+        let referee = consul.referee("zato/ha/stale");
+        assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), VERSION_ABSENT).unwrap());
+        let first = version(&referee);
+        assert!(
+            referee
+                .compare_and_set(&RefereeRecord::replicated(1, NODE_A, NODE_B), first)
+                .unwrap()
+        );
+        assert!(!referee.compare_and_set(&RefereeRecord::solo(2, NODE_B), first).unwrap());
+        assert_eq!(referee.read().unwrap().unwrap().value, RefereeRecord::replicated(1, NODE_A, NODE_B));
+    }
+
+    /// The addresses of both nodes are read back, and the record is not among them.
+    fn check_addresses(consul: &ConsulContainer) {
+        let referee = consul.referee("zato/ha/addresses");
+        assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), VERSION_ABSENT).unwrap());
+        for (node_name, port) in [(NODE_A, 17010), (NODE_B, 17011)] {
+            referee
+                .publish_address(&NodeAddress {
+                    node_name: node_name.to_owned(),
+                    host: LOOPBACK.to_owned(),
+                    port,
+                })
+                .unwrap();
+        }
+        let mut addresses = referee.read_addresses().unwrap();
+        addresses.sort_by(|left, right| left.node_name.cmp(&right.node_name));
+        let names: Vec<&str> = addresses.iter().map(|address| address.node_name.as_str()).collect();
+        assert_eq!(names, [NODE_A, NODE_B]);
+        assert_eq!(referee.read().unwrap().unwrap().value, RefereeRecord::solo(1, NODE_A));
+    }
+
+    #[test]
+    fn the_record_follows_compare_and_set_in_consul_kv() {
+        let consul = ConsulContainer::start();
+        check_creation(&consul);
+        check_stale_version(&consul);
+        check_addresses(&consul);
+    }
+
+    #[test]
+    fn an_agent_that_does_not_answer_is_an_error() {
+        let address = format!("http://{LOOPBACK}:{CLOSED_PORT}");
+        let referee = ConsulReferee::new(&address, "", "zato/ha/test", None).unwrap();
+        assert!(referee.read().is_err());
+        assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), VERSION_ABSENT).is_err());
+    }
+}

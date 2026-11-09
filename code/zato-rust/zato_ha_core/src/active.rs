@@ -555,8 +555,13 @@ impl Shipper {
             }
 
             // From here on, no barrier completes until the standby is in sync or the admission is abandoned.
-            state.admitting = true;
-            state.link_state = LinkState::CaughtUp;
+            // A barrier that completed before this point synced locally frames that the last scan may not
+            // have read, so the admission waits for the next iteration, whose scan reads them.
+            if !state.admitting {
+                state.admitting = true;
+                state.link_state = LinkState::CaughtUp;
+                return Ok(());
+            }
             state.generation
         };
 
@@ -995,5 +1000,161 @@ fn start_session_threads(shared: &Arc<Shared>, receiver: LinkReceiver, sender: L
     if let Err(error) = receiving.and(heartbeats) {
         tracing::error!("Cannot start the threads of session {number}: {error}");
         end_from_thread(shared, number, "no threads");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::barrier::{self, BarrierOutcome};
+    use crate::config::{DB_NAME_PUBSUB, Timers};
+    use crate::link::TlsContext;
+    use crate::record::{NodeAddress, Versioned};
+    use crate::referee::tests::MemoryReferee;
+    use crate::test_support::{self, Certificates, LOOPBACK, NODE_A, NODE_B};
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+
+    /// Rows that make the database file larger than the socket buffers, so that sending it blocks
+    /// for as long as the standby does not read.
+    const BULK_ROWS: usize = 1024;
+
+    /// The size of each of these rows.
+    const BULK_ROW_SIZE: usize = 64 * 1024;
+
+    /// Timers that do not expire during a test.
+    const TIMERS: Timers = Timers {
+        heartbeat: Duration::from_millis(500),
+        mark_out: Duration::from_mins(1),
+        takeover: Duration::from_mins(2),
+    };
+
+    /// How long a test waits for a message of the link.
+    const RECEIVE_TIMEOUT: Duration = Duration::from_secs(30);
+
+    /// The body of the publication acknowledged while the snapshot is being sent.
+    const PUBLICATION: &[u8] = b"acknowledged-publication";
+
+    /// The report of the frames of the publish/subscribe database.
+    const PUBSUB_FRAMES: &str = "frames of pubsub";
+
+    /// The report of an admission.
+    const ADMIT: &str = "admit";
+
+    /// Fills the publish/subscribe database in its main file and leaves it without a log, as a checkpoint does.
+    fn fill_database(path: &Path) {
+        let connection = Connection::open(path).unwrap();
+        connection
+            .execute_batch("pragma journal_mode=delete; create table message (body blob); begin;")
+            .unwrap();
+        let body = vec![0_u8; BULK_ROW_SIZE];
+        for _ in 0..BULK_ROWS {
+            let _ = connection.execute("insert into message (body) values (?1)", [&body]).unwrap();
+        }
+        connection.execute_batch("commit").unwrap();
+    }
+
+    /// The channels between a test and the standby it plays.
+    struct StandbyChannels {
+        /// Told once the first message of the snapshot arrived, after which nothing is read until `resume`.
+        paused: mpsc::Sender<()>,
+
+        /// Tells the standby to read again.
+        resume: mpsc::Receiver<()>,
+
+        /// Receives the frames of the publish/subscribe database and the admissions, in the order they arrive.
+        reports: mpsc::Sender<&'static str>,
+    }
+
+    /// Plays a standby that answers the Hello and confirms nothing.
+    fn run_standby(listener: &TcpListener, tls: &TlsContext, channels: &StandbyChannels) {
+        let (tcp, _) = listener.accept().unwrap();
+        let accepted = tls.accept(tcp).unwrap();
+        let (_, mut receiver) = accepted.receiver.receive().unwrap();
+        let reply = Message::HelloReply {
+            in_sync: false,
+            positions: Vec::new(),
+        };
+        accepted.sender.send(&reply, RECEIVE_TIMEOUT).unwrap();
+
+        let mut paused = false;
+        while let Ok((message, next)) = receiver.receive() {
+            receiver = next;
+            if !paused {
+                paused = true;
+                channels.paused.send(()).unwrap();
+                channels.resume.recv().unwrap();
+            }
+            let report = match message {
+                Message::Frames { database, .. } if database == DB_NAME_PUBSUB => PUBSUB_FRAMES,
+                Message::Admit { .. } => ADMIT,
+                _ => continue,
+            };
+            if channels.reports.send(report).is_err() {
+                return;
+            }
+        }
+    }
+
+    /// Returns the shared state of node A, active alone at generation 1, with node B listening on `port`.
+    fn active_node(dir: &Path, certificates: &Certificates, port: u16) -> Arc<Shared> {
+        let config = test_support::node_config(NODE_A, dir, certificates, TIMERS);
+        let referee = MemoryReferee::default();
+        *referee.record.lock() = Some(Versioned {
+            value: RefereeRecord::solo(1, NODE_A),
+            version: 1,
+        });
+        referee.addresses.lock().push(NodeAddress {
+            node_name: NODE_B.to_owned(),
+            host: LOOPBACK.to_owned(),
+            port,
+        });
+        let shared = test_support::shared(config, Box::new(referee));
+        {
+            let mut state = shared.state.lock();
+            state.role = Role::ActiveSolo;
+            state.generation = 1;
+        }
+        shared
+    }
+
+    #[test]
+    fn a_publication_acknowledged_during_a_join_reaches_the_standby_before_its_admission() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let pubsub_path = dir.path().join("pubsub.db");
+        fill_database(&pubsub_path);
+
+        let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
+        let shared = active_node(dir.path(), &certificates, listener.local_addr().unwrap().port());
+
+        let (paused_sender, paused) = mpsc::channel();
+        let (resume_sender, resume) = mpsc::channel();
+        let (reports_sender, reports) = mpsc::channel();
+        let channels = StandbyChannels {
+            paused: paused_sender,
+            resume,
+            reports: reports_sender,
+        };
+        let standby_tls = TlsContext::load(&certificates.files(NODE_B)).unwrap();
+        let standby = thread::spawn(move || run_standby(&listener, &standby_tls, &channels));
+        let shipper_shared = Arc::clone(&shared);
+        let shipper = thread::spawn(move || Shipper::new(shipper_shared).run());
+
+        // The shipper recorded the end of every log and is blocked sending the database file.
+        paused.recv_timeout(RECEIVE_TIMEOUT).unwrap();
+        let connection = Connection::open(&pubsub_path).unwrap();
+        connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
+        let _ = connection.execute("insert into message (body) values (?1)", [PUBLICATION]).unwrap();
+        assert_eq!(barrier::wait(&shared, DB_NAME_PUBSUB), BarrierOutcome::Synced);
+        resume_sender.send(()).unwrap();
+
+        // The standby confirms nothing, so the frames of the publication arrive and no admission follows them.
+        let first = reports.recv_timeout(RECEIVE_TIMEOUT).unwrap();
+        assert_eq!(first, PUBSUB_FRAMES);
+
+        shared.announce_stop();
+        shipper.join().unwrap();
+        standby.join().unwrap();
     }
 }

@@ -20,5 +20,7 @@ pub mod role_endpoint;
 pub mod standby;
 pub mod state;
 pub mod supervisor;
+#[cfg(test)]
+pub mod test_support;
 pub mod wal;
 pub mod wire;

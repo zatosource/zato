@@ -408,3 +408,189 @@ impl Control {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Timers;
+    use crate::record::Versioned;
+    use crate::referee::tests::MemoryReferee;
+    use crate::test_support::{self, Certificates, NODE_A, NODE_B};
+    use tempfile::TempDir;
+
+    /// Timers short enough for a test to let them expire.
+    const TIMERS: Timers = Timers {
+        heartbeat: Duration::from_millis(10),
+        mark_out: Duration::from_millis(20),
+        takeover: Duration::from_millis(40),
+    };
+
+    /// How long a test waits for every timer to expire.
+    const PAST_TIMERS: Duration = Duration::from_millis(60);
+
+    /// Node A of a pair, with the files it needs for as long as it exists.
+    struct TestNode {
+        /// The control loop of the node.
+        control: Control,
+
+        /// The directory of the node's files.
+        _dir: TempDir,
+
+        /// The certificates of the pair.
+        _certificates: Certificates,
+    }
+
+    /// Returns node A with `record` in the referee and `persisted` in its generation file.
+    fn node(record: Option<RefereeRecord>, persisted: u64, unreachable: bool) -> TestNode {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let config = test_support::node_config(NODE_A, dir.path(), &certificates, TIMERS);
+        generation::write(&config.generation_file(), persisted).unwrap();
+
+        let referee = MemoryReferee::default();
+        *referee.record.lock() = record.map(|value| Versioned { value, version: 1 });
+        *referee.unreachable.lock() = unreachable;
+
+        let shared = test_support::shared(config, Box::new(referee));
+        let control = Control::new(shared, Arc::new(AtomicBool::new(false))).unwrap();
+        TestNode {
+            control,
+            _dir: dir,
+            _certificates: certificates,
+        }
+    }
+
+    /// Returns the record the referee holds.
+    fn record(control: &Control) -> RefereeRecord {
+        control.shared.referee.read().unwrap().unwrap().value
+    }
+
+    /// Returns the role and the generation of the node.
+    fn role(control: &Control) -> (Role, u64) {
+        let state = control.shared.state.lock();
+        (state.role, state.generation)
+    }
+
+    /// Sets the role and the generation of the node, as after its first decision.
+    fn set_role(control: &Control, role: Role, generation: u64) {
+        let mut state = control.shared.state.lock();
+        state.role = role;
+        state.generation = generation;
+    }
+
+    #[test]
+    fn the_first_node_creates_the_record_and_runs_alone() {
+        let mut node = node(None, 0, false);
+        node.control.bootstrap().unwrap();
+        assert_eq!(role(&node.control), (Role::ActiveSolo, 1));
+        assert_eq!(record(&node.control), RefereeRecord::solo(1, NODE_A));
+        assert_eq!(generation::read(&node.control.shared.config.generation_file()).unwrap(), 1);
+    }
+
+    #[test]
+    fn a_node_that_was_active_alone_resumes_at_the_next_generation() {
+        let mut node = node(Some(RefereeRecord::solo(3, NODE_A)), 3, false);
+        node.control.bootstrap().unwrap();
+        assert_eq!(role(&node.control), (Role::ActiveSolo, 4));
+        assert_eq!(record(&node.control), RefereeRecord::solo(4, NODE_A));
+    }
+
+    #[test]
+    fn a_standby_in_sync_restarts_in_sync() {
+        let mut node = node(Some(RefereeRecord::replicated(3, NODE_B, NODE_A)), 3, false);
+        node.control.bootstrap().unwrap();
+        assert_eq!(role(&node.control), (Role::StandbyInSync, 3));
+    }
+
+    #[test]
+    fn a_standby_that_did_not_persist_its_admission_restarts_out() {
+        let mut node = node(Some(RefereeRecord::replicated(3, NODE_B, NODE_A)), 2, false);
+        node.control.bootstrap().unwrap();
+        assert_eq!(role(&node.control), (Role::StandbyOut, 3));
+    }
+
+    #[test]
+    fn an_active_node_that_had_a_standby_in_sync_waits_for_the_takeover() {
+        let mut node = node(Some(RefereeRecord::replicated(3, NODE_A, NODE_B)), 3, false);
+        node.control.bootstrap().unwrap();
+        assert_eq!(role(&node.control), (Role::StandbyOut, 3));
+        assert_eq!(record(&node.control), RefereeRecord::replicated(3, NODE_A, NODE_B));
+    }
+
+    #[test]
+    fn a_referee_below_the_local_generation_stops_the_node() {
+        let mut node = node(Some(RefereeRecord::solo(2, NODE_B)), 5, false);
+        let error = node.control.bootstrap().unwrap_err();
+        assert!(matches!(
+            error,
+            ControlError::RefereeLostData {
+                referee: Some(2),
+                local: 5
+            }
+        ));
+    }
+
+    #[test]
+    fn a_referee_without_the_record_stops_a_node_that_saw_a_generation() {
+        let mut node = node(None, 5, false);
+        let error = node.control.bootstrap().unwrap_err();
+        assert!(matches!(error, ControlError::RefereeLostData { referee: None, local: 5 }));
+    }
+
+    #[test]
+    fn a_silent_active_node_is_taken_over() {
+        let mut node = node(Some(RefereeRecord::replicated(3, NODE_B, NODE_A)), 3, false);
+        set_role(&node.control, Role::StandbyInSync, 3);
+        thread::sleep(PAST_TIMERS);
+        node.control.check_active().unwrap();
+        assert_eq!(role(&node.control), (Role::ActiveSolo, 4));
+        assert_eq!(record(&node.control), RefereeRecord::solo(4, NODE_A));
+    }
+
+    #[test]
+    fn a_takeover_refused_by_the_referee_leaves_the_standby_out() {
+        let mut node = node(Some(RefereeRecord::solo(4, NODE_B)), 3, false);
+        set_role(&node.control, Role::StandbyInSync, 3);
+        thread::sleep(PAST_TIMERS);
+        node.control.check_active().unwrap();
+        assert_eq!(role(&node.control), (Role::StandbyOut, 4));
+        assert_eq!(record(&node.control), RefereeRecord::solo(4, NODE_B));
+    }
+
+    #[test]
+    fn a_silent_standby_is_marked_out() {
+        let mut node = node(Some(RefereeRecord::replicated(3, NODE_A, NODE_B)), 3, false);
+        set_role(&node.control, Role::ActiveReplicated, 3);
+        thread::sleep(PAST_TIMERS);
+        node.control.check_standby().unwrap();
+        assert_eq!(role(&node.control), (Role::ActiveSolo, 4));
+        assert_eq!(record(&node.control), RefereeRecord::solo(4, NODE_A));
+    }
+
+    #[test]
+    fn a_mark_out_refused_by_the_referee_fences_the_node() {
+        let mut node = node(Some(RefereeRecord::solo(4, NODE_B)), 3, false);
+        set_role(&node.control, Role::ActiveReplicated, 3);
+        thread::sleep(PAST_TIMERS);
+        node.control.check_standby().unwrap();
+        assert_eq!(role(&node.control), (Role::Fenced, 4));
+    }
+
+    #[test]
+    fn an_active_node_that_reaches_neither_the_standby_nor_the_referee_is_isolated() {
+        let mut node = node(Some(RefereeRecord::replicated(3, NODE_A, NODE_B)), 3, true);
+        set_role(&node.control, Role::ActiveReplicated, 3);
+        thread::sleep(PAST_TIMERS);
+        node.control.check_standby().unwrap();
+        assert_eq!(role(&node.control), (Role::ActiveReplicated, 3));
+        assert!(node.control.shared.state.lock().isolated);
+    }
+
+    #[test]
+    fn an_active_node_that_the_record_no_longer_names_is_fenced() {
+        let node = node(Some(RefereeRecord::solo(5, NODE_B)), 3, false);
+        set_role(&node.control, Role::ActiveSolo, 3);
+        node.control.check_record().unwrap();
+        assert_eq!(role(&node.control), (Role::Fenced, 5));
+    }
+}
