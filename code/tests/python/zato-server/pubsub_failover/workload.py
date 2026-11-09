@@ -240,7 +240,8 @@ def read_rows(env:'FailoverEnvironment', query:'str') -> 'list':
     if is_postgresql_mode(database.mode):
         connection = connect(database)
     else:
-        connection = sqlite3.connect(database.env['Zato_PubSub_DB_Path'])
+        path = database.env['Zato_PubSub_DB_Path']
+        connection = sqlite3.connect(f'file:{path}?mode=ro', uri=True)
 
     try:
         cursor = connection.cursor()

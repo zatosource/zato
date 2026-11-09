@@ -169,7 +169,7 @@ class SchedulerPair:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _format_date(value:'datetime') -> 'str':
+def format_date(value:'datetime') -> 'str':
     out = value.strftime(_date_format)
     return out
 
@@ -228,7 +228,7 @@ def _patch_redis_port(server_directory:'str', port:'int') -> 'None':
 
 # ################################################################################################################################
 
-def _add_service_row(quickstart_directory:'str') -> 'None':
+def add_service_row(quickstart_directory:'str') -> 'None':
     """ Adds the service of the jobs to the configuration database, because the import of a job requires its service.
     The server matches the row with the service from the pickup directory by its name.
     """
@@ -251,8 +251,9 @@ def _add_service_row(quickstart_directory:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _import_jobs(quickstart_directory:'str', server_directory:'str', rendered_yaml:'str') -> 'None':
-    """ Imports the enmasse file with the jobs, offline, into the configuration database of a server.
+def import_jobs(quickstart_directory:'str', server_directory:'str', rendered_yaml:'str', extra_env:'strstrdict') -> 'None':
+    """ Imports the enmasse file with the jobs, offline, into the configuration database of a server,
+    with the given variables added to the environment of the command.
     """
     rendered_path = os.path.join(quickstart_directory, 'enmasse.yaml')
 
@@ -261,6 +262,7 @@ def _import_jobs(quickstart_directory:'str', server_directory:'str', rendered_ya
 
     env = os.environ.copy()
     env['Zato_Needs_Config_Reload'] = 'False'
+    env.update(extra_env)
 
     command = [_zato_bin, 'enmasse', '--import', '--input', rendered_path, server_directory]
     result = subprocess.run(command, capture_output=True, text=True, check=False,
@@ -298,8 +300,8 @@ def _new_server(
     service_path = os.path.join(os.path.dirname(__file__), ModuleCtx.Service_File_Name)
     _ = shutil.copy(service_path, pickup_dir)
 
-    _add_service_row(quickstart_directory)
-    _import_jobs(quickstart_directory, server_directory, rendered_yaml)
+    add_service_row(quickstart_directory)
+    import_jobs(quickstart_directory, server_directory, rendered_yaml, {})
 
     # .. the server has its own Redis ..
     redis_port = find_free_port()
@@ -409,6 +411,28 @@ def _add_pubsub_objects(placeholders:'strstrdict', pair:'SchedulerPair', data_di
 
 # ################################################################################################################################
 
+def render_job_file(placeholders:'strstrdict') -> 'tuple[str, datetime]':
+    """ Renders the enmasse file with the jobs, adding their dates to the placeholders, and returns it
+    with the date of the one-time job of the gap.
+    """
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    grid_start = now - timedelta(seconds=ModuleCtx.Grid_Start_Age_Seconds)
+    past_start = datetime.now(timezone.utc) - timedelta(seconds=ModuleCtx.Past_Start_Age_Seconds)
+    gap_start = datetime.now(timezone.utc) + timedelta(seconds=ModuleCtx.Gap_Start_Delay_Seconds)
+    gap_start = gap_start.replace(microsecond=0)
+
+    placeholders['grid_start'] = format_date(grid_start)
+    placeholders['past_start'] = format_date(past_start)
+    placeholders['gap_start'] = format_date(gap_start)
+
+    template_path = os.path.join(_tests_dir, ModuleCtx.Scheduler_Template)
+    rendered_yaml = render_template(template_path, placeholders)
+
+    out = (rendered_yaml, gap_start)
+    return out
+
+# ################################################################################################################################
+
 def build_pair(database:'PubSubDatabase', server_count:'int', needs_workload:'bool') -> 'SchedulerPair':
     """ Builds the servers on the database, of which the first one runs and the others wait as stopped containers.
     """
@@ -418,22 +442,10 @@ def build_pair(database:'PubSubDatabase', server_count:'int', needs_workload:'bo
     work_dir = tempfile.mkdtemp(prefix='scheduler_', dir=get_failover_dir())
 
     # The dates of the jobs are the same in each server, so both of them follow one grid ..
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-    grid_start = now - timedelta(seconds=ModuleCtx.Grid_Start_Age_Seconds)
-    past_start = datetime.now(timezone.utc) - timedelta(seconds=ModuleCtx.Past_Start_Age_Seconds)
-    gap_start = datetime.now(timezone.utc) + timedelta(seconds=ModuleCtx.Gap_Start_Delay_Seconds)
-    gap_start = gap_start.replace(microsecond=0)
-
-    placeholders:'strstrdict' = {
-        'grid_start': _format_date(grid_start),
-        'past_start': _format_date(past_start),
-        'gap_start': _format_date(gap_start),
-    }
+    placeholders:'strstrdict' = {}
+    rendered_yaml, gap_start = render_job_file(placeholders)
 
     pair = SchedulerPair(database=database, servers=[], work_dir=work_dir, gap_start=gap_start)
-
-    template_path = os.path.join(_tests_dir, ModuleCtx.Scheduler_Template)
-    rendered_yaml = render_template(template_path, placeholders)
 
     # .. the workload adds the objects of pub/sub to the same file ..
     if needs_workload:

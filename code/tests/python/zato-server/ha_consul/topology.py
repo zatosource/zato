@@ -30,7 +30,7 @@ from zato.common.crypto.api import CryptoManager
 # ################################################################################################################################
 
 if 0:
-    from certificates import Authority
+    from ha_authority import Authority
     from zato.common.typing_ import any_, anydict, strlist
 
     # Dummy assignments to satisfy type checkers
@@ -122,15 +122,21 @@ def save_container_logs(name:'str', directory:'str') -> 'None':
 
 # ################################################################################################################################
 
+def ensure_image(name:'str', dockerfile:'str') -> 'None':
+    """ Builds a tool image from its Dockerfile unless it exists already.
+    """
+    result = docker('image', 'inspect', name, check=False)
+
+    if result.returncode != 0:
+        _ = subprocess.run(['docker', 'build', '-t', name, '-'], input=dockerfile.encode('utf8'), capture_output=True,
+            check=True)
+
+# ################################################################################################################################
+
 def ensure_net_image() -> 'None':
     """ Builds the image with iptables and tc unless it exists already.
     """
-    result = docker('image', 'inspect', ModuleCtx.Net_Image, check=False)
-
-    if result.returncode != 0:
-        dockerfile = ModuleCtx.Net_Dockerfile.encode('utf8')
-        _ = subprocess.run(['docker', 'build', '-t', ModuleCtx.Net_Image, '-'], input=dockerfile, capture_output=True,
-            check=True)
+    ensure_image(ModuleCtx.Net_Image, ModuleCtx.Net_Dockerfile)
 
 # ################################################################################################################################
 
@@ -422,7 +428,7 @@ class HAProxy:
         self.backends = backends
         self.server_port = server_port
         self.role_port = role_port
-        self.address = f'http://{ModuleCtx.HAProxy_IP}:{ModuleCtx.HAProxy_Port}'
+        self.base_url = f'http://{ModuleCtx.HAProxy_IP}:{ModuleCtx.HAProxy_Port}'
 
 # ################################################################################################################################
 

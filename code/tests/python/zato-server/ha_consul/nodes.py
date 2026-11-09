@@ -27,7 +27,7 @@ from topology import docker, ModuleCtx as TopologyCtx, remove_container, save_co
 # ################################################################################################################################
 
 if 0:
-    from certificates import Authority
+    from ha_authority import Authority
     from topology import Consul
     from zato.common.typing_ import anydict, strlist, strstrdict
 
@@ -51,12 +51,19 @@ class ModuleCtx:
     # The repository with the current tree, mounted at its own path
     Repository_Dir = os.environ['ZATO_TEST_BASE_DIR']
 
-    # The node binary and the zato command of the current tree
-    Node_Binary = os.path.join(Repository_Dir, 'code', 'bin', '_zato_ha_node')
-    Zato_Binary = os.path.join(Repository_Dir, 'code', 'bin', 'zato')
+    # The node binary, the scheduler binary and the zato command of the current tree
+    Node_Binary      = os.path.join(Repository_Dir, 'code', 'bin', '_zato_ha_node')
+    Scheduler_Binary = os.path.join(Repository_Dir, 'code', 'bin', '_zato_scheduler')
+    Zato_Binary      = os.path.join(Repository_Dir, 'code', 'bin', 'zato')
 
-    # The script that the container runs in place of the entrypoint of the image
-    Start_Script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ha-start.sh')
+    # The script that the container runs in place of the entrypoint of the image,
+    # and the script that the node runs while it is active
+    Start_Script    = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ha-start.sh')
+    Server_Launcher = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ha-server.sh')
+
+    # The Redis server that the start script runs in each container, and the HTTP port of the scheduler
+    Redis_Port          = 6379
+    Scheduler_HTTP_Port = 35202
 
     # The ports of each node, the same on both, as each node has an address of its own
     Server_Port      = 17010
@@ -78,6 +85,10 @@ class ModuleCtx:
     # How long a container may take to stop gracefully, in seconds
     Stop_Timeout = 20
 
+    # How long a pulled message waits for its acknowledgement, in seconds, short enough for a test to see
+    # the messages of lost pull responses handed out again
+    Pull_Lease_Seconds = '5'
+
     # The roles in which a node serves requests
     Active_Roles = ('ActiveSolo', 'ActiveReplicated')
 
@@ -95,6 +106,19 @@ class Timers:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class NodeHook:
+    """ What a suite prepares for each node before its container starts and removes once the container is removed.
+    """
+
+    def before_start(self, node:'Node') -> 'None':
+        raise NotImplementedError()
+
+    def after_remove(self, node:'Node') -> 'None':
+        raise NotImplementedError()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass
 class Node:
     """ One node of the pair and the container it runs in.
@@ -108,6 +132,10 @@ class Node:
 
     # The host directories that a fault mounts into the container at the next start, at the same path
     fault_mounts: 'strlist' = field(default_factory=list)
+
+    # The options of the mount of the run directory, which a mount made later under it by a tool container
+    # reaches the container through
+    run_dir_options: 'str' = ''
 
     # The server directory, which the quickstart environment of the node creates
     server_directory: 'str' = ''
@@ -145,8 +173,13 @@ class Node:
         return out
 
     @property
-    def cert_dir(self) -> 'str':
-        out = os.path.join(self.directory, 'certs')
+    def scheduler_log_path(self) -> 'str':
+        out = os.path.join(self.directory, 'scheduler.log')
+        return out
+
+    @property
+    def run_log_path(self) -> 'str':
+        out = os.path.join(self.directory, 'run-log.jsonl')
         return out
 
     @property
@@ -169,7 +202,6 @@ class Node:
         """ Creates the directories and the certificate of the node and fills in its environment.
         """
         os.makedirs(self.data_dir, exist_ok=True)
-        os.makedirs(self.cert_dir, exist_ok=True)
 
         issued = authority.issue(self.node_name, [self.node_name], [self.ip])
 
@@ -194,7 +226,17 @@ class Node:
             'Zato_HA_Takeover_Time': str(timers.takeover),
             'Zato_HA_Log_Level': 'info',
             'Zato_Config_Bind_Port': str(ModuleCtx.Server_Port),
+            'Zato_PubSub_Pull_Lease_Seconds': ModuleCtx.Pull_Lease_Seconds,
+            'Zato_Scheduler_Redis_Host': '127.0.0.1',
+            'Zato_Scheduler_Redis_Port': str(ModuleCtx.Redis_Port),
+            'Zato_Scheduler_HTTP_Port': str(ModuleCtx.Scheduler_HTTP_Port),
+            'Zato_Scheduler_Log_Level': 'info',
             'Zato_Test_HA_Node_Binary': ModuleCtx.Node_Binary,
+            'Zato_Test_Server_Launcher': ModuleCtx.Server_Launcher,
+            'Zato_Test_Scheduler_Binary': ModuleCtx.Scheduler_Binary,
+            'Zato_Test_Scheduler_Log': self.scheduler_log_path,
+            'Zato_Test_Scheduler_Run_Log': self.run_log_path,
+            'Zato_Test_Scheduler_Server_Label': self.node_name,
             'Zato_Test_Zato_Binary': ModuleCtx.Zato_Binary,
         })
 
@@ -211,7 +253,7 @@ class Node:
             '--ip', self.ip,
             '--user', f'{os.getuid()}:{os.getgid()}',
             '-v', f'{ModuleCtx.Repository_Dir}:{ModuleCtx.Repository_Dir}',
-            '-v', f'{self.run_dir}:{self.run_dir}',
+            '-v', f'{self.run_dir}:{self.run_dir}{self.run_dir_options}',
             '-v', f'{ModuleCtx.Start_Script}:/ha-start.sh:ro',
         ]
 
@@ -278,6 +320,16 @@ class Node:
 
     def save_logs(self, directory:'str') -> 'None':
         save_container_logs(self.container_name, directory)
+
+# ################################################################################################################################
+
+    def read_logs(self) -> 'str':
+        """ Returns the output of the container of the node, which holds the log of the node and of its server.
+        """
+        result = docker('logs', self.container_name, check=False)
+
+        out = result.stdout + result.stderr
+        return out
 
 # ################################################################################################################################
 
