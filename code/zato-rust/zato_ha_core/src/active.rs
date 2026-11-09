@@ -336,7 +336,7 @@ impl Shipper {
             return Err(Error::new(ErrorKind::NotFound, "the other node has not published its address"));
         };
 
-        let (sender, mut receiver) = self.shared.tls.connect(&peer.node_name, &peer.host, peer.port)?;
+        let (sender, receiver) = self.shared.tls.connect(&peer.node_name, &peer.host, peer.port)?;
         let (generation, role) = {
             let state = self.shared.state.lock();
             (state.generation, state.role)
@@ -350,7 +350,8 @@ impl Shipper {
             timeout,
         )?;
 
-        let (in_sync, positions) = match receiver.receive()? {
+        let (reply, receiver) = receiver.receive()?;
+        let (in_sync, positions) = match reply {
             Message::HelloReply { in_sync, positions } => (in_sync, positions),
             Message::Refused { generation: higher } => {
                 self.shared.fence(&mut self.shared.state.lock(), higher);
@@ -933,7 +934,10 @@ fn apply_confirmation(state: &mut NodeState, position: &Position) {
 fn receive_loop(shared: &Shared, mut receiver: LinkReceiver, number: u64) {
     loop {
         let message = match receiver.receive() {
-            Ok(message) => message,
+            Ok((message, next)) => {
+                receiver = next;
+                message
+            }
             Err(error) => {
                 end_from_thread(shared, number, &error.to_string());
                 return;

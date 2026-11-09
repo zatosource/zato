@@ -34,7 +34,7 @@ from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, st
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, callable_, strstrdict
+    from zato.common.typing_ import any_, anydict, callable_, strnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -300,16 +300,22 @@ def run_quickstart_and_enmasse(
     invoke_password:'str',
     rendered_yaml:'str',
     quickstart_prefix:'str',
+    extra_env:'strstrdict | None' = None,
+    quickstart_parent_dir:'strnone' = None,
 ) -> 'str':
-    """ Creates a quickstart environment and imports the enmasse YAML.
+    """ Creates a quickstart environment and imports the enmasse YAML, with the given variables added
+    to the environment of both commands and under the given parent directory, if any.
     Returns the server directory path.
     """
     start_time = time.monotonic()
 
-    state.quickstart_directory = tempfile.mkdtemp(prefix=quickstart_prefix)
+    state.quickstart_directory = tempfile.mkdtemp(prefix=quickstart_prefix, dir=quickstart_parent_dir)
 
     quickstart_environment = os.environ.copy()
     _ = quickstart_environment.pop('COVERAGE_PROCESS_START', None)
+
+    if extra_env:
+        quickstart_environment.update(extra_env)
 
     quickstart_command = [
         zato_bin, 'quickstart', 'create', state.quickstart_directory,
@@ -340,6 +346,9 @@ def run_quickstart_and_enmasse(
 
         enmasse_environment = os.environ.copy()
         enmasse_environment['Zato_Needs_Config_Reload'] = 'False'
+
+        if extra_env:
+            enmasse_environment.update(extra_env)
 
         enmasse_command = [
             zato_bin, 'enmasse', '--import', '--input', rendered_path, server_directory,

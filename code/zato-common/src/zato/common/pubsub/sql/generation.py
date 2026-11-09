@@ -25,6 +25,7 @@ from sqlalchemy import event, text
 # Zato
 from zato.common.db_env.outage import call_until_available
 from zato.common.pubsub.sql.config import get_generation_file_path
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,13 +74,6 @@ _raise_query = text('UPDATE pubsub_active SET generation = generation + 1 WHERE 
 # What ends the sessions that keep the generation from being raised.
 _backend_pid_query = text('SELECT pg_backend_pid()')
 _terminate_blockers_query = text('SELECT pid, pg_terminate_backend(pid) FROM unnest(pg_blocking_pids(:pid)) AS pid')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class PubSubReplaced(Exception):
-    """ Raised by every pub/sub transaction of a server whose generation is no longer the current one.
-    """
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -8,7 +8,7 @@
 //! Each message is a 32-bit big-endian length followed by that many bytes, of which the first is the kind
 //! of the message. Integers are big-endian, and byte strings and text are prefixed with a 32-bit length.
 
-use std::io::{Error, ErrorKind, Read, Write};
+use std::io::{Error, ErrorKind};
 
 /// The largest message accepted, which bounds the memory a peer can make the node allocate.
 pub const MAX_MESSAGE_SIZE: u32 = 64 * 1024 * 1024;
@@ -449,29 +449,6 @@ pub fn take_message(buffer: &mut Vec<u8>) -> Result<Option<Message>, Error> {
     Ok(Some(out))
 }
 
-/// Writes one message.
-pub fn write_message(writer: &mut impl Write, message: &Message) -> Result<(), Error> {
-    writer.write_all(&frame(message)?)?;
-    writer.flush()
-}
-
-/// Reads one message.
-pub fn read_message(reader: &mut impl Read) -> Result<Message, Error> {
-    let mut length_bytes = [0_u8; 4];
-    reader.read_exact(&mut length_bytes)?;
-    let length = u32::from_be_bytes(length_bytes);
-    if length > MAX_MESSAGE_SIZE {
-        return Err(Error::new(
-            ErrorKind::InvalidData,
-            format!("message of {length} bytes exceeds the limit"),
-        ));
-    }
-    let size = usize::try_from(length).map_err(|error| Error::new(ErrorKind::InvalidData, error))?;
-    let mut body = vec![0_u8; size];
-    reader.read_exact(&mut body)?;
-    decode(&body)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -526,15 +503,16 @@ mod tests {
     proptest! {
         #[test]
         fn every_message_survives_a_round_trip(message in message_strategy()) {
-            let mut buffer = Vec::new();
-            write_message(&mut buffer, &message).unwrap();
-            let decoded = read_message(&mut buffer.as_slice()).unwrap();
-            prop_assert_eq!(decoded, message);
+            let mut buffer = frame(&message).unwrap();
+            let decoded = take_message(&mut buffer).unwrap();
+            prop_assert_eq!(decoded, Some(message));
+            prop_assert!(buffer.is_empty());
         }
 
         #[test]
         fn arbitrary_bytes_never_panic(bytes in prop::collection::vec(any::<u8>(), 0..200)) {
-            let _ = read_message(&mut bytes.as_slice());
+            let mut buffer = bytes;
+            let _ = take_message(&mut buffer);
         }
     }
 }

@@ -22,6 +22,7 @@ from sqlalchemy import bindparam
 from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.ha.common import get_generation, get_node_name, is_active_standby
 from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
 from zato.common.pubsub.sql.generation import take_over
@@ -159,7 +160,8 @@ class SQLBackendCore:
 
     def take_over(self) -> 'None':
         """ Makes this server the active one on PostgreSQL, whose database a standby server may take over,
-        and guards each subsequent transaction with the generation raised. A SQLite file has only one server.
+        and guards each subsequent transaction with the generation raised. On SQLite under an active-standby node,
+        the node made this server the active one already, and its generation is recorded in the audit log.
         """
         if get_pubsub_db_type() == Type_PostgreSQL:
             generation_guard = take_over(get_pubsub_engine)
@@ -173,6 +175,19 @@ class SQLBackendCore:
                 attrs = {
                     'previous_generation': f'{previous_generation}',
                     'generation': f'{generation}',
+                }
+
+                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Takeover, _takeover_object_name,
+                    outcome=AuditOutcome.OK, attrs=attrs)
+
+        elif is_active_standby():
+            if self.audit_log:
+                generation = get_generation()
+                node_name = get_node_name()
+
+                attrs = {
+                    'generation': f'{generation}',
+                    'node': node_name,
                 }
 
                 self.audit_log.insert(AuditSource.PubSub, AuditEvent.Takeover, _takeover_object_name,

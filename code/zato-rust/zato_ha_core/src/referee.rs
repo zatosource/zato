@@ -110,6 +110,22 @@ pub mod tests {
         pub lose_next_answer: Mutex<bool>,
     }
 
+    impl MemoryReferee {
+        /// Writes the record if its version is the expected one, and returns whether it was written.
+        fn store(&self, record: &RefereeRecord, expected_version: u64) -> bool {
+            let mut current = self.record.lock();
+            let version = current.as_ref().map_or(VERSION_ABSENT, |versioned| versioned.version);
+            if version != expected_version {
+                return false;
+            }
+            *current = Some(Versioned {
+                value: record.clone(),
+                version: version + 1,
+            });
+            true
+        }
+    }
+
     impl Referee for MemoryReferee {
         fn read(&self) -> Result<Option<Versioned<RefereeRecord>>, RefereeError> {
             if *self.unreachable.lock() {
@@ -122,21 +138,14 @@ pub mod tests {
             if *self.unreachable.lock() {
                 return Err(RefereeError("unreachable".to_owned()));
             }
-            let mut current = self.record.lock();
-            let version = current.as_ref().map_or(VERSION_ABSENT, |versioned| versioned.version);
-            if version != expected_version {
-                return Ok(false);
-            }
-            *current = Some(Versioned {
-                value: record.clone(),
-                version: version + 1,
-            });
-            drop(current);
+            let applied = self.store(record, expected_version);
+
+            // The record is written before the answer is lost, as it is when a network drops a response.
             let lose = std::mem::take(&mut *self.lose_next_answer.lock());
             if lose {
                 return Err(RefereeError("answer lost".to_owned()));
             }
-            Ok(true)
+            Ok(applied)
         }
 
         fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError> {

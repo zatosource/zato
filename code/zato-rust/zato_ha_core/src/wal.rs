@@ -341,78 +341,89 @@ impl WalCursor {
             return Ok(ScanOutcome::Unchanged);
         };
 
+        // The cursor is advanced only after every read succeeded, so a failed scan leaves it where it was.
         let is_new_cycle = self.header.as_ref().is_none_or(|current| current.raw != on_disk.raw);
+        let (first_frame, first_checksum) = if is_new_cycle {
+            (0, on_disk.checksum)
+        } else {
+            (self.end_frame, self.checksum)
+        };
+        let (frames, checksum) = read_frames(&mut file, &on_disk, first_frame, first_checksum)?;
+        self.end_frame = frames.end_frame;
+        self.checksum = checksum;
+
         if is_new_cycle {
-            let previous_cycle = self.header.is_some();
-            self.checksum = on_disk.checksum;
-            self.end_frame = 0;
-            self.header = Some(on_disk.clone());
-            if previous_cycle {
+            if self.header.is_some() {
                 self.cycle += 1;
             }
-            let frames = self.read_frames(&mut file, &on_disk)?;
-            return Ok(ScanOutcome::Restarted {
-                header: on_disk.raw.to_vec(),
-                frames,
-            });
+            let header = on_disk.raw.to_vec();
+            self.header = Some(on_disk);
+            return Ok(ScanOutcome::Restarted { header, frames });
         }
 
-        let frames = self.read_frames(&mut file, &on_disk)?;
         if frames.bytes.is_empty() {
             return Ok(ScanOutcome::Unchanged);
         }
         Ok(ScanOutcome::Frames(frames))
     }
+}
 
-    /// Reads the valid frames after the cursor and advances it to the last commit frame among them.
-    fn read_frames(&mut self, file: &mut File, header: &WalHeader) -> Result<ScannedFrames, WalError> {
-        let first_frame = self.end_frame;
-        let _ = file.seek(SeekFrom::Start(header.frame_offset(first_frame)))?;
+/// Reads the valid frames from `first_frame` on and returns the committed ones
+/// with the running checksum after the last commit frame among them.
+fn read_frames(
+    file: &mut File,
+    header: &WalHeader,
+    first_frame: u32,
+    first_checksum: Checksum,
+) -> Result<(ScannedFrames, Checksum), WalError> {
+    let _ = file.seek(SeekFrom::Start(header.frame_offset(first_frame)))?;
 
-        let frame_size = usize::try_from(header.frame_size()).map_err(|error| WalError::Read(std::io::Error::other(error)))?;
-        let mut frame = vec![0_u8; frame_size];
-        let mut bytes = Vec::new();
-        let mut committed_length = 0_usize;
-        let mut checksum = self.checksum;
-        let mut index = first_frame;
+    let frame_size = usize::try_from(header.frame_size()).map_err(|error| WalError::Read(std::io::Error::other(error)))?;
+    let mut frame = vec![0_u8; frame_size];
+    let mut bytes = Vec::new();
+    let mut committed_length = 0_usize;
+    let mut committed_end = first_frame;
+    let mut committed_checksum = first_checksum;
+    let mut checksum = first_checksum;
+    let mut index = first_frame;
 
-        loop {
-            match file.read_exact(&mut frame) {
-                Ok(()) => {}
+    loop {
+        match file.read_exact(&mut frame) {
+            Ok(()) => {}
 
-                // The end of the file, or a frame not fully written yet.
-                Err(error) if error.kind() == ErrorKind::UnexpectedEof => break,
-                Err(error) => return Err(WalError::Read(error)),
-            }
-
-            // An invalid frame is one the writer has not finished, or one left over from an earlier cycle.
-            let Some((next_checksum, is_commit)) = verify_frame(header, &frame, checksum) else {
-                break;
-            };
-            checksum = next_checksum;
-            index += 1;
-            bytes.extend_from_slice(&frame);
-
-            // Only whole transactions are shipped, since frames after the last commit may still be rewritten.
-            if is_commit {
-                committed_length = bytes.len();
-                self.end_frame = index;
-                self.checksum = checksum;
-
-                // A long log is read over several scans, so that one message stays bounded.
-                if committed_length >= MAX_SCAN_BYTES {
-                    break;
-                }
-            }
+            // The end of the file, or a frame not fully written yet.
+            Err(error) if error.kind() == ErrorKind::UnexpectedEof => break,
+            Err(error) => return Err(WalError::Read(error)),
         }
 
-        bytes.truncate(committed_length);
-        Ok(ScannedFrames {
-            first_frame,
-            bytes,
-            end_frame: self.end_frame,
-        })
+        // An invalid frame is one the writer has not finished, or one left over from an earlier cycle.
+        let Some((next_checksum, is_commit)) = verify_frame(header, &frame, checksum) else {
+            break;
+        };
+        checksum = next_checksum;
+        index += 1;
+        bytes.extend_from_slice(&frame);
+
+        // Only whole transactions are shipped, since frames after the last commit may still be rewritten.
+        if is_commit {
+            committed_length = bytes.len();
+            committed_end = index;
+            committed_checksum = checksum;
+
+            // A long log is read over several scans, so that one message stays bounded.
+            if committed_length >= MAX_SCAN_BYTES {
+                break;
+            }
+        }
     }
+
+    bytes.truncate(committed_length);
+    let frames = ScannedFrames {
+        first_frame,
+        bytes,
+        end_frame: committed_end,
+    };
+    Ok((frames, committed_checksum))
 }
 
 #[cfg(test)]

@@ -7,8 +7,9 @@
 //!
 //! A client writes the name of a database followed by a newline, and the node answers `ok` once every frame
 //! of that database committed before the request is synced on the standby, or locally when the node runs
-//! alone. A node that is no longer active answers `replaced`, and an unknown database is answered with
-//! `error` followed by a description. A connection carries any number of requests, one after another.
+//! alone. For a database shipped asynchronously, `ok` answers at once on a node that serves requests.
+//! A node that is no longer active answers `replaced`, and an unknown database is answered with
+//! `error` followed by a description. A connection accepts any number of requests, one after another.
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, ErrorKind, Write};
@@ -54,15 +55,21 @@ fn sync_locally(db_path: &Path) -> BarrierOutcome {
 
 /// Waits until the frames of `database` committed before the call are synced on the standby or locally.
 pub fn wait(shared: &Shared, database: &str) -> BarrierOutcome {
-    let Some(config) = shared
-        .config
-        .database(database)
-        .filter(|config| config.shipping == ShippingMode::Synchronous)
-    else {
+    let Some(config) = shared.config.database(database) else {
         return BarrierOutcome::Failed(format!("unknown database `{database}`"));
     };
 
     let mut state = shared.state.lock();
+
+    // The frames of an asynchronous database are never waited for, so its barrier only tells whether the node serves requests.
+    if config.shipping == ShippingMode::Asynchronous {
+        let is_serving = state.role.is_active() && !state.isolated;
+        return if is_serving {
+            BarrierOutcome::Synced
+        } else {
+            BarrierOutcome::Replaced
+        };
+    }
 
     // A scan that starts after this point reads every frame committed before the call.
     state.scan_requested += 1;

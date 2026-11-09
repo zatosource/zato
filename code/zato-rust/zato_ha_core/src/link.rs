@@ -260,11 +260,12 @@ pub struct LinkReceiver {
 }
 
 impl LinkReceiver {
-    /// Returns the next message, blocking until one arrives or the link ends.
-    pub fn receive(&mut self) -> Result<Message, Error> {
+    /// Returns the next message with the receiver for the messages after it, blocking until
+    /// a message arrives or the link ends. A link that fails is over, so an error consumes the receiver.
+    pub fn receive(mut self) -> Result<(Message, Self), Error> {
         loop {
             if let Some(message) = protocol::take_message(&mut self.plaintext)? {
-                return Ok(message);
+                return Ok((message, self));
             }
 
             let count = self.tcp.read(&mut self.buffer)?;
@@ -277,7 +278,7 @@ impl LinkReceiver {
     }
 }
 
-/// Feeds encrypted bytes to the TLS connection and collects the plaintext they carry.
+/// Feeds encrypted bytes to the TLS connection and collects the plaintext they contain.
 fn decrypt(shared: &Mutex<SharedEnd>, plaintext: &mut Vec<u8>, mut received: &[u8]) -> Result<(), Error> {
     let mut shared = shared.lock();
     let mut chunk = [0_u8; 16 * 1024];

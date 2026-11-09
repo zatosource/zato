@@ -16,7 +16,7 @@ from gevent import sleep
 import pytest
 
 # Zato
-from zato.common.pubsub.sql.generation import PubSubReplaced
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.test.pubsub_replication import kill_primary, promote_standby
 
 # local

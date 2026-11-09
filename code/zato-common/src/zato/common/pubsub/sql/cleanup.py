@@ -26,7 +26,8 @@ from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
     get_generation_file_path, get_pubsub_engine
 from zato.common.pubsub.sql.counts import compact_counts
-from zato.common.pubsub.sql.generation import GenerationGuard, PubSubReplaced, read_generation_file
+from zato.common.pubsub.sql.generation import GenerationGuard, read_generation_file
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, trace_table
 

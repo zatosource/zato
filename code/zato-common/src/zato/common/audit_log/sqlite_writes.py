@@ -13,6 +13,7 @@ import stat
 # Zato
 from zato.common.audit_log.common import Audit_DB_File_Name, metadata
 from zato.common.db_env import dispose_env_engine, EnvDBConfig, get_env_values, set_sqlite_busy_timeout, Type_SQLite
+from zato.common.ha.common import Database_Audit
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +50,7 @@ env_config = EnvDBConfig(
     metadata=metadata,
     needs_pool=True,
     needs_background_checkpoint=True,
+    replicated_database=Database_Audit,
 )
 
 # ################################################################################################################################

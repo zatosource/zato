@@ -27,11 +27,11 @@ struct Copies {
 }
 
 impl Copies {
-    /// Opens the copies of the databases written by `active_node`.
-    fn open(configs: &[DatabaseConfig], active_node: &str) -> Result<Self, Error> {
+    /// Opens the copies of the databases, each at the path that the Zato server of this node uses.
+    fn open(configs: &[DatabaseConfig]) -> Result<Self, Error> {
         let mut databases = Vec::new();
         for config in configs {
-            databases.push(DatabaseCopy::open(config.name, &config.copy_path(active_node))?);
+            databases.push(DatabaseCopy::open(config.name, &config.path)?);
         }
         Ok(Self { databases })
     }
@@ -105,13 +105,13 @@ fn is_current(shared: &Shared, session: u64) -> bool {
 }
 
 /// Applies the messages of one session until it ends.
-fn run_session(shared: &Shared, sender: &LinkSender, receiver: &mut LinkReceiver, active_node: &str, generation: u64) -> Result<(), Error> {
+fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver, active_node: &str, generation: u64) -> Result<(), Error> {
     let Some((session, resumes)) = open_session(shared, sender, generation) else {
         return Ok(());
     };
     let timeout = shared.config.timers.mark_out;
 
-    let mut copies = Copies::open(&shared.config.databases, active_node)?;
+    let mut copies = Copies::open(&shared.config.databases)?;
     let positions = if resumes { copies.positions() } else { Vec::new() };
     sender.send(
         &Message::HelloReply {
@@ -123,7 +123,8 @@ fn run_session(shared: &Shared, sender: &LinkSender, receiver: &mut LinkReceiver
     tracing::info!("Session with {active_node} at generation {generation} opened, resuming in sync: {resumes}");
 
     loop {
-        let message = receiver.receive()?;
+        let (message, next) = receiver.receive()?;
+        receiver = next;
         if !is_current(shared, session) {
             return Ok(());
         }
@@ -211,11 +212,12 @@ fn run_session(shared: &Shared, sender: &LinkSender, receiver: &mut LinkReceiver
 fn handle_connection(shared: &Shared, tcp: TcpStream) -> Result<(), Error> {
     let AcceptedLink {
         sender,
-        mut receiver,
+        receiver,
         peer_certificate,
     } = shared.tls.accept(tcp)?;
 
-    let Message::Hello { generation, active_node } = receiver.receive()? else {
+    let (hello, receiver) = receiver.receive()?;
+    let Message::Hello { generation, active_node } = hello else {
         return Err(Error::new(ErrorKind::InvalidData, "the link did not begin with a hello"));
     };
 
@@ -225,7 +227,7 @@ fn handle_connection(shared: &Shared, tcp: TcpStream) -> Result<(), Error> {
         return Err(Error::new(ErrorKind::InvalidData, "the peer claims the name of this node"));
     }
 
-    let outcome = run_session(shared, &sender, &mut receiver, &active_node, generation);
+    let outcome = run_session(shared, &sender, receiver, &active_node, generation);
     sender.close();
     outcome
 }

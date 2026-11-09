@@ -60,6 +60,24 @@ pub fn checkpoint_into_database(db_path: &Path) -> Result<(), Error> {
     sync_parent(db_path)
 }
 
+/// Checkpoints the current log of a copy, if it has one, and starts a new log with the header of the active node.
+fn start_new_log(db_path: &Path, raw: &[u8], has_log: bool) -> Result<(WalHeader, File), Error> {
+    let array: [u8; HEADER_SIZE] = raw.try_into().map_err(|error| Error::new(ErrorKind::InvalidData, error))?;
+    let header = WalHeader::parse(array).map_err(Error::other)?;
+
+    // The frames of the previous cycle become part of the database file before the log is replaced.
+    if has_log {
+        checkpoint_into_database(db_path)?;
+    }
+
+    let wal_path = wal::wal_path(db_path);
+    let mut file = OpenOptions::new().create(true).write(true).truncate(true).open(&wal_path)?;
+    file.write_all(raw)?;
+    file.sync_all()?;
+    sync_parent(&wal_path)?;
+    Ok((header, file))
+}
+
 /// The copy of one database.
 pub struct DatabaseCopy {
     /// The name of the database.
@@ -127,24 +145,29 @@ impl DatabaseCopy {
     /// Writes committed frames at their offsets, after starting a new log if a header precedes them,
     /// and syncs them before it returns the new position.
     pub fn apply_frames(&mut self, header: Option<&[u8]>, first_frame: u32, end_frame: u32, bytes: &[u8]) -> Result<Position, Error> {
-        if let Some(raw) = header {
-            self.start_new_log(raw)?;
-        }
-
-        let (Some(current_header), Some(file)) = (self.header.as_ref(), self.wal_file.as_ref()) else {
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                format!("frames of {} arrived before a log header", self.name),
-            ));
+        // A new log is created on disk first, and the copy records it only once its frames are synced.
+        let fresh_log = match header {
+            Some(raw) => Some(start_new_log(&self.db_path, raw, self.header.is_some())?),
+            None => None,
+        };
+        let (current_header, file, current_end) = match (&fresh_log, self.header.as_ref(), self.wal_file.as_ref()) {
+            (Some((fresh_header, fresh_file)), _, _) => (fresh_header, fresh_file, 0),
+            (None, Some(current_header), Some(file)) => (current_header, file, self.end_frame),
+            (None, _, _) => {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    format!("frames of {} arrived before a log header", self.name),
+                ));
+            }
         };
 
         // Frames are applied strictly in order, so a gap means a batch was lost.
-        if first_frame != self.end_frame {
+        if first_frame != current_end {
             return Err(Error::new(
                 ErrorKind::InvalidData,
                 format!(
-                    "frames of {} start at {first_frame} while the copy ends at {}",
-                    self.name, self.end_frame
+                    "frames of {} start at {first_frame} while the copy ends at {current_end}",
+                    self.name
                 ),
             ));
         }
@@ -160,41 +183,23 @@ impl DatabaseCopy {
 
         file.write_all_at(bytes, current_header.frame_offset(first_frame))?;
         file.sync_data()?;
+
+        if let Some((fresh_header, fresh_file)) = fresh_log {
+            self.header = Some(fresh_header);
+            self.wal_file = Some(fresh_file);
+        }
         self.end_frame = end_frame;
         Ok(self.position())
     }
 
-    /// Checkpoints the current log of the copy and starts a new one with the header of the active node.
-    fn start_new_log(&mut self, raw: &[u8]) -> Result<(), Error> {
-        let array: [u8; HEADER_SIZE] = raw.try_into().map_err(|error| Error::new(ErrorKind::InvalidData, error))?;
-        let header = WalHeader::parse(array).map_err(Error::other)?;
-
-        // The frames of the previous cycle become part of the database file before the log is replaced.
-        self.wal_file = None;
-        if self.header.is_some() {
-            checkpoint_into_database(&self.db_path)?;
-        }
-
-        let wal_path = wal::wal_path(&self.db_path);
-        let mut file = OpenOptions::new().create(true).write(true).truncate(true).open(&wal_path)?;
-        file.write_all(raw)?;
-        file.sync_all()?;
-        sync_parent(&wal_path)?;
-
-        self.header = Some(header);
-        self.end_frame = 0;
-        self.wal_file = Some(file);
-        Ok(())
-    }
-
     /// Discards the copy before the files of a snapshot arrive.
     pub fn begin_snapshot(&mut self) -> Result<(), Error> {
-        self.header = None;
-        self.end_frame = 0;
-        self.wal_file = None;
         for path in [self.snapshot_path(FileKind::Database), self.snapshot_path(FileKind::Wal)] {
             let _ = File::create(path)?;
         }
+        self.header = None;
+        self.end_frame = 0;
+        self.wal_file = None;
         Ok(())
     }
 

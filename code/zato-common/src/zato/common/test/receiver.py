@@ -46,6 +46,9 @@ _Mode_Hang       = 'hang'
 _Quiet_Settle_Time = 1.0
 _Quiet_Timeout     = 15.0
 
+# The address that a receiver listens on unless it is given another one
+Default_Host = '127.0.0.1'
+
 # The headers that identify each copy of a pushed message, and the file in which each request is recorded.
 _Header_Msg_ID           = 'X-Zato-Msg-ID'
 _Header_Delivery_Attempt = 'X-Zato-Delivery-Attempt'
@@ -260,7 +263,8 @@ class WebhookReceiver:
     """ An HTTP receiver that runs in a background thread.
     """
 
-    def __init__(self, port:'int', output_directory:'str', expected_path:'str'='') -> 'None':
+    def __init__(self, port:'int', output_directory:'str', expected_path:'str'='', host:'str'=Default_Host) -> 'None':
+        self.host = host
         self.port = port
         self.output_directory = output_directory
         self.expected_path = expected_path
@@ -276,7 +280,7 @@ class WebhookReceiver:
         """
         os.makedirs(self.output_directory, exist_ok=True)
 
-        address = ('127.0.0.1', self.port)
+        address = (self.host, self.port)
         server = _WebhookHTTPServer(address, _RequestHandler, self.behavior, self.output_directory, self._delivery_event)
 
         self._server = server

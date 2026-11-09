@@ -16,7 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.pubsub.sql.generation import PubSubReplaced
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 
 # ################################################################################################################################
 # ################################################################################################################################

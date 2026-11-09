@@ -21,7 +21,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.db_env import dispose_env_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.config import get_pubsub_engine, pubsub_db_config
-from zato.common.pubsub.sql.generation import PubSubReplaced
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.test.pubsub_database import connect, get_suite_modes, PubSubDBMode, \
     start_pubsub_database, stop_pubsub_database
 from zato.common.typing_ import cast_

@@ -4,8 +4,8 @@ version = "4.1.0"
 edition = "2024"
 license = "AGPL-3.0-only"
 description = "Active-standby replication of SQLite databases for Zato - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
-repository = "https://github.com/zatosource/zato"
 readme = "README.md"
+repository = "https://github.com/zatosource/zato"
 keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
 categories = ["development-tools"]
 

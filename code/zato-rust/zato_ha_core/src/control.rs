@@ -102,11 +102,7 @@ impl Control {
     /// Runs until a stop is requested or the referee is found to have lost data.
     pub fn run(mut self) -> Result<(), ControlError> {
         let outcome = self.bootstrap().and_then(|()| self.control_loop());
-        let mut state = self.shared.state.lock();
-        state.stopping = true;
-        state.close_link();
-        drop(state);
-        self.shared.changed.notify_all();
+        self.shared.announce_stop();
         outcome
     }
 

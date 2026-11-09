@@ -16,7 +16,8 @@ import pytest
 # Zato
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
-from zato.common.pubsub.sql.generation import PubSubReplaced, read_generation_file, write_generation_file
+from zato.common.pubsub.sql.generation import read_generation_file, write_generation_file
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.test.pubsub_database import connect, get_suite_modes, pubsub_db_env, PubSubDBMode, \
     start_pubsub_database, stop_pubsub_database
 from zato.common.typing_ import cast_

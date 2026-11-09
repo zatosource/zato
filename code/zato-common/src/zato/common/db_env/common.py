@@ -21,6 +21,7 @@ from sqlalchemy.types import TypeDecorator
 
 # Zato
 from zato.common.defaults import default_env_base_dir
+from zato.common.ha.common import Not_Replicated
 from zato.common.util.api import as_bool
 
 # ################################################################################################################################
@@ -187,6 +188,7 @@ class EnvDBConfig:
         metadata:'MetaData',
         needs_pool:'bool' = False,
         needs_background_checkpoint:'bool' = False,
+        replicated_database:'str' = Not_Replicated,
         ) -> 'None':
 
         self.env_prefix = env_prefix
@@ -201,6 +203,9 @@ class EnvDBConfig:
 
         # Whether the WAL of a SQLite database is checkpointed in a thread of its own rather than by the commits
         self.needs_background_checkpoint = needs_background_checkpoint
+
+        # The name under which the active-standby node replicates a SQLite database, empty if it is not replicated
+        self.replicated_database = replicated_database
 
         # The full names of the environment variables selecting and configuring the database
         self.env_type     = f'{env_prefix}Type'

@@ -27,7 +27,7 @@ from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
 from zato.common.pubsub.sql.config import pubsub_db_config
-from zato.common.pubsub.sql.generation import PubSubReplaced
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
 

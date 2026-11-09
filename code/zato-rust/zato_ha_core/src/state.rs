@@ -289,6 +289,15 @@ impl Shared {
         }
     }
 
+    /// Tells every thread that the node is stopping and closes the replication link.
+    pub fn announce_stop(&self) {
+        let mut state = self.state.lock();
+        state.stopping = true;
+        state.close_link();
+        drop(state);
+        self.changed.notify_all();
+    }
+
     /// Moves the node to `Fenced` after a peer or the referee showed a higher generation.
     pub fn fence(&self, state: &mut NodeState, generation: u64) {
         tracing::warn!(

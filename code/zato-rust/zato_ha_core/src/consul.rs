@@ -20,7 +20,7 @@ use crate::wire;
 /// How long one request to Consul may take, which is shorter than the gap between the mark-out and the takeover timers.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
 
-/// The header that carries the ACL token.
+/// The header that contains the ACL token.
 const TOKEN_HEADER: &str = "X-Consul-Token";
 
 /// The HTTP status of a key that does not exist.

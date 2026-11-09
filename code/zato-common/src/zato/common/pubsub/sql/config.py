@@ -14,6 +14,7 @@ from zato.common.db_env import get_sqlite_file_engine
 from zato.common.db_env.common import Default_Type, EnvDBConfig
 from zato.common.db_env.engine import get_env_engine
 from zato.common.defaults import default_env_base_dir
+from zato.common.ha.common import Database_PubSub
 from zato.common.pubsub.sql.schema import metadata, pubsub_db_file_name
 
 # ################################################################################################################################
@@ -90,6 +91,7 @@ pubsub_db_config = EnvDBConfig(
     metadata=metadata,
     needs_pool=True,
     needs_background_checkpoint=True,
+    replicated_database=Database_PubSub,
 )
 
 # ################################################################################################################################
@@ -127,7 +129,8 @@ def get_pubsub_engine() -> 'Engine':
 
     if db_type == Default_Type:
         db_path = get_pubsub_db_path()
-        out = get_sqlite_file_engine(db_path, metadata, needs_pool=True, needs_background_checkpoint=True)
+        out = get_sqlite_file_engine(db_path, metadata, needs_pool=True, needs_background_checkpoint=True,
+            replicated_database=Database_PubSub)
     else:
         out = get_env_engine(pubsub_db_config)
 

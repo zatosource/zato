@@ -174,7 +174,7 @@ pub enum ShippingMode {
     /// Success is reported to a caller only after the standby synced the frames.
     Synchronous,
 
-    /// The frames are shipped without a barrier, and the standby keeps them in a copy named after the active node.
+    /// The frames are shipped without a barrier, so the standby may lag behind the commits of the active node.
     Asynchronous,
 }
 
@@ -189,26 +189,6 @@ pub struct DatabaseConfig {
 
     /// How its frames reach the standby.
     pub shipping: ShippingMode,
-}
-
-impl DatabaseConfig {
-    /// Returns the path under which the standby keeps the copy of this database written by `active_node`.
-    pub fn copy_path(&self, active_node: &str) -> PathBuf {
-        match self.shipping {
-            ShippingMode::Synchronous => self.path.clone(),
-            ShippingMode::Asynchronous => {
-                let stem = file_stem(&self.path);
-                let file_name = format!("{stem}-{active_node}.db");
-                self.path.with_file_name(file_name)
-            }
-        }
-    }
-}
-
-/// Returns the file name of a path without its extension.
-fn file_stem(path: &Path) -> String {
-    let stem = path.file_stem().unwrap_or_default();
-    stem.to_string_lossy().into_owned()
 }
 
 /// The files of mutual TLS on the replication link.
@@ -546,12 +526,5 @@ mod tests {
                 ..
             }
         ));
-    }
-
-    #[test]
-    fn audit_copy_is_named_after_the_writer() {
-        let config = NodeConfig::from_source(&minimal()).unwrap();
-        let audit = config.database(DB_NAME_AUDIT).unwrap();
-        assert_eq!(audit.copy_path("zato-b"), PathBuf::from("/home/zato/env/qs-1/audit-zato-b.db"));
     }
 }

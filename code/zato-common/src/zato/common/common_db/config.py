@@ -14,6 +14,7 @@ from zato.common.common_db.schema import common_db_file_name, metadata
 from zato.common.db_env.common import EnvDBConfig, get_env_values, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.engine import create_schema, get_env_engine, get_sqlite_file_engine
 from zato.common.defaults import default_env_base_dir
+from zato.common.ha.common import Database_Common
 from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx as PubSubModuleCtx, pubsub_db_config
 
 # ################################################################################################################################
@@ -54,6 +55,7 @@ common_db_config = EnvDBConfig(
     sqlite_file_name=common_db_file_name,
     metadata=metadata,
     needs_pool=True,
+    replicated_database=Database_Common,
 )
 
 # ################################################################################################################################
@@ -138,7 +140,8 @@ def check_common_db_config() -> 'None':
 # ################################################################################################################################
 
 def _get_sqlite_engine(db_path:'str') -> 'Engine':
-    out = get_sqlite_file_engine(db_path, metadata, needs_pool=True, needs_background_checkpoint=False)
+    out = get_sqlite_file_engine(db_path, metadata, needs_pool=True, needs_background_checkpoint=False,
+        replicated_database=Database_Common)
     return out
 
 # ################################################################################################################################
