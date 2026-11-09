@@ -1,0 +1,51 @@
+[package]
+name = "zato_ha_core"
+version = "4.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+description = "Active-standby replication of SQLite databases for Zato - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
+repository = "https://github.com/zatosource/zato"
+readme = "README.md"
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
+
+[lib]
+name = "zato_ha_core"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "_zato_ha_node"
+path = "src/bin/ha_node.rs"
+
+[dependencies]
+base64 = "0.22"
+nix = { version = "0.30", default-features = false, features = ["signal", "process"] }
+parking_lot = "0.12"
+rand = "0.10.1"
+rusqlite = { version = "0.41", features = ["bundled"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rustls-pki-types = { version = "1", features = ["std"] }
+rustls-webpki = { version = "0.103", default-features = false, features = ["ring", "std"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+signal-hook = "0.3"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ureq = { version = "3", default-features = false, features = ["rustls-no-provider"] }
+
+[dev-dependencies]
+proptest = "1.11.0"
+tempfile = "3"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[profile.dev]
+incremental = false
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.release]
+overflow-checks = true

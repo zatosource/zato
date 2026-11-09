@@ -1,7 +1,7 @@
 .PHONY: build install clean default \
-	server-build scheduler-build io-build common-core-build pg-wire-build queue-bridge-build mq-client \
+	server-build scheduler-build ha-node-build io-build common-core-build pg-wire-build queue-bridge-build mq-client \
 	server-clean scheduler-clean io-clean common-core-clean pg-wire-clean queue-bridge-clean rust-target-prune \
-	server-install scheduler-install io-install common-core-install pg-wire-install queue-bridge-install \
+	server-install scheduler-install ha-node-install io-install common-core-install pg-wire-install queue-bridge-install \
 	health-install health-build health-clean \
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
@@ -109,7 +109,7 @@ PERF_ARGS     := $(if $(HEAVY),heavy,) $(if $(JSON),json,) $(PERF_TIER)
 
 default: dev
 
-build: common-core-build pg-wire-build server-build scheduler-build io-build queue-bridge-build
+build: common-core-build pg-wire-build server-build scheduler-build ha-node-build io-build queue-bridge-build
 # build: ... fhir-rust-build  # FHIR commented out for now
 
 server-build: rust-target-prune
@@ -124,6 +124,13 @@ scheduler-build: rust-target-prune
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml --bin _zato_scheduler && \
 	rm -f $(CURDIR)/code/bin/_zato_scheduler && \
 	cp $(ZATO_RUST)/zato_scheduler_core/target/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
+
+ha-node-build: rust-target-prune
+	@echo ">>> Building the active-standby node"
+	$(LOAD_CARGO_ENV) && \
+	cargo build --release --manifest-path $(ZATO_RUST)/zato_ha_core/Cargo.toml --bin _zato_ha_node && \
+	rm -f $(CURDIR)/code/bin/_zato_ha_node && \
+	cp $(ZATO_RUST)/zato_ha_core/target/release/_zato_ha_node $(CURDIR)/code/bin/_zato_ha_node
 
 io-build: rust-target-prune
 	@echo ">>> Building I/O"
@@ -364,6 +371,8 @@ health-install: ## Install health deps and build.
 server-install: server-build
 
 scheduler-install: scheduler-build
+
+ha-node-install: ha-node-build
 
 io-install: io-build
 
@@ -1725,6 +1734,7 @@ format-zato: ## Check Rust formatting across all public crates.
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml -- --check && \
+	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_ha_core/Cargo.toml        -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             -- --check && \
 	cargo fmt --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   -- --check
 
@@ -1736,6 +1746,7 @@ clippy-zato: rust-target-prune ## Clippy all public Rust crates.
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
+	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_ha_core/Cargo.toml        --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS)
 
@@ -1762,6 +1773,7 @@ dylint-zato: rust-target-prune ## Dylint all public Rust crates.
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml -- --tests && \
+	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_ha_core/Cargo.toml        -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   -- --tests
 
@@ -1773,6 +1785,7 @@ rust-deny-zato: ## Dependency audit (advisories, licenses, bans) for public crat
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_ha_core/Cargo.toml        --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check
 
@@ -1798,7 +1811,7 @@ GEIGER_NOISE := ^Failed to match \(ignoring source\) package:|^Failed to parse f
 
 geiger-zato: ## Report unsafe usage in public crate dependency trees.
 	. $(HOME)/.cargo/env && \
-	for crate in zato_common_core zato_pg_wire zato_server_core zato_scheduler_core; do \
+	for crate in zato_common_core zato_pg_wire zato_server_core zato_scheduler_core zato_ha_core; do \
 		out=$$(cargo geiger --manifest-path $(ZATO_RUST_DIR)/$$crate/Cargo.toml 2>&1); \
 		status=$$?; \
 		echo "$$out" | grep -Ev '$(GEIGER_NOISE)'; \
