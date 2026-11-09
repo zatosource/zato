@@ -65,4 +65,12 @@ class PubSubServiceSubscriberDelete(Service):
         self.logger.info('Received -> %s', self.request.raw_request)
 
 # ################################################################################################################################
+
+class PubSubServiceSubscriberDelivery(Service):
+    name = 'test.pubsub.dashboard-service-subscriber.delivery'
+
+    def handle(self) -> 'None':
+        self.logger.info('Service %s received -> %s', self.name, self.request.raw_request)
+
+# ################################################################################################################################
 # ################################################################################################################################

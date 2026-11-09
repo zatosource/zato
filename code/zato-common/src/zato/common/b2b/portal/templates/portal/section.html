@@ -18,17 +18,20 @@
 </head>
 <body class="portal">
 
-<nav class="navigation">
-    {% if has_logo %}
-    <div class="navigation-top"><img class="navigation-logo" src="{{ logo_url }}" alt="{{ organization }}"></div>
-    {% else %}
-    <div class="navigation-top">{{ organization }}</div>
-    {% endif %}
+<nav class="navigation{% if is_navigation_collapsed %} navigation-collapsed{% endif %}" id="navigation" data-width="{{ navigation_width }}" data-width-cookie="{{ navigation_width_cookie }}" data-collapsed-cookie="{{ navigation_collapsed_cookie }}" data-collapsed-value="{{ navigation_collapsed_value }}"{% if navigation_width and not is_navigation_collapsed %} style="width: {{ navigation_width }}px"{% endif %}>
+    <div class="navigation-top">
+        {% if has_logo %}<img class="navigation-logo" src="{{ logo_url }}" alt="{{ organization }}">{% else %}<span class="navigation-organization">{{ organization }}</span>{% endif %}
+    </div>
     <div class="navigation-list" id="navigation-list">
         {% for entry in navigation %}
         <a class="navigation-item{% if entry.is_active %} navigation-item-active{% endif %}" href="{{ entry.href }}" draggable="true" data-slug="{{ entry.slug }}">{{ entry.label }}</a>
         {% endfor %}
     </div>
+    <div class="navigation-handle" id="navigation-handle"></div>
+    <button type="button" class="navigation-toggle" id="navigation-toggle" aria-label="Navigation">
+        <svg class="navigation-toggle-icon navigation-toggle-collapse" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg>
+        <svg class="navigation-toggle-icon navigation-toggle-expand" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg>
+    </button>
 </nav>
 
 <main class="main-column">

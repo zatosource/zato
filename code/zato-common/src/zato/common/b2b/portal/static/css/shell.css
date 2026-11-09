@@ -3,29 +3,99 @@
 /* ------------------------------------------------------------ */
 
 .navigation {
+    position: relative;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
     width: 210px;
-    border-right: 1px solid var(--border);
     background: var(--chrome);
 }
 
 .navigation-top {
+    position: relative;
     display: flex;
     align-items: center;
-    height: 55px;
+    height: var(--navigation-top-height);
     padding: 10px 20px;
-    border-bottom: 1px solid var(--border);
     font-size: 12.5px;
     letter-spacing: 0.02em;
     color: var(--text3);
+}
+
+.navigation-top::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background: var(--grip-line);
+}
+
+/* The line at the right edge of the pane meets the line under the top and fades out before its bottom end */
+.navigation-handle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: linear-gradient(180deg, var(--fading-line-end));
+    transform: translateX(-50%);
 }
 
 .navigation-logo {
     display: block;
     max-width: 100%;
     height: 30px;
+}
+
+/* The toggle stands on the right edge of the pane, its middle where the line under the top meets that edge */
+.navigation-toggle {
+    position: absolute;
+    top: calc(var(--navigation-top-height) - var(--navigation-toggle-size) / 2);
+    right: calc(var(--navigation-toggle-size) / -2);
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: var(--navigation-toggle-size);
+    height: var(--navigation-toggle-size);
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    color: var(--text4);
+    background: var(--chrome);
+    cursor: pointer;
+}
+
+.navigation-toggle-icon {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.navigation-toggle-expand,
+.navigation-collapsed .navigation-toggle-collapse {
+    display: none;
+}
+
+.navigation-collapsed .navigation-toggle-expand {
+    display: block;
+}
+
+/* A collapsed pane keeps its toggle and the line it is dragged open by, and nothing else */
+.navigation-collapsed {
+    width: var(--navigation-collapsed-width);
+}
+
+.navigation-collapsed .navigation-logo,
+.navigation-collapsed .navigation-organization,
+.navigation-collapsed .navigation-list {
+    display: none;
 }
 
 .navigation-list {
@@ -83,6 +153,26 @@
     opacity: 0.5;
 }
 
+/* The line at the right edge of the pane is dragged by the grip in its middle */
+.navigation-handle {
+    position: absolute;
+    top: 0;
+    right: -7px;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 15px;
+    cursor: col-resize;
+}
+
+.navigation-resizing,
+.navigation-resizing * {
+    cursor: col-resize;
+    user-select: none;
+}
+
 /* ------------------------------------------------------------ */
 /* Shell - main column and cards                                */
 /* ------------------------------------------------------------ */
@@ -100,47 +190,45 @@
     min-height: 0;
     overflow-x: auto;
     overflow-y: scroll;
-    padding: 20px 24px;
+    padding: 18px var(--page-gutter);
 }
 
 .card {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--panel);
-    box-shadow: 0 10px 30px var(--shadow-soft), inset 0 1px 0 var(--sheen);
 }
 
+/* The line of the title is as tall as a control in the header, so that the header is as tall whatever stands in it.
+   The title and a link beside it share a baseline, as their sizes differ, and a control is centered on the line. */
 .card-header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    min-height: var(--card-header-height);
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel-raised);
+    padding: 18px var(--page-gutter) 4px;
+}
+
+.card-header .card-title,
+.card-header .card-header-link {
+    align-self: baseline;
+}
+
+.card-header .card-title {
+    line-height: var(--header-control-height);
+}
+
+/* A title is set apart by its size alone, never by its weight */
+.card-title,
+.wizard-title {
+    font-size: 18px;
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    color: var(--text);
 }
 
 .card-title {
     margin-right: 6px;
     overflow-wrap: anywhere;
-}
-
-.card-header-link {
-    font-size: 12px;
-    color: var(--text3);
-}
-
-/* A title is set apart by its size alone, never by its weight */
-.card-title,
-.detail-title,
-.wizard-title {
-    font-size: 15px;
-    font-weight: 400;
-    letter-spacing: 0.005em;
-    color: var(--text);
 }
 
 /* ------------------------------------------------------------ */
@@ -163,8 +251,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
+    padding: 10px var(--page-gutter) 14px;
 }
 
 .portal input[type="search"].card-filter {
@@ -197,7 +284,7 @@
 
 /* Adding a new item stands right after the title of its listing */
 .card-header .card-new {
-    height: 24px;
+    height: var(--header-control-height);
     font-size: 11px;
 }
 
@@ -208,6 +295,7 @@
 .split {
     display: flex;
     flex-direction: column;
+    padding: 0;
     overflow: hidden;
 }
 
@@ -223,23 +311,58 @@
     overflow: hidden;
 }
 
+/* A pane snapped shut leaves the whole split to the other one */
+.split-top-shut .split-top,
+.split-bottom-shut .split-bottom {
+    display: none;
+}
+
+.split-top-shut .split-bottom {
+    flex-grow: 1;
+}
+
 /* The line between the panes is dragged by the grip in its middle */
 .split-handle {
     position: relative;
-    flex: 0 0 14px;
+    display: flex;
+    flex: 0 0 15px;
+    justify-content: center;
+    align-items: center;
+    margin: 0 var(--page-gutter);
     cursor: row-resize;
 }
 
+/* The line under the grip fades out before the edges of the split */
 .split-handle::before {
     content: "";
     position: absolute;
     top: 50%;
-    left: 50%;
-    width: 43px;
-    height: 7px;
-    background-image: radial-gradient(circle, var(--grip) 1px, transparent 1.5px);
-    background-size: 4px 4px;
-    transform: translate(-50%, -50%);
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--fading-line));
+}
+
+/* A grip is a small lit bar - a shaded face, a rim of light and a shadow under it */
+.split-handle::after,
+.navigation-handle::after {
+    content: "";
+    position: relative;
+    border: 1px solid var(--grip-rim);
+    border-radius: var(--grip-thickness);
+    background-color: var(--grip-face);
+    background-image: var(--grip-shading);
+    box-shadow: var(--grip-shadow);
+}
+
+.split-handle::after {
+    width: var(--grip-length);
+    height: var(--grip-thickness);
+}
+
+.navigation-handle::after {
+    width: var(--grip-thickness);
+    height: var(--grip-length);
 }
 
 .split-dragging,
@@ -391,13 +514,6 @@
     background: var(--button-face);
     box-shadow: 0 1px 2px var(--shadow-strong);
     cursor: pointer;
-    transition: border-color 0.1s ease;
-}
-
-.button-secondary:hover {
-    border-color: var(--button-edge-hover);
-    background: var(--button-face-hover);
-    transition-delay: var(--hover-delay);
 }
 
 .button-action {
@@ -406,26 +522,10 @@
     background: var(--action-face);
 }
 
-.button-action:hover {
-    background: var(--action-face-hover);
-    transition-delay: var(--hover-delay);
-}
-
 .button-danger {
     border-color: var(--danger-edge);
     color: var(--danger-ink);
     background: var(--danger-face);
-}
-
-.button-danger:hover {
-    background: var(--danger-face-hover);
-    transition-delay: var(--hover-delay);
-}
-
-.button-action:active,
-.button-secondary:active,
-.button-danger:active {
-    box-shadow: inset 0 1px 3px var(--shadow-strong);
 }
 
 .button-action:disabled,
@@ -439,19 +539,17 @@
 /* Shell - links                                                */
 /* ------------------------------------------------------------ */
 
+/* The underline is drawn outside the box of the link, so that the box is exactly as tall as the text */
 .link,
 .editable:not(.pill) {
-    padding-bottom: 2px;
     border: none;
     font-family: inherit;
     font-size: inherit;
-    text-decoration: none;
+    text-decoration: underline dashed var(--link-dash);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
     color: var(--text);
-    background-color: transparent;
-    background-image: repeating-linear-gradient(90deg, var(--link-dash) 0, var(--link-dash) 3px, transparent 3px, transparent 6px);
-    background-position: 0 100%;
-    background-repeat: no-repeat;
-    background-size: 100% 1px;
+    background: transparent;
     cursor: pointer;
     transition: color 0.1s ease;
 }
@@ -462,12 +560,13 @@
     color: var(--text3);
 }
 
-.link:hover,
-.editable:not(.pill):hover {
-    color: var(--link-hover);
-    transition-delay: var(--hover-delay);
+/* Small text on the baseline of a much larger title reads lower than it is, which one pixel up evens out */
+.card-header-link {
+    position: relative;
+    top: -1px;
+    font-size: 12px;
+    color: var(--text3);
 }
-
 /* ------------------------------------------------------------ */
 /* Shell - pills                                                */
 /* ------------------------------------------------------------ */
@@ -505,11 +604,32 @@
 }
 
 .direction-inbound {
-    border-left: 8px solid var(--triangle-inbound);
+    --triangle-base: var(--triangle-inbound);
+    border-left: 8px solid var(--triangle-color);
 }
 
 .direction-outbound {
-    border-right: 8px solid var(--triangle-outbound);
+    --triangle-base: var(--triangle-outbound);
+    border-right: 8px solid var(--triangle-color);
+}
+
+.direction {
+    --triangle-color: var(--triangle-base);
+}
+
+/* Beside a chip, a triangle is drawn in the tone of the chip .. */
+.direction-toned {
+    --triangle-color: var(--tone);
+}
+
+/* .. except in a listing, where it keeps the color of its direction, only tinted by the chip of an error or a retry */
+.listing .direction-toned {
+    --triangle-color: var(--triangle-base);
+}
+
+.listing .direction-toned.portal-tone-red,
+.listing .direction-toned.portal-tone-amber {
+    --triangle-color: color-mix(in srgb, var(--tone) var(--triangle-tint), var(--triangle-base));
 }
 
 .pill.editable {

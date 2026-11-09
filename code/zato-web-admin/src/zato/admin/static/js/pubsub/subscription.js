@@ -720,8 +720,8 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     // Handle security definition display as link instead of select
     var $container = $('#edit-sec-def-container');
     if ($container.length) {
-        // Hide the select element
-        $('#id_edit-sec_base_id').hide();
+        // The hidden input below takes over the select's ID and name, and the topic loader reads the subscriber by that ID
+        $('select#id_edit-sec_base_id').remove();
 
         // Clear all existing content from the container
         $container.empty();

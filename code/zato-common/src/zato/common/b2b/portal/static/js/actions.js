@@ -39,7 +39,7 @@ actions.commands = function() {
 
         var itemId = selection.current;
         var sources = selection.sources(itemId);
-        var title = selection.panes[itemId].querySelector('.detail-title').textContent;
+        var title = selection.panes[itemId].getAttribute('data-title');
 
         for (var sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
             out.push({
@@ -211,6 +211,27 @@ actions.initPalette = function() {
 // Links beside the state
 // ////////////////////////////////////////////////////////////////////////
 
+// The labels the action at the given position has in any state, which the link at that position is as wide as
+// the widest of, so that a change of state moves none of the links after it.
+actions.labelsAt = function(position) {
+
+    var out = [];
+    var transitions = actions.selection().transitions;
+
+    for (var state in transitions) {
+
+        var list = transitions[state];
+
+        if (position < list.length) {
+            out.push(list[position].label);
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 actions.addInline = function(itemId, pane) {
 
     var pill = pane.querySelector('.fields [data-role="state"]');
@@ -220,8 +241,21 @@ actions.addInline = function(itemId, pane) {
     for (var sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
 
         var source = sources[sourceIndex];
-        var className = source.hasAttribute('data-danger') ? 'link link-danger' : 'link';
-        var link = portal.create('button', className, source.textContent);
+        var className = source.hasAttribute('data-danger') ? 'link link-danger inline-action' : 'link inline-action';
+        var link = portal.create('button', className, '');
+        var labels = actions.labelsAt(sourceIndex);
+
+        link.appendChild(portal.create('span', 'inline-action-label', source.textContent));
+
+        // The other labels of this position take room in the link without being seen ..
+        for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
+
+            var sizer = portal.create('span', 'inline-action-sizer', labels[labelIndex]);
+
+            // .. nor read out.
+            sizer.setAttribute('aria-hidden', 'true');
+            link.appendChild(sizer);
+        }
 
         link.type = 'button';
         link.setAttribute('data-action', source.getAttribute('data-action'));

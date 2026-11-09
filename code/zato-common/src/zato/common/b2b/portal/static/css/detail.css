@@ -18,18 +18,12 @@
     background: var(--panel-raised);
 }
 
-.detail-title {
-    margin-right: 6px;
-    font-size: 14px;
-    overflow-wrap: anywhere;
-}
-
 .detail-body {
     flex: 1;
     min-height: 0;
     overflow-x: auto;
     overflow-y: scroll;
-    padding: 16px;
+    padding: 18px var(--page-gutter);
 }
 
 .detail-removed .detail-body {
@@ -44,10 +38,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 2px;
-}
-
-.detail-header .tabs {
-    margin-left: 16px;
 }
 
 /* A row of badges - the one standing open is raised off the row, the others are sunk into it */
@@ -79,11 +69,13 @@
     transition-delay: var(--hover-delay);
 }
 
+/* The fill of a tab changes from a color to a gradient when it opens, which a transition draws as a flash */
 .tab-active,
 .tab-active:hover {
     color: var(--text);
     background: var(--badge-chosen-fill);
     box-shadow: var(--badge-chosen-shadow);
+    transition: none;
 }
 
 /* ------------------------------------------------------------ */
@@ -161,6 +153,33 @@
 
 .fields dd .inline-actions {
     margin-left: 4px;
+}
+
+/* ------------------------------------------------------------ */
+/* Detail - blocks of the selected item                         */
+/* ------------------------------------------------------------ */
+
+.detail-body .block {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+.detail-body .block + .block {
+    margin-top: 24px;
+}
+
+.detail-body .block-title {
+    padding: 0 10px 6px;
+    background: transparent;
+}
+
+.detail-body .fields {
+    padding: 12px 10px;
+}
+
+.detail-body .table th {
+    background: transparent;
 }
 
 /* ------------------------------------------------------------ */

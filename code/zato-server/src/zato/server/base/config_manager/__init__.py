@@ -1374,6 +1374,10 @@ class ConfigManager(_ConfigManagerBase):
                 if row.delivery_type != _push:
                     continue
 
+                # .. nor do push subscriptions whose delivery is paused, their messages wait in their queues ..
+                if not row.is_delivery_active:
+                    continue
+
                 # .. push subscriptions this server does not deliver to yet need a config and a greenlet.
                 if sub_key not in self._push_subs:
                     self._push_subs[sub_key] = []
@@ -1448,12 +1452,14 @@ class ConfigManager(_ConfigManagerBase):
                 self.server.pubsub_backend.subscribe(sub_key, topic_name)
                 synced += 1
 
+                # A push subscription whose delivery is paused has no push config, its messages wait in its queue
                 if row.delivery_type == _push:
-                    sub_config = self._build_push_sub_config(session, row)
+                    if row.is_delivery_active:
+                        sub_config = self._build_push_sub_config(session, row)
 
-                    if sub_key not in push_subs:
-                        push_subs[sub_key] = []
-                    push_subs[sub_key].append(sub_config)
+                        if sub_key not in push_subs:
+                            push_subs[sub_key] = []
+                        push_subs[sub_key].append(sub_config)
 
             self._push_subs = push_subs
 
@@ -2902,9 +2908,11 @@ class ConfigManager(_ConfigManagerBase):
             self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
         # .. and if this is a push subscription, its delivery greenlet needs to run
-        # .. from the moment the subscription exists, without waiting for an edit or a restart.
+        # .. from the moment the subscription exists, without waiting for an edit or a restart,
+        # .. unless its delivery is paused, in which case its messages wait in its queue.
         if delivery_type == PubSub.Delivery_Type.Push:
-            self._setup_push_delivery(sub_key, msg)
+            if msg.is_delivery_active:
+                self._setup_push_delivery(sub_key, msg)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
 
@@ -2919,16 +2927,23 @@ class ConfigManager(_ConfigManagerBase):
                 if item['sub_key'] == sub_key:
                     old_topic_names.append(topic_name)
 
-        # .. unsubscribe from old topics in Redis (GAP 12) ..
+        new_topic_names:'list[str]' = []
+
+        for topic_item in msg.topic_name_list:
+            topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+            new_topic_names.append(topic_name)
+
+        # .. unsubscribe only from the topics the subscription no longer has, which discards their pending messages,
+        # .. while the messages of the topics it keeps stay in its queue ..
         for topic_name in old_topic_names:
-            self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
+            if topic_name not in new_topic_names:
+                self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
         # .. remove old in-memory configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
 
-        # .. add new in-memory configs and subscribe in Redis (GAP 13) ..
-        for topic_item in msg.topic_name_list:
-            topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+        # .. add new in-memory configs and subscribe in the backend, which is a no-op for the topics kept ..
+        for topic_name in new_topic_names:
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
             self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
@@ -2938,9 +2953,11 @@ class ConfigManager(_ConfigManagerBase):
         # .. remove old push delivery config (GAP 14) ..
         _ = self._push_subs.pop(sub_key, None)
 
-        # .. if the new delivery type is push, rebuild _push_subs and start the greenlet (GAP 14 + 15).
+        # .. if the new delivery type is push, rebuild _push_subs and start the greenlet (GAP 14 + 15),
+        # .. unless its delivery is paused, in which case its messages wait in its queue until it is resumed.
         if delivery_type == PubSub.Delivery_Type.Push:
-            self._setup_push_delivery(sub_key, msg)
+            if msg.is_delivery_active:
+                self._setup_push_delivery(sub_key, msg)
 
 # ################################################################################################################################
 
@@ -3167,6 +3184,7 @@ class ConfigManager(_ConfigManagerBase):
                 PubSubSubscription.push_type,
                 PubSubSubscription.push_service_name,
                 PubSubSubscription.rest_push_endpoint_id,
+                PubSubSubscription.is_delivery_active,
                 PubSubTopic.name,
             ).join(
                 PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
@@ -3186,21 +3204,28 @@ class ConfigManager(_ConfigManagerBase):
                     'rest_push_endpoint_id': row.rest_push_endpoint_id,
                 }))
 
-                # .. re-add push delivery if needed ..
-                if row.delivery_type == 'push':
-                    sub_config = {
-                        'sub_key': row.sub_key,
-                        'topic_name': topic_name,
-                        'push_type': row.push_type,
-                        'push_service_name': row.push_service_name,
-                        'rest_push_endpoint_id': row.rest_push_endpoint_id,
-                    }
+                # .. pull subscriptions need nothing more ..
+                if row.delivery_type != 'push':
+                    continue
 
-                    if row.sub_key not in self._push_subs:
-                        self._push_subs[row.sub_key] = []
-                    self._push_subs[row.sub_key].append(sub_config)
+                # .. nor do push subscriptions whose delivery is paused ..
+                if not row.is_delivery_active:
+                    continue
 
-                    self.server.pubsub_push_delivery.start_sub_key(row.sub_key)
+                # .. while the other push subscriptions are delivered to again.
+                sub_config = {
+                    'sub_key': row.sub_key,
+                    'topic_name': topic_name,
+                    'push_type': row.push_type,
+                    'push_service_name': row.push_service_name,
+                    'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                }
+
+                if row.sub_key not in self._push_subs:
+                    self._push_subs[row.sub_key] = []
+                self._push_subs[row.sub_key].append(sub_config)
+
+                self.server.pubsub_push_delivery.start_sub_key(row.sub_key)
 
 # ################################################################################################################################
 

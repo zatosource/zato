@@ -22,7 +22,13 @@ selection.config = {
     removedClass: 'listing-row-removed',
     paneRemovedClass: 'detail-removed',
     draggingClass: 'split-dragging',
+    topShutClass: 'split-top-shut',
+    bottomShutClass: 'split-bottom-shut',
     minimumPaneHeight: 140,
+
+    // Closer to an edge of the split than this, the pane at that edge snaps shut while the line is dragged,
+    // and it opens again once the line is dragged past it
+    snapHeight: 70,
     transitionsId: 'transitions-data'
 };
 
@@ -140,8 +146,17 @@ selection.writeAddress = function(itemId, detailsTab) {
 // ////////////////////////////////////////////////////////////////////////
 
 selection.setPaneShown = function(isShown) {
+
+    var split = document.getElementById('split');
+
     document.getElementById('split-bottom').hidden = !isShown;
     document.getElementById('split-handle').hidden = !isShown;
+
+    // Without the line, a pane snapped shut could not be dragged open again
+    if (!isShown) {
+        split.classList.remove(selection.config.topShutClass);
+        split.classList.remove(selection.config.bottomShutClass);
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -336,7 +351,8 @@ selection.onKeyDown = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The line between the panes gives the lower pane the height from the pointer to the bottom of the split.
+// The line between the panes gives the lower pane the height from the pointer to the bottom of the split,
+// and a pointer closer to either edge than the snap height shuts the pane at that edge.
 selection.startResize = function(event) {
 
     event.preventDefault();
@@ -344,6 +360,7 @@ selection.startResize = function(event) {
     var split = document.getElementById('split');
     var bottom = document.getElementById('split-bottom');
     var minimum = selection.config.minimumPaneHeight;
+    var snap = selection.config.snapHeight;
 
     document.body.classList.add(selection.config.draggingClass);
 
@@ -352,6 +369,11 @@ selection.startResize = function(event) {
         var rect = split.getBoundingClientRect();
         var height = rect.bottom - moveEvent.clientY;
         var maximum = rect.height - minimum;
+        var isBottomShut = height < snap;
+        var isTopShut = rect.height - height < snap;
+
+        split.classList.toggle(selection.config.bottomShutClass, isBottomShut);
+        split.classList.toggle(selection.config.topShutClass, isTopShut);
 
         height = Math.max(minimum, Math.min(maximum, height));
         bottom.style.flexBasis = height + 'px';

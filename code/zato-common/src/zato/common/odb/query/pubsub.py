@@ -53,6 +53,7 @@ def pubsub_subscription_topic_pairs(session:'SASession') -> 'anylist':
         PubSubSubscription.push_type,
         PubSubSubscription.push_service_name,
         PubSubSubscription.rest_push_endpoint_id,
+        PubSubSubscription.is_delivery_active,
         PubSubTopic.name,
         SecurityBase.username,
         SecurityBase.name.label('sec_name'),
