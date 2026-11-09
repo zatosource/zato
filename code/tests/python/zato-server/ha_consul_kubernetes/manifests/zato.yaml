@@ -1,0 +1,297 @@
+# The active-standby pair as a StatefulSet of two pods in two zones, each with a local volume on its node.
+# The node in each pod labels its own pod zato-role=active while it serves requests, and the Service zato-ha
+# selects that label. The Secret zato-ha-tls holds the certificate of each pod under the name of the pod,
+# and the Secret zato-ha-consul holds the Consul token of the nodes.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zato-ha
+  namespace: ${namespace}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zato-ha-role-label
+  namespace: ${namespace}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    resourceNames:
+      - zato-ha-0
+      - zato-ha-1
+    verbs:
+      - get
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zato-ha-role-label
+  namespace: ${namespace}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: zato-ha-role-label
+subjects:
+  - kind: ServiceAccount
+    name: zato-ha
+    namespace: ${namespace}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zato-ha-peers
+  namespace: ${namespace}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: zato-ha
+  ports:
+    - name: replication
+      port: ${replication_port}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zato-ha
+  namespace: ${namespace}
+spec:
+  type: NodePort
+  selector:
+    app: zato-ha
+    zato-role: active
+  ports:
+    - name: http
+      port: ${server_port}
+      targetPort: ${server_port}
+      nodePort: ${service_node_port}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zato-ha-0-direct
+  namespace: ${namespace}
+spec:
+  type: NodePort
+  publishNotReadyAddresses: true
+  selector:
+    statefulset.kubernetes.io/pod-name: zato-ha-0
+  ports:
+    - name: http
+      port: ${server_port}
+      targetPort: ${server_port}
+      nodePort: ${pod_0_server_node_port}
+    - name: role
+      port: ${role_port}
+      targetPort: ${role_port}
+      nodePort: ${pod_0_role_node_port}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zato-ha-1-direct
+  namespace: ${namespace}
+spec:
+  type: NodePort
+  publishNotReadyAddresses: true
+  selector:
+    statefulset.kubernetes.io/pod-name: zato-ha-1
+  ports:
+    - name: http
+      port: ${server_port}
+      targetPort: ${server_port}
+      nodePort: ${pod_1_server_node_port}
+    - name: role
+      port: ${role_port}
+      targetPort: ${role_port}
+      nodePort: ${pod_1_role_node_port}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zato-ha
+  namespace: ${namespace}
+spec:
+  serviceName: zato-ha-peers
+  replicas: 2
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: zato-ha
+  template:
+    metadata:
+      labels:
+        app: zato-ha
+    spec:
+      serviceAccountName: zato-ha
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: ${uid}
+        runAsGroup: ${gid}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - zone-a
+                      - zone-b
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          nodeAffinityPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: zato-ha
+      initContainers:
+        - name: data
+          image: ${zato_image}
+          imagePullPolicy: Never
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          command:
+            - /bin/bash
+            - -c
+            - '[ -d ${data_mount}/home ] || cp -a ${template_dir}/. ${data_mount}/'
+          volumeMounts:
+            - name: run
+              mountPath: ${run_dir}
+            - name: data
+              mountPath: ${data_mount}
+              subPathExpr: $(POD_NAME)
+      containers:
+        - name: zato
+          image: ${zato_image}
+          imagePullPolicy: Never
+          command:
+            - /bin/bash
+            - ${start_script}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: HOME
+              value: ${data_mount}/home
+            - name: Zato_HA_Mode
+              value: active-standby
+            - name: Zato_HA_Referee_Type
+              value: consul
+            - name: Zato_HA_Consul_Address
+              value: https://consul-api.${namespace}.svc.cluster.local:8501
+            - name: Zato_HA_Consul_Token
+              valueFrom:
+                secretKeyRef:
+                  name: zato-ha-consul
+                  key: token
+            - name: Zato_HA_Consul_CA_File
+              value: /zato-ha-tls/ca.pem
+            - name: Zato_HA_Consul_Key
+              value: ${consul_key}
+            - name: Zato_HA_Node_Name
+              value: $(POD_NAME)
+            - name: Zato_HA_Advertised_Address
+              value: $(POD_IP)
+            - name: Zato_HA_Replication_Port
+              value: "${replication_port}"
+            - name: Zato_HA_Role_Port
+              value: "${role_port}"
+            - name: Zato_HA_Data_Dir
+              value: ${data_mount}/home/env/qs-1
+            - name: Zato_HA_TLS_CA_File
+              value: /zato-ha-tls/ca.pem
+            - name: Zato_HA_TLS_Cert_File
+              value: /zato-ha-tls/$(POD_NAME).pem
+            - name: Zato_HA_TLS_Key_File
+              value: /zato-ha-tls/$(POD_NAME).key
+            - name: Zato_HA_Heartbeat_Time
+              value: "${heartbeat_time}"
+            - name: Zato_HA_Mark_Out_Time
+              value: "${mark_out_time}"
+            - name: Zato_HA_Takeover_Time
+              value: "${takeover_time}"
+            - name: Zato_HA_Log_Level
+              value: info
+            - name: Zato_Config_Bind_Port
+              value: "${server_port}"
+            - name: Zato_PubSub_Pull_Lease_Seconds
+              value: "${pull_lease_seconds}"
+            - name: Zato_Scheduler_Redis_Host
+              value: 127.0.0.1
+            - name: Zato_Scheduler_Redis_Port
+              value: "${redis_port}"
+            - name: Zato_Scheduler_HTTP_Port
+              value: "${scheduler_http_port}"
+            - name: Zato_Scheduler_Log_Level
+              value: info
+            - name: Zato_Test_HA_Node_Binary
+              value: ${node_binary}
+            - name: Zato_Test_Server_Launcher
+              value: ${server_launcher}
+            - name: Zato_Test_Scheduler_Binary
+              value: ${scheduler_binary}
+            - name: Zato_Test_Scheduler_Log
+              value: ${logs_dir}/$(POD_NAME)-scheduler.log
+            - name: Zato_Test_Scheduler_Run_Log
+              value: ${run_logs_dir}/$(POD_NAME).jsonl
+            - name: Zato_Test_Scheduler_Server_Label
+              value: $(POD_NAME)
+            - name: Zato_Test_Zato_Binary
+              value: ${zato_binary}
+            - name: Zato_Test_Server_Directory
+              value: ${server_directory}
+          ports:
+            - name: http
+              containerPort: ${server_port}
+            - name: replication
+              containerPort: ${replication_port}
+            - name: role
+              containerPort: ${role_port}
+          readinessProbe:
+            httpGet:
+              path: /zato/ha/health
+              port: ${role_port}
+            periodSeconds: 2
+          volumeMounts:
+            - name: repository
+              mountPath: ${repository_dir}
+            - name: run
+              mountPath: ${run_dir}
+            - name: data
+              mountPath: ${data_mount}
+              subPathExpr: $(POD_NAME)
+            - name: tls
+              mountPath: /zato-ha-tls
+              readOnly: true
+      volumes:
+        - name: repository
+          hostPath:
+            path: ${repository_dir}
+            type: Directory
+        - name: run
+          hostPath:
+            path: ${run_dir}
+            type: Directory
+        - name: data
+          hostPath:
+            path: ${volume_dir}
+            type: Directory
+        - name: tls
+          secret:
+            secretName: zato-ha-tls

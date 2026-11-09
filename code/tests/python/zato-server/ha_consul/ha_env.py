@@ -216,20 +216,20 @@ def _topic_to_key(topic_name:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _create_node_environment(
-    short_name:'str',
-    run_dir:'str',
+def create_quickstart_environment(
+    label:'str',
+    directory:'str',
+    home_dir:'str',
     rendered_yaml:'str',
     invoke_password:'str',
 ) -> 'str':
-    """ Creates the quickstart environment of one node in its home directory, with the objects of pub/sub,
+    """ Creates a quickstart environment in a directory, with the given home directory, the objects of pub/sub,
     the scheduler jobs and the service that the jobs invoke, and returns its server directory.
     """
-    node = Node(short_name=short_name, run_dir=run_dir)
-    os.makedirs(node.data_dir, exist_ok=True)
+    os.makedirs(os.path.join(home_dir, 'env', 'qs-1'), exist_ok=True)
 
-    extra_env = {'HOME': node.home_dir}
-    state = SessionState(f'zato.test.ha_consul.{short_name}', f'server-logs-ha-{short_name}.txt')
+    extra_env = {'HOME': home_dir}
+    state = SessionState(f'zato.test.ha_consul.{label}', f'server-logs-ha-{label}.txt')
 
     out = run_quickstart_and_enmasse(
         state=state,
@@ -239,7 +239,7 @@ def _create_node_environment(
         rendered_yaml='',
         quickstart_prefix='quickstart-',
         extra_env=extra_env,
-        quickstart_parent_dir=node.directory,
+        quickstart_parent_dir=directory,
     )
 
     quickstart_directory = os.path.dirname(out)
@@ -260,15 +260,10 @@ def _create_node_environment(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def create_session() -> 'HASession':
-    """ Creates the network, the receivers and the quickstart environments of both nodes, which every test copies.
+def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
+    """ Creates the credentials of a session and starts its receivers on the given address, returning the enmasse file
+    with the objects of pub/sub and the scheduler jobs, and the password of the service that the jobs invoke.
     """
-    run_dir = prepare_runtime_dir()
-    create_network()
-
-    session = HASession()
-    session.run_dir = run_dir
-    session.template_dir = os.path.join(run_dir, 'templates')
     session.publisher_password = 'test.pub.' + CryptoManager.generate_hex_string()
     session.puller_password = 'test.pull.' + CryptoManager.generate_hex_string()
     session.receivers = {}
@@ -278,7 +273,7 @@ def create_session() -> 'HASession':
     placeholders['publisher_password'] = session.publisher_password
     placeholders['puller_password'] = session.puller_password
 
-    # The receivers listen on the gateway of the network, which is the address of the host on it ..
+    # The receivers listen on an address of the host that the nodes reach ..
     for topic_name in ModuleCtx.Topic_Names:
         key = _topic_to_key(topic_name)
         port = find_free_port()
@@ -286,29 +281,49 @@ def create_session() -> 'HASession':
         placeholders[f'sub_{key}_password'] = 'test.sub.' + CryptoManager.generate_hex_string()
         placeholders[f'port_{key}'] = str(port)
 
-        output_directory = os.path.join(run_dir, 'receivers', key)
+        output_directory = os.path.join(session.run_dir, 'receivers', key)
         os.makedirs(output_directory, exist_ok=True)
 
-        receiver = WebhookReceiver(port, output_directory, host=TopologyCtx.Gateway)
+        receiver = WebhookReceiver(port, output_directory, host=host)
         receiver.start()
 
         session.receivers[topic_name] = receiver
 
     pubsub_yaml = render_template(ModuleCtx.Template_Path, placeholders)
-    pubsub_yaml = pubsub_yaml.replace(ModuleCtx.Template_Receiver_Host, f'http://{TopologyCtx.Gateway}:')
+    pubsub_yaml = pubsub_yaml.replace(ModuleCtx.Template_Receiver_Host, f'http://{host}:')
 
-    # .. both nodes import one file with the objects of pub/sub and the scheduler jobs ..
+    # .. and both nodes import one file with the objects of pub/sub and the scheduler jobs.
     job_yaml, _ = render_job_file(placeholders)
     rendered_yaml = pubsub_yaml + '\n' + job_yaml
 
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
+    out = (rendered_yaml, invoke_password)
+    return out
+
+# ################################################################################################################################
+
+def create_session() -> 'HASession':
+    """ Creates the network, the receivers and the quickstart environments of both nodes, which every test copies.
+    """
+    run_dir = prepare_runtime_dir()
+    create_network()
+
+    session = HASession()
+    session.run_dir = run_dir
+    session.template_dir = os.path.join(run_dir, 'templates')
+
+    # The receivers listen on the gateway of the network, which is the address of the host on it ..
+    rendered_yaml, invoke_password = start_receivers(session, TopologyCtx.Gateway)
+
     # .. and the environment of each node is kept as it was created, so that each test begins from it.
     for short_name in ModuleCtx.Node_Names:
-        server_directory = _create_node_environment(short_name, run_dir, rendered_yaml, invoke_password)
+        node = Node(short_name=short_name, run_dir=run_dir)
+
+        server_directory = create_quickstart_environment(short_name, node.directory, node.home_dir, rendered_yaml,
+            invoke_password)
         session.server_directories[short_name] = server_directory
 
-        node = Node(short_name=short_name, run_dir=run_dir)
         template_path = os.path.join(session.template_dir, os.path.basename(node.directory))
         _ = shutil.copytree(node.directory, template_path, symlinks=True)
 

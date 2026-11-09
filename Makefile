@@ -8,7 +8,7 @@
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
-	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-scheduler-failover test-rate-limiting test-enmasse test-cli \
+	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-scheduler-failover test-consul test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
@@ -692,6 +692,17 @@ test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQ
 	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/scheduler_failover/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_failover -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-consul: ## Active-standby pair on SQLite with Consul - functional, failover, fault, long-run and Kubernetes suites.
+	$(Zato_Log_Reset)
+	$(MAKE) ha-node-build $(Zato_Log)
+	$(MAKE) scheduler-build $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_consul/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_consul_kubernetes/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul_kubernetes -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-rate-limiting: rust-target-prune ## All rate limiting tests.

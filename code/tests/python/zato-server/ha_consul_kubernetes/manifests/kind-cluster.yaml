@@ -1,0 +1,35 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ${cluster_name}
+nodes:
+  - role: control-plane
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-a
+    extraMounts:
+      - hostPath: ${repository_dir}
+        containerPath: ${repository_dir}
+      - hostPath: ${run_dir}
+        containerPath: ${run_dir}
+      - hostPath: ${volume_zone_a}
+        containerPath: ${volume_dir}
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-b
+    extraMounts:
+      - hostPath: ${repository_dir}
+        containerPath: ${repository_dir}
+      - hostPath: ${run_dir}
+        containerPath: ${run_dir}
+      - hostPath: ${volume_zone_b}
+        containerPath: ${volume_dir}
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-c
+    extraMounts:
+      - hostPath: ${repository_dir}
+        containerPath: ${repository_dir}
+      - hostPath: ${run_dir}
+        containerPath: ${run_dir}
+      - hostPath: ${volume_zone_c}
+        containerPath: ${volume_dir}

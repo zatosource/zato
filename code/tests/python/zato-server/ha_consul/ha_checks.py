@@ -212,6 +212,39 @@ def check_no_runs_after(env:'HAEnvironment', replaced:'Node', boundary:'float') 
 
 # ################################################################################################################################
 
+def check_no_runs_while_replaced(env:'HAEnvironment', replaced:'Node', boundary:'float', reactivated:'float') -> 'None':
+    """ Checks that a node that was replaced at the given time began no scheduler run until it became active again.
+    """
+    entries = read_run_log(cast_('any_', env))
+    late:'dictlist' = []
+
+    for entry in get_starts_after(entries, replaced.node_name, boundary):
+        if entry['time'] < reactivated:
+            late.append(entry)
+
+    assert not late, f'{replaced.node_name} ran jobs while it was replaced -> {late}'
+
+# ################################################################################################################################
+
+def check_publications_stored(active:'Node', msg_ids:'strlist') -> 'None':
+    """ Checks that the active node holds every publication with the given message IDs.
+    """
+    rows = read_rows(active.db_path(ModuleCtx.PubSub_DB_File), 'select msg_id from pubsub_message')
+    stored:'set[str]' = set()
+
+    for row in rows:
+        stored.add(row[0])
+
+    missing:'strlist' = []
+
+    for msg_id in msg_ids:
+        if msg_id not in stored:
+            missing.append(msg_id)
+
+    assert not missing, f'Acknowledged publications missing from {active.node_name} -> {missing}'
+
+# ################################################################################################################################
+
 def check_workload(env:'HAEnvironment', workload:'Workload') -> 'None':
     """ Drains the pull queue and checks that every acknowledged publication was handed out and pushed,
     that a message was pulled again only after its acknowledgment failed, that every repeated push was in flight

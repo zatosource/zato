@@ -27,6 +27,7 @@ from topology import docker, ModuleCtx as TopologyCtx, remove_container, save_co
 # ################################################################################################################################
 
 if 0:
+    import subprocess
     from ha_authority import Authority
     from topology import Consul
     from zato.common.typing_ import anydict, strlist, strstrdict
@@ -55,6 +56,10 @@ class ModuleCtx:
     Node_Binary      = os.path.join(Repository_Dir, 'code', 'bin', '_zato_ha_node')
     Scheduler_Binary = os.path.join(Repository_Dir, 'code', 'bin', '_zato_scheduler')
     Zato_Binary      = os.path.join(Repository_Dir, 'code', 'bin', 'zato')
+    Python_Binary    = os.path.join(Repository_Dir, 'code', 'bin', 'py')
+
+    # The module of the retention sweep, which cron runs in a production container
+    Retention_Sweep_Module = 'zato.common.pubsub.sql.cleanup'
 
     # The script that the container runs in place of the entrypoint of the image,
     # and the script that the node runs while it is active
@@ -320,6 +325,15 @@ class Node:
 
     def save_logs(self, directory:'str') -> 'None':
         save_container_logs(self.container_name, directory)
+
+# ################################################################################################################################
+
+    def run_retention_sweep(self) -> 'subprocess.CompletedProcess[str]':
+        """ Runs one retention sweep of pub/sub inside the container of the node, as cron does.
+        """
+        out = docker('exec', self.container_name, ModuleCtx.Python_Binary, '-m', ModuleCtx.Retention_Sweep_Module, '--once',
+            check=False)
+        return out
 
 # ################################################################################################################################
 
