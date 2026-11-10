@@ -360,6 +360,7 @@ def build_environment(session:'HASession', test_name:'str', timers:'Timers', hoo
     # Each test has a Consul with no data, configured with the tokens of this test ..
     consul = Consul(authority, run_dir)
     shutil.rmtree(consul.directory, ignore_errors=True)
+    shutil.rmtree(consul.data_dir, ignore_errors=True)
 
     consul.start()
     consul.create_node_token()

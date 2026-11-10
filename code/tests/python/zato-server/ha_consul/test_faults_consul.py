@@ -63,6 +63,9 @@ class ModuleCtx:
     Target_Active = 'active'
     Target_Standby = 'standby'
 
+    # How many claims of each scheduler job the stop of an isolated server may leave without a run
+    Unrun_Claims_After_Isolation = 1
+
     # How long the traffic runs before the event and how long the fault lasts after it, in seconds
     Traffic_Seconds = 10
     Fault_Seconds = 30
@@ -143,7 +146,14 @@ def test_consul_link(ha_pair:'HAEnvironment', fault:'str', target:'str', event:'
 
     check_workload(env, workload)
 
-    _ = check_scheduler(env, active)
+    # An active node that cannot reach Consul when its standby fails cannot mark it out, so it stops its server,
+    # and a claim that the barrier held is in its copy without a run.
+    if target == ModuleCtx.Target_Active and event == ModuleCtx.Event_Mark_Out:
+        unrun_claims = ModuleCtx.Unrun_Claims_After_Isolation
+    else:
+        unrun_claims = 0
+
+    _ = check_scheduler(env, active, unrun_claims)
     check_copies(env, active)
 
 # ################################################################################################################################

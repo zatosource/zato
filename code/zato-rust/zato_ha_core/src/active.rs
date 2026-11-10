@@ -20,7 +20,7 @@ use std::time::{Duration, Instant};
 use rusqlite::Connection;
 use rusqlite::config::DbConfig;
 
-use crate::config::DatabaseConfig;
+use crate::config::{DatabaseConfig, ShippingMode};
 use crate::link::{LinkReceiver, LinkSender};
 use crate::protocol::{FileKind, Message, Position};
 use crate::record::RefereeRecord;
@@ -258,7 +258,7 @@ impl Shipper {
             fresh.push(scan_to_end(&mut database.cursor)?);
         }
 
-        let shipped = if self.session.is_some() { self.ship(&fresh)? } else { false };
+        self.ship(&fresh)?;
 
         let mut state = self.shared.state.lock();
         for database in &self.databases {
@@ -272,14 +272,12 @@ impl Shipper {
             }
         }
         if let Some(session) = &self.session {
+            let sent_at = Instant::now();
             for (database, sent) in self.databases.iter().zip(&session.databases) {
                 if let Some(progress) = state.database_mut(database.config.name) {
-                    progress.sent = sent.sent;
+                    progress.record_shipment(sent.sent, sent_at);
                 }
             }
-        }
-        if shipped && state.oldest_unconfirmed.is_none() {
-            state.oldest_unconfirmed = Some(Instant::now());
         }
         state.scan_completed = state.scan_completed.max(ticket);
         drop(state);
@@ -287,22 +285,20 @@ impl Shipper {
         Ok(())
     }
 
-    /// Sends every frame the session has not sent yet, returning whether anything was sent.
-    fn ship(&mut self, fresh: &[Vec<FreshFrames>]) -> Result<bool, Error> {
+    /// Sends the next chunk of the frames of each database that the session, if any, has not sent yet.
+    fn ship(&mut self, fresh: &[Vec<FreshFrames>]) -> Result<(), Error> {
         let Some(session) = self.session.as_mut() else {
-            return Ok(false);
+            return Ok(());
         };
         let generation = self.shared.state.lock().generation;
         let timeout = self.shared.config.timers.mark_out;
-        let mut out = false;
 
         for ((database, sent), fresh_frames) in self.databases.iter().zip(session.databases.iter_mut()).zip(fresh) {
             for message in frames_to_send(database, sent, fresh_frames, generation)? {
                 session.sender.send(&message, timeout)?;
-                out = true;
             }
         }
-        Ok(out)
+        Ok(())
     }
 
     /// Ends the current session, if any.
@@ -549,7 +545,12 @@ impl Shipper {
             if state.role != Role::ActiveSolo {
                 return Ok(());
             }
-            let caught_up = state.databases.iter().all(|progress| progress.confirmed >= progress.scanned);
+            // The copy of an asynchronous database may lag behind, so only the synchronous ones decide.
+            let caught_up = state
+                .databases
+                .iter()
+                .filter(|progress| progress.shipping == ShippingMode::Synchronous)
+                .all(|progress| progress.confirmed >= progress.scanned);
             if !caught_up {
                 return Ok(());
             }
@@ -664,8 +665,20 @@ impl Shipper {
             let Some(database) = self.databases.get(index) else {
                 continue;
             };
-            let size = std::fs::metadata(wal::wal_path(&database.config.path)).map_or(0, |metadata| metadata.len());
-            if size >= CHECKPOINT_WAL_SIZE {
+            let end = database.end();
+
+            // A log that restarts keeps the length of its file, so only the frames of the current cycle count.
+            let frame_size = database.cursor.header().map_or(0, wal::WalHeader::frame_size);
+            let size = u64::from(end.frame).saturating_mul(frame_size);
+
+            // The standby confirms a log only once all of it was sent, which a long backlog takes several iterations for,
+            // and a checkpoint would hold the write lock while it waited.
+            let has_backlog = self
+                .session
+                .as_ref()
+                .and_then(|session| session.databases.get(index))
+                .is_some_and(|sent| sent.sent < end);
+            if size >= CHECKPOINT_WAL_SIZE && !has_backlog {
                 self.checkpoint(index, role)?;
             }
         }
@@ -719,6 +732,7 @@ impl Shipper {
 
                 // A standby that does not confirm in time is marked out by the control loop, and the checkpoint waits.
                 if state.role != Role::ActiveReplicated || Instant::now() >= deadline {
+                    tracing::warn!("Checkpoint of {name} postponed, the standby confirmed {confirmed:?} of {end:?}");
                     return Ok(());
                 }
                 let _ = self.shared.changed.wait_until(&mut state, deadline);
@@ -773,7 +787,8 @@ fn scan_to_end(cursor: &mut WalCursor) -> Result<Vec<FreshFrames>, Error> {
     }
 }
 
-/// Returns the messages that bring the standby from `sent` to the end of the log, and advances `sent`.
+/// Returns the messages that bring the standby from `sent` towards the end of the log, at most one chunk of it,
+/// and advances `sent`.
 fn frames_to_send(database: &Database, sent: &mut SessionDatabase, fresh: &[FreshFrames], generation: u64) -> Result<Vec<Message>, Error> {
     let mut out = Vec::new();
     let Some(header) = database.cursor.header() else {
@@ -789,13 +804,16 @@ fn frames_to_send(database: &Database, sent: &mut SessionDatabase, fresh: &[Fres
         return Ok(out);
     }
 
+    // One call sends at most one chunk of a long backlog, so that the frames of the other databases do not wait behind it.
+    let send_end = end.frame.min(start.saturating_add(frames_per_chunk(header)?));
+
     // The frames of the most recent scan are sent as they were read, and anything older is read again from the log.
     let fresh_match = fresh
         .iter()
-        .find(|frames| frames.cycle == end.cycle && frames.first_frame == start && frames.end_frame == end.frame);
+        .find(|frames| frames.cycle == end.cycle && frames.first_frame == start && frames.end_frame == send_end);
     let chunks = match fresh_match {
         Some(frames) => vec![(frames.first_frame, frames.end_frame, frames.bytes.clone())],
-        None => read_frames(&database.config.path, header, start, end.frame)?,
+        None => read_frames(&database.config.path, header, start, send_end)?,
     };
 
     let mut header_to_send = if is_new_cycle { Some(header.raw.to_vec()) } else { None };
@@ -821,8 +839,17 @@ fn frames_to_send(database: &Database, sent: &mut SessionDatabase, fresh: &[Fres
     }
 
     sent.header = Some(header.raw.to_vec());
-    sent.sent = end;
+    sent.sent = LogPosition {
+        cycle: end.cycle,
+        frame: send_end,
+    };
     Ok(out)
+}
+
+/// How many frames of a log one chunk holds at most.
+fn frames_per_chunk(header: &wal::WalHeader) -> Result<u32, Error> {
+    let max_bytes = u64::try_from(MAX_SCAN_BYTES).map_err(Error::other)?;
+    u32::try_from((max_bytes / header.frame_size()).max(1)).map_err(Error::other)
 }
 
 /// Reads the frames `start..end` of a log in chunks of a bounded size.
@@ -833,8 +860,7 @@ fn read_frames(db_path: &Path, header: &wal::WalHeader, start: u32, end: u32) ->
     }
     let file = File::open(wal::wal_path(db_path))?;
     let frame_size = header.frame_size();
-    let max_bytes = u64::try_from(MAX_SCAN_BYTES).map_err(Error::other)?;
-    let frames_per_chunk = u32::try_from((max_bytes / frame_size).max(1)).map_err(Error::other)?;
+    let frames_per_chunk = frames_per_chunk(header)?;
 
     let mut first = start;
     while first < end {
@@ -928,10 +954,7 @@ fn apply_confirmation(state: &mut NodeState, position: &Position) {
         })
     };
     if let Some(confirmed) = confirmed {
-        progress.confirmed = progress.confirmed.max(confirmed);
-    }
-    if state.all_confirmed() {
-        state.oldest_unconfirmed = None;
+        progress.record_confirmation(confirmed);
     }
 }
 
@@ -1040,6 +1063,15 @@ mod tests {
 
     /// The report of an admission.
     const ADMIT: &str = "admit";
+
+    /// Rows whose frames make the log longer than the length at which it is checkpointed.
+    const LONG_LOG_ROWS: usize = 1100;
+
+    /// How many small transactions follow the checkpoint of the long log.
+    const SMALL_WRITES: usize = 5;
+
+    /// How long a test lets the shipper run after each write.
+    const SHIPPER_ITERATIONS: Duration = Duration::from_millis(200);
 
     /// Fills the publish/subscribe database in its main file and leaves it without a log, as a checkpoint does.
     fn fill_database(path: &Path) {
@@ -1156,5 +1188,64 @@ mod tests {
         shared.announce_stop();
         shipper.join().unwrap();
         standby.join().unwrap();
+    }
+
+    /// Returns the cycle of the log of the publish/subscribe database at the most recent scan.
+    fn pubsub_cycle(shared: &Shared) -> u64 {
+        let state = shared.state.lock();
+        state
+            .databases
+            .iter()
+            .find(|progress| progress.name == DB_NAME_PUBSUB)
+            .unwrap()
+            .scanned
+            .cycle
+    }
+
+    /// Commits one small transaction and lets the shipper scan it.
+    fn write_small(connection: &Connection) {
+        let _ = connection.execute("insert into message (body) values (?1)", [PUBLICATION]).unwrap();
+        thread::sleep(SHIPPER_ITERATIONS);
+    }
+
+    #[test]
+    fn a_log_that_restarted_is_not_checkpointed_again_until_its_cycle_is_long() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let pubsub_path = dir.path().join("pubsub.db");
+        let connection = Connection::open(&pubsub_path).unwrap();
+        connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
+        connection
+            .execute_batch("pragma journal_mode=wal; pragma wal_autocheckpoint=0; create table message (body blob); begin;")
+            .unwrap();
+        let body = vec![0_u8; BULK_ROW_SIZE];
+        for _ in 0..LONG_LOG_ROWS {
+            let _ = connection.execute("insert into message (body) values (?1)", [&body]).unwrap();
+        }
+        connection.execute_batch("commit").unwrap();
+
+        // Nothing listens on the port of the standby, so the node stays active alone and checkpoints without a session.
+        let port = TcpListener::bind((LOOPBACK, 0)).unwrap().local_addr().unwrap().port();
+        let shared = active_node(dir.path(), &certificates, port);
+        let shipper_shared = Arc::clone(&shared);
+        let shipper = thread::spawn(move || Shipper::new(shipper_shared).run());
+
+        // The first write after the checkpoint of the long log restarts it ..
+        let first_cycle = pubsub_cycle(&shared);
+        let deadline = Instant::now() + RECEIVE_TIMEOUT;
+        while pubsub_cycle(&shared) == first_cycle {
+            assert!(Instant::now() < deadline, "The long log was not checkpointed");
+            write_small(&connection);
+        }
+
+        // .. and the short cycle that follows is not checkpointed, even though the file of the log keeps its length.
+        let restarted_cycle = pubsub_cycle(&shared);
+        for _ in 0..SMALL_WRITES {
+            write_small(&connection);
+        }
+        assert_eq!(pubsub_cycle(&shared), restarted_cycle);
+
+        shared.announce_stop();
+        shipper.join().unwrap();
     }
 }

@@ -22,9 +22,7 @@ import time
 from http.client import NOT_FOUND
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-
-# Zato
-from zato.common.crypto.api import CryptoManager
+from uuid import uuid4
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,6 +46,10 @@ class ModuleCtx:
 
     # Where every run keeps its data, removed at the beginning and at the end of each run
     Runtime_Dir = '/tmp/zato-ha-test'
+
+    # Where Consul keeps its data, in memory, so that the syncs of its log do not delay the syncs of the nodes,
+    # as a referee on hosts of its own does not
+    Consul_Data_Dir = '/dev/shm/zato-ha-test-consul'
 
     # The network of the run and the addresses on it
     Network_Name = 'zato-ha-test'
@@ -158,6 +160,7 @@ def prepare_runtime_dir() -> 'str':
     """ Removes what an earlier run left in the runtime directory and creates it again.
     """
     shutil.rmtree(ModuleCtx.Runtime_Dir, ignore_errors=True)
+    shutil.rmtree(ModuleCtx.Consul_Data_Dir, ignore_errors=True)
     os.makedirs(ModuleCtx.Runtime_Dir)
 
     out = ModuleCtx.Runtime_Dir
@@ -181,11 +184,9 @@ def remove_network() -> 'None':
 # ################################################################################################################################
 
 def _new_uuid() -> 'str':
-    """ Returns a random value in the form of a UUID, which Consul expects of the secret of a token.
+    """ Returns a random UUID, which Consul expects of the secret of a token.
     """
-    value = CryptoManager.generate_hex_string(32)
-
-    out = f'{value[0:8]}-{value[8:12]}-{value[12:16]}-{value[16:20]}-{value[20:32]}'
+    out = str(uuid4())
     return out
 
 # ################################################################################################################################
@@ -211,7 +212,7 @@ class Consul:
         self.authority = authority
         self.directory = os.path.join(run_dir, 'consul')
         self.config_dir = os.path.join(self.directory, 'config')
-        self.data_dir = os.path.join(self.directory, 'data')
+        self.data_dir = ModuleCtx.Consul_Data_Dir
         self.cert_dir = os.path.join(self.directory, 'certs')
 
         self.management_token = _new_uuid()
@@ -291,6 +292,9 @@ class Consul:
             '--network', ModuleCtx.Network_Name,
             '--ip', ModuleCtx.Consul_IP,
             '--user', f'{os.getuid()}:{os.getgid()}',
+
+            # The entrypoint script of the image changes the owner of the data directory, which requires root
+            '--entrypoint', 'consul',
             '-v', f'{self.config_dir}:/consul/config:ro',
             '-v', f'{self.data_dir}:/consul/data',
             '-v', f'{self.cert_dir}:/consul/certs:ro',

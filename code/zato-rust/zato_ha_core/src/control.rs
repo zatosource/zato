@@ -268,14 +268,22 @@ impl Control {
         let mark_out_time = self.shared.config.timers.mark_out;
         let (generation, due) = {
             let mut state = self.shared.state.lock();
-            let silent = state.last_peer_contact.elapsed() > mark_out_time;
-            let lagging = state.oldest_unconfirmed.is_some_and(|since| since.elapsed() > mark_out_time);
+            let silence = state.last_peer_contact.elapsed();
+            let lag = state.oldest_unconfirmed().map(|since| since.elapsed());
+            let silent = silence > mark_out_time;
+            let lagging = lag.is_some_and(|lag| lag > mark_out_time);
             let due = silent || lagging || state.needs_mark_out;
 
             // A standby that answers again ends the isolation, since it confirms every acknowledgment.
             if !due && state.isolated {
                 state.isolated = false;
                 self.shared.changed.notify_all();
+            }
+            if due && !state.isolated {
+                tracing::warn!(
+                    "Marking out the standby, silent for {silence:?}, oldest unconfirmed shipment {lag:?}, requested: {}",
+                    state.needs_mark_out
+                );
             }
             (state.generation, due)
         };

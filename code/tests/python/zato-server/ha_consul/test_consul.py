@@ -58,6 +58,9 @@ class ModuleCtx:
     # How often the containers are checked while a test waits for them to stop, in seconds
     Poll_Interval = 0.5
 
+    # How many claims of each scheduler job the stop of an isolated server may leave without a run
+    Unrun_Claims_After_Isolation = 1
+
     # What the log of a node contains once the referee lost its data
     Data_Loss_Text = 'the referee lost data'
 
@@ -158,7 +161,9 @@ def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
 
     publisher.stop()
 
-    _ = check_scheduler(env, active)
+    # A claim that the barrier held when the standby failed is in the copy of the active node,
+    # and the server was stopped before it ran the job.
+    _ = check_scheduler(env, active, ModuleCtx.Unrun_Claims_After_Isolation)
     check_copies(env, active)
 
 # ################################################################################################################################

@@ -14,6 +14,8 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use std::time::Instant;
 
+use parking_lot::MutexGuard;
+
 use crate::config::DatabaseConfig;
 use crate::copy::DatabaseCopy;
 use crate::link::{AcceptedLink, LinkReceiver, LinkSender, verify_peer_name};
@@ -104,6 +106,14 @@ fn is_current(shared: &Shared, session: u64) -> bool {
     state.session == session && !state.stopping
 }
 
+/// Takes the gate of the copy for one message of `session`, or returns `None` once a newer session replaced it.
+///
+/// A message received before a newer session opened is thus never applied after the messages of that session.
+fn enter_gate(shared: &Shared, session: u64) -> Option<MutexGuard<'_, ()>> {
+    let gate = shared.apply_gate.lock();
+    is_current(shared, session).then_some(gate)
+}
+
 /// Applies the messages of one session until it ends.
 fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver, active_node: &str, generation: u64) -> Result<(), Error> {
     let Some((session, resumes)) = open_session(shared, sender, generation) else {
@@ -111,8 +121,13 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
     };
     let timeout = shared.config.timers.mark_out;
 
+    // The positions are read only once an earlier session finished the message it was applying.
+    let Some(gate) = enter_gate(shared, session) else {
+        return Ok(());
+    };
     let mut copies = Copies::open(&shared.config.databases)?;
     let positions = if resumes { copies.positions() } else { Vec::new() };
+    drop(gate);
     sender.send(
         &Message::HelloReply {
             in_sync: resumes,
@@ -141,7 +156,9 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
                 end_frame,
                 bytes,
             } => {
-                let gate = shared.apply_gate.lock();
+                let Some(gate) = enter_gate(shared, session) else {
+                    return Ok(());
+                };
                 let own = shared.state.lock().generation;
                 if frames_generation < own {
                     drop(gate);
@@ -175,6 +192,12 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
                     while state.role == Role::Fenced && !state.stopping {
                         shared.changed.wait(&mut state);
                     }
+                }
+                let Some(gate) = enter_gate(shared, session) else {
+                    return Ok(());
+                };
+                {
+                    let mut state = shared.state.lock();
                     if !state.role.is_standby() {
                         return Err(Error::new(
                             ErrorKind::InvalidData,
@@ -186,18 +209,33 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
                     shared.changed.notify_all();
                 }
                 copies.get(&database)?.begin_snapshot()?;
+                drop(gate);
             }
-            Message::SnapshotChunk { database, kind, bytes } => copies.get(&database)?.append_snapshot(kind, &bytes)?,
+            Message::SnapshotChunk { database, kind, bytes } => {
+                let Some(gate) = enter_gate(shared, session) else {
+                    return Ok(());
+                };
+                copies.get(&database)?.append_snapshot(kind, &bytes)?;
+                drop(gate);
+            }
             Message::SnapshotEnd { database } => {
+                let Some(gate) = enter_gate(shared, session) else {
+                    return Ok(());
+                };
                 let position = copies.get(&database)?.end_snapshot()?;
                 sender.send(&Message::Confirm(position), timeout)?;
+                drop(gate);
             }
             Message::Admit { generation: admitted } => {
+                let Some(gate) = enter_gate(shared, session) else {
+                    return Ok(());
+                };
                 let mut state = shared.state.lock();
                 state.generation = admitted;
                 state.role = Role::StandbyInSync;
                 state.last_peer_contact = Instant::now();
                 drop(state);
+                drop(gate);
                 shared.changed.notify_all();
                 tracing::info!("Admitted as the standby in sync at generation {admitted}");
             }
@@ -255,4 +293,37 @@ pub fn serve(shared: &Arc<Shared>) -> Result<(), Error> {
         }
     })?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Timers;
+    use crate::referee::tests::MemoryReferee;
+    use crate::test_support::{self, Certificates, NODE_B};
+    use std::time::Duration;
+
+    /// The timers of a node whose loops do not run in a test.
+    const TIMERS: Timers = Timers {
+        heartbeat: Duration::from_secs(1),
+        mark_out: Duration::from_secs(3),
+        takeover: Duration::from_secs(6),
+    };
+
+    #[test]
+    fn a_session_that_a_newer_one_replaced_no_longer_applies_anything() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let config = test_support::node_config(NODE_B, dir.path(), &certificates, TIMERS);
+        let shared = test_support::shared(config, Box::new(MemoryReferee::default()));
+        let earlier = {
+            let mut state = shared.state.lock();
+            state.session += 1;
+            state.session
+        };
+        assert!(enter_gate(&shared, earlier).is_some());
+
+        shared.state.lock().session += 1;
+        assert!(enter_gate(&shared, earlier).is_none());
+    }
 }

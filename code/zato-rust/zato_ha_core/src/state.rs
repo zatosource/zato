@@ -5,6 +5,7 @@
 
 //! The role of the node and the replication progress shared by its threads.
 
+use std::collections::VecDeque;
 use std::time::Instant;
 
 use parking_lot::{Condvar, Mutex};
@@ -96,6 +97,9 @@ pub struct DatabaseProgress {
     /// The end of what the standby confirmed.
     pub confirmed: LogPosition,
 
+    /// The end of each shipment the standby has not confirmed yet and when it was sent, the oldest first.
+    pub unconfirmed: VecDeque<(LogPosition, Instant)>,
+
     /// The current cycle and the one before it, which map the salts of a confirmation to a cycle.
     pub cycles: Vec<CycleRecord>,
 }
@@ -112,7 +116,26 @@ impl DatabaseProgress {
             scanned: LogPosition { cycle: 0, frame: 0 },
             sent: LogPosition { cycle: 0, frame: 0 },
             confirmed: LogPosition { cycle: 0, frame: 0 },
+            unconfirmed: VecDeque::new(),
             cycles: Vec::new(),
+        }
+    }
+
+    /// Records that the frames up to `end` were sent at `sent_at`.
+    pub fn record_shipment(&mut self, end: LogPosition, sent_at: Instant) {
+        if end != self.sent {
+            self.unconfirmed.push_back((end, sent_at));
+        }
+        self.sent = end;
+    }
+
+    /// Records that the standby holds the frames up to `confirmed`.
+    pub fn record_confirmation(&mut self, confirmed: LogPosition) {
+        self.confirmed = self.confirmed.max(confirmed);
+
+        // A shipment that ends at or before the confirmed position is entirely in the standby.
+        while self.unconfirmed.front().is_some_and(|(end, _)| *end <= self.confirmed) {
+            let _ = self.unconfirmed.pop_front();
         }
     }
 
@@ -187,9 +210,6 @@ pub struct NodeState {
     /// When the other node was last heard from.
     pub last_peer_contact: Instant,
 
-    /// When the oldest frame not yet confirmed was sent.
-    pub oldest_unconfirmed: Option<Instant>,
-
     /// The state of the replication link on the active node.
     pub link_state: LinkState,
 
@@ -215,9 +235,14 @@ impl NodeState {
         self.databases.iter_mut().find(|database| database.name == name)
     }
 
-    /// Whether the standby confirmed everything that was sent.
-    pub fn all_confirmed(&self) -> bool {
-        self.databases.iter().all(|database| database.confirmed >= database.sent)
+    /// When the oldest shipment of a synchronous database that the standby has not confirmed yet was sent, if there is one.
+    /// The copy of an asynchronous database may lag behind the active node.
+    pub fn oldest_unconfirmed(&self) -> Option<Instant> {
+        self.databases
+            .iter()
+            .filter(|database| database.shipping == ShippingMode::Synchronous)
+            .filter_map(|database| database.unconfirmed.front().map(|(_, sent_at)| *sent_at))
+            .min()
     }
 
     /// Closes the link of the current session, if any.
@@ -227,7 +252,11 @@ impl NodeState {
         }
         self.link_state = LinkState::Disconnected;
         self.peer_name = None;
-        self.oldest_unconfirmed = None;
+
+        // Shipments of a session that ended are never confirmed.
+        for database in &mut self.databases {
+            database.unconfirmed.clear();
+        }
     }
 }
 
@@ -271,7 +300,6 @@ impl Shared {
             scan_requested: 0,
             scan_completed: 0,
             last_peer_contact: Instant::now(),
-            oldest_unconfirmed: None,
             link_state: LinkState::Disconnected,
             peer_name: None,
             link: None,
@@ -311,5 +339,80 @@ impl Shared {
         state.isolated = false;
         state.close_link();
         self.changed.notify_all();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{DB_NAME_AUDIT, DB_NAME_PUBSUB, Timers};
+    use crate::referee::tests::MemoryReferee;
+    use crate::test_support::{self, Certificates, NODE_A};
+    use std::time::Duration;
+
+    /// The timers of a node whose loops do not run in a test.
+    const TIMERS: Timers = Timers {
+        heartbeat: Duration::from_secs(1),
+        mark_out: Duration::from_secs(3),
+        takeover: Duration::from_secs(6),
+    };
+
+    /// How far apart the two shipments of a test are.
+    const SHIPMENT_GAP: Duration = Duration::from_millis(100);
+
+    /// Returns the position of `frame` in the first cycle of a log.
+    const fn position(frame: u32) -> LogPosition {
+        LogPosition { cycle: 1, frame }
+    }
+
+    #[test]
+    fn a_confirmation_leaves_only_the_shipments_after_it_unconfirmed() {
+        let mut progress = DatabaseProgress::new("pubsub", ShippingMode::Synchronous);
+        let first = Instant::now();
+        let second = first + SHIPMENT_GAP;
+
+        progress.record_shipment(position(10), first);
+        progress.record_shipment(position(20), second);
+        progress.record_confirmation(position(10));
+
+        let pending: Vec<Instant> = progress.unconfirmed.iter().map(|(_, sent_at)| *sent_at).collect();
+        assert_eq!(pending, [second]);
+
+        progress.record_confirmation(position(20));
+        assert!(progress.unconfirmed.is_empty());
+    }
+
+    #[test]
+    fn an_unchanged_end_is_not_a_shipment() {
+        let mut progress = DatabaseProgress::new("pubsub", ShippingMode::Synchronous);
+        let now = Instant::now();
+
+        progress.record_shipment(position(10), now);
+        progress.record_shipment(position(10), now + SHIPMENT_GAP);
+        assert_eq!(progress.unconfirmed.len(), 1);
+    }
+
+    #[test]
+    fn only_the_shipments_of_synchronous_databases_make_a_standby_lag() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let config = test_support::node_config(NODE_A, dir.path(), &certificates, TIMERS);
+        let shared = test_support::shared(config, Box::new(MemoryReferee::default()));
+        let mut state = shared.state.lock();
+        let audit_sent_at = Instant::now();
+        let pubsub_sent_at = audit_sent_at + SHIPMENT_GAP;
+
+        state
+            .database_mut(DB_NAME_AUDIT)
+            .unwrap()
+            .record_shipment(position(10), audit_sent_at);
+        assert_eq!(state.oldest_unconfirmed(), None);
+
+        state
+            .database_mut(DB_NAME_PUBSUB)
+            .unwrap()
+            .record_shipment(position(10), pubsub_sent_at);
+        assert_eq!(state.oldest_unconfirmed(), Some(pubsub_sent_at));
+        drop(state);
     }
 }

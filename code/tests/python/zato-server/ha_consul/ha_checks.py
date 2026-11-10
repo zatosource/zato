@@ -55,6 +55,10 @@ class ModuleCtx:
     # How often the roles of both nodes are read while a check watches them, in seconds
     Role_Poll_Interval = 0.2
 
+    # How long the run logs and the run state of a scheduler that still runs may disagree, in seconds,
+    # as each run is recorded in both at different moments
+    Scheduler_Settle_Timeout = 5.0
+
     # The tables of SQLite itself, which are not part of the logical contents
     Internal_Table_Prefix = 'sqlite_'
 
@@ -185,20 +189,33 @@ def read_run_states(node:'Node') -> 'anydict':
 
 # ################################################################################################################################
 
-def check_scheduler(env:'HAEnvironment', active:'Node') -> 'dictlist':
+def check_scheduler(env:'HAEnvironment', active:'Node', unrun_claims:'int'=0) -> 'dictlist':
     """ Checks that no slot ran twice on the two nodes together and that the run logs agree with the run state
-    of the active node, returning the entries of the run logs.
+    of the active node, returning the entries of the run logs. The run state of each job may count the given number
+    of claims that a server stopped before it ran them.
     """
-    entries = read_run_log(cast_('any_', env))
+    deadline = time.monotonic() + ModuleCtx.Scheduler_Settle_Timeout
 
-    repeated = get_repeated_slots(entries)
-    assert not repeated, repeated
+    while True:
+        entries = read_run_log(cast_('any_', env))
 
-    states = read_run_states(active)
-    mismatches = get_state_mismatches(entries, states)
-    assert not mismatches, mismatches
+        repeated = get_repeated_slots(entries)
+        assert not repeated, repeated
 
-    return entries
+        states = read_run_states(active)
+        mismatches = get_state_mismatches(entries, states, unrun_claims)
+
+        if not mismatches:
+            break
+
+        # A disagreement that outlasts the recording of one run is a defect ..
+        assert time.monotonic() < deadline, mismatches
+
+        # .. and a shorter one is a run that one of them has not recorded yet.
+        time.sleep(ModuleCtx.Role_Poll_Interval)
+
+    out = entries
+    return out
 
 # ################################################################################################################################
 

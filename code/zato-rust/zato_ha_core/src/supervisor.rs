@@ -12,6 +12,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use nix::sys::signal::{Signal, killpg};
+use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
 use nix::unistd::Pid;
 
 use crate::config::{ENV_BARRIER_SOCKET, ENV_GENERATION, ENV_NODE_NAME};
@@ -113,6 +114,7 @@ impl Supervisor {
             tracing::error!("No Zato server command was given");
             return;
         };
+        reap_orphans();
         let config = &self.shared.config;
         let spawned = Command::new(program)
             .args(arguments)
@@ -153,5 +155,20 @@ impl Supervisor {
         }
         let _ = killpg(group, Signal::SIGKILL);
         let _ = child.wait();
+    }
+}
+
+/// Reaps the processes of earlier servers that were reparented to this node.
+///
+/// This happens when the node is the first process of a container. An unreaped process keeps its PID,
+/// and the server does not start while its pidfile names a PID that it cannot inspect.
+fn reap_orphans() {
+    loop {
+        // No server runs at this point, so every child that exited belongs to an earlier server.
+        match waitpid(None, Some(WaitPidFlag::WNOHANG)) {
+            // A child that still runs or no child at all leaves nothing more to reap.
+            Ok(WaitStatus::StillAlive) | Err(_) => return,
+            Ok(status) => tracing::info!("Reaped a process of an earlier Zato server, {status:?}"),
+        }
     }
 }

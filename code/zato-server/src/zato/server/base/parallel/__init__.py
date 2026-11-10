@@ -1325,16 +1325,22 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self._skip_fire_event(ctx, claim, cid, planned_fire_dt, delay_ms)
             return
 
-        audit_event_id = record_job_start(
-            self._scheduler_audit_log,
-            job_name,
-            cid=cid,
-            job_id=job_id,
-            current_run=current_run,
-            planned_fire_time=planned_fire_dt,
-            delay_ms=delay_ms,
-            service=ctx['service'],
-        )
+        # .. the record of the run opens in the audit log, which a run does not depend on,
+        # because the claim committed above counts the run whether the record opens or not ..
+        try:
+            audit_event_id = record_job_start(
+                self._scheduler_audit_log,
+                job_name,
+                cid=cid,
+                job_id=job_id,
+                current_run=current_run,
+                planned_fire_time=planned_fire_dt,
+                delay_ms=delay_ms,
+                service=ctx['service'],
+            )
+        except Exception:
+            logger.warning('Fire event: run not recorded job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())
+            audit_event_id = None
 
         msg = Bunch({
             'action': SCHEDULER_MSG.JOB_EXECUTED.value,
@@ -1368,9 +1374,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         logger.info('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
             job_id, job_name, outcome, duration_ms, current_run, len(error_traceback))
 
-        # .. the run's record closes with its outcome, duration and error ..
+        # .. the run's record closes with its outcome, duration and error, and the scheduler is told of the completion
+        # even if the audit log cannot record it ..
         if audit_event_id:
-            record_job_complete(audit_event_id, outcome=outcome, duration_ms=duration_ms, error=error_traceback)
+            try:
+                record_job_complete(audit_event_id, outcome=outcome, duration_ms=duration_ms, error=error_traceback)
+            except Exception:
+                logger.warning('Fire event: run completion not recorded job_id=%s name=%s traceback=%s',
+                    job_id, job_name, format_exc())
 
         # .. report the completion to the Rust scheduler so its in-flight state clears ..
         try:
