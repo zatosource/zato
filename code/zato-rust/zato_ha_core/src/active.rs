@@ -125,6 +125,14 @@ impl Database {
             frame: self.cursor.end_frame(),
         }
     }
+
+    /// Whether the current cycle of the log reached the length at which it is checkpointed.
+    fn is_long(&self) -> bool {
+        // A log that restarts keeps the length of its file, so only the frames of the current cycle count.
+        let frame_size = self.cursor.header().map_or(0, wal::WalHeader::frame_size);
+        let size = u64::from(self.cursor.end_frame()).saturating_mul(frame_size);
+        size >= CHECKPOINT_WAL_SIZE
+    }
 }
 
 /// What a session has sent of one database.
@@ -168,6 +176,9 @@ pub struct Shipper {
 
     /// When a link was last attempted.
     last_connect: Option<Instant>,
+
+    /// When the barriers were last held for an admission.
+    admission_started: Instant,
 }
 
 impl Shipper {
@@ -179,6 +190,7 @@ impl Shipper {
             databases,
             session: None,
             last_connect: None,
+            admission_started: Instant::now(),
         }
     }
 
@@ -258,6 +270,8 @@ impl Shipper {
             fresh.push(scan_to_end(&mut database.cursor)?);
         }
 
+        // The standby in sync owes the frames from the moment they are read, whether or not a session can ship them.
+        self.record_reads();
         self.ship(&fresh)?;
 
         let mut state = self.shared.state.lock();
@@ -271,18 +285,26 @@ impl Shipper {
                 }
             }
         }
-        if let Some(session) = &self.session {
-            let sent_at = Instant::now();
-            for (database, sent) in self.databases.iter().zip(&session.databases) {
-                if let Some(progress) = state.database_mut(database.config.name) {
-                    progress.record_shipment(sent.sent, sent_at);
-                }
-            }
-        }
         state.scan_completed = state.scan_completed.max(ticket);
         drop(state);
         self.shared.changed.notify_all();
         Ok(())
+    }
+
+    /// Records the end of every log as read and not yet confirmed while a standby is in sync.
+    fn record_reads(&self) {
+        let read_at = Instant::now();
+        let mut state = self.shared.state.lock();
+
+        // Without a standby in sync, no barrier waits for a confirmation.
+        if state.role != Role::ActiveReplicated {
+            return;
+        }
+        for database in &self.databases {
+            if let Some(progress) = state.database_mut(database.config.name) {
+                progress.record_read(database.end(), read_at);
+            }
+        }
     }
 
     /// Sends the next chunk of the frames of each database that the session, if any, has not sent yet.
@@ -402,11 +424,6 @@ impl Shipper {
                 LinkState::Streaming
             };
             state.last_peer_contact = Instant::now();
-            for (database, sent) in self.databases.iter().zip(&session.databases) {
-                if let Some(progress) = state.database_mut(database.config.name) {
-                    progress.sent = sent.sent;
-                }
-            }
             drop(state);
             self.shared.changed.notify_all();
         }
@@ -540,30 +557,8 @@ impl Shipper {
             return Ok(());
         };
 
-        let generation = {
-            let mut state = self.shared.state.lock();
-            if state.role != Role::ActiveSolo {
-                return Ok(());
-            }
-            // The copy of an asynchronous database may lag behind, so only the synchronous ones decide.
-            let caught_up = state
-                .databases
-                .iter()
-                .filter(|progress| progress.shipping == ShippingMode::Synchronous)
-                .all(|progress| progress.confirmed >= progress.scanned);
-            if !caught_up {
-                return Ok(());
-            }
-
-            // From here on, no barrier completes until the standby is in sync or the admission is abandoned.
-            // A barrier that completed before this point synced locally frames that the last scan may not
-            // have read, so the admission waits for the next iteration, whose scan reads them.
-            if !state.admitting {
-                state.admitting = true;
-                state.link_state = LinkState::CaughtUp;
-                return Ok(());
-            }
-            state.generation
+        let Some(generation) = admission_generation(&self.shared, &self.databases, session, &mut self.admission_started) else {
+            return Ok(());
         };
 
         let node_name = self.shared.config.node_name.clone();
@@ -667,10 +662,6 @@ impl Shipper {
             };
             let end = database.end();
 
-            // A log that restarts keeps the length of its file, so only the frames of the current cycle count.
-            let frame_size = database.cursor.header().map_or(0, wal::WalHeader::frame_size);
-            let size = u64::from(end.frame).saturating_mul(frame_size);
-
             // The standby confirms a log only once all of it was sent, which a long backlog takes several iterations for,
             // and a checkpoint would hold the write lock while it waited.
             let has_backlog = self
@@ -678,7 +669,7 @@ impl Shipper {
                 .as_ref()
                 .and_then(|session| session.databases.get(index))
                 .is_some_and(|sent| sent.sent < end);
-            if size >= CHECKPOINT_WAL_SIZE && !has_backlog {
+            if database.is_long() && !has_backlog {
                 self.checkpoint(index, role)?;
             }
         }
@@ -714,6 +705,11 @@ impl Shipper {
         let Some(database) = self.databases.get(index) else {
             return Ok(());
         };
+
+        // A log that restarted since the previous scan is short again, and checkpointing it would only restart it once more.
+        if !database.is_long() {
+            return Ok(());
+        }
         let name = database.config.name;
         let end = database.end();
 
@@ -751,6 +747,58 @@ impl Shipper {
         }
         Ok(())
     }
+}
+
+/// Returns the generation at which the joining standby of `session` is admitted, once it confirmed
+/// the end of every synchronous log while the barriers were held.
+///
+/// Under steady writes, new frames are read before the standby confirms the previous ones, so the barriers
+/// are held from the moment everything read was sent, which stops the writers until the standby confirms it.
+fn admission_generation(shared: &Shared, databases: &[Database], session: &Session, admission_started: &mut Instant) -> Option<u64> {
+    let mut state = shared.state.lock();
+    if state.role != Role::ActiveSolo {
+        return None;
+    }
+
+    if !state.admitting {
+        // The copy of an asynchronous database may lag behind, so only the synchronous ones decide.
+        let all_sent = databases
+            .iter()
+            .zip(&session.databases)
+            .filter(|(database, _)| database.config.shipping == ShippingMode::Synchronous)
+            .all(|(database, sent)| sent.sent >= database.end());
+
+        // From here on, no barrier completes until the standby is in sync or the admission is abandoned.
+        // A barrier that completed before this point synced locally frames that the last scan may not
+        // have read, so the admission waits for a later iteration, whose scan reads them.
+        if all_sent {
+            state.admitting = true;
+            state.link_state = LinkState::CaughtUp;
+            *admission_started = Instant::now();
+        }
+        return None;
+    }
+
+    let caught_up = state
+        .databases
+        .iter()
+        .filter(|progress| progress.shipping == ShippingMode::Synchronous)
+        .all(|progress| progress.confirmed >= progress.scanned);
+    if caught_up {
+        return Some(state.generation);
+    }
+
+    // A standby that does not confirm in time releases the barriers and the admission begins again on a later iteration,
+    // unless the referee may already hold the record of this admission.
+    let mark_out = shared.config.timers.mark_out;
+    if admission_started.elapsed() >= mark_out && state.pending_admission.is_none() {
+        tracing::warn!("Admission postponed, the standby did not confirm within {mark_out:?}");
+        state.admitting = false;
+        state.link_state = LinkState::Joining;
+        drop(state);
+        shared.changed.notify_all();
+    }
+    None
 }
 
 /// The committed frames one scan returned, in the order they were read.
@@ -1035,6 +1083,8 @@ mod tests {
     use crate::record::{NodeAddress, Versioned};
     use crate::referee::tests::MemoryReferee;
     use crate::test_support::{self, Certificates, LOOPBACK, NODE_A, NODE_B};
+    use std::collections::HashMap;
+    use std::collections::hash_map::Entry;
     use std::net::TcpListener;
     use std::sync::mpsc;
 
@@ -1072,6 +1122,15 @@ mod tests {
 
     /// How long a test lets the shipper run after each write.
     const SHIPPER_ITERATIONS: Duration = Duration::from_millis(200);
+
+    /// How many threads of a test commit at once, each waiting at the barrier after every commit as a worker of the Zato server does.
+    const WRITERS: usize = 8;
+
+    /// How long the standby of a test takes to sync each message of frames before it confirms it.
+    const STANDBY_SYNC: Duration = Duration::from_millis(20);
+
+    /// How long a standby that keeps pace with the writers may take to be admitted.
+    const ADMISSION_TIMEOUT: Duration = Duration::from_secs(3);
 
     /// Fills the publish/subscribe database in its main file and leaves it without a log, as a checkpoint does.
     fn fill_database(path: &Path) {
@@ -1123,6 +1182,63 @@ mod tests {
                 _ => continue,
             };
             if channels.reports.send(report).is_err() {
+                return;
+            }
+        }
+    }
+
+    /// Plays a standby that confirms every message of frames once it synced it.
+    fn run_confirming_standby(listener: &TcpListener, tls: &TlsContext) {
+        let (tcp, _) = listener.accept().unwrap();
+        let accepted = tls.accept(tcp).unwrap();
+        let (_, mut receiver) = accepted.receiver.receive().unwrap();
+        let reply = Message::HelloReply {
+            in_sync: false,
+            positions: Vec::new(),
+        };
+        accepted.sender.send(&reply, RECEIVE_TIMEOUT).unwrap();
+
+        // The salts of each log, read from the start of its file in the snapshot or from the header of a new cycle.
+        let mut salts: HashMap<String, (u32, u32)> = HashMap::new();
+        while let Ok((message, next)) = receiver.receive() {
+            receiver = next;
+            let confirmation = match message {
+                Message::SnapshotChunk {
+                    database,
+                    kind: FileKind::Wal,
+                    bytes,
+                } => {
+                    if let Entry::Vacant(entry) = salts.entry(database) {
+                        let header = wal::WalHeader::parse(bytes.get(..wal::HEADER_SIZE).unwrap().try_into().unwrap()).unwrap();
+                        let _ = entry.insert((header.salt_one, header.salt_two));
+                    }
+                    continue;
+                }
+                Message::Frames {
+                    database,
+                    header,
+                    end_frame,
+                    ..
+                } => {
+                    if let Some(raw) = header {
+                        let header = wal::WalHeader::parse(raw[..].try_into().unwrap()).unwrap();
+                        let _ = salts.insert(database.clone(), (header.salt_one, header.salt_two));
+                    }
+                    let (salt_one, salt_two) = *salts.get(&database).unwrap();
+                    thread::sleep(STANDBY_SYNC);
+                    Message::Confirm(Position {
+                        database,
+                        salt_one,
+                        salt_two,
+                        end_frame,
+                    })
+                }
+                Message::Heartbeat { .. } => Message::HeartbeatAck,
+                _ => continue,
+            };
+
+            // A link that the active node closed ends the standby.
+            if accepted.sender.send(&confirmation, RECEIVE_TIMEOUT).is_err() {
                 return;
             }
         }
@@ -1244,6 +1360,82 @@ mod tests {
             write_small(&connection);
         }
         assert_eq!(pubsub_cycle(&shared), restarted_cycle);
+
+        shared.announce_stop();
+        shipper.join().unwrap();
+    }
+
+    /// Commits and waits at the barrier until the node is no longer active alone.
+    fn write_while_solo(shared: &Shared, path: &Path) {
+        let connection = Connection::open(path).unwrap();
+        connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
+        while shared.state.lock().role == Role::ActiveSolo {
+            let _ = connection.execute("insert into message (body) values (?1)", [PUBLICATION]).unwrap();
+            assert_eq!(barrier::wait(shared, DB_NAME_PUBSUB), BarrierOutcome::Synced);
+        }
+    }
+
+    #[test]
+    fn a_standby_that_keeps_pace_with_steady_writers_is_admitted() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let pubsub_path = dir.path().join("pubsub.db");
+        let connection = Connection::open(&pubsub_path).unwrap();
+        connection
+            .execute_batch("pragma journal_mode=wal; pragma wal_autocheckpoint=0; create table message (body blob);")
+            .unwrap();
+
+        let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
+        let shared = active_node(dir.path(), &certificates, listener.local_addr().unwrap().port());
+        let mut writers = Vec::new();
+        for _ in 0..WRITERS {
+            let writer_shared = Arc::clone(&shared);
+            let writer_path = pubsub_path.clone();
+            writers.push(thread::spawn(move || write_while_solo(&writer_shared, &writer_path)));
+        }
+        let standby_tls = TlsContext::load(&certificates.files(NODE_B)).unwrap();
+        let standby = thread::spawn(move || run_confirming_standby(&listener, &standby_tls));
+        let shipper_shared = Arc::clone(&shared);
+        let shipper = thread::spawn(move || Shipper::new(shipper_shared).run());
+
+        let deadline = Instant::now() + ADMISSION_TIMEOUT;
+        while shared.state.lock().role != Role::ActiveReplicated {
+            assert!(Instant::now() < deadline, "The standby was not admitted");
+            thread::sleep(SHIPPER_ITERATIONS);
+        }
+
+        // The standby still confirms the commits whose barriers wait for it.
+        for writer in writers {
+            writer.join().unwrap();
+        }
+        shared.announce_stop();
+        shipper.join().unwrap();
+        standby.join().unwrap();
+    }
+
+    #[test]
+    fn a_standby_in_sync_without_a_session_owes_every_frame_read() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let connection = Connection::open(dir.path().join("pubsub.db")).unwrap();
+        connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
+        connection
+            .execute_batch("pragma journal_mode=wal; create table message (body blob);")
+            .unwrap();
+
+        // Nothing listens on the port of the standby, so no session ever opens.
+        let port = TcpListener::bind((LOOPBACK, 0)).unwrap().local_addr().unwrap().port();
+        let shared = active_node(dir.path(), &certificates, port);
+        shared.state.lock().role = Role::ActiveReplicated;
+        let shipper_shared = Arc::clone(&shared);
+        let shipper = thread::spawn(move || Shipper::new(shipper_shared).run());
+
+        write_small(&connection);
+        let deadline = Instant::now() + RECEIVE_TIMEOUT;
+        while shared.state.lock().oldest_unconfirmed().is_none() {
+            assert!(Instant::now() < deadline, "The frames read were not recorded as owed");
+            thread::sleep(SHIPPER_ITERATIONS);
+        }
 
         shared.announce_stop();
         shipper.join().unwrap();

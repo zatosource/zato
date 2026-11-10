@@ -91,13 +91,10 @@ pub struct DatabaseProgress {
     /// The end of the log at the most recent completed scan.
     pub scanned: LogPosition,
 
-    /// The end of what was sent to the standby.
-    pub sent: LogPosition,
-
     /// The end of what the standby confirmed.
     pub confirmed: LogPosition,
 
-    /// The end of each shipment the standby has not confirmed yet and when it was sent, the oldest first.
+    /// Each end of the log read while a standby was in sync that it has not confirmed yet and when it was read, the oldest first.
     pub unconfirmed: VecDeque<(LogPosition, Instant)>,
 
     /// The current cycle and the one before it, which map the salts of a confirmation to a cycle.
@@ -114,26 +111,25 @@ impl DatabaseProgress {
             name,
             shipping,
             scanned: LogPosition { cycle: 0, frame: 0 },
-            sent: LogPosition { cycle: 0, frame: 0 },
             confirmed: LogPosition { cycle: 0, frame: 0 },
             unconfirmed: VecDeque::new(),
             cycles: Vec::new(),
         }
     }
 
-    /// Records that the frames up to `end` were sent at `sent_at`.
-    pub fn record_shipment(&mut self, end: LogPosition, sent_at: Instant) {
-        if end != self.sent {
-            self.unconfirmed.push_back((end, sent_at));
+    /// Records that the log was read up to `end` at `read_at`, which the standby in sync owes a confirmation of.
+    pub fn record_read(&mut self, end: LogPosition, read_at: Instant) {
+        let newest = self.unconfirmed.back().map_or(self.confirmed, |(newest, _)| *newest);
+        if end > newest {
+            self.unconfirmed.push_back((end, read_at));
         }
-        self.sent = end;
     }
 
     /// Records that the standby holds the frames up to `confirmed`.
     pub fn record_confirmation(&mut self, confirmed: LogPosition) {
         self.confirmed = self.confirmed.max(confirmed);
 
-        // A shipment that ends at or before the confirmed position is entirely in the standby.
+        // A read that ends at or before the confirmed position is entirely in the standby.
         while self.unconfirmed.front().is_some_and(|(end, _)| *end <= self.confirmed) {
             let _ = self.unconfirmed.pop_front();
         }
@@ -235,17 +231,20 @@ impl NodeState {
         self.databases.iter_mut().find(|database| database.name == name)
     }
 
-    /// When the oldest shipment of a synchronous database that the standby has not confirmed yet was sent, if there is one.
+    /// When the oldest read of a synchronous database that the standby has not confirmed yet took place, if there is one.
     /// The copy of an asynchronous database may lag behind the active node.
     pub fn oldest_unconfirmed(&self) -> Option<Instant> {
         self.databases
             .iter()
             .filter(|database| database.shipping == ShippingMode::Synchronous)
-            .filter_map(|database| database.unconfirmed.front().map(|(_, sent_at)| *sent_at))
+            .filter_map(|database| database.unconfirmed.front().map(|(_, read_at)| *read_at))
             .min()
     }
 
     /// Closes the link of the current session, if any.
+    ///
+    /// The reads the standby in sync has not confirmed stay recorded, so that a standby which
+    /// reconnects without ever confirming them is still marked out once they are older than the mark-out time.
     pub fn close_link(&mut self) {
         if let Some(link) = self.link.take() {
             link.close();
@@ -253,9 +252,11 @@ impl NodeState {
         self.link_state = LinkState::Disconnected;
         self.peer_name = None;
 
-        // Shipments of a session that ended are never confirmed.
-        for database in &mut self.databases {
-            database.unconfirmed.clear();
+        // Outside of `ActiveReplicated`, no standby is in sync, so nothing waits for these reads.
+        if self.role != Role::ActiveReplicated {
+            for database in &mut self.databases {
+                database.unconfirmed.clear();
+            }
         }
     }
 }
@@ -357,8 +358,8 @@ mod tests {
         takeover: Duration::from_secs(6),
     };
 
-    /// How far apart the two shipments of a test are.
-    const SHIPMENT_GAP: Duration = Duration::from_millis(100);
+    /// How far apart the two reads of a test are.
+    const READ_GAP: Duration = Duration::from_millis(100);
 
     /// Returns the position of `frame` in the first cycle of a log.
     const fn position(frame: u32) -> LogPosition {
@@ -366,16 +367,16 @@ mod tests {
     }
 
     #[test]
-    fn a_confirmation_leaves_only_the_shipments_after_it_unconfirmed() {
+    fn a_confirmation_leaves_only_the_reads_after_it_unconfirmed() {
         let mut progress = DatabaseProgress::new("pubsub", ShippingMode::Synchronous);
         let first = Instant::now();
-        let second = first + SHIPMENT_GAP;
+        let second = first + READ_GAP;
 
-        progress.record_shipment(position(10), first);
-        progress.record_shipment(position(20), second);
+        progress.record_read(position(10), first);
+        progress.record_read(position(20), second);
         progress.record_confirmation(position(10));
 
-        let pending: Vec<Instant> = progress.unconfirmed.iter().map(|(_, sent_at)| *sent_at).collect();
+        let pending: Vec<Instant> = progress.unconfirmed.iter().map(|(_, read_at)| *read_at).collect();
         assert_eq!(pending, [second]);
 
         progress.record_confirmation(position(20));
@@ -383,36 +384,57 @@ mod tests {
     }
 
     #[test]
-    fn an_unchanged_end_is_not_a_shipment() {
+    fn an_end_already_recorded_or_confirmed_is_not_a_new_read() {
         let mut progress = DatabaseProgress::new("pubsub", ShippingMode::Synchronous);
         let now = Instant::now();
 
-        progress.record_shipment(position(10), now);
-        progress.record_shipment(position(10), now + SHIPMENT_GAP);
+        progress.record_read(position(10), now);
+        progress.record_read(position(10), now + READ_GAP);
         assert_eq!(progress.unconfirmed.len(), 1);
+
+        progress.record_confirmation(position(10));
+        progress.record_read(position(10), now + READ_GAP);
+        assert!(progress.unconfirmed.is_empty());
     }
 
     #[test]
-    fn only_the_shipments_of_synchronous_databases_make_a_standby_lag() {
+    fn only_the_reads_of_synchronous_databases_make_a_standby_lag() {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
         let config = test_support::node_config(NODE_A, dir.path(), &certificates, TIMERS);
         let shared = test_support::shared(config, Box::new(MemoryReferee::default()));
         let mut state = shared.state.lock();
-        let audit_sent_at = Instant::now();
-        let pubsub_sent_at = audit_sent_at + SHIPMENT_GAP;
+        let audit_read_at = Instant::now();
+        let pubsub_read_at = audit_read_at + READ_GAP;
 
-        state
-            .database_mut(DB_NAME_AUDIT)
-            .unwrap()
-            .record_shipment(position(10), audit_sent_at);
+        state.database_mut(DB_NAME_AUDIT).unwrap().record_read(position(10), audit_read_at);
         assert_eq!(state.oldest_unconfirmed(), None);
 
         state
             .database_mut(DB_NAME_PUBSUB)
             .unwrap()
-            .record_shipment(position(10), pubsub_sent_at);
-        assert_eq!(state.oldest_unconfirmed(), Some(pubsub_sent_at));
+            .record_read(position(10), pubsub_read_at);
+        assert_eq!(state.oldest_unconfirmed(), Some(pubsub_read_at));
+        drop(state);
+    }
+
+    #[test]
+    fn a_session_that_ends_keeps_the_lag_of_a_standby_in_sync_until_it_is_marked_out() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let config = test_support::node_config(NODE_A, dir.path(), &certificates, TIMERS);
+        let shared = test_support::shared(config, Box::new(MemoryReferee::default()));
+        let mut state = shared.state.lock();
+        let read_at = Instant::now();
+
+        state.role = Role::ActiveReplicated;
+        state.database_mut(DB_NAME_PUBSUB).unwrap().record_read(position(10), read_at);
+        state.close_link();
+        assert_eq!(state.oldest_unconfirmed(), Some(read_at));
+
+        state.role = Role::ActiveSolo;
+        state.close_link();
+        assert_eq!(state.oldest_unconfirmed(), None);
         drop(state);
     }
 }
