@@ -211,6 +211,12 @@ def read_memory_current(node:'Node') -> 'int':
 
 # ################################################################################################################################
 
+def read_memory_anon(node:'Node') -> 'int':
+    out = Container(node.container_name).read_memory_anon()
+    return out
+
+# ################################################################################################################################
+
 def read_oom_kills(node:'Node') -> 'int':
     out = Container(node.container_name).read_oom_kills()
     return out

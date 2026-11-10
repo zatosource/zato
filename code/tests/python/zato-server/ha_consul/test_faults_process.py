@@ -21,7 +21,7 @@ import pytest
 from ha_checks import check_copies, check_scheduler, check_workload, watch_roles
 from ha_env import ready_pair
 from ha_tools import clear_cpu_limit, clear_memory_limit, limit_cpu, limit_memory, ModuleCtx as ToolsCtx, PreloadHook, \
-    protect_node_from_oom_killer, read_memory_current, read_oom_kills
+    protect_node_from_oom_killer, read_memory_anon, read_memory_current, read_oom_kills
 from nodes import ModuleCtx as NodesCtx, Timers
 from workload import Workload
 from zato.common.typing_ import cast_
@@ -58,8 +58,12 @@ class ModuleCtx:
     # The memory limits of the cgroup
     Memory_High = 'memory.high'
     Memory_Max = 'memory.max'
+    Swap_Max = 'memory.swap.max'
 
-    # The share of its current memory that the active container may keep before the OOM killer acts
+    # The swap that the active container may use while the OOM killer is expected to act
+    No_Swap = 0
+
+    # The share of the memory of its processes that the active container may keep before the OOM killer acts
     OOM_Share = 0.5
 
     # How long the OOM killer may take to end a process, in seconds
@@ -189,10 +193,12 @@ def test_oom_kill_of_server(ha_pair:'HAEnvironment') -> 'None':
     protect_node_from_oom_killer(active)
 
     kills_before = read_oom_kills(active)
-    current = read_memory_current(active)
+    anon = read_memory_anon(active)
 
+    # Neither swap nor the page cache, which the kernel reclaims first, can absorb a limit below the memory of the processes.
     started = time.time()
-    limit_memory(active, ModuleCtx.Memory_Max, int(current * ModuleCtx.OOM_Share))
+    limit_memory(active, ModuleCtx.Swap_Max, ModuleCtx.No_Swap)
+    limit_memory(active, ModuleCtx.Memory_Max, int(anon * ModuleCtx.OOM_Share))
 
     deadline = time.monotonic() + ModuleCtx.OOM_Timeout
 
@@ -201,6 +207,7 @@ def test_oom_kill_of_server(ha_pair:'HAEnvironment') -> 'None':
         time.sleep(ModuleCtx.Poll_Interval)
 
     clear_memory_limit(active, ModuleCtx.Memory_Max)
+    clear_memory_limit(active, ModuleCtx.Swap_Max)
 
     assert active.is_running(), f'{active.node_name} stopped instead of its server'
 

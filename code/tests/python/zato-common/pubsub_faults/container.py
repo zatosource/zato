@@ -157,6 +157,21 @@ class Container:
 
 # ################################################################################################################################
 
+    def read_memory_anon(self) -> 'int':
+        """ Returns the memory of the processes of the container, without the page cache that the kernel can reclaim.
+        """
+        for line in self.read_cgroup('memory.stat').splitlines():
+            name, value = line.split()
+            if name == 'anon':
+                out = int(value)
+                return out
+
+        # .. a cgroup with the memory controller always reports its anonymous memory.
+        else:
+            raise Exception(f'No anon in memory.stat of {self.name}')
+
+# ################################################################################################################################
+
     def read_oom_kills(self) -> 'int':
         """ Returns how many processes of the container the OOM killer ended so far.
         """
