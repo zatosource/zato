@@ -193,6 +193,9 @@ def create_cluster(run_dir:'str', repository_dir:'str') -> 'None':
     with open(config_path, 'w') as config_file:
         _ = config_file.write(config)
 
+    # A cluster that an interrupted run left behind is deleted before the new one is created.
+    delete_cluster()
+
     _ = run(['kind', 'create', 'cluster', '--name', ModuleCtx.Cluster_Name, '--config', config_path,
         '--wait', ModuleCtx.Create_Timeout])
 

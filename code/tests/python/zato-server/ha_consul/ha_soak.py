@@ -58,7 +58,8 @@ class ModuleCtx:
     # How many reports after the start of a run are not compared with the bounds of growth
     Warm_Up_Reports = 2
 
-    # How much the memory of a container may grow over a run, a factor of the baseline and a number of megabytes on top
+    # How much the memory of the processes of a container may grow over a run, without the page cache of the database
+    # files that grow with the traffic, a factor of the baseline and a number of megabytes on top
     Memory_Growth_Factor = 1.5
     Memory_Growth_MB = 100
 
@@ -183,7 +184,7 @@ def take_node_sample(node:'Node') -> 'NodeSample':
 
     out = NodeSample()
     out.node_name = node.node_name
-    out.memory_mb = container.read_memory_current() / ModuleCtx.Bytes_Per_MB
+    out.memory_mb = container.read_memory_anon() / ModuleCtx.Bytes_Per_MB
     out.tasks = int(container.read_cgroup('pids.current'))
     out.wal_bytes = read_wal_bytes(node)
 
@@ -500,9 +501,23 @@ class _NodeSeries:
 
 # ################################################################################################################################
 
+def _get_baseline(samples:'list[NodeSample]', role:'str') -> 'NodeSample':
+    """ Returns the first sample of a node in the given role, since a standby runs no Zato server and its resources
+    are not comparable with those of an active node.
+    """
+    for sample in samples:
+        if sample.role == role:
+            return sample
+
+    # The samples always include the last one, whose role is the one given.
+    else:
+        raise Exception(f'No sample in role {role}')
+
+# ################################################################################################################################
+
 def get_bound_violations(reports:'list[MinuteReport]') -> 'strlist':
     """ Returns each minute whose result is an error, and each resource of a node container that grew beyond
-    its bound from the first report after the warm-up to the last one.
+    its bound from the first report after the warm-up in the role of the last report to the last report.
     """
     out:'strlist' = []
     series:'dict[str, _NodeSeries]' = {}
@@ -524,8 +539,8 @@ def get_bound_violations(reports:'list[MinuteReport]') -> 'strlist':
         if len(node_series.samples) < 2:
             continue
 
-        baseline = node_series.samples[0]
         last = node_series.samples[-1]
+        baseline = _get_baseline(node_series.samples, last.role)
 
         memory_limit = baseline.memory_mb * ModuleCtx.Memory_Growth_Factor + ModuleCtx.Memory_Growth_MB
 

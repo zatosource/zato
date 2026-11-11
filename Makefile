@@ -8,7 +8,7 @@
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
-	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-scheduler-failover test-consul test-rate-limiting test-enmasse test-cli \
+	test-server test-server-fuzz test-rest test-rest-fuzz test-scheduler test-scheduler-failover test-consul test-consul-pair test-consul-kubernetes test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
@@ -23,7 +23,7 @@
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
-	test-all test-all-no-static test test-all-reset test-all-no-static-reset test-clean-test-all test-perf \
+	test-all test-all-no-static test test-all-reset test-all-no-static-reset test-clean-test-all test-clean test-perf \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
@@ -694,16 +694,30 @@ test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQ
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_failover -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-consul: ## Active-standby pair on SQLite with Consul - functional, failover, fault, long-run and Kubernetes suites.
+# Which suite test-consul is currently on, and the pytest option that resumes each suite from the test
+# that failed or was interrupted, or that starts it from the beginning under RESTART.
+Zato_Test_Consul             := test-consul-pair test-consul-kubernetes
+Zato_Test_Consul_Resume_File := $(CURDIR)/code/tests/.test-consul-resume
+Zato_Test_Consul_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+
+test-consul: ## Active-standby pair on SQLite with Consul - every suite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_Walk,$(Zato_Test_Consul),$(Zato_Test_Consul_Resume_File))
+
+test-consul-pair: ## Active-standby pair on SQLite with Consul - functional, failover, fault and long-run suites.
 	$(Zato_Log_Reset)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_consul/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+		$(Zato_Test_Consul_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-consul-kubernetes: ## Active-standby pair on SQLite with Consul - the Kubernetes suite.
+	$(Zato_Log_Reset)
+	$(MAKE) ha-node-build $(Zato_Log)
+	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_consul_kubernetes/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul_kubernetes -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+		$(Zato_Test_Consul_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-rate-limiting: rust-target-prune ## All rate limiting tests.
 	$(Zato_Log_Reset)
@@ -1674,6 +1688,10 @@ test-all-no-static-reset: ## Forget where the last test-all-no-static stopped.
 
 test-clean-test-all: ## Run test-all from a clean state instead of resuming a previous run.
 	$(MAKE) RESTART=1 test-all
+
+test-clean: ## Forget where every test target stopped, so that each next run starts from the beginning.
+	rm -f $(CURDIR)/code/tests/.test-*-resume
+	rm -rf $(CURDIR)/code/tests/.pytest_cache_*
 
 test-perf: $(Zato_Test_Perf) ## Every performance suite - not part of test-all.
 

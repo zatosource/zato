@@ -8,13 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The checks that every run of the active-standby suites applies - no acknowledged publication lost, every repeated push
 # in flight during a fault, no scheduler slot run twice, nothing originating from a replaced node, the integrity
-# of both copies and their equal contents once the traffic stops. Every database is opened read-only,
-# so that no check runs a checkpoint over a log that a node reads.
+# of both copies and their equal contents once the traffic stops. Every database is read from a private copy
+# of its file and its log, so that no check holds a lock that a checkpoint of a node waits for.
 
 # stdlib
 import json
+import os
+import shutil
 import sqlite3
 import time
+from contextlib import contextmanager
+from tempfile import TemporaryDirectory
 
 # Zato
 from checks import get_repeated_slots, get_starts_after, get_state_mismatches, read_run_log
@@ -62,26 +66,59 @@ class ModuleCtx:
     # The tables of SQLite itself, which are not part of the logical contents
     Internal_Table_Prefix = 'sqlite_'
 
+    # The suffix of the log of a database file
+    WAL_Suffix = '-wal'
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+@contextmanager
+def open_copy(path:'str') -> 'any_':
+    """ Yields a connection to a private copy of a database file and its log, which a node never waits for.
+    """
+    with TemporaryDirectory() as copy_dir:
+        copy_path = os.path.join(copy_dir, os.path.basename(path))
+
+        # The log is copied before the file, so that frames that a checkpoint moves into the file
+        # in the meantime are still in the copied log ..
+        try:
+            _ = shutil.copyfile(path + ModuleCtx.WAL_Suffix, copy_path + ModuleCtx.WAL_Suffix)
+
+        # .. a database without a log consists of its file alone ..
+        except FileNotFoundError:
+            pass
+
+        # .. and SQLite rebuilds the index of the copied log, ignoring a frame that was being written.
+        _ = shutil.copyfile(path, copy_path)
+        connection = sqlite3.connect(copy_path)
+
+        try:
+            yield connection
+        finally:
+            connection.close()
+
+# ################################################################################################################################
+
+def query_rows(connection:'sqlite3.Connection', query:'str', params:'anylist | None'=None) -> 'anylist':
+    """ Returns the rows of a query against an open database.
+    """
+    cursor = connection.cursor()
+
+    if params is None:
+        _ = cursor.execute(query)
+    else:
+        _ = cursor.execute(query, params)
+
+    out = list(cursor.fetchall())
+    return out
+
 # ################################################################################################################################
 
 def read_rows(path:'str', query:'str', params:'anylist | None'=None) -> 'anylist':
-    """ Returns the rows of a query against a database file, opened read-only.
+    """ Returns the rows of a query against a private copy of a database file.
     """
-    connection = sqlite3.connect(f'file:{path}?mode=ro', uri=True)
-
-    try:
-        cursor = connection.cursor()
-
-        if params is None:
-            _ = cursor.execute(query)
-        else:
-            _ = cursor.execute(query, params)
-
-        out = list(cursor.fetchall())
-
-    finally:
-        connection.close()
+    with open_copy(path) as connection:
+        out = query_rows(connection, query, params)
 
     return out
 
@@ -119,15 +156,18 @@ def read_contents(path:'str') -> 'anydict':
     """ Returns the rows of each table of a database, sorted, which is its logical contents.
     """
     out:'anydict' = {}
-    tables = read_rows(path, "select name from sqlite_master where type = 'table' order by name")
 
-    for (table_name,) in tables:
-        if table_name.startswith(ModuleCtx.Internal_Table_Prefix):
-            continue
+    # All the tables are read from one copy, so that they describe the same moment.
+    with open_copy(path) as connection:
+        tables = query_rows(connection, "select name from sqlite_master where type = 'table' order by name")
 
-        rows = read_rows(path, f'select * from "{table_name}"')
-        rows.sort(key=repr)
-        out[table_name] = rows
+        for (table_name,) in tables:
+            if table_name.startswith(ModuleCtx.Internal_Table_Prefix):
+                continue
+
+            rows = query_rows(connection, f'select * from "{table_name}"')
+            rows.sort(key=repr)
+            out[table_name] = rows
 
     return out
 

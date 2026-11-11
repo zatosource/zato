@@ -178,6 +178,14 @@ def create_network() -> 'None':
 # ################################################################################################################################
 
 def remove_network() -> 'None':
+    """ Removes the bridge network of the run together with each container that an interrupted run left attached to it.
+    """
+    result = docker('network', 'inspect', '--format', '{{range .Containers}}{{.Name}} {{end}}', ModuleCtx.Network_Name,
+        check=False)
+
+    for name in result.stdout.split():
+        remove_container(name)
+
     _ = docker('network', 'rm', ModuleCtx.Network_Name, check=False)
 
 # ################################################################################################################################

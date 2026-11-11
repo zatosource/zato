@@ -46,13 +46,29 @@ fn sync_parent(path: &Path) -> Result<(), Error> {
     Ok(())
 }
 
+/// Copies every frame of the log of an open database into its file and truncates the log.
+///
+/// Fails if a reader of the database keeps any frame out of the file, since the log is then still needed.
+fn checkpoint_completely(connection: &Connection) -> Result<(), Error> {
+    let busy: i64 = connection
+        .query_row("pragma wal_checkpoint(truncate)", [], |row| row.get(0))
+        .map_err(Error::other)?;
+    if busy != 0 {
+        return Err(Error::new(
+            ErrorKind::WouldBlock,
+            "a reader of the database prevented a complete checkpoint of its log",
+        ));
+    }
+    Ok(())
+}
+
 /// Checkpoints the log of a database into its file with `SQLite` and removes the log.
 pub fn checkpoint_into_database(db_path: &Path) -> Result<(), Error> {
     // A stale index would describe frames of an earlier log, so SQLite rebuilds it from the log.
     remove_if_exists(&wal::shm_path(db_path))?;
     let connection = Connection::open(db_path).map_err(Error::other)?;
     connection.pragma_update(None, "journal_mode", "wal").map_err(Error::other)?;
-    connection.pragma_update(None, "wal_checkpoint", "truncate").map_err(Error::other)?;
+    checkpoint_completely(&connection)?;
     connection.close().map_err(|(_, error)| Error::other(error))?;
     remove_if_exists(&wal::wal_path(db_path))?;
     remove_if_exists(&wal::shm_path(db_path))?;
@@ -242,6 +258,8 @@ impl DatabaseCopy {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use super::*;
 
     /// Opens a database in WAL mode with checkpoints left to the caller.
@@ -328,5 +346,31 @@ mod tests {
             .apply_frames(None, 1, frames.end_frame, frames.bytes.get(4120..).unwrap_or_default())
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn a_checkpoint_that_a_reader_keeps_from_completing_fails() {
+        let source_dir = tempfile::tempdir().unwrap();
+        let source_path = source_dir.path().join("pubsub.db");
+        let source = open(&source_path);
+        source
+            .execute_batch("create table item (value text); insert into item values ('one');")
+            .unwrap();
+
+        // The reader holds the log as it was before the next commit ..
+        let reader = Connection::open(&source_path).unwrap();
+        reader.execute_batch("begin;").unwrap();
+        let _: i64 = reader.query_row("select count(*) from item", [], |row| row.get(0)).unwrap();
+        source.execute_batch("insert into item values ('two');").unwrap();
+
+        // .. so the checkpoint cannot copy that commit into the file and the log is kept.
+        let checkpointer = Connection::open(&source_path).unwrap();
+        checkpointer.busy_timeout(Duration::ZERO).unwrap();
+        let error = checkpoint_completely(&checkpointer).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::WouldBlock);
+
+        // Once the reader is done, the same checkpoint completes.
+        reader.execute_batch("commit;").unwrap();
+        checkpoint_completely(&checkpointer).unwrap();
     }
 }
