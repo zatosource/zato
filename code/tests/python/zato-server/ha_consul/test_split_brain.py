@@ -81,11 +81,13 @@ def test_split_brain(ha_session:'HASession', request:'any_', timer_setting:'tupl
 
         time.sleep(ModuleCtx.Traffic_Seconds)
 
-        # .. the nodes lose each other while both reach Consul ..
+        # .. the nodes lose each other while both reach Consul, from the moment the rules of the first node
+        # are in place, since they drop the packets in both directions ..
         node_a, node_b = env.node_list
-        partitioned_at = time.time()
 
         partition(node_a, [node_b.ip])
+        partitioned_at = time.time()
+
         partition(node_b, [node_a.ip])
 
         time.sleep(ModuleCtx.Partition_Seconds)

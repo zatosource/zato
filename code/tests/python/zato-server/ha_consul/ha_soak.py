@@ -6,10 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The per-minute reports of the long runs. Each minute records the publications and deliveries per second,
-# the publish and barrier latencies, the generation, and for each node its role, the memory, open files and tasks
-# of its container, the size of the WAL of each database and the replication lag. Each minute also checks the free
-# space of the root file system, and the run ends with the bounds that the resources and the WAL remain within.
+# The per-minute reports of the long runs. Each minute records the publications and pulls per second, the messages
+# that wait for the puller and for the push subscriber, the publish and barrier latencies, the generation, and for each
+# node its role, the memory, open files and tasks of its container, the size of the WAL of each database
+# and the replication lag. Each minute also checks the free space of the root file system and every bound
+# that the run remains within, and the first minute that exceeds a bound stops the run.
 
 # stdlib
 import logging
@@ -26,6 +27,7 @@ from subprocess import CalledProcessError
 from container import Container
 from ha_traffic import get_percentile
 from topology import docker
+from workload import Topic_Name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,6 +72,13 @@ class ModuleCtx:
     # The size that the WAL of a database never exceeds, twice the size at which the node checkpoints it
     WAL_Bound_Bytes = 128 * 1024 * 1024
 
+    # How many acknowledged publications may wait for the puller or for the push subscriber at the end of a minute,
+    # which is several minutes of the paced traffic of a long run
+    Backlog_Bound = 3000
+
+    # The suffix of the file of each message that the push receiver stored
+    Delivery_Suffix = '.json'
+
     # The free space of the root file system below which a run stops, in bytes
     Min_Free_Bytes = 20 * 1024 * 1024 * 1024
 
@@ -103,8 +112,8 @@ class ModuleCtx:
     Result_Error = 'error'
 
     # The columns of the table of reports, where the roles, lags, WAL sizes and memory list each node in turn
-    Table_Columns = ['Since start', 'Local time', 'Publishes/s', 'Deliveries/s', 'Publish p99', 'Barrier p99',
-        'Generation', 'Roles', 'Lag', 'WAL MB', 'Memory MB', 'Result', 'Details']
+    Table_Columns = ['Since start', 'Local time', 'Publishes/s', 'Pulls/s', 'Pull backlog', 'Push backlog',
+        'Publish p99', 'Barrier p99', 'Generation', 'Roles', 'Lag', 'WAL MB', 'Memory MB', 'Result', 'Details']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,13 +140,16 @@ class MinuteReport:
     since_start: 'str'
     local_time: 'str'
     publishes_per_second: 'float'
-    deliveries_per_second: 'float'
+    pulls_per_second: 'float'
+    pull_backlog: 'int'
+    push_backlog: 'int'
     publish_p99: 'float'
     barrier_p99: 'float'
     generation: 'int'
     result: 'str'
     details: 'strlist'
     nodes: 'list[NodeSample]'
+    has_fault: 'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,7 +248,9 @@ def _format_row(report:'MinuteReport') -> 'str':
         report.since_start,
         report.local_time,
         f'{report.publishes_per_second:.1f}',
-        f'{report.deliveries_per_second:.1f}',
+        f'{report.pulls_per_second:.1f}',
+        str(report.pull_backlog),
+        str(report.push_backlog),
         f'{report.publish_p99:.3f}s',
         f'{report.barrier_p99:.3f}s',
         str(report.generation),
@@ -396,6 +410,26 @@ class MinuteReporter:
             out = (len(self.workload.acknowledged), len(self.workload.pulled))
         return out
 
+    def _count_backlogs(self) -> 'tuple[int, int]':
+        """ Returns how many acknowledged publications the puller and the push subscriber have not received yet.
+        """
+        published = len(self.publisher.get_msg_ids())
+
+        with self.workload.lock:
+            published += len(self.workload.acknowledged)
+            pulled = len(set(self.workload.pulled))
+
+        # The push receiver stores each message that it accepted in a file of its own.
+        receiver = self.env.receivers[Topic_Name]
+        pushed = 0
+
+        for file_name in os.listdir(receiver.output_directory):
+            if file_name.endswith(ModuleCtx.Delivery_Suffix):
+                pushed += 1
+
+        out = (published - pulled, published - pushed)
+        return out
+
     def _build_report(self, minute:'int', run_started:'float', started:'float', ended:'float',
         counts_before:'tuple[int, int]', counts_after:'tuple[int, int]') -> 'MinuteReport':
 
@@ -406,7 +440,7 @@ class MinuteReporter:
         errors = self.publisher.count_errors_after(started) - self.publisher.count_errors_after(ended)
 
         published = counts_after[0] - counts_before[0] + len(publish_latencies)
-        delivered = counts_after[1] - counts_before[1]
+        pulled = counts_after[1] - counts_before[1]
 
         record = self.env.consul.read_record()
 
@@ -415,7 +449,8 @@ class MinuteReporter:
         out.since_start = humanize_duration(ended - run_started)
         out.local_time = datetime.now().strftime('%H:%M:%S')
         out.publishes_per_second = published / elapsed
-        out.deliveries_per_second = delivered / elapsed
+        out.pulls_per_second = pulled / elapsed
+        out.pull_backlog, out.push_backlog = self._count_backlogs()
         out.publish_p99 = get_percentile(publish_latencies, ModuleCtx.Percentile_99)
         out.barrier_p99 = get_percentile(barrier_latencies, ModuleCtx.Percentile_99)
         out.result = ModuleCtx.Result_OK
@@ -427,6 +462,8 @@ class MinuteReporter:
         with self.lock:
             out.details = self._events
             self._events = []
+
+        out.has_fault = len(out.details) > 0
 
         if errors:
             out.details.append(f'{errors} publish errors')
@@ -455,6 +492,23 @@ class MinuteReporter:
         if active_count > 1:
             out.result = ModuleCtx.Result_Error
             out.details.append('two active nodes')
+
+        # Subscribers that fall behind the paced traffic leave a backlog that only grows.
+        if out.pull_backlog > ModuleCtx.Backlog_Bound:
+            out.result = ModuleCtx.Result_Error
+            out.details.append(f'pull backlog {out.pull_backlog}')
+
+        if out.push_backlog > ModuleCtx.Backlog_Bound:
+            out.result = ModuleCtx.Result_Error
+            out.details.append(f'push backlog {out.push_backlog}')
+
+        # A message that the puller received again without a failed acknowledgment is a defect at any minute.
+        with self.workload.lock:
+            repeated_pulls = self.workload.get_unexpected_repeated_pulls()
+
+        if repeated_pulls:
+            out.result = ModuleCtx.Result_Error
+            out.details.append(f'{len(repeated_pulls)} messages pulled again without a failed acknowledgment')
 
         free = shutil.disk_usage('/').free
 
@@ -489,6 +543,12 @@ class MinuteReporter:
 
             logger.info('Minute %d\n%s', minute, format_table(self.reports))
 
+            # The first minute that exceeds a bound stops the run instead of its end.
+            violations = get_bound_violations(self.reports)
+
+            if violations:
+                self.failure = '; '.join(violations)
+
             started = ended
             counts_before = counts_after
 
@@ -517,17 +577,23 @@ def _get_baseline(samples:'list[NodeSample]', role:'str') -> 'NodeSample':
 
 def get_bound_violations(reports:'list[MinuteReport]') -> 'strlist':
     """ Returns each minute whose result is an error, and each resource of a node container that grew beyond
-    its bound from the first report after the warm-up in the role of the last report to the last report.
+    its bound from the first settled report after the warm-up in the role of the last settled report to that report.
+    A report is settled if neither its minute nor the minute before it had a fault, since a node that stops
+    its server or receives a snapshot holds memory that it releases once the transition completes.
     """
     out:'strlist' = []
     series:'dict[str, _NodeSeries]' = {}
+    previous_has_fault = False
 
     for report in reports:
 
         if report.result == ModuleCtx.Result_Error:
             out.append(f'Minute {report.minute} -> {"; ".join(report.details)}')
 
-        if report.minute > ModuleCtx.Warm_Up_Reports:
+        is_settled = not report.has_fault and not previous_has_fault
+        previous_has_fault = report.has_fault
+
+        if report.minute > ModuleCtx.Warm_Up_Reports and is_settled:
             for sample in report.nodes:
                 if sample.node_name not in series:
                     series[sample.node_name] = _NodeSeries()

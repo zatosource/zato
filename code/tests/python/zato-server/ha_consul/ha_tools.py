@@ -49,6 +49,9 @@ class ModuleCtx:
     # The interface of each container on the network of the run
     Interface = 'eth0'
 
+    # How many priorities of packets the priomap of a prio qdisc assigns to bands
+    Priomap_Size = 16
+
     # The CPU period of cpu.max, in microseconds
     CPU_Period_US = 100000
 
@@ -234,20 +237,45 @@ def protect_node_from_oom_killer(node:'Node') -> 'None':
 def degrade_link(node:'Node', addresses:'strlist', netem:'str') -> 'None':
     """ Applies netem with the given parameters to the packets that a node sends to the given addresses only.
     """
+    degrade_links(node, [(addresses, netem)])
+
+# ################################################################################################################################
+
+def degrade_links(node:'Node', netems:'list[tuple[strlist, str]]') -> 'None':
+    """ Applies netem to the packets that a node sends to each group of addresses, with the parameters of that group.
+    Group N is band N of the link, and the packets to any other address leave through the last band unchanged.
+    """
     interface = ModuleCtx.Interface
 
-    commands = [
-        f'tc qdisc add dev {interface} root handle 1: prio bands 3 priomap 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2',
-        f'tc qdisc add dev {interface} parent 1:1 handle 10: netem {netem}',
-    ]
+    # Every packet that no filter matches is sent through the band after those of the groups.
+    default_band = str(len(netems))
+    priomap = ' '.join([default_band] * ModuleCtx.Priomap_Size)
 
-    for address in addresses:
-        commands.append(f'tc filter add dev {interface} parent 1:0 protocol ip prio 1 u32 match ip dst {address}/32 flowid 1:1')
+    commands = [f'tc qdisc add dev {interface} root handle 1: prio bands {len(netems) + 1} priomap {priomap}']
+
+    band = 0
+
+    for addresses, netem in netems:
+        band += 1
+        commands.append(f'tc qdisc add dev {interface} parent 1:{band} handle {band}0: netem {netem}')
+
+        for address in addresses:
+            commands.append(
+                f'tc filter add dev {interface} parent 1:0 protocol ip prio 1 u32 match ip dst {address}/32 flowid 1:{band}')
 
     script = ' && '.join(commands)
     _ = Container(node.container_name).run_tc(script)
 
-    logger.info('Link of %s to %s -> netem %s', node.node_name, addresses, netem)
+    logger.info('Links of %s -> netem %s', node.node_name, netems)
+
+# ################################################################################################################################
+
+def change_link(node:'Node', band:'int', netem:'str') -> 'None':
+    """ Replaces the parameters of netem of one band that `degrade_links` applied.
+    """
+    _ = Container(node.container_name).run_tc(f'tc qdisc change dev {ModuleCtx.Interface} parent 1:{band} handle {band}0: netem {netem}')
+
+    logger.info('Band %d of the link of %s -> netem %s', band, node.node_name, netem)
 
 # ################################################################################################################################
 

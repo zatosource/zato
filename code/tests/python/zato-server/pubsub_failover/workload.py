@@ -42,6 +42,10 @@ _publisher_count = 8
 # How many messages one pull asks for.
 _pull_max_messages = 100
 
+# How long each publisher waits after an acknowledged publication, in seconds - without a pause,
+# the publishers send as fast as the servers answer.
+Unpaced_Interval = 0.0
+
 # How long a client waits after a failed request before the next one, in seconds.
 _retry_pause_seconds = 0.2
 
@@ -76,9 +80,15 @@ class Workload:
     to the server that answered its previous request and turns to the next server of the list after a failed one.
     """
 
-    def __init__(self, env:'FailoverEnvironment', servers:'list[ContainerServer]') -> 'None':
+    def __init__(
+        self,
+        env:'FailoverEnvironment',
+        servers:'list[ContainerServer]',
+        publish_interval:'float' = Unpaced_Interval,
+        ) -> 'None':
         self.env = env
         self.servers = servers
+        self.publish_interval = publish_interval
         self.lock = threading.Lock()
 
         self.is_publishing = threading.Event()
@@ -125,6 +135,7 @@ class Workload:
             else:
                 with self.lock:
                     self.acknowledged.append(result['msg_id'])
+                time.sleep(self.publish_interval)
 
 # ################################################################################################################################
 

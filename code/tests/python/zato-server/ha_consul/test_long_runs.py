@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The long runs - one hour of takeovers every four minutes, each followed by a rejoin, and one hour of steady traffic.
-# Both runs report every minute, stop when the root file system runs out of space, and end with the checks of every run,
-# the bounds of the resources and the WAL, and the replication lag at zero.
+# Both runs publish paced traffic, report every minute, stop at the first minute that exceeds a bound, and end
+# with the checks of every run, the bounds of the resources and the WAL, and the replication lag at zero.
 
 # stdlib
 import logging
@@ -53,6 +53,13 @@ class ModuleCtx:
     # How long the pair may take to recover, in seconds
     Recovery_Timeout = 300
 
+    # How long each of the eight publishers of the workload and the timed publisher wait after each publication,
+    # in seconds, which paces the traffic at about fifty messages a second, the rate that the puller and the push
+    # subscriber each sustained under an unpaced load, so that the pair runs near its capacity without
+    # a backlog that grows over the hour
+    Workload_Publish_Interval = 0.1
+    Timed_Publish_Interval = 0.1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -66,10 +73,11 @@ def _wait_until(reporter:'MinuteReporter', deadline:'float') -> 'None':
 # ################################################################################################################################
 
 def _start(env:'HAEnvironment') -> 'tuple[Workload, TimedPublisher, MinuteReporter]':
-    workload = Workload(cast_('any_', env), cast_('any_', [env.haproxy]))
+    workload = Workload(cast_('any_', env), cast_('any_', [env.haproxy]), ModuleCtx.Workload_Publish_Interval)
     workload.start()
 
-    publisher = TimedPublisher(env.haproxy.base_url, env.publisher_username, env.publisher_password)
+    publisher = TimedPublisher(env.haproxy.base_url, env.publisher_username, env.publisher_password,
+        ModuleCtx.Timed_Publish_Interval)
     publisher.start()
 
     reporter = MinuteReporter(env, workload, publisher)

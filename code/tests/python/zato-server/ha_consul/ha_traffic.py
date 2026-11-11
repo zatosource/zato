@@ -14,7 +14,7 @@ import threading
 import time
 
 # Zato
-from workload import Topic_Name
+from workload import Topic_Name, Unpaced_Interval
 from zato.common.test.client import PublishClient
 
 # ################################################################################################################################
@@ -50,11 +50,13 @@ def get_percentile(values:'list[float]', percentile:'float') -> 'float':
 # ################################################################################################################################
 
 class TimedPublisher:
-    """ Publishes one message after another to one address and records when each one succeeded or failed.
+    """ Publishes one message after another to one address, with the given pause after each acknowledged one,
+    and records when each one succeeded or failed.
     """
 
-    def __init__(self, base_url:'str', username:'str', password:'str') -> 'None':
+    def __init__(self, base_url:'str', username:'str', password:'str', interval:'float'=Unpaced_Interval) -> 'None':
         self.client = PublishClient(base_url, username, password)
+        self.interval = interval
         self.lock = threading.Lock()
         self.is_running = threading.Event()
 
@@ -84,6 +86,7 @@ class TimedPublisher:
             else:
                 with self.lock:
                     self.acknowledged.append((sent, time.time(), result['msg_id']))
+                time.sleep(self.interval)
 
 # ################################################################################################################################
 

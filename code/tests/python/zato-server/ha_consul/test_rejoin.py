@@ -8,9 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The rejoin of a standby under traffic - through the backup, the frames after it and the admission. A crash
 # of either node in each of the three phases leaves a pair that recovers, with nothing acknowledged lost.
+#
+# Each phase is held until the crash. The link from the active node to the joining node is slowed down
+# to a rate at which the backup of the current databases lasts a known time, and the frames written meanwhile
+# reach the joining node over the same link during the catch-up. The admission is held by a referee
+# that the active node cannot reach, after the link is fast again.
 
 # stdlib
 import logging
+import os
 import time
 
 # pytest
@@ -18,6 +24,8 @@ import pytest
 
 # Zato
 from ha_checks import check_copies, check_scheduler, check_workload
+from ha_tools import change_link, degrade_links, restore_link
+from topology import ModuleCtx as TopologyCtx
 from workload import Workload
 from zato.common.typing_ import cast_
 
@@ -54,17 +62,14 @@ class ModuleCtx:
     Link_Joining   = 'Joining'
     Link_Caught_Up = 'CaughtUp'
 
-    # How long the traffic runs before each attempt, in seconds
+    # How long the traffic runs before the rejoin, in seconds
     Traffic_Seconds = 15
-
-    # How many times the standby is taken out and resumed until the crash finds the rejoin in the phase it needs
-    Max_Attempts = 10
 
     # How often the active node is asked for its report while the test waits for a phase, in seconds
     Phase_Poll_Interval = 0.02
 
-    # How long the test waits for a phase in one attempt, in seconds
-    Phase_Timeout = 120
+    # How long the test waits for a phase, in seconds
+    Phase_Timeout = 180
 
     # How long the active node may take to mark the standby out, in seconds
     Mark_Out_Timeout = 60
@@ -72,9 +77,28 @@ class ModuleCtx:
     # How long the pair may take to recover after the crash, in seconds
     Recovery_Timeout = 300
 
-    # The roles of the active node alone and of the standby in sync
+    # The roles of the active node alone and of the active node with its standby in sync
     Active_Solo = ['ActiveSolo']
-    Standby_In_Sync = ['StandbyInSync']
+    Active_Replicated = 'ActiveReplicated'
+
+    # The databases of a backup, each sent as its file and its log
+    Database_Files = ['pubsub.db', 'common.db', 'audit.db']
+    WAL_Suffix = '-wal'
+
+    # How long the backup of the current databases lasts over the slowed link, in seconds
+    Backup_Seconds = 60
+
+    # The units of the rate of the slowed link
+    Bits_Per_Byte = 8
+    Bits_Per_Kbit = 1000
+
+    # The bands of the link of the active node - to the joining node and to the referee
+    Joining_Band = 1
+    Referee_Band = 2
+
+    # The parameters of netem that leave the packets unchanged and that drop every packet
+    Unchanged_Netem = 'delay 0ms'
+    Total_Loss = 'loss 100%'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,8 +129,8 @@ def _is_in_phase(report:'anydict', phase:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def _wait_for_phase(active:'Node', phase:'str') -> 'bool':
-    """ Waits until the rejoin reaches the given phase and returns whether it did before it completed.
+def _wait_for_phase(active:'Node', phase:'str') -> 'None':
+    """ Waits until the rejoin reaches the given phase.
     """
     deadline = time.monotonic() + ModuleCtx.Phase_Timeout
 
@@ -116,54 +140,93 @@ def _wait_for_phase(active:'Node', phase:'str') -> 'bool':
         if report is not None:
 
             if _is_in_phase(report, phase):
-                return True
+                logger.info('Rejoin in its %s', phase)
+                return
 
-            # The rejoin completed without the test seeing the phase.
-            if report['role'] == 'ActiveReplicated':
-                return False
+            if report['role'] == ModuleCtx.Active_Replicated:
+                raise Exception(f'The rejoin completed before its {phase}')
 
         time.sleep(ModuleCtx.Phase_Poll_Interval)
 
-    return False
+    raise Exception(f'No rejoin in its {phase} within {ModuleCtx.Phase_Timeout}s')
+
+# ################################################################################################################################
+
+def _get_backup_netem(active:'Node') -> 'str':
+    """ Returns the rate of the link at which the backup of the current databases of the active node lasts
+    the configured time. Each log is sent only up to its end, so the backup may take less than that, never more.
+    """
+    total = 0
+
+    for file_name in ModuleCtx.Database_Files:
+        path = active.db_path(file_name)
+        total += os.path.getsize(path)
+
+        wal_path = path + ModuleCtx.WAL_Suffix
+        if os.path.exists(wal_path):
+            total += os.path.getsize(wal_path)
+
+    kbit = total * ModuleCtx.Bits_Per_Byte // (ModuleCtx.Backup_Seconds * ModuleCtx.Bits_Per_Kbit)
+
+    out = f'rate {kbit}kbit'
+    return out
 
 # ################################################################################################################################
 
 def _crash_during(env:'HAEnvironment', phase:'str', side:'str') -> 'tuple[Node, float]':
-    """ Takes the standby out and resumes it until a crash finds its rejoin in the given phase, and returns
-    the node that crashed and the time of the crash.
+    """ Takes the standby out, resumes it, holds its rejoin in the given phase and crashes one node there,
+    and returns the node that crashed and the time of the crash.
     """
-    for attempt in range(ModuleCtx.Max_Attempts):
+    active = env.get_active()
+    assert active is not None, 'No active node'
 
-        active = env.get_active()
-        assert active is not None, 'No active node'
+    joining = env.get_other(active)
 
-        joining = env.get_other(active)
+    joining.kill()
+    _ = active.wait_for_role(ModuleCtx.Active_Solo, ModuleCtx.Mark_Out_Timeout)
 
-        joining.kill()
-        _ = active.wait_for_role(ModuleCtx.Active_Solo, ModuleCtx.Mark_Out_Timeout)
+    time.sleep(ModuleCtx.Traffic_Seconds)
 
-        time.sleep(ModuleCtx.Traffic_Seconds)
-        joining.resume()
+    # The backup is slowed down, which also keeps the frames written in the meantime behind it ..
+    netems = [
+        ([joining.ip], _get_backup_netem(active)),
+        ([TopologyCtx.Consul_IP], ModuleCtx.Unchanged_Netem),
+    ]
+    degrade_links(active, netems)
 
-        if _wait_for_phase(active, phase):
+    joining.resume()
+    _wait_for_phase(active, phase=ModuleCtx.Phase_Backup)
 
-            if side == ModuleCtx.Side_Joining:
-                crashed = joining
-            else:
-                crashed = active
+    # .. the active node read the address of the joining node before its backup began,
+    # and from here on, it does not reach the referee that confirms an admission ..
+    if phase == ModuleCtx.Phase_Admission:
+        change_link(active, ModuleCtx.Referee_Band, ModuleCtx.Total_Loss)
 
-            crashed_at = time.time()
-            crashed.kill()
+    if phase != ModuleCtx.Phase_Backup:
+        _wait_for_phase(active, phase=ModuleCtx.Phase_Catch_Up)
 
-            logger.info('Killed %s during the %s, attempt %d', crashed.node_name, phase, attempt)
+    # .. the backlog reaches the joining node over a fast link again, and the admission waits for the referee ..
+    if phase == ModuleCtx.Phase_Admission:
+        change_link(active, ModuleCtx.Joining_Band, ModuleCtx.Unchanged_Netem)
+        _wait_for_phase(active, phase=ModuleCtx.Phase_Admission)
 
-            out = (crashed, crashed_at)
-            return out
+    if side == ModuleCtx.Side_Joining:
+        crashed = joining
+    else:
+        crashed = active
 
-        logger.info('Rejoin passed the %s unseen, attempt %d', phase, attempt)
-        _ = joining.wait_for_role(ModuleCtx.Standby_In_Sync, ModuleCtx.Recovery_Timeout)
+    crashed_at = time.time()
+    crashed.kill()
 
-    raise Exception(f'No rejoin seen in its {phase} in {ModuleCtx.Max_Attempts} attempts')
+    logger.info('Killed %s during the %s', crashed.node_name, phase)
+
+    # .. and the links are restored once the crash is done, unless the active node itself crashed,
+    # since a container that starts again has a network of its own.
+    if crashed is joining:
+        restore_link(active)
+
+    out = (crashed, crashed_at)
+    return out
 
 # ################################################################################################################################
 

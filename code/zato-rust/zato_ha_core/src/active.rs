@@ -404,7 +404,15 @@ impl Shipper {
                 peer: peer.node_name.clone(),
             }
         } else {
-            let databases = self.send_snapshots(&sender, generation)?;
+            let databases = match self.send_snapshots(&sender, generation) {
+                Ok(databases) => databases,
+                Err(error) => {
+                    // A backup that did not complete leaves no standby joining.
+                    self.shared.state.lock().close_link();
+                    self.shared.changed.notify_all();
+                    return Err(error);
+                }
+            };
             Session {
                 sender: sender.clone(),
                 number,
@@ -494,11 +502,12 @@ impl Shipper {
         let mut out = Vec::new();
 
         {
-            // What an earlier standby confirmed says nothing about this one.
+            // What an earlier standby confirmed says nothing about this one, which is joining from here on.
             let mut state = self.shared.state.lock();
             for progress in &mut state.databases {
                 progress.confirmed = LogPosition::default();
             }
+            state.link_state = LinkState::Joining;
         }
 
         for database in &mut self.databases {
@@ -1300,6 +1309,38 @@ mod tests {
         // The standby confirms nothing, so the frames of the publication arrive and no admission follows them.
         let first = reports.recv_timeout(RECEIVE_TIMEOUT).unwrap();
         assert_eq!(first, PUBSUB_FRAMES);
+
+        shared.announce_stop();
+        shipper.join().unwrap();
+        standby.join().unwrap();
+    }
+
+    #[test]
+    fn a_standby_receiving_its_backup_is_reported_as_joining() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        fill_database(&dir.path().join("pubsub.db"));
+
+        let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
+        let shared = active_node(dir.path(), &certificates, listener.local_addr().unwrap().port());
+
+        let (paused_sender, paused) = mpsc::channel();
+        let (resume_sender, resume) = mpsc::channel();
+        let (reports_sender, _reports) = mpsc::channel();
+        let channels = StandbyChannels {
+            paused: paused_sender,
+            resume,
+            reports: reports_sender,
+        };
+        let standby_tls = TlsContext::load(&certificates.files(NODE_B)).unwrap();
+        let standby = thread::spawn(move || run_standby(&listener, &standby_tls, &channels));
+        let shipper_shared = Arc::clone(&shared);
+        let shipper = thread::spawn(move || Shipper::new(shipper_shared).run());
+
+        // The shipper is blocked sending the database file, which the standby does not read yet.
+        paused.recv_timeout(RECEIVE_TIMEOUT).unwrap();
+        assert_eq!(shared.state.lock().link_state, LinkState::Joining);
+        resume_sender.send(()).unwrap();
 
         shared.announce_stop();
         shipper.join().unwrap();
