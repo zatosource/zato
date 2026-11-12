@@ -640,6 +640,13 @@ impl Shipper {
             }
             state.role = Role::ActiveReplicated;
             state.last_peer_contact = Instant::now();
+        } else if let Some(record) = current {
+            // The standby that the written admission named in sync may have taken over since, and a node active alone
+            // completes barriers on its own disk, so it is fenced before any barrier completes under the newer record.
+            let replaced = record.generation > state.generation && record.active_node != self.shared.config.node_name;
+            if replaced {
+                self.shared.fence(&mut state, record.generation);
+            }
         }
         state.admitting = false;
         state.pending_admission = None;
@@ -1480,5 +1487,34 @@ mod tests {
 
         shared.announce_stop();
         shipper.join().unwrap();
+    }
+
+    #[test]
+    fn an_admission_abandoned_after_a_takeover_fences_the_node() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let config = test_support::node_config(NODE_A, dir.path(), &certificates, TIMERS);
+        let referee = MemoryReferee::default();
+        *referee.record.lock() = Some(Versioned {
+            value: RefereeRecord::solo(3, NODE_B),
+            version: 3,
+        });
+        let shared = test_support::shared(config, Box::new(referee));
+        {
+            let mut state = shared.state.lock();
+            state.role = Role::ActiveSolo;
+            state.generation = 1;
+            state.admitting = true;
+            state.pending_admission = Some(RefereeRecord::replicated(2, NODE_A, NODE_B));
+        }
+
+        // The admission was written, its answer was lost, and the standby it named in sync took over since.
+        Shipper::new(Arc::clone(&shared)).resolve_abandoned_admission();
+        let (role, generation) = {
+            let state = shared.state.lock();
+            (state.role, state.generation)
+        };
+        assert_eq!((role, generation), (Role::Fenced, 3));
+        assert_eq!(barrier::wait(&shared, DB_NAME_PUBSUB), BarrierOutcome::Replaced);
     }
 }

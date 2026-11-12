@@ -274,22 +274,27 @@ impl Control {
             let lagging = lag.is_some_and(|lag| lag > mark_out_time);
             let due = silent || lagging || state.needs_mark_out;
 
-            // A standby that answers again ends the isolation, since it confirms every acknowledgment.
-            if !due && state.isolated {
-                state.isolated = false;
-                self.shared.changed.notify_all();
-            }
             if due && !state.isolated {
                 tracing::warn!(
                     "Marking out the standby, silent for {silence:?}, oldest unconfirmed shipment {lag:?}, requested: {}",
                     state.needs_mark_out
                 );
             }
+
+            // The referee may name this node alone from the write on, even when its answer is lost, so the mark-out
+            // stays due until the referee answers it, and no barrier completes on a confirmation of the standby until then.
+            if due {
+                state.needs_mark_out = true;
+            }
             (state.generation, due)
         };
         if !due {
             return Ok(());
         }
+
+        // Acknowledgments completed on confirmations of the standby alone are synced locally before the write, because
+        // a write whose answer is lost names this node alone, and a restart under that record serves only the local logs.
+        self.sync_every_log();
 
         let node_name = self.shared.config.node_name.clone();
         let intended = RefereeRecord::solo(generation + 1, &node_name);
@@ -298,11 +303,7 @@ impl Control {
         });
 
         match outcome {
-            Transition::Applied => {
-                // Acknowledgments that waited for the standby are now synced locally before any of them completes.
-                self.sync_every_log();
-                self.become_active_solo(generation + 1, "mark-out")
-            }
+            Transition::Applied => self.become_active_solo(generation + 1, "mark-out"),
             Transition::Refused(current) => {
                 let higher = current.map_or(generation, |record| record.generation);
                 self.shared.fence(&mut self.shared.state.lock(), higher);
@@ -450,14 +451,18 @@ mod tests {
 
     /// Returns node A with `record` in the referee and `persisted` in its generation file.
     fn node(record: Option<RefereeRecord>, persisted: u64, unreachable: bool) -> TestNode {
+        let referee = MemoryReferee::default();
+        *referee.record.lock() = record.map(|value| Versioned { value, version: 1 });
+        *referee.unreachable.lock() = unreachable;
+        node_with_referee(referee, persisted)
+    }
+
+    /// Returns node A with `referee` and `persisted` in its generation file.
+    fn node_with_referee(referee: MemoryReferee, persisted: u64) -> TestNode {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
         let config = test_support::node_config(NODE_A, dir.path(), &certificates, TIMERS);
         generation::write(&config.generation_file(), persisted).unwrap();
-
-        let referee = MemoryReferee::default();
-        *referee.record.lock() = record.map(|value| Versioned { value, version: 1 });
-        *referee.unreachable.lock() = unreachable;
 
         let shared = test_support::shared(config, Box::new(referee));
         let control = Control::new(shared, Arc::new(AtomicBool::new(false))).unwrap();
@@ -592,6 +597,30 @@ mod tests {
         node.control.check_standby().unwrap();
         assert_eq!(role(&node.control), (Role::ActiveReplicated, 3));
         assert!(node.control.shared.state.lock().isolated);
+    }
+
+    #[test]
+    fn a_mark_out_whose_answer_was_lost_stays_due_until_the_referee_answers() {
+        let referee = MemoryReferee::default();
+        *referee.record.lock() = Some(Versioned {
+            value: RefereeRecord::replicated(3, NODE_A, NODE_B),
+            version: 1,
+        });
+        *referee.lose_next_answer.lock() = true;
+        let mut node = node_with_referee(referee, 3);
+        set_role(&node.control, Role::ActiveReplicated, 3);
+        thread::sleep(PAST_TIMERS);
+
+        // The record names the node alone, which the node does not know yet ..
+        node.control.check_standby().unwrap();
+        assert_eq!(role(&node.control), (Role::ActiveReplicated, 3));
+        assert_eq!(record(&node.control), RefereeRecord::solo(4, NODE_A));
+        assert!(node.control.shared.state.lock().needs_mark_out);
+
+        // .. so a standby that confirms again leaves the mark-out due, and the next attempt completes it.
+        node.control.shared.state.lock().last_peer_contact = Instant::now();
+        node.control.check_standby().unwrap();
+        assert_eq!(role(&node.control), (Role::ActiveSolo, 4));
     }
 
     #[test]

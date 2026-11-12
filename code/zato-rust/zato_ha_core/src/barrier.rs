@@ -103,6 +103,8 @@ pub fn wait(shared: &Shared, database: &str) -> BarrierOutcome {
 
     loop {
         match state.role {
+            // The record may already name this node alone, and the mark-out syncs every log before the node is active alone.
+            Role::ActiveReplicated if state.needs_mark_out => {}
             Role::ActiveReplicated => {
                 let confirmed = state
                     .databases
