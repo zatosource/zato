@@ -339,13 +339,16 @@ class BaseHTTPSOAPWrapper(AuthMixin):
             # .. so the four settings are taken out of kwargs before the request sees them ..
             retry_policy = self._get_retry_policy(kwargs)
 
+            # .. a redirect is followed only if the caller explicitly asks for it ..
+            allow_redirects = kwargs.pop('allow_redirects', Allow_Redirects)
+
             def send() -> '_RequestsResponse':
 
                 # .. do send it ..
                 response = self.session.request(
                     method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
                     verify=tls_verify, cert=tls_client_cert, timeout=self.config['timeout'],
-                    allow_redirects=Allow_Redirects, *args, **kwargs)
+                    allow_redirects=allow_redirects, *args, **kwargs)
 
                 # Update metrics
                 self._push_metrics(start_time, str(response.status_code))

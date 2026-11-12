@@ -498,10 +498,10 @@ class RESTCallMixin:
 
     send = post
 
-    def put(self, cid:'str', data:'str'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
+    def put(self, cid:'str', data:'any_'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('PUT', cid, data, params, *args, **kwargs)
 
-    def patch(self, cid:'str', data:'str'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
+    def patch(self, cid:'str', data:'any_'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('PATCH', cid, data, params, *args, **kwargs)
 
     def rest_invoke(self, cid:'str', data:'any_'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
