@@ -4,8 +4,6 @@
 //! scheme, an ASCII host in lowercase without credentials, and a path and query string that requests
 //! would not re-quote. Any other address is sent through requests.
 
-use std::borrow::Cow;
-
 /// The port of an `http` address that does not name one.
 const DEFAULT_HTTP_PORT: u16 = 80;
 
@@ -15,8 +13,11 @@ const DEFAULT_HTTPS_PORT: u16 = 443;
 /// The separator between a scheme and the rest of an address.
 const SCHEME_SEPARATOR: &str = "://";
 
-/// The characters requests leaves as they are when it re-quotes an address, besides letters and digits.
-const SAFE_PUNCTUATION: &[u8] = b"-._~!$&'()*+,/:;=?@[]";
+/// The characters requests and urllib3 leave as they are in a path and a query string, besides letters and digits.
+const SAFE_PUNCTUATION: &[u8] = b"-._~!$&'()*+,/:;=?@";
+
+/// The radix of the digits of a percent-encoded octet.
+const HEX_RADIX: u32 = 16;
 
 /// The characters a percent-encoded octet decodes to that requests decodes back when it re-quotes an address.
 const UNRESERVED_PUNCTUATION: &[u8] = b"-._~";
@@ -36,7 +37,7 @@ pub struct Target<'url> {
     pub host_header: String,
 
     /// The path and the query string, as sent in the request line.
-    pub request_target: Cow<'url, str>,
+    pub path_and_query: &'url str,
 }
 
 /// Parses an address, returning `None` for an address the transport leaves to requests.
@@ -48,12 +49,11 @@ pub fn parse(url: &str) -> Option<Target<'_>> {
 
     let (scheme, rest) = url.split_once(SCHEME_SEPARATOR)?;
 
-    let is_tls = if scheme.eq_ignore_ascii_case("https") {
-        true
-    } else if scheme.eq_ignore_ascii_case("http") {
-        false
-    } else {
-        return None;
+    // requests writes the scheme in lowercase in the URL of the response, so any other spelling is left to it
+    let is_tls = match scheme {
+        "https" => true,
+        "http" => false,
+        _ => return None,
     };
 
     let authority_end = rest.find(['/', '?']).unwrap_or(rest.len());
@@ -64,16 +64,19 @@ pub fn parse(url: &str) -> Option<Target<'_>> {
     let default_port = if is_tls { DEFAULT_HTTPS_PORT } else { DEFAULT_HTTP_PORT };
     let port = explicit_port.unwrap_or(default_port);
 
-    if !is_valid_target(path_and_query.as_bytes()) {
+    // An address without a path is given one by requests, which then differs from the address the caller gave
+    if !path_and_query.starts_with('/') {
         return None;
     }
 
-    // A request line always has a path, and requests sends an empty one as a slash
-    let request_target = if path_and_query.starts_with('/') {
-        Cow::Borrowed(path_and_query)
-    } else {
-        Cow::Owned(format!("/{path_and_query}"))
-    };
+    if !is_valid_target(path_and_query.as_bytes()) || has_dot_segment(path_and_query) {
+        return None;
+    }
+
+    // requests removes a question mark that introduces an empty query string
+    if path_and_query.split_once('?').is_some_and(|(_, query)| query.is_empty()) {
+        return None;
+    }
 
     let host_header = build_host_header(host, port, default_port, is_ipv6);
 
@@ -82,8 +85,14 @@ pub fn parse(url: &str) -> Option<Target<'_>> {
         host,
         port,
         host_header,
-        request_target,
+        path_and_query,
     })
+}
+
+/// Whether the path has a segment that begins with a dot, which requests may remove as a dot segment.
+fn has_dot_segment(path_and_query: &str) -> bool {
+    let path = path_and_query.split('?').next().unwrap_or_default();
+    path.contains("/.")
 }
 
 /// Splits an authority into its host, its port if it names one, and whether the host is an IPv6 address.
@@ -95,7 +104,11 @@ fn split_authority(authority: &str) -> Option<(&str, Option<u16>, bool)> {
 
     let (host, port_text, is_ipv6) = if let Some(bracketed) = authority.strip_prefix('[') {
         let (host, after_host) = bracketed.split_once(']')?;
-        let port_text = if after_host.is_empty() { None } else { Some(after_host.strip_prefix(':')?) };
+        let port_text = if after_host.is_empty() {
+            None
+        } else {
+            Some(after_host.strip_prefix(':')?)
+        };
         (host, port_text, true)
     } else {
         match authority.split_once(':') {
@@ -116,9 +129,9 @@ fn split_authority(authority: &str) -> Option<(&str, Option<u16>, bool)> {
     Some((host, port, is_ipv6))
 }
 
-/// Parses a port that consists of decimal digits only and is not zero.
+/// Parses a port that consists of decimal digits only, without a leading zero, and is not zero.
 fn parse_port(text: &str) -> Option<u16> {
-    if text.is_empty() || !text.bytes().all(|byte| byte.is_ascii_digit()) {
+    if text.is_empty() || text.starts_with('0') || !text.bytes().all(|byte| byte.is_ascii_digit()) {
         return None;
     }
 
@@ -133,16 +146,20 @@ fn is_valid_host(host: &str, is_ipv6: bool) -> bool {
     }
 
     if is_ipv6 {
-        return host.bytes().all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f' | b':' | b'.'));
+        return host
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f' | b':' | b'.'));
     }
 
-    host.bytes().all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'.' | b'-' | b'_'))
+    host.bytes()
+        .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'.' | b'-' | b'_'))
 }
 
 /// Whether requests would send a path and query string exactly as they are, without re-quoting any of it.
 ///
 /// Every character must be one that requests leaves alone, and every percent sign must start an encoded octet
-/// that requests does not decode, i.e. one that does not stand for a letter, a digit or an unreserved mark.
+/// in uppercase hexadecimal digits that requests does not decode, i.e. one that does not stand for a letter,
+/// a digit or an unreserved mark.
 pub fn is_valid_target(target: &[u8]) -> bool {
     let mut position = 0;
 
@@ -170,10 +187,15 @@ pub fn is_valid_target(target: &[u8]) -> bool {
     true
 }
 
-/// Decodes two hexadecimal digits into the octet they stand for.
+/// Decodes two hexadecimal digits into the octet they stand for, accepting uppercase digits only,
+/// because urllib3 writes the digits of an encoded octet in uppercase.
 fn decode_hex_pair(pair: &[u8]) -> Option<u8> {
+    if !pair.iter().all(|byte| byte.is_ascii_digit() || (b'A'..=b'F').contains(byte)) {
+        return None;
+    }
+
     let text = std::str::from_utf8(pair).ok()?;
-    u8::from_str_radix(text, 16).ok()
+    u8::from_str_radix(text, HEX_RADIX).ok()
 }
 
 /// Whether an octet is a letter, a digit or an unreserved mark.
@@ -204,7 +226,7 @@ mod tests {
         assert_eq!(target.host, "127.0.0.1");
         assert_eq!(target.port, 8080);
         assert_eq!(target.host_header, "127.0.0.1:8080");
-        assert_eq!(target.request_target, "/api/customers?id=1");
+        assert_eq!(target.path_and_query, "/api/customers?id=1");
     }
 
     #[test]
@@ -223,9 +245,17 @@ mod tests {
     }
 
     #[test]
-    fn empty_path_becomes_slash() {
-        assert_eq!(parse("http://localhost:1234").unwrap().request_target, "/");
-        assert_eq!(parse("http://localhost:1234?page=2").unwrap().request_target, "/?page=2");
+    fn address_without_path_left_to_requests() {
+        assert!(parse("http://localhost:1234").is_none());
+        assert!(parse("http://localhost:1234?page=2").is_none());
+    }
+
+    #[test]
+    fn dot_segments_left_to_requests() {
+        assert!(parse("http://localhost/a/../b").is_none());
+        assert!(parse("http://localhost/a/./b").is_none());
+        assert!(parse("http://localhost/.well-known").is_none());
+        assert!(parse("http://localhost/a?path=/../b").is_some());
     }
 
     #[test]
@@ -244,15 +274,20 @@ mod tests {
         assert!(parse("http://example.com/a#section").is_none());
         assert!(parse("http://example.com:/a").is_none());
         assert!(parse("http://example.com:0/a").is_none());
+        assert!(parse("http://example.com:080/a").is_none());
+        assert!(parse("HTTP://example.com/a").is_none());
+        assert!(parse("http://example.com/a[1]").is_none());
         assert!(parse("http://example.com/a b").is_none());
         assert!(parse("http://example.com/caf\u{e9}").is_none());
         assert!(parse("http://ex\u{e4}mple.com/").is_none());
+        assert!(parse("http://example.com/a?").is_none());
+        assert!(parse("http://example.com/a?b?").is_some());
     }
 
     #[test]
     fn percent_encoding() {
         assert!(is_valid_target(b"/a%2Fb?x=%C3%BC"));
-        assert!(is_valid_target(b"/a%2fb"));
+        assert!(!is_valid_target(b"/a%2fb"));
         assert!(!is_valid_target(b"/a%41"));
         assert!(!is_valid_target(b"/a%7E"));
         assert!(!is_valid_target(b"/a%zz"));

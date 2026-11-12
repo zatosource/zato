@@ -1,5 +1,7 @@
-//! Parsing of the response to an outgoing request - its status line and headers, how its body is framed,
-//! whether its connection can be kept alive, and the decoding of a chunked body.
+//! Parsing of the response to an outgoing request.
+//!
+//! The status line and headers, how the body is framed, whether the connection can be kept alive,
+//! and the decoding of a chunked body.
 //!
 //! The rules follow `http.client`, which requests reads responses through, so a response is framed
 //! and its connection kept or closed exactly as it would be by requests.
@@ -144,10 +146,9 @@ impl ResponseHead {
             return Framing::Chunked;
         }
 
-        match self.header("content-length").and_then(parse_content_length) {
-            Some(length) => Framing::Length(length),
-            None => Framing::UntilClose,
-        }
+        self.header("content-length")
+            .and_then(parse_content_length)
+            .map_or(Framing::UntilClose, Framing::Length)
     }
 
     /// Whether the endpoint keeps the connection open after the response, by the rules of `http.client`.
@@ -239,8 +240,8 @@ impl ChunkedDecoder {
             let consumed = match self.state {
                 ChunkState::Done => return Ok(position),
                 ChunkState::Size => self.feed_size(remaining)?,
-                ChunkState::Data(left) => self.feed_data(remaining, left, output),
-                ChunkState::DataEnd(left) => self.feed_data_end(remaining, left),
+                ChunkState::Data(left) => Some(self.feed_data(remaining, left, output)),
+                ChunkState::DataEnd(left) => Some(self.feed_data_end(remaining, left)),
                 ChunkState::Trailer => self.feed_trailer(remaining),
             };
 
@@ -261,8 +262,8 @@ impl ChunkedDecoder {
         let size_part = line.split(|&byte| byte == b';').next().unwrap_or_default();
         let size_text = String::from_utf8_lossy(size_part);
 
-        let size = usize::from_str_radix(size_text.trim(), HEX_RADIX)
-            .map_err(|err| format!("Invalid chunk length {size_text:?}: {err}"))?;
+        let size =
+            usize::from_str_radix(size_text.trim(), HEX_RADIX).map_err(|err| format!("Invalid chunk length {size_text:?}: {err}"))?;
 
         self.state = if size == 0 { ChunkState::Trailer } else { ChunkState::Data(size) };
 
@@ -270,7 +271,7 @@ impl ChunkedDecoder {
     }
 
     /// Copies the data of the current chunk to the output.
-    fn feed_data(&mut self, input: &[u8], left: usize, output: &mut Vec<u8>) -> Option<usize> {
+    fn feed_data(&mut self, input: &[u8], left: usize, output: &mut Vec<u8>) -> usize {
         let count = left.min(input.len());
         output.extend_from_slice(input.get(..count).unwrap_or_default());
 
@@ -281,17 +282,21 @@ impl ChunkedDecoder {
             ChunkState::Data(still_left)
         };
 
-        Some(count)
+        count
     }
 
     /// Skips the line break after the data of a chunk without checking what it consists of, as `http.client` does.
-    fn feed_data_end(&mut self, input: &[u8], left: usize) -> Option<usize> {
+    fn feed_data_end(&mut self, input: &[u8], left: usize) -> usize {
         let count = left.min(input.len());
         let still_left = left - count;
 
-        self.state = if still_left == 0 { ChunkState::Size } else { ChunkState::DataEnd(still_left) };
+        self.state = if still_left == 0 {
+            ChunkState::Size
+        } else {
+            ChunkState::DataEnd(still_left)
+        };
 
-        Some(count)
+        count
     }
 
     /// Discards the trailer lines until the empty line that ends the body.
@@ -351,12 +356,24 @@ mod tests {
 
     #[test]
     fn framing() {
-        assert_eq!(head(b"HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\n").framing(false), Framing::Length(12));
+        assert_eq!(
+            head(b"HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\n").framing(false),
+            Framing::Length(12)
+        );
         assert_eq!(head(b"HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\n").framing(true), Framing::Empty);
-        assert_eq!(head(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n").framing(false), Framing::Chunked);
-        assert_eq!(head(b"HTTP/1.1 204 No Content\r\nContent-Length: 5\r\n\r\n").framing(false), Framing::Empty);
+        assert_eq!(
+            head(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n").framing(false),
+            Framing::Chunked
+        );
+        assert_eq!(
+            head(b"HTTP/1.1 204 No Content\r\nContent-Length: 5\r\n\r\n").framing(false),
+            Framing::Empty
+        );
         assert_eq!(head(b"HTTP/1.1 200 OK\r\n\r\n").framing(false), Framing::UntilClose);
-        assert_eq!(head(b"HTTP/1.1 200 OK\r\nContent-Length: abc\r\n\r\n").framing(false), Framing::UntilClose);
+        assert_eq!(
+            head(b"HTTP/1.1 200 OK\r\nContent-Length: abc\r\n\r\n").framing(false),
+            Framing::UntilClose
+        );
     }
 
     #[test]

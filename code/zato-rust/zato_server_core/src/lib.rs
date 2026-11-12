@@ -10,6 +10,9 @@ pub mod http;
 /// Rotating file loggers for REST summary and access logs.
 pub mod logging;
 
+/// Transport of outgoing REST connections, driven cooperatively through gevent.
+pub mod outgoing;
+
 /// Utility functions shared across the crate.
 pub mod utils;
 
@@ -29,8 +32,10 @@ fn next_id() -> String {
 #[pymodule]
 fn zato_server_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<http::HTTPServer>()?;
+    module.add_class::<outgoing::HTTPTransport>()?;
     module.add_function(wrap_pyfunction!(next_id, module)?)?;
     module.add_function(wrap_pyfunction!(logging::init_rest_log, module)?)?;
+    module.add_function(wrap_pyfunction!(logging::log_rest_line, module)?)?;
     module.add_function(wrap_pyfunction!(logging::init_access_log, module)?)?;
     module.add_function(wrap_pyfunction!(http::extract_headers, module)?)?;
     module.add_function(wrap_pyfunction!(http::handle_http_request, module)?)?;

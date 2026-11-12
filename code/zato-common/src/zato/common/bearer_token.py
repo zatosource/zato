@@ -12,6 +12,7 @@ from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from json import dumps, loads
 from logging import getLogger
+from time import time
 from traceback import format_exc
 
 # dateutil
@@ -96,6 +97,9 @@ class BearerTokenManager:
         # Parsed private keys by definition name, along with the encrypted text each was parsed from
         self.private_keys:'dict[str, tuple[str, PrivateKeyTypes]]' = {}
 
+        # Tokens this process obtained or read from the cache, by cache key, each with the time its cache entry expires at
+        self.local_tokens:'dict[str, tuple[BearerTokenInfoResult, float]]' = {}
+
 # ################################################################################################################################
 
     def invalidate(self, sec_def_name:'str') -> 'None':
@@ -107,6 +111,40 @@ class BearerTokenManager:
 
         self.revisions[sec_def_name] = revision + 1
         _ = self.private_keys.pop(sec_def_name, None)
+
+        # The keys of the previous revision are no longer built, so their local entries are removed
+        prefix = self._get_cache_key_prefix(sec_def_name, revision)
+
+        for key in list(self.local_tokens):
+            if key.startswith(prefix):
+                del self.local_tokens[key]
+
+# ################################################################################################################################
+
+    def _get_local_token(self, key:'str') -> 'BearerTokenInfoResult | None':
+        """ Returns a token this process holds under a cache key, or None if it holds none or its cache entry expired.
+        """
+        if not (local := self.local_tokens.get(key)):
+            return None
+
+        result, expires_at = local
+
+        if time() < expires_at:
+            return result
+
+        del self.local_tokens[key]
+        return None
+
+# ################################################################################################################################
+
+    def _store_local_token(self, key:'str', info:'BearerTokenInfo', expires_at:'float') -> 'None':
+        """ Keeps a token in this process until the time its cache entry expires at, returned as a cache hit.
+        """
+        result = BearerTokenInfoResult()
+        result.info = info
+        result.is_cache_hit = True
+
+        self.local_tokens[key] = (result, expires_at)
 
 # ################################################################################################################################
 
@@ -340,10 +378,19 @@ class BearerTokenManager:
             revision = Initial_Revision
 
         # .. build the cache key ..
-        key = f'zato.sec.bearer-token.{sec_def_name}.{revision}.{scopes}.{audience}'
+        prefix = self._get_cache_key_prefix(sec_def_name, revision)
+        key = f'{prefix}{scopes}.{audience}'
 
         # .. and return it to our caller.
         return key
+
+# ################################################################################################################################
+
+    def _get_cache_key_prefix(self, sec_def_name:'str', revision:'int') -> 'str':
+        """ Returns the part of the cache keys of a definition that each of its revisions shares among its keys.
+        """
+        out = f'zato.sec.bearer-token.{sec_def_name}.{revision}.'
+        return out
 
 # ################################################################################################################################
 
@@ -372,6 +419,10 @@ class BearerTokenManager:
         else:
             expiry = Default_Cache_Expiry_Seconds
 
+        # .. the time the entry expires at goes with the token, so a process that reads it keeps it no longer than that ..
+        expiry_int = int(expiry)
+        cache_expires_at = time() + expiry_int
+
         # .. serialize the token info for storage ..
         value = {
             'token': info.token,
@@ -380,11 +431,12 @@ class BearerTokenManager:
             'scopes': info.scopes,
             'username': info.username,
             'expires_in_sec': info.expires_in_sec,
+            'cache_expires_at': cache_expires_at,
         }
 
-        # .. store the token ..
-        expiry_int = int(expiry)
+        # .. store the token, in the cache and in this process ..
         self.cache.set(key, value, expiry=expiry_int)
+        self._store_local_token(key, info, cache_expires_at)
 
         # .. make it known when exactly the key will expire ..
         expiry_in = timedelta(seconds=expiry)
@@ -422,6 +474,12 @@ class BearerTokenManager:
             info.username = cached_value['username']
             info.expires_in_sec = cached_value['expires_in_sec']
 
+            # .. an entry that says when it expires is kept in this process until then,
+            # .. whereas one stored before entries said so is read from the cache each time ..
+            if cache_expires_at := cached_value.get('cache_expires_at'):
+                key = self._get_cache_key(config.sec_def_name, scopes)
+                self._store_local_token(key, info, cache_expires_at)
+
             # .. assign the actual value ..
             result.info = info
 
@@ -451,7 +509,13 @@ class BearerTokenManager:
 
     def _get_bearer_token_info(self, sec_def:'stranydict', scopes:'str', data_format:'str') -> 'BearerTokenInfoResult':
 
-        # Turn the input security definition into a bearer token configuration ..
+        # A token this process already holds is returned without a round trip to the cache ..
+        key = self._get_cache_key(sec_def['name'], scopes)
+
+        if result := self._get_local_token(key):
+            return result
+
+        # .. otherwise, turn the input security definition into a bearer token configuration ..
         config = self._get_bearer_token_config(sec_def)
 
         # .. this gets a token either from the server's cache ..

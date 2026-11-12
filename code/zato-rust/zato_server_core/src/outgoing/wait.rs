@@ -118,11 +118,11 @@ fn parse_entries(entries: &Bound<'_, PyAny>, port: u16) -> PyResult<Vec<SocketAd
         let ip_text: String = sockaddr.get_item(0)?.extract()?;
 
         // An address the resolver returned in a form that is not an IP address cannot be connected to
-        let Ok(ip) = ip_text.parse::<IpAddr>() else {
+        let Ok(ip_address) = ip_text.parse::<IpAddr>() else {
             continue;
         };
 
-        let address = match ip {
+        let address = match ip_address {
             IpAddr::V4(ipv4) => SocketAddr::V4(SocketAddrV4::new(ipv4, port)),
             IpAddr::V6(ipv6) => {
                 let flow_info: u32 = sockaddr.get_item(FLOW_INFO_POSITION)?.extract()?;

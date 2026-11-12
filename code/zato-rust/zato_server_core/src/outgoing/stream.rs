@@ -30,7 +30,7 @@ pub enum IoError {
     TimedOut,
 
     /// The operating system reported an error, or the endpoint closed the connection in the middle of a TLS record.
-    Os(std::io::Error),
+    System(std::io::Error),
 
     /// The TLS session failed, e.g. a certificate was rejected or the endpoint sent an alert.
     Tls(rustls::Error),
@@ -114,13 +114,13 @@ fn write_all_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, data: &[u8]) ->
         }
 
         match tcp.write(remaining) {
-            Ok(0) => return Err(IoError::Os(ErrorKind::WriteZero.into())),
+            Ok(0) => return Err(IoError::System(ErrorKind::WriteZero.into())),
             Ok(written) => offset += written,
 
             // The send buffer is full, so this greenlet waits while the others run
             Err(err) if err.kind() == ErrorKind::WouldBlock => ctx.gevent.wait_writable(ctx.py, tcp.as_raw_fd(), ctx.timeout)?,
             Err(err) if err.kind() == ErrorKind::Interrupted => {}
-            Err(err) => return Err(IoError::Os(err)),
+            Err(err) => return Err(IoError::System(err)),
         }
     }
 
@@ -136,7 +136,7 @@ fn read_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, buffer: &mut [u8]) -
             // Nothing arrived yet, so this greenlet waits while the others run
             Err(err) if err.kind() == ErrorKind::WouldBlock => ctx.gevent.wait_readable(ctx.py, tcp.as_raw_fd(), ctx.timeout)?,
             Err(err) if err.kind() == ErrorKind::Interrupted => {}
-            Err(err) => return Err(IoError::Os(err)),
+            Err(err) => return Err(IoError::System(err)),
         }
     }
 }
@@ -179,7 +179,7 @@ impl TlsStream {
                     ctx.gevent.wait_writable(ctx.py, self.tcp.as_raw_fd(), ctx.timeout)?;
                 }
                 Err(err) if err.kind() == ErrorKind::Interrupted => {}
-                Err(err) => return Err(IoError::Os(err)),
+                Err(err) => return Err(IoError::System(err)),
             }
         }
 
@@ -196,13 +196,13 @@ impl TlsStream {
                     ctx.gevent.wait_readable(ctx.py, self.tcp.as_raw_fd(), ctx.timeout)?;
                 }
                 Err(err) if err.kind() == ErrorKind::Interrupted => {}
-                Err(err) => return Err(IoError::Os(err)),
+                Err(err) => return Err(IoError::System(err)),
             }
         };
 
         if let Err(err) = self.session.process_new_packets() {
             // The session queued an alert describing the failure, which the endpoint is told of if it still listens
-            let _ = self.session.write_tls(&mut self.tcp);
+            self.session.write_tls(&mut self.tcp).ok();
             return Err(IoError::Tls(err));
         }
 
@@ -224,7 +224,7 @@ impl TlsStream {
             }
 
             // The session accepts as much plaintext as its buffer holds, and sending makes room for more
-            let accepted = self.session.writer().write(remaining).map_err(IoError::Os)?;
+            let accepted = self.session.writer().write(remaining).map_err(IoError::System)?;
             offset += accepted;
 
             self.flush(ctx)?;
@@ -243,10 +243,11 @@ impl TlsStream {
                 // A connection closed without a TLS close alert ends the data as a clean close would,
                 // the way Python's ssl module treats it for requests
                 Err(err) if err.kind() == ErrorKind::UnexpectedEof => return Ok(0),
-                Err(err) => return Err(IoError::Os(err)),
+                Err(err) => return Err(IoError::System(err)),
             }
 
-            let _ = self.fill(ctx)?;
+            // Whether the endpoint closed the connection is told by the next read of the session
+            self.fill(ctx)?;
         }
     }
 

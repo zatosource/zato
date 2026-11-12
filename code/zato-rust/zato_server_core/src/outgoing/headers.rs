@@ -1,5 +1,4 @@
-//! The head of an outgoing request - the request line and the headers, merged and validated
-//! the way requests merges and validates them.
+//! The head of an outgoing request, merged and validated the way requests merges and validates it.
 //!
 //! The default headers of the connection's session come first, the headers of the call replace them
 //! regardless of case and keep their position, a header whose value is `None` is removed, and the
@@ -11,6 +10,9 @@ use pyo3::types::{PyBytes, PyDict, PyString};
 
 /// The methods requests sends without a `Content-Length` header when they have no body.
 const METHODS_WITHOUT_LENGTH: [&str; 2] = ["GET", "HEAD"];
+
+/// The header the credentials of a connection are sent in.
+const AUTHORIZATION_HEADER: &str = "Authorization";
 
 /// One header of a request, its name as the caller spelled it and its value as sent.
 struct Header {
@@ -40,6 +42,9 @@ pub struct HeadInput<'call, 'py> {
 
     /// The length of the body, if the request has a body that is not empty.
     pub body_len: Option<usize>,
+
+    /// The value of the `Authorization` header the credentials of the connection produce, if the call uses them.
+    pub authorization: Option<&'call [u8]>,
 }
 
 /// Builds the head of a request, or returns `None` if the request is to go through requests.
@@ -85,6 +90,11 @@ pub fn build_head(input: &HeadInput<'_, '_>) -> PyResult<Option<Vec<u8>>> {
 
     set_content_length(&mut merged, input.method, input.body_len);
 
+    // .. and the credentials are applied last, after the length, as requests applies its auth object.
+    if let Some(value) = input.authorization {
+        set_header(&mut merged, String::from(AUTHORIZATION_HEADER), value.to_vec());
+    }
+
     Ok(Some(serialize(input, &merged)))
 }
 
@@ -106,13 +116,7 @@ fn extract_name(key: &Bound<'_, PyAny>) -> PyResult<Option<String>> {
 /// Extracts the value of a header as the bytes sent, returning `None` for a value requests would reject.
 fn extract_value(value: &Bound<'_, PyAny>) -> PyResult<Option<Vec<u8>>> {
     if let Ok(text) = value.cast::<PyString>() {
-        let text = text.to_str()?;
-
-        if !is_valid_text_value(text) {
-            return Ok(None);
-        }
-
-        return Ok(encode_latin1(text));
+        return Ok(encode_text_value(text.to_str()?));
     }
 
     if let Ok(raw) = value.cast::<PyBytes>() {
@@ -128,9 +132,18 @@ fn extract_value(value: &Bound<'_, PyAny>) -> PyResult<Option<Vec<u8>>> {
     Ok(None)
 }
 
+/// Encodes a text value as the bytes sent, returning `None` for a value requests would reject or Latin-1 cannot encode.
+pub fn encode_text_value(text: &str) -> Option<Vec<u8>> {
+    if !is_valid_text_value(text) {
+        return None;
+    }
+
+    encode_latin1(text)
+}
+
 /// Whether a header name matches what requests and `http.client` accept - ASCII, not empty, not starting
 /// with a colon or whitespace, and without a colon or a line break anywhere.
-fn is_valid_name(name: &str) -> bool {
+pub fn is_valid_name(name: &str) -> bool {
     let bytes = name.as_bytes();
 
     let Some(&first) = bytes.first() else {
@@ -164,7 +177,7 @@ fn is_valid_bytes_value(value: &[u8]) -> bool {
         return true;
     };
 
-    !(first.is_ascii_whitespace() || first == VERTICAL_TAB) && !value.iter().any(|byte| matches!(byte, b'\r' | b'\n'))
+    !(first.is_ascii_whitespace() || first == VERTICAL_TAB || value.iter().any(|byte| matches!(byte, b'\r' | b'\n')))
 }
 
 /// Whether Python's regular expressions count a character as whitespace, for the characters Latin-1 can encode.
@@ -201,21 +214,23 @@ fn set_header(headers: &mut Vec<Header>, name: String, value: Vec<u8>) {
     }
 }
 
-/// Sets `Content-Length` the way requests sets it - the length of a body that is not empty, replacing
-/// whatever the caller gave, or zero for a method other than GET and HEAD without a body, unless the caller gave one.
+/// Sets `Content-Length` the way requests sets it.
+///
+/// A body that is not empty sets its length, replacing whatever the caller gave, and a method other than
+/// GET and HEAD without a body sends zero, unless the caller gave a length.
 fn set_content_length(headers: &mut Vec<Header>, method: &str, body_len: Option<usize>) {
-    match body_len {
-        Some(length) => set_header(headers, String::from("Content-Length"), length.to_string().into_bytes()),
-        None => {
-            let is_without_length = METHODS_WITHOUT_LENGTH.contains(&method);
+    if let Some(length) = body_len {
+        set_header(headers, String::from("Content-Length"), length.to_string().into_bytes());
+        return;
+    }
 
-            if !is_without_length && find_header(headers, "Content-Length").is_none() {
-                headers.push(Header {
-                    name: String::from("Content-Length"),
-                    value: b"0".to_vec(),
-                });
-            }
-        }
+    let is_without_length = METHODS_WITHOUT_LENGTH.contains(&method);
+
+    if !is_without_length && find_header(headers, "Content-Length").is_none() {
+        headers.push(Header {
+            name: String::from("Content-Length"),
+            value: b"0".to_vec(),
+        });
     }
 }
 
@@ -297,11 +312,17 @@ mod tests {
         assert!(headers.is_empty());
 
         set_content_length(&mut headers, "POST", None);
-        assert_eq!(find_header(&headers, "content-length").map(|header| header.value.clone()), Some(b"0".to_vec()));
+        assert_eq!(
+            find_header(&headers, "content-length").map(|header| header.value.clone()),
+            Some(b"0".to_vec())
+        );
 
         set_content_length(&mut headers, "POST", Some(12));
         assert_eq!(headers.len(), 1);
-        assert_eq!(find_header(&headers, "Content-Length").map(|header| header.value.clone()), Some(b"12".to_vec()));
+        assert_eq!(
+            find_header(&headers, "Content-Length").map(|header| header.value.clone()),
+            Some(b"12".to_vec())
+        );
     }
 
     #[test]
@@ -321,6 +342,9 @@ mod tests {
 
         assert_eq!(headers.len(), 2);
         assert_eq!(headers.first().map(|header| header.name.as_str()), Some("content-type"));
-        assert_eq!(headers.first().map(|header| header.value.clone()), Some(b"application/xml".to_vec()));
+        assert_eq!(
+            headers.first().map(|header| header.value.clone()),
+            Some(b"application/xml".to_vec())
+        );
     }
 }

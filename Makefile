@@ -8,7 +8,7 @@
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
-	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-scheduler test-scheduler-failover test-consul test-consul-pair test-consul-kubernetes test-rate-limiting test-enmasse test-cli \
+	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-scheduler test-scheduler-failover test-consul test-consul-pair test-consul-kubernetes test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
@@ -666,6 +666,13 @@ test-rest-outgoing: ## Outgoing REST invocation tests, in-process and through a 
 		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_invocation_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_invocation_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+# The measurement environment of outgoing REST invocations - the target endpoint and the scripts
+REST_OUTGOING_BENCH_DIR ?= $(HOME)/reports/rest-outgoing/bench
+
+test-rest-perf: ## Outgoing REST invocations measured through requests and through the Rust transport, side by side.
+	$(Zato_Log_Reset)
+	cd $(REST_OUTGOING_BENCH_DIR) && $(ZATO_PY) compare_transports.py 2>&1 | tee -a /tmp/logs-$@.txt
 
 # fuzz_disabled
 test-rest-fuzz: ## REST mutation tests.

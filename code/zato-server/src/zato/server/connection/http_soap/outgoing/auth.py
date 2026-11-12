@@ -13,6 +13,7 @@ from requests_ntlm import HttpNtlmAuth
 from zato.common.api import EnvVariable
 from zato.common.typing_ import cast_
 from zato.server.connection.http_soap.outgoing.common import logger, _API_Key, _Basic_Auth, _MTLS, _NTLM, _SPNEGO
+from zato.server.connection.http_soap.outgoing.transport import get_basic_authorization
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,12 +21,42 @@ from zato.server.connection.http_soap.outgoing.common import logger, _API_Key, _
 if 0:
     from zato.common.bearer_token import BearerTokenInfoResult
     from zato.common.soap.client import SOAPClient
-    from zato.common.typing_ import any_, stranydict, strnone, strstrdict
+    from zato.common.typing_ import any_, anytuple, stranydict, strnone, strstrdict
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.http_soap.outgoing.common import HTTPSAdapter
+    from zato_server_core.zato_server_core import HTTPTransport
     HTTPSAdapter = HTTPSAdapter
+    HTTPTransport = HTTPTransport
     ParallelServer = ParallelServer
     SOAPClient = SOAPClient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_static_token_header(sec_def:'stranydict') -> 'anytuple | None':
+    """ Returns the name and the value of the header a bearer token definition with a static token produces,
+    or None if the definition obtains its tokens from an authorization server.
+    """
+    # Static tokens live in the password column, while definitions created
+    # before the token moved there keep it in the opaque attributes ..
+    static_token = sec_def.get('static_token') or ''
+    if (not static_token) and sec_def.get('is_static_token'):
+        static_token = sec_def['password']
+
+    if not static_token:
+        return None
+
+    # .. the header is built from the static definition fields.
+    static_header = sec_def['static_header']
+    static_prefix = sec_def['static_prefix']
+
+    if static_prefix:
+        value = f'{static_prefix} {static_token}'
+    else:
+        value = static_token
+
+    out = (static_header, value)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,6 +123,7 @@ class AuthMixin:
     config: 'stranydict'
     sec_type: 'str'
     https_adapter: 'HTTPSAdapter'
+    transport: 'HTTPTransport'
     server: 'ParallelServer'
 
     def _check_password(self) -> 'None':
@@ -118,6 +150,10 @@ class AuthMixin:
         # Local variables
         self.requests_auth = None
         self.username = None
+        authorization = None
+
+        # The header of a static bearer token is built again from the definition as it stands now
+        self.static_token_header:'anytuple | None' = None
 
         # The headers that the security definition contributes are rebuilt on each call, so the set
         # always describes the definition as it stands now and not as it once stood.
@@ -148,6 +184,9 @@ class AuthMixin:
             self.requests_auth = self.auth
             self.username = self.requests_auth[0]
 
+            # The header is computed once here rather than by requests for each call
+            authorization = get_basic_authorization(self.requests_auth)
+
         # #######################################
         #
         # NTLM
@@ -176,6 +215,7 @@ class AuthMixin:
             # certificate would otherwise keep presenting the previous one for as long as
             # a pooled connection lasted.
             self.https_adapter.clear_pool()
+            self.transport.clear_pool()
 
         # #######################################
         #
@@ -197,6 +237,9 @@ class AuthMixin:
         # Whatever the definition contributed replaces the previous set in one assignment,
         # so a request being built elsewhere sees either all of the old headers or all of the new ones.
         self.base_headers = base_headers
+
+        # The Rust transport sends the Authorization header of the credentials as they stand now
+        _ = self.transport.set_authorization(authorization)
 
 # ################################################################################################################################
 
@@ -240,6 +283,7 @@ class AuthMixin:
 
         # Pooled connections keep presenting the material they were opened with ..
         self.https_adapter.clear_pool()
+        self.transport.clear_pool()
 
         # .. and the SOAP client keeps a session of its own, with a pool of its own.
         if self._soap_client:

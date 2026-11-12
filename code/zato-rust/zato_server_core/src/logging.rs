@@ -202,6 +202,27 @@ pub fn log_rest_summary(entry: &RestLogEntry<'_>) {
     let _io_result = writer.write_line(line.as_bytes());
 }
 
+/// Writes a line of an outgoing REST invocation to the REST log, formatted as the Python `zato_rest` logger formats it.
+///
+/// Returns whether the writer was initialized, so a caller in a process without it logs through Python instead.
+/// Errors are dropped, because logging must not fail an invocation.
+#[pyfunction]
+pub fn log_rest_line(message: &str) -> bool {
+    let Some(writer_lock) = REST_WRITER.get() else { return false };
+
+    let pid = std::process::id();
+    let now = Local::now();
+    let line = format!(
+        "{} - INFO - {pid}:Dummy - zato_rest:0 - {message}\n",
+        now.format("%Y-%m-%d %H:%M:%S,%3f")
+    );
+
+    let mut writer = writer_lock.lock();
+    let _io_result = writer.write_line(line.as_bytes());
+
+    true
+}
+
 /// Writes a formatted access log line. Silently drops errors (logging must not crash the server).
 pub fn log_access(entry: &AccessLogEntry<'_>) {
     let Some(writer_lock) = ACCESS_WRITER.get() else { return };

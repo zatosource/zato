@@ -16,10 +16,44 @@ from zato.server.metrics import get_error_source_from_status_class, get_status_c
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict, anytuple
     from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+# The counter and the histogram of each connection name and status, found once rather than through labels() per call
+_metric_children:'anydict' = {}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_metric_children(connection_name:'str', status_code:'str') -> 'anytuple':
+    """ Returns the counter and the histogram a call of a connection that ended with a given status updates.
+    """
+    key = (connection_name, status_code)
+
+    if out := _metric_children.get(key):
+        return out
+
+    status_class = get_status_code_class(status_code)
+    error_source = get_error_source_from_status_class(status_class, status_code)
+
+    counter = zato_rest_outgoing_requests_total.labels(
+        connection_name=connection_name,
+        status_code=status_class,
+        error_source=error_source,
+    )
+
+    histogram = zato_rest_outgoing_request_duration_seconds.labels(
+        connection_name=connection_name
+    )
+
+    out = (counter, histogram)
+    _metric_children[key] = out
+
+    return out
+
 # ################################################################################################################################
 
 def push_metrics(wrapper:'BaseHTTPSOAPWrapper', start_time:'any_', status_code:'str') -> 'None':
@@ -28,20 +62,11 @@ def push_metrics(wrapper:'BaseHTTPSOAPWrapper', start_time:'any_', status_code:'
     source label then carries by name.
     """
     duration = (utcnow() - start_time).total_seconds()
-    connection_name = wrapper.config['name']
 
-    status_class = get_status_code_class(status_code)
-    error_source = get_error_source_from_status_class(status_class, status_code)
+    counter, histogram = _get_metric_children(wrapper.config['name'], status_code)
 
-    _ = zato_rest_outgoing_requests_total.labels(
-        connection_name=connection_name,
-        status_code=status_class,
-        error_source=error_source,
-    ).inc()
-
-    _ = zato_rest_outgoing_request_duration_seconds.labels(
-        connection_name=connection_name
-    ).observe(duration)
+    counter.inc()
+    histogram.observe(duration)
 
 # ################################################################################################################################
 

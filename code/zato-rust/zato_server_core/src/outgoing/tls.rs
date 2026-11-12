@@ -1,5 +1,6 @@
-//! The TLS configuration of an outgoing connection - what the certificate of the endpoint is verified
-//! against, and the client certificate presented to it.
+//! The TLS configuration of outgoing connections.
+//!
+//! It names what the certificate of the endpoint is verified against and the client certificate presented to it.
 //!
 //! One configuration serves every TLS connection of a transport, so the sessions it establishes
 //! are resumed by the new connections that follow them.

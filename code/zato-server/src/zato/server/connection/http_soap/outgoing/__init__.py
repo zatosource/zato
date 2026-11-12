@@ -29,7 +29,7 @@ from zato.common.util.http_retry import send_with_retry
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.tls_verify import resolve_tls_verify
 from zato.server.connection.http_soap.outgoing.audit import insert_audit_event
-from zato.server.connection.http_soap.outgoing.auth import AuthMixin
+from zato.server.connection.http_soap.outgoing.auth import AuthMixin, get_static_token_header
 from zato.server.connection.http_soap.outgoing.common import logger, Allow_Redirects, Default_Content_Type, HTTPSAdapter, \
     Masked_Config_Fields, Masked_Value, Minimum_Pool_Size, Response, _connection_statuses, _get_body_length, _OAuth, \
     _rest_retry_label, _retry
@@ -37,6 +37,10 @@ from zato.server.connection.http_soap.outgoing.metrics import push_metrics, push
 from zato.server.connection.http_soap.outgoing.ping import ping, Default_Ping_Path
 from zato.server.connection.http_soap.outgoing.rest_call import RESTCallMixin
 from zato.server.connection.http_soap.outgoing.soap import SOAPMixin
+from zato.server.connection.http_soap.outgoing.transport import is_requests_selected, log_rest, TransportMixin
+
+# Rust core
+from zato_server_core.zato_server_core import HTTPTransport
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,7 +55,7 @@ if 0:
 
 # ################################################################################################################################
 
-class BaseHTTPSOAPWrapper(AuthMixin):
+class BaseHTTPSOAPWrapper(AuthMixin, TransportMixin):
     """ Base class for HTTP/SOAP connection wrappers.
     """
     def __init__(
@@ -78,6 +82,10 @@ class BaseHTTPSOAPWrapper(AuthMixin):
         # Plain HTTP needs the same treatment - mounting the sized adapter only under https
         # would leave every non-TLS connection on the default pool.
         self.session.mount('http://', HTTPAdapter(pool_connections=pool_size, pool_maxsize=pool_size))
+
+        # The Rust transport keeps a pool of the same size, and it exists before the credentials are configured,
+        # because configuring them passes their Authorization header to it.
+        self.transport = HTTPTransport(pool_size)
         self._component_name = get_component_name()
         self.default_content_type = self.get_default_content_type()
 
@@ -107,6 +115,13 @@ class BaseHTTPSOAPWrapper(AuthMixin):
 
         self.set_address_data()
         self.set_auth()
+        self._configure_transport()
+
+        # The REST lines go to the REST log, unless the environment selects requests and with it the previous behavior
+        if is_requests_selected():
+            self._log_rest = logger.info
+        else:
+            self._log_rest = log_rest
 
 # ################################################################################################################################
 
@@ -244,11 +259,13 @@ class BaseHTTPSOAPWrapper(AuthMixin):
         sec_def_name = kwargs.pop('sec_def_name', NotGiven)
 
         # If we have a security definition name on input, it must be a Bearer token (OAuth)
-        if sec_def_name is not NotGiven:
-            _sec_type = _OAuth
-        else:
+        is_own_definition = sec_def_name is NotGiven
+
+        if is_own_definition:
             sec_def_name = self.config['security_name']
             _sec_type = self.sec_type
+        else:
+            _sec_type = _OAuth
 
         # Force type hints
         sec_def_name = cast_('str', sec_def_name)
@@ -265,26 +282,27 @@ class BaseHTTPSOAPWrapper(AuthMixin):
             # Bearer tokens are obtained dynamically or statically ..
             if is_bearer_token:
 
-                # .. this is reusable ..
-                sec_def = self.server.security_facade.get_bearer_token_by_name(sec_def_name)
+                # .. the header of a static token of the connection's own definition is built once per configuration
+                # .. update, whereas a definition named on input is looked up on each call ..
+                static_token_header = None
 
-                # .. static tokens live in the password column, while definitions created
-                # .. before the token moved there keep it in the opaque attributes ..
-                static_token = sec_def.get('static_token') or ''
-                if (not static_token) and sec_def.get('is_static_token'):
-                    static_token = sec_def['password']
+                if is_own_definition:
+                    static_token_header = self.static_token_header
+
+                if static_token_header:
+                    sec_def = {}
+                else:
+                    sec_def = self.server.security_facade.get_bearer_token_by_name(sec_def_name)
+                    static_token_header = get_static_token_header(sec_def)
+
+                    if is_own_definition:
+                        self.static_token_header = static_token_header
 
                 # .. static tokens have their value defined directly in the definition ..
-                if static_token:
+                if static_token_header:
 
-                    # .. build the header from the static definition fields ..
-                    static_header = sec_def['static_header']
-                    static_prefix = sec_def['static_prefix']
-
-                    if static_prefix:
-                        headers[static_header] = f'{static_prefix} {static_token}'
-                    else:
-                        headers[static_header] = static_token
+                    static_header, static_value = static_token_header
+                    headers[static_header] = static_value
 
                     token_is_cache_hit = None
 
@@ -333,7 +351,7 @@ class BaseHTTPSOAPWrapper(AuthMixin):
                 message += f'; tok-from-cache={token_is_cache_hit}'
 
             # .. log the information about our request ..
-            logger.info(message)
+            self._log_rest(message)
 
             # .. an explicit call argument overrides what the connection is configured with,
             # .. so the four settings are taken out of kwargs before the request sees them ..
@@ -342,20 +360,34 @@ class BaseHTTPSOAPWrapper(AuthMixin):
             # .. a redirect is followed only if the caller explicitly asks for it ..
             allow_redirects = kwargs.pop('allow_redirects', Allow_Redirects)
 
-            def send() -> '_RequestsResponse':
+            # .. the Rust transport sends what it implements, and requests sends everything else ..
+            transport_call = self._get_transport_call(
+                method, address, data, json, headers, auth, hooks, allow_redirects, args, kwargs)
 
-                # .. do send it ..
-                response = self.session.request(
+            def _invoke_with_requests() -> '_RequestsResponse':
+                out = self.session.request(
                     method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
                     verify=tls_verify, cert=tls_client_cert, timeout=self.config['timeout'],
                     allow_redirects=allow_redirects, *args, **kwargs)
+                return out
+
+            def send() -> '_RequestsResponse':
+
+                # .. do send it, through the transport if it implements the call, which it may still
+                # .. decline once it parses the address or the headers ..
+                if transport_call:
+                    response = self._invoke_with_transport(transport_call, tls_verify, tls_client_cert, self.config['timeout'])
+                    if response is None:
+                        response = _invoke_with_requests()
+                else:
+                    response = _invoke_with_requests()
 
                 # Update metrics
                 self._push_metrics(start_time, str(response.status_code))
 
                 # .. log what we received ..
                 msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
-                logger.info(msg)
+                self._log_rest(msg)
 
                 return response
 
