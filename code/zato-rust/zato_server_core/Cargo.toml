@@ -26,6 +26,9 @@ log = "0.4.29"
 parking_lot = "0.12"
 chrono = "0.4.44"
 rand = "0.10.1"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rustls-pki-types = { version = "1", features = ["std"] }
+socket2 = "0.6"
 
 [dev-dependencies]
 proptest = "1.11.0"

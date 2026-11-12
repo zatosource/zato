@@ -1657,7 +1657,7 @@ class RESTAdapter(Service):
 
         # The outgoing connection to use may be static or dynamically generated
         if self.get_conn_name:
-            conn_name = self.get_conn_name
+            conn_name = self.get_conn_name()
         else:
             conn_name = self.conn_name
 
