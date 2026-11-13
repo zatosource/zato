@@ -24,7 +24,6 @@ httparse = "1"
 libc = "0.2.184"
 log = "0.4.29"
 parking_lot = "0.12"
-regex = "1.12.3"
 chrono = "0.4.44"
 rand = "0.10.1"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }

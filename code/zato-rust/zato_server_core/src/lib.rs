@@ -2,9 +2,6 @@
 //!
 //! Exposes HTTP handling, logging and ID generation to Python via `PyO3`.
 
-/// Routing of REST channel requests up to the service invocation.
-pub mod channel;
-
 /// HTTP/1.x server built on raw `libc` sockets.
 ///
 /// Uses gevent cooperative scheduling.
@@ -36,7 +33,6 @@ fn next_id() -> String {
 fn zato_server_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<http::HTTPServer>()?;
     module.add_class::<outgoing::HTTPTransport>()?;
-    module.add_class::<channel::router::ChannelRouter>()?;
     module.add_function(wrap_pyfunction!(next_id, module)?)?;
     module.add_function(wrap_pyfunction!(logging::init_rest_log, module)?)?;
     module.add_function(wrap_pyfunction!(logging::log_rest_line, module)?)?;
