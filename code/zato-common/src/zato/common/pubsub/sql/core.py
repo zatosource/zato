@@ -167,8 +167,9 @@ class SQLBackendCore:
             generation_guard = take_over(get_pubsub_engine)
             self.generation_guard = generation_guard
 
-            # Each generation is one higher than the one it replaces, which the audit log records with the takeover.
-            if self.audit_log:
+            # Each generation is one higher than the one it replaces, which the audit log records with the takeover,
+            # and a server that a later one replaced before its start took nothing over.
+            if self.audit_log and not generation_guard.is_replaced:
                 generation = generation_guard.generation
                 previous_generation = generation - 1
 

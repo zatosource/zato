@@ -22,8 +22,7 @@ from checks import get_starts, read_run_log
 from ha_checks import check_no_runs_after, check_publications_stored, check_scheduler
 from ha_traffic import TimedPublisher
 from postgresql_checks import check_active_server
-from postgresql_cluster import ModuleCtx as ClusterCtx
-from workload import read_rows
+from topology import ModuleCtx as TopologyCtx
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -141,19 +140,15 @@ def test_bootstrap(ha_pair:'HAEnvironment') -> 'None':
     assert active_report['generation'] == record['generation'], (active_report, record)
     assert standby_report['generation'] == record['generation'], (standby_report, record)
 
-    # The referee holds the record of the pair and the address of each node, by which the pod of the other node
+    # The referee holds the address of each node in a lease of its own, by which the pod of the other node
     # is found in Kubernetes ..
-    keys:'list[str]' = []
-
-    for row in read_rows(cast_('any_', env), 'select key from zato_ha_referee order by key'):
-        keys.append(row[0])
-
-    expected_keys = [ClusterCtx.Record_Key]
+    names = env.referee.read_address_names()
+    expected_names:'list[str]' = []
 
     for node in sorted([active.node_name, standby.node_name]):
-        expected_keys.append(f'{ClusterCtx.Record_Key}/nodes/{node}')
+        expected_names.append(f'{TopologyCtx.Lease_Name}{TopologyCtx.Address_Lease_Infix}{node}')
 
-    assert keys == expected_keys, keys
+    assert names == expected_names, names
 
     # .. the role endpoint answers on the active node only ..
     assert _read_role_status(active) == OK

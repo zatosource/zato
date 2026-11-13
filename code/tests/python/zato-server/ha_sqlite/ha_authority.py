@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The certificates of an active-standby pair - one authority that issues the certificate of each node for the mutual TLS
-# of the replication link and the certificate of the Consul server, each valid for the name and the address it serves under.
+# of the replication link, each valid for the name and the address it serves under.
 
 # stdlib
 import ipaddress

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The takeover of a failed active node by its standby under traffic - the active node is stopped gracefully, killed,
-# killed with its unsynced writes discarded, frozen, or cut off from the standby and Consul together. The standby takes over with a higher generation,
+# killed with its unsynced writes discarded, frozen, or cut off from the standby and the API server together. The standby takes over with a higher generation,
 # the former active node is fenced when it resumes, runs nothing afterwards and joins again as the standby.
 
 # stdlib
@@ -38,7 +38,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul.takeover')
+logger = logging.getLogger('zato.test.ha_sqlite.takeover')
 
 # ################################################################################################################################
 # ################################################################################################################################

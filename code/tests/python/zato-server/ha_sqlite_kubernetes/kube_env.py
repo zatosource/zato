@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The session and the pair of the Kubernetes suites. A session creates the cluster, loads the images, creates
-# the quickstart environment that both pods begin from and starts Consul. Each test replaces the pair with
-# a new StatefulSet whose pods begin from that environment, under a referee key with no record.
+# The session and the pair of the Kubernetes suites. A session creates the cluster, loads the images and creates
+# the quickstart environment that both pods begin from. The referee record is in a Lease of the namespace of the pair.
+# Each test replaces the pair with a new StatefulSet whose pods begin from that environment, with no Lease of the pair.
 
 # stdlib
 import json
@@ -24,10 +24,10 @@ from ha_authority import Authority
 from ha_env import create_quickstart_environment, start_receivers, HASession
 from kube_cluster import apply_manifest, create_cluster, delete_cluster, get_kind_gateway, get_node_ip, get_pod_node, \
     get_zato_node_names, get_zone_volume_dir, KubeProxy, kubectl, load_image, ModuleCtx as ClusterCtx, prepare_runtime_dir, \
-    save_pod_logs, wait_for_rollout
+    save_pod_logs
 from kube_endpoints import EndpointWatcher
 from nodes import ModuleCtx as NodesCtx, Node, Timers
-from topology import Consul, ModuleCtx as TopologyCtx, Referee
+from topology import ModuleCtx as TopologyCtx, Referee
 from zato.common.test.pubsub_database import PubSubDatabase, PubSubDBMode
 
 # ################################################################################################################################
@@ -39,7 +39,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul_kubernetes.env')
+logger = logging.getLogger('zato.test.ha_sqlite_kubernetes.env')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,21 +51,15 @@ class ModuleCtx:
     StatefulSet_Name = 'zato-ha'
     Pod_Selector = 'app=zato-ha'
 
-    # The node ports through which the test process reaches the Service, each pod and Consul
+    # The node ports through which the test process reaches the Service and each pod
     Service_Node_Port = 30170
     Pod_Node_Ports = {
         'zato-ha-0': (30180, 30181),
         'zato-ha-1': (30190, 30191),
     }
-    Consul_Node_Port = 30501
 
-    # The manifests of Consul and of the pair
-    Consul_Manifest = 'consul.yaml'
+    # The manifest of the pair
     Zato_Manifest = 'zato.yaml'
-
-    # The Consul servers
-    Consul_StatefulSet = 'consul'
-    Consul_Replicas = 3
 
     # The label of the environment that the quickstart creates once per session
     Quickstart_Label = 'kube'
@@ -85,8 +79,8 @@ class ModuleCtx:
     # The database file of pub/sub
     PubSub_DB_File = 'pubsub.db'
 
-    # The Secret with the referee settings of the pods, and the CA file that the pods mount
-    Referee_Secret = 'zato-ha-referee'
+    # The optional Secret with the pub/sub database settings of the pods, and the CA file that the pods mount
+    PubSub_DB_Secret = 'zato-ha-pubsub-db'
     Pod_CA_File = '/zato-ha-tls/ca.pem'
 
 # ################################################################################################################################
@@ -149,16 +143,65 @@ class KubeNode(Node):
 
 # ################################################################################################################################
 
-class KubeConsul(Consul):
-    """ The Consul servers of the cluster, reached through their node port on the control plane node.
+class KubeLease(Referee):
+    """ The referee record in the Lease of the pair, which the pods write through the API server of the cluster.
     """
 
-    def __init__(self, authority:'Authority', run_dir:'str', address:'str') -> 'None':
-        super().__init__(authority, run_dir)
-        self.address = address
+    def __init__(self, control_plane_ip:'str') -> 'None':
+        self.ip = control_plane_ip
+
+    def _get(self, *args:'str') -> 'any_':
+        result = kubectl('get', 'leases', *args, '-n', ClusterCtx.Namespace, '-o', 'json')
+        out = json.loads(result.stdout)
+        return out
+
+    def read_record(self) -> 'anydict | None':
+        """ Returns the referee record with its version, or None if the pair has not written one yet.
+        """
+        leases = self._get('--field-selector', f'metadata.name={TopologyCtx.Lease_Name}')
+
+        if not leases['items']:
+            return None
+
+        metadata = leases['items'][0]['metadata']
+        value = metadata['annotations'][TopologyCtx.Record_Annotation]
+
+        out = json.loads(value)
+        out['version'] = metadata['resourceVersion']
+
+        return out
+
+    def read_address_names(self) -> 'strlist':
+        """ Returns the names of the leases in which the pods published their addresses, in order.
+        """
+        leases = self._get('-l', f'{TopologyCtx.Lease_Label}={TopologyCtx.Lease_Name}')
+
+        out:'strlist' = []
+
+        for item in leases['items']:
+            out.append(item['metadata']['name'])
+
+        out.sort()
+        return out
 
     def clear(self) -> 'None':
-        _ = self.request('DELETE', f'/v1/kv/{TopologyCtx.Consul_Key}')
+        _ = kubectl('delete', 'leases', '--all', '-n', ClusterCtx.Namespace, '--wait=true')
+
+    def recreate_without_data(self) -> 'None':
+        self.clear()
+
+# ################################################################################################################################
+
+class KubeBackend:
+    """ A service of the cluster that the pair depends on besides the API server, with the pods whose logs
+    each test keeps.
+    """
+    pod_names: 'strlist'
+
+    def clear(self) -> 'None':
+        """ Removes what the pair of an earlier test left in the service.
+        """
+        raise NotImplementedError()
 
 # ################################################################################################################################
 
@@ -177,7 +220,7 @@ class KubeSession:
     base: 'HASession'
     authority: 'Authority'
     referee: 'Referee'
-    referee_pods: 'strlist'
+    backends: 'list[KubeBackend]'
     database: 'PubSubDatabase'
     proxy: 'KubeProxy'
     control_plane_ip: 'str'
@@ -272,8 +315,9 @@ class KubeEnvironment:
         for node in self.node_list:
             save_pod_logs(node.pod_name, self.logs_dir)
 
-        for pod_name in self.session.referee_pods:
-            save_pod_logs(pod_name, self.logs_dir)
+        for backend in self.session.backends:
+            for pod_name in backend.pod_names:
+                save_pod_logs(pod_name, self.logs_dir)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -291,117 +335,6 @@ def create_secret(name:'str', files:'strstrdict', literals:'strstrdict') -> 'Non
 
     manifest = kubectl(*args).stdout
     _ = kubectl('apply', '-f', '-', input_text=manifest)
-
-# ################################################################################################################################
-
-def _write_consul_config(run_dir:'str', management_token:'str') -> 'str':
-    """ Writes the configuration of the Consul servers and returns its path.
-    """
-    namespace = ClusterCtx.Namespace
-    retry_join:'strlist' = []
-
-    for index in range(ModuleCtx.Consul_Replicas):
-        retry_join.append(f'consul-{index}.consul.{namespace}.svc.cluster.local')
-
-    config = {
-        'server': True,
-        'bootstrap_expect': ModuleCtx.Consul_Replicas,
-        'datacenter': 'dc1',
-        'data_dir': '/consul/data',
-        'client_addr': '0.0.0.0',
-        'retry_join': retry_join,
-        'performance': {
-            'raft_multiplier': 1,
-        },
-        'ports': {
-            'http': -1,
-            'https': TopologyCtx.Consul_HTTPS_Port,
-        },
-        'tls': {
-            'defaults': {
-                'ca_file': '/consul/certs/ca.pem',
-                'cert_file': '/consul/certs/consul.pem',
-                'key_file': '/consul/certs/consul.key',
-                'verify_incoming': False,
-                'verify_outgoing': True,
-            },
-            'internal_rpc': {
-                'verify_server_hostname': True,
-            },
-        },
-        'acl': {
-            'enabled': True,
-            'default_policy': 'deny',
-            'enable_token_persistence': True,
-            'tokens': {
-                'initial_management': management_token,
-            },
-        },
-    }
-
-    out = os.path.join(run_dir, 'consul.json')
-
-    with open(out, 'w') as config_file:
-        json.dump(config, config_file, indent=2)
-
-    return out
-
-# ################################################################################################################################
-
-def _start_consul(session:'KubeSession') -> 'KubeConsul':
-    """ Starts the three Consul servers, creates the token of the nodes and the Secret with the referee settings
-    of the pods.
-    """
-    namespace = ClusterCtx.Namespace
-    run_dir = session.base.run_dir
-    authority = session.authority
-    control_plane_ip = session.control_plane_ip
-
-    load_image(TopologyCtx.Consul_Image, list(ClusterCtx.Zones))
-
-    dns_names = [
-        'server.dc1.consul',
-        'localhost',
-        f'consul-api.{namespace}.svc',
-        f'consul-api.{namespace}.svc.cluster.local',
-        f'*.consul.{namespace}.svc.cluster.local',
-    ]
-
-    issued = authority.issue('consul', dns_names, ['127.0.0.1', control_plane_ip])
-
-    address = f'https://{control_plane_ip}:{ModuleCtx.Consul_Node_Port}'
-    out = KubeConsul(authority, run_dir, address)
-
-    config_path = _write_consul_config(run_dir, out.management_token)
-
-    create_secret('consul-config', {'consul.json': config_path}, {})
-    create_secret('consul-tls', {
-        'ca.pem': authority.cert_path,
-        'consul.pem': issued.cert_path,
-        'consul.key': issued.key_path,
-    }, {})
-
-    placeholders = {
-        'namespace': namespace,
-        'consul_image': TopologyCtx.Consul_Image,
-        'consul_node_port': str(ModuleCtx.Consul_Node_Port),
-    }
-
-    apply_manifest(ModuleCtx.Consul_Manifest, placeholders)
-    wait_for_rollout('statefulset', ModuleCtx.Consul_StatefulSet)
-
-    out.wait_until_ready()
-    out.create_node_token()
-
-    create_secret(ModuleCtx.Referee_Secret, {}, {
-        'Zato_HA_Referee_Type': 'consul',
-        'Zato_HA_Consul_Address': f'https://consul-api.{namespace}.svc.cluster.local:{TopologyCtx.Consul_HTTPS_Port}',
-        'Zato_HA_Consul_Token': out.node_token,
-        'Zato_HA_Consul_CA_File': ModuleCtx.Pod_CA_File,
-        'Zato_HA_Consul_Key': TopologyCtx.Consul_Key,
-    })
-
-    return out
 
 # ################################################################################################################################
 
@@ -434,8 +367,8 @@ def _create_host_directories(run_dir:'str') -> 'None':
 # ################################################################################################################################
 
 def create_cluster_session() -> 'KubeSession':
-    """ Creates the cluster, the receivers, the quickstart environment of the pods and their certificates,
-    without the referee and the database of pub/sub, which the caller adds.
+    """ Creates the cluster, the receivers, the quickstart environment of the pods, their certificates and the referee,
+    without the database of pub/sub, which the caller adds.
     """
     run_dir = prepare_runtime_dir()
     _create_host_directories(run_dir)
@@ -474,6 +407,8 @@ def create_cluster_session() -> 'KubeSession':
     out = KubeSession()
     out.base = base
     out.authority = authority
+    out.referee = KubeLease(control_plane_ip)
+    out.backends = []
     out.proxy = proxy
     out.control_plane_ip = control_plane_ip
     out.data_mount = data_mount
@@ -488,7 +423,8 @@ def create_cluster_session() -> 'KubeSession':
         'data_mount': data_mount,
         'template_dir': base.template_dir,
         'start_script': NodesCtx.Start_Script,
-        'referee_secret': ModuleCtx.Referee_Secret,
+        'pubsub_db_secret': ModuleCtx.PubSub_DB_Secret,
+        'lease_name': TopologyCtx.Lease_Name,
         'replication_port': str(NodesCtx.Replication_Port),
         'role_port': str(NodesCtx.Role_Port),
         'server_port': str(NodesCtx.Server_Port),
@@ -515,15 +451,10 @@ def create_cluster_session() -> 'KubeSession':
 # ################################################################################################################################
 
 def create_kube_session() -> 'KubeSession':
-    """ Creates the cluster, the receivers, the quickstart environment of the pods and the Consul servers.
+    """ Creates the cluster, the receivers, the quickstart environment of the pods and the referee.
     """
     out = create_cluster_session()
-    out.referee = _start_consul(out)
-    out.referee_pods = []
     out.database = PubSubDatabase(PubSubDBMode.SQLite)
-
-    for index in range(ModuleCtx.Consul_Replicas):
-        out.referee_pods.append(f'{ModuleCtx.Consul_StatefulSet}-{index}')
 
     return out
 
@@ -568,6 +499,9 @@ def _remove_pair(session:'KubeSession') -> 'None':
         os.makedirs(directory)
 
     session.referee.clear()
+
+    for backend in session.backends:
+        backend.clear()
 
 # ################################################################################################################################
 

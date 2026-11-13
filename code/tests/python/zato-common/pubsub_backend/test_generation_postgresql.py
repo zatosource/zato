@@ -42,6 +42,25 @@ _reached_sub_key = 'zpsk.generation.reached'
 # The owner that another server writes when it raises the generation
 _other_owner = 'other.server'
 
+# The topic of the servers of active-standby nodes and the subscription of each server
+_ha_topic_name = 'generation.ha'
+_ha_current_sub_key = 'zpsk.generation.ha.current'
+_ha_lower_sub_key = 'zpsk.generation.ha.lower'
+_ha_earlier_sub_key = 'zpsk.generation.ha.earlier'
+_ha_later_sub_key = 'zpsk.generation.ha.later'
+
+# How far above the stored generation the active-standby nodes of a test begin
+_ha_generation_step = 10
+
+# The pool sizes that give each server of these tests an engine of its own, since engines are cached by their settings
+# and the guard of a cleanup process remains on the engine that it confirms the generation through
+_pool_size_replaced = 2
+_pool_size_reached  = 3
+_pool_size_current  = 4
+_pool_size_lower    = 5
+_pool_size_earlier  = 6
+_pool_size_later    = 7
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -95,6 +114,45 @@ def _restore_previous_generation(database:'PubSubDatabase') -> 'None':
 
 # ################################################################################################################################
 
+def _read_active(database:'PubSubDatabase') -> 'tuple[int, str]':
+    """ Returns the generation and the owner of the active server as the database holds them.
+    """
+    connection = connect(database)
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute('select generation, owner from pubsub_active where id = 1')
+        row = cast_('any_', cursor.fetchone())
+    finally:
+        connection.close()
+
+    out = (row[0], row[1])
+    return out
+
+# ################################################################################################################################
+
+def _take_over_as_node(database:'PubSubDatabase', ha_generation:'int', pool_size:'int') -> 'SQLPubSubBackend':
+    """ Starts the backend of a server whose active-standby node passed it the given generation,
+    with an engine of its own.
+    """
+    work_dir = tempfile.mkdtemp(prefix='zato_pubsub_generation_', dir=os.environ['TMPDIR'])
+
+    env = dict(database.env)
+    env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
+    env['Zato_HA_Generation'] = str(ha_generation)
+    env['Zato_PubSub_DB_Pool_Size'] = str(pool_size)
+
+    # The backend resolves its engine on first access, which happens here while the variables select the engine
+    # that its guard is installed on.
+    with pubsub_db_env(env):
+        out = SQLPubSubBackend()
+        out.take_over()
+        _ = out.engine
+
+    return out
+
+# ################################################################################################################################
+
 def _count_messages(database:'PubSubDatabase') -> 'int':
     """ Counts the messages through a connection of its own, which no generation guard confirms.
     """
@@ -121,6 +179,7 @@ def test_replaced_backend_and_cleanup(pubsub_database:'PubSubDatabase') -> 'None
 
     env = dict(pubsub_database.env)
     env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
+    env['Zato_PubSub_DB_Pool_Size'] = str(_pool_size_replaced)
 
     with pubsub_db_env(env):
 
@@ -174,6 +233,7 @@ def test_generation_reached_again_by_another_server(pubsub_database:'PubSubDatab
 
     env = dict(pubsub_database.env)
     env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
+    env['Zato_PubSub_DB_Pool_Size'] = str(_pool_size_reached)
 
     with pubsub_db_env(env):
 
@@ -206,6 +266,77 @@ def test_generation_reached_again_by_another_server(pubsub_database:'PubSubDatab
         assert _count_messages(pubsub_database) == message_count
 
         guard.uninstall(backend.engine)
+
+# ################################################################################################################################
+
+def test_lower_ha_generation_leaves_the_server_replaced(pubsub_database:'PubSubDatabase') -> 'None':
+    """ A server whose node passed it a generation below the stored one is replaced from its start and writes no row,
+    while the server of the higher generation keeps writing.
+    """
+    stored_generation, _ = _read_active(pubsub_database)
+    higher_generation = stored_generation + _ha_generation_step
+
+    # The server of the higher generation takes over ..
+    current = _take_over_as_node(pubsub_database, higher_generation, _pool_size_current)
+
+    current_guard = current.generation_guard
+    assert current_guard is not None
+    assert not current.is_replaced
+    assert _read_active(pubsub_database) == (higher_generation, current_guard.owner)
+
+    # .. the server of a lower generation starts after it and is replaced from its start ..
+    earlier = _take_over_as_node(pubsub_database, higher_generation - 1, _pool_size_lower)
+
+    earlier_guard = earlier.generation_guard
+    assert earlier_guard is not None
+    assert earlier.is_replaced
+    assert _read_active(pubsub_database) == (higher_generation, current_guard.owner)
+
+    with pytest.raises(PubSubReplaced):
+        earlier.subscribe(_ha_lower_sub_key, _ha_topic_name)
+
+    # .. and the server of the higher generation keeps writing.
+    current.subscribe(_ha_current_sub_key, _ha_topic_name)
+
+    earlier_guard.uninstall(earlier.engine)
+    current_guard.uninstall(current.engine)
+
+# ################################################################################################################################
+
+def test_equal_ha_generation_replaces_the_earlier_server(pubsub_database:'PubSubDatabase') -> 'None':
+    """ A server whose node passed it the stored generation replaces the earlier server of that generation,
+    which writes no row from then on.
+    """
+    stored_generation, _ = _read_active(pubsub_database)
+    generation = stored_generation + _ha_generation_step
+
+    # The earlier server of the generation takes over ..
+    earlier = _take_over_as_node(pubsub_database, generation, _pool_size_earlier)
+
+    earlier_guard = earlier.generation_guard
+    assert earlier_guard is not None
+    assert not earlier.is_replaced
+
+    # .. a later server of the same generation takes over with an owner of its own ..
+    later = _take_over_as_node(pubsub_database, generation, _pool_size_later)
+
+    later_guard = later.generation_guard
+    assert later_guard is not None
+    assert not later.is_replaced
+    assert later_guard.owner != earlier_guard.owner
+    assert _read_active(pubsub_database) == (generation, later_guard.owner)
+
+    # .. so the earlier server writes no row ..
+    with pytest.raises(PubSubReplaced):
+        earlier.subscribe(_ha_earlier_sub_key, _ha_topic_name)
+
+    assert earlier.is_replaced
+
+    # .. and the later one does.
+    later.subscribe(_ha_later_sub_key, _ha_topic_name)
+
+    earlier_guard.uninstall(earlier.engine)
+    later_guard.uninstall(later.engine)
 
 # ################################################################################################################################
 # ################################################################################################################################

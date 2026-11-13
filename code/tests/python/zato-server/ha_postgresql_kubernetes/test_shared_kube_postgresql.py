@@ -6,8 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The fault of the database under traffic. Its pod is deleted, which takes the pub/sub database and the referee
-# away from both pods at once, until its StatefulSet creates the pod again with its volume.
+# The fault of the database under traffic. Its pod is deleted, which takes the pub/sub database away from both pods
+# at once, until its StatefulSet creates the pod again with its volume. Neither pod renews or takes over the lease while
+# its probe of the database fails, so once the database returns, the first pod whose probe succeeds holds the lease.
 
 # stdlib
 import time
@@ -68,16 +69,17 @@ def _wait_for_new_pod(deleted_uid:'str') -> 'None':
 # ################################################################################################################################
 
 def test_postgresql_pod_deleted(kube_pair:'KubeEnvironment') -> 'None':
-    """ The pod of the database is deleted under traffic. The standby does not take over, and once the database
-    returns with its volume, the same pod is active under the same generation and nothing acknowledged is lost.
+    """ The pod of the database is deleted under traffic. Once the database returns with its volume, the pod that holds
+    the lease is active, at the generation of the record from before the fault if it is the same pod and at a higher one
+    otherwise, and nothing acknowledged is lost.
     """
     env = kube_pair
-    referee = cast_('KubePostgreSQL', env.referee)
+    postgresql = cast_('KubePostgreSQL', env.session.backends[0])
     workload = start_workload(env)
 
     active, _ = get_pair(env)
 
-    record = referee.read_record()
+    record = env.referee.read_record()
     assert record is not None
     generation = record['generation']
 
@@ -86,20 +88,23 @@ def test_postgresql_pod_deleted(kube_pair:'KubeEnvironment') -> 'None':
 
     _wait_for_new_pod(deleted_uid)
     wait_for_rollout('statefulset', PostgreSQLCtx.StatefulSet_Name)
-    referee.wait_until_ready()
+    postgresql.wait_until_ready()
 
     returned = env.wait_for_pair(ChecksCtx.Recovery_Timeout)
-    assert returned is active, f'{returned.pod_name} became active instead of {active.pod_name}'
 
-    record = referee.read_record()
+    record = env.referee.read_record()
     assert record is not None
-    assert record['generation'] == generation, record
-    assert record['active_node'] == active.pod_name, record
+    assert record['active_node'] == returned.pod_name, record
+
+    if returned is active:
+        assert record['generation'] == generation, record
+    else:
+        assert record['generation'] > generation, record
 
     workload.fault_windows.append((started, time.time()))
 
     check_workload(cast_('any_', env), workload)
-    _ = check_scheduler(cast_('any_', env), active, ModuleCtx.Unrun_Claims)
+    _ = check_scheduler(cast_('any_', env), returned, ModuleCtx.Unrun_Claims)
 
 # ################################################################################################################################
 # ################################################################################################################################

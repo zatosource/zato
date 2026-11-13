@@ -6,9 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The referee unavailable or without its data. With the standby in sync, the active node continues through
-# an outage of Consul. A standby lost during the outage stops every acknowledgment until Consul returns,
-# and clients receive errors, never success. A Consul recreated without its data stops both nodes.
+# The referee record in a lease, the API server unavailable and the leases without their data. Every change of the record
+# is a compare-and-set, so a write under an earlier version is refused. With the standby in sync, the active node
+# continues through an outage of the API server. A standby lost during the outage stops every acknowledgment until
+# the API server returns, and clients receive errors, never success. Leases deleted while the pair runs stop both nodes.
 
 # stdlib
 import logging
@@ -20,28 +21,27 @@ import pytest
 # Zato
 from ha_checks import check_copies, check_scheduler
 from ha_traffic import TimedPublisher
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from ha_env import HAEnvironment
-    from topology import Consul
+    from topology import Lease
 
-    Consul = Consul
+    Lease = Lease
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul.consul')
+logger = logging.getLogger('zato.test.ha_sqlite.lease')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
 
-    # How long Consul is unavailable, in seconds
+    # How long the API server is unavailable, in seconds
     Outage_Seconds = [10, 120]
 
     # How long the traffic runs before the outage and after it, in seconds
@@ -50,7 +50,7 @@ class ModuleCtx:
     # How long after the standby fails the requests in flight may still return, in seconds
     In_Flight_Grace = 1.0
 
-    # How long the active node may take to mark the standby out once Consul returns, in seconds
+    # How long the active node may take to mark the standby out once the API server returns, in seconds
     Mark_Out_Timeout = 60
 
     # How long the standby may take to join again, in seconds
@@ -68,6 +68,9 @@ class ModuleCtx:
     # What the log of a node contains once the referee lost its data
     Data_Loss_Text = 'the referee lost data'
 
+    # The status of a JSON Patch whose test of the version failed
+    Stale_Version_Status = 422
+
     # The roles of the pair
     Active_Replicated = ['ActiveReplicated']
     Active_Solo = ['ActiveSolo']
@@ -76,9 +79,49 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def test_the_record_follows_compare_and_set(ha_pair:'HAEnvironment') -> 'None':
+    """ A mark-out writes the record under its version, which raises the version, and a write under the version
+    from before the mark-out is refused and leaves the record as the mark-out wrote it.
+    """
+    env = ha_pair
+
+    active = env.get_active()
+    assert active is not None, 'No active node'
+
+    standby = env.get_other(active)
+
+    # The record names both nodes ..
+    before = env.referee.read_record()
+    assert before is not None, 'No referee record'
+    assert before['active_node'] == active.node_name, before
+    assert before['standby_node'] == standby.node_name, before
+    assert before['standby_in_sync'], before
+
+    # .. the active node marks out the standby that failed, under the version it read ..
+    standby.kill()
+    _ = active.wait_for_role(ModuleCtx.Active_Solo, ModuleCtx.Mark_Out_Timeout)
+
+    after = env.referee.read_record()
+    assert after is not None, 'No referee record after the mark-out'
+    assert after['generation'] == before['generation'] + 1, (before, after)
+    assert after['active_node'] == active.node_name, after
+    assert after['version'] != before['version'], (before, after)
+
+    # .. and a write under the version from before the mark-out is refused.
+    status = env.referee.write_record(before, before['version'])
+    assert status == ModuleCtx.Stale_Version_Status, status
+
+    current = env.referee.read_record()
+    assert current == after, (after, current)
+
+    standby.resume()
+    _ = standby.wait_for_role(ModuleCtx.Standby_In_Sync, ModuleCtx.Rejoin_Timeout)
+
+# ################################################################################################################################
+
 @pytest.mark.parametrize('outage_seconds', ModuleCtx.Outage_Seconds)
 def test_outage_with_standby_in_sync(ha_pair:'HAEnvironment', outage_seconds:'int') -> 'None':
-    """ The active node keeps acknowledging publications while Consul is unavailable and its standby in sync.
+    """ The active node keeps acknowledging publications while the API server is unavailable and its standby in sync.
     """
     env = ha_pair
 
@@ -115,8 +158,9 @@ def test_outage_with_standby_in_sync(ha_pair:'HAEnvironment', outage_seconds:'in
 # ################################################################################################################################
 
 def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
-    """ With Consul unavailable, the active node cannot mark out a standby that failed, so it acknowledges nothing
-    and clients receive errors until Consul returns, after which it continues alone and admits the standby again.
+    """ With the API server unavailable, the active node cannot mark out a standby that failed, so it acknowledges
+    nothing and clients receive errors until the API server returns, after which it continues alone and admits
+    the standby again.
     """
     env = ha_pair
 
@@ -130,7 +174,7 @@ def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
 
     time.sleep(ModuleCtx.Traffic_Seconds)
 
-    # Consul becomes unavailable and the standby fails during the outage ..
+    # The API server becomes unavailable and the standby fails during the outage ..
     env.referee.stop()
     time.sleep(ModuleCtx.Traffic_Seconds)
 
@@ -139,7 +183,7 @@ def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
 
     time.sleep(ModuleCtx.Outage_Seconds[-1])
 
-    # .. so nothing is acknowledged until Consul returns ..
+    # .. so nothing is acknowledged until the API server returns ..
     outage_ended = time.time()
 
     acknowledged = publisher.get_acknowledged_between(standby_failed + ModuleCtx.In_Flight_Grace, outage_ended)
@@ -157,7 +201,7 @@ def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
     time.sleep(ModuleCtx.Traffic_Seconds)
 
     after_outage = publisher.get_acknowledged_between(resumed_at, time.time())
-    assert after_outage, 'No publication acknowledged once Consul returned'
+    assert after_outage, 'No publication acknowledged once the API server returned'
 
     # .. and admits the standby again.
     standby.resume()
@@ -173,12 +217,11 @@ def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
 # ################################################################################################################################
 
 def test_referee_data_loss(ha_pair:'HAEnvironment') -> 'None':
-    """ A Consul recreated without its data holds no record while both nodes have seen a generation,
+    """ Leases deleted while the pair runs hold no record while both nodes have seen a generation,
     so both nodes stop with an error and neither bootstraps a new generation.
     """
     env = ha_pair
-    consul = cast_('Consul', env.referee)
-    consul.recreate_without_data()
+    env.referee.recreate_without_data()
 
     deadline = time.monotonic() + ModuleCtx.Stop_Timeout
 

@@ -42,7 +42,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul.rejoin')
+logger = logging.getLogger('zato.test.ha_sqlite.rejoin')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -190,7 +190,7 @@ def _crash_during(env:'HAEnvironment', phase:'str', side:'str') -> 'tuple[Node, 
     # The backup is slowed down, which also keeps the frames written in the meantime behind it ..
     netems = [
         ([joining.ip], _get_backup_netem(active)),
-        ([TopologyCtx.Consul_IP], ModuleCtx.Unchanged_Netem),
+        ([TopologyCtx.API_Server_IP], ModuleCtx.Unchanged_Netem),
     ]
     degrade_links(active, netems)
 

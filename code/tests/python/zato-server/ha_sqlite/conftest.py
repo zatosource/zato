@@ -28,6 +28,7 @@ from ha_env import create_session, ready_pair, remove_session
 from ha_resume import pytest_runtest_protocol # noqa: F401 # pyright: ignore[reportUnusedImport]
 from ha_resume import pytest_runtest_teardown # noqa: F401 # pyright: ignore[reportUnusedImport]
 from nodes import Timers
+from topology import ModuleCtx as TopologyCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,7 +43,7 @@ if 0:
 def ha_session() -> 'any_':
     """ The network, the receivers and the quickstart environments of both nodes, which every test copies.
     """
-    session = create_session()
+    session = create_session(TopologyCtx.Single_Control_Plane)
 
     try:
         yield session

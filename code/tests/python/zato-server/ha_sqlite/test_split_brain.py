@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Attempts at a split brain - the two nodes are partitioned from each other while both reach Consul, with timers
+# Attempts at a split brain - the two nodes are partitioned from each other while both reach the API server, with timers
 # under which the active node attempts its mark-out and the standby its takeover at nearly the same moment.
 # The referee accepts one of the two, and only that node acknowledges anything afterwards.
 
@@ -34,7 +34,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul.split_brain')
+logger = logging.getLogger('zato.test.ha_sqlite.split_brain')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +81,7 @@ def test_split_brain(ha_session:'HASession', request:'any_', timer_setting:'tupl
 
         time.sleep(ModuleCtx.Traffic_Seconds)
 
-        # .. the nodes lose each other while both reach Consul, from the moment the rules of the first node
+        # .. the nodes lose each other while both reach the API server, from the moment the rules of the first node
         # are in place, since they drop the packets in both directions ..
         node_a, node_b = env.node_list
 

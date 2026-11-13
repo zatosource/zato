@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The session of the Kubernetes suites of a pair on PostgreSQL. The cluster, the receivers and the quickstart
-# environment are those of the Consul suites, and one PostgreSQL instance in the zone without Zato pods takes
-# the place of the Consul servers, as the pub/sub database and as the referee of both pods.
+# The session of the Kubernetes suites of a pair on PostgreSQL. The cluster, the receivers, the quickstart
+# environment and the referee are those of the SQLite suites, and one PostgreSQL instance in the zone without Zato pods
+# is the pub/sub database of both pods.
 
 # stdlib
 import json
@@ -18,8 +18,7 @@ import time
 
 # Zato
 from kube_cluster import apply_manifest, load_image, ModuleCtx as ClusterCtx, wait_for_rollout
-from kube_env import create_cluster_session, create_secret, KubeSession, ModuleCtx as EnvCtx
-from topology import Referee
+from kube_env import create_cluster_session, create_secret, KubeBackend, KubeSession, ModuleCtx as EnvCtx
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.pubsub_database import _write_tls_setup_script, connect, get_container_settings, \
     ModuleCtx as DatabaseCtx, PubSubDatabase, PubSubDBMode
@@ -28,7 +27,7 @@ from zato.common.test.pubsub_database import _write_tls_setup_script, connect, g
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,9 +51,6 @@ class ModuleCtx:
     Port = 5432
     Node_Port = 30432
 
-    # The key of the referee record of the pair
-    Record_Key = 'zato/ha/default'
-
     # How long the instance may take to accept connections, and how often it is checked meanwhile, in seconds
     Ready_Timeout = 300
     Poll_Interval = 0.5
@@ -65,14 +61,14 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class KubePostgreSQL(Referee):
+class KubePostgreSQL(KubeBackend):
     """ The PostgreSQL instance of the cluster, reached by the test process through its node port
     on the control plane node.
     """
 
     def __init__(self, session:'KubeSession') -> 'None':
         self.ip = session.control_plane_ip
-        self.container_names:'strlist' = []
+        self.pod_names:'strlist' = [ModuleCtx.Pod_Name]
         self.password = 'pubsub.' + CryptoManager.generate_hex_string()
         self.directory = os.path.join(session.base.run_dir, 'postgresql')
 
@@ -107,30 +103,9 @@ class KubePostgreSQL(Referee):
 
 # ################################################################################################################################
 
-    def read_record(self) -> 'anydict | None':
-        """ Returns the referee record with its version, or None if there is none.
-        """
-        connection = connect(self.database)
-        cursor = connection.cursor()
-        cursor.execute('select record::text, version from zato_ha_referee where key = %s', (ModuleCtx.Record_Key,))
-        row = cursor.fetchone()
-        connection.close()
-
-        if row is None:
-            return None
-
-        record, version = row
-
-        out = json.loads(record)
-        out['version'] = version
-
-        return out
-
-# ################################################################################################################################
-
     def clear(self) -> 'None':
-        """ Removes every table, so that the pair of the next test begins with a database without data and a referee
-        without a record, as the pair of each Consul test begins with a copy of the quickstart environment.
+        """ Removes every table, so that the pair of the next test begins with a database without data,
+        as the pair of each SQLite test begins with a copy of the quickstart environment.
         """
         connection = connect(self.database, is_admin=True)
         connection.autocommit = True
@@ -144,7 +119,7 @@ class KubePostgreSQL(Referee):
 
 def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
     """ Starts the instance with its certificate, issued by the authority whose CA the pods mount, and creates
-    the Secret with the referee settings of the pods.
+    the Secret with the pub/sub database settings of the pods.
     """
     namespace = ClusterCtx.Namespace
     out = KubePostgreSQL(session)
@@ -205,8 +180,7 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
     # .. and the pods reach it under the name of its Service.
     host = f'{ModuleCtx.StatefulSet_Name}.{namespace}.svc.cluster.local'
 
-    create_secret(EnvCtx.Referee_Secret, {}, {
-        'Zato_HA_Referee_Type': 'postgresql',
+    create_secret(EnvCtx.PubSub_DB_Secret, {}, {
         'Zato_PubSub_DB_Type': 'postgresql',
         'Zato_PubSub_DB_Host': host,
         'Zato_PubSub_DB_Port': str(ModuleCtx.Port),
@@ -228,11 +202,10 @@ def create_postgresql_session() -> 'KubeSession':
     """
     out = create_cluster_session()
 
-    referee = _start_postgresql(out)
+    postgresql = _start_postgresql(out)
 
-    out.referee = referee
-    out.referee_pods = [ModuleCtx.Pod_Name]
-    out.database = referee.database
+    out.backends = [postgresql]
+    out.database = postgresql.database
 
     return out
 

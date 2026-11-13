@@ -18,19 +18,19 @@ _here = os.path.dirname(os.path.abspath(__file__))
 _scheduler_failover_dir = os.path.join(_here, '..', 'scheduler_failover')
 _scheduler_failover_dir = os.path.abspath(_scheduler_failover_dir)
 
-_ha_consul_dir = os.path.join(_here, '..', 'ha_consul')
-_ha_consul_dir = os.path.abspath(_ha_consul_dir)
+_ha_sqlite_dir = os.path.join(_here, '..', 'ha_sqlite')
+_ha_sqlite_dir = os.path.abspath(_ha_sqlite_dir)
 
-_ha_consul_kubernetes_dir = os.path.join(_here, '..', 'ha_consul_kubernetes')
-_ha_consul_kubernetes_dir = os.path.abspath(_ha_consul_kubernetes_dir)
+_ha_sqlite_kubernetes_dir = os.path.join(_here, '..', 'ha_sqlite_kubernetes')
+_ha_sqlite_kubernetes_dir = os.path.abspath(_ha_sqlite_kubernetes_dir)
 
 _pubsub_faults_dir = os.path.join(_here, '..', '..', 'zato-common', 'pubsub_faults')
 _pubsub_faults_dir = os.path.abspath(_pubsub_faults_dir)
 
 sys.path.insert(0, _pubsub_faults_dir)
 sys.path.insert(0, _scheduler_failover_dir)
-sys.path.insert(0, _ha_consul_dir)
-sys.path.insert(0, _ha_consul_kubernetes_dir)
+sys.path.insert(0, _ha_sqlite_dir)
+sys.path.insert(0, _ha_sqlite_kubernetes_dir)
 sys.path.insert(0, _here)
 
 # Zato

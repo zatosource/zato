@@ -15,8 +15,8 @@ import pytest
 
 _here = os.path.dirname(os.path.abspath(__file__))
 
-_ha_consul_dir = os.path.join(_here, '..', 'ha_consul')
-_ha_consul_dir = os.path.abspath(_ha_consul_dir)
+_ha_sqlite_dir = os.path.join(_here, '..', 'ha_sqlite')
+_ha_sqlite_dir = os.path.abspath(_ha_sqlite_dir)
 
 _scheduler_failover_dir = os.path.join(_here, '..', 'scheduler_failover')
 _scheduler_failover_dir = os.path.abspath(_scheduler_failover_dir)
@@ -26,7 +26,7 @@ _pubsub_faults_dir = os.path.abspath(_pubsub_faults_dir)
 
 sys.path.insert(0, _pubsub_faults_dir)
 sys.path.insert(0, _scheduler_failover_dir)
-sys.path.insert(0, _ha_consul_dir)
+sys.path.insert(0, _ha_sqlite_dir)
 sys.path.insert(0, _here)
 
 # Zato
@@ -34,6 +34,7 @@ from ha_env import create_session, remove_session
 from ha_resume import pytest_runtest_protocol # noqa: F401 # pyright: ignore[reportUnusedImport]
 from ha_resume import pytest_runtest_teardown # noqa: F401 # pyright: ignore[reportUnusedImport]
 from nodes import Timers
+from topology import ModuleCtx as TopologyCtx
 from postgresql_env import ready_pair
 
 # ################################################################################################################################
@@ -49,7 +50,7 @@ if 0:
 def ha_session() -> 'any_':
     """ The network, the receivers and the quickstart environments of both nodes, which every test copies.
     """
-    session = create_session()
+    session = create_session(TopologyCtx.Single_Control_Plane)
 
     try:
         yield session

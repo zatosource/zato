@@ -1,7 +1,8 @@
 # The active-standby pair as a StatefulSet of two pods in two zones, each with a local volume on its node.
 # The node in each pod labels its own pod zato-role=active while it serves requests, and the Service zato-ha
-# selects that label. The Secret zato-ha-tls holds the certificate of each pod under the name of the pod,
-# and the referee Secret holds the settings of the referee of the nodes, with its address and credentials.
+# selects that label. The node holds the referee record in a Lease of the namespace, through the service account
+# zato-ha. The Secret zato-ha-tls holds the certificate of each pod under the name of the pod, and the optional Secret
+# of the pub/sub database holds the settings of the database of the shared storage mode.
 
 apiVersion: v1
 kind: ServiceAccount
@@ -35,6 +36,36 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: zato-ha-role-label
+subjects:
+  - kind: ServiceAccount
+    name: zato-ha
+    namespace: ${namespace}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zato-ha-lease
+  namespace: ${namespace}
+rules:
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zato-ha-lease
+  namespace: ${namespace}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: zato-ha-lease
 subjects:
   - kind: ServiceAccount
     name: zato-ha
@@ -180,7 +211,8 @@ spec:
             - ${start_script}
           envFrom:
             - secretRef:
-                name: ${referee_secret}
+                name: ${pubsub_db_secret}
+                optional: true
           env:
             - name: POD_NAME
               valueFrom:
@@ -198,6 +230,8 @@ spec:
               value: $(POD_NAME)
             - name: Zato_HA_Advertised_Address
               value: $(POD_IP)
+            - name: Zato_HA_Lease_Name
+              value: ${lease_name}
             - name: Zato_HA_Replication_Port
               value: "${replication_port}"
             - name: Zato_HA_Role_Port

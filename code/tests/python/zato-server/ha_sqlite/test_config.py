@@ -6,7 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# A node configured with a referee type that is not supported stops with an error and starts no Zato server.
+# A node without a referee type uses the lease as its referee. A node configured with a referee type that is not supported
+# stops with an error and starts no Zato server.
 
 # stdlib
 import logging
@@ -20,18 +21,21 @@ from nodes import Timers
 # ################################################################################################################################
 
 if 0:
-    from ha_env import HASession
+    from ha_env import HAEnvironment, HASession
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul.config')
+logger = logging.getLogger('zato.test.ha_sqlite.config')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
+
+    # The variable that selects the referee type
+    Referee_Type_Variable = 'Zato_HA_Referee_Type'
 
     # The referee type that no node supports
     Unsupported_Referee_Type = 'dynamodb'
@@ -48,6 +52,23 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def test_default_referee_type(ha_pair:'HAEnvironment') -> 'None':
+    """ Nodes that do not set the referee type use the lease, which names the active node of the pair.
+    """
+    env = ha_pair
+
+    for node in env.node_list:
+        assert ModuleCtx.Referee_Type_Variable not in node.env, node.env
+
+    active = env.get_active()
+    assert active is not None, 'No active node'
+
+    record = env.referee.read_record()
+    assert record is not None, 'No referee record'
+    assert record['active_node'] == active.node_name, record
+
+# ################################################################################################################################
+
 def test_unsupported_referee_type(ha_session:'HASession', request:'any_') -> 'None':
     """ The node stops with an error that names the referee type, and its server never starts.
     """
@@ -57,7 +78,7 @@ def test_unsupported_referee_type(ha_session:'HASession', request:'any_') -> 'No
         node = env.node_list[0]
         node.remove()
 
-        node.env['Zato_HA_Referee_Type'] = ModuleCtx.Unsupported_Referee_Type
+        node.env[ModuleCtx.Referee_Type_Variable] = ModuleCtx.Unsupported_Referee_Type
         node.start()
 
         deadline = time.monotonic() + ModuleCtx.Stop_Timeout

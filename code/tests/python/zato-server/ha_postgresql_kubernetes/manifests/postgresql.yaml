@@ -1,5 +1,5 @@
 # One PostgreSQL instance in the zone without Zato pods, with TLS, which both pods of the pair share as the pub/sub
-# database and as the referee. The Secret postgresql-tls holds its certificate and the CA, the Secret postgresql-init
+# database. The Secret postgresql-tls holds its certificate and the CA, the Secret postgresql-init
 # holds the init script that turns TLS on, and the Secret postgresql-auth holds the password of its user.
 
 apiVersion: v1

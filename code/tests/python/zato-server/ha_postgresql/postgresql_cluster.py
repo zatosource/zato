@@ -6,20 +6,19 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The PostgreSQL database that both nodes of a pair share as the pub/sub database and as the referee - a primary
+# The PostgreSQL database that both nodes of a pair share as the pub/sub database - a primary
 # with TLS and two standbys streaming from it, each built from a base backup of the primary, with each commit
 # waiting for the first standby that streams. The containers are on the network of the pair, and the nodes reach
 # the instance accepting writes under a network alias that a failover moves to the promoted standby.
 
 # stdlib
-import json
 import logging
 import os
 import shutil
 import time
 
 # Zato
-from topology import docker, ModuleCtx as TopologyCtx, Referee, remove_container
+from topology import Backend, docker, ModuleCtx as TopologyCtx, remove_container
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.pubsub_certs import generate_certificates
 from zato.common.test.pubsub_database import _directory_mode, _shm_size, _write_tls_setup_script, connect, \
@@ -30,7 +29,7 @@ from zato.common.test.pubsub_replication import _primary_settings, _write_replic
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strlist
+    from zato.common.typing_ import any_, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,9 +71,6 @@ class ModuleCtx:
     # do not delay each other and the syncs of the nodes, as instances on hosts of their own do not
     Host_Data_Dir = '/dev/shm/zato-ha-test-postgresql'
 
-    # The key of the referee record of the pair
-    Record_Key = 'zato/ha/default'
-
     # How long an instance may take to accept connections or to stream, and how long a promotion may take, in seconds
     Ready_Timeout = 120
     Promote_Timeout = 60
@@ -101,8 +97,8 @@ class Instance:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PostgreSQLCluster(Referee):
-    """ The primary and the two standbys of the pub/sub database of a pair, which holds the referee record.
+class PostgreSQLCluster(Backend):
+    """ The primary and the two standbys of the pub/sub database of a pair.
     """
 
     def __init__(self, run_dir:'str') -> 'None':
@@ -352,38 +348,6 @@ class PostgreSQLCluster(Referee):
         for statement in statements:
             cursor.execute(statement)
 
-        connection.close()
-
-# ################################################################################################################################
-
-    def read_record(self) -> 'anydict | None':
-        """ Returns the referee record with its version from the instance accepting writes, or None if there is none.
-        """
-        connection = connect(self.database)
-        cursor = connection.cursor()
-        cursor.execute('select record::text, version from zato_ha_referee where key = %s', (ModuleCtx.Record_Key,))
-        row = cursor.fetchone()
-        connection.close()
-
-        if row is None:
-            return None
-
-        record, version = row
-
-        out = json.loads(record)
-        out['version'] = version
-
-        return out
-
-# ################################################################################################################################
-
-    def delete_record(self) -> 'None':
-        """ Deletes the referee record, which a database restored from a backup older than the pair does not hold.
-        """
-        connection = connect(self.database)
-        cursor = connection.cursor()
-        cursor.execute('delete from zato_ha_referee where key = %s', (ModuleCtx.Record_Key,))
-        connection.commit()
         connection.close()
 
 # ################################################################################################################################

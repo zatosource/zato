@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The faults of the Kubernetes suites. A pod is deleted, its Zato server is killed or the pod is frozen through
 # the cgroup of its node container. A worker node is drained, stopped, paused, or partitioned from the other worker
-# nodes while it still reaches the control plane. Consul pods are deleted. Every fault can be removed, and the cluster
-# can be restored to the state in which every node runs and reaches every other one.
+# nodes while it still reaches the control plane. Every fault can be removed, and the cluster can be restored
+# to the state in which every node runs and reaches every other one.
 
 # stdlib
 import logging
@@ -28,7 +28,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul_kubernetes.faults')
+logger = logging.getLogger('zato.test.ha_sqlite_kubernetes.faults')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -203,19 +203,6 @@ def heal_node(node_name:'str') -> 'None':
     _ = docker('exec', node_name, 'sh', '-c', f'iptables -F {ModuleCtx.Chain} 2>/dev/null || true')
 
     logger.info('Healed %s', node_name)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def delete_consul_pods(pod_names:'strlist') -> 'float':
-    """ Deletes Consul pods at once, which their StatefulSet creates again with their volumes.
-    """
-    out = time.time()
-    _ = kubectl('delete', 'pod', *pod_names, '-n', ClusterCtx.Namespace, '--wait=false')
-
-    logger.info('Deleted Consul pods %s', pod_names)
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

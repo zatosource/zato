@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from ha_authority import Authority
 from nodes import ModuleCtx as NodesCtx, Node, NodeHook, Timers
 from pair import add_service_row, import_jobs, ModuleCtx as PairCtx, render_job_file
-from topology import create_network, HAProxy, Lease, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, \
+from topology import Backend, create_network, HAProxy, Lease, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, \
     remove_network, save_container_logs
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, render_template, \
@@ -123,6 +123,7 @@ class HAEnvironment:
     logs_dir: 'str' = ''
     node_list: 'list[Node]' = field(default_factory=list)
     hooks: 'list[NodeHook]' = field(default_factory=list)
+    backends: 'list[Backend]' = field(default_factory=list)
 
 # ################################################################################################################################
 
@@ -305,7 +306,7 @@ def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
 
 # ################################################################################################################################
 
-def create_session() -> 'HASession':
+def create_session(control_planes:'int') -> 'HASession':
     """ Creates the network, the referee, the receivers and the quickstart environments of both nodes,
     which every test copies.
     """
@@ -323,7 +324,7 @@ def create_session() -> 'HASession':
         node = Node(short_name=short_name, run_dir=run_dir)
         node_names.append(node.node_name)
 
-    session.lease = Lease(run_dir)
+    session.lease = Lease(run_dir, control_planes)
     session.lease.create_cluster(node_names)
 
     # .. the receivers listen on the gateway of the network, which is the address of the host on it ..
@@ -396,7 +397,7 @@ def build_environment(session:'HASession', test_name:'str', timers:'Timers', hoo
 
     database = PubSubDatabase(PubSubDBMode.SQLite)
 
-    out = start_pair(session, test_name, timers, hooks, authority, lease, database, node_list)
+    out = start_pair(session, test_name, timers, hooks, authority, lease, database, node_list, [])
     return out
 
 # ################################################################################################################################
@@ -410,9 +411,11 @@ def start_pair(
     referee:'Referee',
     database:'PubSubDatabase',
     node_list:'list[Node]',
+    backends:'list[Backend]',
 ) -> 'HAEnvironment':
     """ Starts both prepared nodes with HAProxy in front of them, without waiting for the pair.
-    Each hook prepares each node before its container starts.
+    Each hook prepares each node before its container starts, and the backends are the containers of the test
+    that the environment removes with the nodes.
     """
     nodes:'dict[str, Node]' = {}
     node_ips:'list[str]' = []
@@ -440,6 +443,7 @@ def start_pair(
         logs_dir=os.path.join(session.run_dir, 'logs', test_name),
         node_list=node_list,
         hooks=hooks,
+        backends=backends,
     )
 
     out.point_database_at(node_list[0])
@@ -459,8 +463,9 @@ def remove_environment(env:'HAEnvironment') -> 'None':
     """
     env.save_logs()
 
-    for container_name in env.referee.container_names:
-        save_container_logs(container_name, env.logs_dir)
+    for backend in env.backends:
+        for container_name in backend.container_names:
+            save_container_logs(container_name, env.logs_dir)
 
     save_container_logs(TopologyCtx.HAProxy_Container, env.logs_dir)
 
@@ -472,6 +477,9 @@ def remove_environment(env:'HAEnvironment') -> 'None':
 
     env.haproxy.remove()
     env.referee.remove()
+
+    for backend in env.backends:
+        backend.remove()
 
 # ################################################################################################################################
 

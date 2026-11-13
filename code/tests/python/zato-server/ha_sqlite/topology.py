@@ -19,8 +19,9 @@ import shutil
 import ssl
 import subprocess
 import time
-from http.client import NOT_FOUND
+from http.client import NOT_FOUND, OK
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 # ################################################################################################################################
@@ -59,10 +60,26 @@ class ModuleCtx:
     # The name of the container of the load balancer
     HAProxy_Container = 'zato-ha-test-haproxy'
 
-    # The kind cluster of the referee, the container of its control-plane node and the port of its API server
+    # The kind cluster of the referee, the containers of its control-plane nodes, the container of the load balancer
+    # in front of more than one of them, and the port of its API server
     Cluster_Name            = 'zato-ha-test'
     Control_Plane_Container = 'zato-ha-test-control-plane'
+    Load_Balancer_Container = 'zato-ha-test-external-load-balancer'
     API_Server_Port         = 6443
+
+    # How many control-plane nodes the cluster of the referee has unless a suite selects more
+    Single_Control_Plane = 1
+
+    # The members of etcd and the credentials through which each control-plane node reads the status of its own member
+    Etcd_Pod_Prefix = 'etcd-'
+    Etcd_Status_Command = [
+        'etcdctl',
+        '--endpoints=https://127.0.0.1:2379',
+        '--cacert=/etc/kubernetes/pki/etcd/ca.crt',
+        '--cert=/etc/kubernetes/pki/etcd/server.crt',
+        '--key=/etc/kubernetes/pki/etcd/server.key',
+        'endpoint', 'status', '-w', 'json',
+    ]
 
     # The namespace of the leases and of the pods of the nodes, and the name of the lease of the record
     Namespace  = 'zato-ha'
@@ -85,6 +102,10 @@ class ModuleCtx:
 
     # The API paths of the leases
     Leases_Path = f'/apis/coordination.k8s.io/v1/namespaces/{Namespace}/leases'
+
+    # The label of the leases in which the nodes publish their addresses, and the infix of the names of these leases
+    Lease_Label = 'zato.io/ha-lease'
+    Address_Lease_Infix = '-node-'
 
     # How long the cluster may take to serve requests for leases, in seconds
     API_Server_Ready_Timeout = 180
@@ -205,14 +226,37 @@ def remove_network() -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Referee:
-    """ The referee of a pair as the suites act on it - the address that a partition cuts a node off from,
-    the containers whose output the logs of a test keep, and its record.
+class Backend:
+    """ A service that the pair of one test depends on - the containers whose output the logs of a test keep,
+    and the outage and the removal of the service.
     """
-    ip: 'str'
     container_names: 'strlist'
 
+    def stop(self) -> 'None':
+        raise NotImplementedError()
+
+    def resume(self) -> 'None':
+        raise NotImplementedError()
+
+    def remove(self) -> 'None':
+        raise NotImplementedError()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Referee:
+    """ The referee of a pair as the suites act on it - the address that a partition cuts a node off from, its record,
+    its outage and the removal of what one test left in it.
+    """
+    ip: 'str'
+
     def read_record(self) -> 'anydict | None':
+        raise NotImplementedError()
+
+    def read_address_names(self) -> 'strlist':
+        raise NotImplementedError()
+
+    def write_record(self, record:'anydict', version:'str') -> 'int':
         raise NotImplementedError()
 
     def stop(self) -> 'None':
@@ -249,8 +293,9 @@ def kubectl(*args:'str', input_text:'str'='') -> 'subprocess.CompletedProcess[st
 
 # ################################################################################################################################
 
-def _kind_config() -> 'str':
-    """ Returns the configuration of the cluster, whose API server certificate names its address on the network of the run.
+def _kind_config(control_planes:'int') -> 'str':
+    """ Returns the configuration of a cluster of the given number of control-plane nodes, whose API server certificate
+    names its address on the network of the run.
     """
     lines = [
         'kind: Cluster',
@@ -261,9 +306,25 @@ def _kind_config() -> 'str':
         '  apiServer:',
         '    certSANs:',
         f'    - "{ModuleCtx.API_Server_IP}"',
+        'nodes:',
     ]
 
+    for _ in range(control_planes):
+        lines.append('- role: control-plane')
+
     out = '\n'.join(lines) + '\n'
+    return out
+
+# ################################################################################################################################
+
+def get_control_plane_containers(control_planes:'int') -> 'strlist':
+    """ Returns the containers of the control-plane nodes, which kind names with a number from the second node on.
+    """
+    out = [ModuleCtx.Control_Plane_Container]
+
+    for number in range(2, control_planes + 1):
+        out.append(f'{ModuleCtx.Control_Plane_Container}{number}')
+
     return out
 
 # ################################################################################################################################
@@ -356,13 +417,20 @@ def _manifest(node_names:'strlist') -> 'str':
 # ################################################################################################################################
 
 class Lease(Referee):
-    """ The referee record in a lease of a kind cluster of one control-plane node, whose container is attached
-    to the network of the run, so that the faults of the suites cut the nodes off from the API server.
+    """ The referee record in a lease of a kind cluster. The container of its only control-plane node, or of the load
+    balancer in front of several, is attached to the network of the run, so that the faults of the suites cut the nodes
+    off from the API server.
     """
 
-    def __init__(self, run_dir:'str') -> 'None':
+    def __init__(self, run_dir:'str', control_planes:'int') -> 'None':
         self.ip = ModuleCtx.API_Server_IP
-        self.container_names = []
+        self.control_plane_containers = get_control_plane_containers(control_planes)
+
+        if control_planes == ModuleCtx.Single_Control_Plane:
+            self.api_container = ModuleCtx.Control_Plane_Container
+        else:
+            self.api_container = ModuleCtx.Load_Balancer_Container
+
         self.directory = os.path.join(run_dir, 'kubernetes')
         self.service_account_dir = os.path.join(self.directory, 'serviceaccount')
         self.address = f'https://{ModuleCtx.API_Server_IP}:{ModuleCtx.API_Server_Port}'
@@ -379,7 +447,7 @@ class Lease(Referee):
         os.makedirs(self.service_account_dir, exist_ok=True)
 
         config_path = os.path.join(self.directory, 'kind-cluster.yaml')
-        config = _kind_config()
+        config = _kind_config(len(self.control_plane_containers))
 
         with open(config_path, 'w') as config_file:
             _ = config_file.write(config)
@@ -388,8 +456,7 @@ class Lease(Referee):
         _ = subprocess.run(['kind', 'create', 'cluster', '--name', ModuleCtx.Cluster_Name, '--config', config_path],
             capture_output=True, check=True)
 
-        _ = docker('network', 'connect', '--ip', ModuleCtx.API_Server_IP, ModuleCtx.Network_Name,
-            ModuleCtx.Control_Plane_Container)
+        _ = docker('network', 'connect', '--ip', ModuleCtx.API_Server_IP, ModuleCtx.Network_Name, self.api_container)
 
         # .. the nodes and the test process verify the API server against the CA of the cluster ..
         ca_data = kubectl('config', 'view', '--raw', '--minify', '--flatten',
@@ -475,12 +542,19 @@ class Lease(Referee):
 
 # ################################################################################################################################
 
-    def request(self, method:'str', path:'str') -> 'any_':
+    def request(self, method:'str', path:'str', body:'any_'=None, content_type:'str'='application/json') -> 'any_':
         """ Sends one request with the token of the test process and returns the decoded answer.
         """
         url = f'{self.address}{path}'
-        request = Request(url, method=method)
+
+        if body is None:
+            data = None
+        else:
+            data = json.dumps(body).encode('utf8')
+
+        request = Request(url, data=data, method=method)
         request.add_header('Authorization', f'Bearer {self.admin_token}')
+        request.add_header('Content-Type', content_type)
 
         with urlopen(request, timeout=ModuleCtx.API_Server_Request_Timeout, context=self.ssl_context) as response:
             answer = response.read()
@@ -510,15 +584,48 @@ class Lease(Referee):
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Freezes the control-plane node, which stops the API server and etcd from answering.
+        """ Freezes the container through which the nodes reach the API server, which stops it from answering.
         """
-        _ = docker('pause', ModuleCtx.Control_Plane_Container)
+        _ = docker('pause', self.api_container)
 
 # ################################################################################################################################
 
     def resume(self) -> 'None':
-        _ = docker('unpause', ModuleCtx.Control_Plane_Container)
+        _ = docker('unpause', self.api_container)
         self.wait_until_ready()
+
+# ################################################################################################################################
+
+    def find_etcd_leader(self) -> 'str':
+        """ Returns the container of the control-plane node whose etcd member leads the cluster.
+        """
+        for container in self.control_plane_containers:
+            pod_name = f'{ModuleCtx.Etcd_Pod_Prefix}{container}'
+            result = kubectl('--namespace', 'kube-system', 'exec', pod_name, '--', *ModuleCtx.Etcd_Status_Command)
+
+            status = json.loads(result.stdout)[0]['Status']
+            if status['header']['member_id'] == status['leader']:
+                return container
+
+        raise Exception(f'No etcd leader among {self.control_plane_containers}')
+
+# ################################################################################################################################
+
+    def freeze_control_plane(self, container:'str') -> 'None':
+        """ Freezes one control-plane node, which stops its API server and its etcd member from answering.
+        """
+        _ = docker('pause', container)
+        logger.info('Froze control-plane node %s', container)
+
+# ################################################################################################################################
+
+    def thaw_control_plane(self, container:'str') -> 'None':
+        """ Resumes a frozen control-plane node and waits until the API server serves leases again.
+        """
+        _ = docker('unpause', container)
+        self.wait_until_ready()
+
+        logger.info('Resumed control-plane node %s', container)
 
 # ################################################################################################################################
 
@@ -535,13 +642,21 @@ class Lease(Referee):
 # ################################################################################################################################
 
     def clear(self) -> 'None':
-        """ Unfreezes a control-plane node that a failed test left frozen and deletes the leases of the pair.
+        """ Resumes every container of the cluster that a failed test left frozen and deletes the leases of the pair.
         """
-        result = docker('inspect', '--format', '{{.State.Paused}}', ModuleCtx.Control_Plane_Container)
+        containers = [self.api_container]
 
-        if result.stdout.strip() == 'true':
-            self.resume()
+        for container in self.control_plane_containers:
+            if container != self.api_container:
+                containers.append(container)
 
+        for container in containers:
+            result = docker('inspect', '--format', '{{.State.Paused}}', container)
+
+            if result.stdout.strip() == 'true':
+                _ = docker('unpause', container)
+
+        self.wait_until_ready()
         _ = self.request('DELETE', ModuleCtx.Leases_Path)
 
 # ################################################################################################################################
@@ -561,6 +676,46 @@ class Lease(Referee):
 
         out = json.loads(value)
         out['version'] = metadata['resourceVersion']
+
+        return out
+
+# ################################################################################################################################
+
+    def read_address_names(self) -> 'strlist':
+        """ Returns the names of the leases in which the nodes of the pair published their addresses, in order.
+        """
+        selector = quote(f'{ModuleCtx.Lease_Label}={ModuleCtx.Lease_Name}', safe='')
+        leases = self.request('GET', f'{ModuleCtx.Leases_Path}?labelSelector={selector}')
+
+        out:'strlist' = []
+
+        for item in leases['items']:
+            out.append(item['metadata']['name'])
+
+        out.sort()
+        return out
+
+# ################################################################################################################################
+
+    def write_record(self, record:'anydict', version:'str') -> 'int':
+        """ Writes the record under a version as the nodes do, with a JSON Patch that tests the version first,
+        and returns the status of the answer.
+        """
+        value = dict(record)
+        del value['version']
+
+        operations = [
+            {'op': 'test', 'path': '/metadata/resourceVersion', 'value': version},
+            {'op': 'add', 'path': '/metadata/annotations/zato.io~1ha-record', 'value': json.dumps(value)},
+        ]
+        path = f'{ModuleCtx.Leases_Path}/{ModuleCtx.Lease_Name}'
+
+        try:
+            _ = self.request('PATCH', path, operations, 'application/json-patch+json')
+        except HTTPError as e:
+            out = e.code
+        else:
+            out = OK
 
         return out
 
