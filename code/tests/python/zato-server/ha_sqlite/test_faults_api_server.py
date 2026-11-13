@@ -68,6 +68,9 @@ class ModuleCtx:
     # How many claims of each scheduler job the stop of an isolated server may leave without a run
     Unrun_Claims_After_Isolation = 1
 
+    # How many claims of each scheduler job a server killed between a claim and its run may leave without a run
+    Unrun_Claims_After_Kill = 1
+
     # How long the traffic runs before the event and how long the fault lasts after it, in seconds
     Traffic_Seconds = 10
     Fault_Seconds = 30
@@ -156,9 +159,12 @@ def test_api_server_link(ha_pair:'HAEnvironment', fault:'str', target:'str', eve
     check_workload(env, workload)
 
     # An active node that cannot reach the API server when its standby fails cannot mark it out, so it stops its server,
-    # and a claim that the barrier held is in its copy without a run.
+    # and a claim that the barrier held is in its copy without a run. An active node that is killed leaves the claim
+    # it committed before the run began in the copy of the standby without a run.
     if target == ModuleCtx.Target_Active and event == ModuleCtx.Event_Mark_Out:
         unrun_claims = ModuleCtx.Unrun_Claims_After_Isolation
+    elif event == ModuleCtx.Event_Takeover:
+        unrun_claims = ModuleCtx.Unrun_Claims_After_Kill
     else:
         unrun_claims = 0
 
@@ -255,9 +261,12 @@ def test_api_server_outage(ha_pair:'HAEnvironment', event:'str') -> 'None':
     check_workload(env, workload)
 
     # An active node that cannot mark out its failed standby stops its server, and a claim that the barrier held
-    # is in its copy without a run.
+    # is in its copy without a run. An active node that is killed leaves the claim it committed before the run began
+    # in the copy of the standby without a run.
     if event == ModuleCtx.Event_Mark_Out:
         unrun_claims = ModuleCtx.Unrun_Claims_After_Isolation
+    elif event == ModuleCtx.Event_Takeover:
+        unrun_claims = ModuleCtx.Unrun_Claims_After_Kill
     else:
         unrun_claims = 0
 

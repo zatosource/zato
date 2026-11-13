@@ -487,9 +487,7 @@ fn postgresql(source: &dyn VariableSource) -> Result<PostgreSqlConfig, ConfigErr
 
 /// Returns the referee and its settings.
 fn referee(source: &dyn VariableSource) -> Result<RefereeConfig, ConfigError> {
-    let value = source
-        .variable(ENV_REFEREE_TYPE)
-        .unwrap_or_else(|| DEFAULT_REFEREE_TYPE.to_owned());
+    let value = source.variable(ENV_REFEREE_TYPE).unwrap_or_else(|| DEFAULT_REFEREE_TYPE.to_owned());
     match value.as_str() {
         REFEREE_TYPE_KUBERNETES => Ok(RefereeConfig::Kubernetes(KubernetesConfig {
             lease_name: source.variable(ENV_LEASE_NAME).unwrap_or_else(|| DEFAULT_LEASE_NAME.to_owned()),

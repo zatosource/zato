@@ -84,7 +84,7 @@ const STATUS_UNPROCESSABLE: u16 = 422;
 
 /// A `Lease` document that is created.
 #[derive(Serialize)]
-struct NewLease<'a> {
+struct NewLease<'input> {
     /// The API version.
     #[serde(rename = "apiVersion")]
     api_version: &'static str,
@@ -93,46 +93,46 @@ struct NewLease<'a> {
     kind: &'static str,
 
     /// The metadata.
-    metadata: NewMetadata<'a>,
+    metadata: NewMetadata<'input>,
 
     /// The specification.
-    spec: Spec<'a>,
+    spec: Spec<'input>,
 }
 
 /// The metadata of a `Lease` that is created.
 #[derive(Serialize)]
-struct NewMetadata<'a> {
+struct NewMetadata<'input> {
     /// The name.
-    name: &'a str,
+    name: &'input str,
 
     /// The labels.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    labels: BTreeMap<&'static str, &'a str>,
+    labels: BTreeMap<&'static str, &'input str>,
 
     /// The annotations.
-    annotations: BTreeMap<&'static str, &'a str>,
+    annotations: BTreeMap<&'static str, &'input str>,
 }
 
 /// The specification of a `Lease`.
 #[derive(Serialize)]
-struct Spec<'a> {
+struct Spec<'input> {
     /// The node that holds the lease, which `kubectl get lease` shows.
     #[serde(rename = "holderIdentity")]
-    holder_identity: &'a str,
+    holder_identity: &'input str,
 }
 
 /// A merge patch of the annotations of a `Lease`.
 #[derive(Serialize)]
-struct AnnotationsPatch<'a> {
+struct AnnotationsPatch<'input> {
     /// The metadata.
-    metadata: AnnotationsMetadata<'a>,
+    metadata: AnnotationsMetadata<'input>,
 }
 
 /// The metadata of a merge patch of the annotations.
 #[derive(Serialize)]
-struct AnnotationsMetadata<'a> {
+struct AnnotationsMetadata<'input> {
     /// The annotations.
-    annotations: BTreeMap<&'static str, &'a str>,
+    annotations: BTreeMap<&'static str, &'input str>,
 }
 
 /// A `Lease` that the API server returned.
@@ -175,15 +175,16 @@ struct LeaseList {
 
 /// One operation of a JSON Patch.
 #[derive(Serialize)]
-struct Operation<'a> {
+struct PatchOperation<'input> {
     /// The operation.
-    op: &'static str,
+    #[serde(rename = "op")]
+    operation: &'static str,
 
     /// The JSON Pointer the operation applies to.
     path: &'static str,
 
     /// The value compared or written.
-    value: &'a str,
+    value: &'input str,
 }
 
 /// The referee record in a `Lease`, with the addresses of the nodes in `Lease` objects labeled with its name.
@@ -214,7 +215,7 @@ impl LeaseReferee {
     }
 
     /// Sends a JSON Patch of the lease of the record.
-    fn patch(&self, operations: &[Operation<'_>]) -> Result<Response, RefereeError> {
+    fn patch(&self, operations: &[PatchOperation<'_>]) -> Result<Response, RefereeError> {
         let body = encode(operations)?;
         self.client
             .patch(&self.record_url(), CONTENT_TYPE_JSON_PATCH, &body)
@@ -289,18 +290,18 @@ impl Referee for LeaseReferee {
 
         // The test of the version refuses the write at another version and on a deleted lease.
         let operations = [
-            Operation {
-                op: OP_TEST,
+            PatchOperation {
+                operation: OP_TEST,
                 path: RESOURCE_VERSION_PATH,
                 value: expected_version,
             },
-            Operation {
-                op: OP_ADD,
+            PatchOperation {
+                operation: OP_ADD,
                 path: RECORD_PATH,
                 value: &encoded,
             },
-            Operation {
-                op: OP_ADD,
+            PatchOperation {
+                operation: OP_ADD,
                 path: HOLDER_PATH,
                 value: &record.active_node,
             },
@@ -320,23 +321,23 @@ impl Referee for LeaseReferee {
         // The test of the record refuses a version that etcd issued again to another record after a restore,
         // and the version the renewal was made from differs in every renewal, so the API server always persists it.
         let operations = [
-            Operation {
-                op: OP_TEST,
+            PatchOperation {
+                operation: OP_TEST,
                 path: RESOURCE_VERSION_PATH,
                 value: expected_version,
             },
-            Operation {
-                op: OP_TEST,
+            PatchOperation {
+                operation: OP_TEST,
                 path: RECORD_PATH,
                 value: &encoded,
             },
-            Operation {
-                op: OP_ADD,
+            PatchOperation {
+                operation: OP_ADD,
                 path: RENEW_TIME_PATH,
                 value: &renew_time,
             },
-            Operation {
-                op: OP_ADD,
+            PatchOperation {
+                operation: OP_ADD,
                 path: RENEWED_FROM_PATH,
                 value: expected_version,
             },

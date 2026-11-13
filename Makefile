@@ -8,9 +8,8 @@
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
-	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover test-consul test-consul-pair test-consul-kubernetes \
-	test-sql-postgresql-multi \
-	test-consul-multi test-consul-multi-pair test-consul-multi-kubernetes test-rate-limiting test-enmasse test-cli \
+	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover test-ha test-ha-sqlite test-ha-postgresql \
+	test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
@@ -728,83 +727,50 @@ test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQ
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_failover -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-# Which suite test-consul is currently on, and the pytest option that resumes each suite from the test
-# that failed or was interrupted, or that starts it from the beginning under RESTART.
-Zato_Test_Consul             := test-consul-pair test-consul-kubernetes
-Zato_Test_Consul_Resume_File := $(CURDIR)/code/tests/.test-consul-resume
-Zato_Test_Consul_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+# Which HA target test-ha is currently on.
+Zato_Test_HA             := test-ha-sqlite test-ha-postgresql
+Zato_Test_HA_Resume_File := $(CURDIR)/code/tests/.test-ha-resume
 
-test-consul: ## Active-standby pair on SQLite with Consul - every suite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_Walk,$(Zato_Test_Consul),$(Zato_Test_Consul_Resume_File))
-
-test-consul-pair: ## Active-standby pair on SQLite with Consul - functional, failover, fault and long-run suites.
-	$(Zato_Log_Reset)
-	$(MAKE) ha-node-build $(Zato_Log)
-	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_consul/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul -W ignore::DeprecationWarning \
-		$(Zato_Test_Consul_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-test-consul-kubernetes: ## Active-standby pair on SQLite with Consul - the Kubernetes suite.
-	$(Zato_Log_Reset)
-	$(MAKE) ha-node-build $(Zato_Log)
-	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_consul_kubernetes/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul_kubernetes -W ignore::DeprecationWarning \
-		$(Zato_Test_Consul_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-# The suites of test-sql-postgresql-multi in the order they run, the suite it is currently on, and the pytest option
+# The suites of each HA target in the order they run, the suite that each target is currently on, and the pytest option
 # that resumes each suite from the test that failed or was interrupted, or that starts it from the beginning under RESTART.
-Zato_Test_PostgreSQL_Multi             := ha_postgresql ha_postgresql_kubernetes
-Zato_Test_PostgreSQL_Multi_Resume_File := $(CURDIR)/code/tests/.test-sql-postgresql-multi-resume
-Zato_Test_PostgreSQL_Multi_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+Zato_Test_HA_SQLite                 := ha_sqlite ha_sqlite_kubernetes ha_control_plane
+Zato_Test_HA_SQLite_Resume_File     := $(CURDIR)/code/tests/.test-ha-sqlite-resume
+Zato_Test_HA_PostgreSQL             := ha_postgresql ha_postgresql_kubernetes
+Zato_Test_HA_PostgreSQL_Resume_File := $(CURDIR)/code/tests/.test-ha-postgresql-resume
+Zato_Test_HA_Stepwise                = $(if $(RESTART),--sw-reset,--sw)
 
-test-sql-postgresql-multi: ## Active-standby pair on PostgreSQL - the pair and Kubernetes suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_PostgreSQL_Multi_Resume_File); fi
+# Runs the HA suites in $(1) in order, resuming from the one named in the resume file $(2).
+define Zato_Test_HA_Suites
+	@if [ -n "$(RESTART)" ]; then rm -f $(2); fi
 	$(Zato_Log_Reset)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	@resume=''; \
-	if [ -f $(Zato_Test_PostgreSQL_Multi_Resume_File) ]; then \
-		resume=$$(cat $(Zato_Test_PostgreSQL_Multi_Resume_File)); \
+	if [ -f $(2) ]; then \
+		resume=$$(cat $(2)); \
 		echo ">>> Resuming from $$resume" $(Zato_Log); \
 	fi; \
-	for suite in $(Zato_Test_PostgreSQL_Multi); do \
+	for suite in $(1); do \
 		if [ -n "$$resume" ]; then \
 			if [ "$$suite" != "$$resume" ]; then continue; fi; \
 			resume=''; \
 		fi; \
-		echo "$$suite" > $(Zato_Test_PostgreSQL_Multi_Resume_File); \
+		echo "$$suite" > $(2); \
 		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/$$suite/ \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$$suite -W ignore::DeprecationWarning \
-			$(Zato_Test_PostgreSQL_Multi_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+			$(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done; \
-	rm -f $(Zato_Test_PostgreSQL_Multi_Resume_File)
+	rm -f $(2)
+endef
 
-# Which suite test-consul-multi is currently on, and the pytest option that resumes each suite from the test
-# that failed or was interrupted, or that starts it from the beginning under RESTART.
-Zato_Test_Consul_Multi             := test-consul-multi-pair test-consul-multi-kubernetes
-Zato_Test_Consul_Multi_Resume_File := $(CURDIR)/code/tests/.test-consul-multi-resume
-Zato_Test_Consul_Multi_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+test-ha: ## Active-standby pair under the lease referee - the SQLite and the PostgreSQL targets, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_Walk,$(Zato_Test_HA),$(Zato_Test_HA_Resume_File))
 
-test-consul-multi: ## Active-standby pair on a Consul cluster of three servers - every suite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_Walk,$(Zato_Test_Consul_Multi),$(Zato_Test_Consul_Multi_Resume_File))
+test-ha-sqlite: ## Active-standby pair on SQLite - the pair, Kubernetes and control-plane suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_SQLite),$(Zato_Test_HA_SQLite_Resume_File))
 
-test-consul-multi-pair: ## Active-standby pair on a Consul cluster of three servers - faults of the cluster during a takeover, a mark-out and an admission.
-	$(Zato_Log_Reset)
-	$(MAKE) ha-node-build $(Zato_Log)
-	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_consul_multi/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul_multi -W ignore::DeprecationWarning \
-		$(Zato_Test_Consul_Multi_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-test-consul-multi-kubernetes: ## Active-standby pair on a Consul cluster of three servers - the Kubernetes suite of the Consul leader pod.
-	$(Zato_Log_Reset)
-	$(MAKE) ha-node-build $(Zato_Log)
-	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_consul_multi_kubernetes/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul_multi_kubernetes -W ignore::DeprecationWarning \
-		$(Zato_Test_Consul_Multi_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+test-ha-postgresql: ## Active-standby pair on PostgreSQL - the pair and Kubernetes suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_PostgreSQL),$(Zato_Test_HA_PostgreSQL_Resume_File))
 
 test-rate-limiting: rust-target-prune ## All rate limiting tests.
 	$(Zato_Log_Reset)

@@ -96,7 +96,10 @@ impl KindCluster {
     /// Deletes the lease `name`.
     fn delete(&self, name: &str) {
         let context = format!("kind-{}", self.name);
-        run("kubectl", &["--context", &context, "--namespace", NAMESPACE, "delete", "lease", name]);
+        run(
+            "kubectl",
+            &["--context", &context, "--namespace", NAMESPACE, "delete", "lease", name],
+        );
     }
 }
 
@@ -307,7 +310,11 @@ fn a_failed_test_or_a_deleted_lease_refuses_the_renewal() {
         let referee = LeaseReferee::new(client, "zato-ha");
         assert!(referee.renew(&RefereeRecord::solo(2, NODE_A), "7").unwrap().is_none());
         let received = server.join().unwrap();
-        assert!(received.body.contains(r#"{"op":"test","path":"/metadata/annotations/zato.io~1ha-record""#));
+        assert!(
+            received
+                .body
+                .contains(r#"{"op":"test","path":"/metadata/annotations/zato.io~1ha-record""#)
+        );
         assert!(
             received
                 .body

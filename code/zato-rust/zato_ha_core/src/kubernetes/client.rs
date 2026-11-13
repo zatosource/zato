@@ -64,8 +64,8 @@ pub struct ApiClient {
 impl ApiClient {
     /// Returns the client of the service account of the pod, or an error if the node does not run in Kubernetes.
     pub fn from_service_account() -> Result<Self, String> {
-        let host = std::env::var(ENV_SERVICE_HOST).map_err(|_| format!("{ENV_SERVICE_HOST} is not set"))?;
-        let port = std::env::var(ENV_SERVICE_PORT).map_err(|_| format!("{ENV_SERVICE_PORT} is not set"))?;
+        let host = std::env::var(ENV_SERVICE_HOST).map_err(|error| format!("{ENV_SERVICE_HOST}: {error}"))?;
+        let port = std::env::var(ENV_SERVICE_PORT).map_err(|error| format!("{ENV_SERVICE_PORT}: {error}"))?;
         let read =
             |name: &str| std::fs::read(format!("{SERVICE_ACCOUNT_DIR}/{name}")).map_err(|error| format!("Service account {name}: {error}"));
         let token = String::from_utf8(read("token")?).map_err(|error| error.to_string())?;
@@ -139,11 +139,7 @@ impl ApiClient {
     }
 
     /// Reads the status and the body of a response, in which a failure to receive either is an error.
-    fn receive(
-        method: &str,
-        url: &str,
-        outcome: Result<ureq::http::Response<ureq::Body>, ureq::Error>,
-    ) -> Result<Response, String> {
+    fn receive(method: &str, url: &str, outcome: Result<ureq::http::Response<ureq::Body>, ureq::Error>) -> Result<Response, String> {
         let mut response = outcome.map_err(|error| format!("{method} {url}: {error}"))?;
         let status = response.status().as_u16();
         let body = response

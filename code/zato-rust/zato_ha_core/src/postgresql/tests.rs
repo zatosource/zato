@@ -53,7 +53,18 @@ impl PostgreSqlContainer {
         let password = format!("POSTGRES_PASSWORD={PASSWORD}");
         let user = format!("POSTGRES_USER={USERNAME}");
         docker(&[
-            "run", "--detach", "--rm", "--name", &name, "--publish", &publish, "--env", &password, "--env", &user, POSTGRESQL_IMAGE,
+            "run",
+            "--detach",
+            "--rm",
+            "--name",
+            &name,
+            "--publish",
+            &publish,
+            "--env",
+            &password,
+            "--env",
+            &user,
+            POSTGRESQL_IMAGE,
         ]);
         let mapping = docker(&["port", &name, POSTGRESQL_PORT]);
         let port = mapping.lines().next().unwrap().trim().rsplit(':').next().unwrap().parse().unwrap();

@@ -18,13 +18,13 @@ use zato_ha_core::active::Shipper;
 use zato_ha_core::config::{NodeConfig, ProcessEnvironment, RefereeConfig, StorageMode};
 use zato_ha_core::control::Control;
 use zato_ha_core::kubernetes::client::ApiClient;
+use zato_ha_core::kubernetes::label;
 use zato_ha_core::kubernetes::lease::LeaseReferee;
 use zato_ha_core::link::TlsContext;
 use zato_ha_core::postgresql::{DatabaseProbe, PostgreSqlProbe};
 use zato_ha_core::referee::Referee;
 use zato_ha_core::state::Shared;
 use zato_ha_core::supervisor::Supervisor;
-use zato_ha_core::kubernetes::label;
 use zato_ha_core::{barrier, role_endpoint, standby};
 
 /// The argument that separates the node's own arguments from the server command.

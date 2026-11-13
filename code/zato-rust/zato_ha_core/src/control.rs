@@ -111,11 +111,7 @@ pub struct Control {
 
 impl Control {
     /// Returns the control loop of a node, with the probe of the database in the shared storage mode.
-    pub fn new(
-        shared: Arc<Shared>,
-        probe: Option<Box<dyn DatabaseProbe>>,
-        stop_requested: Arc<AtomicBool>,
-    ) -> Result<Self, ControlError> {
+    pub fn new(shared: Arc<Shared>, probe: Option<Box<dyn DatabaseProbe>>, stop_requested: Arc<AtomicBool>) -> Result<Self, ControlError> {
         let persisted_generation = generation::read(&shared.config.generation_file())?;
 
         // Links of a generation below the persisted one are refused before the record is read, because the snapshot
@@ -244,6 +240,17 @@ impl Control {
         };
 
         let mut state = self.shared.state.lock();
+
+        // The replication link accepts sessions before the record can be read, and a role that a session set is newer
+        // than the record read above, since an admission is written to the referee before the standby learns of it.
+        if state.role != Role::Down {
+            tracing::info!(
+                "Starting as {:?} at generation {}, set by the replication link",
+                state.role,
+                state.generation
+            );
+            return Ok(Some(()));
+        }
         state.generation = record.generation;
         state.last_peer_contact = Instant::now();
         state.role = role;
@@ -568,6 +575,18 @@ mod tests {
         let mut node = node(Some(RefereeRecord::replicated(3, NODE_B, NODE_A)), 2, false);
         node.control.bootstrap().unwrap();
         assert_eq!(role(&node.control), (Role::StandbyOut, 3));
+    }
+
+    #[test]
+    fn a_standby_admitted_before_its_first_read_keeps_its_role() {
+        let mut node = node(Some(RefereeRecord::replicated(4, NODE_B, NODE_A)), 3, false);
+
+        // The replication link admitted the node while the referee could not be read ..
+        set_role(&node.control, Role::StandbyInSync, 4);
+        node.control.bootstrap().unwrap();
+
+        // .. so the first read does not put it out of sync again.
+        assert_eq!(role(&node.control), (Role::StandbyInSync, 4));
     }
 
     #[test]
