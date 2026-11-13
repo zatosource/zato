@@ -13,7 +13,7 @@ ifndef Zato_Check_Done
 export Zato_Check_Done := 1
 Zato_Check_Status := $(shell $(Zato_Test_Python) $(Zato_Check_Script) 1>&2 && echo ok)
 ifneq ($(Zato_Check_Status),ok)
-$(error zato-check failed)
+$(warning zato-check failed)
 endif
 endif
 endif

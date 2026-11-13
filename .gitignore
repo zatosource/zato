@@ -92,10 +92,8 @@ zato-rule-engine-dashboard.db
 # Playwright
 .pytest_cache_playwright/
 
-# Where test-all remembers which target it stopped on
-.test-all-no-static-resume
-.test-all-resume
-.test-consul-resume
+# Where each multi-suite test target remembers which suite it stopped on
+.test-*-resume
 
 # Cosmic-ray mutation testing
 *.py.meta

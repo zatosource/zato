@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import time
 from string import Template
+from tempfile import TemporaryDirectory
 from urllib.request import Request, urlopen
 
 # Zato
@@ -218,7 +219,16 @@ def load_image(image:'str', node_names:'strlist') -> 'None':
     if result.returncode != 0:
         _ = docker('pull', image)
 
-    _ = run(['kind', 'load', 'docker-image', image, '--name', ModuleCtx.Cluster_Name, '--nodes', ','.join(node_names)])
+    # The containerd image store of the host holds the index of every platform of a pulled image but the content
+    # of its own platform alone, which an import of all platforms in the nodes refuses, so only that platform is loaded.
+    platform = docker('image', 'inspect', '-f', '{{.Os}}/{{.Architecture}}', image).stdout.strip()
+
+    with TemporaryDirectory() as directory:
+        archive_path = os.path.join(directory, 'image.tar')
+        _ = docker('save', '--platform', platform, '-o', archive_path, image)
+
+        _ = run(['kind', 'load', 'image-archive', archive_path, '--name', ModuleCtx.Cluster_Name,
+            '--nodes', ','.join(node_names)])
 
 # ################################################################################################################################
 
