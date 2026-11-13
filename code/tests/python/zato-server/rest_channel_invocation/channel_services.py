@@ -13,6 +13,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from time import perf_counter_ns
 
+# gevent
+from gevent import sleep as gevent_sleep
+
 # Zato
 from zato.common import SOAPMessage
 from zato.common.exception import BadRequest, Forbidden, NotFound, Unauthorized
@@ -376,14 +379,14 @@ class Hooks(Service):
     """
     name = 'test.channel.hooks'
 
-    def before_handle(self) -> 'None': # type: ignore[override]
+    def before_handle(self, *args:'any_', **kwargs:'any_') -> 'None':
         self.environ['calls'] = ['before_handle']
 
     def handle(self) -> 'None':
         self.environ['calls'].append('handle')
         self.response.payload = {'calls': self.environ['calls']}
 
-    def after_handle(self) -> 'None': # type: ignore[override]
+    def after_handle(self, *args:'any_', **kwargs:'any_') -> 'None':
         self.environ['calls'].append('after_handle')
         self.response.payload = {'calls': self.environ['calls']}
 
@@ -394,7 +397,7 @@ class NotAccepted(Service):
     """
     name = 'test.channel.not-accepted'
 
-    def accept(self) -> 'bool': # type: ignore[override]
+    def accept(self, *args:'any_', **kwargs:'any_') -> 'bool':
         out = False
         return out
 
@@ -423,7 +426,7 @@ class Sleep(Service):
 
     def handle(self) -> 'None':
         seconds = float(self.request.http.GET['seconds'])
-        self.sleep(seconds) # type: ignore[arg-type]
+        gevent_sleep(seconds)
         self.response.payload = {'slept': seconds}
 
 # ################################################################################################################################

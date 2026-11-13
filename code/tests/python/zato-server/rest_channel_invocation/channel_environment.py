@@ -52,6 +52,20 @@ _redis_environment_keys = (
     'Zato_Scheduler_Redis',
 )
 
+# The variables naming the databases and sockets that otherwise default to the shared quickstart directory,
+# each with the name of the file it points to in the temporary directory of the environment
+_isolated_file_variables = (
+    ('Zato_Audit_Log_DB_Name', 'audit.db'),
+    ('Zato_Common_DB_Name', 'common.db'),
+    ('Zato_PubSub_DB_Name', 'pubsub.db'),
+    ('Zato_Analytics_DB_Path', 'analytics.db'),
+    ('Zato_HA_Barrier_Socket', 'barrier.sock'),
+)
+
+# The rule engine names its database through a URL rather than through a path
+_rule_engine_variable = 'Zato_Rule_Engine_Dashboard_DB_URL'
+_rule_engine_file_name = 'rule-engine.db'
+
 _process_kill_timeout = 5
 _server_wait_timeout  = 120
 _redis_wait_timeout   = 10
@@ -228,7 +242,10 @@ class ChannelEnvironment:
             '--no-scheduler',
         ]
 
-        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=_quickstart_timeout)
+        environment = self._get_isolated_environment()
+
+        result = subprocess.run(
+            command, env=environment, capture_output=True, text=True, check=False, timeout=_quickstart_timeout)
 
         if result.returncode != 0:
             raise Exception(f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
@@ -259,10 +276,26 @@ class ChannelEnvironment:
 
 # ################################################################################################################################
 
+    def _get_isolated_environment(self) -> 'strdict':
+        """ Returns the environment variables of every command of this environment, which point each database
+        and socket that defaults to a location under the home directory at a file in the temporary directory.
+        """
+        out = os.environ.copy()
+
+        for variable, file_name in _isolated_file_variables:
+            out[variable] = os.path.join(self.temp_directory, file_name)
+
+        rule_engine_path = os.path.join(self.temp_directory, _rule_engine_file_name)
+        out[_rule_engine_variable] = 'sqlite:///' + rule_engine_path
+
+        return out
+
+# ################################################################################################################################
+
     def _get_server_environment(self) -> 'strdict':
         """ Returns the environment variables the server process starts with.
         """
-        out = os.environ.copy()
+        out = self._get_isolated_environment()
 
         out['Zato_Config_Bind_Port'] = str(self.port)
         out['Zato_Broker_HTTP_Port'] = str(find_free_port())
@@ -336,7 +369,10 @@ class ChannelEnvironment:
             '--missing-wait-time', _missing_wait_time,
         ]
 
-        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=_enmasse_timeout)
+        environment = self._get_isolated_environment()
+
+        result = subprocess.run(
+            command, env=environment, capture_output=True, text=True, check=False, timeout=_enmasse_timeout)
 
         if result.returncode != 0:
             raise Exception(f'enmasse --import failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
