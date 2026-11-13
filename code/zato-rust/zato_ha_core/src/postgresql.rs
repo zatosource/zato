@@ -321,8 +321,11 @@ impl PostgreSqlReferee {
             Ok::<_, RefereeError>((value, session))
         };
 
+        // The timer of the deadline registers with the runtime when it is created, so it is created within it.
         // A session that failed or did not answer in time is dropped with the attempt, which ends its connection.
-        let outcome = self.runtime.block_on(tokio::time::timeout(REQUEST_TIMEOUT, attempt));
+        let outcome = self
+            .runtime
+            .block_on(async { tokio::time::timeout(REQUEST_TIMEOUT, attempt).await });
         match outcome {
             Ok(Ok((value, session))) => {
                 *guard = Some(session);
@@ -393,5 +396,29 @@ impl Referee for PostgreSqlReferee {
         let prefix = format!("{}/{NODES_SUFFIX}/", self.key);
         let rows = self.call("addresses", async |client| client.query(SELECT_ADDRESSES, &[&prefix]).await)?;
         rows.iter().map(decode_column).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_support::{LOOPBACK, NODE_A};
+
+    /// A port on the loopback that nothing listens on.
+    const CLOSED_PORT: u16 = 1;
+
+    #[test]
+    fn a_database_that_does_not_answer_is_an_error() {
+        let settings = PostgreSqlConfig {
+            host: LOOPBACK.to_owned(),
+            port: CLOSED_PORT,
+            username: "zato".to_owned(),
+            password: PostgreSqlPassword::Value("Test password".to_owned()),
+            database: "zato".to_owned(),
+            tls: None,
+        };
+        let referee = PostgreSqlReferee::new(&settings, "zato/ha/test").unwrap();
+        assert!(referee.read().is_err());
+        assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), VERSION_ABSENT).is_err());
     }
 }

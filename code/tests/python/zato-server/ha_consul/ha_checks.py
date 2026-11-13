@@ -245,7 +245,12 @@ def read_active_run_states(env:'HAEnvironment', active:'Node') -> 'anydict':
         object_type = "'" + PairCtx.Run_State_Object_Type + "'"
         query = f'select name, data from zato_shared_object where object_type = {object_type}'
         rows = read_database_rows(cast_('any_', env), query)
-        out = _decode_run_states(rows)
+
+        # The column is of the JSON type in PostgreSQL, which the driver returns decoded.
+        out:'anydict' = {}
+
+        for name, data in rows:
+            out[name] = data
     else:
         out = read_run_states(active)
 
