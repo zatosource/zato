@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The environment of the active-standby suites. One session creates the network, the receivers of push deliveries
-# and the quickstart environments of both nodes, and every test receives a new Consul, both nodes started
-# from a copy of those environments and HAProxy in front of them.
+# The environment of the active-standby suites. One session creates the network, the kind cluster of the referee,
+# the receivers of push deliveries and the quickstart environments of both nodes, and every test receives a referee
+# without leases, both nodes started from a copy of those environments and HAProxy in front of them.
 
 # stdlib
 import logging
@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from ha_authority import Authority
 from nodes import ModuleCtx as NodesCtx, Node, NodeHook, Timers
 from pair import add_service_row, import_jobs, ModuleCtx as PairCtx, render_job_file
-from topology import Consul, create_network, HAProxy, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, \
+from topology import create_network, HAProxy, Lease, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, \
     remove_network, save_container_logs
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, render_template, \
@@ -39,7 +39,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul.env')
+logger = logging.getLogger('zato.test.ha_sqlite.env')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,9 +89,11 @@ class ModuleCtx:
 
 @dataclass(init=False)
 class HASession:
-    """ What one session creates once for every test - the receivers, the credentials and the quickstart environments.
+    """ What one session creates once for every test - the referee, the receivers, the credentials
+    and the quickstart environments.
     """
     run_dir: 'str'
+    lease: 'Lease'
     template_dir: 'str'
     publisher_password: 'str'
     puller_password: 'str'
@@ -229,7 +231,7 @@ def create_quickstart_environment(
     os.makedirs(os.path.join(home_dir, 'env', 'qs-1'), exist_ok=True)
 
     extra_env = {'HOME': home_dir}
-    state = SessionState(f'zato.test.ha_consul.{label}', f'server-logs-ha-{label}.txt')
+    state = SessionState(f'zato.test.ha_sqlite.{label}', f'server-logs-ha-{label}.txt')
 
     out = run_quickstart_and_enmasse(
         state=state,
@@ -304,7 +306,8 @@ def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
 # ################################################################################################################################
 
 def create_session() -> 'HASession':
-    """ Creates the network, the receivers and the quickstart environments of both nodes, which every test copies.
+    """ Creates the network, the referee, the receivers and the quickstart environments of both nodes,
+    which every test copies.
     """
     run_dir = prepare_runtime_dir()
     create_network()
@@ -313,7 +316,17 @@ def create_session() -> 'HASession':
     session.run_dir = run_dir
     session.template_dir = os.path.join(run_dir, 'templates')
 
-    # The receivers listen on the gateway of the network, which is the address of the host on it ..
+    # The API server of the referee serves every test of the session, each of which begins without leases ..
+    node_names:'list[str]' = []
+
+    for short_name in ModuleCtx.Node_Names:
+        node = Node(short_name=short_name, run_dir=run_dir)
+        node_names.append(node.node_name)
+
+    session.lease = Lease(run_dir)
+    session.lease.create_cluster(node_names)
+
+    # .. the receivers listen on the gateway of the network, which is the address of the host on it ..
     rendered_yaml, invoke_password = start_receivers(session, TopologyCtx.Gateway)
 
     # .. and the environment of each node is kept as it was created, so that each test begins from it.
@@ -335,6 +348,7 @@ def remove_session(session:'HASession') -> 'None':
     for receiver in session.receivers.values():
         receiver.stop()
 
+    session.lease.delete_cluster()
     remove_network()
 
 # ################################################################################################################################
@@ -366,27 +380,23 @@ def new_nodes(session:'HASession') -> 'list[Node]':
 # ################################################################################################################################
 
 def build_environment(session:'HASession', test_name:'str', timers:'Timers', hooks:'list[NodeHook]') -> 'HAEnvironment':
-    """ Starts a new Consul, both nodes from the environments of the session and HAProxy, without waiting for the pair.
-    Each hook prepares each node before its container starts.
+    """ Starts both nodes from the environments of the session and HAProxy, under a referee without leases,
+    without waiting for the pair. Each hook prepares each node before its container starts.
     """
     authority = Authority(os.path.join(session.run_dir, 'authority'))
 
-    # Each test has a Consul with no data, configured with the tokens of this test ..
-    consul = Consul(authority, session.run_dir)
-    shutil.rmtree(consul.directory, ignore_errors=True)
-    shutil.rmtree(consul.data_dir, ignore_errors=True)
-
-    consul.start()
-    consul.create_node_token()
+    # Each test begins with no lease of the pair ..
+    lease = session.lease
+    lease.clear()
 
     node_list = new_nodes(session)
 
     for node in node_list:
-        node.prepare(authority, consul, timers)
+        node.prepare(authority, lease, timers)
 
     database = PubSubDatabase(PubSubDBMode.SQLite)
 
-    out = start_pair(session, test_name, timers, hooks, authority, consul, database, node_list)
+    out = start_pair(session, test_name, timers, hooks, authority, lease, database, node_list)
     return out
 
 # ################################################################################################################################

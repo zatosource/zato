@@ -1096,7 +1096,7 @@ mod tests {
     use crate::barrier::{self, BarrierOutcome};
     use crate::config::{DB_NAME_PUBSUB, Timers};
     use crate::link::TlsContext;
-    use crate::record::{NodeAddress, Versioned};
+    use crate::record::NodeAddress;
     use crate::referee::tests::MemoryReferee;
     use crate::test_support::{self, Certificates, LOOPBACK, NODE_A, NODE_B};
     use std::collections::HashMap;
@@ -1263,11 +1263,7 @@ mod tests {
     /// Returns the shared state of node A, active alone at generation 1, with node B listening on `port`.
     fn active_node(dir: &Path, certificates: &Certificates, port: u16) -> Arc<Shared> {
         let config = test_support::node_config(NODE_A, dir, certificates, TIMERS);
-        let referee = MemoryReferee::default();
-        *referee.record.lock() = Some(Versioned {
-            value: RefereeRecord::solo(1, NODE_A),
-            version: 1,
-        });
+        let referee = MemoryReferee::holding(Some(RefereeRecord::solo(1, NODE_A)), 1);
         referee.addresses.lock().push(NodeAddress {
             node_name: NODE_B.to_owned(),
             host: LOOPBACK.to_owned(),
@@ -1494,11 +1490,7 @@ mod tests {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
         let config = test_support::node_config(NODE_A, dir.path(), &certificates, TIMERS);
-        let referee = MemoryReferee::default();
-        *referee.record.lock() = Some(Versioned {
-            value: RefereeRecord::solo(3, NODE_B),
-            version: 3,
-        });
+        let referee = MemoryReferee::holding(Some(RefereeRecord::solo(3, NODE_B)), 3);
         let shared = test_support::shared(config, Box::new(referee));
         {
             let mut state = shared.state.lock();

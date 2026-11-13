@@ -29,17 +29,17 @@ from topology import docker, ModuleCtx as TopologyCtx, remove_container, save_co
 if 0:
     import subprocess
     from ha_authority import Authority
-    from topology import Consul
+    from topology import Lease
     from zato.common.typing_ import anydict, strlist, strstrdict
 
     # Dummy assignments to satisfy type checkers
     Authority = Authority
-    Consul = Consul
+    Lease = Lease
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.ha_consul.nodes')
+logger = logging.getLogger('zato.test.ha_sqlite.nodes')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,6 +145,9 @@ class Node:
     # The server directory, which the quickstart environment of the node creates
     server_directory: 'str' = ''
 
+    # The service account credentials through which the node reaches the API server of the referee
+    service_account_dir: 'str' = ''
+
 # ################################################################################################################################
 
     @property
@@ -203,20 +206,15 @@ class Node:
 
 # ################################################################################################################################
 
-    def prepare(self, authority:'Authority', consul:'Consul', timers:'Timers') -> 'None':
-        """ Creates the directories and the certificate of the node and fills in its environment with Consul
+    def prepare(self, authority:'Authority', lease:'Lease', timers:'Timers') -> 'None':
+        """ Creates the directories and the certificate of the node and fills in its environment with the lease
         as the referee and the replication link between the nodes.
         """
-        self.prepare_common(timers)
+        self.prepare_common(lease, timers)
 
         issued = authority.issue(self.node_name, [self.node_name], [self.ip])
 
         self.env.update({
-            'Zato_HA_Referee_Type': 'consul',
-            'Zato_HA_Consul_Address': consul.address,
-            'Zato_HA_Consul_Token': consul.node_token,
-            'Zato_HA_Consul_CA_File': authority.cert_path,
-            'Zato_HA_Consul_Key': TopologyCtx.Consul_Key,
             'Zato_HA_TLS_CA_File': authority.cert_path,
             'Zato_HA_TLS_Cert_File': issued.cert_path,
             'Zato_HA_TLS_Key_File': issued.key_path,
@@ -224,10 +222,14 @@ class Node:
 
 # ################################################################################################################################
 
-    def prepare_common(self, timers:'Timers') -> 'None':
-        """ Creates the directories of the node and fills in the part of its environment that every referee shares.
+    def prepare_common(self, lease:'Lease', timers:'Timers') -> 'None':
+        """ Creates the directories of the node and fills in the part of its environment that both storage modes share,
+        with the lease as the referee.
         """
         os.makedirs(self.data_dir, exist_ok=True)
+
+        self.service_account_dir = lease.service_account_dir
+        self.env.update(lease.node_env())
 
         self.env.update({
             'HOME': self.home_dir,
@@ -271,6 +273,7 @@ class Node:
             '-v', f'{ModuleCtx.Repository_Dir}:{ModuleCtx.Repository_Dir}',
             '-v', f'{self.run_dir}:{self.run_dir}{self.run_dir_options}',
             '-v', f'{ModuleCtx.Start_Script}:/ha-start.sh:ro',
+            '-v', f'{self.service_account_dir}:{TopologyCtx.Service_Account_Mount}:ro',
         ]
 
         for path in self.fault_mounts:

@@ -36,9 +36,6 @@ const LEASE_KIND: &str = "Lease";
 /// The annotation that holds the referee record.
 const RECORD_ANNOTATION: &str = "zato.io/ha-record";
 
-/// The annotation that holds the version a renewal was made from, which differs in every renewal.
-const RENEWED_FROM_ANNOTATION: &str = "zato.io/ha-renewed-from";
-
 /// The annotation that holds the address a node published.
 const ADDRESS_ANNOTATION: &str = "zato.io/ha-address";
 
@@ -54,7 +51,8 @@ const RESOURCE_VERSION_PATH: &str = "/metadata/resourceVersion";
 /// The JSON Pointer of the record annotation, in which `~1` stands for `/`.
 const RECORD_PATH: &str = "/metadata/annotations/zato.io~1ha-record";
 
-/// The JSON Pointer of the annotation with the version a renewal was made from.
+/// The JSON Pointer of the annotation `zato.io/ha-renewed-from`, which holds the version a renewal was made from
+/// and therefore differs in every renewal.
 const RENEWED_FROM_PATH: &str = "/metadata/annotations/zato.io~1ha-renewed-from";
 
 /// The JSON Pointer of the holder of a lease.

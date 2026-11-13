@@ -5,15 +5,16 @@
 
 //! The lease of the shared storage mode, which the active node renews and the standby watches.
 //!
-//! The active node rewrites its record at every heartbeat interval, which raises its version, and is isolated once
-//! no renewal was applied for the mark-out time. The standby measures on its own monotonic clock how long the version
-//! has not changed, restarts the measure at every read that fails, and takes over after the takeover time.
+//! The active node rewrites its record at every heartbeat interval in which its probe of the database succeeds,
+//! which raises its version. The standby measures on its own monotonic clock how long the version has not changed,
+//! restarts the measure at every read that fails, and takes over after the takeover time if its own probe of the
+//! database succeeds. The active node is never isolated by the lease, because the generation guard of the Zato
+//! server refuses every transaction of a replaced server, so an outage of the referee alone does not stop it.
 
 use std::time::Instant;
 
 use super::{Control, ControlError};
 use crate::record::RefereeRecord;
-use crate::referee::RefereeError;
 use crate::state::Role;
 
 impl Control {
@@ -37,32 +38,54 @@ impl Control {
         }
     }
 
+    /// Returns whether the probe of the database succeeds, logging only a change of the outcome.
+    fn database_reachable(&mut self) -> bool {
+        // The replicated storage mode has no shared database and never watches a lease.
+        let Some(probe) = &self.probe else {
+            return true;
+        };
+        let outcome = probe.probe();
+        let reachable = outcome.is_ok();
+        if reachable != self.database_reachable {
+            match outcome {
+                Ok(()) => tracing::info!("The database is reachable again"),
+                Err(error) => tracing::warn!("The database is not reachable: {error}"),
+            }
+        }
+        self.database_reachable = reachable;
+        reachable
+    }
+
     /// Rewrites the record of the active node, which raises its version, on the condition that the version is the one
     /// this node last wrote and that the record still names it at its generation.
     fn renew_lease(&mut self) -> Result<(), ControlError> {
         self.observed = None;
+
+        // A node that does not reach the database lets its lease lapse, so that a standby that reaches it takes over.
+        if !self.database_reachable() {
+            return Ok(());
+        }
+
         let generation = self.shared.state.lock().generation;
         let record = RefereeRecord::solo(generation, &self.shared.config.node_name);
 
         // A node that has just become active does not know the version of its record yet.
-        let Some(version) = self.lease_version else {
+        let Some(version) = self.lease_version.clone() else {
             return self.adopt_lease(&record);
         };
 
-        // The renewal counts from before it is sent, so that the isolation never begins later than the standby measures.
-        let sent = Instant::now();
-        match self.shared.referee.renew(&record, version) {
+        match self.shared.referee.renew(&record, &version) {
             Ok(Some(renewed)) => {
                 self.lease_version = Some(renewed);
-                self.last_renewal = sent;
-                self.end_isolation();
                 Ok(())
             }
 
             // A renewal whose answer was lost raised the version too, which the record then tells apart from a takeover.
             Ok(None) => self.adopt_lease(&record),
+
+            // The Zato server keeps running, and the next heartbeat renews again.
             Err(error) => {
-                self.isolate_if_lapsed(&error);
+                tracing::warn!("The lease was not renewed: {error}");
                 Ok(())
             }
         }
@@ -86,43 +109,17 @@ impl Control {
                 referee: None,
                 local: self.persisted_generation,
             }),
+
+            // The next heartbeat reads the record again.
             Err(error) => {
-                self.isolate_if_lapsed(&error);
+                tracing::warn!("The lease was not read: {error}");
                 Ok(())
             }
         }
     }
 
-    /// Isolates the active node once its lease was not renewed for the mark-out time, which stops the Zato server
-    /// before the standby may take over.
-    fn isolate_if_lapsed(&self, error: &RefereeError) {
-        let lapsed = self.last_renewal.elapsed();
-        if lapsed <= self.shared.config.timers.mark_out {
-            return;
-        }
-        let mut state = self.shared.state.lock();
-        let newly_isolated = !state.isolated;
-        state.isolated = true;
-        drop(state);
-        if newly_isolated {
-            tracing::warn!("The lease was not renewed for {lapsed:?}, the Zato server stops: {error}");
-            self.shared.changed.notify_all();
-        }
-    }
-
-    /// Ends the isolation of an active node whose lease was renewed, which starts the Zato server again.
-    fn end_isolation(&self) {
-        let mut state = self.shared.state.lock();
-        let was_isolated = state.isolated;
-        state.isolated = false;
-        drop(state);
-        if was_isolated {
-            tracing::info!("The lease was renewed, the Zato server starts again");
-            self.shared.changed.notify_all();
-        }
-    }
-
-    /// Reads the record on the standby and takes over once its version has not changed for the takeover time.
+    /// Reads the record on the standby and takes over once its version has not changed for the takeover time
+    /// and the database is reachable from this node.
     fn watch_lease(&mut self) -> Result<(), ControlError> {
         self.lease_version = None;
         let node_name = self.shared.config.node_name.clone();
@@ -141,9 +138,7 @@ impl Control {
                 "Taking over at generation {}, written by an earlier attempt",
                 current.value.generation
             );
-            self.become_active_solo(current.value.generation, "takeover")?;
-            self.last_renewal = self.takeover_sent;
-            return Ok(());
+            return self.become_active_solo(current.value.generation, "takeover");
         }
 
         let changed = self.observed.as_ref() != Some(&current);
@@ -159,15 +154,17 @@ impl Control {
             return Ok(());
         }
 
+        // A standby that does not reach the database would start a Zato server that cannot work, so it waits.
+        if !self.database_reachable() {
+            return Ok(());
+        }
+
         let next = current.value.generation + 1;
         let intended = RefereeRecord::solo(next, &node_name);
-        self.takeover_sent = Instant::now();
-        match self.shared.referee.compare_and_set(&intended, current.version) {
+        match self.shared.referee.compare_and_set(&intended, Some(&current.version)) {
             Ok(true) => {
                 tracing::info!("Taking over at generation {next} after the lease was not renewed");
-                self.become_active_solo(next, "takeover")?;
-                self.last_renewal = self.takeover_sent;
-                Ok(())
+                self.become_active_solo(next, "takeover")
             }
 
             // A renewal of the active node in the meantime changed the version, which the next read observes.
@@ -187,10 +184,12 @@ mod tests {
     use super::*;
     use crate::config::Timers;
     use crate::generation;
+    use crate::postgresql::{DatabaseProbe, ProbeError};
     use crate::record::{NodeAddress, Versioned};
-    use crate::referee::Referee;
-    use crate::referee::tests::MemoryReferee;
+    use crate::referee::tests::{MemoryReferee, version};
+    use crate::referee::{Referee, RefereeError};
     use crate::test_support::{self, NODE_A, NODE_B};
+    use parking_lot::Mutex;
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
     use std::thread;
@@ -218,11 +217,11 @@ mod tests {
             self.as_ref().read()
         }
 
-        fn compare_and_set(&self, record: &RefereeRecord, expected_version: u64) -> Result<bool, RefereeError> {
+        fn compare_and_set(&self, record: &RefereeRecord, expected_version: Option<&str>) -> Result<bool, RefereeError> {
             self.as_ref().compare_and_set(record, expected_version)
         }
 
-        fn renew(&self, record: &RefereeRecord, expected_version: u64) -> Result<Option<u64>, RefereeError> {
+        fn renew(&self, record: &RefereeRecord, expected_version: &str) -> Result<Option<String>, RefereeError> {
             self.as_ref().renew(record, expected_version)
         }
 
@@ -235,6 +234,22 @@ mod tests {
         }
     }
 
+    /// A probe kept in memory, which a test makes fail or succeed.
+    #[derive(Default)]
+    struct MemoryProbe {
+        /// Whether every probe fails.
+        unreachable: Mutex<bool>,
+    }
+
+    impl DatabaseProbe for Arc<MemoryProbe> {
+        fn probe(&self) -> Result<(), ProbeError> {
+            if *self.unreachable.lock() {
+                return Err(ProbeError("unreachable".to_owned()));
+            }
+            Ok(())
+        }
+    }
+
     /// Node A of the shared storage mode, with its files for as long as it exists.
     struct TestNode {
         /// The control loop of the node.
@@ -243,6 +258,9 @@ mod tests {
         /// The referee, which the test changes under the node.
         referee: Arc<MemoryReferee>,
 
+        /// The probe of the database, which the test makes fail or succeed.
+        probe: Arc<MemoryProbe>,
+
         /// The directory of the node's files.
         _dir: TempDir,
     }
@@ -250,20 +268,18 @@ mod tests {
     impl TestNode {
         /// Returns node A with `record` in the referee and the generation of the record in its generation file.
         fn new(record: Option<RefereeRecord>) -> Self {
-            let referee = Arc::new(MemoryReferee::default());
-            *referee.record.lock() = record.map(|value| Versioned {
-                value,
-                version: FIRST_VERSION,
-            });
+            let referee = Arc::new(MemoryReferee::holding(record, FIRST_VERSION));
+            let probe = Arc::new(MemoryProbe::default());
             let dir = tempfile::tempdir().unwrap();
             let config = test_support::shared_storage_config(NODE_A, dir.path(), TIMERS);
             generation::write(&config.generation_file(), FIRST_GENERATION).unwrap();
 
             let shared = test_support::shared(config, Box::new(Arc::clone(&referee)));
-            let control = Control::new(shared, Arc::new(AtomicBool::new(false))).unwrap();
+            let control = Control::new(shared, Some(Box::new(Arc::clone(&probe))), Arc::new(AtomicBool::new(false))).unwrap();
             Self {
                 control,
                 referee,
+                probe,
                 _dir: dir,
             }
         }
@@ -294,13 +310,22 @@ mod tests {
         }
 
         /// Replaces the record the referee holds, as the other node or a failover of the database does.
-        fn replace_record(&self, value: RefereeRecord, version: u64) {
-            *self.referee.record.lock() = Some(Versioned { value, version });
+        fn replace_record(&self, value: RefereeRecord, number: u64) {
+            *self.referee.record.lock() = Some(Versioned {
+                value,
+                version: version(number),
+            });
+            *self.referee.last_version.lock() = number;
         }
 
         /// Makes every operation of the referee fail or succeed.
         fn set_unreachable(&self, unreachable: bool) {
             *self.referee.unreachable.lock() = unreachable;
+        }
+
+        /// Makes every probe of the database fail or succeed.
+        fn set_database_unreachable(&self, unreachable: bool) {
+            *self.probe.unreachable.lock() = unreachable;
         }
     }
 
@@ -323,7 +348,7 @@ mod tests {
 
         // The node does not resume at once, so the standby that watched the lease takes over first ..
         assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
-        assert_eq!(node.record().version, FIRST_VERSION);
+        assert_eq!(node.record().version, version(FIRST_VERSION));
 
         // .. and without a standby, the node takes over its own record once the takeover time elapses.
         node.control.watch_lease().unwrap();
@@ -341,13 +366,33 @@ mod tests {
 
         // The first renewal of a node learns the version of its record ..
         node.control.renew_lease().unwrap();
-        assert_eq!(node.record().version, FIRST_VERSION);
+        assert_eq!(node.record().version, version(FIRST_VERSION));
 
         // .. and every next one raises it.
         node.control.renew_lease().unwrap();
         node.control.renew_lease().unwrap();
-        assert_eq!(node.record().version, FIRST_VERSION + 2);
+        assert_eq!(node.record().version, version(FIRST_VERSION + 2));
         assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+    }
+
+    #[test]
+    fn an_active_node_without_the_database_does_not_renew_its_lease() {
+        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        node.control.renew_lease().unwrap();
+        node.control.renew_lease().unwrap();
+        assert_eq!(node.record().version, version(FIRST_VERSION + 1));
+
+        // The version stays as it was, so the standby that reaches the database takes over ..
+        node.set_database_unreachable(true);
+        node.control.renew_lease().unwrap();
+        node.control.renew_lease().unwrap();
+        assert_eq!(node.record().version, version(FIRST_VERSION + 1));
+        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+
+        // .. unless the database is reachable again first.
+        node.set_database_unreachable(false);
+        node.control.renew_lease().unwrap();
+        assert_eq!(node.record().version, version(FIRST_VERSION + 2));
     }
 
     #[test]
@@ -360,6 +405,22 @@ mod tests {
         let next = FIRST_GENERATION + 1;
         assert_eq!(node.role(), (Role::ActiveSolo, next));
         assert_eq!(node.record().value, RefereeRecord::solo(next, NODE_A));
+    }
+
+    #[test]
+    fn a_standby_without_the_database_does_not_take_over() {
+        let mut node = TestNode::in_role(Role::StandbyInSync, NODE_B);
+        node.set_database_unreachable(true);
+        node.control.watch_lease().unwrap();
+        thread::sleep(PAST_TIMERS);
+        node.control.watch_lease().unwrap();
+        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
+        assert_eq!(node.record().value, RefereeRecord::solo(FIRST_GENERATION, NODE_B));
+
+        // The lease is still not renewed when the database is reachable again, so the standby takes over at once.
+        node.set_database_unreachable(false);
+        node.control.watch_lease().unwrap();
+        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION + 1));
     }
 
     #[test]
@@ -422,7 +483,7 @@ mod tests {
         node.replace_record(RefereeRecord::solo(FIRST_GENERATION, NODE_B), FIRST_VERSION);
         node.control.renew_lease().unwrap();
         assert_eq!(node.role(), (Role::Fenced, FIRST_GENERATION));
-        assert_eq!(node.record().version, FIRST_VERSION);
+        assert_eq!(node.record().version, version(FIRST_VERSION));
     }
 
     #[test]
@@ -433,28 +494,29 @@ mod tests {
         // The version is raised, which the node does not know yet ..
         *node.referee.lose_next_answer.lock() = true;
         node.control.renew_lease().unwrap();
-        assert_eq!(node.record().version, FIRST_VERSION + 1);
+        assert_eq!(node.record().version, version(FIRST_VERSION + 1));
 
         // .. so its next renewal is refused, after which it continues under the version of its own record.
         node.control.renew_lease().unwrap();
         node.control.renew_lease().unwrap();
-        assert_eq!(node.record().version, FIRST_VERSION + 2);
+        assert_eq!(node.record().version, version(FIRST_VERSION + 2));
         assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
     }
 
     #[test]
-    fn an_active_node_without_the_referee_is_isolated_until_it_renews() {
+    fn an_active_node_without_the_referee_keeps_serving() {
         let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
         node.control.renew_lease().unwrap();
         node.set_unreachable(true);
         thread::sleep(PAST_TIMERS);
         node.control.renew_lease().unwrap();
-        assert!(node.is_isolated());
-
-        node.set_unreachable(false);
         node.control.renew_lease().unwrap();
         assert!(!node.is_isolated());
         assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+
+        node.set_unreachable(false);
+        node.control.renew_lease().unwrap();
+        assert_eq!(node.record().version, version(FIRST_VERSION + 1));
     }
 
     #[test]

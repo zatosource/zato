@@ -13,7 +13,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # so raising the generation waits for the writes of the previous server in progress and every write that begins
 # after it finds the row changed. A server that was replaced therefore changes no row, whether it was stopped,
 # frozen or cut off from the network, and also when a failover of the database to a replica without the last raise
-# lets another server reach its generation again.
+# lets another server reach its generation again. A server that an active-standby node starts sets the generation
+# of the node's referee record in place of raising it, unless the stored generation is higher, in which case
+# the node was replaced before its server started and the server does no pub/sub work.
 
 # stdlib
 import os
@@ -30,18 +32,20 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.outage import call_until_available
 from zato.common.pubsub.sql.config import get_generation_file_path
 from zato.common.pubsub.sql.replaced import PubSubReplaced
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, anylist, callable_
+    from zato.common.typing_ import any_, anylist, callable_, intnone
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anylist = anylist
     callable_ = callable_
+    intnone = intnone
     Connection = Connection
     Engine = Engine
 
@@ -75,6 +79,13 @@ _lock_query = 'SELECT 1 FROM pubsub_active WHERE id = 1 AND generation = %s AND 
 # What raises the generation.
 _raise_query = text('UPDATE pubsub_active SET generation = generation + 1, owner = :owner WHERE id = 1 ' + \
     'RETURNING generation')
+
+# What sets the generation of an active-standby node, unless the stored generation is higher.
+_set_query = text('UPDATE pubsub_active SET generation = :generation, owner = :owner WHERE id = 1 ' + \
+    'AND generation <= :generation RETURNING generation')
+
+# The environment variable through which an active-standby node passes the generation of its referee record.
+_ha_generation_env = 'Zato_HA_Generation'
 
 # The lines of the generation file - the generation, then the owner.
 _generation_file_line_count = 2
@@ -219,14 +230,16 @@ class GenerationGuard:
 # ################################################################################################################################
 
 class _GenerationRaiser:
-    """ Raises the generation on a connection of its own, in a thread that the caller waits for.
+    """ Raises the generation on a connection of its own, in a thread that the caller waits for, or sets it
+    to the generation of an active-standby node. The generation remains None if the stored one is higher.
     """
 
-    def __init__(self, engine:'Engine', owner:'str') -> 'None':
+    def __init__(self, engine:'Engine', owner:'str', ha_generation:'intnone') -> 'None':
         self.engine = engine
         self.owner = owner
+        self.ha_generation = ha_generation
         self.backend_pid = 0
-        self.generation = 0
+        self.generation:'intnone' = None
         self.exception:'BaseException | None' = None
 
         # Set once the session that raises the generation knows its own process identifier.
@@ -237,7 +250,16 @@ class _GenerationRaiser:
             with self.engine.begin() as connection:
                 self.backend_pid = connection.execute(_backend_pid_query).scalar_one()
                 self.has_pid = True
-                self.generation = connection.execute(_raise_query, {'owner': self.owner}).scalar_one()
+
+                # A server without an active-standby node raises the generation by one ..
+                if self.ha_generation is None:
+                    self.generation = connection.execute(_raise_query, {'owner': self.owner}).scalar_one()
+
+                # .. and a server of a node sets the generation of the node, unless a later node set a higher one.
+                else:
+                    parameters = {'generation': self.ha_generation, 'owner': self.owner}
+                    self.generation = connection.execute(_set_query, parameters).scalar_one_or_none()
+
         except BaseException as e:
             self.exception = e
             self.has_pid = True
@@ -257,12 +279,13 @@ def _terminate_blockers(engine:'Engine', backend_pid:'int') -> 'anylist':
 
 # ################################################################################################################################
 
-def _raise_generation(engine:'Engine', owner:'str') -> 'int':
-    """ Raises the generation once and writes the owner. The transactions of the previous server that are still
-    in progress are waited for up to a fixed time, after which the sessions that still hold them are ended,
-    as a frozen or cut-off server would hold its row locks until PostgreSQL notices the lost client.
+def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone') -> 'intnone':
+    """ Raises the generation once, or sets the generation of an active-standby node, and writes the owner.
+    Returns None if the stored generation is higher than the one of the node. The transactions of the previous server
+    that are still in progress are waited for up to a fixed time, after which the sessions that still hold them
+    are ended, as a frozen or cut-off server would hold its row locks until PostgreSQL notices the lost client.
     """
-    raiser = _GenerationRaiser(engine, owner)
+    raiser = _GenerationRaiser(engine, owner, ha_generation)
 
     thread = Thread(target=raiser.run, daemon=True)
     thread.start()
@@ -321,32 +344,61 @@ def read_generation_file() -> 'ActiveServer':
 
 # ################################################################################################################################
 
-def _connect_and_raise_generation(get_engine:'callable_', owner:'str') -> 'tuple[Engine, int]':
+def _connect_and_raise_generation(
+    get_engine:'callable_',
+    owner:'str',
+    ha_generation:'intnone',
+    ) -> 'tuple[Engine, intnone]':
     """ Builds the engine, which creates the schema if needed, and raises the generation through it.
     """
     engine = get_engine()
-    generation = _raise_generation(engine, owner)
+    generation = _raise_generation(engine, owner, ha_generation)
 
     out = engine, generation
     return out
 
 # ################################################################################################################################
 
+def _get_ha_generation() -> 'intnone':
+    """ Returns the generation that an active-standby node passed to this server, or None without a node.
+    """
+    if ha_generation := os.environ.get(_ha_generation_env):
+        out = int(ha_generation)
+    else:
+        out = None
+
+    return out
+
+# ################################################################################################################################
+
 def take_over(get_engine:'callable_') -> 'GenerationGuard':
-    """ Makes this server the active one - raises the generation and writes an owner unique to this server,
-    waiting for the database to become available if it is not, records both and guards every subsequent transaction
-    of the engine with them. The engine is built within the wait as well, because building it already connects
-    to the database. A raise that is run again after an error writes the same owner.
+    """ Makes this server the active one - raises the generation, or sets the generation of its active-standby node,
+    and writes an owner unique to this server, waiting for the database to become available if it is not, records both
+    and guards every subsequent transaction of the engine with them. The engine is built within the wait as well,
+    because building it already connects to the database. A raise that is run again after an error writes the same owner.
     """
     owner = CryptoManager.generate_hex_string()
-    engine, generation = call_until_available('Pub/sub takeover', _connect_and_raise_generation, get_engine, owner)
+    ha_generation = _get_ha_generation()
+
+    engine, generation = call_until_available(
+        'Pub/sub takeover', _connect_and_raise_generation, get_engine, owner, ha_generation)
+
+    # A node that a later node replaced before its server set the generation leaves the server replaced from its start ..
+    if generation is None:
+        generation = cast_('int', ha_generation)
+        is_replaced = True
+        logger.warning('Pub/sub generation %s is below the current one, this server does no pub/sub work', generation)
+
+    # .. otherwise the server is the active one.
+    else:
+        is_replaced = False
+        logger.info('Pub/sub generation raised -> %s, owner:%s', generation, owner)
 
     write_generation_file(generation, owner)
 
     out = GenerationGuard(generation, owner)
+    out.is_replaced = is_replaced
     out.install(engine)
-
-    logger.info('Pub/sub generation raised -> %s, owner:%s', generation, owner)
 
     return out
 
