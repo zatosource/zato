@@ -30,9 +30,11 @@ use crate::record::{NodeAddress, RefereeRecord, Versioned};
 use crate::referee::{Referee, RefereeError, VERSION_ABSENT};
 use crate::wire;
 
-/// How long one request may take, a new connection included, which is shorter than the gap between the mark-out
-/// and the takeover timers.
-pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
+/// How long one request may take, a new connection included.
+///
+/// It is shorter than the gap between the mark-out and the takeover timers, and longer than a commit that waits
+/// for a synchronous standby under load.
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// The name under which the node appears among the sessions of `PostgreSQL`.
 const APPLICATION_NAME: &str = "zato-ha-node";

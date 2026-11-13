@@ -68,6 +68,10 @@ class ModuleCtx:
     # Where each container keeps its data
     Container_Data_Dir = '/var/lib/postgresql/data'
 
+    # Where the instances keep their data on the host, in memory, so that the syncs of three instances on one disk
+    # do not delay each other and the syncs of the nodes, as instances on hosts of their own do not
+    Host_Data_Dir = '/dev/shm/zato-ha-test-postgresql'
+
     # The key of the referee record of the pair
     Record_Key = 'zato/ha/default'
 
@@ -111,7 +115,7 @@ class PostgreSQLCluster(Referee):
         self.container_names:'strlist' = []
 
         for name in ModuleCtx.Instance_IPs:
-            instance = Instance(name, self.directory)
+            instance = Instance(name, ModuleCtx.Host_Data_Dir)
             self.instances[name] = instance
             self.container_names.append(instance.container_name)
 
@@ -150,6 +154,7 @@ class PostgreSQLCluster(Referee):
         """ Writes the certificates and the init scripts of the primary, returning the paths of both scripts.
         """
         shutil.rmtree(self.directory, ignore_errors=True)
+        shutil.rmtree(ModuleCtx.Host_Data_Dir, ignore_errors=True)
         os.makedirs(self.certs_dir)
         os.chmod(self.directory, _directory_mode)
         os.chmod(self.certs_dir, _directory_mode)
@@ -468,6 +473,8 @@ class PostgreSQLCluster(Referee):
     def remove(self) -> 'None':
         for container_name in self.container_names:
             remove_container(container_name)
+
+        shutil.rmtree(ModuleCtx.Host_Data_Dir, ignore_errors=True)
 
 # ################################################################################################################################
 # ################################################################################################################################

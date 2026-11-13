@@ -205,8 +205,9 @@ def test_haproxy(ha_pair:'HAEnvironment') -> 'None':
     for _ in range(ModuleCtx.Takeover_Count):
         active, standby = _get_pair(env)
 
-        killed_at = time.time()
+        # The time is taken once the kill returns, since the node still acknowledges publications until then.
         active.kill()
+        killed_at = time.time()
 
         takeover_recovery = _wait_for_acknowledgment(publisher, killed_at, ModuleCtx.Takeover_Recovery_Limit)
         logger.info('Clients reached %s %.2fs after %s was killed', standby.node_name, takeover_recovery,
