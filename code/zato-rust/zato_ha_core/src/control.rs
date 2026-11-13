@@ -12,11 +12,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::config::StorageMode;
 use crate::generation;
-use crate::record::{NodeAddress, RefereeRecord};
+use crate::record::{NodeAddress, RefereeRecord, Versioned};
 use crate::referee::{Transition, transition};
 use crate::state::{Role, Shared};
 use crate::wal;
+
+mod lease;
 
 /// How often the control loop evaluates the timers.
 const TICK: Duration = Duration::from_millis(100);
@@ -85,17 +88,48 @@ pub struct Control {
 
     /// When the referee record was last read.
     last_record_check: Instant,
+
+    /// When the lease was last renewed or watched, in the shared storage mode.
+    last_lease_check: Instant,
+
+    /// The version of the record that the active node last renewed, or `None` until it reads it, in the shared storage mode.
+    lease_version: Option<u64>,
+
+    /// When the last write that the referee applied for the active node was sent, in the shared storage mode.
+    last_renewal: Instant,
+
+    /// The record that the standby last saw change, in the shared storage mode.
+    observed: Option<Versioned<RefereeRecord>>,
+
+    /// When the standby last saw the record change or failed to read it, in the shared storage mode.
+    observed_at: Instant,
+
+    /// When the standby last sent a takeover, in the shared storage mode.
+    takeover_sent: Instant,
 }
 
 impl Control {
     /// Returns the control loop of a node.
     pub fn new(shared: Arc<Shared>, stop_requested: Arc<AtomicBool>) -> Result<Self, ControlError> {
         let persisted_generation = generation::read(&shared.config.generation_file())?;
+
+        // Links of a generation below the persisted one are refused before the record is read, because the snapshot
+        // of such a link would replace frames that this node acknowledged at the persisted generation.
+        let mut state = shared.state.lock();
+        state.generation = persisted_generation;
+        drop(state);
+
         Ok(Self {
             shared,
             stop_requested,
             persisted_generation,
             last_record_check: Instant::now(),
+            last_lease_check: Instant::now(),
+            lease_version: None,
+            last_renewal: Instant::now(),
+            observed: None,
+            observed_at: Instant::now(),
+            takeover_sent: Instant::now(),
         })
     }
 
@@ -111,7 +145,7 @@ impl Control {
         self.stop_requested.load(Ordering::Relaxed)
     }
 
-    /// Publishes the address of the node and decides its first role from the referee record.
+    /// Publishes the address of the node for the replication link and decides its first role from the referee record.
     fn bootstrap(&mut self) -> Result<(), ControlError> {
         let config = &self.shared.config;
         let address = NodeAddress {
@@ -119,7 +153,8 @@ impl Control {
             host: config.advertised_address.clone(),
             port: config.replication_port,
         };
-        while let Err(error) = self.shared.referee.publish_address(&address) {
+        let has_link = config.storage == StorageMode::Replicated;
+        while has_link && let Err(error) = self.shared.referee.publish_address(&address) {
             if self.stop_requested() {
                 return Ok(());
             }
@@ -131,6 +166,8 @@ impl Control {
             if self.stop_requested() {
                 return Ok(());
             }
+            // A write of the record that makes this node active counts as a renewal of its lease from before it was sent.
+            self.last_renewal = Instant::now();
             match self.decide_first_role()? {
                 Some(()) => return Ok(()),
                 None => thread::sleep(STARTUP_RETRY_INTERVAL),
@@ -191,7 +228,10 @@ impl Control {
 
         // A standby in sync that restarts still holds every frame it confirmed, since it confirms only synced frames.
         // An active node that had a standby in sync may lack frames it never synced, so it waits for the takeover.
-        let role = if record.is_standby_in_sync(&node_name) && record.generation == local {
+        // A standby of the shared storage mode reads the one database, so it may always take over.
+        let is_shared = self.shared.config.storage == StorageMode::Shared;
+        let was_in_sync = record.is_standby_in_sync(&node_name) && record.generation == local;
+        let role = if is_shared || was_in_sync {
             Role::StandbyInSync
         } else {
             Role::StandbyOut
@@ -221,6 +261,7 @@ impl Control {
         state.needs_mark_out = false;
         state.close_link();
         drop(state);
+        self.lease_version = None;
         self.shared.changed.notify_all();
         tracing::info!("Active alone at generation {generation} after {reason}");
         Ok(())
@@ -244,15 +285,18 @@ impl Control {
             self.persist(generation)?;
 
             let role = self.shared.state.lock().role;
-            match role {
-                Role::ActiveReplicated => self.check_standby()?,
-                Role::StandbyInSync => self.check_active()?,
-                Role::ActiveSolo => {
-                    let mut state = self.shared.state.lock();
-                    state.needs_mark_out = false;
-                    state.isolated = false;
-                }
-                Role::Down | Role::StandbyOut | Role::Joining | Role::Fenced => {}
+            match self.shared.config.storage {
+                StorageMode::Replicated => match role {
+                    Role::ActiveReplicated => self.check_standby()?,
+                    Role::StandbyInSync => self.check_active()?,
+                    Role::ActiveSolo => {
+                        let mut state = self.shared.state.lock();
+                        state.needs_mark_out = false;
+                        state.isolated = false;
+                    }
+                    Role::Down | Role::StandbyOut | Role::Joining | Role::Fenced => {}
+                },
+                StorageMode::Shared => self.check_lease(role)?,
             }
 
             if self.last_record_check.elapsed() >= RECORD_CHECK_INTERVAL {

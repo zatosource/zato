@@ -16,7 +16,7 @@ import sqlite3
 
 # Zato
 from zato.common.ha.barrier import wait_for_replication
-from zato.common.ha.common import is_active_standby, Synchronous_Databases
+from zato.common.ha.common import is_active_standby, is_shared_storage, Synchronous_Databases
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,12 +94,16 @@ class ReplicatedPragmas:
 
 def holds_log_for_node(replicated_database:'str') -> 'bool':
     """ Returns whether the log of a database is left to the active-standby node, which is the case for the databases
-    that the node replicates when this process runs in an environment of an active-standby pair.
+    that the node replicates when this process runs in an environment of an active-standby pair whose hosts
+    do not share one PostgreSQL database.
     """
+
+    # Our response to produce
+    out = False
+
     if replicated_database:
-        out = is_active_standby()
-    else:
-        out = False
+        if is_active_standby():
+            out = not is_shared_storage()
 
     return out
 

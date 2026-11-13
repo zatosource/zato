@@ -12,7 +12,8 @@ use std::sync::Arc;
 use tempfile::TempDir;
 
 use crate::config::{
-    DB_NAME_AUDIT, DB_NAME_COMMON, DB_NAME_PUBSUB, DatabaseConfig, NodeConfig, RefereeType, ShippingMode, Timers, TlsFiles,
+    ConsulConfig, DB_NAME_AUDIT, DB_NAME_COMMON, DB_NAME_PUBSUB, DatabaseConfig, NodeConfig, RefereeConfig, ShippingMode, StorageMode,
+    Timers, TlsFiles,
 };
 use crate::link::TlsContext;
 use crate::referee::Referee;
@@ -137,18 +138,31 @@ fn run_openssl(dir: &Path, args: &[&str]) {
 
 /// Returns the configuration of a node whose files are in `dir`.
 pub fn node_config(node: &str, dir: &Path, certificates: &Certificates, timers: Timers) -> NodeConfig {
+    let tls = certificates.files(node);
+    config(node, dir, StorageMode::Replicated, Some(tls), timers)
+}
+
+/// Returns the configuration of a node of the shared storage mode whose files are in `dir`.
+pub fn shared_storage_config(node: &str, dir: &Path, timers: Timers) -> NodeConfig {
+    config(node, dir, StorageMode::Shared, None, timers)
+}
+
+/// Returns the configuration of a node in a storage mode, with the TLS files of its replication link if it has one.
+fn config(node: &str, dir: &Path, storage: StorageMode, tls: Option<TlsFiles>, timers: Timers) -> NodeConfig {
     NodeConfig {
-        referee_type: RefereeType::Consul,
-        consul_address: format!("http://{LOOPBACK}:8500"),
-        consul_token: String::new(),
-        consul_ca_file: None,
-        consul_key: "zato/ha/test".to_owned(),
+        referee: RefereeConfig::Consul(ConsulConfig {
+            address: format!("http://{LOOPBACK}:8500"),
+            token: String::new(),
+            ca_file: None,
+            key: "zato/ha/test".to_owned(),
+        }),
+        storage,
         node_name: node.to_owned(),
         advertised_address: LOOPBACK.to_owned(),
         replication_port: 0,
         role_port: 0,
         data_dir: dir.to_path_buf(),
-        tls: certificates.files(node),
+        tls,
         timers,
         databases: vec![
             DatabaseConfig {
@@ -174,6 +188,6 @@ pub fn node_config(node: &str, dir: &Path, certificates: &Certificates, timers: 
 
 /// Returns the shared state of a node that has not read the referee record yet.
 pub fn shared(config: NodeConfig, referee: Box<dyn Referee>) -> Arc<Shared> {
-    let tls = TlsContext::load(&config.tls).unwrap();
+    let tls = config.tls.as_ref().map(|files| TlsContext::load(files).unwrap());
     Arc::new(Shared::new(config, referee, tls))
 }

@@ -74,7 +74,7 @@ def take_over(env:'HAEnvironment', fault:'str', workload:'Workload') -> 'tuple[N
 
     new_active = env.get_other(old_active)
 
-    record = env.consul.read_record()
+    record = env.referee.read_record()
     assert record is not None
     generation_before = record['generation']
 
@@ -82,13 +82,13 @@ def take_over(env:'HAEnvironment', fault:'str', workload:'Workload') -> 'tuple[N
     time.sleep(ModuleCtx.Traffic_Seconds)
 
     # .. which fails, and its standby takes over ..
-    addresses = get_isolation_addresses(new_active)
+    addresses = get_isolation_addresses(new_active, env.referee.ip)
     fault_started = apply_fault(old_active, fault, addresses)
 
     _ = new_active.wait_for_role(ModuleCtx.Active_Roles, ModuleCtx.Takeover_Timeout)
     takeover_time = time.time()
 
-    record = env.consul.read_record()
+    record = env.referee.read_record()
     assert record is not None
     assert record['active_node'] == new_active.node_name, record
     assert record['generation'] > generation_before, record

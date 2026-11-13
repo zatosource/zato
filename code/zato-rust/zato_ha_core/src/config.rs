@@ -5,8 +5,10 @@
 
 //! Configuration of the node, read from `Zato_HA_*` environment variables.
 //!
-//! A deployment sets the mode, the referee type, the Consul address and the Consul token,
-//! and every other variable overrides a default defined in this module.
+//! A deployment sets the mode and the referee type, with the Consul address and the Consul token for the Consul
+//! referee, or the `Zato_PubSub_DB_*` variables of the Zato server for the `PostgreSQL` referee, and every other
+//! variable overrides a default defined in this module. A pub/sub database on `PostgreSQL` puts the node
+//! in the shared storage mode, in which both hosts use the one database and nothing is replicated between them.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -74,6 +76,42 @@ pub const ENV_GENERATION: &str = "Zato_HA_Generation";
 /// The environment variable with the path of the pub/sub database, shared with the Zato server.
 pub const ENV_PUBSUB_DB_PATH: &str = "Zato_PubSub_DB_Path";
 
+/// The environment variable with the type of the pub/sub database, shared with the Zato server.
+pub const ENV_PUBSUB_DB_TYPE: &str = "Zato_PubSub_DB_Type";
+
+/// The environment variable with the host of the pub/sub database on `PostgreSQL`.
+pub const ENV_PUBSUB_DB_HOST: &str = "Zato_PubSub_DB_Host";
+
+/// The environment variable with the port of the pub/sub database on `PostgreSQL`.
+pub const ENV_PUBSUB_DB_PORT: &str = "Zato_PubSub_DB_Port";
+
+/// The environment variable with the user name of the pub/sub database on `PostgreSQL`.
+pub const ENV_PUBSUB_DB_USERNAME: &str = "Zato_PubSub_DB_Username";
+
+/// The environment variable with the password of the pub/sub database on `PostgreSQL`.
+pub const ENV_PUBSUB_DB_PASSWORD: &str = "Zato_PubSub_DB_Password";
+
+/// The environment variable with the file whose content is the password of the pub/sub database on `PostgreSQL`.
+pub const ENV_PUBSUB_DB_PASSWORD_FILE: &str = "Zato_PubSub_DB_Password_File";
+
+/// The environment variable with the name of the pub/sub database on `PostgreSQL`.
+pub const ENV_PUBSUB_DB_NAME: &str = "Zato_PubSub_DB_Name";
+
+/// The environment variable that turns on TLS to the pub/sub database on `PostgreSQL`.
+pub const ENV_PUBSUB_DB_SSL: &str = "Zato_PubSub_DB_SSL";
+
+/// The environment variable with the CA file that the certificate of `PostgreSQL` is verified against.
+pub const ENV_PUBSUB_DB_SSL_CA_FILE: &str = "Zato_PubSub_DB_SSL_CA_File";
+
+/// The environment variable with the client certificate file of mutual TLS to `PostgreSQL`.
+pub const ENV_PUBSUB_DB_SSL_CERT_FILE: &str = "Zato_PubSub_DB_SSL_Cert_File";
+
+/// The environment variable with the client key file of mutual TLS to `PostgreSQL`.
+pub const ENV_PUBSUB_DB_SSL_KEY_FILE: &str = "Zato_PubSub_DB_SSL_Key_File";
+
+/// The environment variable that turns off the verification of the certificate of `PostgreSQL`.
+pub const ENV_PUBSUB_DB_SSL_VERIFY: &str = "Zato_PubSub_DB_SSL_Verify";
+
 /// The environment variable with the path of the common database, shared with the Zato server.
 pub const ENV_COMMON_DB_PATH: &str = "Zato_Common_DB_Path";
 
@@ -85,6 +123,33 @@ pub const ENV_LOG_LEVEL: &str = "Zato_HA_Log_Level";
 
 /// The referee type backed by Consul.
 pub const REFEREE_TYPE_CONSUL: &str = "consul";
+
+/// The referee type backed by the pub/sub database on `PostgreSQL`.
+pub const REFEREE_TYPE_POSTGRESQL: &str = "postgresql";
+
+/// The pub/sub database type of the Zato server that is a `SQLite` file on each host.
+pub const PUBSUB_DB_TYPE_SQLITE: &str = "sqlite";
+
+/// The pub/sub database type of the Zato server that both hosts share.
+pub const PUBSUB_DB_TYPE_POSTGRESQL: &str = "postgresql";
+
+/// The default port of `PostgreSQL`.
+pub const DEFAULT_POSTGRESQL_PORT: u16 = 5432;
+
+/// The key of the referee record in the table of the `PostgreSQL` referee.
+pub const POSTGRESQL_RECORD_KEY: &str = "zato/ha/default";
+
+/// Whether TLS to `PostgreSQL` is on when the variable is not set, as in `zato.common.db_env.common`.
+pub const DEFAULT_POSTGRESQL_SSL: bool = false;
+
+/// Whether the certificate of `PostgreSQL` is verified when the variable is not set, as in `zato.common.db_env.common`.
+pub const DEFAULT_POSTGRESQL_SSL_VERIFY: bool = true;
+
+/// The values that a boolean variable reads as true, as in `zato.common.util.eval_`.
+const TRUE_VALUES: [&str; 6] = ["true", "yes", "on", "y", "t", "1"];
+
+/// The values that a boolean variable reads as false, as in `zato.common.util.eval_`.
+const FALSE_VALUES: [&str; 6] = ["false", "no", "off", "n", "f", "0"];
 
 /// The default port of the replication link.
 pub const DEFAULT_REPLICATION_PORT: u16 = 35_200;
@@ -161,11 +226,85 @@ impl std::fmt::Display for ConfigError {
 
 impl std::error::Error for ConfigError {}
 
+/// The settings of the Consul referee.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConsulConfig {
+    /// The address of the Consul agent.
+    pub address: String,
+
+    /// The Consul ACL token.
+    pub token: String,
+
+    /// The CA file for the certificate of Consul, if Consul is reached over TLS with a private CA.
+    pub ca_file: Option<PathBuf>,
+
+    /// The Consul key of the referee record.
+    pub key: String,
+}
+
+/// The TLS settings of the connections to `PostgreSQL`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PostgreSqlTls {
+    /// The CA file that the certificate of `PostgreSQL` is verified against, or the system store if not given.
+    pub ca_file: Option<PathBuf>,
+
+    /// The client certificate and key files of mutual TLS, if `PostgreSQL` requires a client certificate.
+    pub client_files: Option<(PathBuf, PathBuf)>,
+
+    /// Whether the certificate of `PostgreSQL` is verified.
+    pub verify: bool,
+}
+
+/// The settings of the `PostgreSQL` referee, which are those of the pub/sub database of the Zato server.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PostgreSqlConfig {
+    /// The host of `PostgreSQL`.
+    pub host: String,
+
+    /// The port of `PostgreSQL`.
+    pub port: u16,
+
+    /// The user name.
+    pub username: String,
+
+    /// The password, read from a file on every connection if the file is given.
+    pub password: PostgreSqlPassword,
+
+    /// The name of the database.
+    pub database: String,
+
+    /// TLS, if it is on.
+    pub tls: Option<PostgreSqlTls>,
+}
+
+/// Where the password of `PostgreSQL` comes from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PostgreSqlPassword {
+    /// The value of the password variable, empty if it is not set.
+    Value(String),
+
+    /// A file read again on every connection, so that a rotated password takes effect without a restart.
+    File(PathBuf),
+}
+
 /// The referee selected by the configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RefereeType {
+pub enum RefereeConfig {
     /// Consul KV with check-and-set writes.
-    Consul,
+    Consul(ConsulConfig),
+
+    /// A table in the pub/sub database on `PostgreSQL` with conditional updates.
+    PostgreSql(PostgreSqlConfig),
+}
+
+/// Where the databases of the Zato server are kept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StorageMode {
+    /// Each host keeps `SQLite` files, which the active node replicates to the standby.
+    Replicated,
+
+    /// Both hosts use one database on `PostgreSQL`, and the active node holds a lease on the referee record.
+    Shared,
 }
 
 /// How the frames of a database reach the standby.
@@ -220,20 +359,11 @@ pub struct Timers {
 /// The complete configuration of the node.
 #[derive(Debug, Clone)]
 pub struct NodeConfig {
-    /// The selected referee.
-    pub referee_type: RefereeType,
+    /// The selected referee and its settings.
+    pub referee: RefereeConfig,
 
-    /// The address of the Consul agent.
-    pub consul_address: String,
-
-    /// The Consul ACL token.
-    pub consul_token: String,
-
-    /// The CA file for the certificate of Consul, if Consul is reached over TLS with a private CA.
-    pub consul_ca_file: Option<PathBuf>,
-
-    /// The Consul key of the referee record.
-    pub consul_key: String,
+    /// Where the databases of the Zato server are kept.
+    pub storage: StorageMode,
 
     /// The name of this node.
     pub node_name: String,
@@ -250,8 +380,8 @@ pub struct NodeConfig {
     /// The directory of the node's own files.
     pub data_dir: PathBuf,
 
-    /// The files of mutual TLS on the replication link.
-    pub tls: TlsFiles,
+    /// The files of mutual TLS on the replication link, which the shared storage mode does not open.
+    pub tls: Option<TlsFiles>,
 
     /// The timers.
     pub timers: Timers,
@@ -317,16 +447,113 @@ fn seconds(source: &dyn VariableSource, name: &'static str, default: f64) -> Res
         })
 }
 
-/// Returns the referee type.
-fn referee_type(source: &dyn VariableSource) -> Result<RefereeType, ConfigError> {
+/// Returns a boolean from a variable or its default, reading the values that the Zato server reads.
+fn boolean(source: &dyn VariableSource, name: &'static str, default: bool) -> Result<bool, ConfigError> {
+    let Some(value) = source.variable(name) else {
+        return Ok(default);
+    };
+    let normalized = value.trim().to_lowercase();
+    if TRUE_VALUES.contains(&normalized.as_str()) {
+        return Ok(true);
+    }
+    if FALSE_VALUES.contains(&normalized.as_str()) {
+        return Ok(false);
+    }
+    Err(ConfigError::Invalid {
+        name,
+        reason: format!("`{value}` is neither true nor false"),
+    })
+}
+
+/// Returns the settings of the Consul referee.
+fn consul(source: &dyn VariableSource) -> Result<ConsulConfig, ConfigError> {
+    Ok(ConsulConfig {
+        address: required(source, ENV_CONSUL_ADDRESS)?,
+        token: required(source, ENV_CONSUL_TOKEN)?,
+        ca_file: source.variable(ENV_CONSUL_CA_FILE).map(PathBuf::from),
+        key: source.variable(ENV_CONSUL_KEY).unwrap_or_else(|| DEFAULT_CONSUL_KEY.to_owned()),
+    })
+}
+
+/// Returns the TLS settings of `PostgreSQL`, or `None` if TLS is off.
+fn postgresql_tls(source: &dyn VariableSource) -> Result<Option<PostgreSqlTls>, ConfigError> {
+    if !boolean(source, ENV_PUBSUB_DB_SSL, DEFAULT_POSTGRESQL_SSL)? {
+        return Ok(None);
+    }
+
+    // A client certificate is used only together with its key.
+    let client_files = match (
+        source.variable(ENV_PUBSUB_DB_SSL_CERT_FILE),
+        source.variable(ENV_PUBSUB_DB_SSL_KEY_FILE),
+    ) {
+        (Some(certificate), Some(key)) => Some((PathBuf::from(certificate), PathBuf::from(key))),
+        (None, None) => None,
+        (Some(_), None) => return Err(ConfigError::Missing(ENV_PUBSUB_DB_SSL_KEY_FILE)),
+        (None, Some(_)) => return Err(ConfigError::Missing(ENV_PUBSUB_DB_SSL_CERT_FILE)),
+    };
+
+    Ok(Some(PostgreSqlTls {
+        ca_file: source.variable(ENV_PUBSUB_DB_SSL_CA_FILE).map(PathBuf::from),
+        client_files,
+        verify: boolean(source, ENV_PUBSUB_DB_SSL_VERIFY, DEFAULT_POSTGRESQL_SSL_VERIFY)?,
+    }))
+}
+
+/// Returns the settings of the `PostgreSQL` referee, which are those of the pub/sub database.
+fn postgresql(source: &dyn VariableSource) -> Result<PostgreSqlConfig, ConfigError> {
+    // A database that authenticates without a password is given an empty one.
+    let password = source.variable(ENV_PUBSUB_DB_PASSWORD_FILE).map_or_else(
+        || PostgreSqlPassword::Value(source.variable(ENV_PUBSUB_DB_PASSWORD).unwrap_or_default()),
+        |path| PostgreSqlPassword::File(PathBuf::from(path)),
+    );
+    Ok(PostgreSqlConfig {
+        host: required(source, ENV_PUBSUB_DB_HOST)?,
+        port: port(source, ENV_PUBSUB_DB_PORT, DEFAULT_POSTGRESQL_PORT)?,
+        username: required(source, ENV_PUBSUB_DB_USERNAME)?,
+        password,
+        database: required(source, ENV_PUBSUB_DB_NAME)?,
+        tls: postgresql_tls(source)?,
+    })
+}
+
+/// Returns the referee and its settings.
+fn referee(source: &dyn VariableSource) -> Result<RefereeConfig, ConfigError> {
     let value = required(source, ENV_REFEREE_TYPE)?;
     match value.as_str() {
-        REFEREE_TYPE_CONSUL => Ok(RefereeType::Consul),
+        REFEREE_TYPE_CONSUL => Ok(RefereeConfig::Consul(consul(source)?)),
+        REFEREE_TYPE_POSTGRESQL => Ok(RefereeConfig::PostgreSql(postgresql(source)?)),
         _ => Err(ConfigError::Invalid {
             name: ENV_REFEREE_TYPE,
             reason: format!("unsupported referee type `{value}`"),
         }),
     }
+}
+
+/// Returns the storage mode, which the type of the pub/sub database of the Zato server decides.
+fn storage_mode(source: &dyn VariableSource) -> Result<StorageMode, ConfigError> {
+    let Some(value) = source.variable(ENV_PUBSUB_DB_TYPE) else {
+        return Ok(StorageMode::Replicated);
+    };
+    match value.as_str() {
+        PUBSUB_DB_TYPE_SQLITE => Ok(StorageMode::Replicated),
+        PUBSUB_DB_TYPE_POSTGRESQL => Ok(StorageMode::Shared),
+        _ => Err(ConfigError::Invalid {
+            name: ENV_PUBSUB_DB_TYPE,
+            reason: format!("unsupported pub/sub database type `{value}`"),
+        }),
+    }
+}
+
+/// Returns the files of mutual TLS on the replication link, which only the replicated storage mode opens.
+fn link_tls(source: &dyn VariableSource, storage: StorageMode) -> Result<Option<TlsFiles>, ConfigError> {
+    if storage == StorageMode::Shared {
+        return Ok(None);
+    }
+    Ok(Some(TlsFiles {
+        authority: PathBuf::from(required(source, ENV_TLS_CA_FILE)?),
+        certificate: PathBuf::from(required(source, ENV_TLS_CERT_FILE)?),
+        private_key: PathBuf::from(required(source, ENV_TLS_KEY_FILE)?),
+    }))
 }
 
 /// Returns the timers, refusing a takeover time that does not exceed the mark-out time.
@@ -403,9 +630,8 @@ impl NodeConfig {
             });
         }
 
-        let referee_type = referee_type(source)?;
-        let consul_address = required(source, ENV_CONSUL_ADDRESS)?;
-        let consul_token = required(source, ENV_CONSUL_TOKEN)?;
+        let referee = referee(source)?;
+        let storage = storage_mode(source)?;
 
         let data_dir = match source.variable(ENV_DATA_DIR) {
             Some(dir) => PathBuf::from(dir),
@@ -415,22 +641,15 @@ impl NodeConfig {
         let node_name = node_name(source)?;
         let advertised_address = source.variable(ENV_ADVERTISED_ADDRESS).unwrap_or_else(|| node_name.clone());
 
-        let tls = TlsFiles {
-            authority: PathBuf::from(required(source, ENV_TLS_CA_FILE)?),
-            certificate: PathBuf::from(required(source, ENV_TLS_CERT_FILE)?),
-            private_key: PathBuf::from(required(source, ENV_TLS_KEY_FILE)?),
-        };
+        let tls = link_tls(source, storage)?;
 
         let barrier_socket = source
             .variable(ENV_BARRIER_SOCKET)
             .map_or_else(|| data_dir.join(BARRIER_SOCKET_FILE_NAME), PathBuf::from);
 
         Ok(Self {
-            referee_type,
-            consul_address,
-            consul_token,
-            consul_ca_file: source.variable(ENV_CONSUL_CA_FILE).map(PathBuf::from),
-            consul_key: source.variable(ENV_CONSUL_KEY).unwrap_or_else(|| DEFAULT_CONSUL_KEY.to_owned()),
+            referee,
+            storage,
             databases: databases(source, &data_dir),
             node_name,
             advertised_address,
@@ -456,75 +675,4 @@ impl NodeConfig {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-
-    /// Variables kept in a map.
-    struct Variables(HashMap<String, String>);
-
-    impl VariableSource for Variables {
-        fn variable(&self, name: &str) -> Option<String> {
-            self.0.get(name).cloned()
-        }
-    }
-
-    /// Returns the variables of a minimal deployment.
-    fn minimal() -> Variables {
-        let pairs = [
-            (ENV_MODE, MODE_ACTIVE_STANDBY),
-            (ENV_REFEREE_TYPE, REFEREE_TYPE_CONSUL),
-            (ENV_CONSUL_ADDRESS, "https://consul:8501"),
-            (ENV_CONSUL_TOKEN, "token"),
-            (ENV_NODE_NAME, "zato-a"),
-            (ENV_TLS_CA_FILE, "/tls/ca.pem"),
-            (ENV_TLS_CERT_FILE, "/tls/zato-a.pem"),
-            (ENV_TLS_KEY_FILE, "/tls/zato-a.key"),
-            ("HOME", "/home/zato"),
-        ];
-        Variables(
-            pairs
-                .iter()
-                .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
-                .collect(),
-        )
-    }
-
-    #[test]
-    fn defaults_apply() {
-        let config = NodeConfig::from_source(&minimal()).unwrap();
-        assert_eq!(config.replication_port, DEFAULT_REPLICATION_PORT);
-        assert_eq!(config.timers.mark_out, Duration::from_secs(3));
-        assert_eq!(config.data_dir, PathBuf::from("/home/zato/env/qs-1"));
-        assert_eq!(config.advertised_address, "zato-a");
-        assert_eq!(config.databases.len(), 3);
-    }
-
-    #[test]
-    fn unknown_referee_is_refused() {
-        let mut variables = minimal();
-        variables.0.insert(ENV_REFEREE_TYPE.to_owned(), "etcd".to_owned());
-        let error = NodeConfig::from_source(&variables).unwrap_err();
-        assert!(matches!(
-            error,
-            ConfigError::Invalid {
-                name: ENV_REFEREE_TYPE,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn takeover_must_exceed_mark_out() {
-        let mut variables = minimal();
-        variables.0.insert(ENV_TAKEOVER_TIME.to_owned(), "3".to_owned());
-        let error = NodeConfig::from_source(&variables).unwrap_err();
-        assert!(matches!(
-            error,
-            ConfigError::Invalid {
-                name: ENV_TAKEOVER_TIME,
-                ..
-            }
-        ));
-    }
-}
+mod tests;

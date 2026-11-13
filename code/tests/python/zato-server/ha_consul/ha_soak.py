@@ -442,7 +442,7 @@ class MinuteReporter:
         published = counts_after[0] - counts_before[0] + len(publish_latencies)
         pulled = counts_after[1] - counts_before[1]
 
-        record = self.env.consul.read_record()
+        record = self.env.referee.read_record()
 
         out = MinuteReport()
         out.minute = minute

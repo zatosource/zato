@@ -7,22 +7,26 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The generation of the active server. One server is active at a time and its standby is a stopped container.
-# A server that starts on PostgreSQL raises the generation in the single row of pubsub_active, and each transaction
-# of the pub/sub database first confirms that the generation is still the one its server raised it to. A transaction
-# that writes locks the row for share, so raising the generation waits for the writes of the previous server in progress
-# and every write that begins after it finds the generation changed. A server that was replaced therefore changes
-# no row, whether it was stopped, frozen or cut off from the network.
+# A server that starts on PostgreSQL raises the generation in the single row of pubsub_active and writes a value unique
+# to itself, its owner, in the same statement, and each transaction of the pub/sub database first confirms that
+# the generation and the owner are still those of its server. A transaction that writes locks the row for share,
+# so raising the generation waits for the writes of the previous server in progress and every write that begins
+# after it finds the row changed. A server that was replaced therefore changes no row, whether it was stopped,
+# frozen or cut off from the network, and also when a failover of the database to a replica without the last raise
+# lets another server reach its generation again.
 
 # stdlib
 import os
 from logging import getLogger
 from threading import Thread
 from time import monotonic
+from typing import NamedTuple
 
 # SQLAlchemy
 from sqlalchemy import event, text
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.outage import call_until_available
 from zato.common.pubsub.sql.config import get_generation_file_path
 from zato.common.pubsub.sql.replaced import PubSubReplaced
@@ -65,15 +69,28 @@ _read_prefix = 'SELECT'
 _write_clause = 'FOR UPDATE'
 
 # What a transaction runs before its first read and before its first write.
-_check_query = 'SELECT 1 FROM pubsub_active WHERE id = 1 AND generation = %s'
-_lock_query = 'SELECT 1 FROM pubsub_active WHERE id = 1 AND generation = %s FOR SHARE'
+_check_query = 'SELECT 1 FROM pubsub_active WHERE id = 1 AND generation = %s AND owner = %s'
+_lock_query = 'SELECT 1 FROM pubsub_active WHERE id = 1 AND generation = %s AND owner = %s FOR SHARE'
 
 # What raises the generation.
-_raise_query = text('UPDATE pubsub_active SET generation = generation + 1 WHERE id = 1 RETURNING generation')
+_raise_query = text('UPDATE pubsub_active SET generation = generation + 1, owner = :owner WHERE id = 1 ' + \
+    'RETURNING generation')
+
+# The lines of the generation file - the generation, then the owner.
+_generation_file_line_count = 2
 
 # What ends the sessions that keep the generation from being raised.
 _backend_pid_query = text('SELECT pg_backend_pid()')
 _terminate_blockers_query = text('SELECT pid, pg_terminate_backend(pid) FROM unnest(pg_blocking_pids(:pid)) AS pid')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ActiveServer(NamedTuple):
+    """ The generation of the active server and the value unique to that server, as the generation file records them.
+    """
+    generation: int
+    owner: str
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,13 +112,14 @@ def _is_write(statement:'str') -> 'bool':
 # ################################################################################################################################
 
 class GenerationGuard:
-    """ Confirms the generation of this server in each transaction of one engine, before the first statement
-    of the transaction runs. A read confirms it once, and the first write of a transaction also locks the row
-    for share until the transaction ends.
+    """ Confirms the generation and the owner of this server in each transaction of one engine, before the first
+    statement of the transaction runs. A read confirms them once, and the first write of a transaction also locks
+    the row for share until the transaction ends.
     """
 
-    def __init__(self, generation:'int') -> 'None':
+    def __init__(self, generation:'int', owner:'str') -> 'None':
         self.generation = generation
+        self.owner = owner
 
         # Once replaced, a server remains replaced, because generations only ever increase.
         self.is_replaced = False
@@ -168,7 +186,7 @@ class GenerationGuard:
             query = _check_query
             new_state = _state_checked
 
-        cursor.execute(query, (self.generation,))
+        cursor.execute(query, (self.generation, self.owner))
         row = cursor.fetchone()
 
         if row is None:
@@ -204,8 +222,9 @@ class _GenerationRaiser:
     """ Raises the generation on a connection of its own, in a thread that the caller waits for.
     """
 
-    def __init__(self, engine:'Engine') -> 'None':
+    def __init__(self, engine:'Engine', owner:'str') -> 'None':
         self.engine = engine
+        self.owner = owner
         self.backend_pid = 0
         self.generation = 0
         self.exception:'BaseException | None' = None
@@ -218,7 +237,7 @@ class _GenerationRaiser:
             with self.engine.begin() as connection:
                 self.backend_pid = connection.execute(_backend_pid_query).scalar_one()
                 self.has_pid = True
-                self.generation = connection.execute(_raise_query).scalar_one()
+                self.generation = connection.execute(_raise_query, {'owner': self.owner}).scalar_one()
         except BaseException as e:
             self.exception = e
             self.has_pid = True
@@ -238,12 +257,12 @@ def _terminate_blockers(engine:'Engine', backend_pid:'int') -> 'anylist':
 
 # ################################################################################################################################
 
-def _raise_generation(engine:'Engine') -> 'int':
-    """ Raises the generation once. The transactions of the previous server that are still in progress are waited for
-    up to a fixed time, after which the sessions that still hold them are ended, as a frozen or cut-off server
-    would hold its row locks until PostgreSQL notices the lost client.
+def _raise_generation(engine:'Engine', owner:'str') -> 'int':
+    """ Raises the generation once and writes the owner. The transactions of the previous server that are still
+    in progress are waited for up to a fixed time, after which the sessions that still hold them are ended,
+    as a frozen or cut-off server would hold its row locks until PostgreSQL notices the lost client.
     """
-    raiser = _GenerationRaiser(engine)
+    raiser = _GenerationRaiser(engine, owner)
 
     thread = Thread(target=raiser.run, daemon=True)
     thread.start()
@@ -273,37 +292,40 @@ def _raise_generation(engine:'Engine') -> 'int':
 
 # ################################################################################################################################
 
-def write_generation_file(generation:'int') -> 'None':
-    """ Records the generation of this server for the cleanup process that the server's environment runs.
+def write_generation_file(generation:'int', owner:'str') -> 'None':
+    """ Records the generation and the owner of this server for the cleanup process that the server's environment runs.
     """
     path = get_generation_file_path()
     temp_path = f'{path}.tmp'
 
     with open(temp_path, 'w') as generation_file:
-        _ = generation_file.write(str(generation))
+        _ = generation_file.write(f'{generation}\n{owner}')
 
     os.replace(temp_path, path)
 
 # ################################################################################################################################
 
-def read_generation_file() -> 'int':
-    """ Returns the generation that the server of this environment recorded.
+def read_generation_file() -> 'ActiveServer':
+    """ Returns the generation and the owner that the server of this environment recorded.
     """
     path = get_generation_file_path()
 
     with open(path) as generation_file:
         value = generation_file.read()
 
-    out = int(value)
+    generation, owner = value.split('\n', _generation_file_line_count - 1)
+    generation = int(generation)
+
+    out = ActiveServer(generation, owner)
     return out
 
 # ################################################################################################################################
 
-def _connect_and_raise_generation(get_engine:'callable_') -> 'tuple[Engine, int]':
+def _connect_and_raise_generation(get_engine:'callable_', owner:'str') -> 'tuple[Engine, int]':
     """ Builds the engine, which creates the schema if needed, and raises the generation through it.
     """
     engine = get_engine()
-    generation = _raise_generation(engine)
+    generation = _raise_generation(engine, owner)
 
     out = engine, generation
     return out
@@ -311,18 +333,20 @@ def _connect_and_raise_generation(get_engine:'callable_') -> 'tuple[Engine, int]
 # ################################################################################################################################
 
 def take_over(get_engine:'callable_') -> 'GenerationGuard':
-    """ Makes this server the active one - raises the generation, waiting for the database to become available
-    if it is not, records the new generation and guards every subsequent transaction of the engine with it.
-    The engine is built within the wait as well, because building it already connects to the database.
+    """ Makes this server the active one - raises the generation and writes an owner unique to this server,
+    waiting for the database to become available if it is not, records both and guards every subsequent transaction
+    of the engine with them. The engine is built within the wait as well, because building it already connects
+    to the database. A raise that is run again after an error writes the same owner.
     """
-    engine, generation = call_until_available('Pub/sub takeover', _connect_and_raise_generation, get_engine)
+    owner = CryptoManager.generate_hex_string()
+    engine, generation = call_until_available('Pub/sub takeover', _connect_and_raise_generation, get_engine, owner)
 
-    write_generation_file(generation)
+    write_generation_file(generation, owner)
 
-    out = GenerationGuard(generation)
+    out = GenerationGuard(generation, owner)
     out.install(engine)
 
-    logger.info('Pub/sub generation raised -> %s', generation)
+    logger.info('Pub/sub generation raised -> %s, owner:%s', generation, owner)
 
     return out
 

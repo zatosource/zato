@@ -134,9 +134,9 @@ class PubSubCleanup:
 # ################################################################################################################################
 
     def guard_with_server_generation(self) -> 'bool':
-        """ On PostgreSQL, makes the sweeps confirm the generation that the server of this environment recorded,
-        so that the cleanup process of a server that was replaced changes no row. Returns whether a sweep may run,
-        which on PostgreSQL requires a server of this environment to have taken over the database.
+        """ On PostgreSQL, makes the sweeps confirm the generation and the owner that the server of this environment
+        recorded, so that the cleanup process of a server that was replaced changes no row. Returns whether a sweep
+        may run, which on PostgreSQL requires a server of this environment to have taken over the database.
         """
         engine = self.engine
 
@@ -151,15 +151,16 @@ class PubSubCleanup:
             logger.info('Sweep skipped, no server of this environment has taken over the database')
             return False
 
-        # .. and the generation is read again before each sweep, as the server may have been restarted.
-        generation = read_generation_file()
+        # .. and the generation and the owner are read again before each sweep, as the server may have been restarted.
+        active_server = read_generation_file()
 
         if self._guard is not None:
-            if self._guard.generation == generation:
-                return True
+            if self._guard.generation == active_server.generation:
+                if self._guard.owner == active_server.owner:
+                    return True
             self._guard.uninstall(engine)
 
-        self._guard = GenerationGuard(generation)
+        self._guard = GenerationGuard(active_server.generation, active_server.owner)
         self._guard.install(engine)
 
         return True

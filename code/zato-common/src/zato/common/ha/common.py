@@ -38,6 +38,12 @@ class ModuleCtx:
     # The value of the mode variable that turns the active-standby mode on
     Mode_Active_Standby = 'active-standby'
 
+    # The type of the pub/sub database, which selects the storage mode of the node
+    Env_PubSub_DB_Type = 'Zato_PubSub_DB_Type'
+
+    # The type of the pub/sub database under which both hosts of a pair use one PostgreSQL database
+    PubSub_DB_Type_PostgreSQL = 'postgresql'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -61,6 +67,17 @@ def is_active_standby() -> 'bool':
     mode = os.environ.get(ModuleCtx.Env_Mode, '')
 
     out = mode == ModuleCtx.Mode_Active_Standby
+    return out
+
+# ################################################################################################################################
+
+def is_shared_storage() -> 'bool':
+    """ Returns whether both hosts of the pair use one PostgreSQL database, in which case the node replicates
+    no database of its host.
+    """
+    db_type = os.environ.get(ModuleCtx.Env_PubSub_DB_Type, '')
+
+    out = db_type == ModuleCtx.PubSub_DB_Type_PostgreSQL
     return out
 
 # ################################################################################################################################

@@ -99,7 +99,7 @@ def test_bootstrap(ha_pair:'HAEnvironment') -> 'None':
     assert active_report['link'] == ModuleCtx.Link_Streaming, active_report
     assert standby_report['role'] == ModuleCtx.Role_Standby, standby_report
 
-    record = env.consul.read_record()
+    record = env.referee.read_record()
     assert record is not None
 
     assert record['active_node'] == active.node_name, record

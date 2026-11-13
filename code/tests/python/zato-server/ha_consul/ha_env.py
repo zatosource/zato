@@ -22,8 +22,8 @@ from dataclasses import dataclass, field
 from ha_authority import Authority
 from nodes import ModuleCtx as NodesCtx, Node, NodeHook, Timers
 from pair import add_service_row, import_jobs, ModuleCtx as PairCtx, render_job_file
-from topology import Consul, create_network, HAProxy, ModuleCtx as TopologyCtx, prepare_runtime_dir, remove_network, \
-    save_container_logs
+from topology import Consul, create_network, HAProxy, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, \
+    remove_network, save_container_logs
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, render_template, \
     run_quickstart_and_enmasse, SessionState
@@ -108,7 +108,7 @@ class HAEnvironment:
     """
     run_dir: 'str'
     authority: 'Authority'
-    consul: 'Consul'
+    referee: 'Referee'
     haproxy: 'HAProxy'
     nodes: 'dict[str, Node]'
     database: 'PubSubDatabase'
@@ -349,48 +349,77 @@ def _restore_node_directory(session:'HASession', node:'Node') -> 'None':
 
 # ################################################################################################################################
 
+def new_nodes(session:'HASession') -> 'list[Node]':
+    """ Returns both nodes, each with its directory restored from the copy that the session created.
+    """
+    out:'list[Node]' = []
+
+    for short_name in ModuleCtx.Node_Names:
+        node = Node(short_name=short_name, run_dir=session.run_dir)
+        _restore_node_directory(session, node)
+
+        node.server_directory = session.server_directories[short_name]
+        out.append(node)
+
+    return out
+
+# ################################################################################################################################
+
 def build_environment(session:'HASession', test_name:'str', timers:'Timers', hooks:'list[NodeHook]') -> 'HAEnvironment':
     """ Starts a new Consul, both nodes from the environments of the session and HAProxy, without waiting for the pair.
     Each hook prepares each node before its container starts.
     """
-    run_dir = session.run_dir
-
-    authority = Authority(os.path.join(run_dir, 'authority'))
+    authority = Authority(os.path.join(session.run_dir, 'authority'))
 
     # Each test has a Consul with no data, configured with the tokens of this test ..
-    consul = Consul(authority, run_dir)
+    consul = Consul(authority, session.run_dir)
     shutil.rmtree(consul.directory, ignore_errors=True)
     shutil.rmtree(consul.data_dir, ignore_errors=True)
 
     consul.start()
     consul.create_node_token()
 
-    nodes:'dict[str, Node]' = {}
-    node_list:'list[Node]' = []
-    node_ips:'list[str]' = []
+    node_list = new_nodes(session)
 
-    for short_name in ModuleCtx.Node_Names:
-        node = Node(short_name=short_name, run_dir=run_dir)
-        _restore_node_directory(session, node)
-
-        node.server_directory = session.server_directories[short_name]
+    for node in node_list:
         node.prepare(authority, consul, timers)
-
-        for hook in hooks:
-            hook.before_start(node)
-
-        nodes[short_name] = node
-        node_list.append(node)
-        node_ips.append(node.ip)
-
-    haproxy = HAProxy(run_dir, node_ips, NodesCtx.Server_Port, NodesCtx.Role_Port)
 
     database = PubSubDatabase(PubSubDBMode.SQLite)
 
+    out = start_pair(session, test_name, timers, hooks, authority, consul, database, node_list)
+    return out
+
+# ################################################################################################################################
+
+def start_pair(
+    session:'HASession',
+    test_name:'str',
+    timers:'Timers',
+    hooks:'list[NodeHook]',
+    authority:'Authority',
+    referee:'Referee',
+    database:'PubSubDatabase',
+    node_list:'list[Node]',
+) -> 'HAEnvironment':
+    """ Starts both prepared nodes with HAProxy in front of them, without waiting for the pair.
+    Each hook prepares each node before its container starts.
+    """
+    nodes:'dict[str, Node]' = {}
+    node_ips:'list[str]' = []
+
+    for node in node_list:
+        for hook in hooks:
+            hook.before_start(node)
+
+        nodes[node.short_name] = node
+        node_ips.append(node.ip)
+
+    haproxy = HAProxy(session.run_dir, node_ips, NodesCtx.Server_Port, NodesCtx.Role_Port)
+
     out = HAEnvironment(
-        run_dir=run_dir,
+        run_dir=session.run_dir,
         authority=authority,
-        consul=consul,
+        referee=referee,
         haproxy=haproxy,
         nodes=nodes,
         database=database,
@@ -398,14 +427,14 @@ def build_environment(session:'HASession', test_name:'str', timers:'Timers', hoo
         puller_password=session.puller_password,
         receivers=session.receivers,
         timers=timers,
-        logs_dir=os.path.join(run_dir, 'logs', test_name),
+        logs_dir=os.path.join(session.run_dir, 'logs', test_name),
         node_list=node_list,
         hooks=hooks,
     )
 
     out.point_database_at(node_list[0])
 
-    # .. and both nodes start together, with HAProxy in front of them.
+    # Both nodes start together, with HAProxy in front of them.
     for node in node_list:
         node.start()
 
@@ -419,7 +448,10 @@ def remove_environment(env:'HAEnvironment') -> 'None':
     """ Saves the logs of every container of a test and removes the containers.
     """
     env.save_logs()
-    save_container_logs(TopologyCtx.Consul_Container, env.logs_dir)
+
+    for container_name in env.referee.container_names:
+        save_container_logs(container_name, env.logs_dir)
+
     save_container_logs(TopologyCtx.HAProxy_Container, env.logs_dir)
 
     for node in env.node_list:
@@ -429,25 +461,38 @@ def remove_environment(env:'HAEnvironment') -> 'None':
             hook.after_remove(node)
 
     env.haproxy.remove()
-    env.consul.remove()
+    env.referee.remove()
+
+# ################################################################################################################################
+
+def clear_receivers(session:'HASession') -> 'None':
+    for receiver in session.receivers.values():
+        receiver.clear_output()
 
 # ################################################################################################################################
 
 @contextmanager
-def ready_pair(session:'HASession', test_name:'str', timers:'Timers', hooks:'list[NodeHook]') -> 'any_':
-    """ A pair with the given timers and node hooks that is ready - one node active with its server up and the other
-    its standby in sync, removed when the test completes.
+def until_removed(env:'HAEnvironment') -> 'any_':
+    """ Yields an environment once its pair is ready - one node active with its server up and the other
+    its standby in sync, and removes it when the test completes.
     """
-    for receiver in session.receivers.values():
-        receiver.clear_output()
-
-    env = build_environment(session, test_name, timers, hooks)
-
     try:
         _ = env.wait_for_pair(ModuleCtx.Pair_Ready_Timeout)
         yield env
     finally:
         remove_environment(env)
+
+# ################################################################################################################################
+
+@contextmanager
+def ready_pair(session:'HASession', test_name:'str', timers:'Timers', hooks:'list[NodeHook]') -> 'any_':
+    """ A pair with the given timers and node hooks that is ready, removed when the test completes.
+    """
+    clear_receivers(session)
+    env = build_environment(session, test_name, timers, hooks)
+
+    with until_removed(env) as out:
+        yield out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -25,7 +25,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # Zato
 from ha_env import create_session, ready_pair, remove_session
-from ha_resume import pytest_runtest_protocol, pytest_runtest_teardown # noqa: F401
+from ha_resume import pytest_runtest_protocol # noqa: F401 # pyright: ignore[reportUnusedImport]
+from ha_resume import pytest_runtest_teardown # noqa: F401 # pyright: ignore[reportUnusedImport]
 from nodes import Timers
 
 # ################################################################################################################################

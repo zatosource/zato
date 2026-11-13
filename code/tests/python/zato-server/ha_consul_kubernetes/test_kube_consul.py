@@ -20,12 +20,13 @@ from kube_checks import finish, get_pair, start_workload
 from kube_cluster import wait_for_rollout
 from kube_env import ModuleCtx as EnvCtx
 from kube_faults import delete_consul_pods
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from kube_env import KubeEnvironment
+    from kube_env import KubeConsul, KubeEnvironment
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,11 +54,12 @@ def test_consul_pods_deleted(kube_pair:'KubeEnvironment', pod_names:'list[str]')
     publications throughout, and Consul returns with its data.
     """
     env = kube_pair
+    consul = cast_('KubeConsul', env.referee)
     workload = start_workload(env)
 
     active, _ = get_pair(env)
 
-    record = env.consul.read_record()
+    record = consul.read_record()
     assert record is not None
     generation = record['generation']
 
@@ -70,9 +72,9 @@ def test_consul_pods_deleted(kube_pair:'KubeEnvironment', pod_names:'list[str]')
     assert len(workload.acknowledged) > acknowledged_before, 'No publication acknowledged while Consul pods were deleted'
 
     wait_for_rollout('statefulset', EnvCtx.Consul_StatefulSet)
-    env.consul.wait_until_ready()
+    consul.wait_until_ready()
 
-    record = env.consul.read_record()
+    record = consul.read_record()
     assert record is not None
     assert record['generation'] == generation, record
     assert record['active_node'] == active.pod_name, record

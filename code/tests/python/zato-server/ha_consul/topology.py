@@ -211,12 +211,41 @@ def _decode_value(value:'str') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Consul:
+class Referee:
+    """ The referee of a pair as the suites act on it - the address that a partition cuts a node off from,
+    the containers whose output the logs of a test keep, and its record.
+    """
+    ip: 'str'
+    container_names: 'strlist'
+
+    def read_record(self) -> 'anydict | None':
+        raise NotImplementedError()
+
+    def stop(self) -> 'None':
+        raise NotImplementedError()
+
+    def resume(self) -> 'None':
+        raise NotImplementedError()
+
+    def remove(self) -> 'None':
+        raise NotImplementedError()
+
+    def clear(self) -> 'None':
+        """ Removes what the pair of an earlier test left in the referee, which a referee that outlives one test needs.
+        """
+        raise NotImplementedError()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Consul(Referee):
     """ One Consul server with ACLs and TLS, whose management token the test process uses and whose node token
     may only read and write the key prefix of the pair.
     """
 
     def __init__(self, authority:'Authority', run_dir:'str') -> 'None':
+        self.ip = ModuleCtx.Consul_IP
+        self.container_names = [ModuleCtx.Consul_Container]
         self.authority = authority
         self.directory = os.path.join(run_dir, 'consul')
         self.config_dir = os.path.join(self.directory, 'config')

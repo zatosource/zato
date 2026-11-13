@@ -204,28 +204,39 @@ class Node:
 # ################################################################################################################################
 
     def prepare(self, authority:'Authority', consul:'Consul', timers:'Timers') -> 'None':
-        """ Creates the directories and the certificate of the node and fills in its environment.
+        """ Creates the directories and the certificate of the node and fills in its environment with Consul
+        as the referee and the replication link between the nodes.
         """
-        os.makedirs(self.data_dir, exist_ok=True)
+        self.prepare_common(timers)
 
         issued = authority.issue(self.node_name, [self.node_name], [self.ip])
 
         self.env.update({
-            'HOME': self.home_dir,
-            'Zato_HA_Mode': 'active-standby',
             'Zato_HA_Referee_Type': 'consul',
             'Zato_HA_Consul_Address': consul.address,
             'Zato_HA_Consul_Token': consul.node_token,
             'Zato_HA_Consul_CA_File': authority.cert_path,
             'Zato_HA_Consul_Key': TopologyCtx.Consul_Key,
+            'Zato_HA_TLS_CA_File': authority.cert_path,
+            'Zato_HA_TLS_Cert_File': issued.cert_path,
+            'Zato_HA_TLS_Key_File': issued.key_path,
+        })
+
+# ################################################################################################################################
+
+    def prepare_common(self, timers:'Timers') -> 'None':
+        """ Creates the directories of the node and fills in the part of its environment that every referee shares.
+        """
+        os.makedirs(self.data_dir, exist_ok=True)
+
+        self.env.update({
+            'HOME': self.home_dir,
+            'Zato_HA_Mode': 'active-standby',
             'Zato_HA_Node_Name': self.node_name,
             'Zato_HA_Advertised_Address': self.ip,
             'Zato_HA_Replication_Port': str(ModuleCtx.Replication_Port),
             'Zato_HA_Role_Port': str(ModuleCtx.Role_Port),
             'Zato_HA_Data_Dir': self.data_dir,
-            'Zato_HA_TLS_CA_File': authority.cert_path,
-            'Zato_HA_TLS_Cert_File': issued.cert_path,
-            'Zato_HA_TLS_Key_File': issued.key_path,
             'Zato_HA_Heartbeat_Time': str(timers.heartbeat),
             'Zato_HA_Mark_Out_Time': str(timers.mark_out),
             'Zato_HA_Takeover_Time': str(timers.takeover),

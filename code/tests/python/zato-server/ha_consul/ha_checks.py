@@ -23,7 +23,9 @@ from tempfile import TemporaryDirectory
 # Zato
 from checks import get_repeated_slots, get_starts_after, get_state_mismatches, read_run_log
 from pair import ModuleCtx as PairCtx
-from workload import get_count_mismatches, get_repeats_not_in_flight, Topic_Name, wait_for_deliveries
+from workload import get_count_mismatches, get_repeats_not_in_flight, read_rows as read_database_rows, Topic_Name, \
+    wait_for_deliveries
+from zato.common.test.pubsub_database import is_postgresql_mode
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -214,16 +216,38 @@ def wait_for_equal_copies(active:'Node', standby:'Node') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _decode_run_states(rows:'anylist') -> 'anydict':
+    out:'anydict' = {}
+
+    for name, data in rows:
+        out[name] = json.loads(data)
+
+    return out
+
+# ################################################################################################################################
+
 def read_run_states(node:'Node') -> 'anydict':
     """ Returns the run state of each scheduler job as the common database of a node holds it.
     """
     query = 'select name, data from zato_shared_object where object_type = ?'
     rows = read_rows(node.db_path(ModuleCtx.Common_DB_File), query, [PairCtx.Run_State_Object_Type])
 
-    out:'anydict' = {}
+    out = _decode_run_states(rows)
+    return out
 
-    for name, data in rows:
-        out[name] = json.loads(data)
+# ################################################################################################################################
+
+def read_active_run_states(env:'HAEnvironment', active:'Node') -> 'anydict':
+    """ Returns the run state of each scheduler job as the active node reads it - from its own common database,
+    or from the PostgreSQL database that both nodes share.
+    """
+    if is_postgresql_mode(env.database.mode):
+        object_type = "'" + PairCtx.Run_State_Object_Type + "'"
+        query = f'select name, data from zato_shared_object where object_type = {object_type}'
+        rows = read_database_rows(cast_('any_', env), query)
+        out = _decode_run_states(rows)
+    else:
+        out = read_run_states(active)
 
     return out
 
@@ -242,7 +266,7 @@ def check_scheduler(env:'HAEnvironment', active:'Node', unrun_claims:'int'=0) ->
         repeated = get_repeated_slots(entries)
         assert not repeated, repeated
 
-        states = read_run_states(active)
+        states = read_active_run_states(env, active)
         mismatches = get_state_mismatches(entries, states, unrun_claims)
 
         if not mismatches:
@@ -283,10 +307,16 @@ def check_no_runs_while_replaced(env:'HAEnvironment', replaced:'Node', boundary:
 
 # ################################################################################################################################
 
-def check_publications_stored(active:'Node', msg_ids:'strlist') -> 'None':
-    """ Checks that the active node holds every publication with the given message IDs.
+def check_publications_stored(env:'HAEnvironment', active:'Node', msg_ids:'strlist') -> 'None':
+    """ Checks that the pub/sub database of the active node holds every publication with the given message IDs.
     """
-    rows = read_rows(active.db_path(ModuleCtx.PubSub_DB_File), 'select msg_id from pubsub_message')
+    query = 'select msg_id from pubsub_message'
+
+    if is_postgresql_mode(env.database.mode):
+        rows = read_database_rows(cast_('any_', env), query)
+    else:
+        rows = read_rows(active.db_path(ModuleCtx.PubSub_DB_File), query)
+
     stored:'set[str]' = set()
 
     for row in rows:
@@ -348,7 +378,11 @@ def watch_roles(env:'HAEnvironment', seconds:'float') -> 'strlist':
 
 def check_copies(env:'HAEnvironment', active:'Node') -> 'None':
     """ Checks the integrity of both copies and, once the standby caught up, that their contents are equal.
+    The nodes of a pair on PostgreSQL hold no copies, as both use the database they share.
     """
+    if is_postgresql_mode(env.database.mode):
+        return
+
     standby = env.get_other(active)
     wait_for_equal_copies(active, standby)
 

@@ -1,0 +1,122 @@
+# One PostgreSQL instance in the zone without Zato pods, with TLS, which both pods of the pair share as the pub/sub
+# database and as the referee. The Secret postgresql-tls holds its certificate and the CA, the Secret postgresql-init
+# holds the init script that turns TLS on, and the Secret postgresql-auth holds the password of its user.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: ${namespace}
+spec:
+  selector:
+    app: postgresql
+  ports:
+    - name: postgresql
+      port: ${postgresql_port}
+      targetPort: ${postgresql_port}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-external
+  namespace: ${namespace}
+spec:
+  type: NodePort
+  selector:
+    app: postgresql
+  ports:
+    - name: postgresql
+      port: ${postgresql_port}
+      targetPort: ${postgresql_port}
+      nodePort: ${postgresql_node_port}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: ${namespace}
+spec:
+  serviceName: postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      terminationGracePeriodSeconds: 10
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - ${postgresql_zone}
+      containers:
+        - name: postgresql
+          image: ${postgresql_image}
+          imagePullPolicy: Never
+          args: ${postgresql_args}
+          env:
+            - name: POSTGRES_USER
+              value: ${postgresql_user}
+            - name: POSTGRES_DB
+              value: ${postgresql_db}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-auth
+                  key: password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgresql
+              containerPort: ${postgresql_port}
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -h
+                - 127.0.0.1
+                - -U
+                - ${postgresql_user}
+                - -d
+                - ${postgresql_db}
+            periodSeconds: 2
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: tls
+              mountPath: /certs-in
+              readOnly: true
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: tls
+          secret:
+            secretName: postgresql-tls
+        - name: init
+          secret:
+            secretName: postgresql-init
+            defaultMode: 0755
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: ${postgresql_shm_size}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 1Gi

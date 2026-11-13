@@ -30,7 +30,8 @@ sys.path.insert(0, _ha_consul_dir)
 sys.path.insert(0, _here)
 
 # Zato
-from ha_resume import pytest_runtest_protocol, pytest_runtest_teardown # noqa: F401
+from ha_resume import pytest_runtest_protocol # noqa: F401 # pyright: ignore[reportUnusedImport]
+from ha_resume import pytest_runtest_teardown # noqa: F401 # pyright: ignore[reportUnusedImport]
 from kube_cluster import delete_cluster
 from kube_env import create_kube_session, ready_kube_pair, remove_kube_session
 from kube_faults import restore_cluster

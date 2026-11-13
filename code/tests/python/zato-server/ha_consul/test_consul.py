@@ -20,12 +20,16 @@ import pytest
 # Zato
 from ha_checks import check_copies, check_scheduler
 from ha_traffic import TimedPublisher
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from ha_env import HAEnvironment
+    from topology import Consul
+
+    Consul = Consul
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,12 +93,12 @@ def test_outage_with_standby_in_sync(ha_pair:'HAEnvironment', outage_seconds:'in
     time.sleep(ModuleCtx.Traffic_Seconds)
 
     outage_started = time.time()
-    env.consul.stop()
+    env.referee.stop()
 
     time.sleep(outage_seconds)
 
     outage_ended = time.time()
-    env.consul.resume()
+    env.referee.resume()
 
     time.sleep(ModuleCtx.Traffic_Seconds)
     publisher.stop()
@@ -127,7 +131,7 @@ def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
     time.sleep(ModuleCtx.Traffic_Seconds)
 
     # Consul becomes unavailable and the standby fails during the outage ..
-    env.consul.stop()
+    env.referee.stop()
     time.sleep(ModuleCtx.Traffic_Seconds)
 
     standby_failed = time.time()
@@ -145,7 +149,7 @@ def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
     assert errors > 0, 'No client received an error during the outage'
 
     # .. after which the active node marks the standby out and continues alone ..
-    env.consul.resume()
+    env.referee.resume()
     _ = active.wait_for_role(ModuleCtx.Active_Solo, ModuleCtx.Mark_Out_Timeout)
     _ = active.wait_until_server_up(ModuleCtx.Mark_Out_Timeout)
 
@@ -173,7 +177,8 @@ def test_referee_data_loss(ha_pair:'HAEnvironment') -> 'None':
     so both nodes stop with an error and neither bootstraps a new generation.
     """
     env = ha_pair
-    env.consul.recreate_without_data()
+    consul = cast_('Consul', env.referee)
+    consul.recreate_without_data()
 
     deadline = time.monotonic() + ModuleCtx.Stop_Timeout
 
@@ -194,7 +199,7 @@ def test_referee_data_loss(ha_pair:'HAEnvironment') -> 'None':
         logs = node.read_logs()
         assert ModuleCtx.Data_Loss_Text in logs, f'{node.node_name} stopped without the error of a referee that lost data'
 
-    record = env.consul.read_record()
+    record = env.referee.read_record()
     assert record is None, f'A new generation was bootstrapped -> {record}'
 
 # ################################################################################################################################

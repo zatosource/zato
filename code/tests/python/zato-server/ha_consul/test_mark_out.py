@@ -82,7 +82,7 @@ def test_mark_out(ha_pair:'HAEnvironment', fault:'str') -> 'None':
     fault_started = apply_fault(standby, fault, [active.ip])
     _ = active.wait_for_role(ModuleCtx.Active_Solo, ModuleCtx.Mark_Out_Timeout)
 
-    record = env.consul.read_record()
+    record = env.referee.read_record()
     assert record is not None
     assert record['active_node'] == active.node_name, record
     assert not record['standby_in_sync'], record

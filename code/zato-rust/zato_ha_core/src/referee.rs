@@ -31,6 +31,13 @@ pub trait Referee: Send + Sync {
     /// [`VERSION_ABSENT`] creates the record only if it does not exist.
     fn compare_and_set(&self, record: &RefereeRecord, expected_version: u64) -> Result<bool, RefereeError>;
 
+    /// Rewrites `record` unchanged, which raises its version, only if the version is still `expected_version`
+    /// and the record still equals `record`, returning the new version, or `None` if either condition fails.
+    ///
+    /// A record that another node created again at the same version after the referee lost data
+    /// differs from `record`, so the lease of the node that it does not name is not renewed.
+    fn renew(&self, record: &RefereeRecord, expected_version: u64) -> Result<Option<u64>, RefereeError>;
+
     /// Publishes the address of this node under its own key.
     fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError>;
 
@@ -124,6 +131,20 @@ pub mod tests {
             });
             true
         }
+
+        /// Raises the version of the record if it is the expected record at the expected version, and returns
+        /// the raised version.
+        fn raise_version(&self, record: &RefereeRecord, expected_version: u64) -> Option<u64> {
+            let mut current = self.record.lock();
+            let versioned = current.as_mut()?;
+            if versioned.version != expected_version || versioned.value != *record {
+                return None;
+            }
+            versioned.version += 1;
+            let out = versioned.version;
+            drop(current);
+            Some(out)
+        }
     }
 
     impl Referee for MemoryReferee {
@@ -146,6 +167,20 @@ pub mod tests {
                 return Err(RefereeError("answer lost".to_owned()));
             }
             Ok(applied)
+        }
+
+        fn renew(&self, record: &RefereeRecord, expected_version: u64) -> Result<Option<u64>, RefereeError> {
+            if *self.unreachable.lock() {
+                return Err(RefereeError("unreachable".to_owned()));
+            }
+            let renewed = self.raise_version(record, expected_version);
+
+            // The version is raised before the answer is lost, as it is when a network drops a response.
+            let lose = std::mem::take(&mut *self.lose_next_answer.lock());
+            if lose {
+                return Err(RefereeError("answer lost".to_owned()));
+            }
+            Ok(renewed)
         }
 
         fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError> {

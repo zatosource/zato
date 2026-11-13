@@ -252,7 +252,7 @@ fn handle_connection(shared: &Shared, tcp: TcpStream) -> Result<(), Error> {
         sender,
         receiver,
         peer_certificate,
-    } = shared.tls.accept(tcp)?;
+    } = shared.link_tls()?.accept(tcp)?;
 
     let (hello, receiver) = receiver.receive()?;
     let Message::Hello { generation, active_node } = hello else {
@@ -299,8 +299,12 @@ pub fn serve(shared: &Arc<Shared>) -> Result<(), Error> {
 mod tests {
     use super::*;
     use crate::config::Timers;
+    use crate::control::Control;
+    use crate::generation;
+    use crate::link::TlsContext;
     use crate::referee::tests::MemoryReferee;
-    use crate::test_support::{self, Certificates, NODE_B};
+    use crate::test_support::{self, Certificates, LOOPBACK, NODE_A, NODE_B};
+    use std::sync::atomic::AtomicBool;
     use std::time::Duration;
 
     /// The timers of a node whose loops do not run in a test.
@@ -325,5 +329,39 @@ mod tests {
 
         shared.state.lock().session += 1;
         assert!(enter_gate(&shared, earlier).is_none());
+    }
+
+    #[test]
+    fn a_restarted_node_refuses_a_link_below_its_persisted_generation() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let config = test_support::node_config(NODE_B, dir.path(), &certificates, TIMERS);
+        generation::write(&config.generation_file(), 3).unwrap();
+        let shared = test_support::shared(config, Box::new(MemoryReferee::default()));
+        let _control = Control::new(Arc::clone(&shared), Arc::new(AtomicBool::new(false))).unwrap();
+
+        let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let accepting = Arc::clone(&shared);
+        let server = std::thread::spawn(move || {
+            let (tcp, _) = listener.accept().unwrap();
+            let _ = handle_connection(&accepting, tcp);
+        });
+
+        let tls = TlsContext::load(&certificates.files(NODE_A)).unwrap();
+        let (sender, receiver) = tls.connect(NODE_B, LOOPBACK, port).unwrap();
+        let hello = Message::Hello {
+            generation: 1,
+            active_node: NODE_A.to_owned(),
+        };
+        sender.send(&hello, TIMERS.mark_out).unwrap();
+        let (reply, _receiver) = receiver.receive().unwrap();
+        server.join().unwrap();
+
+        assert_eq!(reply, Message::Refused { generation: 3 });
+        let state = shared.state.lock();
+        let role_and_generation = (state.role, state.generation);
+        drop(state);
+        assert_eq!(role_and_generation, (Role::Down, 3));
     }
 }

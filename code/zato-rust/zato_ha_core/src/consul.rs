@@ -32,6 +32,12 @@ const STATUS_OK: u16 = 200;
 /// The suffix of the keys under which the nodes publish their addresses.
 const NODES_SUFFIX: &str = "nodes";
 
+/// The query of a read of the record, which only a server whose leadership a quorum confirms answers.
+const CONSISTENT_QUERY: &str = "?consistent";
+
+/// The query of a read of every key under a prefix.
+const RECURSE_QUERY: &str = "?recurse=true";
+
 /// One entry of a Consul KV read.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -95,12 +101,9 @@ impl ConsulReferee {
         format!("{}/{NODES_SUFFIX}/{node_name}", self.key)
     }
 
-    /// Reads the entries of a key, or of every key under a prefix with `recurse`.
-    fn read_entries(&self, key: &str, recurse: bool) -> Result<Vec<KvEntry>, RefereeError> {
-        let mut url = self.url(key);
-        if recurse {
-            url.push_str("?recurse=true");
-        }
+    /// Reads the entries of a key with `query` appended to its URL.
+    fn read_entries(&self, key: &str, query: &str) -> Result<Vec<KvEntry>, RefereeError> {
+        let url = format!("{}{query}", self.url(key));
         let mut response = self
             .agent
             .get(&url)
@@ -161,7 +164,8 @@ fn decode_value<T: serde::de::DeserializeOwned>(entry: &KvEntry) -> Result<T, Re
 
 impl Referee for ConsulReferee {
     fn read(&self) -> Result<Option<Versioned<RefereeRecord>>, RefereeError> {
-        let entries = self.read_entries(&self.key, false)?;
+        // A former leader that a new one replaced answers a read in the default mode with a superseded record.
+        let entries = self.read_entries(&self.key, CONSISTENT_QUERY)?;
         let Some(entry) = entries.first() else {
             return Ok(None);
         };
@@ -177,6 +181,25 @@ impl Referee for ConsulReferee {
         self.write(&self.key, &body, Some(expected_version))
     }
 
+    fn renew(&self, record: &RefereeRecord, expected_version: u64) -> Result<Option<u64>, RefereeError> {
+        // The check-and-set of Consul compares the index alone, so the value is compared on a read first,
+        // and the write under the same index fails if anything changed the key after that read.
+        let current = self.read()?;
+        let unchanged = current.is_some_and(|versioned| versioned.version == expected_version && versioned.value == *record);
+        if !unchanged {
+            return Ok(None);
+        }
+        if !self.compare_and_set(record, expected_version)? {
+            return Ok(None);
+        }
+
+        // Consul answers a write with its outcome only, so the new index is read back.
+        let renewed = self.read()?;
+        Ok(renewed
+            .filter(|versioned| versioned.value == *record)
+            .map(|versioned| versioned.version))
+    }
+
     fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError> {
         let body = wire::encode(address).map_err(|error| RefereeError(format!("JSON value: {error}")))?;
         let key = self.address_key(&address.node_name);
@@ -189,7 +212,7 @@ impl Referee for ConsulReferee {
 
     fn read_addresses(&self) -> Result<Vec<NodeAddress>, RefereeError> {
         let prefix = format!("{}/{NODES_SUFFIX}/", self.key);
-        let entries = self.read_entries(&prefix, true)?;
+        let entries = self.read_entries(&prefix, RECURSE_QUERY)?;
         entries.iter().map(decode_value).collect()
     }
 }
@@ -199,9 +222,14 @@ mod tests {
     use super::*;
     use crate::referee::VERSION_ABSENT;
     use crate::test_support::{LOOPBACK, NODE_A, NODE_B};
+    use std::io::{BufRead, BufReader, Write};
+    use std::net::TcpListener;
     use std::process::Command;
     use std::thread;
     use std::time::Instant;
+
+    /// The answer of a server to a read of a key that does not exist.
+    const NOT_FOUND_RESPONSE: &[u8] = b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 
     /// The Consul image of the test container.
     const CONSUL_IMAGE: &str = "hashicorp/consul:1.21.4";
@@ -351,6 +379,25 @@ mod tests {
         check_creation(&consul);
         check_stale_version(&consul);
         check_addresses(&consul);
+    }
+
+    #[test]
+    fn the_record_is_read_in_the_consistent_mode() {
+        let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut request_line = String::new();
+            reader.read_line(&mut request_line).unwrap();
+            stream.write_all(NOT_FOUND_RESPONSE).unwrap();
+            request_line
+        });
+
+        let referee = ConsulReferee::new(&address, "", "zato/ha/test", None).unwrap();
+        assert!(referee.read().unwrap().is_none());
+        let request_line = server.join().unwrap();
+        assert_eq!(request_line.trim_end(), "GET /v1/kv/zato/ha/test?consistent HTTP/1.1");
     }
 
     #[test]

@@ -354,7 +354,7 @@ impl Shipper {
             return Err(Error::new(ErrorKind::NotFound, "the other node has not published its address"));
         };
 
-        let (sender, receiver) = self.shared.tls.connect(&peer.node_name, &peer.host, peer.port)?;
+        let (sender, receiver) = self.shared.link_tls()?.connect(&peer.node_name, &peer.host, peer.port)?;
         let (generation, role) = {
             let state = self.shared.state.lock();
             (state.generation, state.role)

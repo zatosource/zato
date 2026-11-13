@@ -236,15 +236,36 @@ register_traces(metadata)
 
 # ################################################################################################################################
 
-# The single row with the generation of the active server. Each server that starts on PostgreSQL raises the generation,
-# and every pub/sub transaction confirms that its server's generation is still the current one - see generation.py.
+# The single row with the generation of the active server and the value unique to that server. Each server that starts
+# on PostgreSQL raises the generation and writes its own value, and every pub/sub transaction confirms that both
+# are still those of its server - see generation.py.
 active_table = Table('pubsub_active', metadata,
     Column('id', Integer, primary_key=True, autoincrement=False),
     Column('generation', BigInteger, nullable=False),
+    Column('owner', String(_short_column_len), nullable=False, server_default=''),
 )
 
 # The row exists from the moment the table does.
 event.listen(active_table, 'after_create', DDL('INSERT INTO pubsub_active (id, generation) VALUES (1, 0)'))
+
+# A PostgreSQL database created before the owner column receives it when the schema is next created. The column
+# is looked up first, so that a database that has it takes no lock on the table, which the transactions
+# of a previous server may hold.
+_add_owner_column = DDL(f'''
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'pubsub_active' AND column_name = 'owner'
+    ) THEN
+        ALTER TABLE pubsub_active ADD COLUMN owner VARCHAR({_short_column_len}) NOT NULL DEFAULT '';
+    END IF;
+END
+$$
+''')
+
+_add_owner_column = _add_owner_column.execute_if(dialect=Type_PostgreSQL)
+event.listen(metadata, 'after_create', _add_owner_column)
 
 # ################################################################################################################################
 

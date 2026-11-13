@@ -93,7 +93,7 @@ def test_split_brain(ha_session:'HASession', request:'any_', timer_setting:'tupl
         time.sleep(ModuleCtx.Partition_Seconds)
 
         # .. the referee named one of them ..
-        record = env.consul.read_record()
+        record = env.referee.read_record()
         assert record is not None
 
         winner = env.get_node(record['active_node'])

@@ -13,6 +13,7 @@ pub mod copy;
 pub mod generation;
 pub mod kubernetes;
 pub mod link;
+pub mod postgresql;
 pub mod protocol;
 pub mod record;
 pub mod referee;

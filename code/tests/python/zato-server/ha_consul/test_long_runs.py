@@ -15,23 +15,24 @@ import logging
 import time
 
 # Zato
-from ha_checks import check_copies, check_no_runs_while_replaced, check_publications_stored, check_scheduler, \
-    check_workload
-from ha_soak import get_bound_violations, MinuteReporter, wait_for_zero_lag
-from ha_takeover import ModuleCtx as TakeoverCtx, take_over
-from ha_traffic import TimedPublisher
-from workload import Workload
-from zato.common.typing_ import cast_
+from ha_checks import check_copies, check_publications_stored, check_scheduler, check_workload
+from ha_long_run import check_replacements, ModuleCtx as LongRunCtx, run_repeated_failover, start_traffic, \
+    stop_traffic, wait_until
+from ha_soak import get_bound_violations, wait_for_zero_lag
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from ha_env import HAEnvironment
+    from ha_soak import MinuteReporter
+    from ha_traffic import TimedPublisher
     from nodes import Node
-    from zato.common.typing_ import any_
+    from workload import Workload
 
-    any_ = any_
+    MinuteReporter = MinuteReporter
+    TimedPublisher = TimedPublisher
+    Workload = Workload
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,66 +42,16 @@ logger = logging.getLogger('zato.test.ha_consul.long_runs')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ModuleCtx:
-
-    # How long each run lasts and how often the active node is replaced, in seconds
-    Duration_Seconds = 60 * 60
-    Switch_Interval_Seconds = 4 * 60
-
-    # How often a run checks whether it must stop, in seconds
-    Check_Interval = 1.0
-
-    # How long the pair may take to recover, in seconds
-    Recovery_Timeout = 300
-
-    # How long each of the eight publishers of the workload and the timed publisher wait after each publication,
-    # in seconds, which paces the traffic at about fifty messages a second, the rate that the puller and the push
-    # subscriber each sustained under an unpaced load, so that the pair runs near its capacity without
-    # a backlog that grows over the hour
-    Workload_Publish_Interval = 0.1
-    Timed_Publish_Interval = 0.1
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _wait_until(reporter:'MinuteReporter', deadline:'float') -> 'None':
-    """ Waits until the given monotonic time, stopping the run if the reporter requires it.
-    """
-    while time.monotonic() < deadline:
-        reporter.check()
-        time.sleep(ModuleCtx.Check_Interval)
-
-# ################################################################################################################################
-
-def _start(env:'HAEnvironment') -> 'tuple[Workload, TimedPublisher, MinuteReporter]':
-    workload = Workload(cast_('any_', env), cast_('any_', [env.haproxy]), ModuleCtx.Workload_Publish_Interval)
-    workload.start()
-
-    publisher = TimedPublisher(env.haproxy.base_url, env.publisher_username, env.publisher_password,
-        ModuleCtx.Timed_Publish_Interval)
-    publisher.start()
-
-    reporter = MinuteReporter(env, workload, publisher)
-    reporter.start()
-
-    out = (workload, publisher, reporter)
-    return out
-
-# ################################################################################################################################
-
 def _finish(env:'HAEnvironment', workload:'Workload', publisher:'TimedPublisher', reporter:'MinuteReporter') -> 'Node':
     """ Stops the traffic and the reports and applies the checks of every run, the bounds and the replication lag.
     """
-    active = env.wait_for_pair(ModuleCtx.Recovery_Timeout)
-
-    publisher.stop()
-    reporter.stop()
+    active = stop_traffic(env, publisher, reporter)
 
     violations = get_bound_violations(reporter.reports)
     assert not violations, violations
 
     check_workload(env, workload)
-    check_publications_stored(active, publisher.get_msg_ids())
+    check_publications_stored(env, active, publisher.get_msg_ids())
 
     wait_for_zero_lag(active)
 
@@ -117,48 +68,12 @@ def test_repeated_failover(ha_pair:'HAEnvironment') -> 'None':
     and its standby takes over each time while the former active node joins again.
     """
     env = ha_pair
-    workload, publisher, reporter = _start(env)
+    workload, publisher, reporter = start_traffic(env)
 
-    # Each replaced node with the time it was replaced and the time it became active again.
-    replacements:'list[tuple[Node, float]]' = []
-    reactivations:'dict[int, float]' = {}
-
-    switch_count = ModuleCtx.Duration_Seconds // ModuleCtx.Switch_Interval_Seconds - 1
-    started = time.monotonic()
-
-    for index in range(switch_count):
-        _wait_until(reporter, started + (index + 1) * ModuleCtx.Switch_Interval_Seconds)
-
-        fault = TakeoverCtx.Faults[index % len(TakeoverCtx.Faults)]
-
-        active = env.get_active()
-        assert active is not None, 'No active node'
-
-        reporter.add_event(f'{fault} of {active.node_name}')
-        logger.info('Switch %d of %d - %s of %s', index + 1, switch_count, fault, active.node_name)
-
-        new_active, old_active, takeover_time = take_over(env, fault, workload)
-
-        # The node that takes over was itself replaced in an earlier switch, and that period ends now.
-        for replacement_index, (replaced, _) in enumerate(replacements):
-            if replaced is new_active and replacement_index not in reactivations:
-                reactivations[replacement_index] = takeover_time
-
-        replacements.append((old_active, takeover_time))
-
-    _wait_until(reporter, started + ModuleCtx.Duration_Seconds)
+    replacements = run_repeated_failover(env, workload, reporter)
 
     _ = _finish(env, workload, publisher, reporter)
-
-    for replacement_index, (replaced, boundary) in enumerate(replacements):
-
-        # A node that never became active again was replaced until the end of the run.
-        if replacement_index in reactivations:
-            reactivated = reactivations[replacement_index]
-        else:
-            reactivated = time.time()
-
-        check_no_runs_while_replaced(env, replaced, boundary, reactivated)
+    check_replacements(env, replacements)
 
 # ################################################################################################################################
 
@@ -167,9 +82,9 @@ def test_soak(ha_pair:'HAEnvironment') -> 'None':
     their bounds and the replication lag at zero once the traffic stops.
     """
     env = ha_pair
-    workload, publisher, reporter = _start(env)
+    workload, publisher, reporter = start_traffic(env)
 
-    _wait_until(reporter, time.monotonic() + ModuleCtx.Duration_Seconds)
+    wait_until(reporter, time.monotonic() + LongRunCtx.Duration_Seconds)
 
     _ = _finish(env, workload, publisher, reporter)
 

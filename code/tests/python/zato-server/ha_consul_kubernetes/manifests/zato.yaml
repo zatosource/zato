@@ -1,7 +1,7 @@
 # The active-standby pair as a StatefulSet of two pods in two zones, each with a local volume on its node.
 # The node in each pod labels its own pod zato-role=active while it serves requests, and the Service zato-ha
 # selects that label. The Secret zato-ha-tls holds the certificate of each pod under the name of the pod,
-# and the Secret zato-ha-consul holds the Consul token of the nodes.
+# and the referee Secret holds the settings of the referee of the nodes, with its address and credentials.
 
 apiVersion: v1
 kind: ServiceAccount
@@ -178,6 +178,9 @@ spec:
           command:
             - /bin/bash
             - ${start_script}
+          envFrom:
+            - secretRef:
+                name: ${referee_secret}
           env:
             - name: POD_NAME
               valueFrom:
@@ -191,19 +194,6 @@ spec:
               value: ${data_mount}/home
             - name: Zato_HA_Mode
               value: active-standby
-            - name: Zato_HA_Referee_Type
-              value: consul
-            - name: Zato_HA_Consul_Address
-              value: https://consul-api.${namespace}.svc.cluster.local:8501
-            - name: Zato_HA_Consul_Token
-              valueFrom:
-                secretKeyRef:
-                  name: zato-ha-consul
-                  key: token
-            - name: Zato_HA_Consul_CA_File
-              value: /zato-ha-tls/ca.pem
-            - name: Zato_HA_Consul_Key
-              value: ${consul_key}
             - name: Zato_HA_Node_Name
               value: $(POD_NAME)
             - name: Zato_HA_Advertised_Address

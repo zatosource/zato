@@ -269,8 +269,8 @@ pub struct Shared {
     /// The referee.
     pub referee: Box<dyn Referee>,
 
-    /// The TLS configuration of the link.
-    pub tls: TlsContext,
+    /// The TLS configuration of the link, which the shared storage mode does not open.
+    pub tls: Option<TlsContext>,
 
     /// The mutable state.
     pub state: Mutex<NodeState>,
@@ -285,7 +285,7 @@ pub struct Shared {
 
 impl Shared {
     /// Returns the shared state of a node that has not read the referee record yet.
-    pub fn new(config: NodeConfig, referee: Box<dyn Referee>, tls: TlsContext) -> Self {
+    pub fn new(config: NodeConfig, referee: Box<dyn Referee>, tls: Option<TlsContext>) -> Self {
         let databases = config
             .databases
             .iter()
@@ -316,6 +316,13 @@ impl Shared {
             changed: Condvar::new(),
             apply_gate: Mutex::new(()),
         }
+    }
+
+    /// Returns the TLS configuration of the replication link.
+    pub fn link_tls(&self) -> Result<&TlsContext, std::io::Error> {
+        self.tls
+            .as_ref()
+            .ok_or_else(|| std::io::Error::other("the shared storage mode opens no replication link"))
     }
 
     /// Tells every thread that the node is stopping and closes the replication link.
