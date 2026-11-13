@@ -9,7 +9,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover test-consul test-consul-pair test-consul-kubernetes \
-	test-sql-postgresql-multi test-sql-postgresql-multi-pair test-sql-postgresql-multi-kubernetes \
+	test-sql-postgresql-multi \
 	test-consul-multi test-consul-multi-pair test-consul-multi-kubernetes test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
@@ -753,30 +753,33 @@ test-consul-kubernetes: ## Active-standby pair on SQLite with Consul - the Kuber
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_consul_kubernetes -W ignore::DeprecationWarning \
 		$(Zato_Test_Consul_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-# Which suite test-sql-postgresql-multi is currently on, and the pytest option that resumes each suite from the test
-# that failed or was interrupted, or that starts it from the beginning under RESTART.
-Zato_Test_PostgreSQL_Multi             := test-sql-postgresql-multi-pair test-sql-postgresql-multi-kubernetes
+# The suites of test-sql-postgresql-multi in the order they run, the suite it is currently on, and the pytest option
+# that resumes each suite from the test that failed or was interrupted, or that starts it from the beginning under RESTART.
+Zato_Test_PostgreSQL_Multi             := ha_postgresql ha_postgresql_kubernetes
 Zato_Test_PostgreSQL_Multi_Resume_File := $(CURDIR)/code/tests/.test-sql-postgresql-multi-resume
 Zato_Test_PostgreSQL_Multi_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
 
-test-sql-postgresql-multi: ## Active-standby pair on PostgreSQL - every suite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_Walk,$(Zato_Test_PostgreSQL_Multi),$(Zato_Test_PostgreSQL_Multi_Resume_File))
-
-test-sql-postgresql-multi-pair: ## Active-standby pair on PostgreSQL - functional, takeover, fault, database failover and long-run suites.
+test-sql-postgresql-multi: ## Active-standby pair on PostgreSQL - the pair and Kubernetes suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_PostgreSQL_Multi_Resume_File); fi
 	$(Zato_Log_Reset)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_postgresql/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_postgresql -W ignore::DeprecationWarning \
-		$(Zato_Test_PostgreSQL_Multi_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-test-sql-postgresql-multi-kubernetes: ## Active-standby pair on PostgreSQL - the Kubernetes suite.
-	$(Zato_Log_Reset)
-	$(MAKE) ha-node-build $(Zato_Log)
-	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_postgresql_kubernetes/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_postgresql_kubernetes -W ignore::DeprecationWarning \
-		$(Zato_Test_PostgreSQL_Multi_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	@resume=''; \
+	if [ -f $(Zato_Test_PostgreSQL_Multi_Resume_File) ]; then \
+		resume=$$(cat $(Zato_Test_PostgreSQL_Multi_Resume_File)); \
+		echo ">>> Resuming from $$resume" $(Zato_Log); \
+	fi; \
+	for suite in $(Zato_Test_PostgreSQL_Multi); do \
+		if [ -n "$$resume" ]; then \
+			if [ "$$suite" != "$$resume" ]; then continue; fi; \
+			resume=''; \
+		fi; \
+		echo "$$suite" > $(Zato_Test_PostgreSQL_Multi_Resume_File); \
+		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/$$suite/ \
+			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$$suite -W ignore::DeprecationWarning \
+			$(Zato_Test_PostgreSQL_Multi_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	done; \
+	rm -f $(Zato_Test_PostgreSQL_Multi_Resume_File)
 
 # Which suite test-consul-multi is currently on, and the pytest option that resumes each suite from the test
 # that failed or was interrupted, or that starts it from the beginning under RESTART.

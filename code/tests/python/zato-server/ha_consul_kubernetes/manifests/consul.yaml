@@ -72,6 +72,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+          # The entrypoint script of the image changes the owner of the configuration directory, a read-only Secret
+          command:
+            - consul
           args:
             - agent
             - -config-dir=/consul/config
