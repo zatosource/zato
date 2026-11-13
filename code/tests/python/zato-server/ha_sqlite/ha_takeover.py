@@ -62,6 +62,9 @@ class ModuleCtx:
     # The faults of the takeover
     Faults = [FaultsCtx.Fault_Stop, FaultsCtx.Fault_Kill, FaultsCtx.Fault_Pause, FaultsCtx.Fault_Partition]
 
+    # How many claims of each scheduler job an active node that fails between a claim and its run may leave without a run
+    Unrun_Claims_After_Takeover = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 

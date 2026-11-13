@@ -1043,8 +1043,15 @@ fn receive_loop(shared: &Shared, mut receiver: LinkReceiver, number: u64) {
         match message {
             Message::Confirm(position) => apply_confirmation(&mut state, &position),
             Message::HeartbeatAck => {}
-            Message::Refused { generation } => {
+            // The standby refuses the frames of a generation it left behind, and a node that wrote the newer generation
+            // itself in the meantime, by a mark-out or an admission, was not replaced, so only a higher one fences it.
+            Message::Refused { generation } if generation > state.generation => {
                 shared.fence(&mut state, generation);
+                return;
+            }
+            Message::Refused { generation } => {
+                drop(state);
+                end_from_thread(shared, number, &format!("frames refused at generation {generation}"));
                 return;
             }
             other => {
@@ -1276,6 +1283,35 @@ mod tests {
             state.generation = 1;
         }
         shared
+    }
+
+    #[test]
+    fn a_refusal_at_the_generation_of_the_node_ends_only_the_session() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let shared = active_node(dir.path(), &certificates, port);
+
+        // The standby refuses frames that the node sent before it wrote the generation of the refusal itself ..
+        let standby_tls = TlsContext::load(&certificates.files(NODE_B)).unwrap();
+        let standby = thread::spawn(move || {
+            let (tcp, _) = listener.accept().unwrap();
+            let accepted = standby_tls.accept(tcp).unwrap();
+            accepted.sender.send(&Message::Refused { generation: 1 }, RECEIVE_TIMEOUT).unwrap();
+            accepted
+        });
+        let tls = TlsContext::load(&certificates.files(NODE_A)).unwrap();
+        let (_sender, receiver) = tls.connect(NODE_B, LOOPBACK, port).unwrap();
+        let _accepted = standby.join().unwrap();
+        let number = shared.state.lock().session;
+        receive_loop(&shared, receiver, number);
+
+        // .. so the node is not fenced and continues active.
+        let state = shared.state.lock();
+        let role_and_generation = (state.role, state.generation);
+        drop(state);
+        assert_eq!(role_and_generation, (Role::ActiveSolo, 1));
     }
 
     #[test]

@@ -59,7 +59,8 @@ def test_takeover(ha_pair:'HAEnvironment', fault:'str') -> 'None':
     check_workload(env, workload)
     check_no_runs_after(env, old_active, takeover_time)
 
-    _ = check_scheduler(env, new_active)
+    # An active node that fails leaves the claim it committed before the run began in the copy of the standby without a run.
+    _ = check_scheduler(env, new_active, ModuleCtx.Unrun_Claims_After_Takeover)
     check_copies(env, new_active)
 
 # ################################################################################################################################
@@ -106,7 +107,8 @@ def test_takeover_with_lost_writes(ha_session:'HASession', request:'any_') -> 'N
         check_workload(env, workload)
         check_no_runs_after(env, old_active, takeover_time)
 
-        _ = check_scheduler(env, new_active)
+        # The killed node leaves the claim it committed before the run began in the copy of the standby without a run.
+        _ = check_scheduler(env, new_active, ModuleCtx.Unrun_Claims_After_Takeover)
         check_copies(env, new_active)
 
 # ################################################################################################################################

@@ -189,9 +189,11 @@ fn split(tcp: TcpStream, mut connection: Connection) -> Result<(LinkSender, Link
     // The receiver blocks until the peer sends something or the link is shut down.
     tcp.set_read_timeout(None)?;
     let reader = tcp.try_clone()?;
+    let closer = Arc::new(tcp.try_clone()?);
     let shared = Arc::new(Mutex::new(SharedEnd { connection, tcp }));
     let sender = LinkSender {
         shared: Arc::clone(&shared),
+        closer,
     };
     let receiver = LinkReceiver {
         shared,
@@ -226,6 +228,9 @@ impl SharedEnd {
 pub struct LinkSender {
     /// The shared TLS state.
     shared: Arc<Mutex<SharedEnd>>,
+
+    /// A clone of the TCP stream that shuts the link down without waiting for a send in progress.
+    closer: Arc<TcpStream>,
 }
 
 impl LinkSender {
@@ -242,10 +247,10 @@ impl LinkSender {
 
     /// Shuts the link down, which ends the receiver's wait as well.
     pub fn close(&self) {
-        let shared = self.shared.lock();
-
+        // A send to a peer that takes a few bytes at a time holds the lock of the TLS state for longer than its timeout,
+        // so the link is shut down through a clone of the stream, which also ends that send.
         // A link already closed by the peer reports an error that changes nothing.
-        let _ = shared.tcp.shutdown(Shutdown::Both);
+        let _ = self.closer.shutdown(Shutdown::Both);
     }
 }
 

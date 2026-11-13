@@ -42,8 +42,15 @@ logger = logging.getLogger('zato.test.ha_sqlite.long_runs')
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _finish(env:'HAEnvironment', workload:'Workload', publisher:'TimedPublisher', reporter:'MinuteReporter') -> 'Node':
+def _finish(
+    env:'HAEnvironment',
+    workload:'Workload',
+    publisher:'TimedPublisher',
+    reporter:'MinuteReporter',
+    unrun_claims:'int'=0,
+) -> 'Node':
     """ Stops the traffic and the reports and applies the checks of every run, the bounds and the replication lag.
+    Each job may count the given number of claims that a failed active node did not run.
     """
     active = stop_traffic(env, publisher, reporter)
 
@@ -55,7 +62,7 @@ def _finish(env:'HAEnvironment', workload:'Workload', publisher:'TimedPublisher'
 
     wait_for_zero_lag(active)
 
-    _ = check_scheduler(env, active)
+    _ = check_scheduler(env, active, unrun_claims)
     check_copies(env, active)
 
     return active
@@ -72,7 +79,8 @@ def test_repeated_failover(ha_pair:'HAEnvironment') -> 'None':
 
     replacements = run_repeated_failover(env, workload, reporter)
 
-    _ = _finish(env, workload, publisher, reporter)
+    # Each failed active node may leave the claim it committed before the run began without a run.
+    _ = _finish(env, workload, publisher, reporter, len(replacements))
     check_replacements(env, replacements)
 
 # ################################################################################################################################

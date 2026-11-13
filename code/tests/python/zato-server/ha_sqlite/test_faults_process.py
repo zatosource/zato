@@ -92,6 +92,9 @@ class ModuleCtx:
     # The roles of a node that serves requests
     Active_Roles:'strlist' = list(NodesCtx.Active_Roles)
 
+    # How many claims of each scheduler job a server killed between a claim and its run may leave without a run
+    Unrun_Claims_After_Kill = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -108,12 +111,12 @@ def _get_target(env:'HAEnvironment', target:'str') -> 'Node':
 
 # ################################################################################################################################
 
-def _finish(env:'HAEnvironment', workload:'Workload') -> 'None':
+def _finish(env:'HAEnvironment', workload:'Workload', unrun_claims:'int'=0) -> 'None':
     active = env.wait_for_pair(ModuleCtx.Recovery_Timeout)
 
     check_workload(env, workload)
 
-    _ = check_scheduler(env, active)
+    _ = check_scheduler(env, active, unrun_claims)
     check_copies(env, active)
 
 # ################################################################################################################################
@@ -245,7 +248,9 @@ def test_clock_during_takeover(ha_session:'HASession', request:'any_', clock_set
         active.resume()
         workload.fault_windows.append((started, time.time()))
 
-        _finish(env, workload)
+        # An active node that is killed leaves the claim it committed before the run began
+        # in the copy of the standby without a run.
+        _finish(env, workload, ModuleCtx.Unrun_Claims_After_Kill)
 
 # ################################################################################################################################
 # ################################################################################################################################

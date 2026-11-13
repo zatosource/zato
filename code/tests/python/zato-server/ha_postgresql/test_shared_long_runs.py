@@ -42,8 +42,15 @@ logger = logging.getLogger('zato.test.ha_postgresql.long_runs')
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _finish(env:'HAEnvironment', workload:'Workload', publisher:'TimedPublisher', reporter:'MinuteReporter') -> 'None':
+def _finish(
+    env:'HAEnvironment',
+    workload:'Workload',
+    publisher:'TimedPublisher',
+    reporter:'MinuteReporter',
+    unrun_claims:'int'=0,
+) -> 'None':
     """ Stops the traffic and the reports and applies the checks of every run and the bounds.
+    Each job may count the given number of claims that a failed active node did not run.
     """
     active = stop_traffic(env, publisher, reporter)
 
@@ -53,7 +60,7 @@ def _finish(env:'HAEnvironment', workload:'Workload', publisher:'TimedPublisher'
     check_workload(env, workload)
     check_publications_stored(env, active, publisher.get_msg_ids())
 
-    _ = check_scheduler(env, active)
+    _ = check_scheduler(env, active, unrun_claims)
     check_active_server(env, active)
 
 # ################################################################################################################################
@@ -68,7 +75,8 @@ def test_repeated_failover(ha_pair:'HAEnvironment') -> 'None':
 
     replacements = run_repeated_failover(env, workload, reporter)
 
-    _finish(env, workload, publisher, reporter)
+    # Each failed active node may leave the claim it committed before the run began without a run.
+    _finish(env, workload, publisher, reporter, len(replacements))
     check_replacements(env, replacements)
 
 # ################################################################################################################################

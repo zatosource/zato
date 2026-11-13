@@ -73,15 +73,18 @@ class ModuleCtx:
     Active_Solo = ['ActiveSolo']
     Standby_In_Sync = ['StandbyInSync']
 
+    # How many claims of each scheduler job a server killed between a claim and its run may leave without a run
+    Unrun_Claims_After_Kill = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _finish(env:'HAEnvironment', workload:'Workload') -> 'None':
+def _finish(env:'HAEnvironment', workload:'Workload', unrun_claims:'int'=0) -> 'None':
     active = env.wait_for_pair(ModuleCtx.Recovery_Timeout)
 
     check_workload(env, workload)
 
-    _ = check_scheduler(env, active)
+    _ = check_scheduler(env, active, unrun_claims)
     check_copies(env, active)
 
 # ################################################################################################################################
@@ -163,7 +166,9 @@ def test_starved_standby_during_takeover(ha_pair:'HAEnvironment') -> 'None':
     active.resume()
     workload.fault_windows.append((started, time.time()))
 
-    _finish(env, workload)
+    # An active node that is killed leaves the claim it committed before the run began
+    # in the copy of the standby without a run.
+    _finish(env, workload, ModuleCtx.Unrun_Claims_After_Kill)
 
 # ################################################################################################################################
 
