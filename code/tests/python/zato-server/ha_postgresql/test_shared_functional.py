@@ -141,13 +141,19 @@ def test_bootstrap(ha_pair:'HAEnvironment') -> 'None':
     assert active_report['generation'] == record['generation'], (active_report, record)
     assert standby_report['generation'] == record['generation'], (standby_report, record)
 
-    # The record of the pair is the only row of the referee, as the nodes publish no address ..
+    # The referee holds the record of the pair and the address of each node, by which the pod of the other node
+    # is found in Kubernetes ..
     keys:'list[str]' = []
 
-    for row in read_rows(cast_('any_', env), 'select key from zato_ha_referee'):
+    for row in read_rows(cast_('any_', env), 'select key from zato_ha_referee order by key'):
         keys.append(row[0])
 
-    assert keys == [ClusterCtx.Record_Key], keys
+    expected_keys = [ClusterCtx.Record_Key]
+
+    for node in sorted([active.node_name, standby.node_name]):
+        expected_keys.append(f'{ClusterCtx.Record_Key}/nodes/{node}')
+
+    assert keys == expected_keys, keys
 
     # .. the role endpoint answers on the active node only ..
     assert _read_role_status(active) == OK

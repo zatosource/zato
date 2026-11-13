@@ -305,11 +305,15 @@ mod tests {
     }
 
     #[test]
-    fn a_node_starts_as_a_standby_in_sync_and_publishes_no_address() {
+    fn a_node_starts_as_a_standby_in_sync_and_publishes_its_address() {
         let mut node = TestNode::new(Some(RefereeRecord::solo(FIRST_GENERATION, NODE_B)));
         node.control.bootstrap().unwrap();
         assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
-        assert!(node.referee.addresses.lock().is_empty());
+
+        // The node that takes over later finds the pod of this node among the addresses.
+        let addresses = node.referee.addresses.lock().clone();
+        let names: Vec<&str> = addresses.iter().map(|address| address.node_name.as_str()).collect();
+        assert_eq!(names, [NODE_A]);
     }
 
     #[test]

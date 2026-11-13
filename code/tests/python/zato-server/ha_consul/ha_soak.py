@@ -22,6 +22,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from subprocess import CalledProcessError
+from traceback import format_exc
 
 # Zato
 from container import Container
@@ -472,10 +473,10 @@ class MinuteReporter:
 
         for node in self.env.node_list:
 
-            # A node stopped by a fault in this minute has no resources to report.
+            # A node stopped by a fault in this minute has no resources to report, and its container has no cgroup.
             try:
                 sample = take_node_sample(node)
-            except CalledProcessError:
+            except (CalledProcessError, FileNotFoundError):
                 out.details.append(f'{node.node_name} not sampled')
                 continue
 
@@ -520,6 +521,15 @@ class MinuteReporter:
         return out
 
     def _run(self) -> 'None':
+
+        # An exception that ends the thread stops the run, which would otherwise continue without its reports.
+        try:
+            self._report_every_minute()
+        except Exception:
+            self.failure = format_exc()
+            raise
+
+    def _report_every_minute(self) -> 'None':
 
         minute = 0
         run_started = time.time()

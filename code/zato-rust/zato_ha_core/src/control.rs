@@ -145,7 +145,10 @@ impl Control {
         self.stop_requested.load(Ordering::Relaxed)
     }
 
-    /// Publishes the address of the node for the replication link and decides its first role from the referee record.
+    /// Publishes the address of the node and decides its first role from the referee record.
+    ///
+    /// The other node opens the replication link to the address, and in both storage modes the node that becomes
+    /// active removes the role label from the pod of each other published node before it labels its own pod.
     fn bootstrap(&mut self) -> Result<(), ControlError> {
         let config = &self.shared.config;
         let address = NodeAddress {
@@ -153,8 +156,7 @@ impl Control {
             host: config.advertised_address.clone(),
             port: config.replication_port,
         };
-        let has_link = config.storage == StorageMode::Replicated;
-        while has_link && let Err(error) = self.shared.referee.publish_address(&address) {
+        while let Err(error) = self.shared.referee.publish_address(&address) {
             if self.stop_requested() {
                 return Ok(());
             }
